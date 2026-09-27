@@ -7,6 +7,39 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — A key's history comes from its audit trail, shown on the key (1.38.0-beta)
+
+**Decision.** Source Traceability (a discovery-owned `lineage_events` store
+with its own graph, provenance, custody and tamper-check views) is removed.
+A key's history is its audit events. They are verified per key by the audit
+service (`GET /audit/targets/{id}/integrity`), and its callers come from
+keycore's `key_usage_events` (`GET /keys/{id}/consumers`). Both appear in
+one **History & usage** panel in the key detail view, where people look
+before they rotate or delete.
+
+**Why:** lineage had one writer, a manual form, so it recorded claims, not
+events. Its tamper check could not fail. The audit trail already records
+every key operation with an actor, and it is already tamper-evident (hash
+chain, per-event HMAC, Merkle epochs), so a second store would only drift
+from it. The usage trail is what keycore itself writes on every crypto
+operation.
+
+*Rejected:*
+- fixing lineage in place (it would still need a real writer that duplicates
+  audit, and a second integrity scheme to certify);
+- a separate "history" tab (the question comes up on a key, right before a
+  rotate or delete);
+- verifying on every panel open (each run is itself audited against the
+  key; verification runs when the user asks);
+- merging usage across cluster nodes in this change (`key_usage_events` is
+  node-local by design; the response says `node_local: true`).
+
+Enforced by `TestTargetIntegrityRejectsTampering` (each way stored data can
+be altered is rejected), `TestEventMerkleProofUsesSealedRoot`, and
+`TestKeyConsumersFromUsageTrail`.
+
+---
+
 ## 2026-09-27 — Built-in approval policy for posture escalation (1.35.0-beta)
 
 **Decision.** Governance creates **Posture escalation (built-in)** in a

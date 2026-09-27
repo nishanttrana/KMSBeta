@@ -83,9 +83,6 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
-  tab_lineage["Source Traceability"]
-  UI --> tab_lineage
-  tab_lineage --> svc_discovery
   tab_cluster["Cluster"]
   UI --> tab_cluster
   tab_cluster --> svc_auth_edge
@@ -120,7 +117,7 @@ flowchart LR
   tab_restapi --> svc_secrets
   svc_ai["ai"]
   svc_ai_gateway["ai-gateway (31 routes)"]
-  svc_audit["audit (51 routes)"]
+  svc_audit["audit (52 routes)"]
   svc_auth["auth (82 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -129,12 +126,11 @@ flowchart LR
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
-  svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (174 routes)"]
+  svc_keycore["keycore (175 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (19 routes)"]
   svc_pqc["pqc (16 routes)"]

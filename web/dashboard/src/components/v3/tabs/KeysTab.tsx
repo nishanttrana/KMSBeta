@@ -32,6 +32,7 @@ import { C } from "../theme";
 import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
 import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
+import { KeyHistoryPanel } from "../../../modules/keys/KeyHistoryPanel";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -2543,6 +2544,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           {!Array.isArray(keyVersions)||!keyVersions.length?<div style={{fontSize:10,color:C.muted}}>No version history found.</div>:null}
         </div>
       </FG>
+      <KeyHistoryPanel session={session} keyID={selectedKey.id}/>
       <div style={{display:"flex",gap:6,marginTop:12}}>
         {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
         {selectedCanExport&&<Btn onClick={()=>{setExportWrappingKeyId("");setExportMode(isPublicComponentLike(selectedKey)?"public-plaintext":"wrapped");setModal("export");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}

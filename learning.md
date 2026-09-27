@@ -5,6 +5,40 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### SQLite returns MIN/MAX of a time column as Go's `time.String()` text
+- **What happened:** `GET /keys/{id}/consumers` groups the usage trail
+  with `MIN(occurred_at)`/`MAX(occurred_at)`. On SQLite the aggregate loses
+  the column type and comes back as `2026-09-27 18:26:27.888827 +0000 UTC`.
+  `parseDBTime` did not know that layout, so every first/last-seen time was
+  zero and the consumer order (sorted by last seen) was random. The test
+  failed only sometimes, and only in the full `make test-fips-modes` run.
+- **Rule:** when parsing a DB time fails, don't carry on with a zero value.
+  `parseDBTime` now accepts that layout. A test that sorts by time asserts
+  the times themselves, and ties sort on a stable key.
+
+### Two integrity checks compared a value with itself (lineage tamper check, Merkle proof root)
+- **What happened:** the lineage "tamper check" hashed a key's lineage
+  events, then called `buildChainOfCustody` on the same events, which ran
+  the same hash, and compared the two. They could only match, so every key
+  was "verified". It also hashed only event IDs, so edited contents were
+  invisible, and every custody handoff was hardcoded `Verified: true`.
+  While replacing it, the audit service's own `GetEventMerkleProof` turned
+  out to do the same thing one level down: it rebuilt the tree from the
+  stored leaves and returned *that* tree's root, not the root stored when
+  the epoch was sealed, so a proof over an altered leaf still verified.
+- **Why it slipped through:** both looked like verification: a hash, a
+  comparison, a boolean. No test altered stored data and expected a
+  failure. The only tests fed in good data, and a check that always passes
+  passes those. The lineage data was also never observed: the tab's own
+  form was the only writer, so there was nothing real to tamper with.
+- **Rule:** an integrity check compares with a record the checked data
+  cannot produce: a neighbour's link, an HMAC under a key the database
+  doesn't hold, or a root stored at sealing time. Every integrity check
+  ships with a test that alters the stored data (row, recomputed row, leaf,
+  root, a deleted neighbour) and expects rejection
+  (`TestTargetIntegrityRejectsTampering`, `TestEventMerkleProofUsesSealedRoot`).
+  To confirm that test has teeth, break the comparison and watch it fail.
+
 ### A "bootstrap on first read" is a write (sbom CBOM history)
 - **What happened:** `ListCBOMHistory` generated a snapshot when none
   existed, so a GET wrote a replicated table, on cluster members too.

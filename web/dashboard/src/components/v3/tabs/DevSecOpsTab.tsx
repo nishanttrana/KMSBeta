@@ -549,6 +549,7 @@ const API_ENDPOINTS = [
   { group: "Key Management", method: "POST",   path: "/svc/keycore/keys/{id}/sign",         desc: "Sign message hash with asymmetric key",     auth: true },
   { group: "Key Management", method: "POST",   path: "/svc/keycore/keys/{id}/verify",       desc: "Verify a signature",                        auth: true },
   { group: "Key Management", method: "POST",   path: "/svc/keycore/keys/{id}/rotate",       desc: "Trigger key rotation (new version)",        auth: true },
+  { group: "Key Management", method: "GET",    path: "/svc/keycore/keys/{id}/consumers",    desc: "Callers of a key and rotate/delete impact", auth: true },
   { group: "Key Management", method: "GET",    path: "/svc/keycore/keys/{id}/status",       desc: "Get key lifecycle status",                  auth: true },
   // Secrets
   { group: "Secrets",        method: "GET",    path: "/svc/secrets/secrets",                desc: "List application secrets",                  auth: true },
@@ -568,7 +569,6 @@ const API_ENDPOINTS = [
   { group: "Discovery",      method: "GET",    path: "/svc/discovery/assets",               desc: "List discovered crypto assets",             auth: true },
   { group: "Discovery",      method: "POST",   path: "/svc/discovery/pii/scan",             desc: "Scan content for PII / PAN / PHI",         auth: true },
   { group: "Discovery",      method: "GET",    path: "/svc/discovery/summary",              desc: "Discovery fleet summary stats",             auth: true },
-  { group: "Discovery",      method: "GET",    path: "/svc/discovery/lineage/{id}",         desc: "Data lineage for a specific asset",         auth: true },
   // EKM TDE (Database Encryption)
   { group: "EKM",            method: "POST",   path: "/svc/ekm/agents/register",            desc: "Register EKM agent for TDE",                auth: true },
   { group: "EKM",            method: "GET",    path: "/svc/ekm/agents",                     desc: "List EKM agents",                           auth: true },

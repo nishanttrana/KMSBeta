@@ -20,6 +20,7 @@ type Store interface {
 	QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error)
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
+	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
 
 	QueryAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error)
 	GetAlert(ctx context.Context, tenantID string, id string) (Alert, error)
@@ -366,14 +367,41 @@ FROM audit_events WHERE tenant_id=$1 AND id=$2
 	return ev, err
 }
 
-func (s *SQLStore) VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, sequence, previous_hash, chain_hash, timestamp, service, action, actor_id, actor_type,
+// chainRowColumns selects every field eventHashInput covers, plus the chain
+// and signature fields, in the order scanChainRow reads them.
+const chainRowColumns = `id, sequence, previous_hash, chain_hash, timestamp, service, action, actor_id, actor_type,
        COALESCE(target_type,''), COALESCE(target_id,''), COALESCE(method,''), COALESCE(endpoint,''), COALESCE(CAST(source_ip AS TEXT),''), COALESCE(user_agent,''),
        COALESCE(request_hash,''), COALESCE(correlation_id,''), COALESCE(parent_event_id,''), COALESCE(session_id,''),
        result, COALESCE(status_code,0), COALESCE(error_message,''), COALESCE(duration_ms,0), COALESCE(fips_compliant,false), COALESCE(approval_id,''),
        COALESCE(risk_score,0), tags, COALESCE(node_id,''), details,
-       chain_node, COALESCE(hmac_sig,''), COALESCE(hmac_key_id,'')
+       chain_node, COALESCE(hmac_sig,''), COALESCE(hmac_key_id,'')`
+
+// scanChainRow reads one chainRowColumns row as stored, so a recomputed hash
+// covers exactly what is in the database now.
+func scanChainRow(rows interface {
+	Scan(dest ...interface{}) error
+}, tenantID string) (AuditEvent, error) {
+	var (
+		ev                  AuditEvent
+		timestampRaw        interface{}
+		tagsRaw, detailsRaw []byte
+	)
+	if err := rows.Scan(&ev.ID, &ev.Sequence, &ev.PreviousHash, &ev.ChainHash, &timestampRaw, &ev.Service, &ev.Action, &ev.ActorID, &ev.ActorType,
+		&ev.TargetType, &ev.TargetID, &ev.Method, &ev.Endpoint, &ev.SourceIP, &ev.UserAgent, &ev.RequestHash, &ev.CorrelationID, &ev.ParentEventID, &ev.SessionID,
+		&ev.Result, &ev.StatusCode, &ev.ErrorMessage, &ev.DurationMS, &ev.FIPSCompliant, &ev.ApprovalID, &ev.RiskScore, &tagsRaw, &ev.NodeID, &detailsRaw,
+		&ev.ChainNode, &ev.HMACSig, &ev.HMACKeyID); err != nil {
+		return AuditEvent{}, err
+	}
+	ev.TenantID = tenantID
+	ev.Timestamp = parseTimeValue(timestampRaw)
+	_ = json.Unmarshal(tagsRaw, &ev.Tags)
+	_ = json.Unmarshal(detailsRaw, &ev.Details)
+	return ev, nil
+}
+
+func (s *SQLStore) VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT `+chainRowColumns+`
 FROM audit_events
 WHERE tenant_id=$1
 ORDER BY sequence ASC
@@ -391,41 +419,10 @@ ORDER BY sequence ASC
 	prevByChain := map[string]string{}
 	var breaks []map[string]interface{}
 	for rows.Next() {
-		var (
-			ev                       AuditEvent
-			timestampRaw             interface{}
-			tagsRaw, detailsRaw      []byte
-			targetType, targetID     string
-			method, endpoint         string
-			sourceIP, userAgent      string
-			requestHash, corrID      string
-			parentID, sessionID      string
-			errorMessage, approvalID string
-			nodeID                   string
-		)
-		if err := rows.Scan(&ev.ID, &ev.Sequence, &ev.PreviousHash, &ev.ChainHash, &timestampRaw, &ev.Service, &ev.Action, &ev.ActorID, &ev.ActorType,
-			&targetType, &targetID, &method, &endpoint, &sourceIP, &userAgent, &requestHash, &corrID, &parentID, &sessionID,
-			&ev.Result, &ev.StatusCode, &errorMessage, &ev.DurationMS, &ev.FIPSCompliant, &approvalID, &ev.RiskScore, &tagsRaw, &nodeID, &detailsRaw,
-			&ev.ChainNode, &ev.HMACSig, &ev.HMACKeyID); err != nil {
+		ev, err := scanChainRow(rows, tenantID)
+		if err != nil {
 			return false, nil, err
 		}
-		ev.TenantID = tenantID
-		ev.TargetType = targetType
-		ev.TargetID = targetID
-		ev.Method = method
-		ev.Endpoint = endpoint
-		ev.SourceIP = sourceIP
-		ev.UserAgent = userAgent
-		ev.RequestHash = requestHash
-		ev.CorrelationID = corrID
-		ev.ParentEventID = parentID
-		ev.SessionID = sessionID
-		ev.ErrorMessage = errorMessage
-		ev.ApprovalID = approvalID
-		ev.NodeID = nodeID
-		ev.Timestamp = parseTimeValue(timestampRaw)
-		_ = json.Unmarshal(tagsRaw, &ev.Tags)
-		_ = json.Unmarshal(detailsRaw, &ev.Details)
 
 		chain := ev.ChainNode
 		if chain == "" {
@@ -1006,12 +1003,21 @@ ORDER BY leaf_index ASC
 		return nil, err
 	}
 
-	// Rebuild tree and generate proof
+	// The proof's root is the root stored when the epoch was sealed, never
+	// the root of the tree just rebuilt from the same leaves: that one
+	// matches by construction, so an altered leaf would still "verify".
+	var storedRoot string
+	if err := s.db.SQL().QueryRowContext(ctx,
+		`SELECT tree_root FROM audit_merkle_epochs WHERE tenant_id=$1 AND id=$2`,
+		tenantID, leaf.EpochID).Scan(&storedRoot); err != nil {
+		return nil, err
+	}
 	tree := BuildMerkleTree(hashes)
 	proof, ok := GenerateProof(tree, leaf.LeafIndex)
 	if !ok {
 		return nil, fmt.Errorf("failed to generate proof for leaf %d", leaf.LeafIndex)
 	}
+	proof.Root = storedRoot
 
 	return &MerkleProofResponse{
 		EventID:   leaf.EventID,

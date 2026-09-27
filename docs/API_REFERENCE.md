@@ -277,6 +277,17 @@ key type, size or curve, and the HSM's own `local`, `sensitive`,
 `extractable`, `never_extractable`, `always_sensitive` and usage flags; key
 values are never read). A key with no HSM versions answers `409 not_hsm_key`.
 
+`GET /svc/keycore/keys/{id}/consumers` (`key.usage.read`; kernel event
+`audit.key.key_consumers_read`, detail `consumers`) lists the key's callers
+from keycore's usage trail, which every successful crypto operation writes:
+`consumers[]` (`actor_id`, `interface`, `operations` by name, `total`,
+`first_seen`, `last_seen`), `since` and `window_days` (the trail's 30-day
+retention), `node_local: true` (each node keeps its own trail), and `impact`
+(`key_status`, `current_version`, `versions_by_status`, `active_callers`,
+`interfaces`, `last_used_at`, `approval_required`). `404` for an unknown key.
+The Keys detail view's **History & usage** panel shows it under "Used by"
+and "Before you rotate or delete".
+
 `GET /svc/keycore/hsm/objects` (`key.hsm.read`) lists the tenant's HSM
 partition: `hsm` (identity) and `objects`, each with the attributes above,
 `managed` (created by the KMS for this tenant, with `key_id`, `version` and
@@ -1071,7 +1082,38 @@ Single event.
 
 ### GET /svc/audit/audit/events/{id}/proof
 
-Merkle inclusion proof. Response: `eventId`, `merkleRoot`, `proof[]`, `proofIndex`, `chainHeight`
+Merkle inclusion proof for a sealed event. Response `proof`: `event_id`,
+`sequence`, `epoch_id`, `leaf_hash`, `leaf_index`, `siblings[]` (`hash`,
+`position`) and `root`. Since 1.38.0-beta `root` is the root stored when the
+epoch was sealed, not the root of a tree rebuilt from the current leaves, so
+a proof over an altered leaf no longer verifies. `404` until the event is in
+an epoch.
+
+---
+
+### GET /svc/audit/audit/targets/{target_id}/integrity
+
+Permission `audit.integrity.read`; kernel event
+`audit.audit.target_integrity_verified` (details `verdict`, `events_checked`,
+`failed`). Verifies the newest 500 (or `limit`) audit events whose
+`target_id` is `{target_id}` (for a key, its ID). Every check recomputes from
+what is stored now and compares with an independent record:
+
+| Field | Check | Values |
+|---|---|---|
+| `content` | the row's fields reproduce its `chain_hash` | `intact`, `altered` |
+| `link` | the predecessor's `chain_hash` is this row's `previous_hash`, and the successor's `previous_hash` is this row's `chain_hash` | `linked`, `genesis`, `anchor` (a replicated chain's first row here), `broken`, `predecessor_missing` |
+| `signature` | per-event HMAC over the chain hash, under the audit signing key | `verified`, `unsigned`, `not_checked` (no key on this node), `mismatch`, `key_unknown` |
+| `seal` | the recomputed hash, walked up its epoch's tree, reaches the root stored at sealing; the epoch hash and the next epoch's link agree | `sealed`, `pending` (not yet in an epoch), `leaf_mismatch`, `root_mismatch`, `epoch_unlinked` |
+
+Response `integrity`: `verdict` (`intact`, `tampered`, `no_events`),
+`events_checked`, `failed`, `sealed`, `pending`, `unsigned`, `truncated`,
+`signing_key_configured`, `verified_at`, and `events[]` with the fields above,
+`failures[]` and, when sealed, `epoch_number` and `proof` (`leaf_hash`,
+`leaf_index`, `siblings`, `root`). A `tampered` verdict also raises the
+critical `audit.audit.chain_broken` (details `scope: target`, `target_id`,
+`breaks`). The Keys detail view's **History & usage** panel calls this from
+**Verify integrity**.
 
 ---
 
@@ -2757,6 +2799,8 @@ Selected events with dedicated audit classification:
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
+- `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain): audit trail integrity
+- `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
@@ -2910,6 +2954,7 @@ from the code; do not edit by hand.
 - `GET /svc/audit/audit/session/{session_id}`
 - `GET /svc/audit/audit/stats`
 - `GET /svc/audit/audit/stream`
+- `GET /svc/audit/audit/targets/{target_id}/integrity`
 - `GET /svc/audit/audit/timeline/{target_id}`
 - `GET /svc/audit/metrics`
 - `GET /svc/audit/ops-metrics/by-service`
@@ -3197,6 +3242,7 @@ from the code; do not edit by hand.
 - `POST /svc/confidential/confidential/evaluate`
 - `GET /svc/confidential/confidential/policy`
 - `PUT /svc/confidential/confidential/policy`
+- `POST /svc/confidential/confidential/release`
 - `GET /svc/confidential/confidential/releases`
 - `GET /svc/confidential/confidential/releases/{id}`
 - `GET /svc/confidential/confidential/summary`
@@ -3261,20 +3307,6 @@ from the code; do not edit by hand.
 - `PUT /svc/discovery/discovery/assets/{id}/classify`
 - `GET /svc/discovery/discovery/crypto/assets`
 - `GET /svc/discovery/discovery/data-inventory`
-- `GET /svc/discovery/discovery/lineage/access-patterns/{key_id}`
-- `GET /svc/discovery/discovery/lineage/chain-of-custody/{key_id}`
-- `GET /svc/discovery/discovery/lineage/data-flow/{key_id}`
-- `GET /svc/discovery/discovery/lineage/dependencies/{key_id}`
-- `GET /svc/discovery/discovery/lineage/graph`
-- `GET /svc/discovery/discovery/lineage/impact/{key_id}`
-- `GET /svc/discovery/discovery/lineage/key/{key_id}`
-- `GET /svc/discovery/discovery/lineage/provenance/{key_id}`
-- `POST /svc/discovery/discovery/lineage/record`
-- `GET /svc/discovery/discovery/lineage/risk-heatmap`
-- `POST /svc/discovery/discovery/lineage/search`
-- `GET /svc/discovery/discovery/lineage/stats`
-- `POST /svc/discovery/discovery/lineage/tamper-check/{key_id}`
-- `GET /svc/discovery/discovery/lineage/timeline/{key_id}`
 - `GET /svc/discovery/discovery/pii/patterns`
 - `POST /svc/discovery/discovery/pii/scan`
 - `GET /svc/discovery/discovery/posture`
@@ -3535,6 +3567,8 @@ from the code; do not edit by hand.
 - `PUT /svc/keycore/keys/{id}/approval`
 - `POST /svc/keycore/keys/{id}/archive`
 - `POST /svc/keycore/keys/{id}/attest`
+- `POST /svc/keycore/keys/{id}/attested-release`
+- `GET /svc/keycore/keys/{id}/consumers`
 - `GET /svc/keycore/keys/{id}/credential-bindings`
 - `POST /svc/keycore/keys/{id}/credential-bindings`
 - `POST /svc/keycore/keys/{id}/deactivate`
@@ -3718,7 +3752,6 @@ from the code; do not edit by hand.
 ### reporting (`/svc/reporting/`)
 
 - `GET /svc/reporting/alerts`
-- `PUT /svc/reporting/alerts/`
 - `POST /svc/reporting/alerts/bulk/acknowledge`
 - `POST /svc/reporting/alerts/bulk/resolve`
 - `GET /svc/reporting/alerts/channels`
@@ -3736,6 +3769,7 @@ from the code; do not edit by hand.
 - `GET /svc/reporting/alerts/stats/top-sources`
 - `GET /svc/reporting/alerts/unread`
 - `GET /svc/reporting/alerts/{id}`
+- `PUT /svc/reporting/alerts/{id}/{op}`
 - `GET /svc/reporting/incidents`
 - `GET /svc/reporting/incidents/{id}`
 - `PUT /svc/reporting/incidents/{id}/assign`

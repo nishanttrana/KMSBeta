@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-27T13:34:46Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T18:22:24Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `32`
-- Tab/component mappings: `40`
+- Dashboard navigation items: `31`
+- Tab/component mappings: `39`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `943` across `30` services
-- Backend routes on the `pkg/route` kernel: `151` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `607`
-- Frontend call sites with exact backend route match: `557`
-- Frontend call sites needing review or dynamic/runtime confirmation: `50`
-- Clickable controls with static `onClick` handlers: `810`
-- Backend request flows with handler/service/package summaries: `943`
+- Backend HTTP routes discovered: `931` across `30` services
+- Backend routes on the `pkg/route` kernel: `153` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `595`
+- Frontend call sites with exact backend route match: `546`
+- Frontend call sites needing review or dynamic/runtime confirmation: `49`
+- Clickable controls with static `onClick` handlers: `783`
+- Backend request flows with handler/service/package summaries: `931`
 
 ## How To Use This For Launch
 
@@ -113,9 +113,6 @@ flowchart LR
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
-  tab_lineage["Source Traceability"]
-  UI --> tab_lineage
-  tab_lineage --> svc_discovery
   tab_cluster["Cluster"]
   UI --> tab_cluster
   tab_cluster --> svc_auth_edge
@@ -150,7 +147,7 @@ flowchart LR
   tab_restapi --> svc_secrets
   svc_ai["ai"]
   svc_ai_gateway["ai-gateway (31 routes)"]
-  svc_audit["audit (51 routes)"]
+  svc_audit["audit (52 routes)"]
   svc_auth["auth (82 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -159,12 +156,11 @@ flowchart LR
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
-  svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (174 routes)"]
+  svc_keycore["keycore (175 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (19 routes)"]
   svc_pqc["pqc (16 routes)"]
@@ -184,7 +180,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 200 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 201 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Operations Metrics | ops_metrics | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | audit | 5 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
@@ -198,14 +194,13 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 46 |
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 45 |
 | Data & integrations | AI Security Gateway | ai_gateway | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | ai, ai-gateway | 26 |
-| Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 15 |
+| Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 16 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 26 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 23 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | auth, autokey, certs, compliance, keyaccess, keycore, pqc, reporting, signing, workload | 179 |
 | Security & compliance | Threat & Exposure | threat_exposure | web/dashboard/src/components/v3/tabs/ThreatExposureTab.tsx | keycore, posture | 8 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 16 |
-| Security & compliance | Source Traceability | lineage | web/dashboard/src/components/v3/tabs/LineageTab.tsx | discovery | 14 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Health | health | web/dashboard/src/components/v3/tabs/HealthTab.tsx | - | 0 |
@@ -228,7 +223,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
 | ai-gateway | 31 | 23 |
-| audit | 51 | 27 |
+| audit | 52 | 28 |
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
@@ -238,13 +233,13 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | compliance | 42 | 18 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
-| discovery | 26 | 20 |
+| discovery | 12 | 6 |
 | ekm | 64 | 45 |
 | governance | 34 | 23 |
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 174 | 123 |
+| keycore | 175 | 124 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -267,9 +262,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | ai | GET | /ai/protect/policies | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 395 |
 | ai | POST | /ai/protect/policies | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 610 |
 | ai | DELETE | /ai/protect/policies/{param} | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 623 |
-| discovery | GET | /discovery/lineage/tamper-check/{param} | serviceRequest | web/dashboard/src/components/v3/tabs/LineageTab.tsx | 702 |
-| audit | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/audit.ts | 245 |
-| audit | PUT | /alerts/{param}/resolve | serviceRequest | web/dashboard/src/lib/audit.ts | 261 |
+| audit | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/audit.ts | 285 |
+| audit | PUT | /alerts/{param}/resolve | serviceRequest | web/dashboard/src/lib/audit.ts | 301 |
 | keycore | GET | /audit/chain | trackedFetch | web/dashboard/src/lib/auditChain.ts | 6 |
 | keycore | POST | /audit/chain/verify | trackedFetch | web/dashboard/src/lib/auditChain.ts | 12 |
 | keycore | POST | /audit/chain/anchor | trackedFetch | web/dashboard/src/lib/auditChain.ts | 21 |
@@ -315,7 +309,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 275 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
-Showing `50` of `50`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `49` of `49`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -347,14 +341,14 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | PUT | /alerts/channels | h.handleUpdateChannels |  | services/audit/handler.go | 104 |
 | audit | POST | /alerts/channels/test | h.handleTestChannel |  | services/audit/handler.go | 105 |
 | audit | GET | /audit/merkle/epochs/{id} | h.handleMerkleEpoch |  | services/audit/handler.go | 110 |
-| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 115 |
-| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 116 |
-| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 117 |
-| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 128 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 131 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 134 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 135 |
-| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 138 |
+| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 116 |
+| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 117 |
+| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 118 |
+| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 129 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 132 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 135 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 136 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 139 |
 | auth | POST | /auth/register | h.handleRegister |  | services/auth/handler.go | 61 |
 | auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 62 |
 | auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 63 |
@@ -444,7 +438,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 67 |
 | compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 68 |
 
-Showing `120` of `388`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `387`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

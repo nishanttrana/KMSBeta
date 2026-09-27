@@ -104,7 +104,7 @@ var Replicated = map[string][]string{
 	"discovery": {
 		"discovery_assets",
 		"discovery_scans",
-		"lineage_events",
+		"lineage_events", // dropped by discovery migration 003; 002 still creates it
 	},
 	"ekm": {
 		"ekm_agents",

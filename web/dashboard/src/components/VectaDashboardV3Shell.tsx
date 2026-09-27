@@ -16,7 +16,6 @@ import {
   FileText,
   Gauge,
   GitBranch,
-  GitMerge,
   Home as HomeIcon,
   LayoutDashboard,
   Lightbulb,
@@ -102,7 +101,6 @@ const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ 
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
 const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
-const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ default: m.LineageTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 // Enterprise Advanced Features
@@ -208,7 +206,6 @@ const TABS: Record<string, any> = {
   backup: BackupTab,
   devsecops: DevSecOpsTab,
   ai_gateway: AIGatewayTab,
-  lineage: LineageTab,
   playbooks: PlaybooksTab,
   health: HealthTab,
   // Enterprise Advanced Features
@@ -252,7 +249,6 @@ const TITLES: Record<string, string> = {
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
   ai_gateway: "AI Security Gateway",
-  lineage: "Source Traceability",
   playbooks: "Playbooks",
   health: "Health & Reconciliation",
   // Enterprise Advanced Features
@@ -293,7 +289,6 @@ const NAV = [
     { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
     { id: "threat_exposure", icon: ShieldAlert, label: "Threat & Exposure" },
     { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
-    { id: "lineage", icon: GitMerge, label: "Source Traceability" },
     { id: "playbooks", icon: Play, label: "Playbooks" },
   ]},
   { g: "Platform", items: [

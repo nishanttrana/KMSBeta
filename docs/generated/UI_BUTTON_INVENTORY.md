@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-27T13:34:46Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T18:22:24Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 730 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 890 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 941 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 964 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1014 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1051 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1086 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 725 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 885 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 936 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 959 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1009 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1046 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1081 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -433,57 +433,57 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 111 | - | Btn | setShowForm(false)} variant="ghost">Cancel |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 130 | - | Btn | handleToggle(j)}>{j.enabled ? : } |  |
 | web/dashboard/src/components/v3/tabs/KeySchedulingTab.tsx | 133 | - | Btn | handleDelete(j.id)}> |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1779 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:1... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1782 | keys | Btn | } primary style={ } > Create Key |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1789 | keys | Btn | setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,font... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1792 | keys | Btn | } style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:7... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1795 | keys | Btn | setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1805 | keys | button | { e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1933 | keys | button | { e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1975 | keys | button | } style={ } > Edit Key Policy |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1984 | keys | button | } style={ } > Rotate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1997 | keys | button | } style={ } > Verify Integrity |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2003 | keys | button | } style={ } > Attest |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2009 | keys | button | } disabled= style={ } > Deactivate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2019 | keys | button | } disabled= style={ } > Activate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2029 | keys | button | } disabled= style={ } > Disable |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2039 | keys | button | } style={ } > Export |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2052 | keys | button | } style={ } > Delete |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2085 | keys | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2087 | keys | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2208 | keys | button | setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2218 | keys | Btn | setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2236 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2237 | keys | Btn | (icon or dynamic label) | addCustomerKey} disabled={creating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2358 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2359 | keys | Btn | (icon or dynamic label) | submitFormKey} disabled={forming |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2465 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2466 | keys | Btn | (icon or dynamic label) | submitImportKey} disabled={importing |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2524 | keys | Btn | updateKeyStatus(comp,"deactivated")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2525 | keys | Btn | updateKeyStatus(comp,"active")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2526 | keys | Btn | updateKeyStatus(comp,"disabled")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2547 | keys | Btn | }> Rotate |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2548 | keys | Btn | }> Export |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2549 | keys | Btn | openPolicyEditor(selectedKey)}>Edit Key Policy |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2550 | keys | Btn | updateKeyStatus(selectedKey,"deactivated")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2551 | keys | Btn | updateKeyStatus(selectedKey,"active")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2552 | keys | Btn | updateKeyStatus(selectedKey,"disabled")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2553 | keys | Btn | }> Delete |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2619 | keys | Btn | Add Assignment | addPolicyGrant |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2641 | keys | Btn | removePolicyGrant(subjectType,subjectID)}>Remove |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2663 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2664 | keys | Btn | (icon or dynamic label) | saveKeyPolicy} disabled={policySaving |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2681 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2681 | keys | Btn | (icon or dynamic label) | rotateSelectedKey} disabled={rotating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2711 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2712 | keys | Btn | (icon or dynamic label) | exportSelectedKey} disabled={exporting |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2737 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2738 | keys | Btn | (icon or dynamic label) | destroySelectedKey} disabled={!destroyReady |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2757 | keys | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2757 | keys | Btn | (icon or dynamic label) | generatePQCKey} disabled={pqcGenerating |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2763 | keys | Btn | setAttestResult(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2770 | keys | Btn | {const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c... |  |
-| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2771 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1780 | keys | Btn | void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:1... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1783 | keys | Btn | } primary style={ } > Create Key |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1790 | keys | Btn | setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,font... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1793 | keys | Btn | } style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:7... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1796 | keys | Btn | setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1806 | keys | button | { e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1934 | keys | button | { e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1976 | keys | button | } style={ } > Edit Key Policy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1985 | keys | button | } style={ } > Rotate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 1998 | keys | button | } style={ } > Verify Integrity |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2004 | keys | button | } style={ } > Attest |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2010 | keys | button | } disabled= style={ } > Deactivate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2020 | keys | button | } disabled= style={ } > Activate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2030 | keys | button | } disabled= style={ } > Disable |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2040 | keys | button | } style={ } > Export |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2053 | keys | button | } style={ } > Delete |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2086 | keys | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2088 | keys | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2209 | keys | button | setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2219 | keys | Btn | setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2237 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2238 | keys | Btn | (icon or dynamic label) | addCustomerKey} disabled={creating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2359 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2360 | keys | Btn | (icon or dynamic label) | submitFormKey} disabled={forming |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2466 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2467 | keys | Btn | (icon or dynamic label) | submitImportKey} disabled={importing |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2525 | keys | Btn | updateKeyStatus(comp,"deactivated")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2526 | keys | Btn | updateKeyStatus(comp,"active")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2527 | keys | Btn | updateKeyStatus(comp,"disabled")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2549 | keys | Btn | }> Rotate |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2550 | keys | Btn | }> Export |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2551 | keys | Btn | openPolicyEditor(selectedKey)}>Edit Key Policy |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2552 | keys | Btn | updateKeyStatus(selectedKey,"deactivated")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2553 | keys | Btn | updateKeyStatus(selectedKey,"active")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2554 | keys | Btn | updateKeyStatus(selectedKey,"disabled")} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2555 | keys | Btn | }> Delete |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2621 | keys | Btn | Add Assignment | addPolicyGrant |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2643 | keys | Btn | removePolicyGrant(subjectType,subjectID)}>Remove |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2665 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2666 | keys | Btn | (icon or dynamic label) | saveKeyPolicy} disabled={policySaving |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2683 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2683 | keys | Btn | (icon or dynamic label) | rotateSelectedKey} disabled={rotating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2713 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2714 | keys | Btn | (icon or dynamic label) | exportSelectedKey} disabled={exporting |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2739 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2740 | keys | Btn | (icon or dynamic label) | destroySelectedKey} disabled={!destroyReady |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2759 | keys | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2759 | keys | Btn | (icon or dynamic label) | generatePQCKey} disabled={pqcGenerating |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2765 | keys | Btn | setAttestResult(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2772 | keys | Btn | {const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c... |  |
+| web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2773 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 168 | - | Btn | Cancel | onClose |
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 169 | - | Btn | (icon or dynamic label) | submit} disabled={busy |
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 194 | - | Btn | Cancel | onClose |
@@ -497,34 +497,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 410 | - | Btn | void handleDelete(t.id)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 504 | - | Btn | void handleResolve(f.id)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/LeakScannerTab.tsx | 527 | - | Btn | void load(false)}> Refresh |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 798 | lineage | Btn | Export | exportGraphJSON} disabled={!graph |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 801 | lineage | Btn | void loadGraph()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 826 | lineage | button | setView(key)} style={{ padding: "8px 16px", border: "none", background: "tran... |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 848 | lineage | button | } style={{ background: timeFilter === tf.value ? C.accentDim : "transparent",... |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 880 | lineage | button | setSelectedNode(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 916 | lineage | Btn | }>View Timeline |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 917 | lineage | Btn | }>View Dependencies |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 918 | lineage | Btn | }>Impact Analysis |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 926 | lineage | button | setSelectedEdge(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1045 | lineage | Btn | (icon or dynamic label) | doSearch} disabled={searching |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1257 | lineage | Btn | (icon or dynamic label) | doRecordEvent} disabled={recording |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1281 | lineage | Btn | (icon or dynamic label) | loadTimeline} disabled={loadingTimeline |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1332 | lineage | button | toggleEntry(entry.event_id)} style={ }> {isExpanded ? : } |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1384 | lineage | Btn | (icon or dynamic label) | loadDependencies} disabled={loadingDeps |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1439 | lineage | Btn | }>Explore |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1517 | lineage | Btn | } disabled= > |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1831 | lineage | Btn | } disabled= > |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1834 | lineage | Btn | Export JSON | exportAuditJSON} disabled={!auditEvents \|\| auditEvents.length === 0 |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 1938 | lineage | Btn | (icon or dynamic label) | loadProvenance} disabled={loadingProv |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2155 | lineage | Btn | (icon or dynamic label) | loadDataflow} disabled={loadingDf |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2347 | lineage | Btn | } disabled= > |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2424 | lineage | button | setHeatmapDetail(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2540 | lineage | Btn | }> View History |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2613 | lineage | Btn | (icon or dynamic label) | loadForensics} disabled={loadingFor |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2711 | lineage | button | toggleAnomaly(i)} style={ }> {isExpanded ? : } |  |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2829 | lineage | Btn | (icon or dynamic label) | loadCustody} disabled={loadingCust |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 2971 | lineage | Btn | (icon or dynamic label) | verifyCustodyIntegrity} disabled={loadingVerify |
-| web/dashboard/src/components/v3/tabs/LineageTab.tsx | 3018 | lineage | Btn | Export Full Report (JSON) | exportCustodyJSON |
 | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 92 | ops_metrics | button | setTimeWindow(w)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 99 | ops_metrics | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 121 | ops_metrics | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
@@ -553,15 +525,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 133 | - | Btn | void refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 134 | - | Btn | void scanNow()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 135 | - | Btn | void savePolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 536 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 537 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 946 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1182 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1183 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1184 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1185 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1274 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1276 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 537 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 538 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 947 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1183 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1184 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1185 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1186 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1277 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1279 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 477 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 508 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 515 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |
@@ -816,3 +788,4 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/modules/hsm/HSMIntegrationCard.tsx | 95 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/modules/hsm/HSMKeyCheckPanel.tsx | 38 | - | Btn | void run()} disabled= > |  |
 | web/dashboard/src/modules/hsm/HSMPartitionTable.tsx | 48 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/modules/keys/KeyHistoryPanel.tsx | 76 | - | Btn | void verify()} disabled= > |  |

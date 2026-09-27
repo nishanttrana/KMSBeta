@@ -160,6 +160,46 @@ export async function getAuditTimeline(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+// GET /audit/targets/{id}/integrity: each of the target's audit events
+// recomputed from the stored row and checked against its chain links, its
+// HMAC and the Merkle root sealed with its epoch.
+export type AuditEventIntegrity = {
+  event_id: string;
+  sequence: number;
+  timestamp: string;
+  action: string;
+  actor_id: string;
+  result: string;
+  content: "intact" | "altered";
+  link: "linked" | "genesis" | "anchor" | "broken" | "predecessor_missing";
+  signature: "verified" | "unsigned" | "not_checked" | "mismatch" | "key_unknown";
+  seal: "sealed" | "pending" | "leaf_mismatch" | "root_mismatch" | "epoch_unlinked";
+  epoch_number?: number;
+  failures?: string[];
+};
+
+export type AuditTargetIntegrity = {
+  target_id: string;
+  verdict: "intact" | "tampered" | "no_events";
+  events_checked: number;
+  failed: number;
+  sealed: number;
+  pending: number;
+  unsigned: number;
+  truncated: boolean;
+  signing_key_configured: boolean;
+  verified_at: string;
+  events: AuditEventIntegrity[];
+};
+
+export async function verifyTargetIntegrity(session: AuthSession, targetId: string): Promise<AuditTargetIntegrity> {
+  const out = await serviceRequest<{ integrity: AuditTargetIntegrity }>(
+    session, "audit",
+    `/audit/targets/${encodeURIComponent(String(targetId || "").trim())}/integrity?${tenantQuery(session)}`
+  );
+  return out.integrity;
+}
+
 export async function getAuditSession(
   session: AuthSession,
   sessionId: string,

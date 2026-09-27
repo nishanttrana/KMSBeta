@@ -44,24 +44,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /discovery/pii/patterns", h.handleListPIIPatterns)
 	mux.HandleFunc("GET /discovery/data-inventory", h.handleGetDataInventory)
 
-	// Source traceability / data lineage
-	mux.HandleFunc("POST /discovery/lineage/record", h.handleRecordLineageEvent)
-	mux.HandleFunc("GET /discovery/lineage/key/{key_id}", h.handleGetKeyLineage)
-	mux.HandleFunc("GET /discovery/lineage/graph", h.handleGetLineageGraph)
-	mux.HandleFunc("GET /discovery/lineage/impact/{key_id}", h.handleGetLineageImpact)
-	mux.HandleFunc("GET /discovery/lineage/timeline/{key_id}", h.handleGetKeyTimeline)
-	mux.HandleFunc("GET /discovery/lineage/dependencies/{key_id}", h.handleGetKeyDependencies)
-	mux.HandleFunc("POST /discovery/lineage/search", h.handleLineageSearch)
-	mux.HandleFunc("GET /discovery/lineage/stats", h.handleGetLineageStats)
-
-	// Enterprise lineage
-	mux.HandleFunc("GET /discovery/lineage/provenance/{key_id}", h.handleGetKeyProvenance)
-	mux.HandleFunc("GET /discovery/lineage/data-flow/{key_id}", h.handleGetDataFlow)
-	mux.HandleFunc("GET /discovery/lineage/risk-heatmap", h.handleGetRiskHeatmap)
-	mux.HandleFunc("GET /discovery/lineage/access-patterns/{key_id}", h.handleGetAccessPatterns)
-	mux.HandleFunc("GET /discovery/lineage/chain-of-custody/{key_id}", h.handleGetChainOfCustody)
-	mux.HandleFunc("POST /discovery/lineage/tamper-check/{key_id}", h.handleTamperCheck)
-
 	return mux
 }
 

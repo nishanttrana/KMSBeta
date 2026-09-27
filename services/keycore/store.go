@@ -70,6 +70,7 @@ type Store interface {
 	RecordRESTClientSecurityObservation(ctx context.Context, tenantID string, clientID string, observation RESTClientSecurityObservation) error
 
 	ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error)
+	ListKeyConsumers(ctx context.Context, tenantID, keyID string, since time.Time) ([]KeyConsumer, error)
 	GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error)
 	RotateVersion(ctx context.Context, tenantID string, keyID string, newVer KeyVersion, reason string, oldVersionAction string) error
 	UpdateVersionStatus(ctx context.Context, tenantID string, keyID string, version int, status string) error

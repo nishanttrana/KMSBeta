@@ -927,6 +927,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-get-audit-targets-target-id-integrity",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/targets/{target_id}/integrity",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/targets/{target_id}/integrity?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/targets/{target_id}/integrity?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-audit-timeline-target-id",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/timeline/{target_id}",
@@ -6188,6 +6216,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "confidential-post-confidential-release",
+    "group": "Confidential Compute (confidential)",
+    "title": "POST /confidential/release",
+    "service": "confidential",
+    "method": "POST",
+    "pathTemplate": "/confidential/release?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Confidential service.",
+    "requestExample": "POST /svc/confidential/confidential/release?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "confidential-put-confidential-policy",
     "group": "Confidential Compute (confidential)",
     "title": "Update Attestation Policy",
@@ -7734,314 +7790,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "discovery-get-discovery-lineage-access-patterns-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/access-patterns/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/access-patterns/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/access-patterns/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-chain-of-custody-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/chain-of-custody/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/chain-of-custody/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/chain-of-custody/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-data-flow-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/data-flow/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/data-flow/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/data-flow/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-dependencies-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/dependencies/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/dependencies/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/dependencies/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-graph",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/graph",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/graph?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/graph?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-impact-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/impact/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/impact/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/impact/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-key-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/key/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/key/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/key/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-provenance-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/provenance/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/provenance/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/provenance/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-risk-heatmap",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/risk-heatmap",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/risk-heatmap?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/risk-heatmap?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-stats",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/stats",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/stats?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/stats?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-get-discovery-lineage-timeline-key-id",
-    "group": "Discovery (discovery)",
-    "title": "GET /discovery/lineage/timeline/{key_id}",
-    "service": "discovery",
-    "method": "GET",
-    "pathTemplate": "/discovery/lineage/timeline/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "GET /svc/discovery/discovery/lineage/timeline/{key_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "discovery-get-discovery-pii-patterns",
     "group": "Discovery (discovery)",
     "title": "GET /discovery/pii/patterns",
@@ -8163,90 +7911,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Discovery service.",
     "requestExample": "GET /svc/discovery/discovery/summary?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-post-discovery-lineage-record",
-    "group": "Discovery (discovery)",
-    "title": "POST /discovery/lineage/record",
-    "service": "discovery",
-    "method": "POST",
-    "pathTemplate": "/discovery/lineage/record?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "POST /svc/discovery/discovery/lineage/record?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-post-discovery-lineage-search",
-    "group": "Discovery (discovery)",
-    "title": "POST /discovery/lineage/search",
-    "service": "discovery",
-    "method": "POST",
-    "pathTemplate": "/discovery/lineage/search?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "POST /svc/discovery/discovery/lineage/search?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "discovery-post-discovery-lineage-tamper-check-key-id",
-    "group": "Discovery (discovery)",
-    "title": "POST /discovery/lineage/tamper-check/{key_id}",
-    "service": "discovery",
-    "method": "POST",
-    "pathTemplate": "/discovery/lineage/tamper-check/{key_id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Discovery service.",
-    "requestExample": "POST /svc/discovery/discovery/lineage/tamper-check/{key_id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -15663,6 +15327,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-get-keys-id-consumers",
+    "group": "Key Management (keycore)",
+    "title": "GET /keys/{id}/consumers",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys/{id}/consumers?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/keys/{id}/consumers?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-get-keys-id-credential-bindings",
     "group": "Key Management (keycore)",
     "title": "GET /keys/{id}/credential-bindings",
@@ -17660,6 +17352,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/{id}/attest?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-keys-id-attested-release",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/attested-release",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/attested-release?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/attested-release?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -22131,15 +21851,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "reporting-put-alerts",
+    "id": "reporting-put-alerts-id-op",
     "group": "Reporting (reporting)",
-    "title": "PUT /alerts/",
+    "title": "PUT /alerts/{id}/{op}",
     "service": "reporting",
     "method": "PUT",
-    "pathTemplate": "/alerts/?tenant_id={{tenant_id}}",
+    "pathTemplate": "/alerts/{id}/{op}?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Reporting service.",
-    "requestExample": "PUT /svc/reporting/alerts/?tenant_id={{tenant_id}}",
+    "requestExample": "PUT /svc/reporting/alerts/{id}/{op}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

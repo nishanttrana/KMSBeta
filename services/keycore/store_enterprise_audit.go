@@ -1066,7 +1066,9 @@ func parseDBTime(raw any) (time.Time, bool) {
 	case time.Time:
 		return v.UTC(), true
 	case string:
-		for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999Z07:00", "2006-01-02 15:04:05.999999999-07:00", "2006-01-02 15:04:05"} {
+		// The last layout is Go's time.String(), which SQLite returns for an
+		// aggregate (MIN/MAX) over a time column.
+		for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999Z07:00", "2006-01-02 15:04:05.999999999-07:00", "2006-01-02 15:04:05", "2006-01-02 15:04:05.999999999 -0700 MST"} {
 			if t, err := time.Parse(layout, strings.TrimSpace(v)); err == nil {
 				return t.UTC(), true
 			}

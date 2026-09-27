@@ -4,6 +4,40 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.38.0-beta] — 2026-09-27
+
+### Key history lives on the key; the fake lineage tamper check is gone
+- **Removed: Source Traceability.** The tab, all 14 `/discovery/lineage/*`
+  routes and the `lineage_events` table (discovery migration
+  `003_drop_lineage.sql`) are deleted. The only writer was the tab's own
+  "record event" form, so its graph, provenance and chain-of-custody views
+  showed what users typed. Its tamper check (`POST
+  /discovery/lineage/tamper-check/{key_id}`) compared a hash with the same
+  hash recomputed from the same rows, so it always answered "verified".
+  Security & compliance loses the tab. Discovery stays on the route-kernel
+  burn-down list: its scan, asset and PII routes still use a raw mux.
+- **New: Keys > key detail > History & usage.**
+  - *Timeline:* the key's audit events (`GET /audit/timeline/{id}`), with
+    **Verify integrity** calling the new `GET
+    /audit/targets/{target_id}/integrity`. Every event is recomputed from
+    its stored row and checked against its chain links to both neighbours,
+    its HMAC and, once sealed, the Merkle root stored with its epoch. A
+    tampered trail answers `verdict: tampered` with per-event reasons and
+    raises the critical `audit.audit.chain_broken`.
+  - *Used by:* the key's callers from keycore's usage trail (new `GET
+    /keys/{id}/consumers`): actor, interface, operation counts and last use,
+    over the trail's 30 days on this node (each node keeps its own).
+  - *Before you rotate or delete:* the callers affected, the version a
+    rotation creates and what happens to the current one, and version
+    counts by status.
+- **Fixed: Merkle proofs verified against themselves.** `GET
+  /audit/events/{id}/proof` returned the root of a tree rebuilt from the
+  current leaves, so a proof over an altered leaf still verified. It now
+  returns the root stored when the epoch was sealed.
+- New audit events: `audit.audit.target_integrity_verified`,
+  `audit.key.key_consumers_read` (both kernel events, refusals included).
+  `audit.audit.chain_broken` is now in the register.
+
 ## [1.37.0-beta] — 2026-09-27
 
 ### Close the 1.33.0-beta open items for sbom and reporting

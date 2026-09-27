@@ -110,6 +110,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /audit/merkle/epochs/{id}", h.handleMerkleEpoch)
 	mux.HandleFunc("GET /audit/events/{id}/proof", h.handleEventProof)
 	mux.HandleFunc("POST /audit/merkle/verify", h.handleMerkleVerify)
+	h.integrityRouter(selfEmitter{h.svc}).MountOn(mux)
 
 	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
 	mux.HandleFunc("POST /audit/cluster/signing-key/join-key", h.handleClusterKeyJoinKey)
