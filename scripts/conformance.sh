@@ -218,10 +218,17 @@ fake_hits=$(grep -rnE '\b(simulate|synthetic|fabricate|fake|mock)[A-Z][A-Za-z0-9
   --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null \
   | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
 rand_hits=$(grep -rnE 'Math\.random\(\)[[:space:]]*\*[[:space:]]*256|nonce-\$\{Date\.now' web/dashboard/src --include='*.ts' --include='*.tsx' 2>/dev/null || true)
-if [ -n "$fake_hits$rand_hits" ]; then
+# Built-in sample data shown when a backend call fails (MOCK_SCORE,
+# MOCK_WEBHOOKS, MOCK_TARGETS...) presents invented rows as the customer's
+# own. Such constants, or mock/demo/fake/dummy data variables, fail outside
+# tests; a failed fetch renders "not assessed / unavailable" with the error.
+sample_hits=$(grep -rnE '\b(MOCK|DEMO|SAMPLE|FAKE|DUMMY)_[A-Z0-9_]+\b|\b(const|let|var)[[:space:]]+(mock|demo|fake|dummy)[A-Z][A-Za-z0-9]*[[:space:]]*[:=]' services pkg web/dashboard/src \
+  --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null \
+  | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
+if [ -n "$fake_hits$rand_hits$sample_hits" ]; then
   FAIL=1
-  echo "FAIL [real-capability]: simulated results or Math.random security values (CLAUDE.md rule 8)"
-  printf '%s\n' "$fake_hits" "$rand_hits" | grep -v '^$' | sed 's/^/  /'
+  echo "FAIL [real-capability]: simulated results, built-in sample data or Math.random security values (CLAUDE.md rules 7 and 8)"
+  printf '%s\n' "$fake_hits" "$rand_hits" "$sample_hits" | grep -v '^$' | sed 's/^/  /'
 else
   echo "PASS [real-capability]"
 fi

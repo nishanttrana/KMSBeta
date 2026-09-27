@@ -32,7 +32,11 @@ working backend behind it doesn't count as a feature.
   - `simulate*`, `synthetic*`, `fabricate*`, `fake*` and `mock*` functions
     outside tests (Go and dashboard TypeScript);
   - `Math.random()*256` byte generation and `nonce-${Date.now…}` fallbacks
-    in the dashboard.
+    in the dashboard;
+  - built-in sample data outside tests: `MOCK_*`, `DEMO_*`, `SAMPLE_*`,
+    `FAKE_*` or `DUMMY_*` identifiers, and `mock*`/`demo*`/`fake*`/`dummy*`
+    data variables (added 2026-09-27). A failed fetch renders "not assessed /
+    unavailable" with the error.
 - Review: follow the data. If no code path touches the secret, calls the
   network or runs the check, the feature is a record-keeper, whatever the
   UI shows.
@@ -47,5 +51,8 @@ working backend behind it doesn't count as a feature.
 | mTLS Mesh (certs) | "Renew" discarded the cert and key; topology claimed mTLS on plain-HTTP links | Internal mTLS from the internal-services Sub CA ([INTERNAL_TLS.md](INTERNAL_TLS.md)) |
 | "TLS 1.3 + Hybrid PQC (KMS internal)" mode (governance) | Minted ML-DSA certificates for every service, then discarded them; audited `internal_hybrid_tls_applied` | Real hybrid ML-KEM key exchange on every internal mTLS link, asserted by `TestMutualTLSBetweenServices` |
 | Envelope Encryption hierarchy (keycore, 2026-09-27) | KEKs without key material, "rotate" bumped a counter, DEK list always empty, rewrap jobs never ran | `POST /keys/{id}/generate-data-key` + `/unwrap` on real keycore keys |
+| Sample-data fallbacks (dashboard, 2026-09-27) | Crypto Agility, Webhooks, Leak Scanner and Rotation Scheduler tabs showed built-in `MOCK_*` rows as the customer's data when a call failed, and "succeeded" at failed creates | An explicit "not assessed / unavailable" state with the error |
+| Rotation policy trigger (keycore, 2026-09-27) | Wrote a run marked "running" and rotated nothing; no scheduler existed | Trigger and a primary-only scheduler rotate the matching keys through `RotateKey` |
+| Webhook event delivery (audit, 2026-09-27) | Only the Test button sent anything; the dispatcher was never wired | Every matching persisted audit event is delivered, signed and recorded |
 | Secret Vault envelope switch (dashboard, 2026-09-27) | "Off" claimed secrets were stored as-is; the backend always encrypts | Read-only indicator |
 | Tokenize nonce fallback (dashboard) | `Math.random` / timestamp nonces | The browser CSPRNG only; fails closed |

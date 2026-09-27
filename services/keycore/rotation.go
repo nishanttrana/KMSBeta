@@ -9,9 +9,9 @@ type RotationPolicy struct {
 	TargetType       string     `json:"target_type"`
 	TargetFilter     string     `json:"target_filter"`
 	IntervalDays     int        `json:"interval_days"`
-	CronExpr         string     `json:"cron_expr,omitempty"`
+	CronExpr         string     `json:"-"` // legacy column; never evaluated, not exposed
 	AutoRotate       bool       `json:"auto_rotate"`
-	NotifyDaysBefore int        `json:"notify_days_before"`
+	NotifyDaysBefore int        `json:"-"` // legacy column; nothing notified, not exposed
 	Enabled          bool       `json:"enabled"`
 	Status           string     `json:"status"`
 	LastRotationAt   *time.Time `json:"last_rotation_at,omitempty"`
@@ -49,12 +49,10 @@ type UpcomingRotation struct {
 }
 
 type CreateRotationPolicyRequest struct {
-	TenantID         string `json:"tenant_id"`
-	Name             string `json:"name"`
-	TargetType       string `json:"target_type"`
-	TargetFilter     string `json:"target_filter"`
-	IntervalDays     int    `json:"interval_days"`
-	CronExpr         string `json:"cron_expr,omitempty"`
-	AutoRotate       bool   `json:"auto_rotate"`
-	NotifyDaysBefore int    `json:"notify_days_before"`
+	TenantID     string `json:"tenant_id"` // enforced by the kernel
+	Name         string `json:"name"`
+	TargetType   string `json:"target_type"`
+	TargetFilter string `json:"target_filter"`
+	IntervalDays int    `json:"interval_days"`
+	AutoRotate   bool   `json:"auto_rotate"`
 }

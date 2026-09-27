@@ -1,296 +1,237 @@
 package main
 
 import (
-	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"io"
+	"context"
 	"net/http"
 	"strings"
 	"time"
 
-	"vecta-kms/pkg/ssrfguard"
+	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/route"
 )
 
-func (h *Handler) handleListWebhooks(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.store.ListWebhooks(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", "failed to list webhooks", reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"items":      items,
-		"request_id": reqID,
+// selfEmitter records the audit service's own kernel events straight into
+// its chain (it is the pipeline's sink, so it does not publish to itself).
+type selfEmitter struct{ svc *Service }
+
+func (e selfEmitter) Emit(ctx context.Context, action string, evt pkgaudit.Event) error {
+	_, _, err := e.svc.ProcessEvent(ctx, AuditEvent{
+		TenantID: evt.TenantID, Service: "audit", Action: "audit.audit." + action,
+		ActorID: evt.ActorID, ActorType: evt.ActorType, TargetType: evt.TargetType, TargetID: evt.TargetID,
+		Result: evt.Result, StatusCode: evt.StatusCode, ErrorMessage: evt.ErrorMessage,
+		SourceIP: evt.SourceIP, UserAgent: evt.UserAgent, Method: evt.Method, Endpoint: evt.Endpoint,
+		CorrelationID: evt.CorrelationID, DurationMS: evt.DurationMS, Details: evt.Details,
+		Timestamp: time.Now().UTC(),
 	})
+	return err
 }
 
-func (h *Handler) handleCreateWebhook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+// webhookRouter serves webhook management through the pkg/route kernel.
+func (h *Handler) webhookRouter(audit route.Emitter) *route.Router {
+	r := route.New("audit", audit, nil)
+	r.Handle("GET /webhooks", route.Spec{Action: "webhooks_listed", Permission: "audit.webhook.read", Resource: "webhook"}, h.listWebhooks)
+	r.Handle("POST /webhooks", route.Spec{Action: "webhook_created", Permission: "audit.webhook.write", Resource: "webhook", Severity: "warning"}, h.createWebhook)
+	r.Handle("PATCH /webhooks/{id}", route.Spec{Action: "webhook_updated", Permission: "audit.webhook.write", Resource: "webhook", TargetParam: "id", Severity: "warning"}, h.updateWebhook)
+	r.Handle("DELETE /webhooks/{id}", route.Spec{Action: "webhook_deleted", Permission: "audit.webhook.write", Resource: "webhook", TargetParam: "id", Severity: "warning"}, h.deleteWebhook)
+	r.Handle("POST /webhooks/{id}/test", route.Spec{Action: "webhook_tested", Permission: "audit.webhook.write", Resource: "webhook", TargetParam: "id"}, h.testWebhook)
+	r.Handle("GET /webhooks/{id}/deliveries", route.Spec{Action: "webhook_deliveries_listed", Permission: "audit.webhook.read", Resource: "webhook", TargetParam: "id"}, h.listDeliveries)
+	return r
+}
+
+func (h *Handler) fanout() *webhookFanout { return h.svc.webhooks }
+
+func (h *Handler) listWebhooks(c *route.Call) {
+	items, err := h.store.ListWebhooks(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "query_failed", "failed to list webhooks")
 		return
 	}
+	out := make([]Webhook, 0, len(items))
+	for _, w := range items {
+		out = append(out, publicWebhook(w))
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": out})
+}
+
+func validateWebhookSecret(s string) bool { return s == "" || len(s) >= minWebhookSecret }
+
+func (h *Handler) createWebhook(c *route.Call) {
 	var req CreateWebhookRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
-	}
-	if strings.TrimSpace(req.Name) == "" {
-		writeErr(w, http.StatusBadRequest, "validation_error", "name is required", reqID, tenantID)
-		return
-	}
-	if strings.TrimSpace(req.URL) == "" {
-		writeErr(w, http.StatusBadRequest, "validation_error", "url is required", reqID, tenantID)
-		return
-	}
-	// SSRF protection: block webhooks targeting internal IPs or cloud metadata
-	if err := ssrfguard.ValidateWebhookURL(strings.TrimSpace(req.URL)); err != nil {
-		writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
-		return
-	}
-	enabled := true
-	if req.Enabled != nil {
-		enabled = *req.Enabled
-	}
-	format := strings.TrimSpace(req.Format)
-	if format == "" {
-		format = "json"
-	}
-	headers := req.Headers
-	if headers == nil {
-		headers = map[string]string{}
-	}
-	events := req.Events
-	if events == nil {
-		events = []string{}
 	}
 	wh := Webhook{
-		TenantID: tenantID,
-		Name:     strings.TrimSpace(req.Name),
-		URL:      strings.TrimSpace(req.URL),
-		Format:   format,
-		Events:   events,
-		Secret:   req.Secret,
-		Headers:  headers,
-		Enabled:  enabled,
+		TenantID: c.Tenant, Name: strings.TrimSpace(req.Name), URL: strings.TrimSpace(req.URL),
+		Format: strings.TrimSpace(req.Format), Events: req.Events, Secret: req.Secret,
+		Headers: req.Headers, Enabled: req.Enabled == nil || *req.Enabled,
 	}
-	created, err := h.store.CreateWebhook(r.Context(), wh)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_failed", "failed to create webhook", reqID, tenantID)
+	if wh.Format == "" {
+		wh.Format = "json"
+	}
+	if wh.Headers == nil {
+		wh.Headers = map[string]string{}
+	}
+	if !h.validWebhook(c, wh) {
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"webhook":    created,
-		"request_id": reqID,
-	})
+	created, err := h.store.CreateWebhook(c.R.Context(), wh)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "create_failed", "failed to create webhook")
+		return
+	}
+	h.webhookChanged(c, created)
+	c.JSON(http.StatusCreated, map[string]interface{}{"webhook": publicWebhook(created)})
 }
 
-func (h *Handler) handleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
+func (h *Handler) validWebhook(c *route.Call, wh Webhook) bool {
+	fail := func(msg string) bool { c.Error(http.StatusBadRequest, "validation_error", msg); return false }
+	switch {
+	case wh.Name == "":
+		return fail("name is required")
+	case !webhookFormats[wh.Format]:
+		return fail("format must be json, splunk_hec, datadog or slack")
+	case !validateWebhookSecret(wh.Secret):
+		return fail("secret must be at least 16 characters (HMAC keys under 112 bits are not approved)")
 	}
-	id := r.PathValue("id")
-	existing, err := h.store.GetWebhook(r.Context(), tenantID, id)
-	if err != nil {
-		writeErr(w, http.StatusNotFound, "not_found", "webhook not found", reqID, tenantID)
-		return
+	check := validateWebhookURL
+	if f := h.fanout(); f != nil {
+		check = f.disp.validate // the same check delivery applies
 	}
+	if err := check(wh.URL); err != nil {
+		c.Detail("url_refused", err.Error())
+		c.Refuse(http.StatusBadRequest, "url_blocked", err.Error())
+		return false
+	}
+	if err := validateWebhookEvents(wh.Events); err != nil {
+		return fail(err.Error())
+	}
+	if err := validateWebhookHeaders(wh.Headers); err != nil {
+		return fail(err.Error())
+	}
+	return true
+}
+
+func (h *Handler) webhookChanged(c *route.Call, wh Webhook) {
+	c.Target(wh.ID)
+	c.Detail("url_host", hostOf(wh.URL))
+	c.Detail("format", wh.Format)
+	c.Detail("events", wh.Events)
+	c.Detail("enabled", wh.Enabled)
+	c.Detail("signed", wh.Secret != "")
+	if f := h.fanout(); f != nil {
+		f.Invalidate(wh.TenantID)
+	}
+}
+
+func hostOf(raw string) string {
+	s := strings.TrimPrefix(strings.TrimPrefix(raw, "https://"), "http://")
+	if i := strings.IndexAny(s, "/?#"); i >= 0 {
+		s = s[:i]
+	}
+	return s
+}
+
+func (h *Handler) updateWebhook(c *route.Call) {
 	var req UpdateWebhookRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+	if !c.Decode(&req) {
+		return
+	}
+	wh, err := h.store.GetWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		c.Error(http.StatusNotFound, "not_found", "webhook not found")
 		return
 	}
 	if req.Name != nil {
-		existing.Name = strings.TrimSpace(*req.Name)
+		wh.Name = strings.TrimSpace(*req.Name)
 	}
 	if req.URL != nil {
-		newURL := strings.TrimSpace(*req.URL)
-		if err := ssrfguard.ValidateWebhookURL(newURL); err != nil {
-			writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
-			return
-		}
-		existing.URL = newURL
+		wh.URL = strings.TrimSpace(*req.URL)
 	}
 	if req.Format != nil {
-		existing.Format = strings.TrimSpace(*req.Format)
+		wh.Format = strings.TrimSpace(*req.Format)
 	}
 	if req.Events != nil {
-		existing.Events = req.Events
+		wh.Events = req.Events
 	}
-	if req.Secret != nil {
-		existing.Secret = *req.Secret
+	if req.ClearSecret {
+		wh.Secret = ""
+	} else if req.Secret != nil && *req.Secret != "" {
+		wh.Secret = *req.Secret
 	}
 	if req.Headers != nil {
-		existing.Headers = *req.Headers
+		next := make(map[string]string, len(*req.Headers))
+		for k, v := range *req.Headers {
+			if v == "" {
+				v = wh.Headers[k] // values are write-only; empty keeps the stored one
+			}
+			next[k] = v
+		}
+		wh.Headers = next
 	}
 	if req.Enabled != nil {
-		existing.Enabled = *req.Enabled
+		wh.Enabled = *req.Enabled
 	}
-	updated, err := h.store.UpdateWebhook(r.Context(), tenantID, id, existing)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "update_failed", "failed to update webhook", reqID, tenantID)
+	if !h.validWebhook(c, wh) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"webhook":    updated,
-		"request_id": reqID,
+	updated, err := h.store.UpdateWebhook(c.R.Context(), c.Tenant, wh.ID, wh)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "update_failed", "failed to update webhook")
+		return
+	}
+	h.webhookChanged(c, updated)
+	c.JSON(http.StatusOK, map[string]interface{}{"webhook": publicWebhook(updated)})
+}
+
+func (h *Handler) deleteWebhook(c *route.Call) {
+	if err := h.store.DeleteWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id")); err != nil {
+		c.Error(http.StatusNotFound, "not_found", "webhook not found")
+		return
+	}
+	if f := h.fanout(); f != nil {
+		f.Invalidate(c.Tenant)
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"deleted": true, "id": c.R.PathValue("id")})
+}
+
+// testWebhook sends a labelled test event (action audit.audit.webhook_test)
+// through the same delivery path as real events and records the result.
+func (h *Handler) testWebhook(c *route.Call) {
+	wh, err := h.store.GetWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		c.Error(http.StatusNotFound, "not_found", "webhook not found")
+		return
+	}
+	f := h.fanout()
+	if f == nil {
+		c.Error(http.StatusServiceUnavailable, "webhooks_unavailable", "webhook delivery is not running")
+		return
+	}
+	ev := AuditEvent{
+		ID: newID("test"), TenantID: c.Tenant, Service: "audit", Action: webhookSelfPrefix + "test",
+		ActorID: c.Actor(), Result: "success", Timestamp: time.Now().UTC(),
+		Details: map[string]interface{}{"message": "Test delivery from Vecta KMS"},
+	}
+	d := f.deliver(c.R.Context(), wh, ev)
+	c.Detail("delivery_status", d.Status)
+	c.Detail("http_status", d.HTTPStatus)
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"success": d.Status == "success", "status": d.Status, "http_status": d.HTTPStatus,
+		"latency_ms": d.LatencyMs, "error": d.Error,
 	})
 }
 
-func (h *Handler) handleDeleteWebhook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	id := r.PathValue("id")
-	if err := h.store.DeleteWebhook(r.Context(), tenantID, id); err != nil {
-		writeErr(w, http.StatusNotFound, "not_found", "webhook not found", reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"deleted":    true,
-		"id":         id,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	id := r.PathValue("id")
-	wh, err := h.store.GetWebhook(r.Context(), tenantID, id)
-	if err != nil {
-		writeErr(w, http.StatusNotFound, "not_found", "webhook not found", reqID, tenantID)
-		return
-	}
-
-	// SSRF protection on test delivery
-	if err := ssrfguard.ValidateWebhookURL(wh.URL); err != nil {
-		writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
-		return
-	}
-
-	testPayload := map[string]interface{}{
-		"event_type": "test",
-		"tenant_id":  tenantID,
-		"webhook_id": wh.ID,
-		"timestamp":  time.Now().UTC().Format(time.RFC3339),
-		"data": map[string]interface{}{
-			"message": "This is a test delivery from Vecta KMS",
-		},
-	}
-	payloadBytes, _ := json.Marshal(testPayload)
-
-	var sig string
-	if wh.Secret != "" {
-		mac := hmac.New(sha256.New, []byte(wh.Secret))
-		mac.Write(payloadBytes)
-		sig = "sha256=" + hex.EncodeToString(mac.Sum(nil))
-	}
-
-	start := time.Now()
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, wh.URL, bytes.NewReader(payloadBytes))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid_url", fmt.Sprintf("cannot build request: %s", err.Error()), reqID, tenantID)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "VectaKMS-Webhook/1.0")
-	if sig != "" {
-		req.Header.Set("X-KMS-Signature", sig)
-	}
-	for k, v := range wh.Headers {
-		req.Header.Set(k, v)
-	}
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, deliveryErr := client.Do(req)
-	latencyMs := int(time.Since(start).Milliseconds())
-
-	delivery := WebhookDelivery{
-		ID:             newID("wd"),
-		TenantID:       tenantID,
-		WebhookID:      wh.ID,
-		EventType:      "test",
-		PayloadPreview: truncateString(string(payloadBytes), 512),
-		DeliveredAt:    time.Now().UTC(),
-		LatencyMs:      latencyMs,
-		Attempt:        1,
-	}
-
-	success := false
-	httpStatus := 0
-	var errMsg string
-
-	if deliveryErr != nil {
-		delivery.Status = "failure"
-		delivery.Error = deliveryErr.Error()
-		errMsg = deliveryErr.Error()
-	} else {
-		defer resp.Body.Close() //nolint:errcheck
-		io.Copy(io.Discard, resp.Body) //nolint:errcheck
-		httpStatus = resp.StatusCode
-		delivery.HTTPStatus = httpStatus
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			delivery.Status = "success"
-			success = true
-		} else {
-			delivery.Status = "failure"
-			errMsg = fmt.Sprintf("non-2xx response: %d", resp.StatusCode)
-			delivery.Error = errMsg
-		}
-	}
-
-	_ = h.store.RecordDelivery(r.Context(), delivery)
-	_ = h.store.UpdateLastDelivery(r.Context(), tenantID, wh.ID, delivery.Status, delivery.DeliveredAt)
-	if !success {
-		_ = h.store.IncrementFailureCount(r.Context(), tenantID, wh.ID)
-	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"success":    success,
-		"status":     delivery.Status,
-		"http_status": httpStatus,
-		"latency_ms": latencyMs,
-		"error":      errMsg,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleListDeliveries(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	id := r.PathValue("id")
-	limit := atoi(r.URL.Query().Get("limit"))
-	if limit <= 0 {
+func (h *Handler) listDeliveries(c *route.Call) {
+	limit := atoi(c.R.URL.Query().Get("limit"))
+	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	items, err := h.store.ListDeliveries(r.Context(), tenantID, id, limit)
+	items, err := h.store.ListDeliveries(c.R.Context(), c.Tenant, c.R.PathValue("id"), limit)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", "failed to list deliveries", reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "query_failed", "failed to list deliveries")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"items":      items,
-		"request_id": reqID,
-	})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
 func truncateString(s string, max int) string {

@@ -70,9 +70,11 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.posture.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "posture")
 	} else {
 		logger.Printf("nats unavailable, posture event publishing disabled: %v", err)
 	}
@@ -96,7 +98,9 @@ func main() {
 	svc.Configure(engineInterval, hotRetention, auditSyncLimit, autoRemediate)
 	svc.StartScheduler(ctx)
 
-	var rootHandler http.Handler = NewHandler(svc)
+	postureHandler := NewHandler(svc)
+	postureHandler.SetAuditClient(auditClient)
+	var rootHandler http.Handler = postureHandler
 	// Optional JWT parsing: populate claims when a valid token is present so
 	// tenantcheck.Enforce binds requests to the authenticated tenant. Absent
 	// tokens are allowed through here (tenant-scoped feature handlers that must

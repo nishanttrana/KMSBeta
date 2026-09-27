@@ -56,6 +56,8 @@ func createAuditSchemaForTest(conn *pkgdb.DB) error {
 			escalated_from TEXT, escalated_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE webhooks (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, url TEXT NOT NULL, format TEXT NOT NULL DEFAULT 'json', events_json TEXT NOT NULL DEFAULT '[]', secret TEXT NOT NULL DEFAULT '', headers_json TEXT NOT NULL DEFAULT '{}', enabled BOOLEAN NOT NULL DEFAULT TRUE, failure_count INT NOT NULL DEFAULT 0, last_delivery_at TIMESTAMP, last_delivery_status TEXT, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
+		`CREATE TABLE webhook_deliveries (id TEXT NOT NULL, tenant_id TEXT NOT NULL, webhook_id TEXT NOT NULL, event_type TEXT NOT NULL, payload_preview TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'success', http_status INT, delivered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, latency_ms INT NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', attempt INT NOT NULL DEFAULT 1, PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE alert_rules (
 			id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, condition_expr TEXT NOT NULL,
 			severity TEXT NOT NULL, title TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP

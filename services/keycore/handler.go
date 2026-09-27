@@ -202,13 +202,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /ceremony/{id}/abort", h.handleAbortCeremony)
 
 	// Rotation routes
-	mux.HandleFunc("GET /rotation/policies", h.handleListRotationPolicies)
-	mux.HandleFunc("POST /rotation/policies", h.handleCreateRotationPolicy)
-	mux.HandleFunc("PATCH /rotation/policies/{id}", h.handleUpdateRotationPolicy)
-	mux.HandleFunc("DELETE /rotation/policies/{id}", h.handleDeleteRotationPolicy)
-	mux.HandleFunc("POST /rotation/policies/{id}/trigger", h.handleTriggerRotation)
-	mux.HandleFunc("GET /rotation/runs", h.handleListRotationRuns)
-	mux.HandleFunc("GET /rotation/upcoming", h.handleListUpcomingRotations)
+	h.rotationRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /rotation/analytics", h.handleGetRotationAnalytics)
 	mux.HandleFunc("GET /rotation/analytics/overdue", h.handleListOverdueRotationMetrics)
 	mux.HandleFunc("GET /keys/{id}/rotation-metrics", h.handleListKeyRotationMetrics)

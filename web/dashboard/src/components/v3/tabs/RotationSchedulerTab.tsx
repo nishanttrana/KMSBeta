@@ -1,9 +1,8 @@
-// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useEffect, useState } from "react";
 import {
   RefreshCw, Clock, AlertTriangle, CheckCircle2, Plus, Trash2, Play, Edit2, CalendarClock
 } from "lucide-react";
-import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
@@ -15,13 +14,18 @@ import {
   listRuns,
   listUpcoming,
   type RotationPolicy,
+  type RotationPolicyInput,
   type RotationRun,
   type UpcomingRotation,
 } from "../../../lib/rotationScheduler";
 
+// Every row comes from keycore's /rotation routes; a policy run really
+// rotates the matching keys. When the routes can't be read the tab says so
+// with the error; it never substitutes sample data.
+
 /* ────── Helpers ────── */
 
-function fmtDate(iso: string) {
+function fmtDate(iso?: string) {
   if (!iso) return "—";
   try { return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
   catch { return "—"; }
@@ -62,32 +66,9 @@ function policyStatusColor(s: string) {
   }
 }
 
-/* ────── Mock Data ────── */
-
-const MOCK_POLICIES: RotationPolicy[] = [
-  { id: "p1", tenant_id: "t1", name: "Critical Keys — 90d", target_type: "key", target_filter: "tag:critical", interval_days: 90, auto_rotate: true, notify_days_before: 14, last_rotation_at: "2025-01-05T02:00:00Z", next_rotation_at: "2025-04-05T02:00:00Z", enabled: true, created_at: "2024-10-01T00:00:00Z", total_rotations: 4, status: "active" },
-  { id: "p2", tenant_id: "t1", name: "TLS Certificates — 60d", target_type: "certificate", target_filter: "tag:tls", interval_days: 60, auto_rotate: true, notify_days_before: 7, last_rotation_at: "2025-01-25T03:00:00Z", next_rotation_at: "2025-03-26T03:00:00Z", enabled: true, created_at: "2024-11-01T00:00:00Z", total_rotations: 6, status: "active" },
-  { id: "p3", tenant_id: "t1", name: "DB Secrets — 30d", target_type: "secret", target_filter: "tag:database", interval_days: 30, auto_rotate: false, notify_days_before: 5, last_rotation_at: "2025-02-24T04:00:00Z", next_rotation_at: "2025-03-26T04:00:00Z", enabled: true, created_at: "2024-12-01T00:00:00Z", total_rotations: 12, status: "active" },
-  { id: "p4", tenant_id: "t1", name: "API Keys — 180d", target_type: "key", target_filter: "tag:api", interval_days: 180, auto_rotate: false, notify_days_before: 21, last_rotation_at: "2024-10-01T00:00:00Z", next_rotation_at: "2025-04-01T00:00:00Z", enabled: false, created_at: "2024-07-01T00:00:00Z", total_rotations: 2, status: "paused" },
-];
-
-const MOCK_UPCOMING: UpcomingRotation[] = [
-  { policy_id: "p2", policy_name: "TLS Certificates — 60d", target_id: "cert-tls-prod-01", target_name: "tls-prod-01", target_type: "certificate", scheduled_at: "2025-03-26T03:00:00Z", days_until: 1, overdue: false },
-  { policy_id: "p3", policy_name: "DB Secrets — 30d", target_id: "secret-db-primary", target_name: "db-primary-secret", target_type: "secret", scheduled_at: "2025-03-26T04:00:00Z", days_until: 1, overdue: false },
-  { policy_id: "p2", policy_name: "TLS Certificates — 60d", target_id: "cert-tls-staging-01", target_name: "tls-staging-01", target_type: "certificate", scheduled_at: "2025-03-20T03:00:00Z", days_until: -5, overdue: true },
-  { policy_id: "p1", policy_name: "Critical Keys — 90d", target_id: "key-root-enc-01", target_name: "root-encryption-key", target_type: "key", scheduled_at: "2025-04-05T02:00:00Z", days_until: 11, overdue: false },
-];
-
-const MOCK_RUNS: RotationRun[] = [
-  { id: "r1", policy_id: "p1", policy_name: "Critical Keys — 90d", target_id: "key-root-enc-prev", target_name: "root-encryption-key", target_type: "key", started_at: "2025-01-05T02:00:00Z", completed_at: "2025-01-05T02:01:13Z", status: "success", triggered_by: "schedule" },
-  { id: "r2", policy_id: "p2", policy_name: "TLS Certificates — 60d", target_id: "cert-tls-prod-01", target_name: "tls-prod-01", target_type: "certificate", started_at: "2025-01-25T03:00:00Z", completed_at: "2025-01-25T03:02:44Z", status: "success", triggered_by: "schedule" },
-  { id: "r3", policy_id: "p3", policy_name: "DB Secrets — 30d", target_id: "secret-db-replica", target_name: "db-replica-secret", target_type: "secret", started_at: "2025-02-24T04:00:00Z", completed_at: "2025-02-24T04:00:22Z", status: "failed", error: "Connection timeout to secret store", triggered_by: "schedule" },
-  { id: "r4", policy_id: "p2", policy_name: "TLS Certificates — 60d", target_id: "cert-tls-api-01", target_name: "tls-api-01", target_type: "certificate", started_at: "2025-03-10T14:00:00Z", completed_at: "2025-03-10T14:01:58Z", status: "success", triggered_by: "manual" },
-];
-
 /* ────── Main Component ────── */
 
-export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: { session: any; enabledFeatures?: any; keyCatalog?: any[] }) => {
+export const RotationSchedulerTab = ({ session }: { session: any; enabledFeatures?: any; keyCatalog?: any[] }) => {
   const [section, setSection] = useState("policies");
   const [loading, setLoading] = useState(false);
   const [policies, setPolicies] = useState<RotationPolicy[]>([]);
@@ -101,11 +82,11 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
   const [policyModal, setPolicyModal] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<RotationPolicy | null>(null);
   const [pName, setPName] = useState("");
-  const [pTargetType, setPTargetType] = useState<string>("key");
   const [pFilter, setPFilter] = useState("");
   const [pInterval, setPInterval] = useState("90");
   const [pAutoRotate, setPAutoRotate] = useState(true);
-  const [pNotifyBefore, setPNotifyBefore] = useState("7");
+  const [unavailable, setUnavailable] = useState("");
+  const [notice, setNotice] = useState("");
   const [pSaving, setPSaving] = useState(false);
   const [pError, setPError] = useState("");
 
@@ -114,19 +95,12 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
     setLoading(true);
     setError("");
     try {
-      const [p, u, r] = await Promise.all([
-        listPolicies(session).catch(() => MOCK_POLICIES),
-        listUpcoming(session).catch(() => MOCK_UPCOMING),
-        listRuns(session).catch(() => MOCK_RUNS),
-      ]);
-      setPolicies(Array.isArray(p) ? p : MOCK_POLICIES);
-      setUpcoming(Array.isArray(u) ? u : MOCK_UPCOMING);
-      setRuns(Array.isArray(r) ? r : MOCK_RUNS);
-    } catch (e: any) {
-      setError(errMsg(e));
-      setPolicies(MOCK_POLICIES);
-      setUpcoming(MOCK_UPCOMING);
-      setRuns(MOCK_RUNS);
+      const [p, u, r] = await Promise.all([listPolicies(session), listUpcoming(session), listRuns(session)]);
+      setPolicies(p); setUpcoming(u); setRuns(r);
+      setUnavailable("");
+    } catch (e: unknown) {
+      setPolicies([]); setUpcoming([]); setRuns([]);
+      setUnavailable(errMsg(e));
     } finally {
       setLoading(false);
     }
@@ -139,23 +113,22 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
   const activePolicies = policies.filter((p) => p.status === "active").length;
   const upcoming7d = upcoming.filter((u) => !u.overdue && u.days_until <= 7).length;
   const overdueCount = upcoming.filter((u) => u.overdue).length;
-  const last24hRuns = runs.filter((r) => {
-    try { return Date.now() - new Date(r.started_at).getTime() < 86400000; }
-    catch { return false; }
-  }).length;
+  const last24hRuns = runs.filter((r) => r.status === "success" && Date.now() - new Date(r.started_at).getTime() < 86400000).length;
+  const policyById = new Map(policies.map((p) => [p.id, p]));
+  const daysOverdue = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
 
   const openCreateModal = () => {
     setEditingPolicy(null);
-    setPName(""); setPTargetType("key"); setPFilter(""); setPInterval("90");
-    setPAutoRotate(true); setPNotifyBefore("7"); setPError("");
+    setPName(""); setPFilter(""); setPInterval("90");
+    setPAutoRotate(true); setPError("");
     setPolicyModal(true);
   };
 
   const openEditModal = (p: RotationPolicy) => {
     setEditingPolicy(p);
-    setPName(p.name); setPTargetType(p.target_type); setPFilter(p.target_filter || "");
+    setPName(p.name); setPFilter(p.target_filter || "");
     setPInterval(String(p.interval_days)); setPAutoRotate(p.auto_rotate);
-    setPNotifyBefore(String(p.notify_days_before)); setPError("");
+    setPError("");
     setPolicyModal(true);
   };
 
@@ -164,14 +137,11 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
     if (!Number(pInterval) || Number(pInterval) < 1) { setPError("Interval must be at least 1 day."); return; }
     setPSaving(true);
     setPError("");
-    const payload: Partial<RotationPolicy> = {
+    const payload: RotationPolicyInput = {
       name: pName.trim(),
-      target_type: pTargetType as RotationPolicy["target_type"],
       target_filter: pFilter.trim(),
       interval_days: Number(pInterval),
       auto_rotate: pAutoRotate,
-      notify_days_before: Number(pNotifyBefore) || 7,
-      enabled: true,
     };
     try {
       if (editingPolicy?.id) {
@@ -191,24 +161,52 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
   const doDelete = async (p: RotationPolicy) => {
     if (!window.confirm(`Delete policy "${p.name}"?`)) return;
     setDeleteBusy(p.id);
+    setError("");
     try {
       await deletePolicy(session, p.id);
+    } catch (e: unknown) {
+      setError(`Delete failed: ${errMsg(e)}`);
+    } finally {
+      setDeleteBusy("");
       await refresh();
-    } catch { /* ignore */ }
-    finally { setDeleteBusy(""); }
+    }
   };
 
   const doTrigger = async (policyId: string, policyName: string) => {
-    if (!window.confirm(`Manually trigger rotation for policy "${policyName}"?`)) return;
+    const filter = policyById.get(policyId)?.target_filter ?? "";
+    if (!window.confirm(`Rotate every active key matching "${filter}" now (policy "${policyName}")? Each key gets a new version.`)) return;
     setTriggerBusy(policyId);
+    setError(""); setNotice("");
     try {
-      await triggerRotation(session, policyId);
+      const out = await triggerRotation(session, policyId);
+      const msg = `${policyName}: rotated ${out.rotated} of ${out.matched} matching key${out.matched === 1 ? "" : "s"}`;
+      if (out.failed > 0) setError(`${msg}; ${out.failed} failed (see History)`);
+      else setNotice(msg);
+    } catch (e: unknown) {
+      setError(`Rotation not run: ${errMsg(e)}`);
+    } finally {
+      setTriggerBusy("");
       await refresh();
-    } catch { /* ignore */ }
-    finally { setTriggerBusy(""); }
+    }
   };
 
   /* ════════════ RENDER ════════════ */
+  if (unavailable) {
+    return (
+      <Card style={{ padding: 20 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <AlertTriangle size={16} color={C.red} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Not assessed: rotation data is unavailable</div>
+            <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>keycore did not return rotation policies, schedule or history, so none are shown.</div>
+            <div style={{ fontSize: 10, color: C.red, marginTop: 6, fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-word" }}>{unavailable}</div>
+            <div style={{ marginTop: 10 }}><Btn small onClick={() => void refresh()}><RefreshCw size={11} /> Retry</Btn></div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
 
@@ -224,6 +222,11 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
       {error && (
         <div style={{ padding: "8px 12px", borderRadius: 7, background: C.redDim, border: `1px solid ${C.red}`, fontSize: 11, color: C.red }}>
           {error}
+        </div>
+      )}
+      {notice && (
+        <div style={{ padding: "8px 12px", borderRadius: 7, background: C.greenDim, border: `1px solid ${C.green}`, fontSize: 11, color: C.green }}>
+          {notice}
         </div>
       )}
 
@@ -277,12 +280,10 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
                 >
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>Next: {fmtDate(p.next_rotation_at)} · {p.total_rotations} total runs</div>
+                    <div style={{ fontSize: 9, color: C.dim }}>Next: {fmtDate(p.next_rotation_at)} · Last: {fmtDate(p.last_rotation_at)} · {p.total_rotations} keys rotated</div>
                   </div>
                   <div>
-                    <B c={p.target_type === "key" ? "accent" : p.target_type === "certificate" ? "blue" : "purple"}>
-                      {p.target_type}
-                    </B>
+                    <B c="accent">{p.target_type}</B>
                   </div>
                   <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.target_filter || "—"}
@@ -291,7 +292,7 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
                   <div>
                     <B c={p.auto_rotate ? "green" : "muted"}>{p.auto_rotate ? "Auto" : "Manual"}</B>
                   </div>
-                  <div><B c={policyStatusColor(p.status)}>{p.status}</B></div>
+                  <div title={p.last_error || undefined}><B c={policyStatusColor(p.status)}>{p.enabled ? p.status : "disabled"}</B></div>
                   <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                     <Btn small disabled={triggerBusy === p.id} onClick={() => void doTrigger(p.id, p.name)}>
                       <Play size={9} /> {triggerBusy === p.id ? "..." : "Run"}
@@ -317,7 +318,7 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
             <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "9px 14px", borderBottom: `1px solid ${C.border}`, fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, background: C.surface }}>
               <div>Policy</div>
               <div>Target</div>
-              <div>Type</div>
+              <div>Mode</div>
               <div>Scheduled</div>
               <div>Days Until</div>
               <div style={{ textAlign: "right" }}>Action</div>
@@ -337,22 +338,20 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
               )}
               {!loading && upcoming.map((u, idx) => (
                 <div
-                  key={`${u.policy_id}-${u.target_id}-${idx}`}
+                  key={`${u.policy_id}-${idx}`}
                   style={{ display: "grid", gridTemplateColumns: "1.5fr 1.5fr 0.7fr 1fr 0.8fr auto", padding: "10px 14px", borderBottom: `1px solid ${C.border}`, alignItems: "center", fontSize: 11, background: u.overdue ? C.redTint : "transparent", transition: "background 120ms" }}
                   onMouseEnter={(e) => { if (!u.overdue) e.currentTarget.style.background = C.cardHover; }}
                   onMouseLeave={(e) => { if (!u.overdue) e.currentTarget.style.background = "transparent"; }}
                 >
                   <div style={{ color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.policy_name}</div>
-                  <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.target_name}</div>
+                  <div style={{ color: C.dim, fontFamily: "'JetBrains Mono', monospace", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>keys matching {policyById.get(u.policy_id)?.target_filter ?? "—"}</div>
                   <div>
-                    <B c={u.target_type === "key" ? "accent" : u.target_type === "certificate" ? "blue" : "purple"}>
-                      {u.target_type}
-                    </B>
+                    <B c={policyById.get(u.policy_id)?.auto_rotate ? "green" : "muted"}>{policyById.get(u.policy_id)?.auto_rotate ? "auto" : "manual"}</B>
                   </div>
                   <div style={{ color: C.dim, fontSize: 10 }}>{fmtDateTime(u.scheduled_at)}</div>
                   <div>
                     {u.overdue
-                      ? <span style={{ color: C.red, fontWeight: 700, fontSize: 11 }}>{Math.abs(u.days_until)}d overdue</span>
+                      ? <span style={{ color: C.red, fontWeight: 700, fontSize: 11 }}>{daysOverdue(u.scheduled_at)}d overdue</span>
                       : <span style={{ color: u.days_until <= 3 ? C.amber : C.text, fontWeight: 600 }}>{u.days_until}d</span>
                     }
                   </div>
@@ -409,8 +408,8 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
                   <div style={{ color: C.dim, fontSize: 10 }}>{runDuration(r.started_at, r.completed_at)}</div>
                   <div><B c={runStatusColor(r.status)}>{r.status}</B></div>
                   <div>
-                    <B c={r.triggered_by === "manual" ? "amber" : r.triggered_by === "expiry" ? "orange" : "blue"}>
-                      {r.triggered_by}
+                    <B c={r.triggered_by.startsWith("manual") ? "amber" : "blue"}>
+                      {r.triggered_by.startsWith("manual:") ? `manual (${r.triggered_by.slice(7)})` : r.triggered_by}
                     </B>
                   </div>
                 </div>
@@ -426,26 +425,14 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
           <FG label="Policy Name" required>
             <Inp value={pName} onChange={(e) => setPName(e.target.value)} placeholder="e.g. Critical Keys — 90d" />
           </FG>
-          <FG label="Target Type" required>
-            <Sel value={pTargetType} onChange={(e) => setPTargetType(e.target.value)}>
-              <option value="key">Key</option>
-              <option value="secret">Secret</option>
-              <option value="certificate">Certificate</option>
-            </Sel>
-          </FG>
-        </Row2>
-        <FG label="Target Filter" hint="Tag selector or glob pattern, e.g. tag:critical or prefix:prod-*">
-          <Inp value={pFilter} onChange={(e) => setPFilter(e.target.value)} placeholder="tag:critical" />
-        </FG>
-        <Row2>
-          <FG label="Interval (days)" required hint="How often to rotate matching targets">
+          <FG label="Interval (days)" required hint="How often to rotate matching keys">
             <Inp type="number" value={pInterval} onChange={(e) => setPInterval(e.target.value)} placeholder="90" />
           </FG>
-          <FG label="Notify N Days Before" hint="Send notification this many days before rotation">
-            <Inp type="number" value={pNotifyBefore} onChange={(e) => setPNotifyBefore(e.target.value)} placeholder="7" />
-          </FG>
         </Row2>
-        <FG label="Auto Rotate" hint="When enabled, rotation runs automatically on schedule. When disabled, requires manual trigger.">
+        <FG label="Keys to rotate" required hint="* (every active key), tag:<tag>, id:<key id>, or a key-name glob such as prod-*. Secrets and certificates are rotated by their own services.">
+          <Inp value={pFilter} onChange={(e) => setPFilter(e.target.value)} placeholder="tag:critical" mono />
+        </FG>
+        <FG label="Auto Rotate" hint="When enabled, keycore rotates the matching keys when the policy is due. When disabled, keys rotate only when you press Run.">
           <div
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", width: "fit-content" }}
             onClick={() => setPAutoRotate((v) => !v)}
@@ -461,7 +448,7 @@ export const RotationSchedulerTab = ({ session, enabledFeatures, keyCatalog }: {
         {pError && <div style={{ fontSize: 10, color: C.red, marginBottom: 8, padding: "6px 10px", background: C.redDim, borderRadius: 6 }}>{pError}</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
           <Btn small onClick={() => setPolicyModal(false)}>Cancel</Btn>
-          <Btn small primary onClick={savePolicy} disabled={pSaving || !pName.trim()}>
+          <Btn small primary onClick={savePolicy} disabled={pSaving || !pName.trim() || !pFilter.trim()}>
             {pSaving ? "Saving..." : editingPolicy ? "Update Policy" : "Create Policy"}
           </Btn>
         </div>

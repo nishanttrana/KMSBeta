@@ -1,5 +1,4 @@
-// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import {
   AlertTriangle,
   Eye,
@@ -15,73 +14,23 @@ import {
   X
 } from "lucide-react";
 import {
-  listLeakTargets,
-  addLeakTarget,
-  deleteLeakTarget,
-  triggerLeakScan,
-  listLeakFindings,
-  resolveLeakFinding,
-  listLeakJobs
+  listTargets,
+  createTarget,
+  deleteTarget,
+  triggerScan,
+  listFindings,
+  updateFinding,
+  listJobs,
+  type ScanTarget as LeakTarget,
+  type ScanTargetType as TargetType,
+  type LeakFinding,
+  type ScanJob as LeakJob,
 } from "../../../lib/leakScanner";
-import { B, Bar, Btn, Card, FG, Inp, Modal, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { B, Bar, Btn, Card, FG, Inp, Modal, Section, Sel, Stat, Tabs, Txt } from "../legacyPrimitives";
 import { C } from "../../v3/theme";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type TargetType = "git_repo" | "container_image" | "log_stream";
-
-interface LeakTarget {
-  id: string;
-  name: string;
-  type: TargetType;
-  uri: string;
-  enabled: boolean;
-  last_scanned?: string;
-  open_findings: number;
-}
-
-interface LeakFinding {
-  id: string;
-  severity: "critical" | "high" | "medium" | "low" | "info";
-  secret_type: string;
-  target_id: string;
-  target_name: string;
-  location: string;
-  entropy: number;
-  status: "open" | "acknowledged" | "resolved";
-  detected_at: string;
-}
-
-interface LeakJob {
-  id: string;
-  target_name: string;
-  target_type: TargetType;
-  status: "running" | "queued" | "completed" | "failed";
-  progress: number;
-  started_at: string;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_TARGETS: LeakTarget[] = [
-  { id: "tgt-001", name: "vecta-core", type: "git_repo", uri: "https://github.com/vecta-io/vecta-core.git", enabled: true, last_scanned: new Date(Date.now() - 3600 * 1000).toISOString(), open_findings: 3 },
-  { id: "tgt-002", name: "api-gateway:latest", type: "container_image", uri: "registry.vecta.io/api-gateway:latest", enabled: true, last_scanned: new Date(Date.now() - 7200 * 1000).toISOString(), open_findings: 1 },
-  { id: "tgt-003", name: "prod-audit-logs", type: "log_stream", uri: "cloudwatch://us-east-1/prod/audit", enabled: false, last_scanned: new Date(Date.now() - 86400 * 1000).toISOString(), open_findings: 2 }
-];
-
-const MOCK_FINDINGS: LeakFinding[] = [
-  { id: "fnd-001", severity: "critical", secret_type: "aws_access_key", target_id: "tgt-001", target_name: "vecta-core", location: "src/config/aws.ts:L42", entropy: 4.92, status: "open", detected_at: new Date(Date.now() - 900 * 1000).toISOString() },
-  { id: "fnd-002", severity: "high", secret_type: "jwt_token", target_id: "tgt-001", target_name: "vecta-core", location: "tests/fixtures/auth.json:L18", entropy: 4.61, status: "open", detected_at: new Date(Date.now() - 1800 * 1000).toISOString() },
-  { id: "fnd-003", severity: "high", secret_type: "generic_api_key", target_id: "tgt-002", target_name: "api-gateway:latest", location: "/etc/gateway/config.yaml:L7", entropy: 4.44, status: "acknowledged", detected_at: new Date(Date.now() - 7200 * 1000).toISOString() },
-  { id: "fnd-004", severity: "medium", secret_type: "private_key_pem", target_id: "tgt-001", target_name: "vecta-core", location: "scripts/deploy.sh:L93", entropy: 4.28, status: "open", detected_at: new Date(Date.now() - 3600 * 1000).toISOString() },
-  { id: "fnd-005", severity: "low", secret_type: "slack_webhook", target_id: "tgt-003", target_name: "prod-audit-logs", location: "log-line:2024-03-20T08:12:31Z", entropy: 3.87, status: "resolved", detected_at: new Date(Date.now() - 86400 * 1000).toISOString() },
-  { id: "fnd-006", severity: "critical", secret_type: "gcp_service_account_key", target_id: "tgt-003", target_name: "prod-audit-logs", location: "log-line:2024-03-21T14:03:55Z", entropy: 5.01, status: "open", detected_at: new Date(Date.now() - 43200 * 1000).toISOString() }
-];
-
-const MOCK_JOBS: LeakJob[] = [
-  { id: "job-001", target_name: "vecta-core", target_type: "git_repo", status: "running", progress: 67, started_at: new Date(Date.now() - 120 * 1000).toISOString() },
-  { id: "job-002", target_name: "api-gateway:latest", target_type: "container_image", status: "queued", progress: 0, started_at: new Date(Date.now() - 30 * 1000).toISOString() }
-];
+// Every row comes from posture's /leaks routes. When they can't be read the
+// tab says so with the error; it never substitutes sample data.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,13 +75,19 @@ function targetTypeIcon(t: TargetType) {
   return <ScrollText size={11} color={C.teal} />;
 }
 
-function uriPlaceholder(t: TargetType): string {
-  if (t === "git_repo") return "https://github.com/org/repo.git";
-  if (t === "container_image") return "registry.example.io/image:tag";
-  return "cloudwatch://region/group/stream";
+const TARGET_TYPES: { v: TargetType; l: string }[] = [
+  { v: "git_repo", l: "Git Repository" },
+  { v: "container_image", l: "Container Image (unpacked)" },
+  { v: "log_stream", l: "Log Files" },
+  { v: "s3_bucket", l: "Bucket Export" },
+  { v: "env_file", l: "Env / Config File" },
+];
+
+function errText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
-const TH: React.CSSProperties = {
+const TH: CSSProperties = {
   padding: "6px 10px",
   fontSize: 9,
   fontWeight: 600,
@@ -143,7 +98,7 @@ const TH: React.CSSProperties = {
   whiteSpace: "nowrap"
 };
 
-const TD: React.CSSProperties = {
+const TD: CSSProperties = {
   padding: "8px 10px",
   fontSize: 11,
   color: C.text,
@@ -193,13 +148,11 @@ function AddTargetModal({ open, onClose, onAdd }: AddTargetModalProps) {
       </FG>
       <FG label="Target Type" required>
         <Sel value={type} onChange={e => setType(e.target.value as TargetType)}>
-          <option value="git_repo">Git Repository</option>
-          <option value="container_image">Container Image</option>
-          <option value="log_stream">Log Stream</option>
+          {TARGET_TYPES.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
         </Sel>
       </FG>
-      <FG label="URI" required>
-        <Inp value={uri} onChange={e => setUri(e.target.value)} placeholder={uriPlaceholder(type)} />
+      <FG label="Path" required hint="A path under the server's LEAK_SCAN_ROOT (relative or file://). Remote URLs are not fetched: scanning one fails with that reason. You can also paste content to scan from the target's row.">
+        <Inp value={uri} onChange={e => setUri(e.target.value)} placeholder="repos/payments-service" mono />
       </FG>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <div
@@ -219,12 +172,39 @@ function AddTargetModal({ open, onClose, onAdd }: AddTargetModalProps) {
   );
 }
 
+// ─── Paste Content Modal ──────────────────────────────────────────────────────
+
+function PasteScanModal({ target, onClose, onScan }: {
+  target: LeakTarget | null;
+  onClose: () => void;
+  onScan: (content: { content: string; filename: string }) => Promise<void>;
+}) {
+  const [content, setContent] = useState("");
+  const [filename, setFilename] = useState("");
+  useEffect(() => { if (target) { setContent(""); setFilename(""); } }, [target]);
+  return (
+    <Modal open={Boolean(target)} onClose={onClose} title={`Scan content: ${target?.name ?? ""}`}>
+      <FG label="File name" hint="Used as the finding location, e.g. .env or deploy.sh">
+        <Inp value={filename} onChange={e => setFilename(e.target.value)} placeholder=".env" mono />
+      </FG>
+      <FG label="Content" required hint="Scanned on the server and discarded; findings keep a redacted preview only.">
+        <Txt rows={8} value={content} onChange={e => setContent(e.target.value)} placeholder="Paste a config file, diff or log excerpt" />
+      </FG>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn primary disabled={!content.trim()} onClick={() => void onScan({ content, filename: filename.trim() })}>Scan</Btn>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface LeakScannerTabProps {
   session: any;
   enabledFeatures?: any;
   keyCatalog?: any[];
+  configOnly?: boolean;
 }
 
 // configOnly drops the Findings section (covered by the unified Threat &
@@ -244,22 +224,18 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
   const [deleteBusy, setDeleteBusy] = useState<string>("");
   const [resolveBusy, setResolveBusy] = useState<string>("");
 
+  const [unavailable, setUnavailable] = useState("");
+  const [pasteTarget, setPasteTarget] = useState<LeakTarget | null>(null);
+
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    setError("");
     try {
-      const [t, f, j] = await Promise.all([
-        listLeakTargets(session),
-        listLeakFindings(session),
-        listLeakJobs(session)
-      ]);
-      setTargets(Array.isArray(t) ? t : MOCK_TARGETS);
-      setFindings(Array.isArray(f) ? f : MOCK_FINDINGS);
-      setJobs(Array.isArray(j) ? j : MOCK_JOBS);
-    } catch {
-      setTargets(MOCK_TARGETS);
-      setFindings(MOCK_FINDINGS);
-      setJobs(MOCK_JOBS);
+      const [t, f, j] = await Promise.all([listTargets(session), listFindings(session), listJobs(session)]);
+      setTargets(t); setFindings(f); setJobs(j);
+      setUnavailable("");
+    } catch (e) {
+      setTargets([]); setFindings([]); setJobs([]);
+      setUnavailable(errText(e));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -267,33 +243,38 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
 
   useEffect(() => { void load(false); }, [load]);
 
-  const handleAdd = async (payload: { name: string; type: TargetType; uri: string; enabled: boolean }) => {
+  // Every action surfaces its error; nothing is changed locally unless the
+  // server confirmed it.
+  const act = async (fn: () => Promise<unknown>, label: string) => {
+    setError("");
     try {
-      await addLeakTarget(session, payload);
-    } catch {
-      // optimistic fallback
+      await fn();
+    } catch (e) {
+      setError(`${label}: ${errText(e)}`);
     }
+    await load(true);
+  };
+
+  const handleAdd = async (payload: { name: string; type: TargetType; uri: string; enabled: boolean }) => {
+    await createTarget(session, payload); // errors show in the modal
     await load(true);
   };
 
   const handleDelete = async (id: string) => {
     setDeleteBusy(id);
-    try { await deleteLeakTarget(session, id); } catch { /* ignore */ }
-    setTargets(prev => prev.filter(t => t.id !== id));
+    await act(() => deleteTarget(session, id), "Delete failed");
     setDeleteBusy("");
   };
 
-  const handleScan = async (id: string) => {
+  const handleScan = async (id: string, content?: { content: string; filename: string }) => {
     setScanBusy(id);
-    try { await triggerLeakScan(session, id); } catch { /* ignore */ }
-    await load(true);
+    await act(() => triggerScan(session, id, content), "Scan not started");
     setScanBusy("");
   };
 
   const handleResolve = async (id: string) => {
     setResolveBusy(id);
-    try { await resolveLeakFinding(session, id); } catch { /* ignore */ }
-    setFindings(prev => prev.map(f => f.id === id ? { ...f, status: "resolved" as const } : f));
+    await act(() => updateFinding(session, id, { status: "resolved" }), "Not resolved");
     setResolveBusy("");
   };
 
@@ -301,7 +282,7 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
 
   const openFindings = findings.filter(f => f.status === "open");
   const criticalFindings = openFindings.filter(f => f.severity === "critical");
-  const lastScannedAll = targets.map(t => t.last_scanned).filter(Boolean) as string[];
+  const lastScannedAll = targets.map(t => t.last_scanned_at).filter(Boolean) as string[];
   const lastScan = lastScannedAll.length
     ? formatAgo(lastScannedAll.sort().reverse()[0])
     : "—";
@@ -316,12 +297,28 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
 
   // ─── Table styles ──────────────────────────────────────────────────────────
 
-  const tableStyle: React.CSSProperties = {
+  const tableStyle: CSSProperties = {
     width: "100%",
     borderCollapse: "collapse",
     fontSize: 11,
     tableLayout: "fixed"
   };
+
+  if (unavailable) {
+    return (
+      <Card style={{ padding: 20 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <AlertTriangle size={16} color={C.red} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Not assessed: leak scanner data is unavailable</div>
+            <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>The posture service did not return scan targets, findings or jobs, so none are shown.</div>
+            <div style={{ fontSize: 10, color: C.red, marginTop: 6, fontFamily: "'JetBrains Mono',monospace", wordBreak: "break-word" }}>{unavailable}</div>
+            <div style={{ marginTop: 10 }}><Btn small onClick={() => void load(false)}><RefreshCcw size={11} />Retry</Btn></div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div>
@@ -395,7 +392,7 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                     <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.dim }} title={t.uri}>
                       {truncate(t.uri, 38)}
                     </td>
-                    <td style={{ ...TD, color: C.dim }}>{formatAgo(t.last_scanned)}</td>
+                    <td style={{ ...TD, color: C.dim }}>{formatAgo(t.last_scanned_at)}</td>
                     <td style={TD}>
                       <span style={{ color: t.open_findings > 0 ? C.orange : C.green, fontWeight: 600 }}>{t.open_findings}</span>
                     </td>
@@ -404,8 +401,11 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                     </td>
                     <td style={TD}>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <Btn small onClick={() => void handleScan(t.id)} disabled={scanBusy === t.id || !t.enabled}>
+                        <Btn small onClick={() => void handleScan(t.id)} disabled={scanBusy === t.id || !t.enabled} title="Scan the target's files under LEAK_SCAN_ROOT">
                           <Play size={10} />{scanBusy === t.id ? "…" : "Scan"}
+                        </Btn>
+                        <Btn small onClick={() => setPasteTarget(t)} disabled={scanBusy === t.id || !t.enabled} title="Scan pasted content against this target">
+                          Paste
                         </Btn>
                         <Btn small danger onClick={() => void handleDelete(t.id)} disabled={deleteBusy === t.id}>
                           <Trash2 size={10} />
@@ -441,6 +441,7 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                 <option value="open">Open</option>
                 <option value="acknowledged">Acknowledged</option>
                 <option value="resolved">Resolved</option>
+                <option value="false_positive">False positive</option>
               </Sel>
             </div>
           }
@@ -485,7 +486,7 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                       </span>
                     </td>
                     <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.accent }}>
-                      {f.secret_type}
+                      <span title={f.description}>{f.type}</span>
                     </td>
                     <td style={{ ...TD, color: C.dim }}>{f.target_name}</td>
                     <td style={{ ...TD, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: C.dim }} title={f.location}>
@@ -496,10 +497,10 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                         {f.entropy.toFixed(2)}
                       </span>
                     </td>
-                    <td style={TD}><B c={f.status === "open" ? "orange" : f.status === "resolved" ? "green" : "blue"}>{f.status}</B></td>
+                    <td style={TD} title={f.resolved_by ? `by ${f.resolved_by}` : undefined}><B c={f.status === "open" ? "orange" : f.status === "resolved" ? "green" : "blue"}>{f.status.replace("_", " ")}</B></td>
                     <td style={{ ...TD, color: C.dim }}>{formatAgo(f.detected_at)}</td>
                     <td style={TD}>
-                      {f.status !== "resolved" ? (
+                      {f.status !== "resolved" && f.status !== "false_positive" ? (
                         <Btn small onClick={() => void handleResolve(f.id)} disabled={resolveBusy === f.id}>
                           {resolveBusy === f.id ? "…" : "Resolve"}
                         </Btn>
@@ -538,10 +539,11 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
                         {j.status}
                       </B>
                     </div>
-                    <Bar pct={j.progress} color={j.status === "failed" ? C.red : j.status === "completed" ? C.green : C.accent} />
+                    <Bar pct={j.progress_pct} color={j.status === "failed" ? C.red : j.status === "completed" ? C.green : C.accent} />
+                    {j.error && <div style={{ fontSize: 10, color: j.status === "failed" ? C.red : C.muted, marginTop: 4 }}>{j.error}</div>}
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 9, color: C.muted }}>
-                      <span>{j.progress}% complete</span>
-                      <span>Started {formatAgo(j.started_at)}</span>
+                      <span>{j.status === "completed" ? `${j.findings_count} finding${j.findings_count === 1 ? "" : "s"}` : `${j.progress_pct}% complete`}</span>
+                      <span>Started {formatAgo(j.started_at ?? j.created_at)}</span>
                     </div>
                   </div>
                 </div>
@@ -555,6 +557,11 @@ export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => 
       )}
 
       <AddTargetModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
+      <PasteScanModal
+        target={pasteTarget}
+        onClose={() => setPasteTarget(null)}
+        onScan={async (content) => { if (pasteTarget) await handleScan(pasteTarget.id, content); setPasteTarget(null); }}
+      />
     </div>
   );
 };

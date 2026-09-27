@@ -117,12 +117,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /audit/cluster/signing-key/import", h.handleClusterKeyImport)
 
 	// Webhook routes
-	mux.HandleFunc("GET /webhooks", h.handleListWebhooks)
-	mux.HandleFunc("POST /webhooks", h.handleCreateWebhook)
-	mux.HandleFunc("PATCH /webhooks/{id}", h.handleUpdateWebhook)
-	mux.HandleFunc("DELETE /webhooks/{id}", h.handleDeleteWebhook)
-	mux.HandleFunc("POST /webhooks/{id}/test", h.handleTestWebhook)
-	mux.HandleFunc("GET /webhooks/{id}/deliveries", h.handleListDeliveries)
+	h.webhookRouter(selfEmitter{h.svc}).MountOn(mux)
 
 	// Ops metrics routes
 	mux.HandleFunc("GET /ops-metrics/overview", h.handleGetOpsOverview)

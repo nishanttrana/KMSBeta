@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/resilience"
 	"vecta-kms/pkg/ssrfguard"
 )
@@ -26,11 +25,12 @@ import (
 // leaves the others untouched. Breakers half-open on a 30s cool-down so
 // transient outages recover automatically without operator intervention.
 type WebhookDispatcher struct {
-	client    *http.Client
-	retry     resilience.RetryConfig
-	mu        sync.RWMutex
-	breakers  map[string]*resilience.Breaker
-	onEvent   func(target string, ok bool, latency time.Duration, err error)
+	client   *http.Client
+	validate func(string) error // https + SSRF guard; tests substitute a local server
+	retry    resilience.RetryConfig
+	mu       sync.RWMutex
+	breakers map[string]*resilience.Breaker
+	onEvent  func(target string, ok bool, latency time.Duration, err error)
 }
 
 // NewWebhookDispatcher constructs a dispatcher with production defaults:
@@ -44,7 +44,8 @@ func NewWebhookDispatcher() *WebhookDispatcher {
 	r.Multiplier = 2.0
 	r.JitterFraction = 0.1
 	return &WebhookDispatcher{
-		client:   &http.Client{Timeout: 15 * time.Second},
+		client:   ssrfguard.NewHTTPSClient(15 * time.Second),
+		validate: validateWebhookURL,
 		retry:    r,
 		breakers: make(map[string]*resilience.Breaker),
 	}
@@ -59,10 +60,10 @@ func (d *WebhookDispatcher) OnEvent(cb func(target string, ok bool, latency time
 
 // Deliver attempts to POST payload to wh.URL, signing with the webhook
 // secret and respecting per-target circuit-breaker state. Returns the
-// final HTTP status (0 on transport failure) and any error.
-func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType string, payload []byte) (int, error) {
-	if err := ssrfguard.ValidateWebhookURL(wh.URL); err != nil {
-		return 0, fmt.Errorf("blocked: %w", err)
+// final HTTP status (0 on transport failure), the attempts made and any error.
+func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType, eventID string, payload []byte) (int, int, error) {
+	if err := d.validate(wh.URL); err != nil {
+		return 0, 0, err
 	}
 	br := d.breakerFor(wh.ID)
 	var status int
@@ -74,7 +75,7 @@ func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType s
 		var e error
 		_, brErr := br.Execute(func() (any, error) {
 			start := time.Now()
-			s, e = d.doOnce(ctx, wh, eventType, payload)
+			s, e = d.doOnce(ctx, wh, eventType, eventID, payload)
 			if d.onEvent != nil {
 				d.onEvent(wh.URL, e == nil && s >= 200 && s < 300, time.Since(start), e)
 			}
@@ -96,30 +97,32 @@ func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType s
 	if err != nil && lastErr == nil {
 		lastErr = err
 	}
-	return status, lastErr
+	if lastErr == nil && (status < 200 || status >= 300) {
+		lastErr = fmt.Errorf("non-2xx response: %d", status)
+	}
+	return status, attempt, lastErr
 }
 
-func (d *WebhookDispatcher) doOnce(ctx context.Context, wh Webhook, eventType string, payload []byte) (int, error) {
+func (d *WebhookDispatcher) doOnce(ctx context.Context, wh Webhook, eventType, eventID string, payload []byte) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, wh.URL, bytes.NewReader(payload))
 	if err != nil {
 		return 0, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "VectaKMS-Webhook/1.0")
-	req.Header.Set("X-KMS-Event-Type", eventType)
-	if wh.Secret != "" {
-		mac := hmac.New(sha256.New, []byte(wh.Secret))
-		mac.Write(payload) //nolint:errcheck
-		req.Header.Set("X-KMS-Signature", "sha256="+hex.EncodeToString(mac.Sum(nil)))
-	}
 	for k, v := range wh.Headers {
 		req.Header.Set(k, v)
+	}
+	req.Header.Set("X-KMS-Event-Type", eventType)
+	req.Header.Set("X-KMS-Event-ID", eventID)
+	if wh.Secret != "" {
+		req.Header.Set("X-KMS-Signature", "sha256="+hex.EncodeToString(pkgcrypto.HMACSHA256([]byte(wh.Secret), payload)))
 	}
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return 0, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close()        //nolint:errcheck
 	io.Copy(io.Discard, resp.Body) //nolint:errcheck
 	return resp.StatusCode, nil
 }

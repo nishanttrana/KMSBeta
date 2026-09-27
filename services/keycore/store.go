@@ -104,6 +104,9 @@ type Store interface {
 	DeleteRotationPolicy(ctx context.Context, tenantID, id string) error
 	ListRotationRuns(ctx context.Context, tenantID, policyID string) ([]RotationRun, error)
 	CreateRotationRun(ctx context.Context, r RotationRun) (RotationRun, error)
+	GetRotationPolicy(ctx context.Context, tenantID, id string) (RotationPolicy, error)
+	ListDueRotationPolicies(ctx context.Context, now time.Time, limit int) ([]RotationPolicy, error)
+	RecordRotationPolicyOutcome(ctx context.Context, tenantID, id string, ranAt, next time.Time, rotated int, status, lastErr string) error
 	ListUpcomingRotations(ctx context.Context, tenantID string) ([]UpcomingRotation, error)
 	RecordRotationMetric(ctx context.Context, metric RotationMetric) error
 	ListRotationMetrics(ctx context.Context, tenantID, keyID, status string, limit int) ([]RotationMetric, error)

@@ -21,7 +21,11 @@ type Service struct {
 	hndl       *HNDLDetector
 	quarantine *QuarantineEvaluator
 	cluster    clusterKeyState
+	webhooks   *webhookFanout
 }
+
+// SetWebhookFanout wires delivery of persisted events to webhooks.
+func (s *Service) SetWebhookFanout(f *webhookFanout) { s.webhooks = f }
 
 // SetDetectors wires the closed-loop detectors. Both are optional; if
 // nil the corresponding signal is simply not produced. The setter is on
@@ -126,6 +130,9 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 		return AuditEvent{}, Alert{}, err
 	}
 	s.broadcastToStream(evt, al)
+	if s.webhooks != nil {
+		s.webhooks.Enqueue(ctx, evt)
+	}
 	return evt, al, nil
 }
 

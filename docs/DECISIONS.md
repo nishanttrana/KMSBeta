@@ -7,6 +7,36 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Rotation policies and webhook delivery: how they run
+
+**Rotation.** A trigger rotates keys *as the caller*, so the caller's key
+grants and the policy service decide each key. A scheduled run needs an
+identity with no user present. It uses an in-process keycore service
+principal, set in code, never from a request, so it can't be forged (rule 4).
+The rejected alternative was to replay the policy creator's identity: a user
+removed later would still rotate keys, and a stored identity can be spoofed.
+The authority therefore comes from `key.rotation.write`, which only admins
+hold by default, and every scheduled run is audited with its counts. Only
+keys are supported. Secrets and certificates rotate in their own services;
+a policy there would be a record with nothing behind it. The scheduler runs
+on the primary only, because policies and runs are replicated tables.
+
+**Webhooks.** Delivery hooks into `ProcessEvent` after the event is
+persisted, so only events in the chain are delivered, and each one exactly
+once, on the node that ingested it. Relayed duplicates are skipped before
+processing. A separate JetStream consumer was rejected: it would see
+unpersisted and duplicate events. Subscriptions are audit action patterns
+(`audit.key.*`) rather than a parallel event vocabulary. The old names
+(`key.created`) matched nothing and would have needed a mapping kept in sync
+by hand. Delivery audits (`audit.audit.webhook_*`) are excluded from matching
+so a `*` subscription can't loop. Members record attempts in node-local
+`webhook_deliveries` and leave the replicated `webhooks` row to the primary.
+The outbound client dials only SSRF-checked addresses, follows no redirects
+and requires TLS 1.3, so a validated URL can't be re-pointed at an internal
+host by DNS or redirect.
+
+---
+
 ## 2026-09-27 — Service mTLS: per-service policy by published file, restart to apply
 **Decision:**
 - **Where the policy lives:** each internal identity's certificate key and

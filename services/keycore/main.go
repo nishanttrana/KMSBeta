@@ -216,6 +216,9 @@ func main() {
 		logger.Printf("zeroization verification scheduler started")
 	}
 
+	// Rotation policies: due auto-rotate policies run on the primary.
+	go NewRotationScheduler(svc, auditClient, logger).Run(ctx)
+
 	// Heartbeat publisher so the watchdog observes liveness.
 	if nc, _, err := initNATS(cfg.NATSURL); err == nil {
 		hb := pkgheartbeat.New(nc, "keycore", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("KEYCORE_VERSION", "dev"))

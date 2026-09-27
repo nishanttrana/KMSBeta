@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"vecta-kms/pkg/route"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc   *Service
+	mux   *http.ServeMux
+	audit route.Emitter // *pkgaudit.Client in production
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -42,13 +45,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /posture/dashboard", h.handleDashboard)
 
 	// Leak scanner routes
-	mux.HandleFunc("GET /leaks/targets", h.handleListLeakTargets)
-	mux.HandleFunc("POST /leaks/targets", h.handleCreateLeakTarget)
-	mux.HandleFunc("DELETE /leaks/targets/{id}", h.handleDeleteLeakTarget)
-	mux.HandleFunc("POST /leaks/targets/{id}/scan", h.handleTriggerScan)
-	mux.HandleFunc("GET /leaks/jobs", h.handleListLeakJobs)
-	mux.HandleFunc("GET /leaks/findings", h.handleListLeakFindings)
-	mux.HandleFunc("PATCH /leaks/findings/{id}", h.handleUpdateLeakFinding)
+	h.leakRouter(postureEmitter{h}).MountOn(mux)
 
 	return mux
 }

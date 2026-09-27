@@ -108,6 +108,9 @@ func main() {
 	quarantine := NewQuarantineEvaluator(pub)
 	svc.SetDetectors(hndl, quarantine)
 
+	fanout := newWebhookFanout(store, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
+	fanout.Start(ctx)
+	svc.SetWebhookFanout(fanout)
 	handler := NewHandler(svc, store)
 	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
 		envOr("CLUSTER_URL", "https://cluster-manager:8210"),

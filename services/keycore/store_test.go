@@ -93,6 +93,8 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			updated_by TEXT,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE rotation_policies (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, target_type TEXT NOT NULL DEFAULT 'key', target_filter TEXT NOT NULL DEFAULT '', interval_days INT NOT NULL DEFAULT 90, cron_expr TEXT, auto_rotate BOOLEAN NOT NULL DEFAULT FALSE, notify_days_before INT NOT NULL DEFAULT 7, enabled BOOLEAN NOT NULL DEFAULT TRUE, status TEXT NOT NULL DEFAULT 'active', last_rotation_at TIMESTAMP, next_rotation_at TIMESTAMP, total_rotations INT NOT NULL DEFAULT 0, last_error TEXT, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
+		`CREATE TABLE rotation_runs (id TEXT NOT NULL, tenant_id TEXT NOT NULL, policy_id TEXT NOT NULL, policy_name TEXT NOT NULL, target_id TEXT NOT NULL, target_name TEXT NOT NULL, target_type TEXT NOT NULL DEFAULT 'key', status TEXT NOT NULL DEFAULT 'running', triggered_by TEXT NOT NULL DEFAULT 'schedule', started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TIMESTAMP, error TEXT, PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE key_rotation_metrics (
 			rotation_id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,

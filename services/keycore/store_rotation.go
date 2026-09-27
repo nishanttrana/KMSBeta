@@ -143,14 +143,68 @@ func (s *SQLStore) CreateRotationRun(ctx context.Context, r RotationRun) (Rotati
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO rotation_runs
   (id, tenant_id, policy_id, policy_name, target_id, target_name, target_type,
-   status, triggered_by, started_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+   status, triggered_by, started_at, completed_at, error)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id, tenant_id, policy_id, policy_name, target_id, target_name, target_type,
           status, triggered_by, started_at, completed_at, COALESCE(error,'')
 `, r.ID, r.TenantID, r.PolicyID, r.PolicyName, r.TargetID, r.TargetName, r.TargetType,
-		r.Status, r.TriggeredBy)
+		r.Status, r.TriggeredBy, r.StartedAt, nullableTime(r.CompletedAt), nullable(r.Error))
 
 	return scanRotationRun(row)
+}
+
+const rotationPolicyColumns = `id, tenant_id, name, target_type, target_filter, interval_days,
+       COALESCE(cron_expr,''), auto_rotate, notify_days_before, enabled, status,
+       last_rotation_at, next_rotation_at, total_rotations, COALESCE(last_error,''),
+       created_at, updated_at`
+
+// GetRotationPolicy returns one of a tenant's rotation policies.
+func (s *SQLStore) GetRotationPolicy(ctx context.Context, tenantID, id string) (RotationPolicy, error) {
+	p, err := scanRotationPolicy(s.db.SQL().QueryRowContext(ctx,
+		`SELECT `+rotationPolicyColumns+` FROM rotation_policies WHERE tenant_id = $1 AND id = $2`, tenantID, id))
+	if err == sql.ErrNoRows {
+		return RotationPolicy{}, errStoreNotFound
+	}
+	return p, err
+}
+
+// ListDueRotationPolicies returns enabled auto-rotate policies, across all
+// tenants, whose next rotation is at or before now.
+func (s *SQLStore) ListDueRotationPolicies(ctx context.Context, now time.Time, limit int) ([]RotationPolicy, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+rotationPolicyColumns+`
+FROM rotation_policies
+WHERE enabled = TRUE AND auto_rotate = TRUE AND next_rotation_at IS NOT NULL AND next_rotation_at <= $1
+ORDER BY next_rotation_at ASC
+LIMIT $2`, now, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []RotationPolicy
+	for rows.Next() {
+		p, err := scanRotationPolicy(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// RecordRotationPolicyOutcome stores the result of one policy run.
+func (s *SQLStore) RecordRotationPolicyOutcome(ctx context.Context, tenantID, id string, ranAt, next time.Time, rotated int, status, lastErr string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE rotation_policies
+SET last_rotation_at = $1, next_rotation_at = $2, total_rotations = total_rotations + $3,
+    status = $4, last_error = $5, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $6 AND id = $7`, ranAt, next, rotated, status, nullable(lastErr), tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errStoreNotFound
+	}
+	return nil
 }
 
 // ListUpcomingRotations returns rotation policies with next_rotation_at within 30 days.

@@ -1,22 +1,24 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
+// Shapes mirror keycore services/keycore/rotation.go. A policy rotates the
+// tenant's active keys that match target_filter: now on a trigger (as the
+// caller), and on schedule when auto_rotate is set (on the primary).
+
 export interface RotationPolicy {
   id: string;
   tenant_id: string;
   name: string;
-  target_type: "key" | "secret" | "certificate";
-  target_filter: string; // tag selector or glob
+  target_type: "key";
+  target_filter: string; // "*", "tag:<tag>", "id:<key id>" or a key-name glob
   interval_days: number;
-  cron_expr?: string;
   auto_rotate: boolean;
-  notify_days_before: number;
   last_rotation_at?: string;
-  next_rotation_at: string;
+  next_rotation_at?: string;
   enabled: boolean;
   created_at: string;
   total_rotations: number;
-  status: "active" | "paused" | "error";
+  status: "active" | "error";
   last_error?: string;
 }
 
@@ -29,50 +31,65 @@ export interface RotationRun {
   target_type: string;
   started_at: string;
   completed_at?: string;
-  status: "running" | "success" | "failed" | "skipped";
+  status: "success" | "failed";
   error?: string;
-  triggered_by: "schedule" | "manual" | "expiry";
+  triggered_by: string; // "schedule" or "manual:<actor>"
 }
 
 export interface UpcomingRotation {
   policy_id: string;
   policy_name: string;
-  target_id: string;
-  target_name: string;
   target_type: string;
   scheduled_at: string;
   days_until: number;
   overdue: boolean;
 }
 
+export interface RotationOutcome {
+  matched: number;
+  rotated: number;
+  failed: number;
+  runs: RotationRun[];
+}
+
+export interface RotationPolicyInput {
+  name: string;
+  target_filter: string;
+  interval_days: number;
+  auto_rotate: boolean;
+}
+
 export async function listPolicies(session: AuthSession): Promise<RotationPolicy[]> {
-  const res = await serviceRequest<any>(session, "keycore", "/rotation/policies");
+  const res = await serviceRequest<{ items: RotationPolicy[] }>(session, "keycore", "/rotation/policies");
   return res.items ?? [];
 }
 
-export async function createPolicy(session: AuthSession, data: Partial<RotationPolicy>): Promise<RotationPolicy> {
-  return serviceRequest<RotationPolicy>(session, "keycore", "/rotation/policies", { method: "POST", body: JSON.stringify(data) });
+export async function createPolicy(session: AuthSession, data: RotationPolicyInput): Promise<RotationPolicy> {
+  const res = await serviceRequest<{ policy: RotationPolicy }>(session, "keycore", "/rotation/policies", { method: "POST", body: JSON.stringify(data) });
+  return res.policy;
 }
 
-export async function updatePolicy(session: AuthSession, id: string, data: Partial<RotationPolicy>): Promise<RotationPolicy> {
-  return serviceRequest<RotationPolicy>(session, "keycore", `/rotation/policies/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export async function updatePolicy(session: AuthSession, id: string, data: Partial<RotationPolicyInput> & { enabled?: boolean }): Promise<RotationPolicy> {
+  const res = await serviceRequest<{ policy: RotationPolicy }>(session, "keycore", `/rotation/policies/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(data) });
+  return res.policy;
 }
 
 export async function deletePolicy(session: AuthSession, id: string): Promise<void> {
-  return serviceRequest<void>(session, "keycore", `/rotation/policies/${id}`, { method: "DELETE" });
+  await serviceRequest(session, "keycore", `/rotation/policies/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
-export async function triggerRotation(session: AuthSession, policyId: string): Promise<RotationRun> {
-  return serviceRequest<RotationRun>(session, "keycore", `/rotation/policies/${policyId}/trigger`, { method: "POST" });
+export async function triggerRotation(session: AuthSession, policyId: string): Promise<RotationOutcome> {
+  const res = await serviceRequest<{ outcome: RotationOutcome }>(session, "keycore", `/rotation/policies/${encodeURIComponent(policyId)}/trigger`, { method: "POST" });
+  return res.outcome;
 }
 
 export async function listRuns(session: AuthSession, policyId?: string): Promise<RotationRun[]> {
-  const q = policyId ? `?policy_id=${policyId}` : "";
-  const res = await serviceRequest<any>(session, "keycore", `/rotation/runs${q}`);
+  const q = policyId ? `?policy_id=${encodeURIComponent(policyId)}` : "";
+  const res = await serviceRequest<{ items: RotationRun[] }>(session, "keycore", `/rotation/runs${q}`);
   return res.items ?? [];
 }
 
 export async function listUpcoming(session: AuthSession): Promise<UpcomingRotation[]> {
-  const res = await serviceRequest<any>(session, "keycore", "/rotation/upcoming");
+  const res = await serviceRequest<{ items: UpcomingRotation[] }>(session, "keycore", "/rotation/upcoming");
   return res.items ?? [];
 }

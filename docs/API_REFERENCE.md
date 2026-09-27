@@ -603,6 +603,131 @@ included.
 
 ---
 
+### Key rotation policies: /svc/keycore/rotation/*
+
+A policy rotates the tenant's **active** keys that match `target_filter`,
+through the same path as `POST /keys/{id}/rotate`: policy check, key access,
+HSM, and a per-key `audit.key.rotate`. Each key gets its own run row with the
+real outcome. Served by the `pkg/route` kernel.
+
+| Route | Permission | Audit |
+|---|---|---|
+| `GET /rotation/policies` | `key.rotation.read` | `audit.key.rotation_policies_listed` |
+| `POST /rotation/policies` | `key.rotation.write` | `audit.key.rotation_policy_created` |
+| `PATCH /rotation/policies/{id}` | `key.rotation.write` | `audit.key.rotation_policy_updated` |
+| `DELETE /rotation/policies/{id}` | `key.rotation.write` | `audit.key.rotation_policy_deleted` |
+| `POST /rotation/policies/{id}/trigger` | `key.rotation.write` | `audit.key.rotation_policy_triggered` (details `matched`, `rotated`, `failed`) |
+| `GET /rotation/runs[?policy_id=]` | `key.rotation.read` | `audit.key.rotation_runs_listed` |
+| `GET /rotation/upcoming` | `key.rotation.read` | `audit.key.rotation_upcoming_listed` |
+
+- **Create body:** `name`, `target_filter`, `interval_days` (1–3650) and
+  `auto_rotate`. `target_type` may be omitted or `key`; `secret` and
+  `certificate` are refused (`unsupported_target_type`).
+- **`target_filter`:** `*` (every active key), `tag:<tag>`, `id:<key id>`, or
+  a glob on the key name (`prod-*`). A filter that matches more than 1,000
+  active keys is refused.
+- **Update body:** any of `name`, `target_filter`, `interval_days`,
+  `auto_rotate` and `enabled`.
+- **Removed fields:** `cron_expr` and `notify_days_before` were stored but
+  never used. Requests carrying them are now rejected (400, unknown field).
+- **Trigger:** rotates the matching keys now, *as the caller*, so their key
+  grants apply. Response: `outcome` `{matched, rotated, failed, runs[]}`. A
+  key the caller may not rotate gives a `failed` run with the refusal, and
+  the policy's `status` becomes `error` with `last_error`.
+- **Schedule:** on the primary, every minute, keycore runs enabled
+  `auto_rotate` policies whose `next_rotation_at` has passed. They run under
+  keycore's own in-process service identity. Each run emits
+  `audit.key.rotation_policy_run` (details `matched`, `rotated`, `failed`,
+  `result: failure` if any key failed). `next_rotation_at` advances by
+  `interval_days`. Cluster members never run the schedule.
+- **Runs:** `triggered_by` is `schedule` or `manual:<actor>`, and `status` is
+  `success` or `failed` with `error`.
+
+---
+
+### Webhooks: /svc/audit/webhooks
+
+The audit service delivers every persisted audit event whose `action`
+matches one of a webhook's `events` patterns to the tenant's enabled
+webhooks. Delivery runs on the node that ingested the event.
+
+| Route | Permission | Audit |
+|---|---|---|
+| `GET /webhooks` | `audit.webhook.read` | `audit.audit.webhooks_listed` |
+| `POST /webhooks` | `audit.webhook.write` | `audit.audit.webhook_created` |
+| `PATCH /webhooks/{id}` | `audit.webhook.write` | `audit.audit.webhook_updated` |
+| `DELETE /webhooks/{id}` | `audit.webhook.write` | `audit.audit.webhook_deleted` |
+| `POST /webhooks/{id}/test` | `audit.webhook.write` | `audit.audit.webhook_tested` |
+| `GET /webhooks/{id}/deliveries` | `audit.webhook.read` | `audit.audit.webhook_deliveries_listed` |
+
+- **Every delivery,** real or test, emits `audit.audit.webhook_delivered`:
+  `result` is `success` or `failure`; details are `event_id`,
+  `event_action`, `http_status`, `attempts`, `latency_ms` and `format`. It
+  is also recorded in the node-local `webhook_deliveries`.
+  `audit.audit.webhook_*` events are never delivered.
+- **`url`:** `https` only. It passes the SSRF guard, and delivery dials the
+  address it checked (no DNS rebinding), with no redirects, no proxy and TLS
+  1.3. A refused URL is audited as `result: refused`, `reason: url_blocked`.
+- **`events`:** `*`, a prefix such as `audit.key.*`, or an exact action such
+  as `audit.key.rotate`. Older names like `key.created` never matched an
+  audit action and are refused.
+- **`format`:**
+  - `json`: `{event_type, event}`
+  - `splunk_hec`: the HEC envelope, `sourcetype` `vecta:audit`
+  - `datadog`: a Logs intake array
+  - `slack`: `{text}`
+
+  `pagerduty` and `generic_siem` are refused: neither was ever produced.
+- **`secret`:** optional, at least 16 characters (HMAC keys under 112 bits
+  are not approved). Each body is signed as
+  `X-KMS-Signature: sha256=<hex HMAC-SHA256(secret, body)>`. Every request
+  also carries `X-KMS-Event-Type` and `X-KMS-Event-ID`.
+- **`headers`:** custom headers, for example `Authorization: Splunk <token>`
+  or `DD-API-KEY`. The platform's own headers can't be overridden.
+- **Write-only values:** responses never carry the secret or header values.
+  They show `has_secret` and header names with empty values. On update, a
+  header sent with an empty value keeps its stored value, and
+  `clear_secret: true` removes the secret.
+- **Delivery:** three attempts with backoff and a per-webhook circuit
+  breaker. The queue holds 4,096 events. A full queue is recorded as a failed
+  delivery (`delivery queue full`) and audited; it is never dropped silently.
+  Only the primary updates `last_delivery_*` and `failure_count` (a
+  replicated row); members keep their attempts in `webhook_deliveries`.
+- **Test:** sends a labelled event (`audit.audit.webhook_test`) through the
+  same path. Response: `success`, `status`, `http_status`, `latency_ms`,
+  `error`.
+
+---
+
+### Leak scanner: /svc/posture/leaks/*
+
+| Route | Permission | Audit |
+|---|---|---|
+| `GET /leaks/targets` | `posture.leak.read` | `audit.posture.leak_targets_listed` |
+| `POST /leaks/targets` | `posture.leak.write` | `audit.posture.leak_target_created` |
+| `DELETE /leaks/targets/{id}` | `posture.leak.write` | `audit.posture.leak_target_deleted` |
+| `POST /leaks/targets/{id}/scan` | `posture.leak.write` | `audit.posture.leak_scan_started`; the outcome is `audit.posture.leak_scan_completed` |
+| `GET /leaks/jobs` | `posture.leak.read` | `audit.posture.leak_jobs_listed` |
+| `GET /leaks/findings` | `posture.leak.read` | `audit.posture.leak_findings_listed` |
+| `PATCH /leaks/findings/{id}` | `posture.leak.write` | `audit.posture.leak_finding_updated` |
+
+- **Target `type`:** `git_repo`, `container_image`, `log_stream`,
+  `s3_bucket` or `env_file`.
+- **Scanned content:** either the optional scan body `{content, filename}`,
+  or files at the target's path under the server's `LEAK_SCAN_ROOT`. Remote
+  URLs are not fetched: the job fails with that reason, and never invents
+  findings.
+- **Findings:** keep a redacted preview and a SHA-256 fingerprint only.
+- **`leak_scan_completed`:** carries `status`, `findings` and `job_id`. Its
+  severity is warning when there are findings or the scan failed.
+- **Finding update body:** `status` (`open`, `acknowledged`, `resolved`,
+  `false_positive`) and optional `notes`. `resolved_by` is the verified
+  caller; a `resolved_by` in the body is rejected.
+- **Disabled target:** a scan request is refused (`409`, `reason:
+  target_disabled`).
+
+---
+
 ### POST /svc/keycore/keys/{id}/derive
 
 Body: `algorithm` (HKDF-SHA256/384/512, PBKDF2-SHA256, SP800-108-CTR), `salt`, `info`, `outputLength` (16–64), `outputKeySpec` (optional)
@@ -3594,6 +3719,9 @@ Selected events with dedicated audit classification:
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
+- `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
+- `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure): webhooks
+- `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
 - `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`

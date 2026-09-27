@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A plausible screen can hide a missing backend twice
+- **What happened:** removing the `MOCK_*` fallbacks from the Webhooks and
+  Rotation Scheduler tabs showed that the mocks hid more than a failing
+  call:
+  - the webhook dispatcher was fully written and never constructed, so no
+    event was ever delivered;
+  - "trigger rotation" inserted a run row marked `running`, rotated nothing,
+    and no scheduler existed.
+- **Also hidden:** the webhook list returned signing secrets and Splunk and
+  Datadog tokens to every reader, and the leak scanner accepted any
+  `resolved_by` from the client.
+- **Rule:** after removing a fallback, follow the data for each action to the
+  side effect (the key version, the outbound request), not to the row that
+  records it. A run row, a delivery log or a status field is evidence only if
+  the code that writes it also did the work.
+- **Open:** webhook secrets and header values are write-only in the API but
+  still plaintext at rest. The audit service has no `pkg/mek` master key yet.
+  Adding one means audit waits for keycore at startup and needs a
+  backup-rewrap catalogue entry, so it is its own change.
+
 ### A test that doesn't exist also passes
 - **What happened:** 1.16.0-beta cited two tests as proof, and a filtered
   `go test -run` printed `ok`. The test file had never been written: the

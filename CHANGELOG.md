@@ -4,6 +4,85 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.20.0-beta] — 2026-09-27
+
+### Rotation policies, webhooks and the leak scanner: real, with no sample data
+- **Removed invented dashboard data.** Three tabs showed built-in rows as the
+  customer's own whenever a call failed, the same pattern removed from
+  Crypto Agility in 1.18.0-beta:
+  - Webhooks: `MOCK_WEBHOOKS` and `MOCK_DELIVERIES`;
+  - Leak Scanner: `MOCK_TARGETS`, `MOCK_FINDINGS` and `MOCK_JOBS`;
+  - Rotation Scheduler: `MOCK_POLICIES`, `MOCK_UPCOMING` and `MOCK_RUNS`.
+
+  Failed creates, edits, toggles, deletes and resolves also updated the page
+  as if they had succeeded. Each tab now shows **"Not assessed: … is
+  unavailable"** with the error, and every action shows its real result or
+  error.
+- **Rotation policies actually rotate keys** (owner decision: build it).
+  - Before, "Run" wrote a run marked `running` and rotated nothing, and
+    nothing ever ran a policy on schedule.
+  - Now a trigger rotates every active key matching `target_filter` (`*`,
+    `tag:`, `id:` or a name glob) through `RotateKey`, *as the caller*.
+  - A primary-only scheduler runs due `auto_rotate` policies every minute,
+    under keycore's in-process service identity.
+  - Each key gets a run row with the real outcome. The policy records its
+    totals and next date, and shows `error` with the reason when a key fails.
+  - Migration 025 marks the old fake `running` rows as failed ("not
+    executed").
+  - Only key policies are accepted. `cron_expr` and `notify_days_before`
+    (stored, never used) are refused.
+  - The routes moved to the `pkg/route` kernel (`key.rotation.read` /
+    `key.rotation.write`).
+- **Webhooks deliver real events** (owner decision: wire it).
+  - Before, only the Test button sent anything.
+  - Now the audit service delivers every persisted audit event whose action
+    matches a subscription (`*`, `audit.key.*` or an exact action) to the
+    tenant's enabled webhooks.
+  - Supported formats: JSON, Splunk HEC, Datadog Logs or Slack. PagerDuty
+    and "Generic SIEM" were never produced and are refused.
+  - Each delivery is recorded and audited (`audit.audit.webhook_delivered`).
+  - **Security fixes:**
+    - `GET /webhooks` returned signing secrets and header values (Splunk
+      tokens, Datadog keys) in plaintext. Both are now write-only.
+    - Webhook URLs must be `https`. Delivery dials only the address the SSRF
+      guard checked (no DNS rebinding), with no redirects, no proxy and TLS
+      1.3 (`ssrfguard.NewHTTPSClient`).
+    - HMAC signing uses `pkg/crypto`, with secrets of at least 16
+      characters.
+  - Routes are on the kernel (`audit.webhook.read` / `audit.webhook.write`).
+  - **Breaking:** existing webhooks with the old event names (`key.created`
+    and so on) or an `http://` URL deliver nothing until they are edited.
+    They never delivered anything before.
+- **Leak scanner hardening.**
+  - Routes moved to the kernel (`posture.leak.read` / `posture.leak.write`).
+    Before, none was audited beyond the request log.
+  - A scan's outcome is audited (`audit.posture.leak_scan_completed`, with
+    the finding count).
+  - `resolved_by` is the verified caller. Before, the client could set any
+    name.
+  - The tab can scan pasted content, and says plainly that remote URLs are
+    not fetched.
+- **Breaking:** non-admin roles need the new permissions:
+  - `key.rotation.read` / `key.rotation.write`;
+  - `audit.webhook.read` / `audit.webhook.write`;
+  - `posture.leak.read` / `posture.leak.write`.
+
+  Admin's `*` covers them all.
+- **Conformance:** `real-capability` now also fails on built-in sample data:
+  `MOCK_*`, `DEMO_*`, `SAMPLE_*`, `FAKE_*` and `DUMMY_*` identifiers, and
+  `mock*`/`demo*`/`fake*`/`dummy*` data variables, outside tests. It would
+  have caught all four tabs.
+- **Tests:**
+  - `services/keycore/rotation_engine_test.go`, plus
+    `rotation_postgres_test.go` on real Postgres;
+  - `services/audit/webhook_test.go`: real TLS delivery, signature, write-only
+    secrets and member mode;
+  - `services/posture/handler_leak_test.go`;
+  - `pkg/ssrfguard` dialer.
+- **Still open:** webhook signing secrets and header values are stored in
+  plaintext in the audit database. Encrypting them at rest needs a `pkg/mek`
+  master key for the audit service (see learning.md).
+
 ## [1.19.0-beta] — 2026-09-27
 
 ### Removed: post-quantum and hybrid certificates (they were never real)

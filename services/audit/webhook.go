@@ -10,7 +10,8 @@ type Webhook struct {
 	URL                string            `json:"url"`
 	Format             string            `json:"format"`
 	Events             []string          `json:"events"`
-	Secret             string            `json:"secret"`
+	Secret             string            `json:"-"` // write-only: never returned
+	HasSecret          bool              `json:"has_secret"`
 	Headers            map[string]string `json:"headers"`
 	Enabled            bool              `json:"enabled"`
 	FailureCount       int               `json:"failure_count"`
@@ -37,22 +38,27 @@ type WebhookDelivery struct {
 
 // CreateWebhookRequest is the request body for creating a new webhook.
 type CreateWebhookRequest struct {
-	Name    string            `json:"name"`
-	URL     string            `json:"url"`
-	Format  string            `json:"format"`
-	Events  []string          `json:"events"`
-	Secret  string            `json:"secret"`
-	Headers map[string]string `json:"headers"`
-	Enabled *bool             `json:"enabled"`
+	TenantID string            `json:"tenant_id"` // enforced by the kernel
+	Name     string            `json:"name"`
+	URL      string            `json:"url"`
+	Format   string            `json:"format"`
+	Events   []string          `json:"events"`
+	Secret   string            `json:"secret"`
+	Headers  map[string]string `json:"headers"`
+	Enabled  *bool             `json:"enabled"`
 }
 
 // UpdateWebhookRequest is the request body for updating an existing webhook.
+// A header sent with an empty value keeps its stored value (values are never
+// returned); clear_secret removes the signing secret.
 type UpdateWebhookRequest struct {
-	Name    *string            `json:"name"`
-	URL     *string            `json:"url"`
-	Format  *string            `json:"format"`
-	Events  []string           `json:"events"`
-	Secret  *string            `json:"secret"`
-	Headers *map[string]string `json:"headers"`
-	Enabled *bool              `json:"enabled"`
+	TenantID    string             `json:"tenant_id"` // enforced by the kernel
+	Name        *string            `json:"name"`
+	URL         *string            `json:"url"`
+	Format      *string            `json:"format"`
+	Events      []string           `json:"events"`
+	Secret      *string            `json:"secret"`
+	ClearSecret bool               `json:"clear_secret"`
+	Headers     *map[string]string `json:"headers"`
+	Enabled     *bool              `json:"enabled"`
 }
