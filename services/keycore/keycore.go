@@ -2771,7 +2771,9 @@ func (s *Service) ensureApprovalAllowed(ctx context.Context, key Key, tenantID s
 	return approvalRequiredError{RequestID: requestID}
 }
 
-func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest) (CryptoResponse, error) {
+func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest) (_ CryptoResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "encrypt"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -2861,7 +2863,6 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	if s.meter != nil {
 		_ = s.meter.IncrementOps()
 	}
-	_ = s.publishAudit(ctx, "audit.key.encrypt", req.TenantID, map[string]any{"key_id": keyID})
 	return CryptoResponse{
 		KeyID:     keyID,
 		Version:   result.KeyVersion,
@@ -2871,7 +2872,9 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	}, nil
 }
 
-func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest) (CryptoResponse, error) {
+func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest) (_ CryptoResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "decrypt"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -2954,7 +2957,6 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	if s.meter != nil {
 		_ = s.meter.IncrementOps()
 	}
-	_ = s.publishAudit(ctx, "audit.key.decrypt", req.TenantID, map[string]any{"key_id": keyID})
 	return CryptoResponse{
 		KeyID:    keyID,
 		Version:  result.KeyVersion,
@@ -2962,7 +2964,9 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	}, nil
 }
 
-func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (CryptoResponse, error) {
+func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (_ CryptoResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "sign"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -3043,7 +3047,6 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	if s.meter != nil {
 		_ = s.meter.IncrementOps()
 	}
-	_ = s.publishAudit(ctx, "audit.key.sign", req.TenantID, map[string]any{"key_id": keyID})
 	return CryptoResponse{
 		KeyID:        keyID,
 		Version:      result.KeyVersion,
@@ -3051,7 +3054,9 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	}, nil
 }
 
-func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (CryptoResponse, error) {
+func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (_ CryptoResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "verify"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -3138,7 +3143,6 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 	if s.meter != nil {
 		_ = s.meter.IncrementOps()
 	}
-	_ = s.publishAudit(ctx, "audit.key.verify", req.TenantID, map[string]any{"key_id": keyID})
 	return CryptoResponse{
 		KeyID:    keyID,
 		Version:  version,
@@ -3498,7 +3502,9 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 	}, nil
 }
 
-func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (DeriveResponse, error) {
+func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (_ DeriveResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "derive"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return DeriveResponse{}, err
@@ -3597,12 +3603,7 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	}
 	derivedB64 := base64.StdEncoding.EncodeToString(result.Payload)
 	crypto.Zeroize(result.Payload)
-	_ = s.publishAudit(ctx, "audit.key.derive", req.TenantID, map[string]any{
-		"key_id":       keyID,
-		"algorithm":    canonicalAlg,
-		"length_bits":  req.LengthBits,
-		"reference_id": req.ReferenceID,
-	})
+	extra["algorithm"], extra["length_bits"], extra["reference_id"] = canonicalAlg, req.LengthBits, req.ReferenceID
 	return DeriveResponse{
 		KeyID:      keyID,
 		Version:    result.KeyVersion,
@@ -3612,7 +3613,9 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	}, nil
 }
 
-func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncapsulateRequest) (KEMResponse, error) {
+func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncapsulateRequest) (_ KEMResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-encapsulate"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return KEMResponse{}, err
@@ -3681,11 +3684,7 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	encapsulatedB64 := base64.StdEncoding.EncodeToString(result.IV)
 	crypto.Zeroize(result.Payload)
 	crypto.Zeroize(result.IV)
-	_ = s.publishAudit(ctx, "audit.key.kem_encapsulate", req.TenantID, map[string]any{
-		"key_id":       keyID,
-		"algorithm":    keyAlg,
-		"reference_id": req.ReferenceID,
-	})
+	extra["algorithm"], extra["reference_id"] = keyAlg, req.ReferenceID
 	return KEMResponse{
 		KeyID:           keyID,
 		Version:         result.KeyVersion,
@@ -3695,7 +3694,9 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	}, nil
 }
 
-func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecapsulateRequest) (KEMResponse, error) {
+func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecapsulateRequest) (_ KEMResponse, err error) {
+	start, extra := time.Now(), map[string]any{}
+	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-decapsulate"), req.TenantID, keyID, start, err, extra) }()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return KEMResponse{}, err
@@ -3766,11 +3767,7 @@ func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecap
 	}
 	sharedB64 := base64.StdEncoding.EncodeToString(result.Payload)
 	crypto.Zeroize(result.Payload)
-	_ = s.publishAudit(ctx, "audit.key.kem_decapsulate", req.TenantID, map[string]any{
-		"key_id":       keyID,
-		"algorithm":    keyAlg,
-		"reference_id": req.ReferenceID,
-	})
+	extra["algorithm"], extra["reference_id"] = keyAlg, req.ReferenceID
 	return KEMResponse{
 		KeyID:           keyID,
 		Version:         result.KeyVersion,

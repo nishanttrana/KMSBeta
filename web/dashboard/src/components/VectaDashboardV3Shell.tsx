@@ -1,7 +1,6 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
-  BarChart2,
   Bell,
   Building2,
   CalendarClock,
@@ -95,7 +94,6 @@ const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ defa
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
-const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
 const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
@@ -198,7 +196,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
-  ops_metrics: OpsMetricsTab,
   backup: BackupTab,
   devsecops: DevSecOpsTab,
   ai_gateway: AIGatewayTab,
@@ -239,7 +236,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
-  ops_metrics: "Operations Metrics",
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
   ai_gateway: "AI Security Gateway",
@@ -254,7 +250,6 @@ const NAV = [
     { id: "recommendations", icon: Lightbulb, label: "Recommendations" },
     { id: "ops", icon: LayoutDashboard, label: "Operations" },
     { id: "workbench", icon: LayoutGrid, label: "Workbench" },
-    { id: "ops_metrics", icon: BarChart2, label: "Operations Metrics" },
     { id: "key_analytics", icon: BarChart3, label: "Analytics" },
   ]},
   { g: "Keys & lifecycle", items: [
@@ -346,13 +341,17 @@ const SUB_PANES: Record<string, any[]> = {
   ]
 };
 
+// Tabs merged into another; a saved or linked id opens the new home.
+// Platform > Health went to Administration > Health (1.38.0-beta),
+// Operations Metrics to Analytics > Operations (2.1.0-beta).
+const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "key_analytics" };
+
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, alerts, audit, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
     try {
       const saved = window.location.hash.replace("#", "") || localStorage.getItem(TAB_STORAGE_KEY);
-      // Platform > Health merged into Administration > Health (1.38.0-beta).
-      if (saved) return saved === "health" ? "admin" : saved;
+      if (saved) return RETIRED_TABS[saved] ?? saved;
     } catch { /* ignored */ }
     return "home";
   });

@@ -126,7 +126,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /ops-metrics/latency", h.handleGetLatencyPercentiles)
 	mux.HandleFunc("GET /ops-metrics/by-service", h.handleGetServiceStats)
 	mux.HandleFunc("GET /ops-metrics/errors", h.handleGetErrorBreakdown)
-	mux.HandleFunc("POST /ops-metrics/record", h.handleRecordOp)
 
 	// FIPS 140-3 module boundary declaration
 	mux.HandleFunc("GET /audit/fips/boundary", h.handleFIPSBoundary)

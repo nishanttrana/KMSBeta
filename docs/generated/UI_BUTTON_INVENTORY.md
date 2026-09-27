@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-27T18:44:36Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T18:47:18Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 714 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 874 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 925 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 948 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 998 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1035 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1070 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 713 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 873 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 924 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 947 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 997 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1034 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1069 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -421,9 +421,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 250 | - | Btn | void saveRule()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 288 | - | Btn | editRule(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 289 | - | Btn | void removeRule(item)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 15 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 16 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
 | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 64 | key_analytics | Btn | Export JSON | handleExport |
 | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 65 | key_analytics | Btn | (icon or dynamic label) | load |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 71 | key_analytics | button | setView(id)} style={{ padding: "8px 16px", border: "none", background: "trans... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 53 | - | Btn | void load()}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 77 | - | Btn | void run(k.key_id, "start migration", () => kdfTransition(session, k.key_id,... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 81 | - | Btn | void run(k.key_id, "re-protect vault tokens", () => kdfReprotectVault(session... |  |
@@ -487,9 +488,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2772 | keys | Btn | setAttestResult(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2779 | keys | Btn | {const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c... |  |
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2780 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
-| web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 92 | ops_metrics | button | setTimeWindow(w)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 99 | ops_metrics | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | 121 | ops_metrics | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 128 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
 | web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 453 | - | Btn | void loadAll(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 454 | - | Btn | (icon or dynamic label) | saveAll} disabled={loading \|\| saving |
 | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 824 | payment | Btn | void refreshAP2Profile()} disabled= > |  |

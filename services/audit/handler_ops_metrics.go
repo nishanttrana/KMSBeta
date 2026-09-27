@@ -11,10 +11,7 @@ func (h *Handler) handleGetOpsOverview(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	window := strings.TrimSpace(r.URL.Query().Get("window"))
-	if window == "" {
-		window = "24h"
-	}
+	window := opsWindow(r)
 	ov, err := h.store.GetOpsOverview(r.Context(), tenantID, window)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
@@ -32,10 +29,7 @@ func (h *Handler) handleGetOpsTimeSeries(w http.ResponseWriter, r *http.Request)
 	if tenantID == "" {
 		return
 	}
-	window := strings.TrimSpace(r.URL.Query().Get("window"))
-	if window == "" {
-		window = "24h"
-	}
+	window := opsWindow(r)
 	items, err := h.store.GetOpsTimeSeries(r.Context(), tenantID, window)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
@@ -54,7 +48,7 @@ func (h *Handler) handleGetLatencyPercentiles(w http.ResponseWriter, r *http.Req
 	if tenantID == "" {
 		return
 	}
-	items, err := h.store.GetLatencyPercentiles(r.Context(), tenantID)
+	items, err := h.store.GetLatencyPercentiles(r.Context(), tenantID, opsWindow(r))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
@@ -71,7 +65,7 @@ func (h *Handler) handleGetServiceStats(w http.ResponseWriter, r *http.Request) 
 	if tenantID == "" {
 		return
 	}
-	items, err := h.store.GetServiceStats(r.Context(), tenantID)
+	items, err := h.store.GetServiceStats(r.Context(), tenantID, opsWindow(r))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
@@ -88,10 +82,7 @@ func (h *Handler) handleGetErrorBreakdown(w http.ResponseWriter, r *http.Request
 	if tenantID == "" {
 		return
 	}
-	window := strings.TrimSpace(r.URL.Query().Get("window"))
-	if window == "" {
-		window = "24h"
-	}
+	window := opsWindow(r)
 	items, err := h.store.GetErrorBreakdown(r.Context(), tenantID, window)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
@@ -104,32 +95,10 @@ func (h *Handler) handleGetErrorBreakdown(w http.ResponseWriter, r *http.Request
 	})
 }
 
-func (h *Handler) handleRecordOp(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
+// opsWindow is the request's window (1h, 6h, 24h, 7d, 30d; default 24h).
+func opsWindow(r *http.Request) string {
+	if w := strings.TrimSpace(r.URL.Query().Get("window")); w != "" {
+		return w
 	}
-	var req struct {
-		Service   string `json:"service"`
-		OpType    string `json:"op_type"`
-		LatencyMs int    `json:"latency_ms"`
-		IsError   bool   `json:"is_error"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	if strings.TrimSpace(req.OpType) == "" {
-		writeErr(w, http.StatusBadRequest, "validation_error", "op_type is required", reqID, tenantID)
-		return
-	}
-	if err := h.store.RecordOp(r.Context(), tenantID, req.Service, req.OpType, req.LatencyMs, req.IsError); err != nil {
-		writeErr(w, http.StatusInternalServerError, "record_failed", "failed to record operation", reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"recorded":   true,
-		"request_id": reqID,
-	})
+	return "24h"
 }

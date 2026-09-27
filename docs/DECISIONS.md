@@ -7,6 +7,37 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Operations metrics come from audit events, shown in Analytics (2.1.0-beta)
+
+**Decision.** Key-operation throughput, latency and errors are the
+Operations section of Analytics, not a tab of their own. The audit service
+builds them from the `audit.key.<op>` events keycore emits for every key
+operation. Latency percentiles come from a fixed-bucket histogram.
+
+**Why.** The owner asked whether the tab needed to be separate. Analytics
+already answers "how are our keys doing", and operations are the usage half
+of that answer. The audit event is the one record every operation already
+has to produce (CLAUDE.md rule 2), so deriving metrics from it gives one
+source of truth and no second write path to drift from it.
+
+**How.** Keycore's crypto entry points defer `auditCryptoOp`, which names
+the event after the operation that ran and carries `duration_ms` and
+`result`. Audit's `ProcessEvent` calls `recordOpMetric` after the event is
+persisted, so an event that fails to persist is not counted. Enforced by
+`TestCryptoOpsAuditedWithOutcomeAndDuration` (keycore) and
+`TestOpsMetricsBuiltFromIngestedKeyOpEvents` (audit).
+
+**Rejected.** Keeping the removed record endpoint (`/ops-metrics/record`) and having keycore call
+it: that is a second path, and any authenticated caller could post
+numbers. Estimating percentiles from the average: that is fabricated data
+(rule 7). Storing every sample for exact percentiles: that is unbounded
+growth on a hot path. Histogram bounds are the honest resolution.
+
+**Open.** Metrics are per node (`ops_metrics_hourly` is node-local). A
+cluster-wide view would need members to report to the primary.
+
+---
+
 ## 2026-09-28 — Threat & Exposure folded into Keys, Posture and Reporting; leak scanner removed (2.0.0-beta)
 
 **Decision.** The Threat & Exposure tab is removed.

@@ -131,6 +131,7 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 	if err != nil {
 		return AuditEvent{}, Alert{}, err
 	}
+	s.recordOpMetric(ctx, evt)
 	s.broadcastToStream(evt, al)
 	if s.webhooks != nil {
 		s.webhooks.Enqueue(ctx, evt)

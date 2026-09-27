@@ -67,11 +67,10 @@ audit,GET,/ops-metrics/timeseries,/ops-metrics/timeseries,h.handleGetOpsTimeSeri
 audit,GET,/ops-metrics/latency,/ops-metrics/latency,h.handleGetLatencyPercentiles,mux,,,,services/audit/handler.go,126,audit|GET|/ops-metrics/latency
 audit,GET,/ops-metrics/by-service,/ops-metrics/by-service,h.handleGetServiceStats,mux,,,,services/audit/handler.go,127,audit|GET|/ops-metrics/by-service
 audit,GET,/ops-metrics/errors,/ops-metrics/errors,h.handleGetErrorBreakdown,mux,,,,services/audit/handler.go,128,audit|GET|/ops-metrics/errors
-audit,POST,/ops-metrics/record,/ops-metrics/record,h.handleRecordOp,mux,,,,services/audit/handler.go,129,audit|POST|/ops-metrics/record
-audit,GET,/audit/fips/boundary,/audit/fips/boundary,h.handleFIPSBoundary,mux,,,,services/audit/handler.go,132,audit|GET|/audit/fips/boundary
-audit,GET,/audit/cbom/inventory,/audit/cbom/inventory,h.handleCBOMInventory,mux,,,,services/audit/handler.go,135,audit|GET|/audit/cbom/inventory
-audit,GET,/audit/cbom/diff,/audit/cbom/diff,h.handleCBOMDiff,mux,,,,services/audit/handler.go,136,audit|GET|/audit/cbom/diff
-audit,GET,/metrics,/metrics,h.handlePrometheusMetrics,mux,,,,services/audit/handler.go,139,audit|GET|/metrics
+audit,GET,/audit/fips/boundary,/audit/fips/boundary,h.handleFIPSBoundary,mux,,,,services/audit/handler.go,131,audit|GET|/audit/fips/boundary
+audit,GET,/audit/cbom/inventory,/audit/cbom/inventory,h.handleCBOMInventory,mux,,,,services/audit/handler.go,134,audit|GET|/audit/cbom/inventory
+audit,GET,/audit/cbom/diff,/audit/cbom/diff,h.handleCBOMDiff,mux,,,,services/audit/handler.go,135,audit|GET|/audit/cbom/diff
+audit,GET,/metrics,/metrics,h.handlePrometheusMetrics,mux,,,,services/audit/handler.go,138,audit|GET|/metrics
 audit,GET,/webhooks,/webhooks,h.listWebhooks,kernel,audit.webhook.read,webhooks_listed,webhook,services/audit/handler_webhook.go,32,audit|GET|/webhooks
 audit,POST,/webhooks,/webhooks,h.createWebhook,kernel,audit.webhook.write,webhook_created,webhook,services/audit/handler_webhook.go,33,audit|POST|/webhooks
 audit,PATCH,/webhooks/{id},/webhooks/{param},h.updateWebhook,kernel,audit.webhook.write,webhook_updated,webhook,services/audit/handler_webhook.go,34,audit|PATCH|/webhooks/{param}

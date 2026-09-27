@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A metrics tab read a table that nothing wrote (Operations Metrics)
+- **What happened:** Operations Metrics was always empty. Its only writer
+  was `POST /ops-metrics/record`, and no service called it. The latency
+  "percentiles" were `p90 = 2 × avg` and `p99 = 4 × avg`, labelled as
+  measurements. Latency was summed in whole milliseconds, so sub-millisecond
+  crypto rounded to 0. Keycore audited only successful key operations, and
+  audited a wrap as an encrypt and a MAC as a sign.
+- **Why it slipped through:** the endpoints, schema and UI all existed, so
+  the feature looked finished. Nobody followed the data back to a producer.
+  The fabricated percentiles sat in the store layer behind a comment calling
+  them "heuristics", where the `real-capability` scan (function names) can't
+  see them.
+- **Rule:** a metric comes from the event of the work that produced it,
+  never from a record endpoint callers post to. Before calling a read view
+  done, find what writes its table. A number derived from another number is
+  not a measurement: measure it (histogram) or don't show it.
+
 ### Detection that runs on read never alerts anyone (threat signals)
 - **What happened:** keycore's threat rules were real, but they ran only
   when `GET /threat/signals` or `/threat/dashboard` was called, which the

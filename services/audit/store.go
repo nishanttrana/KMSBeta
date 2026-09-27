@@ -54,11 +54,11 @@ type Store interface {
 	SealPlaintextWebhook(ctx context.Context, w Webhook) (bool, error)
 
 	// Ops metrics operations
-	RecordOp(ctx context.Context, tenantID string, service string, opType string, latencyMs int, isError bool) error
+	RecordOp(ctx context.Context, op OpSample) error
 	GetOpsOverview(ctx context.Context, tenantID string, window string) (OpsOverview, error)
 	GetOpsTimeSeries(ctx context.Context, tenantID string, window string) ([]OpsTimeSeries, error)
-	GetLatencyPercentiles(ctx context.Context, tenantID string) ([]LatencyPercentiles, error)
-	GetServiceStats(ctx context.Context, tenantID string) ([]ServiceOpsStats, error)
+	GetLatencyPercentiles(ctx context.Context, tenantID string, window string) ([]LatencyPercentiles, error)
+	GetServiceStats(ctx context.Context, tenantID string, window string) ([]ServiceOpsStats, error)
 	GetErrorBreakdown(ctx context.Context, tenantID string, window string) ([]ErrorBreakdown, error)
 	// GetAllServiceStats returns cross-tenant per-service/op-type aggregates for Prometheus.
 	GetAllServiceStats(ctx context.Context) ([]PrometheusMetricRow, error)

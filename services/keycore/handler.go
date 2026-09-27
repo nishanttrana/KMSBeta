@@ -2743,6 +2743,9 @@ func publishAuditEvent(ctx context.Context, pub AuditPublisher, subject string, 
 	if v, ok := data["error"].(string); ok && strings.TrimSpace(v) != "" {
 		payload["error_message"] = strings.TrimSpace(v)
 	}
+	if v, ok := data["duration_ms"].(float64); ok {
+		payload["duration_ms"] = v
+	}
 	if v, ok := data["actor_id"].(string); ok && strings.TrimSpace(v) != "" {
 		payload["actor_id"] = strings.TrimSpace(v)
 	}

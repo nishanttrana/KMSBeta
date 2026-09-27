@@ -88,7 +88,7 @@ var Local = map[string][]string{
 		// tests only read.
 		"POST /audit/publish", "POST /audit/search",
 		"POST /audit/merkle/build", "POST /audit/merkle/verify",
-		"POST /ops-metrics/record", "POST /alerts/test-rule",
+		"POST /alerts/test-rule",
 		"POST /alerts/channels/test", "POST /webhooks/{id}/test",
 	},
 }

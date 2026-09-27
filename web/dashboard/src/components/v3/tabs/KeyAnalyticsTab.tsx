@@ -3,6 +3,7 @@ import { apiFetch } from "../../../lib/apiFetch";
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
+import { OpsMetricsPanel } from "./OpsMetricsPanel";
 
 const base = "/svc/keycore";
 const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
@@ -17,6 +18,7 @@ const Btn = ({ onClick, children, small, variant = "default" }: any) => {
 const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
 
 export function KeyAnalyticsTab({ session }: any) {
+  const [view, setView] = useState<"keys" | "ops">("keys");
   const [analytics, setAnalytics] = useState<any>({});
   const [keyStats, setKeyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,15 +29,12 @@ export function KeyAnalyticsTab({ session }: any) {
     const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const [aRes, sRes] = await Promise.all([
-        apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) }),
-        apiFetch(`${base}/rotation/analytics`, { headers: hdr(session.token, tid) }),
-      ]);
+      const aRes = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
       const a = await aRes.json().catch(() => ({}));
-      const s = await sRes.json().catch(() => ({}));
+      if (!aRes.ok) throw new Error(a?.error?.message || a?.message || `key analytics unavailable (HTTP ${aRes.status})`);
       setAnalytics(a);
       setKeyStats(Array.isArray(a.by_algorithm) ? a.by_algorithm : []);
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) { setAnalytics({}); setKeyStats([]); setErr(e.message); }
     finally { setLoading(false); }
   }, [session?.token, session?.tenantId]);
 
@@ -44,7 +43,8 @@ export function KeyAnalyticsTab({ session }: any) {
   const handleExport = async () => {
     const tid = session?.tenantId ?? "";
     const r = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setErr(d?.error?.message || `export failed (HTTP ${r.status})`); return; }
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "key-analytics-report.json"; a.click();
@@ -60,11 +60,23 @@ export function KeyAnalyticsTab({ session }: any) {
           <BarChart3 size={20} style={{ color: C.accent }} />
           <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Advanced Key Analytics & Reporting</span>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        {view === "keys" && <div style={{ display: "flex", gap: 8 }}>
           <Btn onClick={handleExport} variant="ghost" small><Download size={12} /> Export JSON</Btn>
           <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
-        </div>
+        </div>}
       </div>
+
+      <div style={{ display: "flex", gap: 2, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+        {([["keys", "Key inventory"], ["ops", "Operations"]] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)} style={{
+            padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12,
+            fontWeight: view === id ? 700 : 400, color: view === id ? C.accent : C.muted,
+            borderBottom: view === id ? `2px solid ${C.accent}` : "2px solid transparent", marginBottom: -1,
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {view === "ops" ? <OpsMetricsPanel session={session} /> : <>
 
       {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
@@ -116,6 +128,7 @@ export function KeyAnalyticsTab({ session }: any) {
           ))}
         </Card>
       </div>
+      </>}
     </div>
   );
 }

@@ -27,12 +27,18 @@ function fmt(n: number): string {
 }
 
 function pct(n: number): string { return ((n ?? 0) * 100).toFixed(3) + "%"; }
-function ms(n: number): string { return (n ?? 0).toFixed(1) + "ms"; }
+function ms(n: number): string { return (n ?? 0) < 1 ? (n ?? 0).toFixed(3) + "ms" : (n ?? 0).toFixed(1) + "ms"; }
+// A percentile is the histogram bucket bound it fell in; null is the
+// overflow bucket (slower than the last bound).
+function le(n: number | null | undefined): string { return n == null ? "> 1000ms" : "≤ " + n + "ms"; }
 
 const CELL: React.CSSProperties = { padding: "8px 12px", color: C.dim, fontSize: 12, verticalAlign: "middle" };
 const TH: React.CSSProperties = { padding: "7px 12px", fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "left" };
 
-export function OpsMetricsTab({ session }: { session: any }) {
+// Operations section of the Analytics tab: key-operation throughput,
+// latency and errors, built by the audit service from keycore's
+// audit.key.<op> events.
+export function OpsMetricsPanel({ session }: { session: any }) {
   const [timeWindow, setTimeWindow] = useState<"1h" | "24h" | "7d" | "30d">("24h");
   const [section, setSection] = useState<"ops" | "latency" | "services" | "errors">("ops");
   const [overview, setOverview] = useState<any>(null);
@@ -40,29 +46,34 @@ export function OpsMetricsTab({ session }: { session: any }) {
   const [services, setServices] = useState<any[]>([]);
   const [errors, setErrors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadErr("");
     try {
       const [ov, lat, svc, err] = await Promise.all([
-        getOverview(session),
-        getLatencyPercentiles(session),
-        getServiceStats(session),
-        getErrorBreakdown(session),
+        getOverview(session, timeWindow),
+        getLatencyPercentiles(session, timeWindow),
+        getServiceStats(session, timeWindow),
+        getErrorBreakdown(session, timeWindow),
       ]);
       setOverview(ov);
-      setLatency(lat ?? []);
-      setServices(svc ?? []);
-      setErrors(err ?? []);
-    } catch { /* leave state as-is */ }
+      setLatency(lat);
+      setServices(svc);
+      setErrors(err);
+    } catch (e: any) {
+      setOverview(null); setLatency([]); setServices([]); setErrors([]);
+      setLoadErr(e?.message || String(e));
+    }
     setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [session, timeWindow]);
 
   useEffect(() => { load(); }, [load]);
 
   const ov = overview ?? {};
-  const totalOps = latency.reduce((s, r) => s + (r.sample_ops ?? r.sample_count ?? 0), 0);
+  const totalOps = latency.reduce((s, r) => s + (r.sample_ops ?? 0), 0);
+  const na = loading || loadErr;
 
   const statCard = (icon: React.ReactNode, label: string, value: string, sub?: string, color?: string) => (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", flex: 1, display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -76,16 +87,10 @@ export function OpsMetricsTab({ session }: { session: any }) {
   );
 
   return (
-    <div style={{ padding: 24, fontFamily: '"IBM Plex Sans", sans-serif', color: C.text, minHeight: "100%" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <BarChart2 size={18} color={C.accent} />
-            <span style={{ fontSize: 16, fontWeight: 700 }}>Operations Metrics</span>
-          </div>
-          <div style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency, and error analytics</div>
-        </div>
+    <div style={{ fontFamily: '"IBM Plex Sans", sans-serif', color: C.text }}>
+      {/* Controls */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: C.muted }}>Key operation throughput, latency and errors, from the audit events of every operation keycore ran, refused or failed</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 6, padding: 2, border: `1px solid ${C.border}` }}>
             {(["1h", "24h", "7d", "30d"] as const).map(w => (
@@ -102,12 +107,14 @@ export function OpsMetricsTab({ session }: { session: any }) {
         </div>
       </div>
 
+      {loadErr && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
+
       {/* Stat Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        {statCard(<Zap size={16} />, "Total Ops", loading ? "—" : fmt(ov.total_ops ?? 0), `window: ${ov.window ?? timeWindow}`, C.accent)}
-        {statCard(<Activity size={16} />, "Avg Latency", loading ? "—" : ms(ov.avg_latency_ms ?? 0), "across all operations", (ov.avg_latency_ms ?? 0) > 10 ? C.amber : C.green)}
-        {statCard(<Clock size={16} />, "Error Rate", loading ? "—" : pct(ov.error_rate ?? 0), `${ov.total_errors ?? 0} errors`, (ov.error_rate ?? 0) > 0.02 ? C.red : C.green)}
-        {statCard(<BarChart2 size={16} />, "Total Errors", loading ? "—" : String(ov.total_errors ?? 0), "in selected window", (ov.total_errors ?? 0) > 0 ? C.amber : C.green)}
+        {statCard(<Zap size={16} />, "Total Ops", na ? "—" : fmt(ov.total_ops ?? 0), `window: ${ov.window ?? timeWindow}`, C.accent)}
+        {statCard(<Activity size={16} />, "Avg Latency", na ? "—" : ms(ov.avg_latency_ms ?? 0), "across all operations", (ov.avg_latency_ms ?? 0) > 10 ? C.amber : C.green)}
+        {statCard(<Clock size={16} />, "Error Rate", na ? "—" : pct(ov.error_rate ?? 0), `${ov.total_errors ?? 0} errors`, (ov.error_rate ?? 0) > 0.02 ? C.red : C.green)}
+        {statCard(<BarChart2 size={16} />, "Total Errors", na ? "—" : String(ov.total_errors ?? 0), "in selected window", (ov.total_errors ?? 0) > 0 ? C.amber : C.green)}
       </div>
 
       {/* Section Tabs */}
@@ -129,18 +136,18 @@ export function OpsMetricsTab({ session }: { session: any }) {
       </div>
 
       {/* Operations Breakdown */}
-      {section === "ops" && (
+      {!loadErr && section === "ops" && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Operations by Type — {timeWindow}</div>
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
               <Activity size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
-              <div style={{ fontSize: 13 }}>No operations recorded yet. Operations appear here as keys are used.</div>
+              <div style={{ fontSize: 13 }}>No key operations in this window. Encrypt, decrypt, wrap, sign, verify, MAC, derive and KEM calls appear here as they run.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {latency.map(row => {
-                const count = row.sample_ops ?? row.sample_count ?? 0;
+                const count = row.sample_ops ?? 0;
                 const p = totalOps > 0 ? (count / totalOps) * 100 : 0;
                 const color = OP_COLORS[row.op_type] || C.dim;
                 return (
@@ -167,11 +174,11 @@ export function OpsMetricsTab({ session }: { session: any }) {
       )}
 
       {/* Latency Percentiles */}
-      {section === "latency" && (
+      {!loadErr && section === "latency" && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Latency by Operation Type</div>
+          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Latency by Operation Type <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>average is exact; percentiles are the histogram bucket each falls in</span></div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : latency.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No latency data recorded yet.</div>
+            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No key operations in this window.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -192,10 +199,10 @@ export function OpsMetricsTab({ session }: { session: any }) {
                         </div>
                       </td>
                       <td style={{ ...CELL, color: C.dim }}>{ms(row.avg_ms ?? 0)}</td>
-                      <td style={{ ...CELL, color: C.green }}>{ms(row.p50_ms ?? 0)}</td>
-                      <td style={{ ...CELL, color: (row.p90_ms ?? 0) > 20 ? C.amber : C.dim }}>{ms(row.p90_ms ?? 0)}</td>
-                      <td style={{ ...CELL, color: (row.p99_ms ?? 0) > 30 ? C.orange : C.dim }}>{ms(row.p99_ms ?? 0)}</td>
-                      <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(row.sample_ops ?? row.sample_count ?? 0)}</td>
+                      <td style={{ ...CELL, color: C.green }}>{le(row.p50_ms)}</td>
+                      <td style={{ ...CELL, color: row.p90_ms == null || row.p90_ms > 25 ? C.amber : C.dim }}>{le(row.p90_ms)}</td>
+                      <td style={{ ...CELL, color: row.p99_ms == null || row.p99_ms > 50 ? C.orange : C.dim }}>{le(row.p99_ms)}</td>
+                      <td style={{ ...CELL, fontFamily: "monospace" }}>{fmt(row.sample_ops ?? 0)}</td>
                     </tr>
                   );
                 })}
@@ -206,11 +213,11 @@ export function OpsMetricsTab({ session }: { session: any }) {
       )}
 
       {/* By Service */}
-      {section === "services" && (
+      {!loadErr && section === "services" && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Operations by Service</div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : services.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No service data recorded yet.</div>
+            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No key operations in this window.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -239,7 +246,7 @@ export function OpsMetricsTab({ session }: { session: any }) {
       )}
 
       {/* Error Breakdown */}
-      {section === "errors" && (
+      {!loadErr && section === "errors" && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>
             Error Breakdown <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>by service and operation</span>

@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-27T18:44:36Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T18:47:18Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `29`
-- Tab/component mappings: `37`
+- Dashboard navigation items: `28`
+- Tab/component mappings: `36`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `910` across `30` services
+- Backend HTTP routes discovered: `909` across `30` services
 - Backend routes on the `pkg/route` kernel: `153` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `578`
-- Frontend call sites with exact backend route match: `531`
+- Frontend API call sites discovered: `577`
+- Frontend call sites with exact backend route match: `530`
 - Frontend call sites needing review or dynamic/runtime confirmation: `47`
-- Clickable controls with static `onClick` handlers: `758`
-- Backend request flows with handler/service/package summaries: `910`
+- Clickable controls with static `onClick` handlers: `759`
+- Backend request flows with handler/service/package summaries: `909`
 
 ## How To Use This For Launch
 
@@ -47,9 +47,6 @@ flowchart LR
   tab_ops --> svc_keycore
   tab_ops --> svc_reporting
   tab_ops --> svc_secrets
-  tab_ops_metrics["Operations Metrics"]
-  UI --> tab_ops_metrics
-  tab_ops_metrics --> svc_audit
   tab_keys["Key Management"]
   UI --> tab_keys
   tab_keys --> svc_auth
@@ -143,7 +140,7 @@ flowchart LR
   tab_restapi --> svc_secrets
   svc_ai["ai"]
   svc_ai_gateway["ai-gateway (31 routes)"]
-  svc_audit["audit (52 routes)"]
+  svc_audit["audit (51 routes)"]
   svc_auth["auth (82 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -178,7 +175,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
-| Overview | Operations Metrics | ops_metrics | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | audit | 5 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
@@ -217,7 +213,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
 | ai-gateway | 31 | 23 |
-| audit | 52 | 28 |
+| audit | 51 | 27 |
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
@@ -336,11 +332,11 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 116 |
 | audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 117 |
 | audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 118 |
-| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 129 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 132 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 135 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 136 |
-| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 139 |
+| audit | GET | /ops-metrics/timeseries | h.handleGetOpsTimeSeries |  | services/audit/handler.go | 125 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 131 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 134 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 135 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 138 |
 | auth | POST | /auth/register | h.handleRegister |  | services/auth/handler.go | 61 |
 | auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 62 |
 | auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 63 |

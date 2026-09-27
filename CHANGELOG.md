@@ -4,6 +4,44 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.1.0-beta] — 2026-09-28
+
+### Operations metrics are real, and live in Analytics
+- **The Operations Metrics tab was always empty.** It read
+  `ops_metrics_hourly`, which only `POST /ops-metrics/record` wrote, and
+  nothing ever called it. The tab is now the **Operations** section of
+  **Analytics** (next to Key inventory). A saved `ops_metrics` tab or
+  `#ops_metrics` link opens Analytics.
+- **Built from audit events of operations that ran.** Keycore now emits
+  `audit.key.<op>` for every key operation (`encrypt`, `decrypt`, `wrap`,
+  `unwrap`, `sign`, `verify`, `mac`, `derive`, `kem_encapsulate`,
+  `kem_decapsulate`) with its measured `duration_ms` and `result`:
+  `success`, `refused` (with `reason`: `ops_limit_reached`, `policy_denied`,
+  `fips_mode_violation`, key-access and HSM reasons), `failure` (with
+  `error_message`) or `pending_approval`. The audit service adds each
+  persisted event to the hour it happened in. Refusals and failures count as
+  errors, and pending approvals are not counted.
+- **Audit fixes on the way.** Refused and failed key operations used to emit no
+  operation event. A wrap was audited as `audit.key.encrypt`, an unwrap as
+  `audit.key.decrypt` and a MAC as `audit.key.sign`. Each is now named after
+  what ran.
+- **Latency percentiles are measured.** p90 and p99 used to be printed as
+  2× and 4× the average. Each sample is now counted in a latency histogram
+  (bounds 0.1 ms to 1000 ms, migration 007), and p50/p90/p99 are the bucket
+  bound each falls in, shown as "≤ X ms", or "> 1000ms" for the overflow
+  bucket. Latency is summed in microseconds, because whole milliseconds
+  rounded every sub-millisecond operation down to 0.
+- **The window selector works.** Overview, latency, by-service and errors all
+  take `?window=1h|6h|24h|7d|30d`. Before, only errors did, and the dashboard
+  never sent it. A failed load shows "Operations metrics unavailable:
+  <error>" instead of zeros.
+- **Removed `POST /svc/audit/ops-metrics/record`.** Any authenticated caller
+  could write arbitrary numbers into the metrics.
+- Analytics > Key inventory shows the error when its call fails, and it no
+  longer fetches `/rotation/analytics`, which it ignored.
+- Metrics are per node (`ops_metrics_hourly` is node-local): each node counts
+  the operations its own keycore ran.
+
 ## [2.0.0-beta] — 2026-09-28
 
 ### Breaking: the Threat & Exposure tab is removed; its real parts move to Keys, Posture and Reporting
