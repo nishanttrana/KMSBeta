@@ -4,46 +4,31 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"vecta-kms/pkg/tenantcheck"
-
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
-// optionalJWTMiddleware populates request claims when a valid bearer token is
-// present (rejecting an invalid one) and otherwise passes the request through
-// unauthenticated. Tenant-scoped feature handlers gate on requireAuthedTenant.
-func optionalJWTMiddleware(next http.Handler, parse func(string) (*pkgauth.Claims, error)) http.Handler {
+// claimsMiddleware puts verified JWT claims on the request when the bearer
+// token is valid, and nothing otherwise. It never answers itself: every
+// route is on the pkg/route kernel, which refuses a request without verified
+// claims (missing or invalid token alike) with 401 and audits the refusal as
+// audit.posture.<action> with reason "unauthenticated".
+func claimsMiddleware(next http.Handler, parse func(string) (*pkgauth.Claims, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
 		if raw != "" {
-			claims, err := parse(raw)
-			if err != nil {
-				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
-				return
+			if claims, err := parse(raw); err == nil && claims != nil {
+				r = r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims))
 			}
-			r = r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims))
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// requireAuthedTenant is mustTenant plus a hard requirement that the caller is
-// authenticated — used by tenant-scoped feature endpoints (e.g. the leak
-// scanner) so they cannot be reached unauthenticated or with a spoofed tenant.
-func requireAuthedTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	if _, ok := pkgauth.ClaimsFromContext(r.Context()); !ok {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "authentication required", reqID, "")
-		return ""
-	}
-	return mustTenant(r, reqID, w)
 }
 
 type serviceError struct {
@@ -281,62 +266,6 @@ func max(a int, b int) int {
 		return a
 	}
 	return b
-}
-
-func requestID(r *http.Request) string {
-	reqID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-	if reqID == "" {
-		reqID = newID("req")
-	}
-	return reqID
-}
-
-func tenantFromRequest(r *http.Request) string {
-	return firstNonEmpty(
-		r.URL.Query().Get("tenant_id"),
-		r.Header.Get("X-Tenant-ID"),
-	)
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := strings.TrimSpace(tenantFromRequest(r))
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "tenant_required", "tenant_id is required", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return ""
-	}
-	return tenantID
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	if r.Body == nil {
-		return errors.New("request body is required")
-	}
-	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	return dec.Decode(out)
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeErr(w http.ResponseWriter, status int, code string, message string, reqID string, tenantID string) {
-	writeJSON(w, status, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       defaultString(code, "internal_error"),
-			"message":    defaultString(message, "request failed"),
-			"request_id": reqID,
-			"tenant_id":  tenantID,
-		},
-	})
 }
 
 func slaForSeverity(sev string, base time.Time) time.Time {

@@ -5,6 +5,33 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### "Optional auth so internal callers keep working" is no auth (posture)
+- **What happened:** posture's `optionalJWTMiddleware` parsed a token when
+  one was sent and let every other request through, so reporting could call
+  without a token. Each handler then read the tenant from the query and
+  called `tenantcheck.Enforce`, which skips the check when there are no
+  claims. Five routes didn't even call that, and defaulted to `*`. With no
+  auth at Envoy either, anyone reaching `/svc/posture/` could read every
+  tenant's risk, trigger scans and write events, and choose the executor
+  name recorded on a remediation.
+- **Why it slipped through:** the comment said tenant-scoped handlers
+  "gate themselves", and the leak scanner (added later, on the kernel) did.
+  The older routes looked the same from outside, and `tenantcheck.Enforce`
+  succeeding without claims reads like a pass. The internal caller that
+  motivated the bypass had a service identity provisioned all along
+  (`kms-reporting` is in auth's bootstrap list); it was simply never used.
+  The same service's own call to audit had the mirror bug: it sent no
+  token to a service that requires one, so every audit sync failed with
+  `401`, logged and swallowed, and risk was computed without audit events.
+- **Rule:** an internal caller is authenticated with its service token and
+  admitted by `tenantcheck.IsServicePrincipal`, never by leaving a path
+  open. A middleware that passes tokenless requests is acceptable only
+  in front of the kernel, which then refuses and audits them. Also: a
+  handler that returns success for a no-op (re-executing an executed action)
+  or a failure it swallowed (runbook publish error) becomes a false
+  `result: success` audit event once the kernel audits the route; check
+  every nil return when migrating.
+
 ### An audit register row must name a test, not the code that emits
 - **What happened:** the 1.27.0-beta register listed
   `audit.signing.request_refused` with "handler `bindTenant`" as its proof.

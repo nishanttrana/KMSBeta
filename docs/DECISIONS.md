@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Posture on the route kernel (1.32.0-beta)
+
+**Decision.** All posture routes are kernel routes with three permissions:
+`posture.read`, `posture.write` and `posture.action.execute`. Posture does
+**not** join `route.CoarseDomains`: it is an analytics and remediation plane
+whose actions change controls, so `kms.read`/`kms.write` API-client grants
+don't reach it. The wildcard tenants `*` and `all` are refused on every
+engine route, including for tenant-less root tokens and service principals,
+because the kernel binds exactly one tenant and `*` is the row key of the
+cross-tenant aggregate snapshot; the all-tenant scan runs only in the
+in-process scheduler. `main` wraps the kernel in a claims-only middleware
+that forwards a missing or invalid token without claims, so the kernel
+refuses it and audits it under the route's action, and posture refuses to
+start without a JWT key. *Rejected:* `jwtauth.MustWrap` (its 401 is only
+seen by the generic request log, not as `audit.posture.<action>`
+`unauthenticated`); keeping an unauthenticated path for reporting (it has a
+provisioned `kms-reporting` identity); serving `*` to root admins (no UI
+uses it, and it would be the only cross-tenant read in the API). A batch
+item naming another tenant refuses the whole batch rather than being
+dropped, so a caller never gets a partial success it didn't ask for.
+
+---
+
 ## 2026-09-27 — Attested key release: seal to a key the evidence commits to
 
 **Decision** (1.30.0-beta). A release goes to a public key generated inside

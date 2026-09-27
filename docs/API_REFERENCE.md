@@ -1252,44 +1252,101 @@ Body: `frameworkId`, `templateId`, `scope`, `recompute`. Response 202: assessmen
 
 ## Service 7: Posture (`/svc/posture/`)
 
-Risk findings, risk drivers, blast radius, remediation actions, drift detection.
+Risk findings, risk drivers, blast radius, remediation actions. Every route,
+engine and [leak scanner](#leak-scanner-svcpostureleaks) alike, is on the
+`pkg/route` kernel (1.32.0-beta): a verified bearer token is required, the
+tenant is the token's (a `tenant_id` query, `X-Tenant-ID` header or body
+`tenant_id` must match it), and each request is audited as
+`audit.posture.<action>`. Refusals are audited under the same action with
+`result: refused` and `reason` = `unauthenticated`, `permission_denied`,
+`tenant_mismatch`, `tenant_conflict` or `tenant_wildcard` (`*` or `all`
+named as the tenant; the cross-tenant aggregate is not served). Internal
+callers present their `kms-*` service token; reporting reads findings and
+actions as `kms-reporting`.
+
+| Route | Permission | Audit |
+|---|---|---|
+| `GET /posture/health` | any verified identity | `audit.posture.health_read` |
+| `GET /posture/dashboard` | `posture.read` | `audit.posture.dashboard_viewed` (`risk_24h`, `open_findings`, `critical_findings`, `risk_driver_count`, `blast_radius`, `action_count`) |
+| `GET /posture/risk` | `posture.read` | `audit.posture.risk_read` (`assessed: false` when the tenant was never scanned) |
+| `GET /posture/risk/history` | `posture.read` | `audit.posture.risk_history_read` |
+| `POST /posture/scan` | `posture.write` | `audit.posture.scan_run` (`sync_audit`, `risk_24h`) |
+| `POST /posture/events` | `posture.write` | `audit.posture.events_ingested` (`submitted`, `inserted`) |
+| `POST /posture/events/batch` | `posture.write` | `audit.posture.events_ingested` (`batch: true`) |
+| `POST /posture/ingest/audit` | `posture.write` | `audit.posture.audit_synced` (`inserted`) |
+| `GET /posture/findings` | `posture.read` | `audit.posture.findings_listed` |
+| `PUT /posture/findings/{id}/status` | `posture.write` | `audit.posture.finding_status_updated` (`status`) |
+| `GET /posture/actions` | `posture.read` | `audit.posture.actions_listed` |
+| `POST /posture/actions/{id}/execute` | `posture.action.execute` | `audit.posture.action_executed` (warning; `approval_request_id`) |
+
+`kms.read` / `kms.write` grants don't reach posture (it is not in
+`route.CoarseDomains`); `posture.*` or `*` does.
 
 ---
 
 ### GET /svc/posture/posture/findings
 
-Query: `severity`, `findingType`, `status`, `resourceType`, `resourceId`, `pageSize`, `pageToken`
+Query: `engine`, `status`, `severity`, `finding_type`, `from`, `to`,
+`limit` (1–1000, default 200), `offset`.
 
-Finding: id, severity, findingType, title, description, affectedResourceType, affectedResourceId, remediationSteps[], status, riskDrivers, blastRadius, owner, dueDate, createdAt
+Response: `items[]` (`id`, `engine`, `finding_type`, `title`, `description`,
+`severity`, `risk_score`, `recommended_action`, `status`, `sla_due_at`,
+`risk_drivers`, `blast_radius`, ...), `request_id`.
 
 ```bash
 curl -sk "https://localhost/svc/posture/posture/findings?severity=critical&status=open" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
 
 ### GET /svc/posture/posture/dashboard
 
-Response: `riskDrivers[]`, `remediationCockpit`, `blastRadius`, `scenarioSimulator`, `validationBadges[]`, `slaOverview`
+Response: `risk`, `recent_findings[]`, `pending_actions[]`, `open_findings`,
+`critical_findings`, `risk_drivers`, `remediation_cockpit[]`,
+`blast_radius[]`, `scenario_simulator[]`, `validation_badges[]`,
+`sla_overview`, `request_id`.
 
 ---
 
 ### GET /svc/posture/posture/actions
 
-Action[]: id, findingId, title, priority, impactEstimate, rollbackHint, blastRadius, status
+Query: `status`, `action_type`, `limit`, `offset`. Response: `items[]`
+(`id`, `finding_id`, `action_type`, `approval_required`, `status`,
+`executed_by`, `impact_estimate`, `rollback_hint`, `blast_radius`,
+`priority`), `request_id`.
 
 ---
 
 ### POST /svc/posture/posture/actions/{id}/execute
 
-Executes approved remediation. Response 202: `actionId`, `status: executing`
+Body (optional): `approval_request_id`. Publishes the runbook event
+(`audit.posture.runbook.execute`) and marks the action `executed`, with
+`executed_by` = the verified caller. An `actor` body field is rejected
+(`400`) and `X-Actor-ID` is ignored. Response `200`: `ok`, `request_id`.
+Errors: `404` unknown action, `409 approval_required` (approval-required
+action without `approval_request_id`), `409 already_executed`,
+`502 dispatch_failed` (event bus unavailable or publish failed; the action
+is marked `failed`).
 
 ---
 
 ### POST /svc/posture/posture/scan
 
-Triggers full posture scan. Response 202: `scanId`, `status: running`
+Query: `sync_audit` (bool). Scans the request tenant synchronously; the
+engine scheduler scans every tenant in-process. Response `200`: `risk`
+(snapshot), `tenant_id`, `request_id`.
+
+---
+
+### POST /svc/posture/posture/events, /events/batch
+
+Body: one event, or `{items: [...]}`. Fields: `service` and `action`
+(required), `result`, `severity`, `actor` (the actor the event describes;
+data, not the caller), `ip`, `request_id`, `resource_id`, `error_code`,
+`latency_ms`, `node_id`, `details`, `timestamp`, `tenant_id` (optional, must
+be the request tenant). A batch item naming another tenant refuses the whole
+batch. Response `200`: `inserted`, `request_id`.
 
 ---
 
@@ -2600,7 +2657,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
 | audit.compliance.* | Compliance assessments |
-| audit.posture.* | Posture scan and findings |
+| audit.posture.* | Posture engine (reads, scans, event ingest, action execution) and leak scanner |
 | audit.scim.* | SCIM provisioning |
 | audit.mpc.* | MPC ceremonies |
 | audit.signing.* | Artifact signing |
@@ -2623,6 +2680,7 @@ Selected events with dedicated audit classification:
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
+- `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.runbook.execute` (engine events): posture engine
 - `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
 - `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`

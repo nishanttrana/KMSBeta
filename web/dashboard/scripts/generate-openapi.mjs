@@ -827,6 +827,41 @@ function buildPostureComponents() {
           request_id: { type: "string" },
         },
       },
+      PostureEvent: {
+        type: "object",
+        required: ["service", "action"],
+        additionalProperties: false,
+        properties: {
+          id: { type: "string" },
+          timestamp: isoDateTime,
+          tenant_id: { type: "string", description: "Optional; must equal the request tenant (the token's)." },
+          service: { type: "string" },
+          action: { type: "string" },
+          result: { type: "string" },
+          severity: { type: "string" },
+          actor: { type: "string", description: "The actor the event describes (data), not the caller's identity." },
+          ip: { type: "string" },
+          request_id: { type: "string" },
+          resource_id: { type: "string" },
+          error_code: { type: "string" },
+          latency_ms: { type: "number" },
+          node_id: { type: "string" },
+          details: objectAny,
+          created_at: isoDateTime,
+        },
+      },
+      IngestEnvelope: {
+        type: "object",
+        required: ["inserted", "request_id"],
+        properties: {
+          inserted: { type: "integer" },
+          tenant_id: { type: "string" },
+          request_id: { type: "string" },
+        },
+      },
+    },
+    securitySchemes: {
+      bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
   };
 }
@@ -837,66 +872,58 @@ function buildPostureSpec() {
     { $ref: "#/components/parameters/TenantQuery" },
     { $ref: "#/components/parameters/TenantHeader" },
   ];
+  // Every route is on the pkg/route kernel: a verified JWT is required, the
+  // tenant is the token's (a named tenant must match it), and each request is
+  // audited as audit.posture.<action>, refusals included.
+  const kernel = (perm, action) =>
+    `Permission \`${perm}\`. Audited as \`audit.posture.${action}\`, refusals included (\`reason\` = \`unauthenticated\`, \`permission_denied\`, \`tenant_mismatch\`, \`tenant_conflict\`, \`tenant_wildcard\`).`;
+  const refusals = {
+    400: err("tenant_id missing (service principals must name one) or malformed request."),
+    401: err("No valid bearer token (reason unauthenticated)."),
+    403: err("Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`."),
+    500: err("Internal failure (no detail is returned)."),
+  };
+  const ok = (description, schema) => ({ 200: { description, content: media(schema) } });
 
   return {
     openapi: "3.0.3",
     info: {
       title: "Vecta KMS Security Posture API",
-      version: "1.0.0",
-      description: "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and what-if risk projections for pending remediation actions. Served at `/svc/posture` through the Envoy edge.",
+      version: "2.0.0",
+      description: "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and what-if risk projections for pending remediation actions. Served at `/svc/posture` through the Envoy edge. Every route requires a verified bearer token; the tenant is bound from it. Internal callers use their kms-* service identity.",
     },
     servers: [
       { url: "/svc/posture", description: "Envoy edge" },
     ],
+    security: [{ bearerAuth: [] }],
     tags: [
       { name: "Posture Dashboard" },
+      { name: "Posture Events" },
       { name: "Posture Findings" },
       { name: "Posture Actions" },
     ],
     paths: {
+      "/posture/health": {
+        get: {
+          tags: ["Posture Dashboard"],
+          operationId: "getPostureHealth",
+          description: "Any verified identity. Audited as `audit.posture.health_read`.",
+          parameters: [{ $ref: "#/components/parameters/RequestIdHeader" }],
+          responses: {
+            ...ok("Service is up.", { type: "object", properties: { status: { type: "string" }, service: { type: "string" }, request_id: { type: "string" } } }),
+            401: refusals[401],
+          },
+        },
+      },
       "/posture/dashboard": {
         get: {
           tags: ["Posture Dashboard"],
           operationId: "getPostureDashboard",
+          description: kernel("posture.read", "dashboard_viewed"),
           parameters: tenantParams,
           responses: {
-            200: { description: "Posture dashboard with risk drivers, remediation cockpit, blast radius, validation badges, and SLA overview.", content: media({ $ref: "#/components/schemas/PostureDashboardEnvelope" }) },
-            500: err("Unhandled posture dashboard failure."),
-          },
-        },
-      },
-      "/posture/findings": {
-        get: {
-          tags: ["Posture Findings"],
-          operationId: "listPostureFindings",
-          parameters: [
-            ...tenantParams,
-            { name: "engine", in: "query", required: false, schema: { type: "string" } },
-            { name: "status", in: "query", required: false, schema: { type: "string" } },
-            { name: "severity", in: "query", required: false, schema: { type: "string" } },
-            { $ref: "#/components/parameters/LimitQuery" },
-          ],
-          responses: {
-            200: { description: "Filtered posture findings.", content: media({ $ref: "#/components/schemas/FindingListEnvelope" }) },
-            400: err("Missing tenant scope."),
-            500: err("Unhandled posture findings failure."),
-          },
-        },
-      },
-      "/posture/actions": {
-        get: {
-          tags: ["Posture Actions"],
-          operationId: "listPostureActions",
-          parameters: [
-            ...tenantParams,
-            { name: "status", in: "query", required: false, schema: { type: "string" } },
-            { name: "action_type", in: "query", required: false, schema: { type: "string" } },
-            { $ref: "#/components/parameters/LimitQuery" },
-          ],
-          responses: {
-            200: { description: "Remediation actions, including approval-required and manual actions.", content: media({ $ref: "#/components/schemas/ActionListEnvelope" }) },
-            400: err("Missing tenant scope."),
-            500: err("Unhandled posture action failure."),
+            ...ok("Posture dashboard with risk drivers, remediation cockpit, blast radius, validation badges, and SLA overview.", { $ref: "#/components/schemas/PostureDashboardEnvelope" }),
+            ...refusals,
           },
         },
       },
@@ -904,10 +931,11 @@ function buildPostureSpec() {
         get: {
           tags: ["Posture Dashboard"],
           operationId: "getLatestPostureRisk",
+          description: kernel("posture.read", "risk_read") + " A tenant never scanned returns an empty snapshot for that tenant.",
           parameters: tenantParams,
           responses: {
-            200: { description: "Latest risk snapshot.", content: media({ $ref: "#/components/schemas/RiskEnvelope" }) },
-            500: err("Unhandled posture risk failure."),
+            ...ok("Latest risk snapshot of the tenant.", { $ref: "#/components/schemas/RiskEnvelope" }),
+            ...refusals,
           },
         },
       },
@@ -915,10 +943,11 @@ function buildPostureSpec() {
         get: {
           tags: ["Posture Dashboard"],
           operationId: "listPostureRiskHistory",
-          parameters: [...tenantParams, { $ref: "#/components/parameters/LimitQuery" }],
+          description: kernel("posture.read", "risk_history_read"),
+          parameters: [...tenantParams, { $ref: "#/components/parameters/LimitQuery" }, { name: "offset", in: "query", required: false, schema: { type: "integer", minimum: 0 } }],
           responses: {
-            200: { description: "Historical risk snapshots.", content: media({ $ref: "#/components/schemas/RiskHistoryEnvelope" }) },
-            500: err("Unhandled posture history failure."),
+            ...ok("Historical risk snapshots of the tenant.", { $ref: "#/components/schemas/RiskHistoryEnvelope" }),
+            ...refusals,
           },
         },
       },
@@ -926,14 +955,112 @@ function buildPostureSpec() {
         post: {
           tags: ["Posture Dashboard"],
           operationId: "runPostureScan",
+          description: kernel("posture.write", "scan_run") + " Scans the request tenant only; the scheduler scans every tenant in-process.",
           parameters: [
             ...tenantParams,
             { name: "sync_audit", in: "query", required: false, schema: { type: "boolean", default: false } },
           ],
           responses: {
-            200: { description: "Manual posture scan result.", content: media({ type: "object", required: ["risk", "tenant_id", "request_id"], properties: { risk: { $ref: "#/components/schemas/RiskSnapshot" }, tenant_id: { type: "string" }, request_id: { type: "string" } } }) },
-            400: err("Missing tenant scope."),
-            500: err("Unhandled posture scan failure."),
+            ...ok("Scan result for the tenant.", { type: "object", required: ["risk", "tenant_id", "request_id"], properties: { risk: { $ref: "#/components/schemas/RiskSnapshot" }, tenant_id: { type: "string" }, request_id: { type: "string" } } }),
+            ...refusals,
+          },
+        },
+      },
+      "/posture/events": {
+        post: {
+          tags: ["Posture Events"],
+          operationId: "ingestPostureEvent",
+          description: kernel("posture.write", "events_ingested"),
+          parameters: tenantParams,
+          requestBody: { required: true, content: media({ $ref: "#/components/schemas/PostureEvent" }) },
+          responses: {
+            ...ok("Events stored.", { $ref: "#/components/schemas/IngestEnvelope" }),
+            ...refusals,
+          },
+        },
+      },
+      "/posture/events/batch": {
+        post: {
+          tags: ["Posture Events"],
+          operationId: "ingestPostureEventsBatch",
+          description: kernel("posture.write", "events_ingested") + " An item naming another tenant refuses the whole batch (`tenant_mismatch`); nothing is stored.",
+          parameters: tenantParams,
+          requestBody: {
+            required: true,
+            content: media({ type: "object", required: ["items"], additionalProperties: false, properties: { items: { type: "array", items: { $ref: "#/components/schemas/PostureEvent" } } } }),
+          },
+          responses: {
+            ...ok("Events stored.", { $ref: "#/components/schemas/IngestEnvelope" }),
+            ...refusals,
+          },
+        },
+      },
+      "/posture/ingest/audit": {
+        post: {
+          tags: ["Posture Events"],
+          operationId: "syncPostureFromAudit",
+          description: kernel("posture.write", "audit_synced") + " Pulls the tenant's recent audit events into the posture engine.",
+          parameters: [...tenantParams, { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 5000, default: 500 } }],
+          responses: {
+            ...ok("Events stored.", { $ref: "#/components/schemas/IngestEnvelope" }),
+            ...refusals,
+          },
+        },
+      },
+      "/posture/findings": {
+        get: {
+          tags: ["Posture Findings"],
+          operationId: "listPostureFindings",
+          description: kernel("posture.read", "findings_listed"),
+          parameters: [
+            ...tenantParams,
+            { name: "engine", in: "query", required: false, schema: { type: "string" } },
+            { name: "status", in: "query", required: false, schema: { type: "string" } },
+            { name: "severity", in: "query", required: false, schema: { type: "string" } },
+            { name: "finding_type", in: "query", required: false, schema: { type: "string" } },
+            { name: "from", in: "query", required: false, schema: isoDateTime },
+            { name: "to", in: "query", required: false, schema: isoDateTime },
+            { $ref: "#/components/parameters/LimitQuery" },
+            { name: "offset", in: "query", required: false, schema: { type: "integer", minimum: 0 } },
+          ],
+          responses: {
+            ...ok("Filtered posture findings.", { $ref: "#/components/schemas/FindingListEnvelope" }),
+            ...refusals,
+          },
+        },
+      },
+      "/posture/findings/{id}/status": {
+        put: {
+          tags: ["Posture Findings"],
+          operationId: "updatePostureFindingStatus",
+          description: kernel("posture.write", "finding_status_updated"),
+          parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
+          requestBody: {
+            required: true,
+            content: media({ type: "object", required: ["status"], additionalProperties: false, properties: { status: { type: "string", enum: ["open", "acknowledged", "resolved", "reopened"] } } }),
+          },
+          responses: {
+            ...ok("Status updated.", { type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, request_id: { type: "string" } } }),
+            ...refusals,
+            404: err("Finding not found in the tenant."),
+          },
+        },
+      },
+      "/posture/actions": {
+        get: {
+          tags: ["Posture Actions"],
+          operationId: "listPostureActions",
+          description: kernel("posture.read", "actions_listed"),
+          parameters: [
+            ...tenantParams,
+            { name: "status", in: "query", required: false, schema: { type: "string" } },
+            { name: "action_type", in: "query", required: false, schema: { type: "string" } },
+            { $ref: "#/components/parameters/LimitQuery" },
+            { name: "offset", in: "query", required: false, schema: { type: "integer", minimum: 0 } },
+          ],
+          responses: {
+            ...ok("Remediation actions, including approval-required and manual actions.", { $ref: "#/components/schemas/ActionListEnvelope" }),
+            ...refusals,
           },
         },
       },
@@ -941,21 +1068,24 @@ function buildPostureSpec() {
         post: {
           tags: ["Posture Actions"],
           operationId: "executePostureAction",
+          description: kernel("posture.action.execute", "action_executed") + " The executor recorded is the verified caller; an `actor` body field is rejected and `X-Actor-ID` is ignored.",
           parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
           requestBody: {
             required: false,
             content: media({
               type: "object",
+              additionalProperties: false,
               properties: {
-                actor: { type: "string" },
                 approval_request_id: { type: "string" },
               },
             }),
           },
           responses: {
-            200: { description: "Action execution accepted.", content: media({ type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, request_id: { type: "string" } } }) },
-            400: err("Missing tenant scope or malformed payload."),
-            500: err("Unhandled posture action execution failure."),
+            ...ok("Runbook dispatched and the action marked executed.", { type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, request_id: { type: "string" } } }),
+            ...refusals,
+            404: err("Action not found in the tenant."),
+            409: err("approval_required (no approval_request_id) or already_executed."),
+            502: err("dispatch_failed: the runbook event could not be published; the action is marked failed."),
           },
         },
       },

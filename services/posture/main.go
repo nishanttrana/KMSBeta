@@ -100,19 +100,18 @@ func main() {
 
 	postureHandler := NewHandler(svc)
 	postureHandler.SetAuditClient(auditClient)
-	var rootHandler http.Handler = postureHandler
-	// Optional JWT parsing: populate claims when a valid token is present so
-	// tenantcheck.Enforce binds requests to the authenticated tenant. Absent
-	// tokens are allowed through here (tenant-scoped feature handlers that must
-	// be authenticated call requireAuthedTenant themselves) so internal,
-	// tokenless callers of /posture/* (e.g. reporting) keep working.
-	if parser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "POSTURE", Issuer: cfg.JWTIssuer, Audience: cfg.JWTAudience}); err != nil {
-		logger.Printf("jwt parser disabled: %v", err)
-	} else if parser != nil {
-		rootHandler = optionalJWTMiddleware(rootHandler, parser)
-		logger.Printf("jwt parser enabled for tenant enforcement")
+	// Every route is on the pkg/route kernel, which requires verified claims
+	// and binds the tenant from them. Internal callers (reporting) present
+	// their kms-* service token. Without a JWT key nothing could be served,
+	// so the service refuses to start (fail closed).
+	parser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "POSTURE", Issuer: cfg.JWTIssuer, Audience: cfg.JWTAudience})
+	if err != nil {
+		logger.Fatalf("jwt parser init failed: %v", err)
 	}
-	handler := rootHandler
+	if parser == nil {
+		logger.Fatalf("POSTURE_JWT_PUBLIC_KEY_PEM (or JWT_PUBLIC_KEY_PEM / _B64) is required to start this service")
+	}
+	handler := claimsMiddleware(postureHandler, parser)
 
 	httpPort := envOr("HTTP_PORT", "8220")
 	if err := pkgruntimecfg.ValidateHTTPPort(httpPort); err != nil {

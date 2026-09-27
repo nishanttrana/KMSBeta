@@ -135,9 +135,3 @@ func TestLeakScanWithoutSourceFailsHonestly(t *testing.T) {
 		t.Fatalf("jobs %+v", jobs)
 	}
 }
-
-func TestLeakRoutesRefusalsAudited(t *testing.T) {
-	h, _ := newLeakHandler(t)
-	rec := &routetest.Recorder{}
-	routetest.RefusalsAudited(t, h.leakRouter(rec), rec)
-}

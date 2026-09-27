@@ -37,6 +37,12 @@ Every event is normalized to:
 
 ## APIs
 
+Every route is on the `pkg/route` kernel: a verified bearer token is
+required, the tenant is the token's (`tenant_id` is optional and must match
+it; `*`/`all` are refused), and each request is audited as
+`audit.posture.<action>`. Internal callers use their `kms-*` service token.
+Permissions and audit subjects: [docs/API_REFERENCE.md](../../docs/API_REFERENCE.md#service-7-posture-svcposture).
+
 - `POST /posture/events`
 - `POST /posture/events/batch`
 - `POST /posture/ingest/audit?tenant_id=...&limit=...`

@@ -222,15 +222,16 @@ export async function listPostureActions(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+// The executor is the signed-in user, taken by posture from the verified
+// token; the request carries no actor.
 export async function executePostureAction(
   session: AuthSession,
   actionID: string,
-  payload: { actor?: string; approval_request_id?: string } = {}
+  payload: { approval_request_id?: string } = {}
 ): Promise<void> {
   await serviceRequest(session, "posture", `/posture/actions/${encodeURIComponent(String(actionID || "").trim())}/execute?${tenantQuery(session)}`, {
     method: "POST",
     body: JSON.stringify({
-      actor: String(payload.actor || session.username || "dashboard").trim(),
       approval_request_id: String(payload.approval_request_id || "").trim()
     })
   });

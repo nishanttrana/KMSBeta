@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPPostureClient struct {
@@ -37,6 +39,9 @@ func (c *HTTPPostureClient) ListFindings(ctx context.Context, tenantID string, l
 	if err != nil {
 		return nil, err
 	}
+	// Posture authenticates every route; reporting is a verified service
+	// principal there, never a tokenless caller.
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -63,6 +68,7 @@ func (c *HTTPPostureClient) ListActions(ctx context.Context, tenantID string, li
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

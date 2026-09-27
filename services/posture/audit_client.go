@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPAuditClient struct {
@@ -60,6 +62,9 @@ func (c *HTTPAuditClient) doJSON(ctx context.Context, path string) (map[string]i
 	if err != nil {
 		return nil, err
 	}
+	// Audit requires a verified token; posture reads a tenant's events as
+	// its kms-posture service identity.
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

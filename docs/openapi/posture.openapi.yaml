@@ -1,29 +1,66 @@
 openapi: 3.0.3
 info:
   title: Vecta KMS Security Posture API
-  version: 1.0.0
+  version: 2.0.0
   description: OpenAPI contract for posture dashboards, risk drivers, remediation
     cockpit, blast radius views, and what-if risk projections for pending
-    remediation actions. Served at `/svc/posture` through the Envoy edge.
+    remediation actions. Served at `/svc/posture` through the Envoy edge. Every
+    route requires a verified bearer token; the tenant is bound from it.
+    Internal callers use their kms-* service identity.
 servers:
   - url: /svc/posture
     description: Envoy edge
+security:
+  - bearerAuth: []
 tags:
   - name: Posture Dashboard
+  - name: Posture Events
   - name: Posture Findings
   - name: Posture Actions
 paths:
+  /posture/health:
+    get:
+      tags:
+        - Posture Dashboard
+      operationId: getPostureHealth
+      description: Any verified identity. Audited as `audit.posture.health_read`.
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+      responses:
+        "200":
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  request_id:
+                    type: string
+        "401": &a1
+          description: No valid bearer token (reason unauthenticated).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /posture/dashboard:
     get:
       tags:
         - Posture Dashboard
       operationId: getPostureDashboard
-      parameters: &a4
-        - &a1
+      description: Permission `posture.read`. Audited as
+        `audit.posture.dashboard_viewed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
+      parameters: &a2
+        - &a6
           $ref: "#/components/parameters/RequestIdHeader"
-        - &a2
+        - &a7
           $ref: "#/components/parameters/TenantQuery"
-        - &a3
+        - &a8
           $ref: "#/components/parameters/TenantHeader"
       responses:
         "200":
@@ -33,91 +70,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostureDashboardEnvelope"
-        "500":
-          description: Unhandled posture dashboard failure.
+        "400": &a3
+          description: tenant_id missing (service principals must name one) or malformed
+            request.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /posture/findings:
-    get:
-      tags:
-        - Posture Findings
-      operationId: listPostureFindings
-      parameters:
-        - *a1
-        - *a2
-        - *a3
-        - name: engine
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: severity
-          in: query
-          required: false
-          schema:
-            type: string
-        - $ref: "#/components/parameters/LimitQuery"
-      responses:
-        "200":
-          description: Filtered posture findings.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FindingListEnvelope"
-        "400":
-          description: Missing tenant scope.
+        "401": *a1
+        "403": &a4
+          description: Missing permission, a tenant other than the token's, or the
+            wildcard tenant `*`/`all`.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-        "500":
-          description: Unhandled posture findings failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-  /posture/actions:
-    get:
-      tags:
-        - Posture Actions
-      operationId: listPostureActions
-      parameters:
-        - *a1
-        - *a2
-        - *a3
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: action_type
-          in: query
-          required: false
-          schema:
-            type: string
-        - $ref: "#/components/parameters/LimitQuery"
-      responses:
-        "200":
-          description: Remediation actions, including approval-required and manual actions.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ActionListEnvelope"
-        "400":
-          description: Missing tenant scope.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-        "500":
-          description: Unhandled posture action failure.
+        "500": &a5
+          description: Internal failure (no detail is returned).
           content:
             application/json:
               schema:
@@ -127,52 +96,66 @@ paths:
       tags:
         - Posture Dashboard
       operationId: getLatestPostureRisk
-      parameters: *a4
+      description: Permission `posture.read`. Audited as `audit.posture.risk_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). A tenant never
+        scanned returns an empty snapshot for that tenant.
+      parameters: *a2
       responses:
         "200":
-          description: Latest risk snapshot.
+          description: Latest risk snapshot of the tenant.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RiskEnvelope"
-        "500":
-          description: Unhandled posture risk failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
   /posture/risk/history:
     get:
       tags:
         - Posture Dashboard
       operationId: listPostureRiskHistory
+      description: Permission `posture.read`. Audited as
+        `audit.posture.risk_history_read`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
       parameters:
-        - *a1
-        - *a2
-        - *a3
+        - *a6
+        - *a7
+        - *a8
         - $ref: "#/components/parameters/LimitQuery"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
       responses:
         "200":
-          description: Historical risk snapshots.
+          description: Historical risk snapshots of the tenant.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RiskHistoryEnvelope"
-        "500":
-          description: Unhandled posture history failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
   /posture/scan:
     post:
       tags:
         - Posture Dashboard
       operationId: runPostureScan
+      description: Permission `posture.write`. Audited as `audit.posture.scan_run`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). Scans the
+        request tenant only; the scheduler scans every tenant in-process.
       parameters:
-        - *a1
-        - *a2
-        - *a3
+        - *a6
+        - *a7
+        - *a8
         - name: sync_audit
           in: query
           required: false
@@ -181,7 +164,7 @@ paths:
             default: false
       responses:
         "200":
-          description: Manual posture scan result.
+          description: Scan result for the tenant.
           content:
             application/json:
               schema:
@@ -197,42 +180,201 @@ paths:
                     type: string
                   request_id:
                     type: string
-        "400":
-          description: Missing tenant scope.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-        "500":
-          description: Unhandled posture scan failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-  /posture/actions/{id}/execute:
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/events:
     post:
       tags:
-        - Posture Actions
-      operationId: executePostureAction
-      parameters:
-        - *a1
-        - *a2
-        - *a3
-        - $ref: "#/components/parameters/IdPath"
+        - Posture Events
+      operationId: ingestPostureEvent
+      description: Permission `posture.write`. Audited as
+        `audit.posture.events_ingested`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
+      parameters: *a2
       requestBody:
-        required: false
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostureEvent"
+      responses:
+        "200":
+          description: Events stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/events/batch:
+    post:
+      tags:
+        - Posture Events
+      operationId: ingestPostureEventsBatch
+      description: Permission `posture.write`. Audited as
+        `audit.posture.events_ingested`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`). An item naming another tenant
+        refuses the whole batch (`tenant_mismatch`); nothing is stored.
+      parameters: *a2
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - items
+              additionalProperties: false
               properties:
-                actor:
-                  type: string
-                approval_request_id:
-                  type: string
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/PostureEvent"
       responses:
         "200":
-          description: Action execution accepted.
+          description: Events stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/ingest/audit:
+    post:
+      tags:
+        - Posture Events
+      operationId: syncPostureFromAudit
+      description: Permission `posture.write`. Audited as
+        `audit.posture.audit_synced`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`). Pulls the tenant's recent audit
+        events into the posture engine.
+      parameters:
+        - *a6
+        - *a7
+        - *a8
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 500
+      responses:
+        "200":
+          description: Events stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/findings:
+    get:
+      tags:
+        - Posture Findings
+      operationId: listPostureFindings
+      description: Permission `posture.read`. Audited as
+        `audit.posture.findings_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
+      parameters:
+        - *a6
+        - *a7
+        - *a8
+        - name: engine
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: finding_type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema: &a9
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema: *a9
+        - $ref: "#/components/parameters/LimitQuery"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Filtered posture findings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FindingListEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/findings/{id}/status:
+    put:
+      tags:
+        - Posture Findings
+      operationId: updatePostureFindingStatus
+      description: Permission `posture.write`. Audited as
+        `audit.posture.finding_status_updated`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
+      parameters:
+        - *a6
+        - *a7
+        - *a8
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              additionalProperties: false
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - open
+                    - acknowledged
+                    - resolved
+                    - reopened
+      responses:
+        "200":
+          description: Status updated.
           content:
             application/json:
               schema:
@@ -245,14 +387,117 @@ paths:
                     type: boolean
                   request_id:
                     type: string
-        "400":
-          description: Missing tenant scope or malformed payload.
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "404":
+          description: Finding not found in the tenant.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-        "500":
-          description: Unhandled posture action execution failure.
+        "500": *a5
+  /posture/actions:
+    get:
+      tags:
+        - Posture Actions
+      operationId: listPostureActions
+      description: Permission `posture.read`. Audited as
+        `audit.posture.actions_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`).
+      parameters:
+        - *a6
+        - *a7
+        - *a8
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: action_type
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/LimitQuery"
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Remediation actions, including approval-required and manual actions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionListEnvelope"
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "500": *a5
+  /posture/actions/{id}/execute:
+    post:
+      tags:
+        - Posture Actions
+      operationId: executePostureAction
+      description: Permission `posture.action.execute`. Audited as
+        `audit.posture.action_executed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`, `tenant_wildcard`). The executor recorded is the
+        verified caller; an `actor` body field is rejected and `X-Actor-ID` is
+        ignored.
+      parameters:
+        - *a6
+        - *a7
+        - *a8
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                approval_request_id:
+                  type: string
+      responses:
+        "200":
+          description: Runbook dispatched and the action marked executed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - request_id
+                properties:
+                  ok:
+                    type: boolean
+                  request_id:
+                    type: string
+        "400": *a3
+        "401": *a1
+        "403": *a4
+        "404":
+          description: Action not found in the tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: approval_required (no approval_request_id) or already_executed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500": *a5
+        "502":
+          description: "dispatch_failed: the runbook event could not be published; the
+            action is marked failed."
           content:
             application/json:
               schema:
@@ -336,12 +581,10 @@ components:
           type: integer
         corrective_score:
           type: integer
-        top_signals: &a5
+        top_signals: &a10
           type: object
           additionalProperties: true
-        captured_at: &a6
-          type: string
-          format: date-time
+        captured_at: *a9
     RiskDriverContribution:
       type: object
       properties:
@@ -357,7 +600,7 @@ components:
           type: string
         explanation:
           type: string
-        evidence: *a5
+        evidence: *a10
     RiskDriverExplainer:
       type: object
       properties:
@@ -398,7 +641,7 @@ components:
             type: string
         event_count:
           type: integer
-        last_seen_at: *a6
+        last_seen_at: *a9
         summary:
           type: string
     RemediationImpact:
@@ -437,11 +680,11 @@ components:
           type: string
         fingerprint:
           type: string
-        evidence: *a5
-        detected_at: *a6
-        updated_at: *a6
-        resolved_at: *a6
-        sla_due_at: *a6
+        evidence: *a10
+        detected_at: *a9
+        updated_at: *a9
+        resolved_at: *a9
+        sla_due_at: *a9
         reopen_count:
           type: integer
         risk_drivers:
@@ -473,12 +716,12 @@ components:
           type: string
         executed_by:
           type: string
-        executed_at: *a6
-        evidence: *a5
+        executed_at: *a9
+        evidence: *a10
         result_message:
           type: string
-        created_at: *a6
-        updated_at: *a6
+        created_at: *a9
+        updated_at: *a9
         impact_estimate:
           $ref: "#/components/schemas/RemediationImpact"
         rollback_hint:
@@ -515,8 +758,8 @@ components:
           type: string
         detail:
           type: string
-        last_checked_at: *a6
-        last_success_at: *a6
+        last_checked_at: *a9
+        last_success_at: *a9
         metric:
           type: number
     ScenarioSimulation:
@@ -698,3 +941,58 @@ components:
             $ref: "#/components/schemas/RiskSnapshot"
         request_id:
           type: string
+    PostureEvent:
+      type: object
+      required:
+        - service
+        - action
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        timestamp: *a9
+        tenant_id:
+          type: string
+          description: Optional; must equal the request tenant (the token's).
+        service:
+          type: string
+        action:
+          type: string
+        result:
+          type: string
+        severity:
+          type: string
+        actor:
+          type: string
+          description: The actor the event describes (data), not the caller's identity.
+        ip:
+          type: string
+        request_id:
+          type: string
+        resource_id:
+          type: string
+        error_code:
+          type: string
+        latency_ms:
+          type: number
+        node_id:
+          type: string
+        details: *a10
+        created_at: *a9
+    IngestEnvelope:
+      type: object
+      required:
+        - inserted
+        - request_id
+      properties:
+        inserted:
+          type: integer
+        tenant_id:
+          type: string
+        request_id:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

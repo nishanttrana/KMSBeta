@@ -35,9 +35,8 @@ func (h *Handler) SetAuditClient(c *pkgaudit.Client) {
 	}
 }
 
-// leakRouter serves the leak scanner through the pkg/route kernel.
-func (h *Handler) leakRouter(audit route.Emitter) *route.Router {
-	r := route.New("posture", audit, nil)
+// leakRoutes registers the leak scanner routes.
+func (h *Handler) leakRoutes(r *route.Router) {
 	r.Handle("GET /leaks/targets", route.Spec{Action: "leak_targets_listed", Permission: "posture.leak.read", Resource: "leak_target"}, h.listLeakTargets)
 	r.Handle("POST /leaks/targets", route.Spec{Action: "leak_target_created", Permission: "posture.leak.write", Resource: "leak_target"}, h.createLeakTarget)
 	r.Handle("DELETE /leaks/targets/{id}", route.Spec{Action: "leak_target_deleted", Permission: "posture.leak.write", Resource: "leak_target", TargetParam: "id", Severity: "warning"}, h.deleteLeakTarget)
@@ -45,7 +44,6 @@ func (h *Handler) leakRouter(audit route.Emitter) *route.Router {
 	r.Handle("GET /leaks/jobs", route.Spec{Action: "leak_jobs_listed", Permission: "posture.leak.read", Resource: "leak_scan"}, h.listLeakJobs)
 	r.Handle("GET /leaks/findings", route.Spec{Action: "leak_findings_listed", Permission: "posture.leak.read", Resource: "leak_finding"}, h.listLeakFindings)
 	r.Handle("PATCH /leaks/findings/{id}", route.Spec{Action: "leak_finding_updated", Permission: "posture.leak.write", Resource: "leak_finding", TargetParam: "id"}, h.updateLeakFinding)
-	return r
 }
 
 func (h *Handler) listLeakTargets(c *route.Call) {

@@ -250,7 +250,7 @@ export const PostureTab = ({ session, onToast }: any) => {
     const id = String(action?.id || "").trim();
     if (!id) return;
     try {
-      await executePostureAction(session, id, { actor: String(session?.username || "dashboard") });
+      await executePostureAction(session, id);
       onToast?.("Runbook action executed.");
       setSelectedAction(null);
       await load(true);

@@ -28,11 +28,14 @@ import (
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[reporting] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to posture carry this service's own identity (kms-reporting).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-reporting"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-reporting", cfg); err != nil {

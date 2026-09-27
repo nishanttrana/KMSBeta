@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -84,16 +85,9 @@ func (s *Service) IngestEvents(ctx context.Context, events []NormalizedEvent) (i
 		}
 		normalized = append(normalized, ev)
 	}
-	inserted, err := s.store.IngestEvents(ctx, normalized)
-	if err != nil {
-		return 0, err
-	}
-	if inserted > 0 {
-		_ = s.publish(ctx, "audit.posture.events_ingested", "root", map[string]interface{}{
-			"inserted": inserted,
-		})
-	}
-	return inserted, nil
+	// Request ingest is audited by the route kernel; the scheduled audit
+	// sync emits its own event (RunScanAllTenants).
+	return s.store.IngestEvents(ctx, normalized)
 }
 
 func (s *Service) SyncFromAudit(ctx context.Context, tenantID string, limit int) (int, error) {
@@ -145,8 +139,13 @@ func (s *Service) RunScanAllTenants(ctx context.Context, syncAudit bool) error {
 			continue
 		}
 		if syncAudit {
-			if _, err := s.SyncFromAudit(ctx, tenantID, s.auditSyncLimit); err != nil {
+			if inserted, err := s.SyncFromAudit(ctx, tenantID, s.auditSyncLimit); err != nil {
 				logger.Printf("audit sync failed tenant=%s: %v", tenantID, err)
+			} else if inserted > 0 {
+				_ = s.publish(ctx, "audit.posture.events_ingested", tenantID, map[string]interface{}{
+					"inserted": inserted,
+					"source":   "scheduled_audit_sync",
+				})
 			}
 		}
 		snap, runErr := s.runTenantScan(ctx, tenantID)
@@ -1182,7 +1181,8 @@ func (s *Service) ExecuteAction(ctx context.Context, tenantID string, actionID s
 		return err
 	}
 	if item.Status == "executed" {
-		return nil
+		// Never a silent success: the route would audit a no-op as executed.
+		return newServiceError(409, "already_executed", "action was already executed")
 	}
 	if item.ApprovalRequired && strings.TrimSpace(approvalRequestID) == "" {
 		return newServiceError(409, "approval_required", "approval_request_id is required before execution")
@@ -1204,12 +1204,19 @@ func (s *Service) ExecuteAction(ctx context.Context, tenantID string, actionID s
 		"executed_by":       actor,
 		"evidence":          item.Evidence,
 	}
-	if err := s.publish(ctx, "audit.posture.runbook.execute", tenantID, payload); err != nil {
+	dispatchErr := errors.New("event bus unavailable")
+	if s.event != nil {
+		dispatchErr = s.publish(ctx, "audit.posture.runbook.execute", tenantID, payload)
+	}
+	if dispatchErr != nil {
 		status = "failed"
-		result = "runbook publish failed: " + err.Error()
+		result = "runbook publish failed: " + dispatchErr.Error()
 	}
 	if err := s.store.UpdateActionExecution(ctx, tenantID, actionID, status, actor, result, approvalRequestID); err != nil {
 		return err
+	}
+	if dispatchErr != nil {
+		return newServiceError(502, "dispatch_failed", "runbook dispatch failed")
 	}
 	return nil
 }
@@ -1292,14 +1299,6 @@ func (s *Service) Dashboard(ctx context.Context, tenantID string) (PostureDashbo
 		ValidationBadges:   buildValidationBadges(risk, events),
 		SLAOverview:        buildSLAOverview(enrichedFindings),
 	}
-	_ = s.publish(ctx, "audit.posture.dashboard_viewed", tenantID, map[string]interface{}{
-		"risk_24h":          out.Risk.Risk24h,
-		"open_findings":     out.OpenFindings,
-		"critical_findings": out.CriticalFindings,
-		"risk_driver_count": len(out.RiskDrivers.Drivers),
-		"blast_radius":      len(out.BlastRadius),
-		"action_count":      len(out.PendingActions),
-	})
 	return out, nil
 }
 

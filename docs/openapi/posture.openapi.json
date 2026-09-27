@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Vecta KMS Security Posture API",
-    "version": "1.0.0",
-    "description": "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and what-if risk projections for pending remediation actions. Served at `/svc/posture` through the Envoy edge."
+    "version": "2.0.0",
+    "description": "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and what-if risk projections for pending remediation actions. Served at `/svc/posture` through the Envoy edge. Every route requires a verified bearer token; the tenant is bound from it. Internal callers use their kms-* service identity."
   },
   "servers": [
     {
@@ -11,9 +11,17 @@
       "description": "Envoy edge"
     }
   ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "tags": [
     {
       "name": "Posture Dashboard"
+    },
+    {
+      "name": "Posture Events"
     },
     {
       "name": "Posture Findings"
@@ -23,12 +31,60 @@
     }
   ],
   "paths": {
+    "/posture/health": {
+      "get": {
+        "tags": [
+          "Posture Dashboard"
+        ],
+        "operationId": "getPostureHealth",
+        "description": "Any verified identity. Audited as `audit.posture.health_read`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/posture/dashboard": {
       "get": {
         "tags": [
           "Posture Dashboard"
         ],
         "operationId": "getPostureDashboard",
+        "description": "Permission `posture.read`. Audited as `audit.posture.dashboard_viewed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
         "parameters": [
           {
             "$ref": "#/components/parameters/RequestIdHeader"
@@ -51,8 +107,550 @@
               }
             }
           },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
-            "description": "Unhandled posture dashboard failure.",
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/risk": {
+      "get": {
+        "tags": [
+          "Posture Dashboard"
+        ],
+        "operationId": "getLatestPostureRisk",
+        "description": "Permission `posture.read`. Audited as `audit.posture.risk_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). A tenant never scanned returns an empty snapshot for that tenant.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest risk snapshot of the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/risk/history": {
+      "get": {
+        "tags": [
+          "Posture Dashboard"
+        ],
+        "operationId": "listPostureRiskHistory",
+        "description": "Permission `posture.read`. Audited as `audit.posture.risk_history_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical risk snapshots of the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskHistoryEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/scan": {
+      "post": {
+        "tags": [
+          "Posture Dashboard"
+        ],
+        "operationId": "runPostureScan",
+        "description": "Permission `posture.write`. Audited as `audit.posture.scan_run`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). Scans the request tenant only; the scheduler scans every tenant in-process.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "sync_audit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan result for the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "risk",
+                    "tenant_id",
+                    "request_id"
+                  ],
+                  "properties": {
+                    "risk": {
+                      "$ref": "#/components/schemas/RiskSnapshot"
+                    },
+                    "tenant_id": {
+                      "type": "string"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/events": {
+      "post": {
+        "tags": [
+          "Posture Events"
+        ],
+        "operationId": "ingestPostureEvent",
+        "description": "Permission `posture.write`. Audited as `audit.posture.events_ingested`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostureEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Events stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/events/batch": {
+      "post": {
+        "tags": [
+          "Posture Events"
+        ],
+        "operationId": "ingestPostureEventsBatch",
+        "description": "Permission `posture.write`. Audited as `audit.posture.events_ingested`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). An item naming another tenant refuses the whole batch (`tenant_mismatch`); nothing is stored.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/PostureEvent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Events stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/ingest/audit": {
+      "post": {
+        "tags": [
+          "Posture Events"
+        ],
+        "operationId": "syncPostureFromAudit",
+        "description": "Permission `posture.write`. Audited as `audit.posture.audit_synced`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). Pulls the tenant's recent audit events into the posture engine.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
             "content": {
               "application/json": {
                 "schema": {
@@ -70,6 +668,7 @@
           "Posture Findings"
         ],
         "operationId": "listPostureFindings",
+        "description": "Permission `posture.read`. Audited as `audit.posture.findings_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
         "parameters": [
           {
             "$ref": "#/components/parameters/RequestIdHeader"
@@ -105,7 +704,42 @@
             }
           },
           {
+            "name": "finding_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
             "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -120,7 +754,27 @@
             }
           },
           "400": {
-            "description": "Missing tenant scope.",
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -130,7 +784,129 @@
             }
           },
           "500": {
-            "description": "Unhandled posture findings failure.",
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posture/findings/{id}/status": {
+      "put": {
+        "tags": [
+          "Posture Findings"
+        ],
+        "operationId": "updatePostureFindingStatus",
+        "description": "Permission `posture.write`. Audited as `audit.posture.finding_status_updated`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "$ref": "#/components/parameters/IdPath"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "acknowledged",
+                      "resolved",
+                      "reopened"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "request_id"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Finding not found in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure (no detail is returned).",
             "content": {
               "application/json": {
                 "schema": {
@@ -148,6 +924,7 @@
           "Posture Actions"
         ],
         "operationId": "listPostureActions",
+        "description": "Permission `posture.read`. Audited as `audit.posture.actions_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`).",
         "parameters": [
           {
             "$ref": "#/components/parameters/RequestIdHeader"
@@ -176,6 +953,15 @@
           },
           {
             "$ref": "#/components/parameters/LimitQuery"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -190,7 +976,27 @@
             }
           },
           "400": {
-            "description": "Missing tenant scope.",
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -200,168 +1006,7 @@
             }
           },
           "500": {
-            "description": "Unhandled posture action failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/posture/risk": {
-      "get": {
-        "tags": [
-          "Posture Dashboard"
-        ],
-        "operationId": "getLatestPostureRisk",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/RequestIdHeader"
-          },
-          {
-            "$ref": "#/components/parameters/TenantQuery"
-          },
-          {
-            "$ref": "#/components/parameters/TenantHeader"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Latest risk snapshot.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RiskEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled posture risk failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/posture/risk/history": {
-      "get": {
-        "tags": [
-          "Posture Dashboard"
-        ],
-        "operationId": "listPostureRiskHistory",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/RequestIdHeader"
-          },
-          {
-            "$ref": "#/components/parameters/TenantQuery"
-          },
-          {
-            "$ref": "#/components/parameters/TenantHeader"
-          },
-          {
-            "$ref": "#/components/parameters/LimitQuery"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Historical risk snapshots.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RiskHistoryEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled posture history failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/posture/scan": {
-      "post": {
-        "tags": [
-          "Posture Dashboard"
-        ],
-        "operationId": "runPostureScan",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/RequestIdHeader"
-          },
-          {
-            "$ref": "#/components/parameters/TenantQuery"
-          },
-          {
-            "$ref": "#/components/parameters/TenantHeader"
-          },
-          {
-            "name": "sync_audit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Manual posture scan result.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "risk",
-                    "tenant_id",
-                    "request_id"
-                  ],
-                  "properties": {
-                    "risk": {
-                      "$ref": "#/components/schemas/RiskSnapshot"
-                    },
-                    "tenant_id": {
-                      "type": "string"
-                    },
-                    "request_id": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing tenant scope.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unhandled posture scan failure.",
+            "description": "Internal failure (no detail is returned).",
             "content": {
               "application/json": {
                 "schema": {
@@ -379,6 +1024,7 @@
           "Posture Actions"
         ],
         "operationId": "executePostureAction",
+        "description": "Permission `posture.action.execute`. Audited as `audit.posture.action_executed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). The executor recorded is the verified caller; an `actor` body field is rejected and `X-Actor-ID` is ignored.",
         "parameters": [
           {
             "$ref": "#/components/parameters/RequestIdHeader"
@@ -399,10 +1045,8 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {
-                  "actor": {
-                    "type": "string"
-                  },
                   "approval_request_id": {
                     "type": "string"
                   }
@@ -413,7 +1057,7 @@
         },
         "responses": {
           "200": {
-            "description": "Action execution accepted.",
+            "description": "Runbook dispatched and the action marked executed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -435,7 +1079,47 @@
             }
           },
           "400": {
-            "description": "Missing tenant scope or malformed payload.",
+            "description": "tenant_id missing (service principals must name one) or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason unauthenticated).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Action not found in the tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "approval_required (no approval_request_id) or already_executed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -445,7 +1129,17 @@
             }
           },
           "500": {
-            "description": "Unhandled posture action execution failure.",
+            "description": "Internal failure (no detail is returned).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "dispatch_failed: the runbook event could not be published; the action is marked failed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1140,6 +1834,94 @@
             "type": "string"
           }
         }
+      },
+      "PostureEvent": {
+        "type": "object",
+        "required": [
+          "service",
+          "action"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "description": "Optional; must equal the request tenant (the token's)."
+          },
+          "service": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string",
+            "description": "The actor the event describes (data), not the caller's identity."
+          },
+          "ip": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "error_code": {
+            "type": "string"
+          },
+          "latency_ms": {
+            "type": "number"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "IngestEnvelope": {
+        "type": "object",
+        "required": [
+          "inserted",
+          "request_id"
+        ],
+        "properties": {
+          "inserted": {
+            "type": "integer"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }

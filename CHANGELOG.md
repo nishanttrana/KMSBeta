@@ -4,6 +4,61 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.32.0-beta] — 2026-09-27
+
+### Posture requires a verified token on every route (breaking)
+- **Posture is on the `pkg/route` kernel.** All twelve `/posture/*` routes
+  moved off the raw `http.ServeMux`; `services/posture/handler.go` is off the
+  route-kernel burn-down list. Before this, `optionalJWTMiddleware` let
+  requests with no `Authorization` header through and Envoy adds no auth on
+  `/svc/posture/`, so:
+  - `GET /posture/dashboard`, `/posture/risk` and `/posture/risk/history`
+    took the tenant from `tenant_id` / `X-Tenant-ID` unchecked and, with
+    none, served `*` (the all-tenant aggregate), to anyone.
+  - `POST /posture/scan` scanned any tenant, or every tenant (`*`, `all`
+    or empty), without a token.
+  - `POST /posture/events` and `/events/batch` stored events under any
+    `tenant_id` in the body, without a token.
+  - `POST /posture/actions/{id}/execute` recorded the executor from the body
+    `actor` or `X-Actor-ID` (CLAUDE.md rule 4).
+- **Now:** a missing or forged token is refused with `401`; the tenant is
+  the token's, and a query, header, body or batch-item tenant that differs
+  is refused (`403 tenant_mismatch`); `*` and `all` are refused
+  (`403 tenant_wildcard`) even for tenant-less root tokens and service
+  principals; the executor is the verified caller, a body `actor` is
+  rejected (`400`) and `X-Actor-ID` is ignored.
+- **Permissions:** `posture.read` (dashboard, risk, findings, actions),
+  `posture.write` (scan, event ingest, audit sync, finding status),
+  `posture.action.execute` (execute an action). `kms.read`/`kms.write` don't
+  grant them. Roles with `*` or `posture.*` are unaffected.
+- **Audit:** every request emits `audit.posture.<action>` (list in
+  [docs/API_REFERENCE.md](docs/API_REFERENCE.md)), refusals included.
+  `dashboard_viewed` and `events_ingested` keep their names; the service no
+  longer emits them a second time. The scheduled audit sync now emits
+  `events_ingested` under the synced tenant (it used `root` for every
+  tenant).
+- **Execute is honest about outcome:** re-running an executed action returns
+  `409 already_executed` (it returned `200` and did nothing), and a runbook
+  that can't be published (no event bus, or publish error) returns
+  `502 dispatch_failed` with the action marked `failed` (it returned `200`).
+- **Posture refuses to start without a JWT public key**
+  (`POSTURE_JWT_PUBLIC_KEY_PEM` or the shared `JWT_PUBLIC_KEY_*`); it used
+  to log "jwt parser disabled" and serve unauthenticated.
+- **Reporting authenticates to posture** with its `kms-reporting` service
+  identity (it called `/posture/findings` and `/posture/actions` with no
+  token). The dashboard no longer sends `actor`.
+- **Posture's audit sync works.** Its calls to audit's `GET /audit/events`
+  (the scheduled sync, `POST /posture/ingest/audit`, and the event enrichment
+  on dashboard, findings and actions) sent no token, and audit requires one,
+  so they got `401` and the engine scored tenants without their audit
+  events. They now carry the `kms-posture` service token.
+- **Posture OpenAPI spec (2.0.0)** covers all twelve routes (it listed
+  seven), with bearer auth, permissions, audit subjects and refusals.
+- **Still open:** `approval_request_id` on execute is required but not yet
+  verified against governance, and nothing consumes
+  `audit.posture.runbook.execute` yet, so "executed" means the runbook event
+  was published, not that a remediation ran. Both are tracked as follow-ups.
+
 ## [1.31.0-beta] — 2026-09-27
 
 ### Signing refusals are proven audited
