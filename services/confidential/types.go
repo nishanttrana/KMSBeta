@@ -45,6 +45,25 @@ type AttestedReleaseRequest struct {
 	Requester           string            `json:"requester"`
 	ReleaseReason       string            `json:"release_reason"`
 	DryRun              bool              `json:"dry_run"`
+	// RecipientPublicKey is the enclave's key (base64 DER SubjectPublicKeyInfo,
+	// RSA 2048-8192) that the evidence commits to: AWS Nitro in public_key,
+	// OIDC attestations in nonce = base64url(SHA-256(DER)).
+	RecipientPublicKey string `json:"recipient_public_key,omitempty"`
+}
+
+// SealedKeyRelease is the key material sealed to the recipient key
+// (RSA-OAEP-256 wrapping an AES-256-GCM key); only the enclave opens it.
+type SealedKeyRelease struct {
+	KeyID         string `json:"key_id"`
+	Version       int    `json:"version"`
+	Algorithm     string `json:"algorithm"`
+	KeyType       string `json:"key_type"`
+	KCV           string `json:"kcv"`
+	SealAlgorithm string `json:"seal_algorithm"`
+	WrappedKey    string `json:"wrapped_key"`
+	Nonce         string `json:"nonce"`
+	Ciphertext    string `json:"ciphertext"`
+	AAD           string `json:"aad"`
 }
 
 type AttestedReleaseDecision struct {
@@ -71,6 +90,9 @@ type AttestedReleaseDecision struct {
 	ExpiresAt                 time.Time         `json:"expires_at,omitempty"`
 	EvaluatedAt               time.Time         `json:"evaluated_at"`
 	Profile                   AttestationPolicy `json:"policy"`
+	RecipientKeyBinding       string            `json:"recipient_key_binding,omitempty"`
+	Released                  bool              `json:"released"`
+	Release                   *SealedKeyRelease `json:"release,omitempty"`
 }
 
 type AttestedReleaseRecord struct {
@@ -111,6 +133,8 @@ type AttestedReleaseRecord struct {
 	AttestationDocumentHash   string            `json:"attestation_document_hash"`
 	AttestationDocumentFormat string            `json:"attestation_document_format"`
 	ExpiresAt                 time.Time         `json:"expires_at,omitempty"`
+	RecipientKeyBinding       string            `json:"recipient_key_binding,omitempty"`
+	Released                  bool              `json:"released"`
 	CreatedAt                 time.Time         `json:"created_at"`
 }
 

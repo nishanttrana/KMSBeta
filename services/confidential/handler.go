@@ -1,18 +1,36 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+
+	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/route"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc   *Service
+	mux   *http.ServeMux
+	audit route.Emitter
+}
+
+// SetAuditClient wires the unified audit client used by kernel routes.
+func (h *Handler) SetAuditClient(a route.Emitter) { h.audit = a }
+
+type kernelEmitter struct{ h *Handler }
+
+func (e kernelEmitter) Emit(ctx context.Context, action string, evt pkgaudit.Event) error {
+	if e.h.audit == nil {
+		return nil
+	}
+	return e.h.audit.Emit(ctx, action, evt)
 }
 
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
 	h.mux = h.routes()
+	h.releaseRouter(kernelEmitter{h}).MountOn(h.mux)
 	return h
 }
 

@@ -261,3 +261,12 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 | `audit.signing.request_refused` | A sign or verify request naming another tenant | handler `bindTenant` |
 
 | `audit.ekm.request_refused` | An EKM call without a verified token for its tenant, or a BitLocker agent call without a bitlocker-role JWT | `TestHandlerEKMRequiresVerifiedTenantToken` |
+
+## Attested key release (1.30.0-beta)
+
+| Event | When | Test |
+|---|---|---|
+| `audit.confidential.key_released` | Keycore sealed the key to the recipient key the verified evidence commits to | `TestReleaseSealsKeyToAttestedEnclaveKey` |
+| `audit.confidential.key_release_refused` | No binding, verdict not allow, or keycore refused | `TestReleaseRefusedWithoutBindingAllowOrKeycore` |
+| `audit.confidential.key_release` | Kernel event for `POST /confidential/release` (refused when nothing is released) | kernel (`pkg/route`) |
+| `audit.key.attested_release` | Keycore kernel event; refused for any caller but `kms-confidential`, non-exportable or inactive keys | `TestAttestedReleaseSealsToRecipientOnlyForConfidentialService` |

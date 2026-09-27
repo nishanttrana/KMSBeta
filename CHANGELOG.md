@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.30.0-beta] — 2026-09-27
+
+### Attested key release is real
+Until now confidential compute returned a verdict and released nothing
+([REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md) listed it as open).
+- **`POST /confidential/release`** evaluates the evidence as before and, on an
+  `allow`, releases the key to the enclave. The request carries
+  `recipient_public_key` (an RSA 2048–8192 key generated in the enclave), and
+  the *verified* evidence must commit to it: AWS Nitro signs it into the
+  attestation document's `public_key`; Azure MAA and GCP Confidential Space
+  commit through their verified nonce = base64url(SHA-256(DER)). Evidence that
+  names another key, or any unverified or generic evidence, releases nothing.
+- **`POST /keys/{id}/attested-release`** (keycore) returns the key's current
+  material sealed to that key: RSA-OAEP-256 wraps a fresh AES-256 key, which
+  seals the material with AES-256-GCM (module-generated IV), bound by AAD to
+  tenant, key, version and release ID. Only the `kms-confidential` service
+  identity may call it, and only for an active, exportable key; HSM-resident
+  keys, policy and FIPS refusals apply. Keycore never sees the enclave's
+  private key and returns no plaintext. Replaying evidence is harmless: the
+  sealed result opens only inside the enclave that holds the key.
+- `pkg/crypto`: `SealToRecipient`, `OpenFromRecipient`,
+  `ParseRecipientPublicKey`, `RecipientKeyBinding`.
+- `kms-confidential` is now a provisioned service identity (auth) and sends
+  its service token; the release history records `released` and
+  `recipient_key_binding` (migration 003).
+- Audit: `audit.confidential.key_released`,
+  `audit.confidential.key_release_refused`, `audit.confidential.key_release`
+  (kernel), `audit.key.attested_release` (keycore; refusals included).
+- The dashboard's confidential tab says what now happens and marks released
+  entries.
+- README's service table listed `qkd`, `qrng`, `mpc` and `ai` services that do
+  not exist; it now lists `ai-gateway`.
 ## [1.29.0-beta] — 2026-09-27
 
 ### OpenAPI specs describe only real services (breaking for anyone using them)

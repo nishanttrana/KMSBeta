@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-27T09:45:06Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T13:08:42Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `32`
 - Tab/component mappings: `40`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `941` across `30` services
-- Backend routes on the `pkg/route` kernel: `86` (permission and audit action in `backend-routes.csv`)
+- Backend HTTP routes discovered: `943` across `30` services
+- Backend routes on the `pkg/route` kernel: `88` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `607`
 - Frontend call sites with exact backend route match: `557`
 - Frontend call sites needing review or dynamic/runtime confirmation: `50`
 - Clickable controls with static `onClick` handlers: `810`
-- Backend request flows with handler/service/package summaries: `941`
+- Backend request flows with handler/service/package summaries: `943`
 
 ## How To Use This For Launch
 
@@ -164,7 +164,7 @@ flowchart LR
   svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (173 routes)"]
+  svc_keycore["keycore (174 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (19 routes)"]
   svc_pqc["pqc (16 routes)"]
@@ -236,7 +236,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
-| confidential | 6 | 6 |
+| confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 26 | 20 |
 | ekm | 64 | 45 |
@@ -244,7 +244,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 173 | 123 |
+| keycore | 174 | 123 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -444,7 +444,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 67 |
 | compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 68 |
 
-Showing `120` of `386`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `388`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

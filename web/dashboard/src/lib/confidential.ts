@@ -107,6 +107,8 @@ export type AttestedReleaseRecord = {
   cluster_node_id?: string;
   requester?: string;
   release_reason?: string;
+  released?: boolean;
+  recipient_key_binding?: string;
   decision: string;
   allowed: boolean;
   reasons: string[];

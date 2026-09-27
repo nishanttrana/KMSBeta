@@ -178,6 +178,7 @@ func (h *Handler) routes() *http.ServeMux {
 	// Kernel-routed (pkg/route): platform services' master-key system keys.
 	h.systemKeyRouter().MountOn(mux)
 	h.dataKeyRouter(kernelEmitter{h}).MountOn(mux)
+	h.attestedReleaseRouter(kernelEmitter{h}).MountOn(mux)
 	h.hsmRouter(kernelEmitter{h}).MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)

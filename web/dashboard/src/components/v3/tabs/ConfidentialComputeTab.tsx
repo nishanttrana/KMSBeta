@@ -299,10 +299,12 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
           ))}
         </div>
         <Card style={{ padding: 16, background: `linear-gradient(135deg, ${C.card} 0%, rgba(40,95,145,.12) 100%)`, marginBottom: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Attestation verdicts for workload key access</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Attested key release</div>
           <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
             Verifies enclave or TEE evidence (AWS Nitro, Azure MAA, GCP Confidential Space) against tenant policy and returns an allow, review or deny verdict.
-            The KMS releases no key material here; your key broker enforces the verdict. Self-asserted (generic) evidence is never allowed. Tenant policy controls provider, approved images,
+            Evaluate returns the verdict only. A workload calls POST /confidential/release with its evidence and a recipient public key the evidence commits to
+            (AWS Nitro public_key, or nonce = base64url(SHA-256(key)) for Azure and GCP); on allow, keycore releases the key sealed to that key (RSA-OAEP-256 + AES-256-GCM),
+            so only the enclave can open it. The key must be active and exportable. Self-asserted (generic) evidence is never allowed. Tenant policy controls provider, approved images,
             workload subject claims, PCR or measurement matching, cluster-node allowlists, and runtime safety checks like secure boot and debug-disabled posture.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
@@ -618,6 +620,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{String(item.key_id || "unknown-key")}</div>
                       <B c={decisionColor(item.decision)}>{String(item.decision || "deny").toUpperCase()}</B>
+                      {item.released ? <B c="green">KEY RELEASED</B> : null}
                       <B c="blue">{String(item.provider || "generic")}</B>
                       <B c={item.cryptographically_verified ? "green" : "red"}>{item.cryptographically_verified ? "Verified" : "Unverified"}</B>
                       {item.cluster_node_id ? <B c="accent">{String(item.cluster_node_id)}</B> : null}

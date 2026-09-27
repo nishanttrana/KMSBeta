@@ -64,6 +64,9 @@ type attestationVerification struct {
 	DebugDisabled    bool
 	HasDebugDisabled bool
 	ClusterNodeID    string
+	// RecipientKey is the public key signed into the evidence itself (AWS
+	// Nitro public_key), if the provider carries one.
+	RecipientKey []byte
 }
 
 func (v attestationVerification) applyTo(in AttestedReleaseRequest) AttestedReleaseRequest {
@@ -223,6 +226,7 @@ func (v *ProviderVerifier) verifyAWSAttestation(ctx context.Context, in Attested
 	}
 
 	verification.CryptographicallyVerified = true
+	verification.RecipientKey = doc.PublicKey
 	verification.VerificationIssuer = firstNonEmpty(leaf.Issuer.CommonName, leaf.Subject.CommonName, "aws.nitro-enclaves")
 	verification.VerificationKeyID = chainID
 	verification.Attester = verification.VerificationIssuer
@@ -403,6 +407,9 @@ type awsNitroDocument struct {
 	CABundle    [][]byte
 	UserData    []byte
 	Nonce       string
+	// PublicKey is the enclave-supplied key the document commits to (DER
+	// SubjectPublicKeyInfo); attested release seals the key to it.
+	PublicKey []byte
 }
 
 func extractAWSAttestationBytes(raw string) ([]byte, string, error) {
@@ -517,6 +524,9 @@ func parseAWSNitroDocument(payload []byte) (awsNitroDocument, error) {
 	document.Certificate, _ = raw["certificate"].([]byte)
 	if nonceBytes, ok := raw["nonce"].([]byte); ok {
 		document.Nonce = bytesToStableString(nonceBytes)
+	}
+	if pub, ok := raw["public_key"].([]byte); ok {
+		document.PublicKey = pub
 	}
 	if userData, ok := raw["user_data"].([]byte); ok {
 		document.UserData = userData

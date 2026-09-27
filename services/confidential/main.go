@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
@@ -43,6 +44,7 @@ func main() {
 	defer stop()
 	// Internal mTLS identity from the internal-services Sub CA; nothing is
 	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-confidential"))
 	if _, err := pkgsvctls.Init(ctx, "kms-confidential", pkgsvctls.Options{Logger: logger}); err != nil {
 		logger.Fatalf("internal mTLS enrolment failed: %v", err)
 	}
@@ -67,16 +69,24 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.confidential.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "confidential")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
 	clusterNodeID := envOr("CLUSTER_NODE_ID", "vecta-kms-01")
 	svc := NewService(NewSQLStore(dbConn), publisher, clusterNodeID)
+	// Attested release: keycore seals the key to the enclave's key; it accepts
+	// the request only from this service's identity (kms-confidential).
+	svc.SetKeyReleaser(NewHTTPKeycoreReleaser(envOr("KEYCORE_URL", "https://keycore:8010"), 10*time.Second))
 	handler := NewHandler(svc)
+	if auditClient != nil {
+		handler.SetAuditClient(auditClient)
+	}
 
 	// JWT middleware (fail-closed). The confidential service governs
 	// attested key release; before 1562c827 it derived tenant from an

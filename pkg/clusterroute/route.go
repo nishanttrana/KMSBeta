@@ -61,7 +61,7 @@ var Local = map[string][]string{
 		"POST /keys/{id}/encrypt", "POST /keys/{id}/decrypt",
 		"POST /keys/{id}/sign", "POST /keys/{id}/verify",
 		"POST /keys/{id}/mac", "POST /keys/{id}/wrap", "POST /keys/{id}/generate-data-key",
-		"POST /keys/{id}/derive", "POST /keys/{id}/service-derive",
+		"POST /keys/{id}/derive", "POST /keys/{id}/service-derive", "POST /keys/{id}/attested-release",
 		"POST /keys/{id}/attest", "POST /keys/{id}/verify-material",
 		"POST /crypto/hash", "POST /crypto/random",
 		// Master-key transfer acts on this node's keycore during a join.

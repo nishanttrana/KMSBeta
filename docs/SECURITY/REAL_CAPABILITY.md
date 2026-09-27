@@ -134,12 +134,14 @@ The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
 | OpenAPI (1.29) | `ai` spec for a `/svc/ai` service that does not exist; `http://localhost` servers | Removed; specs checked by `check-doc-routes.py` |
 | Unused packages (1.28) | 11 `pkg/` packages imported by nothing | Deleted |
 
+## Built (1.30.0-beta)
+
+| Area | Was | Now |
+|---|---|---|
+| Attested key release | Verdict only; no key could reach an enclave | `POST /confidential/release`: verified evidence must commit to the enclave's RSA key (Nitro `public_key`, or OIDC nonce = base64url(SHA-256(DER))); keycore (`POST /keys/{id}/attested-release`, kms-confidential only) seals the active exportable key to it with RSA-OAEP-256 + AES-256-GCM |
+
 ## Still open
 
-- **Attested key release** is not built: releasing key material to a verified
-  enclave (wrapped to the attestation's public key) would need keycore
-  support. Until then, confidential compute returns a verdict only and says
-  so.
 - **DKE key rotation**: DKE decrypts only with the key's current version
   (keycore decrypts with the current version), so a document wrapped under an
   older version cannot be opened after the key rotates. Decrypting with a

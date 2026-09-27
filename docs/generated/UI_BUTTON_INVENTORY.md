@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-27T09:45:06Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T13:08:42Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -268,10 +268,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1154 | compliance | Btn | void runNow()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1989 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 292 | - | Btn | void refresh(false)}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 323 | - | Btn | void refresh(false)}>Reload |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 324 | - | Btn | void savePolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 430 | - | Btn | void runEvaluation()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 603 | - | Btn | void refresh(false)}>Refresh History |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 325 | - | Btn | void refresh(false)}>Reload |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 326 | - | Btn | void savePolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 432 | - | Btn | void runEvaluation()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 605 | - | Btn | void refresh(false)}>Refresh History |  |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 119 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 202 | crypto_agility | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 203 | crypto_agility | button | (icon or dynamic label) | handleSave |

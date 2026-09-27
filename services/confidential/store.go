@@ -262,9 +262,11 @@ INSERT INTO confidential_release_history (
     attestation_document_hash,
     attestation_document_format,
     expires_at,
-    created_at
+    created_at,
+    recipient_key_binding,
+    released
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40
 )
 `, item.TenantID,
 		item.ID,
@@ -304,6 +306,8 @@ INSERT INTO confidential_release_history (
 		item.AttestationDocumentFormat,
 		nullableTime(item.ExpiresAt),
 		item.CreatedAt.UTC(),
+		item.RecipientKeyBinding,
+		item.Released,
 	)
 	return err
 }
@@ -350,7 +354,9 @@ SELECT tenant_id,
        attestation_document_hash,
        attestation_document_format,
        expires_at,
-       created_at
+       created_at,
+       recipient_key_binding,
+       released
 FROM confidential_release_history
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -409,7 +415,9 @@ SELECT tenant_id,
        attestation_document_hash,
        attestation_document_format,
        expires_at,
-       created_at
+       created_at,
+       recipient_key_binding,
+       released
 FROM confidential_release_history
 WHERE tenant_id = $1 AND id = $2
 `, strings.TrimSpace(tenantID), strings.TrimSpace(id))
@@ -481,6 +489,8 @@ func scanReleaseRecord(row scanner) (AttestedReleaseRecord, error) {
 		&item.AttestationDocumentFormat,
 		&expiresRaw,
 		&createdRaw,
+		&item.RecipientKeyBinding,
+		&item.Released,
 	); err != nil {
 		return AttestedReleaseRecord{}, err
 	}

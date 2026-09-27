@@ -7,6 +7,22 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Attested key release: seal to a key the evidence commits to
+
+**Decision** (1.30.0-beta). A release goes to a public key generated inside
+the enclave and committed to by *verified* evidence (Nitro `public_key`; OIDC
+nonce = base64url(SHA-256(DER))). Keycore seals the material to it with
+RSA-OAEP-256 + AES-256-GCM (SP 800-56B key transport, approved in FIPS mode),
+and only the confidential service identity may ask.
+
+**Why.** Binding the output to the enclave's own key makes the release safe
+against replayed evidence and a compromised caller: the sealed blob is useless
+outside the enclave. RSA is what Nitro recipients use (AWS KMS's own Nitro
+recipient flow), and the hybrid construction carries any key size.
+
+**Rejected.** Returning plaintext to the caller after an allow (anyone with
+the evidence could fetch the key); HPKE/X25519 (not approved in FIPS strict
+mode); letting any `kms-*` service release keys.
 ## 2026-09-27 — OpenAPI specs: remove the fabricated one, check the rest (1.29.0-beta)
 
 **Decision.** The `ai` OpenAPI spec is deleted rather than rewritten as an

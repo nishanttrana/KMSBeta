@@ -86,9 +86,9 @@ Vecta KMS is organized into five working areas:
 | `keyaccess` | External key-use justification policy | HYOK/EKM/cloud decrypt or sign requests with reason codes and approvals |
 | `signing` | Artifact and code signing control plane | Git, blob, and OCI signing with workload or OIDC identity constraints |
 | `workload` | SPIFFE/SVID and workload identity | workload-to-key auth, token exchange, federation |
-| `confidential` | Attested key release | enclave/TEE gated key release |
+| `confidential` | Attested key release | verified TEE evidence releases a key sealed to the enclave's own key |
 | `pqc` | Post-quantum migration and policy | ML-KEM, ML-DSA, SLH-DSA, hybrid rollout |
-| `qkd`, `qrng`, `mpc`, `ai` | Specialist advanced crypto capabilities | quantum integrations, FROST-style threshold ceremonies, AI model protection |
+| `ai-gateway` | AI request gateway | DLP and prompt-injection checks on AI traffic |
 
 ## Quick Start
 

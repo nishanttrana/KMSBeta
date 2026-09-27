@@ -1196,6 +1196,7 @@ Audit:
 - `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
 - `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
+- `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
@@ -1412,7 +1413,22 @@ Returns the workload identity relationship graph: trust domain, issued SVIDs, re
 
 ## Service 10: Confidential (`/svc/confidential/`)
 
-TEE attestation verification (AWS Nitro COSE, Azure MAA and GCP Confidential Space JWTs) against tenant policy. Each evaluation returns a **verdict** — `allow`, `review` or `deny` — that the caller's key broker enforces. **No key material is released by this service**, and no keycore operation consults the verdict (see docs/SECURITY/REAL_CAPABILITY.md, "Still open"). `generic` (self-asserted) evidence is never allowed. Before 1.26.0-beta the allow verdict was called `release`; stored records keep that value.
+TEE attestation verification (AWS Nitro COSE, Azure MAA and GCP Confidential Space JWTs) against tenant policy, and **attested key release** (1.30.0-beta). `POST /confidential/evaluate` returns a verdict only (`allow`, `review` or `deny`); nothing is released. `POST /confidential/release` releases a key: on an `allow` whose verified evidence commits to the caller's recipient public key, keycore returns the key's current material **sealed to that key** (RSA-OAEP-256 wrapping an AES-256-GCM key), so only the enclave holding the private key can open it. `generic` (self-asserted) evidence is never allowed. Before 1.26.0-beta the allow verdict was called `release`; stored records keep that value.
+
+### POST /svc/confidential/confidential/release
+
+Kernel route (`audit.confidential.key_release`, permission `confidential.release`). Body: the evaluate fields (`key_id`, `provider`, `attestation_document`, `audience`, …) plus `recipient_public_key`: base64 DER SubjectPublicKeyInfo of an RSA 2048–8192 key generated inside the enclave. The evidence must commit to it:
+
+| Provider | Binding |
+|---|---|
+| `aws_nitro_enclaves`, `aws_nitro_tpm` | the attestation document's signed `public_key` equals the recipient key |
+| `azure_secure_key_release`, `gcp_confidential_space` | the verified token's `nonce` (or `eat_nonce`) equals base64url(SHA-256(recipient DER)), unpadded |
+
+The key must be active, allow export, and pass policy and FIPS checks; HSM-resident keys are refused. `dry_run` is refused. Response 200: `decision` with `released: true`, `recipient_key_binding` and `release` = `{key_id, version, algorithm, key_type, kcv, seal_algorithm: "RSA-OAEP-256+A256GCM", wrapped_key, nonce, ciphertext, aad}`. To open: RSA-OAEP-SHA-256 decrypt `wrapped_key` with label `vecta-kms recipient seal v1`, then AES-256-GCM decrypt `ciphertext` with `nonce` and `aad` (`vecta-attested-release|<tenant>|<key>|<version>|<release_id>`). 403 `release_refused` lists the reasons (no binding, verdict not allow, keycore refusal); every attempt is recorded in the release history with `released`.
+
+### POST /svc/keycore/keys/{id}/attested-release
+
+Internal: accepted only from the `kms-confidential` service identity (403 `caller_not_confidential_service` otherwise). Body: `tenant_id`, `recipient_public_key`, `release_id`, `attestation_document_hash`, `provider`. Audited as `audit.key.attested_release` (refusals: `caller_not_confidential_service`, `export_not_allowed`, `key_not_active`, `hsm_operation_unsupported`, policy and FIPS refusals).
 
 ---
 
@@ -2589,7 +2605,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.mpc.* | MPC ceremonies |
 | audit.signing.* | Artifact signing |
 | audit.workload.* | Workload identity |
-| audit.confidential.* | Attestation verdicts (no key material is released) |
+| audit.confidential.* | Attestation verdicts and attested key release |
 | audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |
 | audit.sbom.* | SBOM/CBOM generation |

@@ -18,6 +18,7 @@ type Service struct {
 	verifier      *ProviderVerifier
 	now           func() time.Time
 	clusterNodeID string
+	releaser      KeyReleaser
 }
 
 func NewService(store Store, events EventPublisher, clusterNodeID string) *Service {
@@ -279,17 +280,19 @@ func (s *Service) GetAttestationSummary(ctx context.Context, tenantID string) (A
 	return summary, nil
 }
 
-func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleaseRequest) (AttestedReleaseDecision, error) {
+// evaluate verifies the evidence and applies the tenant policy. It persists
+// and audits nothing; EvaluateAttestedRelease and ReleaseKey do.
+func (s *Service) evaluate(ctx context.Context, in AttestedReleaseRequest) (AttestedReleaseDecision, AttestedReleaseRecord, AttestedReleaseRequest, error) {
 	in = normalizeAttestedReleaseRequest(in, s.clusterNodeID)
 	if in.TenantID == "" {
-		return AttestedReleaseDecision{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+		return AttestedReleaseDecision{}, AttestedReleaseRecord{}, in, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
 	if in.KeyID == "" {
-		return AttestedReleaseDecision{}, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required")
+		return AttestedReleaseDecision{}, AttestedReleaseRecord{}, in, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required")
 	}
 	policy, err := s.GetAttestationPolicy(ctx, in.TenantID)
 	if err != nil {
-		return AttestedReleaseDecision{}, err
+		return AttestedReleaseDecision{}, AttestedReleaseRecord{}, in, err
 	}
 
 	verification := attestationVerification{
@@ -406,9 +409,21 @@ func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleas
 		matchedMeasurements = append(matchedMeasurements, key)
 	}
 
-	// A verdict only: no key material leaves the KMS here, and no keycore
-	// operation consults it. The caller's key broker enforces it. (Until
-	// 1.26.0-beta the verdict was called "release".)
+	// A release is sealed to a recipient key only if the verified evidence
+	// commits to that key (recipientBinding).
+	recipientKeyBinding := ""
+	if strings.TrimSpace(in.RecipientPublicKey) != "" {
+		binding, bindErr := recipientBinding(in, verification)
+		if bindErr != nil {
+			reasons = append(reasons, bindErr.Error())
+			missingAttributes = append(missingAttributes, "recipient_key_binding")
+		}
+		recipientKeyBinding = binding
+	}
+
+	// The verdict. POST /confidential/evaluate returns it alone; POST
+	// /confidential/release acts on an allow by releasing the key sealed to
+	// the bound recipient key. (Until 1.26.0-beta the verdict was "release".)
 	decision := "allow"
 	allowed := true
 	if len(reasons) > 0 {
@@ -496,8 +511,21 @@ func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleas
 		AttestationDocumentHash:   result.AttestationDocumentHash,
 		AttestationDocumentFormat: result.AttestationDocumentFormat,
 		ExpiresAt:                 result.ExpiresAt,
+		RecipientKeyBinding:       recipientKeyBinding,
 		CreatedAt:                 now,
 	}
+	result.RecipientKeyBinding = recipientKeyBinding
+	return result, record, evaluated, nil
+}
+
+// EvaluateAttestedRelease returns the verdict for the evidence and records it
+// (unless dry_run). No key material is released here.
+func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleaseRequest) (AttestedReleaseDecision, error) {
+	result, record, evaluated, err := s.evaluate(ctx, in)
+	if err != nil {
+		return AttestedReleaseDecision{}, err
+	}
+	releaseID := result.ReleaseID
 	if !in.DryRun {
 		if err := s.store.InsertReleaseRecord(ctx, record); err != nil {
 			return AttestedReleaseDecision{}, err

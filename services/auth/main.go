@@ -284,7 +284,7 @@ var internalServiceClients = []string{
 	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
 	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
-	"kms-cluster-manager", "kms-secrets", "kms-reconciler",
+	"kms-cluster-manager", "kms-secrets", "kms-reconciler", "kms-confidential",
 }
 
 // revokeInsecureServiceKeys deletes service API keys that earlier deployments

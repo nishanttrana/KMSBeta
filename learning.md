@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A release gate must bind its output to the verified party
+- **What happened:** confidential compute verified attestations well but had
+  nowhere to send a key, so it returned a verdict and the feature was
+  "attested release" in name only (1.26.0-beta relabelled it honestly).
+- **Rule:** a release is real only when the output is bound to the party the
+  evidence proves: the enclave's key must be inside the signed evidence, and
+  the key is sealed to it. Test that a key the evidence does not name gets
+  nothing (`TestReleaseRefusedWithoutBindingAllowOrKeycore`).
 ### A generated doc is only as true as its input (OpenAPI specs)
 - **What happened:** `docs/openapi/ai.openapi.*` documented a `/svc/ai`
   service with six operations. No such service exists; the AI service is

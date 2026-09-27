@@ -246,7 +246,8 @@ Use it when:
 
 - `GET /svc/confidential/confidential/policy?tenant_id=root`
 - `PUT /svc/confidential/confidential/policy?tenant_id=root`
-- `POST /svc/confidential/confidential/evaluate`
+- `POST /svc/confidential/confidential/evaluate` (verdict only)
+- `POST /svc/confidential/confidential/release` (key sealed to the enclave key the evidence commits to)
 - `GET /svc/confidential/confidential/releases?tenant_id=root`
 
 ### Operational Outcome
