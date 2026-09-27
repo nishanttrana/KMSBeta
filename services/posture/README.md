@@ -69,14 +69,17 @@ Permissions and audit subjects: [docs/API_REFERENCE.md](../../docs/API_REFERENCE
   - preemptive rotation windows
   - guardrail policy recommendation
 - Corrective:
-  - SLA breach escalation
-  - runbook action generation (`restart_connector`, `failover_hsm_profile`, `quarantine_profile`, `rotate_credentials`, etc.)
-  - optional auto-remediation for low-impact actions if `POSTURE_AUTO_REMEDIATE=true`
+  - SLA breach escalation: the only remediation action. Executing it raises
+    the overdue finding one severity level, restarts its SLA and resolves the
+    SLA-breach finding, after a governance approval opened by the executor
+    (`target_type` `posture_action`, action `posture.escalate_remediation`).
+  - other open findings raise the corrective score and carry a recommended
+    action for an operator; posture has no executor for them, so it creates
+    no action records (1.34.0-beta).
 
 ## Runtime knobs
 
 - `POSTURE_ENGINE_INTERVAL_SEC` (default `60`)
 - `POSTURE_HOT_RETENTION_HOURS` (default `72`)
 - `POSTURE_AUDIT_SYNC_LIMIT` (default `500`)
-- `POSTURE_AUTO_REMEDIATE` (default `false`)
 

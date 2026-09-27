@@ -1024,7 +1024,7 @@
           "Posture Actions"
         ],
         "operationId": "executePostureAction",
-        "description": "Permission `posture.action.execute`. Audited as `audit.posture.action_executed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). The executor recorded is the verified caller; an `actor` body field is rejected and `X-Actor-ID` is ignored.",
+        "description": "Permission `posture.action.execute`. Audited as `audit.posture.action_executed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`). Runs the action's executor as the verified caller (an `actor` body field is rejected, `X-Actor-ID` is ignored). Only `escalate_remediation` is executable: it raises the overdue finding one severity level, restarts its SLA and resolves the SLA-breach finding. An approval-required action runs only on an approved governance request bound to this action and opened by the caller: the first call opens one and is refused `approval_pending`. Refusal reasons also include `approval_invalid`, `approval_unavailable` and `not_executable`.",
         "parameters": [
           {
             "$ref": "#/components/parameters/RequestIdHeader"
@@ -1048,7 +1048,8 @@
                 "additionalProperties": false,
                 "properties": {
                   "approval_request_id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Optional; must be an approved governance request bound to this action and opened by the caller."
                   }
                 }
               }
@@ -1057,7 +1058,7 @@
         },
         "responses": {
           "200": {
-            "description": "Runbook dispatched and the action marked executed.",
+            "description": "The executor ran; `result` says what changed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1069,6 +1070,10 @@
                   "properties": {
                     "ok": {
                       "type": "boolean"
+                    },
+                    "result": {
+                      "type": "object",
+                      "additionalProperties": true
                     },
                     "request_id": {
                       "type": "string"
@@ -1099,7 +1104,7 @@
             }
           },
           "403": {
-            "description": "Missing permission, a tenant other than the token's, or the wildcard tenant `*`/`all`.",
+            "description": "Missing permission, another tenant, the wildcard tenant, or approval_invalid (the given approval_request_id is not an approved request bound to this action and caller).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1119,7 +1124,7 @@
             }
           },
           "409": {
-            "description": "approval_required (no approval_request_id) or already_executed.",
+            "description": "approval_pending (an approval request was opened or is still pending; its ID is in the message), not_executable (no executor for this action type, or the action was withdrawn), already_executed, or finding_not_open.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1138,8 +1143,8 @@
               }
             }
           },
-          "502": {
-            "description": "dispatch_failed: the runbook event could not be published; the action is marked failed.",
+          "503": {
+            "description": "approval_unavailable: governance approvals are not configured or can't be reached (fail closed).",
             "content": {
               "application/json": {
                 "schema": {

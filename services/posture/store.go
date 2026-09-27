@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -21,11 +22,14 @@ type Store interface {
 	ListOverdueFindings(ctx context.Context, tenantID string, now time.Time, limit int) ([]Finding, error)
 	ListOpenFindings(ctx context.Context, tenantID string, limit int) ([]Finding, error)
 	GetFindingByFingerprint(ctx context.Context, tenantID string, fp string) (Finding, error)
+	GetFinding(ctx context.Context, tenantID string, id string) (Finding, error)
+	EscalateFinding(ctx context.Context, tenantID string, id string, severity string, slaDue time.Time) error
 
 	CreateActionIfAbsent(ctx context.Context, tenantID string, findingID string, candidate ActionCandidate) (RemediationAction, error)
 	ListActions(ctx context.Context, tenantID string, q ActionQuery) ([]RemediationAction, error)
 	UpdateActionExecution(ctx context.Context, tenantID string, id string, status string, executedBy string, resultMessage string, approvalRequestID string) error
 	GetAction(ctx context.Context, tenantID string, id string) (RemediationAction, error)
+	CorrectLegacyActions(ctx context.Context, tenantID string, executable []string) (ActionCorrection, error)
 
 	CreateRiskSnapshot(ctx context.Context, snap RiskSnapshot) error
 	GetLatestRiskSnapshot(ctx context.Context, tenantID string) (RiskSnapshot, error)
@@ -587,6 +591,84 @@ SET status = $1,
 WHERE tenant_id = $3 AND id = $4
 `, status, resolvedAt, tenantID, id)
 	return err
+}
+
+func (s *SQLStore) GetFinding(ctx context.Context, tenantID string, id string) (Finding, error) {
+	return s.getFindingByID(ctx, tenantID, id)
+}
+
+// EscalateFinding raises an open finding's severity and restarts its SLA.
+// A finding that is no longer open is not escalated (errNotFound).
+func (s *SQLStore) EscalateFinding(ctx context.Context, tenantID string, id string, severity string, slaDue time.Time) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE posture_findings
+SET severity = $1,
+	sla_due_at = $2,
+	updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $3 AND id = $4 AND status IN ('open', 'acknowledged', 'reopened')
+`, severity, slaDue.UTC(), tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+// ActionCorrection counts the legacy action rows CorrectLegacyActions fixed.
+type ActionCorrection struct {
+	Reset, NotPerformed, Withdrawn int64
+}
+
+func (c ActionCorrection) Total() int64 { return c.Reset + c.NotPerformed + c.Withdrawn }
+
+// legacyDispatch matches rows the pre-1.34.0 ExecuteAction wrote: it only
+// published audit.posture.runbook.execute, which nothing consumed. It is
+// spliced into a fmt format, hence %%.
+const legacyDispatch = `(result_message IN ('runbook dispatched', 'execution started') OR result_message LIKE 'runbook publish failed%%')`
+
+// CorrectLegacyActions makes the tenant's action rows true: an executable
+// type the old code marked executed goes back to suggested, any other type
+// it marked executed becomes not_performed, and every open action of a type
+// posture cannot execute is withdrawn. Idempotent; primary only.
+func (s *SQLStore) CorrectLegacyActions(ctx context.Context, tenantID string, executable []string) (ActionCorrection, error) {
+	var out ActionCorrection
+	inList := "''"
+	args := []interface{}{tenantID}
+	for i, t := range executable {
+		if i == 0 {
+			inList = ""
+		} else {
+			inList += ","
+		}
+		args = append(args, t)
+		inList += fmt.Sprintf("$%d", len(args))
+	}
+	steps := []struct {
+		n   *int64
+		sql string
+		msg string
+	}{
+		{&out.Reset, `UPDATE posture_actions SET status = 'suggested', executed_by = '', executed_at = NULL, approval_request_id = '', result_message = $%d, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND action_type IN (` + inList + `) AND status IN ('executed', 'executing', 'failed') AND ` + legacyDispatch,
+			"reset in 1.34.0-beta: the earlier execution only published an event nothing consumed; nothing was escalated"},
+		{&out.NotPerformed, `UPDATE posture_actions SET status = 'not_performed', result_message = $%d, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND action_type NOT IN (` + inList + `) AND status IN ('executed', 'executing', 'failed') AND ` + legacyDispatch,
+			"no remediation was performed: the earlier execution only published an event nothing consumed (corrected in 1.34.0-beta)"},
+		{&out.Withdrawn, `UPDATE posture_actions SET status = 'withdrawn', result_message = $%d, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND action_type NOT IN (` + inList + `) AND status NOT IN ('withdrawn', 'not_performed', 'failed', 'executed', 'executing')`,
+			"withdrawn in 1.34.0-beta: posture has no executor for this action type; follow the finding's recommended action"},
+	}
+	for _, st := range steps {
+		stepArgs := append(append([]interface{}{}, args...), st.msg)
+		res, err := s.db.SQL().ExecContext(ctx, fmt.Sprintf(st.sql, len(stepArgs)), stepArgs...)
+		if err != nil {
+			return out, err
+		}
+		*st.n, _ = res.RowsAffected()
+	}
+	return out, nil
 }
 
 func (s *SQLStore) ListOverdueFindings(ctx context.Context, tenantID string, now time.Time, limit int) ([]Finding, error) {

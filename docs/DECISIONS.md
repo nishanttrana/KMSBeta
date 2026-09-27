@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Posture remediation: one real executor, governance-bound approvals (1.34.0-beta)
+
+**Decision.** Posture executes only action types it can perform against a
+named object. Today that is `escalate_remediation`, which changes the overdue
+finding it names. The other eight types are no longer created: their
+findings are aggregate counts, so there is no connector, client, credential,
+HSM profile or certificate to act on. The unconsumed
+`audit.posture.runbook.execute` event and `POSTURE_AUTO_REMEDIATE` are
+removed. Approvals are governance requests posture opens as its service
+identity, with the verified caller as requester, bound by target and payload
+hash to one action. The executor must be the requester. *Rejected:*
+- a labelled preview for the eight types (rule 8 prefers removal, and the
+  finding's recommended action already carries the guidance);
+- executors that guess a target (for example quarantining the most active
+  client);
+- governance callbacks that execute on approval (the executor would be the
+  approver's vote, not a verified caller);
+- trusting a client-supplied approval ID, as before;
+- letting any user run on another user's approval (dual control means one
+  person asks, another approves, and the asker executes).
+
+Legacy rows are corrected by an idempotent primary-only job, since
+`posture_actions` is replicated and a SQL migration would also run on
+members.
+
+---
+
 ## 2026-09-27 — sbom and reporting on the route kernel (1.33.0-beta)
 
 **Decision.** Both handler files are migrated whole to `pkg/route`, not

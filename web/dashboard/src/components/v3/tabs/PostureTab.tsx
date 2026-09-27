@@ -82,7 +82,8 @@ function actionStatusTone(status: string) {
   const v = String(status || "").toLowerCase();
   if (v === "failed" || v === "error") return "red";
   if (v === "executed" || v === "done" || v === "completed") return "green";
-  if (v === "approved" || v === "pending" || v === "queued" || v === "suggested") return "amber";
+  if (v === "approved" || v === "pending" || v === "queued" || v === "suggested" || v === "awaiting_approval") return "amber";
+  if (v === "withdrawn" || v === "not_performed") return "orange";
   return "blue";
 }
 
@@ -251,7 +252,7 @@ export const PostureTab = ({ session, onToast }: any) => {
     if (!id) return;
     try {
       await executePostureAction(session, id);
-      onToast?.("Runbook action executed.");
+      onToast?.("Action executed.");
       setSelectedAction(null);
       await load(true);
     } catch (error) {
@@ -1270,7 +1271,9 @@ export const PostureTab = ({ session, onToast }: any) => {
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {(() => {
             const s = String(selectedAction.status || "").toLowerCase();
-            const canExec = s === "pending" || s === "approved" || s === "queued" || s === "suggested";
+            // Approval-required actions: the first Execute opens a governance
+            // approval; run it again once that request is approved.
+            const canExec = s === "suggested" || s === "awaiting_approval" || s === "failed";
             return canExec ? <Btn small primary onClick={() => executeAction(selectedAction)}><Play size={11} /> Execute</Btn> : null;
           })()}
           <Btn onClick={() => setSelectedAction(null)}>Close</Btn>

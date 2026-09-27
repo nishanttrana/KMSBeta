@@ -1277,7 +1277,7 @@ actions as `kms-reporting`.
 | `GET /posture/findings` | `posture.read` | `audit.posture.findings_listed` |
 | `PUT /posture/findings/{id}/status` | `posture.write` | `audit.posture.finding_status_updated` (`status`) |
 | `GET /posture/actions` | `posture.read` | `audit.posture.actions_listed` |
-| `POST /posture/actions/{id}/execute` | `posture.action.execute` | `audit.posture.action_executed` (warning; `approval_request_id`) |
+| `POST /posture/actions/{id}/execute` | `posture.action.execute` | `audit.posture.action_executed` (warning; `approval_request_id`, `action_type`, `severity_from`, `severity_to`; refusals `approval_pending`, `approval_invalid`, `approval_unavailable`, `not_executable`) |
 
 `kms.read` / `kms.write` grants don't reach posture (it is not in
 `route.CoarseDomains`); `posture.*` or `*` does.
@@ -1320,14 +1320,35 @@ Query: `status`, `action_type`, `limit`, `offset`. Response: `items[]`
 
 ### POST /svc/posture/posture/actions/{id}/execute
 
-Body (optional): `approval_request_id`. Publishes the runbook event
-(`audit.posture.runbook.execute`) and marks the action `executed`, with
-`executed_by` = the verified caller. An `actor` body field is rejected
-(`400`) and `X-Actor-ID` is ignored. Response `200`: `ok`, `request_id`.
-Errors: `404` unknown action, `409 approval_required` (approval-required
-action without `approval_request_id`), `409 already_executed`,
-`502 dispatch_failed` (event bus unavailable or publish failed; the action
-is marked `failed`).
+Runs the action's executor as the verified caller (`executed_by`). An
+`actor` body field is rejected (`400`) and `X-Actor-ID` is ignored.
+
+- **Executable types (1.34.0-beta):** only `escalate_remediation`. It
+  raises the overdue source finding one severity level (info → warning →
+  high → critical), restarts its SLA at that level, and resolves the
+  SLA-breach finding. If the engine later re-detects the source condition,
+  its own assessment applies again. The engine creates no other action
+  type; older rows of other types are `withdrawn` or `not_performed`.
+- **Approval (dual control):** an approval-required action runs only when
+  governance holds an **approved** request with `target_type`
+  `posture_action`, `target_id` the action ID, action
+  `posture.<action_type>`, a `payload_hash` over tenant, action, type and
+  finding, and `requester_id` = the caller. The first call opens that
+  request as posture's service identity (governance excludes the requester
+  from the approvers and refuses their vote), sets the action to
+  `awaiting_approval`, and is refused `409 approval_pending` with the
+  request ID in the message. Call again once it is approved. Another user
+  can't run on it: they get their own request.
+- **Body (optional):** `approval_request_id`. It is checked, never
+  trusted: it must be one of the approved requests above.
+- **Response `200`:** `ok`, `result` (`action_type`, `finding_id`,
+  `escalated_finding_id`, `severity_from`, `severity_to`, `sla_due_at`),
+  `request_id`.
+- **Refusals** (audited `result: refused`): `409 approval_pending`,
+  `403 approval_invalid`, `503 approval_unavailable` (governance not
+  configured or unreachable; fail closed), `409 not_executable`.
+  **Errors:** `404` unknown action, `409 already_executed`,
+  `409 finding_not_open` (the action is marked `failed`).
 
 ---
 
@@ -2717,7 +2738,7 @@ Selected events with dedicated audit classification:
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
-- `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.runbook.execute` (engine events): posture engine
+- `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
 - `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`

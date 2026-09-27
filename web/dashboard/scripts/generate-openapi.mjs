@@ -1113,7 +1113,7 @@ function buildPostureSpec() {
         post: {
           tags: ["Posture Actions"],
           operationId: "executePostureAction",
-          description: kernel("posture.action.execute", "action_executed") + " The executor recorded is the verified caller; an `actor` body field is rejected and `X-Actor-ID` is ignored.",
+          description: kernel("posture.action.execute", "action_executed") + " Runs the action's executor as the verified caller (an `actor` body field is rejected, `X-Actor-ID` is ignored). Only `escalate_remediation` is executable: it raises the overdue finding one severity level, restarts its SLA and resolves the SLA-breach finding. An approval-required action runs only on an approved governance request bound to this action and opened by the caller: the first call opens one and is refused `approval_pending`. Refusal reasons also include `approval_invalid`, `approval_unavailable` and `not_executable`.",
           parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
           requestBody: {
             required: false,
@@ -1121,16 +1121,17 @@ function buildPostureSpec() {
               type: "object",
               additionalProperties: false,
               properties: {
-                approval_request_id: { type: "string" },
+                approval_request_id: { type: "string", description: "Optional; must be an approved governance request bound to this action and opened by the caller." },
               },
             }),
           },
           responses: {
-            ...ok("Runbook dispatched and the action marked executed.", { type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, request_id: { type: "string" } } }),
+            ...ok("The executor ran; `result` says what changed.", { type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, result: objectAny, request_id: { type: "string" } } }),
             ...refusals,
+            403: err("Missing permission, another tenant, the wildcard tenant, or approval_invalid (the given approval_request_id is not an approved request bound to this action and caller)."),
             404: err("Action not found in the tenant."),
-            409: err("approval_required (no approval_request_id) or already_executed."),
-            502: err("dispatch_failed: the runbook event could not be published; the action is marked failed."),
+            409: err("approval_pending (an approval request was opened or is still pending; its ID is in the message), not_executable (no executor for this action type, or the action was withdrawn), already_executed, or finding_not_open."),
+            503: err("approval_unavailable: governance approvals are not configured or can't be reached (fail closed)."),
           },
         },
       },

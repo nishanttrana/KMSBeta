@@ -2043,7 +2043,7 @@ const SectionApiPosture = () => (
         ["GET", "/posture/risk/history", "Risk score history over time for trend analysis"],
         ["GET", "/posture/findings", "List security findings enriched with risk-driver explainers and blast-radius metadata"],
         ["PUT", "/posture/findings/{id}/status", "Update finding status (open, in_progress, resolved, accepted)"],
-        ["GET", "/posture/actions", "List remediation actions grouped in the UI as safe auto-fix, approval-required, and manual, including rollback hints and impact estimates"],
+        ["GET", "/posture/actions", "List remediation actions grouped as approval-required or manual. Only escalation of an overdue finding is executable; approval-required actions run on a governance approval opened by the executor"],
         ["POST", "/posture/actions/{id}/execute", "Execute a remediation action (e.g., rotate key, renew cert) once safety or approval requirements are met"],
         ["POST", "/posture/scan", "Trigger a manual posture scan across all domains"],
       ]} />

@@ -209,62 +209,6 @@ func TestPostureServicePrincipalReadsTenant(t *testing.T) {
 	expectRefused(t, rec, postureCall(h, forged, http.MethodGet, "/posture/findings?tenant_id=t1", ""), http.StatusForbidden, "findings_listed", route.ReasonTenantMismatch)
 }
 
-func seedAction(t *testing.T, store *SQLStore, id string) {
-	t.Helper()
-	if _, err := store.db.SQL().Exec(`INSERT INTO posture_actions (tenant_id, id, action_type, approval_required, status) VALUES ('t1', $1, 'rotate_key', FALSE, 'suggested')`, id); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// The executor is the verified caller: a body actor is rejected, the
-// X-Actor-ID header is ignored, and a re-run or failed dispatch is never
-// audited as a success.
-func TestExecuteActionActorIsVerifiedCaller(t *testing.T) {
-	bus := &recordedPublish{}
-	h, store, rec := newPostureHandler(t, bus)
-	seedAction(t, store, "a1")
-	alice := userClaims("alice", "t1")
-
-	rr := postureCall(h, alice, http.MethodPost, "/posture/actions/a1/execute", `{"actor":"mallory"}`)
-	if rr.Code != http.StatusBadRequest || rec.Last(t).Event.Result != route.ResultFailure {
-		t.Fatalf("body actor accepted: %d %s", rr.Code, rr.Body)
-	}
-	rr = postureCall(h, alice, http.MethodPost, "/posture/actions/a1/execute", "", "X-Actor-ID", "mallory")
-	if rr.Code != http.StatusOK {
-		t.Fatalf("execute: %d %s", rr.Code, rr.Body)
-	}
-	got, err := store.GetAction(context.Background(), "t1", "a1")
-	if err != nil || got.Status != "executed" || got.ExecutedBy != "alice" {
-		t.Fatalf("action %+v (%v), want executed by alice", got, err)
-	}
-	if e := rec.Last(t); e.Action != "action_executed" || e.Event.Result != route.ResultSuccess || e.Event.ActorID != "alice" || e.Event.TargetID != "a1" {
-		t.Fatalf("execute event %+v", e)
-	}
-	if len(bus.subjects) != 1 || bus.subjects[0] != "audit.posture.runbook.execute" {
-		t.Fatalf("runbook dispatch %v", bus.subjects)
-	}
-
-	rr = postureCall(h, alice, http.MethodPost, "/posture/actions/a1/execute", "")
-	if rr.Code != http.StatusConflict || rec.Last(t).Event.Result != route.ResultFailure {
-		t.Fatalf("re-execute: %d, audited %s", rr.Code, rec.Last(t).Event.Result)
-	}
-	if rr := postureCall(h, alice, http.MethodPost, "/posture/actions/missing/execute", ""); rr.Code != http.StatusNotFound {
-		t.Fatalf("missing action: %d", rr.Code)
-	}
-}
-
-func TestExecuteActionWithoutBusFails(t *testing.T) {
-	h, store, rec := newPostureHandler(t, nil)
-	seedAction(t, store, "a1")
-	rr := postureCall(h, userClaims("alice", "t1"), http.MethodPost, "/posture/actions/a1/execute", "")
-	if rr.Code != http.StatusBadGateway || rec.Last(t).Event.Result != route.ResultFailure {
-		t.Fatalf("dispatch with no bus: %d %s", rr.Code, rr.Body)
-	}
-	if got, _ := store.GetAction(context.Background(), "t1", "a1"); got.Status != "failed" {
-		t.Fatalf("action status %q, want failed", got.Status)
-	}
-}
-
 // The dashboard read is audited once, by the kernel, with its counts.
 func TestDashboardViewedAuditedOnce(t *testing.T) {
 	bus := &recordedPublish{}

@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### An event with no consumer is not an action (posture remediation)
+- **What happened:** posture's "execute" published
+  `audit.posture.runbook.execute` and marked the action `executed`, with an
+  optional auto-remediate mode doing the same unattended. No service
+  subscribed to that subject, so nothing was ever remediated. The approval
+  gate accepted any non-empty string as `approval_request_id`.
+- **Why it slipped through:** publishing succeeded, so every signal looked
+  green: a 200, an audit event, an `executed` row with an executor. Nobody
+  followed the event to a consumer. The approval field *looked* like a
+  governance reference, and nothing compared it with governance. The action
+  types also read as concrete ("fail over HSM profile") though the findings
+  behind them held only counts, with no target anything could act on.
+- **Rule:** before calling an action real, name the code that performs it
+  and the object it changes. If the finding doesn't identify the object, the
+  action can't exist; keep the recommendation as text. An approval reference
+  from a client is only a lookup key: verify with the approving service that
+  the request is approved, bound to this exact operation, and opened by the
+  caller who executes.
+
 ### A tenant check on some handlers is not a tenant check (sbom, reporting)
 - **What happened:** reporting and sbom read handlers called
   `mustTenant` (which runs `tenantcheck.Enforce`), but the generate handlers

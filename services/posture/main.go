@@ -90,12 +90,12 @@ func main() {
 		5*time.Second,
 	); governanceClient != nil {
 		svc.SetGovernanceControlClient(governanceClient)
+		svc.SetApprovalClient(governanceClient)
 	}
 	engineInterval := time.Duration(envOrInt("POSTURE_ENGINE_INTERVAL_SEC", 60)) * time.Second
 	hotRetention := time.Duration(envOrInt("POSTURE_HOT_RETENTION_HOURS", 72)) * time.Hour
 	auditSyncLimit := envOrInt("POSTURE_AUDIT_SYNC_LIMIT", 500)
-	autoRemediate := envOrBool("POSTURE_AUTO_REMEDIATE", false)
-	svc.Configure(engineInterval, hotRetention, auditSyncLimit, autoRemediate)
+	svc.Configure(engineInterval, hotRetention, auditSyncLimit)
 	svc.StartScheduler(ctx)
 
 	postureHandler := NewHandler(svc)
@@ -212,21 +212,6 @@ func envOrInt(key string, fallback int) int {
 		return fallback
 	}
 	return n
-}
-
-func envOrBool(key string, fallback bool) bool {
-	raw := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
-	if raw == "" {
-		return fallback
-	}
-	switch raw {
-	case "1", "true", "yes", "on":
-		return true
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return fallback
-	}
 }
 
 func mustAtoi(s string) int {

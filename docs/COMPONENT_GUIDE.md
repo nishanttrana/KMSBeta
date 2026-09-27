@@ -435,7 +435,7 @@ Common APIs:
 What it does:
 
 - converts audit and runtime evidence into risk snapshots, findings, and remediation actions
-- groups actions into safe auto-fix, approval-required, and manual paths
+- proposes one executable remediation, escalation of an overdue finding, which runs after a governance approval; other findings carry operator guidance
 
 Use cases:
 

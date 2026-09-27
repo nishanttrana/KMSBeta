@@ -4,6 +4,55 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.34.0-beta] — 2026-09-27
+
+### Posture remediation does what it says, after a real approval (breaking)
+Closes the two items 1.32.0-beta left open.
+- **Approvals are verified with governance.** Before, an approval-required
+  action ran when the body held *any* non-empty `approval_request_id`. Now
+  it runs only when governance holds an **approved** request bound to this
+  action (`target_type` `posture_action`, `target_id`, action
+  `posture.<type>`, payload hash over tenant, action, type and finding) and
+  **opened by the executor**. The first Execute opens that request as
+  posture's service identity, naming the verified caller as requester, so
+  governance excludes them from the approvers and refuses their vote. The
+  action moves to `awaiting_approval` and the call is refused
+  `409 approval_pending`. A supplied ID is checked, never trusted
+  (`403 approval_invalid`). Governance unconfigured or unreachable refuses
+  (`503 approval_unavailable`). An active approval policy covering
+  `posture.escalate_remediation` or `posture.*` is required
+  ([OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md)).
+- **Execute runs a real executor or refuses.** "Execute" used to publish
+  `audit.posture.runbook.execute`, which no service consumed, and marked the
+  action executed. That event is gone. The findings carry only counts (no
+  connector, client, credential, HSM profile or certificate), so eight of the
+  nine action types had nothing a real executor could act on:
+  - `escalate_remediation` now really escalates. It raises the overdue
+    finding one severity level, restarts its SLA and resolves the SLA-breach
+    finding; the result is in the response and the audit event.
+  - The engine no longer creates `restart_degraded_connector`,
+    `failover_hsm_profile`, `quarantine_nonapproved_policy`,
+    `quarantine_compromised_client_profile`, `rotate_affected_credentials`,
+    `rebalance_certificate_renewal_schedule`,
+    `execute_emergency_certificate_rotation` or
+    `spread_certificate_rotation_window` actions. Their findings still raise
+    the corrective score and keep their recommended action as operator
+    guidance. Executing one is refused `409 not_executable`.
+- **Existing action rows are corrected** on the primary at the next scan, and
+  audited once as `audit.posture.actions_corrected`:
+  - escalations the old code marked executed go back to `suggested` (nothing
+    was escalated);
+  - other types it marked executed become `not_performed`;
+  - open actions of other types become `withdrawn`.
+- **`POSTURE_AUTO_REMEDIATE` is removed.** It "auto-executed" low-impact
+  actions, which only published the unconsumed event.
+- **Remediation cockpit:** the "Safe Auto-Fix" group is gone (nothing
+  auto-fixes). Withdrawn and not-performed actions are left out of the
+  cockpit and the scenario simulator. Rollback hints no longer describe
+  undoing actions that never ran.
+- **Dashboard:** Execute is offered for `suggested`, `awaiting_approval` and
+  `failed` actions. The approval request ID is shown in the toast.
+
 ## [1.33.0-beta] — 2026-09-27
 
 ### sbom and reporting on the route kernel: tenant and identity from the token (breaking)

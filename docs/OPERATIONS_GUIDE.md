@@ -331,6 +331,22 @@ Examples:
 - optional services such as `autokey`, `workload`, `confidential`, and `pqc` should appear in health and dashboard state
 - auth startup should include SCIM schema readiness before the tenant provisioning UI is treated as healthy
 
+## Posture Remediation Approvals
+
+Escalating an overdue posture finding is approval-required (1.34.0-beta).
+Before anyone can run one, create an active governance approval policy whose
+trigger actions cover `posture.escalate_remediation` (or `posture.*`), with
+at least one approver other than the people who will execute. Then:
+
+1. The operator clicks Execute on the action (or calls
+   `POST /svc/posture/posture/actions/{id}/execute`). Posture opens the
+   governance request in their name and answers `409 approval_pending`.
+2. Another approver approves it in Governance.
+3. The same operator clicks Execute again; the escalation runs.
+
+Without a matching policy, or when governance is unreachable, execution is
+refused (`approval_unavailable`) and nothing changes.
+
 ## Troubleshooting By Symptom
 
 ### "I can’t log in"

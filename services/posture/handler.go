@@ -228,9 +228,10 @@ func (h *Handler) handleListActions(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-// handleExecuteAction records the verified caller as the executor. A body
+// handleExecuteAction runs the action as the verified caller. A body
 // "actor" (or an X-Actor-ID header) is never identity: the field is rejected
-// as unknown and the header is ignored.
+// as unknown and the header is ignored. Approval, executor and refusal
+// outcomes are in the event's details.
 func (h *Handler) handleExecuteAction(c *route.Call) {
 	var payload struct {
 		ApprovalRequestID string `json:"approval_request_id"`
@@ -238,15 +239,23 @@ func (h *Handler) handleExecuteAction(c *route.Call) {
 	if c.R.ContentLength != 0 && !c.Decode(&payload) {
 		return
 	}
-	approval := strings.TrimSpace(payload.ApprovalRequestID)
-	if err := h.svc.ExecuteAction(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor(), approval); err != nil {
+	res, err := h.svc.ExecuteAction(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor(), payload.ApprovalRequestID)
+	for k, v := range res.Details {
+		c.Detail(k, v)
+	}
+	if res.ApprovalRequestID != "" {
+		c.Detail("approval_request_id", res.ApprovalRequestID)
+	}
+	var refusal executionRefusal
+	if errors.As(err, &refusal) {
+		c.Refuse(refusal.Status, refusal.Reason, refusal.Message)
+		return
+	}
+	if err != nil {
 		h.fail(c, err)
 		return
 	}
-	if approval != "" {
-		c.Detail("approval_request_id", approval)
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"ok": true})
+	c.JSON(http.StatusOK, map[string]interface{}{"ok": true, "result": res.Details})
 }
 
 func (h *Handler) handleDashboard(c *route.Call) {

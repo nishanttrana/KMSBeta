@@ -17,11 +17,11 @@ type Service struct {
 	audit      AuditClient
 	event      EventPublisher
 	governance GovernanceControlClient
+	approvals  ApprovalClient
 
 	engineInterval time.Duration
 	hotRetention   time.Duration
 	auditSyncLimit int
-	autoRemediate  bool
 
 	mu sync.Mutex
 }
@@ -34,7 +34,6 @@ func NewService(store Store, audit AuditClient, event EventPublisher) *Service {
 		engineInterval: time.Minute,
 		hotRetention:   72 * time.Hour,
 		auditSyncLimit: 500,
-		autoRemediate:  false,
 	}
 }
 
@@ -42,7 +41,13 @@ func (s *Service) SetGovernanceControlClient(client GovernanceControlClient) {
 	s.governance = client
 }
 
-func (s *Service) Configure(interval time.Duration, hotRetention time.Duration, auditSyncLimit int, autoRemediate bool) {
+// SetApprovalClient wires governance approvals; without it, actions that
+// need approval refuse to run (fail closed).
+func (s *Service) SetApprovalClient(client ApprovalClient) {
+	s.approvals = client
+}
+
+func (s *Service) Configure(interval time.Duration, hotRetention time.Duration, auditSyncLimit int) {
 	if interval > 0 {
 		s.engineInterval = interval
 	}
@@ -52,7 +57,6 @@ func (s *Service) Configure(interval time.Duration, hotRetention time.Duration, 
 	if auditSyncLimit > 0 {
 		s.auditSyncLimit = auditSyncLimit
 	}
-	s.autoRemediate = autoRemediate
 }
 
 func (s *Service) StartScheduler(ctx context.Context) {
@@ -183,6 +187,7 @@ func (s *Service) RunScanTenant(ctx context.Context, tenantID string, syncAudit 
 }
 
 func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnapshot, error) {
+	s.correctLegacyActions(ctx, tenantID)
 	now := nowUTC()
 	current24, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-24*time.Hour), now)
 	if err != nil {
@@ -278,13 +283,8 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 				continue
 			}
 		}
-		action, err := s.store.CreateActionIfAbsent(ctx, tenantID, finding.ID, candidate)
-		if err != nil {
+		if _, err := s.store.CreateActionIfAbsent(ctx, tenantID, finding.ID, candidate); err != nil {
 			logger.Printf("action create failed tenant=%s finding=%s action=%s: %v", tenantID, finding.ID, candidate.ActionType, err)
-			continue
-		}
-		if s.autoRemediate && !action.ApprovalRequired && action.Status == "suggested" {
-			_ = s.ExecuteAction(ctx, tenantID, action.ID, "posture-engine", "")
 		}
 	}
 
@@ -1043,7 +1043,7 @@ func (s *Service) correctiveEngine(ctx context.Context, tenantID string, now tim
 		actions = append(actions, ActionCandidate{
 			FindingFingerprint: fp,
 			ActionType:         "escalate_remediation",
-			RecommendedAction:  "Escalate remediation with owner binding and due-date reset.",
+			RecommendedAction:  "Escalate the overdue finding: raise its severity one level and restart its remediation SLA.",
 			SafetyGate:         "manual",
 			ApprovalRequired:   true,
 			Evidence: map[string]interface{}{
@@ -1053,106 +1053,15 @@ func (s *Service) correctiveEngine(ctx context.Context, tenantID string, now tim
 		})
 	}
 
+	// Open findings raise the corrective score. They get no action record:
+	// posture has no executor for connector restarts, HSM failover,
+	// quarantines, credential rotation or certificate scheduling (the
+	// findings don't even name the connector, client or certificate), so the
+	// finding's recommended action is guidance for an operator
+	// (docs/DECISIONS.md, 1.34.0-beta).
 	openFindings, _ := s.store.ListOpenFindings(ctx, tenantID, 200)
 	for _, item := range openFindings {
-		switch item.FindingType {
-		case "connector_auth_flap":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "restart_degraded_connector",
-				RecommendedAction:  "Restart degraded connector and validate connector auth material.",
-				SafetyGate:         "low-impact",
-				ApprovalRequired:   false,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 6
-		case "hsm_latency_rising":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "failover_hsm_profile",
-				RecommendedAction:  "Fail over to standby HSM profile.",
-				SafetyGate:         "high-impact",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 10
-		case "non_approved_algo_fips_strict":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "quarantine_nonapproved_policy",
-				RecommendedAction:  "Quarantine policy path that triggered non-approved algorithm usage.",
-				SafetyGate:         "high-impact",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 10
-		case "tenant_isolation_violation_pattern":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "quarantine_compromised_client_profile",
-				RecommendedAction:  "Quarantine compromised client profile and revoke active leases/sessions.",
-				SafetyGate:         "high-impact",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 12
-		case "deletion_velocity_anomaly":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "rotate_affected_credentials",
-				RecommendedAction:  "Rotate affected credentials and re-check delete permissions.",
-				SafetyGate:         "manual",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 10
-		case "certificate_renewal_windows_missed":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "rebalance_certificate_renewal_schedule",
-				RecommendedAction:  "Rebalance certificate renewal jobs and re-open missed ARI windows where possible.",
-				SafetyGate:         "manual",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 8
-		case "certificate_emergency_rotation_active":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "execute_emergency_certificate_rotation",
-				RecommendedAction:  "Execute emergency certificate rotation and validate deployment propagation across interfaces.",
-				SafetyGate:         "high-impact",
-				ApprovalRequired:   true,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 12
-		case "certificate_mass_renewal_hotspot", "certificate_schedule_rebalancing_required":
-			actions = append(actions, ActionCandidate{
-				FindingFingerprint: item.Fingerprint,
-				ActionType:         "spread_certificate_rotation_window",
-				RecommendedAction:  "Spread certificate rotations across CA-directed windows to avoid batch renewal concentration.",
-				SafetyGate:         "low-impact",
-				ApprovalRequired:   false,
-				Evidence: map[string]interface{}{
-					"finding_id": item.ID,
-				},
-			})
-			score += 6
-		}
+		score += correctiveWeight[item.FindingType]
 	}
 
 	if len(actions) > 1 {
@@ -1175,50 +1084,226 @@ func (s *Service) correctiveEngine(ctx context.Context, tenantID string, now tim
 	}
 }
 
-func (s *Service) ExecuteAction(ctx context.Context, tenantID string, actionID string, actor string, approvalRequestID string) error {
+// correctiveWeight is how much each open finding type adds to the
+// corrective score.
+var correctiveWeight = map[string]int{
+	"connector_auth_flap":                       6,
+	"hsm_latency_rising":                        10,
+	"non_approved_algo_fips_strict":             10,
+	"tenant_isolation_violation_pattern":        12,
+	"deletion_velocity_anomaly":                 10,
+	"certificate_renewal_windows_missed":        8,
+	"certificate_emergency_rotation_active":     12,
+	"certificate_mass_renewal_hotspot":          6,
+	"certificate_schedule_rebalancing_required": 6,
+}
+
+// actionExecutors are the remediation action types posture really performs.
+// The engine proposes no other type; older rows of other types are
+// withdrawn (correctLegacyActions).
+var actionExecutors = map[string]func(*Service, context.Context, RemediationAction) (string, map[string]interface{}, error){
+	"escalate_remediation": (*Service).escalateRemediation,
+}
+
+func executableActionTypes() []string {
+	out := make([]string, 0, len(actionExecutors))
+	for t := range actionExecutors {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// actionClosed reports whether an action can no longer run or be projected.
+func actionClosed(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "executed", "withdrawn", "not_performed":
+		return true
+	}
+	return false
+}
+
+// executionRefusal is an execute request posture refuses; the route audits
+// it as refused with Reason.
+type executionRefusal struct {
+	Status  int
+	Reason  string
+	Message string
+}
+
+func (e executionRefusal) Error() string { return e.Message }
+
+// ExecutionResult says what an execution did, for the audit event.
+type ExecutionResult struct {
+	ApprovalRequestID string
+	Details           map[string]interface{}
+}
+
+// ExecuteAction runs the action's executor as actor, the verified caller.
+// An approval-required action runs only on an approved governance request
+// bound to this action and opened by actor; without one, posture opens it
+// and refuses with approval_pending.
+func (s *Service) ExecuteAction(ctx context.Context, tenantID string, actionID string, actor string, approvalRequestID string) (ExecutionResult, error) {
 	item, err := s.store.GetAction(ctx, tenantID, actionID)
 	if err != nil {
-		return err
+		return ExecutionResult{}, err
 	}
-	if item.Status == "executed" {
-		// Never a silent success: the route would audit a no-op as executed.
-		return newServiceError(409, "already_executed", "action was already executed")
+	res := ExecutionResult{Details: map[string]interface{}{"action_type": item.ActionType, "finding_id": item.FindingID}}
+	exec, ok := actionExecutors[item.ActionType]
+	switch {
+	case item.Status == "executed":
+		return res, newServiceError(409, "already_executed", "action was already executed")
+	case !ok || item.Status == "withdrawn" || item.Status == "not_performed":
+		return res, executionRefusal{409, "not_executable", "posture has no executor for action type " + item.ActionType + "; follow the finding's recommended action"}
+	case strings.TrimSpace(actor) == "":
+		return res, executionRefusal{403, "actor_required", "a verified caller identity is required"}
 	}
-	if item.ApprovalRequired && strings.TrimSpace(approvalRequestID) == "" {
-		return newServiceError(409, "approval_required", "approval_request_id is required before execution")
+	if item.ApprovalRequired {
+		id, err := s.requireApproval(ctx, item, actor, strings.TrimSpace(approvalRequestID))
+		res.ApprovalRequestID = id
+		if err != nil {
+			return res, err
+		}
 	}
-	if strings.TrimSpace(actor) == "" {
-		actor = "system"
+	msg, details, err := exec(s, ctx, item)
+	if err != nil {
+		reason := "internal error"
+		var svcErr serviceError
+		if errors.As(err, &svcErr) {
+			reason = svcErr.Message
+		}
+		_ = s.store.UpdateActionExecution(ctx, tenantID, actionID, "failed", actor, "execution failed: "+reason, res.ApprovalRequestID)
+		return res, err
 	}
-	_ = s.store.UpdateActionExecution(ctx, tenantID, actionID, "executing", actor, "execution started", approvalRequestID)
+	for k, v := range details {
+		res.Details[k] = v
+	}
+	if err := s.store.UpdateActionExecution(ctx, tenantID, actionID, "executed", actor, msg, res.ApprovalRequestID); err != nil {
+		return res, err
+	}
+	return res, nil
+}
 
-	status := "executed"
-	result := "runbook dispatched"
-	payload := map[string]interface{}{
-		"tenant_id":         tenantID,
-		"action_id":         actionID,
-		"action_type":       item.ActionType,
-		"finding_id":        item.FindingID,
-		"approval_required": item.ApprovalRequired,
-		"approval_id":       approvalRequestID,
-		"executed_by":       actor,
-		"evidence":          item.Evidence,
+// requireApproval returns the approved governance request authorizing
+// executor to run item. It never trusts approvalRequestID alone: a given ID
+// must be one of the approved requests bound to this action and executor.
+func (s *Service) requireApproval(ctx context.Context, item RemediationAction, executor string, given string) (string, error) {
+	if s.approvals == nil {
+		return "", executionRefusal{503, "approval_unavailable", "governance approvals are not configured; this action requires one"}
 	}
-	dispatchErr := errors.New("event bus unavailable")
-	if s.event != nil {
-		dispatchErr = s.publish(ctx, "audit.posture.runbook.execute", tenantID, payload)
+	approved, err := s.approvals.ListApprovals(ctx, item.TenantID, "approved", approvalTargetType, item.ID)
+	if err != nil {
+		logger.Printf("approval lookup failed tenant=%s action=%s: %v", item.TenantID, item.ID, err)
+		return "", executionRefusal{503, "approval_unavailable", "governance approval check failed"}
 	}
-	if dispatchErr != nil {
-		status = "failed"
-		result = "runbook publish failed: " + dispatchErr.Error()
+	for _, a := range approved {
+		if approvalMatches(a, item, executor) && (given == "" || given == a.ID) {
+			return a.ID, nil
+		}
 	}
-	if err := s.store.UpdateActionExecution(ctx, tenantID, actionID, status, actor, result, approvalRequestID); err != nil {
-		return err
+	if given != "" {
+		return given, executionRefusal{403, "approval_invalid", "approval_request_id is not an approved governance request for this action opened by the caller"}
 	}
-	if dispatchErr != nil {
-		return newServiceError(502, "dispatch_failed", "runbook dispatch failed")
+	pending, err := s.approvals.ListApprovals(ctx, item.TenantID, "pending", approvalTargetType, item.ID)
+	if err != nil {
+		logger.Printf("approval lookup failed tenant=%s action=%s: %v", item.TenantID, item.ID, err)
+		return "", executionRefusal{503, "approval_unavailable", "governance approval check failed"}
 	}
-	return nil
+	for _, a := range pending {
+		if approvalMatches(a, item, executor) {
+			return a.ID, executionRefusal{409, "approval_pending", "awaiting governance approval " + a.ID + "; execute again once it is approved"}
+		}
+	}
+	id, err := s.approvals.RequestApproval(ctx, ApprovalRequestInput{
+		TenantID:   item.TenantID,
+		Action:     approvalAction(item.ActionType),
+		TargetType: approvalTargetType,
+		TargetID:   item.ID,
+		TargetDetails: map[string]interface{}{
+			"payload_hash":       approvalPayloadHash(item),
+			"action_type":        item.ActionType,
+			"finding_id":         item.FindingID,
+			"recommended_action": item.RecommendedAction,
+		},
+		RequesterID: executor,
+	})
+	if err != nil {
+		return "", executionRefusal{409, "approval_unavailable", "governance could not open an approval request (an active approval policy must cover " + approvalAction(item.ActionType) + " or posture.*): " + err.Error()}
+	}
+	_ = s.store.UpdateActionExecution(ctx, item.TenantID, item.ID, "awaiting_approval", "", "approval requested from governance by "+executor, id)
+	return id, executionRefusal{409, "approval_pending", "approval requested from governance: " + id + "; execute again once it is approved"}
+}
+
+// escalateRemediation raises the overdue source finding one severity level,
+// restarts its SLA at that level, and resolves the SLA-breach finding the
+// action answers. If the engine re-detects the source condition later, its
+// own assessment applies again.
+func (s *Service) escalateRemediation(ctx context.Context, item RemediationAction) (string, map[string]interface{}, error) {
+	sourceID, _ := item.Evidence["source_finding_id"].(string)
+	if strings.TrimSpace(sourceID) == "" {
+		return "", nil, newServiceError(409, "evidence_missing", "the action names no overdue finding")
+	}
+	src, err := s.store.GetFinding(ctx, item.TenantID, sourceID)
+	if errors.Is(err, errNotFound) {
+		return "", nil, newServiceError(409, "finding_not_open", "the overdue finding no longer exists")
+	}
+	if err != nil {
+		return "", nil, err
+	}
+	from := normalizeSeverity(src.Severity)
+	to := escalatedSeverity(from)
+	due := slaForSeverity(to, nowUTC())
+	if err := s.store.EscalateFinding(ctx, item.TenantID, src.ID, to, due); errors.Is(err, errNotFound) {
+		return "", nil, newServiceError(409, "finding_not_open", "the overdue finding is no longer open")
+	} else if err != nil {
+		return "", nil, err
+	}
+	if err := s.store.UpdateFindingStatus(ctx, item.TenantID, item.FindingID, "resolved"); err != nil {
+		return "", nil, err
+	}
+	msg := fmt.Sprintf("escalated finding %s from %s to %s; SLA restarted, due %s", src.ID, from, to, due.Format(time.RFC3339))
+	return msg, map[string]interface{}{
+		"escalated_finding_id": src.ID,
+		"severity_from":        from,
+		"severity_to":          to,
+		"sla_due_at":           due.Format(time.RFC3339),
+	}, nil
+}
+
+func escalatedSeverity(sev string) string {
+	switch normalizeSeverity(sev) {
+	case severityInfo:
+		return severityWarning
+	case severityWarning:
+		return severityHigh
+	default:
+		return severityCritical
+	}
+}
+
+// correctLegacyActions fixes action rows written before 1.34.0-beta, when
+// "execute" only published an event nothing consumed, and audits what it
+// changed. Primary only: posture_actions is replicated.
+func (s *Service) correctLegacyActions(ctx context.Context, tenantID string) {
+	if !clusterstate.RunsPrimaryJobs(ctx) {
+		return
+	}
+	c, err := s.store.CorrectLegacyActions(ctx, tenantID, executableActionTypes())
+	if err != nil {
+		logger.Printf("legacy action correction failed tenant=%s: %v", tenantID, err)
+		return
+	}
+	if c.Total() == 0 {
+		return
+	}
+	_ = s.publish(ctx, "audit.posture.actions_corrected", tenantID, map[string]interface{}{
+		"reset_to_suggested": c.Reset,
+		"not_performed":      c.NotPerformed,
+		"withdrawn":          c.Withdrawn,
+		"severity":           "warning",
+		"result":             "success",
+		"reason":             "earlier executions only published audit.posture.runbook.execute, which nothing consumed",
+	})
 }
 
 func (s *Service) ListFindings(ctx context.Context, tenantID string, q FindingQuery) ([]Finding, error) {
@@ -1563,9 +1648,8 @@ func buildBlastRadiusHotspots(findings []Finding) []BlastRadius {
 
 func buildRemediationCockpit(actions []RemediationAction) []RemediationCockpitGroup {
 	groups := []RemediationCockpitGroup{
-		{ID: "safe-auto-fix", Label: "Safe Auto-Fix", Description: "Low-impact actions that can be executed immediately."},
-		{ID: "approval-required", Label: "Approval Required", Description: "High-impact actions that require an approval token before execution."},
-		{ID: "manual", Label: "Manual", Description: "Operator-driven runbooks that need investigation or scheduling."},
+		{ID: "approval-required", Label: "Approval Required", Description: "Actions that run only after a governance approval opened by the executor."},
+		{ID: "manual", Label: "Manual", Description: "Actions an operator runs directly."},
 	}
 	addToGroup := func(groupID string, action RemediationAction) {
 		for idx := range groups {
@@ -1577,16 +1661,12 @@ func buildRemediationCockpit(actions []RemediationAction) []RemediationCockpitGr
 		}
 	}
 	for _, action := range actions {
-		status := strings.ToLower(strings.TrimSpace(action.Status))
-		if status == "executed" {
+		if actionClosed(action.Status) {
 			continue
 		}
-		switch {
-		case action.ApprovalRequired:
+		if action.ApprovalRequired {
 			addToGroup("approval-required", action)
-		case strings.EqualFold(action.SafetyGate, "low-impact"):
-			addToGroup("safe-auto-fix", action)
-		default:
+		} else {
 			addToGroup("manual", action)
 		}
 	}
@@ -1597,8 +1677,7 @@ func buildScenarioSimulator(risk RiskSnapshot, actions []RemediationAction, find
 	out := make([]ScenarioSimulation, 0, 6)
 	seen := map[string]struct{}{}
 	for _, action := range actions {
-		status := strings.ToLower(strings.TrimSpace(action.Status))
-		if status == "executed" {
+		if actionClosed(action.Status) {
 			continue
 		}
 		if _, ok := seen[action.ActionType]; ok {
@@ -1755,23 +1834,13 @@ func deriveActionImpact(action RemediationAction, finding Finding) RemediationIm
 	}
 }
 
+// deriveRollbackHint describes how to undo what an executor changes. Only
+// escalation runs; other action types changed nothing, so have no rollback.
 func deriveRollbackHint(action RemediationAction) string {
-	switch strings.TrimSpace(action.ActionType) {
-	case "restart_degraded_connector":
-		return "Re-enable the connector profile and rerun connector auth validation."
-	case "failover_hsm_profile":
-		return "Switch traffic back to the primary HSM profile after latency stabilizes."
-	case "quarantine_nonapproved_policy":
-		return "Restore the quarantined policy path after replacing the non-approved algorithm callsite."
-	case "quarantine_compromised_client_profile":
-		return "Reissue the client profile after session revocation and actor review."
-	case "rotate_affected_credentials":
-		return "Restore previous credentials only if audit confirms the delete anomaly was a false positive."
-	case "escalate_remediation":
-		return "Re-open the original remediation item and clear the temporary escalation owner."
-	default:
-		return "Roll back by restoring the previous connector/profile state after verification."
+	if strings.TrimSpace(action.ActionType) == "escalate_remediation" {
+		return "Escalation changes only the finding's severity and SLA; set its status or wait for the next scan that re-detects the condition to restore the engine's assessment."
 	}
+	return ""
 }
 
 func deriveActionPriority(action RemediationAction, finding Finding) string {

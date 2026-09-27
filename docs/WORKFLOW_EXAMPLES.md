@@ -618,9 +618,9 @@ Steps:
 
 1. Run or schedule compliance assessments.
 2. Review posture dashboard for risk drivers and blast radius.
-3. Group remediation into safe auto-fix, approval-required, and manual.
+3. Act on each finding's recommended action; escalate overdue findings.
 4. Use reporting to export alerts, incidents, and evidence packs.
-5. Route high-impact actions into Governance approval flow.
+5. Approve escalations in Governance: the first Execute opens the request; the requester runs it again once another approver has approved.
 
 Assessment sample:
 
