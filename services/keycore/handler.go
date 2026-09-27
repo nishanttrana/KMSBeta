@@ -2026,21 +2026,14 @@ func (h *Handler) handleServiceDerive(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.ServiceDerive(r.Context(), r.PathValue("id"), req)
 	if err != nil {
-		var denied policyDeniedError
-		var fipsDenied fipsModeViolationError
-		switch {
-		case errors.Is(err, errServiceIdentityRequired):
-			writeErr(w, http.StatusForbidden, "service_identity_required", err.Error(), reqID, req.TenantID)
-		case errors.Is(err, errStoreNotFound):
-			writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, req.TenantID)
-		case errors.As(err, &denied):
-			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
-		case errors.As(err, &fipsDenied):
-			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
-		case errors.As(err, new(*accessRefusal)):
-			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+		// The same code is the audited refusal reason.
+		switch code := serviceDeriveRefusalReason(err); code {
+		case "not_found":
+			writeErr(w, http.StatusNotFound, code, "key not found", reqID, req.TenantID)
+		case "service_derive_failed":
+			writeErr(w, http.StatusBadRequest, code, err.Error(), reqID, req.TenantID)
 		default:
-			writeErr(w, http.StatusBadRequest, "service_derive_failed", err.Error(), reqID, req.TenantID)
+			writeErr(w, http.StatusForbidden, code, err.Error(), reqID, req.TenantID)
 		}
 		return
 	}

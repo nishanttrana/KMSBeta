@@ -87,7 +87,7 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 		t.Fatalf("unexpected run: %+v", run)
 	}
 	after, _ := svc.GetMigrationPlan(ctx, tenantID, plan.ID)
-	successors := 0
+	successors, rotated := 0, 0
 	for _, step := range after.Steps {
 		switch step.Status {
 		case "successor_created":
@@ -96,6 +96,7 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 				t.Fatalf("successor step without a key id: %+v", step)
 			}
 		case "rotated":
+			rotated++
 			if step.TargetAlg != step.CurrentAlg {
 				t.Fatalf("rotation reported as migration to %s: %+v", step.TargetAlg, step)
 			}
@@ -112,6 +113,10 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 	keycore.mu.Unlock()
 	if successors == 0 || len(created) != successors {
 		t.Fatalf("successors %d, keycore creates %d", successors, len(created))
+	}
+	// One step event per key actually changed; manual steps emit none.
+	if n := pub.Count("audit.pqc.migration_step_executed"); n != successors+rotated {
+		t.Fatalf("migration_step_executed %d, want %d (steps that changed a key)", n, successors+rotated)
 	}
 	for _, req := range created {
 		if req["algorithm"] != "ML-DSA-65" && req["algorithm"] != "ML-KEM-768" {

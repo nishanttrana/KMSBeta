@@ -26,7 +26,8 @@ an approach, record it here or in the matching doc below.
      "refused"`: denied permission, tamper or integrity failures, preview
      refusals, and FIPS refusals.
    - A test asserts that each new event is emitted, including for the refused
-     case.
+     case. Its row in `docs/SECURITY/AUDIT_EVENTS_2026-09.md` names that
+     test; naming the code that emits it is not proof (1.36.0-beta).
    - New subjects are listed in `docs/API_REFERENCE.md` (Audit Action Subject
      Reference).
    - **Routes get this by construction** (owner directive, 2026-09-26:

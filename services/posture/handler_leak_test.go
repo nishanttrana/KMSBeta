@@ -112,6 +112,24 @@ func TestLeakScanFindsSecretsAndResolverIsTheCaller(t *testing.T) {
 	if e := rec.Last(t); e.Action != "leak_finding_updated" || e.Event.Details["status"] != "resolved" {
 		t.Fatalf("update event %+v", e)
 	}
+	for _, c := range []struct{ method, path, action string }{
+		{http.MethodGet, "/leaks/targets", "leak_targets_listed"},
+		{http.MethodGet, "/leaks/jobs", "leak_jobs_listed"},
+		{http.MethodGet, "/leaks/findings", "leak_findings_listed"},
+		{http.MethodDelete, "/leaks/targets/" + tid, "leak_target_deleted"},
+	} {
+		rr, _ := leakCall(t, h, c.method, c.path, "")
+		if e := rec.Last(t); rr.Code >= 300 || e.Action != c.action || e.Event.Result != "success" {
+			t.Fatalf("%s %s: %d audited as %+v", c.method, c.path, rr.Code, e)
+		}
+	}
+	created := false
+	for _, e := range rec.Events() {
+		created = created || (e.Action == "leak_target_created" && e.Event.Result == "success")
+	}
+	if !created {
+		t.Fatal("target creation not audited")
+	}
 }
 
 // A scan with no content source fails with the reason, never with made-up
@@ -133,5 +151,24 @@ func TestLeakScanWithoutSourceFailsHonestly(t *testing.T) {
 	}
 	if len(jobs) != 1 || jobs[0].Status != "failed" || jobs[0].Error == "" || jobs[0].FindingsCount != 0 {
 		t.Fatalf("jobs %+v", jobs)
+	}
+}
+
+// A scan of a disabled target is refused and audited, and starts no job.
+func TestLeakScanOfDisabledTargetRefused(t *testing.T) {
+	h, store := newLeakHandler(t)
+	rec := &routetest.Recorder{}
+	h.audit = rec
+	_, out := leakCall(t, h, http.MethodPost, "/leaks/targets", `{"name":"old","type":"env_file","uri":"inline"}`)
+	tid := out["target"].(map[string]any)["id"].(string)
+	if _, err := store.db.SQL().Exec(`UPDATE leak_scan_targets SET enabled = FALSE WHERE id = $1`, tid); err != nil {
+		t.Fatal(err)
+	}
+	rr, _ := leakCall(t, h, http.MethodPost, "/leaks/targets/"+tid+"/scan", `{"content":"x"}`)
+	if e := rec.Last(t); rr.Code != http.StatusConflict || e.Action != "leak_scan_started" || e.Event.Result != "refused" || e.Event.Details["reason"] != "target_disabled" {
+		t.Fatalf("disabled target: %d audited as %+v", rr.Code, e)
+	}
+	if jobs, _ := store.ListLeakScanJobs(context.Background(), "t1", tid, 10); len(jobs) != 0 {
+		t.Fatalf("a refused scan started a job: %+v", jobs)
 	}
 }

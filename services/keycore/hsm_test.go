@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -309,6 +310,11 @@ func TestHSMKeyProvenance(t *testing.T) {
 	if key.Labels[labelHSMToken] != "vecta-test" || key.Labels[labelHSMSerial] == "" || key.Labels[labelHSMManufacturer] == "" {
 		t.Fatalf("HSM not recorded on the key: %v", key.Labels)
 	}
+	if ev := rec.find("audit.key.create"); ev == nil {
+		t.Fatal("HSM key creation not audited")
+	} else if d, _ := ev["details"].(map[string]any); d["hsm_serial"] != key.Labels[labelHSMSerial] || d["hsm_token"] != "vecta-test" || d["hsm_manufacturer"] != key.Labels[labelHSMManufacturer] {
+		t.Fatalf("the create event must name the device that generated the key: %+v", ev)
+	}
 	check, err := svc.InspectHSMKey(ctx, "t3", key.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -379,5 +385,78 @@ func TestHSMKeyProvenance(t *testing.T) {
 	}
 	if d := refusalDetails(t, rec, "audit.key.hsm_refused"); d["reason"] != "hsm_key_not_found" {
 		t.Fatalf("refusal: %+v", d)
+	}
+}
+
+// A version generated on a different HSM than the one the key recorded, and
+// HSM objects the destroy couldn't remove, are each audited.
+func TestHSMDeviceChangeAndDestroyFailureAudited(t *testing.T) {
+	svc, rec, _ := newHSMService(t, "t4")
+	ctx := adminCtx()
+	if _, err := svc.UpdateHSMSettings(ctx, HSMSettings{TenantID: "t4", HSMKeysEnabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t4", Name: "moved", Algorithm: "AES-256", Purpose: "encrypt", Owner: "ops", HSM: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serial := key.Labels[labelHSMSerial]
+	// Record the key as first generated on another HSM (the partition was
+	// replaced); the next version comes from the test token.
+	key.Labels[labelHSMSerial] = "previous-hsm-0001"
+	raw, _ := json.Marshal(key.Labels)
+	if _, err := svc.store.(*SQLStore).db.SQL().ExecContext(context.Background(), `UPDATE keys SET labels = ? WHERE id = ?`, string(raw), key.ID); err != nil {
+		t.Fatal(err)
+	}
+	_ = svc.cache.Delete(context.Background(), "t4", key.ID)
+	if _, err := svc.RotateKey(ctx, "t4", key.ID, "hsm replaced", ""); err != nil {
+		t.Fatal(err)
+	}
+	ev := rec.find("audit.key.hsm_device_changed")
+	d, _ := ev["details"].(map[string]any)
+	if d["previous_serial"] != "previous-hsm-0001" || d["serial"] != serial || d["version"] != float64(2) {
+		t.Fatalf("device change audit: %+v", ev)
+	}
+
+	// The connector is gone when the key is destroyed: the key is destroyed in
+	// the KMS and the objects left on the HSM are named.
+	svc.SetHSMBackend(hsm.New("https://127.0.0.1:1"))
+	if err := svc.DestroyKeyImmediately(ctx, "t4", key.ID, "destroy while the HSM is unreachable", "tester", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	ev = rec.find("audit.key.hsm_destroy_failed")
+	d, _ = ev["details"].(map[string]any)
+	if ev == nil || d["reason"] != "hsm_unreachable" || d["result"] != "failure" || len(d["labels"].([]any)) != 2 {
+		t.Fatalf("destroy failure audit: %+v", ev)
+	}
+	if rec.find("audit.key.hsm_objects_destroyed") != nil {
+		t.Fatal("an unreachable HSM must not be audited as objects destroyed")
+	}
+}
+
+// The HSM routes that succeed are audited under their own action.
+func TestHSMRoutesAudited(t *testing.T) {
+	svc, _, _ := newHSMService(t, "t1")
+	h := NewHandler(svc)
+	rec := &routetest.Recorder{}
+	h.kernelAudit = rec
+	if _, err := svc.UpdateHSMSettings(adminCtx(), HSMSettings{TenantID: "t1", HSMKeysEnabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	key, err := svc.CreateKey(adminCtx(), CreateKeyRequest{TenantID: "t1", Name: "routes", Algorithm: "AES-256", Purpose: "encrypt", Owner: "ops", HSM: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ method, path, body, action string }{
+		{http.MethodGet, "/hsm/settings", "", "hsm_status_read"},
+		{http.MethodPut, "/hsm/settings", `{"hsm_keys_enabled":true}`, "hsm_settings_update"},
+		{http.MethodGet, "/hsm/objects", "", "hsm_objects_listed"},
+		{http.MethodGet, "/keys/" + key.ID + "/hsm", "", "hsm_key_inspected"},
+	} {
+		rr := httptest.NewRecorder()
+		serveAsAdmin(h, rr, httptest.NewRequest(c.method, c.path+"?tenant_id=t1", strings.NewReader(c.body)))
+		if e := rec.Last(t); rr.Code >= 300 || e.Action != c.action || e.Event.Result != "success" {
+			t.Fatalf("%s %s: %d %s audited as %+v", c.method, c.path, rr.Code, rr.Body, e)
+		}
 	}
 }

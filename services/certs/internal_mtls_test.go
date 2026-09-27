@@ -272,6 +272,11 @@ func TestMTLSRoutesRootOnlyAndAudited(t *testing.T) {
 		t.Fatalf("a policy change must be audited with old and new values: %d %s %+v", w.Code, w.Body, last)
 	}
 
+	w = mtlsCall(router, http.MethodPost, "/certs/internal-mtls/kms-keycore/rotate", "root", map[string]string{"mode": "graceful"})
+	if last := rec.Last(t); w.Code != http.StatusOK || last.Action != "internal_mtls_rotated" || last.Event.Result != "success" || last.Event.Details["restart_mode"] != "graceful" {
+		t.Fatalf("a rotation must be audited with its restart mode: %d %s %+v", w.Code, w.Body, last)
+	}
+
 	w = mtlsCall(router, http.MethodPost, "/certs/internal-mtls/rotate-all", "root", map[string]string{"mode": "graceful"})
 	if w.Code != http.StatusBadRequest || rec.Last(t).Event.Details["reason"] != "confirmation_required" {
 		t.Fatalf("rotate-all needs a typed confirmation: %d", w.Code)
@@ -293,6 +298,9 @@ func TestMTLSRoutesRootOnlyAndAudited(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
 	if w.Code != http.StatusOK || len(out.Items) != len(svctls.Services)+len(svctls.Materialized)+len(svctls.Infrastructure) {
 		t.Fatalf("the inventory must list every internal identity: %d, %d items", w.Code, len(out.Items))
+	}
+	if last := rec.Last(t); last.Action != "internal_mtls_inventory_read" || last.Event.Result != "success" {
+		t.Fatalf("reading the inventory must be audited: %+v", last)
 	}
 }
 

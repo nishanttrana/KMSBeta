@@ -76,6 +76,8 @@ func enroll(t *testing.T, h http.Handler, identity string, csr []byte, proof str
 
 func TestInternalSubCAIsCreatedOnceUnderTheRoot(t *testing.T) {
 	svc, _ := newCertsService(t)
+	rec := &subjectRecorder{}
+	svc.events = rec
 	root, sub, err := svc.EnsureInternalPKI(context.Background(), "root")
 	if err != nil {
 		t.Fatal(err)
@@ -87,10 +89,15 @@ func TestInternalSubCAIsCreatedOnceUnderTheRoot(t *testing.T) {
 	if err != nil || again.ID != sub.ID {
 		t.Fatalf("Sub CA must be reused, got %s then %s (%v)", sub.ID, again.ID, err)
 	}
+	if rec.count("audit.cert.internal_subca_created") != 1 || rec.last(t, "audit.cert.internal_subca_created")["parent_ca_id"] != root.ID {
+		t.Fatalf("the Sub CA's creation must be audited once, under the root: %v", rec.subjects)
+	}
 }
 
 func TestEnrollmentIssuesRegistrySANsFromTheSubCA(t *testing.T) {
 	svc, _ := newCertsService(t)
+	rec := &subjectRecorder{}
+	svc.events = rec
 	em := &captureEmitter{}
 	h := svc.enrollHandler("root", enrollTestSecret, em)
 	_, sub, err := svc.EnsureInternalPKI(context.Background(), "root")
@@ -146,6 +153,10 @@ func TestEnrollmentIssuesRegistrySANsFromTheSubCA(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("exactly one active certificate per identity, got %d", n)
+	}
+	if d := rec.last(t, "audit.cert.internal_enrolled"); rec.count("audit.cert.internal_enrolled") != 2 ||
+		d["identity"] != "kms-keycore" || d["ca_id"] != sub.ID || d["superseded"] != float64(1) {
+		t.Fatalf("each issuance must be audited with the identity and what it superseded: %v %v", rec.subjects, d)
 	}
 }
 

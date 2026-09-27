@@ -528,6 +528,8 @@ func TestHandlerOCSPWireResponse(t *testing.T) {
 func TestOCSPStrictModeRefusesSHA1CertID(t *testing.T) {
 	fipstest.StrictOnly(t)
 	h, svc := newCertsHandler(t)
+	rec := &subjectRecorder{}
+	svc.events = rec
 	ca, err := svc.CreateCA(context.Background(), CreateCARequest{
 		TenantID: "t-ocsp-strict", Name: "root-strict", CALevel: "root", Algorithm: "RSA-3072",
 		KeyBackend: "software", Subject: "CN=Root Strict",
@@ -557,6 +559,9 @@ func TestOCSPStrictModeRefusesSHA1CertID(t *testing.T) {
 	h.ServeHTTP(rr, req)
 	if rr.Code == http.StatusOK || !strings.Contains(rr.Body.String(), "SHA-1") {
 		t.Fatalf("strict mode must refuse a SHA-1 CertID cleanly, got status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if d := rec.last(t, "audit.cert.ocsp_refused"); d["result"] != "refused" || d["reason"] != "sha1_certid_fips_strict" {
+		t.Fatalf("the refusal must be audited: %v", d)
 	}
 }
 

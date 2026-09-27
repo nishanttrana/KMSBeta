@@ -11,6 +11,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/route"
 )
 
 // Rotation policies rotate the tenant's keys that match target_filter, through
@@ -156,14 +157,18 @@ func schedulerContext(ctx context.Context) context.Context {
 // RotationScheduler runs due auto-rotate policies on the primary.
 type RotationScheduler struct {
 	svc      *Service
-	audit    *pkgaudit.Client
+	audit    route.Emitter
 	interval time.Duration
 	logger   *log.Logger
 	primary  func(context.Context) bool
 }
 
 func NewRotationScheduler(svc *Service, audit *pkgaudit.Client, logger *log.Logger) *RotationScheduler {
-	return &RotationScheduler{svc: svc, audit: audit, interval: time.Minute, logger: logger, primary: clusterstate.RunsPrimaryJobs}
+	r := &RotationScheduler{svc: svc, interval: time.Minute, logger: logger, primary: clusterstate.RunsPrimaryJobs}
+	if audit != nil {
+		r.audit = audit
+	}
+	return r
 }
 
 func (r *RotationScheduler) Run(ctx context.Context) {

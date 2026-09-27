@@ -85,6 +85,18 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 	if e := rec.Last(t); e.Action != "agility_migration_plan_updated" || e.Event.Details["status"] != "in_progress" {
 		t.Fatalf("update event %+v", e)
 	}
+	for path, action := range map[string]string{
+		"/agility/algorithms":                           "agility_inventory_read",
+		"/agility/keys-by-algorithm?algorithm=RSA-2048": "agility_keys_by_algorithm_read",
+		"/agility/migration-plans":                      "agility_migration_plans_listed",
+	} {
+		if rr, _ := agilityCall(t, h, http.MethodGet, path, ""); rr.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", path, rr.Code, rr.Body)
+		}
+		if e := rec.Last(t); e.Action != action || e.Event.Result != "success" {
+			t.Fatalf("%s audited as %+v", path, e)
+		}
+	}
 }
 
 // A plan cannot be written into another tenant by naming it in the body (the

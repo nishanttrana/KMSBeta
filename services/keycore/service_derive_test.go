@@ -3,12 +3,10 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
-	"time"
-
-	pkgcache "vecta-kms/pkg/cache"
-	"vecta-kms/pkg/metering"
 )
 
 func serviceCtx(clientID string) context.Context {
@@ -86,16 +84,88 @@ func TestServiceDeriveRequiresServiceIdentity(t *testing.T) {
 	}
 }
 
-type captureKeycorePublisher struct{ subjects []string }
+type captureKeycorePublisher struct {
+	mu       sync.Mutex
+	subjects []string
+	payloads [][]byte
+}
 
-func (c *captureKeycorePublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (c *captureKeycorePublisher) Publish(_ context.Context, subject string, payload []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.subjects = append(c.subjects, subject)
+	c.payloads = append(c.payloads, payload)
 	return nil
 }
 
+func (c *captureKeycorePublisher) count(subject string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, s := range c.subjects {
+		if s == subject {
+			n++
+		}
+	}
+	return n
+}
+
+// details returns the details of the last event published on subject.
+func (c *captureKeycorePublisher) details(t *testing.T, subject string) map[string]any {
+	t.Helper()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i := len(c.subjects) - 1; i >= 0; i-- {
+		if c.subjects[i] == subject {
+			var ev struct {
+				Details map[string]any `json:"details"`
+			}
+			if err := json.Unmarshal(c.payloads[i], &ev); err != nil {
+				t.Fatal(err)
+			}
+			return ev.Details
+		}
+	}
+	t.Fatalf("no %s event: %v", subject, c.subjects)
+	return nil
+}
+
+// A service derive is audited with the calling service and purpose; a
+// derive by anything but an internal service identity is refused and audited.
+func TestServiceDeriveAudited(t *testing.T) {
+	svc, pub := newCaptureService(t)
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "dp-audit", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.ServiceDerive(serviceCtx("kms-dataprotect"), key.ID, ServiceDeriveRequest{TenantID: "t1", Purpose: "tokenize"}); err != nil {
+		t.Fatal(err)
+	}
+	if d := pub.details(t, "audit.key.service_derive"); d["service"] != "kms-dataprotect" || d["purpose"] != "tokenize" || d["result"] != "success" {
+		t.Fatalf("derive details: %v", d)
+	}
+	admin := contextWithAccessActor(context.Background(), AccessActor{UserID: "u1", Role: "admin", Authenticated: true})
+	if _, err := svc.ServiceDerive(admin, key.ID, ServiceDeriveRequest{TenantID: "t1", Purpose: "tokenize"}); !errors.Is(err, errServiceIdentityRequired) {
+		t.Fatalf("admin derive: %v", err)
+	}
+	if d := pub.details(t, "audit.key.service_derive_refused"); d["reason"] != "service_identity_required" || d["result"] != "refused" {
+		t.Fatalf("identity refusal details: %v", d)
+	}
+	if _, err := svc.ServiceDerive(serviceCtx("kms-dataprotect"), "missing", ServiceDeriveRequest{TenantID: "t1", Purpose: "tokenize"}); err == nil {
+		t.Fatal("derive from a missing key")
+	}
+	if d := pub.details(t, "audit.key.service_derive_refused"); d["reason"] != "not_found" {
+		t.Fatalf("missing-key refusal details: %v", d)
+	}
+	if pub.count("audit.key.service_derive") != 1 || pub.count("audit.key.service_derive_refused") != 2 {
+		t.Fatalf("one derive and two refusals: %v", pub.subjects)
+	}
+}
+
 func TestGenericDeriveCannotReproduceServiceSubkey(t *testing.T) {
-	pub := &captureKeycorePublisher{}
-	svc := NewService(newStoreForTest(t), NewKeyCache(pkgcache.NewMemory(5*time.Minute), 5*time.Minute), pub, metering.NewMeter(0, time.Hour), []byte("0123456789ABCDEF0123456789ABCDEF"), nil, false)
+	svc, pub := newCaptureService(t)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
 		TenantID: "t1", Name: "dp-key-3", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "derive",
 		Owner: "ops", CreatedBy: "tester",

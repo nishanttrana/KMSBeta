@@ -223,3 +223,68 @@ func TestDashboardViewedAuditedOnce(t *testing.T) {
 		t.Fatalf("service layer still publishes %v", bus.subjects)
 	}
 }
+
+// Every engine route that succeeds is audited under its own action, as the
+// verified caller.
+func TestPostureEngineRoutesAudited(t *testing.T) {
+	h, store, rec := newPostureHandler(t, nil)
+	alice := userClaims("alice", "t1")
+	src, _, _ := seedEscalation(t, store)
+	for _, c := range []struct{ method, path, body, action string }{
+		{http.MethodGet, "/posture/health", "", "health_read"},
+		{http.MethodPost, "/posture/events", `{"service":"key","action":"audit.key.delete","result":"success"}`, "events_ingested"},
+		{http.MethodPost, "/posture/events/batch", `{"items":[{"service":"key","action":"audit.key.delete","result":"success"}]}`, "events_ingested"},
+		{http.MethodPost, "/posture/ingest/audit", "", "audit_synced"},
+		{http.MethodPost, "/posture/scan", "", "scan_run"},
+		{http.MethodGet, "/posture/findings", "", "findings_listed"},
+		{http.MethodPut, "/posture/findings/" + src.ID + "/status", `{"status":"acknowledged"}`, "finding_status_updated"},
+		{http.MethodGet, "/posture/risk", "", "risk_read"},
+		{http.MethodGet, "/posture/risk/history", "", "risk_history_read"},
+		{http.MethodGet, "/posture/actions", "", "actions_listed"},
+		{http.MethodGet, "/posture/dashboard", "", "dashboard_viewed"},
+	} {
+		rr := postureCall(h, alice, c.method, c.path+"?tenant_id=t1", c.body)
+		e := rec.Last(t)
+		if rr.Code >= 300 || e.Action != c.action || e.Event.Result != route.ResultSuccess || e.Event.ActorID != "alice" {
+			t.Fatalf("%s %s: %d %s audited as %s %s by %s", c.method, c.path, rr.Code, rr.Body, e.Action, e.Event.Result, e.Event.ActorID)
+		}
+	}
+}
+
+// posture's audit reader for the scheduled sync: events already in the
+// audit trail.
+type auditTrail []map[string]interface{}
+
+func (a auditTrail) ListEvents(context.Context, string, int) ([]map[string]interface{}, error) {
+	return a, nil
+}
+
+// The scheduled engine run audits what it synced from the audit trail, under
+// the synced tenant; a run that syncs nothing emits nothing.
+func TestScheduledAuditSyncAudited(t *testing.T) {
+	_, store, _ := newPostureHandler(t, nil)
+	bus := &recordedPublish{}
+	svc := NewService(store, auditTrail{{"id": "e1", "action": "audit.key.delete", "service": "key", "result": "success", "tenant_id": "root"}}, bus)
+	if err := svc.RunScanAllTenants(context.Background(), true); err != nil {
+		t.Fatal(err)
+	}
+	if bus.count("audit.posture.events_ingested") != 1 {
+		t.Fatalf("scheduled sync audit: %v", bus.subjects)
+	}
+	empty := &recordedPublish{}
+	if err := NewService(store, auditTrail{}, empty).RunScanAllTenants(context.Background(), true); err != nil || empty.count("audit.posture.events_ingested") != 0 {
+		t.Fatalf("an empty sync must not be audited: %v %v", err, empty.subjects)
+	}
+}
+
+func (p *recordedPublish) count(subject string) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n := 0
+	for _, s := range p.subjects {
+		if s == subject {
+			n++
+		}
+	}
+	return n
+}

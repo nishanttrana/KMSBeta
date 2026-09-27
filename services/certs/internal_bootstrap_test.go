@@ -140,6 +140,8 @@ func TestBootstrapEnrolmentAndInfraCertsBeforeTheDatabase(t *testing.T) {
 // issuance goes through the database (and supersedes the bootstrap one).
 func TestReconcileRecordsBootstrapStateAndSwitchesToTheDatabase(t *testing.T) {
 	svc, store := newCertsService(t)
+	rec := &subjectRecorder{}
+	svc.events = rec
 	b, err := svc.BootstrapInternalPKI("root", filepath.Join(t.TempDir(), "c.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -161,6 +163,9 @@ func TestReconcileRecordsBootstrapStateAndSwitchesToTheDatabase(t *testing.T) {
 	certs, _ := store.ListCertificates(context.Background(), "root", "", "internal-mtls", 100, 0)
 	if len(certs) != 1+len(svctls.Infrastructure) {
 		t.Fatalf("every bootstrap certificate must be recorded, got %d", len(certs))
+	}
+	if d := rec.last(t, "audit.cert.internal_pki_bootstrapped"); d["issued_before_database"] != float64(1+len(svctls.Infrastructure)) || d["sub_ca_id"] != b.sub.ID {
+		t.Fatalf("the bootstrap must be audited with what it recorded: %v", d)
 	}
 	if root, sub, err := svc.EnsureInternalPKI(context.Background(), "root"); err != nil || root.ID != b.root.ID || sub.ID != b.sub.ID {
 		t.Fatalf("EnsureInternalPKI must return the bootstrapped CAs: %v", err)

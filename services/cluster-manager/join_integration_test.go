@@ -118,7 +118,8 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	audit := &captureAudit{}
 	primary := NewService(NewSQLStore(primaryDB), audit).WithReplication(clusterrepl.New(primarySQL))
 	t.Setenv("CLUSTER_NODE_ID", "node-2")
-	member := NewService(NewSQLStore(memberDB), nil).WithReplication(clusterrepl.New(memberSQL))
+	memberAudit := &captureAudit{}
+	member := NewService(NewSQLStore(memberDB), memberAudit).WithReplication(clusterrepl.New(memberSQL))
 
 	// The primary's cluster-manager behind real TLS; the bundle pins its cert.
 	srv := httptest.NewTLSServer(NewHandler(primary))
@@ -164,6 +165,14 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	})
 	if !bytes.Equal(memberKC.installed, primaryKC.mek) {
 		t.Fatal("the member must receive the primary's master key")
+	}
+	// The primary audits the join and the publications it created for it; the
+	// member audits that it joined. Refused joins above audit neither.
+	if audit.count("audit.cluster.member_joined") != 1 || audit.count("audit.cluster.publication_changed") == 0 {
+		t.Fatalf("the primary must audit the member join and new publications: %v", audit.subjects)
+	}
+	if memberAudit.count("audit.cluster.joined_cluster") != 1 {
+		t.Fatalf("the member must audit joining the cluster once: %v", memberAudit.subjects)
 	}
 	if strings.Join(res.Components, ",") != "auth,governance,keycore,policy" {
 		t.Fatalf("components = %v, want core + policy", res.Components)

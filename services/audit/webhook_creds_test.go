@@ -125,6 +125,43 @@ func TestPlaintextWebhooksAreSealedAndRegistered(t *testing.T) {
 	}
 }
 
+// A plaintext row that can't be registered and sealed is left alone, the
+// sweep fails, and the refusal is audited with the webhook.
+func TestPlaintextWebhookSealRefusalAudited(t *testing.T) {
+	_, svc, store, srv, _ := webhookRig(t)
+	ctx := context.Background()
+	if _, err := store.db.SQL().Exec(`INSERT INTO webhooks (id, tenant_id, name, url, format, events_json, secret, headers_json)
+		VALUES ('wh_stuck', 't1', 'legacy', $1, 'json', '["*"]', 'legacy-plain-secret', '{}')`, srv.URL); err != nil {
+		t.Fatal(err)
+	}
+	// The exposure register is unavailable, so the row can't be recorded as
+	// exposed; it must not be sealed silently either.
+	if _, err := store.db.SQL().Exec(`DROP TABLE audit_mek_exposure`); err != nil {
+		t.Fatal(err)
+	}
+	k, _ := svc.creds.current()
+	var refused []AuditEvent
+	n, err := svc.sealLegacyWebhooks(ctx, k, func(context.Context) bool { return true }, func(_ context.Context, ev AuditEvent) {
+		if ev.Action == "audit.audit.webhook_credentials_seal_refused" {
+			refused = append(refused, ev)
+		}
+	})
+	if err == nil || n != 0 {
+		t.Fatalf("the sweep must fail: sealed %d, %v", n, err)
+	}
+	if len(refused) != 1 || refused[0].Result != "refused" || refused[0].Details["reason"] != "seal_failed" {
+		t.Fatalf("refusal audit: %+v", refused)
+	}
+	if ids, _ := refused[0].Details["webhook_ids"].([]string); len(ids) != 1 || ids[0] != "wh_stuck" {
+		t.Fatalf("refusal must name the webhook: %+v", refused[0].Details)
+	}
+	var sec string
+	_ = store.db.SQL().QueryRow(`SELECT secret FROM webhooks WHERE id='wh_stuck'`).Scan(&sec)
+	if sec != "legacy-plain-secret" {
+		t.Fatal("a row that couldn't be registered as exposed was changed")
+	}
+}
+
 // A key that doesn't match the stored data leaves credentials unavailable
 // (fail closed) and stops retrying; the audit service itself keeps running.
 func TestCredsKeyringMismatchFailsClosed(t *testing.T) {

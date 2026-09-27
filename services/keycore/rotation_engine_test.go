@@ -63,6 +63,9 @@ func TestRotationTriggerRotatesMatchingKeys(t *testing.T) {
 		t.Fatalf("create: %d %s", rr.Code, rr.Body)
 	}
 	id := out["policy"].(map[string]any)["id"].(string)
+	if e := rec.Last(t); e.Action != "rotation_policy_created" || e.Event.Result != "success" {
+		t.Fatalf("create event %+v", e)
+	}
 
 	rr, out = rotationCall(t, h, nil, http.MethodPost, "/rotation/policies/"+id+"/trigger", "")
 	if rr.Code != http.StatusOK {
@@ -85,6 +88,20 @@ func TestRotationTriggerRotatesMatchingKeys(t *testing.T) {
 	p, _ := svc.store.GetRotationPolicy(context.Background(), "t1", id)
 	if p.TotalRotations != 2 || p.LastRotationAt == nil || p.Status != "active" {
 		t.Fatalf("policy after run %+v", p)
+	}
+	for _, c := range []struct{ method, path, body, action string }{
+		{http.MethodGet, "/rotation/policies", "", "rotation_policies_listed"},
+		{http.MethodPatch, "/rotation/policies/" + id, `{"interval_days":60}`, "rotation_policy_updated"},
+		{http.MethodGet, "/rotation/runs", "", "rotation_runs_listed"},
+		{http.MethodGet, "/rotation/upcoming", "", "rotation_upcoming_listed"},
+		{http.MethodDelete, "/rotation/policies/" + id, "", "rotation_policy_deleted"},
+	} {
+		if rr, _ := rotationCall(t, h, nil, c.method, c.path, c.body); rr.Code >= 300 {
+			t.Fatalf("%s %s: %d %s", c.method, c.path, rr.Code, rr.Body)
+		}
+		if e := rec.Last(t); e.Action != c.action || e.Event.Result != "success" {
+			t.Fatalf("%s %s audited as %+v", c.method, c.path, e)
+		}
 	}
 }
 
@@ -143,15 +160,22 @@ func TestRotationSchedulerRunsDuePoliciesOnPrimaryOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	sched := NewRotationScheduler(svc, nil, log.Default())
+	audit := &routetest.Recorder{}
+	sched.audit = audit
 	sched.primary = func(context.Context) bool { return false }
 	sched.Tick(context.Background())
-	if keyVersion(t, svc, k.ID) != 1 {
+	if keyVersion(t, svc, k.ID) != 1 || len(audit.Events()) != 0 {
 		t.Fatal("member ran the rotation scheduler")
 	}
 	sched.primary = func(context.Context) bool { return true }
 	sched.Tick(context.Background())
 	if keyVersion(t, svc, k.ID) != 2 {
 		t.Fatal("due policy was not rotated")
+	}
+	// The run is audited with the counts of what it actually rotated.
+	if ev := audit.Events(); len(ev) != 1 || ev[0].Action != "rotation_policy_run" || ev[0].Event.Result != "success" ||
+		ev[0].Event.TargetID != "rp-due" || ev[0].Event.Details["rotated"] != 1 || ev[0].Event.Details["matched"] != 1 {
+		t.Fatalf("scheduled run audit: %+v", ev)
 	}
 	p, _ := svc.store.GetRotationPolicy(context.Background(), "t1", "rp-due")
 	if p.NextRotationAt == nil || !p.NextRotationAt.After(time.Now().UTC()) {
@@ -162,7 +186,7 @@ func TestRotationSchedulerRunsDuePoliciesOnPrimaryOnly(t *testing.T) {
 		t.Fatalf("runs %+v", runs)
 	}
 	sched.Tick(context.Background()) // no longer due
-	if keyVersion(t, svc, k.ID) != 2 {
+	if keyVersion(t, svc, k.ID) != 2 || len(audit.Events()) != 1 {
 		t.Fatal("policy ran again before it was due")
 	}
 }

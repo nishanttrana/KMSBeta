@@ -170,7 +170,7 @@ func TestKDFMigrationDualReadThenCutover(t *testing.T) {
 // hold stay valid and the same input keeps its token.
 func TestVaultReprotectKeepsTokens(t *testing.T) {
 	fipstest.SkipIfStrict(t, "identifier-derived (v1) working keys")
-	svc, store, _ := newDataProtectService(t)
+	svc, store, pub := newDataProtectService(t)
 	ctx := context.Background()
 	vault, err := svc.CreateTokenVault(ctx, "t-vault", TokenVault{Name: "cards", TokenType: "credit_card", Format: "deterministic", KeyID: "key-1"})
 	if err != nil {
@@ -205,6 +205,9 @@ func TestVaultReprotectKeepsTokens(t *testing.T) {
 	out, err := svc.ReprotectVaultTokens(ctx, "t-vault", "key-1", 100, "tester")
 	if err != nil || out["converted"] != 2 || out["remaining"] != 0 {
 		t.Fatalf("reprotect: %+v %v", out, err)
+	}
+	if pub.Count("audit.dataprotect.kdf_vault_reprotected") != 1 {
+		t.Fatal("vault re-protection must be audited")
 	}
 	if _, err := svc.CompleteKDFMigration(ctx, "t-vault", "key-1", "tester", false); err != nil {
 		t.Fatal(err)
@@ -250,6 +253,29 @@ func TestIdentifierKeysRejectedAfterMigrationEveryMode(t *testing.T) {
 	}
 	if pub.Count("audit.dataprotect.kdf_legacy_used") != 0 {
 		t.Fatal("no legacy derivation may happen for migrated keys")
+	}
+}
+
+// Aborting a migration returns the key to legacy and is audited; aborting a
+// key that isn't migrating is refused and not audited as an abort.
+func TestKDFMigrationAbortAudited(t *testing.T) {
+	svc, store, pub := newDataProtectService(t)
+	ctx := context.Background()
+	if _, err := svc.AbortKDFMigration(ctx, "t-abort", "key-3", "tester"); err == nil {
+		t.Fatal("abort of a key that isn't migrating")
+	}
+	if _, err := svc.StartKDFMigration(ctx, "t-abort", "key-3", "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if pub.Count("audit.dataprotect.kdf_migration_aborted") != 0 {
+		t.Fatal("a refused abort was audited as an abort")
+	}
+	st, err := svc.AbortKDFMigration(ctx, "t-abort", "key-3", "tester")
+	if err != nil || st.State != kdfStateLegacy {
+		t.Fatalf("abort: %+v %v", st, err)
+	}
+	if got, _ := store.GetKeyKDF(ctx, "t-abort", "key-3"); got.State != kdfStateLegacy || pub.Count("audit.dataprotect.kdf_migration_aborted") != 1 {
+		t.Fatalf("abort must return the key to legacy and be audited once: %+v", got)
 	}
 }
 

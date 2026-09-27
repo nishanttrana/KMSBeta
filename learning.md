@@ -5,6 +5,32 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### Filling in the register's test column found five real audit gaps
+- **What happened:** the earlier register tables listed each event and
+  when it fires, but no test. Finding or writing a test for every row
+  turned up five problems no reviewer had caught:
+  - publications created during a cluster join were never audited;
+  - a refused service derive had no specific event;
+  - `ocsp_refused` reported `result: denied`, not `refused`;
+  - the HSM create event lacked a field the register said it carried;
+  - the rotation scheduler's audit could not be observed by any test.
+- **Why it slipped through:** the register was written from the code that
+  emits events, so each row described an intention. A search for the
+  event name in test files was also misleading:
+  `audit.key.hsm_settings_update` "matched" a test only because it is a
+  prefix of `hsm_settings_updated`. Some event names are built from a
+  prefix (`webhookSelfPrefix + "credentials_seal_refused"`), so a grep for
+  the full name finds nothing even when the event is emitted.
+- **Rule:** a row is proven only by a test that fails when the event
+  disappears or changes its `result` or `reason`. Check the assertion
+  itself, not a string match. An emitter a test cannot observe (a concrete
+  NATS client) is itself a gap: take an interface.
+- **Trap when checking locally:** setting `VECTA_TEST_POSTGRES_DSN` for
+  `make test-fips-modes` makes unrelated Postgres tests fail at random,
+  because packages run in parallel against one database and the certs
+  helper drops the schema. CI runs the Postgres tests on their own with
+  `-p 1`, and so should local runs.
+
 ### A dual-control check that matches on one field misses the other (governance requester)
 - **What happened:** governance left the requester out of a request's
   approvers by comparing emails, and refused a requester's vote by

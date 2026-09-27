@@ -131,3 +131,32 @@ func TestHSMCAKeysSignInTheHSM(t *testing.T) {
 		t.Fatalf("without keycore: %v", err)
 	}
 }
+
+// A CA whose HSM key is gone can't sign its CRL: nothing unsigned is
+// published, and the failure is audited.
+func TestHSMCACRLFailureAudited(t *testing.T) {
+	srv := softhsmtest.Start(t, "kms-keycore", "t-crl")
+	svc, _ := newCertsService(t)
+	client := hsm.New(srv.URL)
+	svc.keycore = &hsmKeycore{client: client}
+	rec := &subjectRecorder{}
+	svc.events = rec
+	ctx := context.Background()
+	root, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t-crl", Name: "HSM Root", CALevel: "root", Algorithm: "ECDSA-P256", KeyBackend: "hsm", Subject: "CN=HSM Root"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, _ := svc.store.GetCA(ctx, "t-crl", root.ID)
+	if err := client.Destroy(ctx, "t-crl", hsm.KeyLabel("t-crl", stored.KeyRef, 1)); err != nil {
+		t.Fatal(err)
+	}
+	if crl, _, err := svc.GenerateCRL(ctx, "t-crl", root.ID); err == nil || crl != "" {
+		t.Fatalf("a CRL was produced without the CA key: %q %v", crl, err)
+	}
+	if d := rec.last(t, "audit.cert.crl_generation_failed"); d["ca_id"] != root.ID || d["result"] != "failure" {
+		t.Fatalf("the CRL failure must be audited: %v", d)
+	}
+	if rec.count("audit.cert.crl_generated") != 0 {
+		t.Fatal("a failed CRL must not be audited as generated")
+	}
+}

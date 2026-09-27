@@ -347,6 +347,7 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	_ = s.publishAudit(ctx, "audit.key.create", req.TenantID, map[string]any{
 		"key_id": keyID, "kcv": strings.ToUpper(fmt.Sprintf("%X", kcv)), "hsm": true, "hsm_label": label, "algorithm": alg,
 		"hsm_serial": gen.HSM.SerialNumber, "hsm_token": gen.HSM.TokenLabel, "hsm_model": gen.HSM.Model,
+		"hsm_manufacturer": gen.HSM.Manufacturer,
 	})
 	return key, nil
 }

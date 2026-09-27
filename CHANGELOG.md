@@ -4,7 +4,44 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [1.35.0-beta] — 2026-09-27
+## [1.36.0-beta] — 2026-09-27
+
+### Every audit register row names the test that proves it
+Each table in
+[AUDIT_EVENTS_2026-09.md](docs/SECURITY/AUDIT_EVENTS_2026-09.md) now has a
+Test column. About 40 events had no test that failed if the event stopped
+being emitted. They have one now, and filling the column found five real
+gaps:
+- **A cluster join audited no publications.** When a member joined, the
+  primary created replication publications for it, and none was audited:
+  only the once-a-minute loop audited them. The join now audits
+  `audit.cluster.publication_changed` too.
+- **A refused service derive was not audited.** Keycore refused a
+  `POST /keys/{id}/service-derive` from anything other than an internal
+  service identity, returning 403 with no specific event. New:
+  `audit.key.service_derive_refused`, with the response's error code as
+  `reason`.
+- **`audit.cert.ocsp_refused` said `result: denied`.** Refusals use
+  `result: refused` everywhere else. It now reports `result: refused` and
+  `reason: sha1_certid_fips_strict`.
+- **`audit.key.create` for an HSM key lacked `hsm_manufacturer`,** although
+  the register listed it. The event now carries it, from the same device
+  report as the key's labels.
+- **Nothing could check the scheduled rotation audit.** The scheduler only
+  accepted a NATS client, so no test could see `rotation_policy_run`. It
+  now takes the same emitter interface as the route kernel.
+
+New or extended tests: the two-node join (`TestSecureJoinEndToEnd`);
+cluster master-key transfer; service derive; the HSM device change, the
+destroy failure and the HSM routes (SoftHSM2); a CRL that an HSM CA
+cannot sign (SoftHSM2); OCSP in strict mode; internal PKI bootstrap,
+Sub CA creation and enrolment; the mTLS inventory read and rotation; PQC
+migration steps; MEK exposure listing, acknowledgement and recording;
+every webhook management route; a refused credential seal; every posture
+engine and leak route; the scheduled audit sync; a disabled leak target;
+agility and rotation routes; and dataprotect vault re-protection and
+migration abort.
+
 
 ### Posture escalation approvals work with no setup
 - **Built-in approval policy.** A posture escalation used to be refused on

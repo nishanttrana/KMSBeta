@@ -345,7 +345,8 @@ func TestExposureAndRewrapRoutes(t *testing.T) {
 	setupDB(t, db)
 	dev := rnd(t)
 	put(t, db, dev, "t1", "s1", 1, "v")
-	k, err := Open(ctx, Options{Tables: testTables, Source: newFakeKeycore(t), DB: db, Legacy: []LegacyKey{{Name: "dev_mek", Key: dev, Public: true}}})
+	ringAudit := &routetest.Recorder{}
+	k, err := Open(ctx, Options{Tables: testTables, Source: newFakeKeycore(t), DB: db, Audit: ringAudit, Legacy: []LegacyKey{{Name: "dev_mek", Key: dev, Public: true}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,14 +365,35 @@ func TestExposureAndRewrapRoutes(t *testing.T) {
 	if w := do("GET", "/mek/exposure", "", admin); w.Code != 200 || !strings.Contains(w.Body.String(), `"item_id":"s1"`) || !strings.Contains(w.Body.String(), `"open":1`) {
 		t.Fatalf("list: %d %s", w.Code, w.Body)
 	}
+	if e := rec.Last(t); e.Action != "mek_exposure_listed" || e.Event.Result != "success" {
+		t.Fatalf("list not audited: %+v", e)
+	}
 	if w := do("POST", "/mek/exposure/thing/s1/acknowledge", `{"reason":"short"}`, admin); w.Code != 400 {
 		t.Fatalf("acknowledge without a real reason: %d", w.Code)
 	}
 	if w := do("POST", "/mek/exposure/thing/s1/acknowledge", `{"reason":"test data, never used in production"}`, admin); w.Code != 200 {
 		t.Fatalf("acknowledge: %d %s", w.Code, w.Body)
 	}
+	if e := rec.Last(t); e.Action != "mek_exposure_acknowledged" || e.Event.Result != "success" {
+		t.Fatalf("acknowledge not audited: %+v", e)
+	}
+	if d := events(ringAudit, "mek_exposure_remediated")["t1"]; d == nil {
+		t.Fatalf("acknowledged exposure not audited as remediated: %+v", ringAudit.Events())
+	}
 	if exp, _ := k.Exposures(ctx, "t1", true); len(exp) != 0 {
 		t.Fatalf("still open: %+v", exp)
+	}
+
+	// Material exposed another way (plaintext storage) enters the register
+	// and is audited with its source.
+	if err := k.RecordExposure(ctx, "t1", "thing", "s2", "plaintext_storage"); err != nil {
+		t.Fatal(err)
+	}
+	if d := events(ringAudit, "mek_exposure_recorded")["t1"]; d == nil || d["source"] != "plaintext_storage" {
+		t.Fatalf("recorded exposure not audited: %+v", ringAudit.Events())
+	}
+	if exp, _ := k.Exposures(ctx, "t1", true); len(exp) != 1 || exp[0].ItemID != "s2" {
+		t.Fatalf("recorded exposure not open: %+v", exp)
 	}
 
 	// Re-wrap of backup contents: governance only.

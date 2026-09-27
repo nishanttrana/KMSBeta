@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -20,16 +21,33 @@ func (nopCertPublisher) Publish(_ context.Context, _ string, _ []byte) error { r
 type subjectRecorder struct {
 	mu       sync.Mutex
 	subjects map[string]int
+	data     map[string]map[string]any
 }
 
-func (r *subjectRecorder) Publish(_ context.Context, subject string, _ []byte) error {
+func (r *subjectRecorder) Publish(_ context.Context, subject string, payload []byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.subjects == nil {
-		r.subjects = map[string]int{}
+		r.subjects, r.data = map[string]int{}, map[string]map[string]any{}
 	}
 	r.subjects[subject]++
+	var ev struct {
+		Data map[string]any `json:"data"`
+	}
+	_ = json.Unmarshal(payload, &ev)
+	r.data[subject] = ev.Data
 	return nil
+}
+
+// last returns the data of the last event published on subject.
+func (r *subjectRecorder) last(t *testing.T, subject string) map[string]any {
+	t.Helper()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.subjects[subject] == 0 {
+		t.Fatalf("no %s event: %v", subject, r.subjects)
+	}
+	return r.data[subject]
 }
 
 func (r *subjectRecorder) count(subject string) int {

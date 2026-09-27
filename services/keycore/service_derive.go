@@ -56,7 +56,37 @@ func serviceDeriveInfo(clientID, tenantID, keyID, purpose string, version int) [
 	return []byte(fmt.Sprintf("%s%s|%s|%s|%s|v%d", serviceDeriveInfoPrefix, clientID, tenantID, keyID, purpose, version))
 }
 
+// ServiceDerive derives the working key; every refusal is audited as
+// audit.key.service_derive_refused with the reason the handler reports.
 func (s *Service) ServiceDerive(ctx context.Context, keyID string, req ServiceDeriveRequest) (ServiceDeriveResponse, error) {
+	resp, err := s.serviceDerive(ctx, keyID, req)
+	if err != nil {
+		_ = s.publishAudit(ctx, "audit.key.service_derive_refused", strings.TrimSpace(req.TenantID), map[string]any{
+			"key_id": keyID, "purpose": req.Purpose, "service": accessActorFromContext(ctx).ClientID,
+			"reason": serviceDeriveRefusalReason(err), "error": err.Error(), "result": "refused", "severity": "warning",
+		})
+	}
+	return resp, err
+}
+
+// serviceDeriveRefusalReason is the error code handleServiceDerive returns.
+func serviceDeriveRefusalReason(err error) string {
+	switch {
+	case errors.Is(err, errServiceIdentityRequired):
+		return "service_identity_required"
+	case errors.Is(err, errStoreNotFound):
+		return "not_found"
+	case errors.As(err, new(policyDeniedError)):
+		return "policy_denied"
+	case errors.As(err, new(fipsModeViolationError)):
+		return "fips_mode_violation"
+	case errors.As(err, new(*accessRefusal)):
+		return "access_denied"
+	}
+	return "service_derive_failed"
+}
+
+func (s *Service) serviceDerive(ctx context.Context, keyID string, req ServiceDeriveRequest) (ServiceDeriveResponse, error) {
 	actor := accessActorFromContext(ctx)
 	clientID := strings.TrimSpace(actor.ClientID)
 	if !actorIsServicePrincipal(actor) || !strings.HasPrefix(clientID, "kms-") {

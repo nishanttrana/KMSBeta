@@ -202,3 +202,36 @@ func TestWebhookDeliveryOnMemberLeavesReplicatedRowAlone(t *testing.T) {
 		t.Fatalf("member wrote the replicated webhook row: %+v", wh)
 	}
 }
+
+// Each webhook management call is recorded under its own action.
+func TestWebhookManagementAudited(t *testing.T) {
+	h, _, store, srv, got := webhookRig(t)
+	rr, out := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "ops", "url": srv.URL, "events": []string{"audit.key.*"}})
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", rr.Code, rr.Body)
+	}
+	id := out["webhook"].(map[string]any)["id"].(string)
+	for _, c := range []struct{ method, path string }{
+		{http.MethodGet, "/webhooks"},
+		{http.MethodPatch, "/webhooks/" + id},
+		{http.MethodPost, "/webhooks/" + id + "/test"},
+		{http.MethodGet, "/webhooks/" + id + "/deliveries"},
+		{http.MethodDelete, "/webhooks/" + id},
+	} {
+		var body any
+		if c.method == http.MethodPatch {
+			body = map[string]any{"name": "ops-2"}
+		}
+		if rr, _ := webhookReq(t, h, c.method, c.path, body); rr.Code >= 300 {
+			t.Fatalf("%s %s: %d %s", c.method, c.path, rr.Code, rr.Body)
+		}
+	}
+	if len(got()) != 1 {
+		t.Fatalf("the test call must deliver once, got %d", len(got()))
+	}
+	for _, action := range []string{"webhook_created", "webhooks_listed", "webhook_updated", "webhook_tested", "webhook_deliveries_listed", "webhook_deleted"} {
+		if n := actionCount(t, store, "audit.audit."+action); n != 1 {
+			t.Fatalf("audit.audit.%s recorded %d times, want 1", action, n)
+		}
+	}
+}

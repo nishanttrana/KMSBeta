@@ -188,9 +188,11 @@ func (s *Service) ExchangeJoin(ctx context.Context, in ExchangeJoinInput) (Excha
 		return ExchangeJoinResult{}, err
 	}
 	components := clustercatalog.WithCore(node.EnabledComponents)
-	if _, err := s.replication.EnsurePublications(ctx, clustercatalog.Components()); err != nil {
+	pubs, err := s.replication.EnsurePublications(ctx, clustercatalog.Components())
+	if err != nil {
 		return ExchangeJoinResult{}, err
 	}
+	s.AuditPublicationChanges(ctx, pubs)
 	pwRaw, err := pkgcrypto.RandomBytes(32)
 	if err != nil {
 		return ExchangeJoinResult{}, err

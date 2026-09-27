@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -28,6 +29,8 @@ func TestClusterMEKTransfer(t *testing.T) {
 	memberMEK := []byte("MEMBER--MEK-0123456789abcdef0123")
 	primary := newMEKTestService(t, primaryMEK)
 	member := newMEKTestService(t, memberMEK)
+	primaryAudit, memberAudit := &captureKeycorePublisher{}, &captureKeycorePublisher{}
+	primary.events, member.events = primaryAudit, memberAudit
 	file := filepath.Join(t.TempDir(), "cluster-mek.b64")
 	t.Setenv("KEYCORE_CLUSTER_MEK_FILE", file)
 	restarted := make(chan struct{}, 1)
@@ -62,6 +65,21 @@ func TestClusterMEKTransfer(t *testing.T) {
 	loaded, err := loadMEK()
 	if err != nil || !bytes.Equal(loaded, primaryMEK) {
 		t.Fatalf("after import keycore must load the primary's master key: %v", err)
+	}
+	// Each step is audited where it happened, with the fingerprint, never the key.
+	if memberAudit.count("audit.key.cluster_join_key_created") != 1 || memberAudit.count("audit.key.cluster_mek_imported") != 1 {
+		t.Fatalf("member audit: %v", memberAudit.subjects)
+	}
+	if d := primaryAudit.details(t, "audit.key.cluster_mek_exported"); d["member_node_id"] != "node-2" || d["mek_fingerprint"] != fp {
+		t.Fatalf("export audit: %v", d)
+	}
+	if d := memberAudit.details(t, "audit.key.cluster_mek_imported"); d["mek_fingerprint"] != fp || d["context"] != joinCtx {
+		t.Fatalf("import audit: %v", d)
+	}
+	for _, p := range append(primaryAudit.payloads, memberAudit.payloads...) {
+		if bytes.Contains(p, primaryMEK) || bytes.Contains(p, []byte(base64.StdEncoding.EncodeToString(primaryMEK))) {
+			t.Fatal("an audit event carries the master key")
+		}
 	}
 	// The member, now on the primary's MEK, decrypts the primary's key material.
 	ver, err := primary.GetVersion(context.Background(), "t1", key.ID, 0)
