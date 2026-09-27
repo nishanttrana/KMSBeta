@@ -286,7 +286,7 @@ type ErrorResponse struct {
 type HealthResponse struct {
 	Status    string            `json:"status"`
 	Service   string            `json:"service"`
-	Version   string            `json:"version"`
+	Version   string            `json:"version,omitempty"`
 	Checks    map[string]string `json:"checks"`
 	Timestamp time.Time         `json:"timestamp"`
 }

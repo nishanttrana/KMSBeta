@@ -214,9 +214,15 @@ fi
 # invented results were named for it (simulateCTFetch, syntheticDrillSteps,
 # simulateDrillCompletion). Such a function outside tests fails; security
 # nonces and keys never use Math.random.
-fake_hits=$(grep -rnE '\b(simulate|synthetic|fabricate|fake|mock)[A-Z][A-Za-z0-9]*[[:space:]]*\(' services pkg web/dashboard/src \
-  --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null \
-  | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
+# 2026-09-27: also newMock/newFake constructors (a cloud mock provider sat in
+# a non-test file), which the word boundary above missed. Test doubles live in
+# _test files only.
+fake_hits=$( {
+  grep -rnE '\b(simulate|synthetic|fabricate|fake|mock)[A-Z][A-Za-z0-9]*[[:space:]]*\(' services pkg web/dashboard/src \
+    --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null
+  grep -rnE '\b(new|New)(Mock|Fake|Simulated|Synthetic|Dummy)[A-Za-z0-9]*[[:space:]]*\(' services pkg web/dashboard/src \
+    --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null
+} | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
 rand_hits=$(grep -rnE 'Math\.random\(\)[[:space:]]*\*[[:space:]]*256|nonce-\$\{Date\.now' web/dashboard/src --include='*.ts' --include='*.tsx' 2>/dev/null || true)
 # Built-in sample data shown when a backend call fails (MOCK_SCORE,
 # MOCK_WEBHOOKS, MOCK_TARGETS...) presents invented rows as the customer's

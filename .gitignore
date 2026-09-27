@@ -40,7 +40,6 @@ web/dashboard/dist/
 /keycore
 /payment
 /posture
-/featureforge
 services/keycore/keycore
 services/ekm/ekm
 services/*/__debug_bin*
@@ -88,8 +87,7 @@ services/confidential/confidential
 services/dataprotect/dataprotect
 services/discovery/discovery
 services/ekm-agent/ekm-agent
-services/featureforge/featureforge
-services/governance/governance
+services/featureforgeservices/governance/governance
 services/hsm-connector/hsm-connector
 services/hsm-integration/hsm-integration
 services/hyok/hyok

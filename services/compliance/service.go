@@ -2046,8 +2046,9 @@ func isWeakCertAlgorithm(algorithm string) bool {
 func summarizeAssessmentPQC(keys []map[string]interface{}) AssessmentPQC {
 	total := len(keys)
 	if total == 0 {
+		// Nothing evaluated: not assessed (was reported as 100% ready).
 		return AssessmentPQC{
-			ReadyPercent:   100,
+			ReadyPercent:   0,
 			MLKEMMigrated:  0,
 			MLDSAMigrated:  0,
 			Pending:        0,

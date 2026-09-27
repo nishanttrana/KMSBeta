@@ -333,6 +333,10 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.Is(err, errKeyAlgorithmUnsupported) {
+			writeErr(w, http.StatusBadRequest, "algorithm_unsupported", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -2172,6 +2176,13 @@ func (h *Handler) handleRandom(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.As(err, new(*accessRefusal)) {
 			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
+		if errors.Is(err, errRandomSourceUnavailable) {
+			writeErr(w, http.StatusConflict, "random_source_unavailable", err.Error(), reqID, req.TenantID)
+			return
+		}
+		if writeHSMError(w, err, reqID, req.TenantID) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "random_failed", err.Error(), reqID, req.TenantID)

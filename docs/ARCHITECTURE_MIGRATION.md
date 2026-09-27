@@ -98,7 +98,7 @@ and the largest last:
 
 1. `software-vault`, `keyaccess`, `signing`, `backup`, `workload`, `confidential`
 2. `hyok`, `autokey`, `pqc`, `policy`, `sbom`, `discovery`
-3. `reporting`, `posture`, `compliance`, `governance`, `cloud`, `ai-gateway`, `featureforge`
+3. `reporting`, `posture`, `compliance`, `governance`, `cloud`, `ai-gateway`
 4. `cluster-manager`, `audit`, `dataprotect`, `certs`, `ekm`, `payment`, `kmip` (HTTP API)
 5. `auth`, then `keycore` (122 write routes; split by handler file). Keycore
    authorizes per key (grants), not per route, so it needs the phase 1

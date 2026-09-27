@@ -100,6 +100,8 @@ that stops for a mode change stays stopped. Restart it by hand.
 | | **X25519** via `filippo.io/age`: refused in `only` mode by an explicit guard, because the runtime can't see it |
 | | **OpenPGP** (`ProtonMail/go-crypto`, SHA-1 fingerprints): refused in `only` mode |
 | | **DES/TDES** payment crypto (`pkg/payment`, `moov-io/tr31`), **ChaCha20** (`x/crypto`): refused by the runtime in `only` mode |
+| | **scrypt, Argon2id** (`x/crypto`, keycore KDF endpoint): refused in `only` mode by `pkgcrypto.ErrKDFStrict` guards |
+| | **FF1 format-preserving encryption** (`pkg/crypto/fpe.go`): an SP 800-38G approved mode built on the module's AES, like AES-SIV. The FF1 construction itself is outside the module's validation scope; it runs in every mode and is not claimed as validated |
 
 **Shamir secret sharing** (`pkg/crypto/shamir.go`, backup key split): a
 split-knowledge procedure over GF(2^8), not an encryption algorithm, and not

@@ -83,7 +83,7 @@ export const DashboardTabView = (props: any) => {
       case "audit": return auditChainOk ? "INTACT" : "BROKEN";
       case "posture": return homeSummary?.postureRisk != null ? `${Number(homeSummary.postureRisk).toFixed(0)}%` : "—";
       case "compliance": return `${homeSummary?.complianceScore || 0}/100`;
-      case "cluster": return `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
+      case "cluster": return clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
       case "approvals": case "governance": return fmtInt(homeSummary?.myPendingApprovals || 0);
       case "hsm": return String(homeSystemState?.hsm_mode || "software");
       case "reporting": return "Live";
@@ -161,7 +161,7 @@ export const DashboardTabView = (props: any) => {
               <Cpu size={12} strokeWidth={2.4} /> {cryptoLibraryValidated ? "VALIDATED CRYPTO" : (cryptoLibraryLabel || "CRYPTO LIBRARY")}
             </span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: networkStatus === "ok" ? C.greenFg : C.redFg, background: networkStatus === "ok" ? C.greenDim : C.redDim, border: `1px solid color-mix(in oklab, ${networkStatus === "ok" ? C.green : C.red} 30%, transparent)` }}>
-              <GitBranch size={12} strokeWidth={2.4} /> {`CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
+              <GitBranch size={12} strokeWidth={2.4} /> {clusterSummary?.unavailable ? "CLUSTER unavailable" : `CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
             </span>
           </div>
         </div>
@@ -375,8 +375,8 @@ export const DashboardTabView = (props: any) => {
                     {`${fmtInt(clusterSummary.degraded_nodes)} degraded`}
                   </span>
                 )}
-                <B c={clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green"}>
-                  {`${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`}
+                <B c={clusterSummary?.unavailable ? "amber" : clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green"}>
+                  {clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`}
                 </B>
               </div>
             </div>
@@ -407,7 +407,7 @@ export const DashboardTabView = (props: any) => {
               })}
             </div>
             <div style={{ fontSize: 10, color: C.dim, marginTop: 10, fontFamily: "'JetBrains Mono',monospace" }}>
-              {`Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
+              {clusterSummary?.unavailable ? "Cluster status unavailable (cluster service did not answer)" : `Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
             </div>
           </Card>
 

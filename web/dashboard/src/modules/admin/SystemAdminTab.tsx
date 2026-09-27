@@ -2132,12 +2132,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const sortedJobs=useMemo(()=>[...jobs].sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime()),[jobs]);
   const totalServices=Number(health.summary?.total||health.services?.length||0);
   const runtimeModeLabel=String(systemState?.fips_mode_policy||"standard")==="strict"?"Strict":"Standard";
-  const runtimeTlsLabel=String(systemState?.fips_tls_profile||"tls1.2_fips")
+  // Values the service did not report show as "not reported", never a guess.
+  const runtimeTlsLabel=String(systemState?.fips_tls_profile||"not reported")
     .replace("tls13_only","TLS 1.3 only")
     .replace("tls1.2_fips","TLS 1.2+ FIPS");
-  const runtimeRngLabel=String(systemState?.fips_rng_mode||"ctr_drbg").toUpperCase();
+  const runtimeRngLabel=systemState?.fips_rng_mode?String(systemState.fips_rng_mode).toUpperCase():"not reported";
   const entropyBits=Number(systemState?.fips_entropy_bits_per_byte||0);
-  const entropySampleBytes=Math.max(0,Number(systemState?.fips_entropy_sample_bytes||4096));
+  const entropySampleBytes=Math.max(0,Number(systemState?.fips_entropy_sample_bytes||0));
   const entropySampleMicros=Math.max(0,Number(systemState?.fips_entropy_read_micros||0));
   const runtimeAllOk = Number(health.summary?.degraded||0)===0 && Number(health.summary?.down||0)===0;
   // Runtime mode comes from the Go runtime (VECTA_FIPS_MODE at deploy time); never guess it.
@@ -2313,7 +2314,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
         <B c="blue">{runtimeModeLabel}</B>
         <B c="accent">{runtimeTlsLabel}</B>
-        <B c={String(systemState?.fips_entropy_health||"ok").toLowerCase()==="ok"?"green":"amber"}>{`${entropyBits.toFixed(3)} bits/byte`}</B>
+        <B c={String(systemState?.fips_entropy_health||"").toLowerCase()==="ok"?"green":"amber"}>{`${entropyBits.toFixed(3)} bits/byte`}</B>
       </div>
       <Row2>
         <FG label="FIPS Policy">

@@ -170,7 +170,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           listGovernanceRequests(session,{status:"pending"}).catch(()=>[]),
           listGovernancePolicies(session,{status:"active"}).catch(()=>[]),
           getGovernanceSettings(session).catch(()=>null),
-          getClusterOverview(session).catch(()=>({nodes:[],profiles:[],summary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0}})),
+          getClusterOverview(session).catch(()=>null), // unavailable, not "0 nodes"
           getGovernanceSystemState(session).catch(()=>null),
           getComplianceAssessment(session,"default").catch(()=>null),
           listComplianceAssessmentHistory(session,2,"default").catch(()=>[]),
@@ -360,6 +360,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
             return String(a?.name||a?.id||"").localeCompare(String(b?.name||b?.id||""));
           });
         const clusterSummary={
+          unavailable:!clusterOverview,
           total_nodes:Math.max(0,Number(clusterOverview?.summary?.total_nodes||clusterNodes.length||0)),
           online_nodes:Math.max(0,Number(clusterOverview?.summary?.online_nodes||clusterNodes.filter((n:any)=>n.status==="online").length||0)),
           degraded_nodes:Math.max(0,Number(clusterOverview?.summary?.degraded_nodes||clusterNodes.filter((n:any)=>n.status==="degraded").length||0)),

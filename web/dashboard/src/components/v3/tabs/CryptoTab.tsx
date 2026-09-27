@@ -554,15 +554,18 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
     {id:"Random",label:"Random"}
   ];
 
+  // What keycore implements, and whether it is FIPS 140-3 approved
+  // (SP 800-131A r2, FIPS 186-5/203/204/205). Nothing unimplemented is listed:
+  // until 1.26.0-beta this rail offered Camellia, DSA, Ed448, XMSS, LMS and
+  // hybrids keycore could not do, and marked Poly1305, 3DES encryption and DSA
+  // signing as approved. keycore still enforces the mode server-side.
   const cryptoAlgorithms=[
-    {group:"Symmetric",items:[["AES-128-GCM",true],["AES-192-GCM",true],["AES-256-GCM",true],["AES-256-CTR",true],["AES-256-CBC",true],["AES-256-ECB",false],["AES-256-CCM",true],["Camellia-256",false],["ChaCha20-Poly1305",false],["3DES",true]]},
-    {group:"MAC",items:[["AES-CMAC",true],["AES-GMAC",true],["HMAC-SHA256",true],["HMAC-SHA3-256",true],["HMAC-SHA512",true],["Poly1305",true]]},
-    {group:"Asymmetric",items:[["RSA-2048-OAEP",true],["RSA-4096-OAEP",true],["RSA-8192",true],["ECIES-P256",false]]},
-    {group:"Signatures",items:[["RSA-PSS-4096",true],["ECDSA-P256",true],["ECDSA-P384",true],["ECDSA-P521",true],["ECDSA-Brainpool256",false],["Ed25519",true],["Ed448",true],["DSA-3072",true]]},
-    {group:"Key Exchange",items:[["DH-2048",true],["DH-4096",true],["ECDH-P384",true],["X25519",true]]},
-    {group:"Hash",items:[["SHA-256",true],["SHA-512",true],["SHA3-256",true],["SHA3-512",true],["SHAKE256",true],["Keccak-256",false],["RIPEMD-160",false],["BLAKE2b",false]]},
-    {group:"PQC",items:[["ML-KEM-768",true],["ML-KEM-1024",true],["ML-DSA-65",true],["ML-DSA-87",true],["SLH-DSA-256f",true],["HSS/LMS",true],["XMSS",true]]},
-    {group:"Hybrid",items:[["ECDH + ML-KEM-768",true],["ECDSA + ML-DSA-65",true]]}
+    {group:"Symmetric",items:[["AES-128-GCM",true],["AES-192-GCM",true],["AES-256-GCM",true],["AES-256-CTR",true],["AES-256-CBC",true],["3DES",false]]},
+    {group:"MAC",items:[["HMAC-SHA256",true],["HMAC-SHA384",true],["HMAC-SHA512",true]]},
+    {group:"Asymmetric",items:[["RSA-2048-OAEP",true],["RSA-3072-OAEP",true],["RSA-4096-OAEP",true]]},
+    {group:"Signatures",items:[["RSA-PSS-3072",true],["ECDSA-P256",true],["ECDSA-P384",true],["ECDSA-P521",true],["Ed25519",true]]},
+    {group:"Hash",items:[["SHA-256",true],["SHA-384",true],["SHA-512",true],["SHA3-256",true],["SHA3-512",true],["BLAKE2b-256",false]]},
+    {group:"PQC",items:[["ML-KEM-768",true],["ML-KEM-1024",true],["ML-DSA-65",true],["ML-DSA-87",true],["SLH-DSA-SHA2-128s",true],["SLH-DSA-SHAKE-256f",true]]}
   ];
 
   const inferOperationFromAlgorithm=(algorithmName:string):string=>{
@@ -837,8 +840,7 @@ export const CryptoTab=({session,keyCatalog,onToast,fipsMode})=>{
               <Inp type="number" min="1" max="4096" value={randomLength} onChange={(e)=>setRandomLength(e.target.value)} placeholder="Length (bytes)"/>
               <Sel value={randomSource} onChange={(e)=>setRandomSource(e.target.value)}>
                 <option value="kms-csprng">KMS CSPRNG</option>
-                <option value="hsm-trng">HSM TRNG</option>
-                <option value="qkd-seeded-csprng">QKD-seeded CSPRNG</option>
+                <option value="hsm-trng">HSM TRNG (tenant HSM, C_GenerateRandom)</option>
               </Sel>
             </div>}
 

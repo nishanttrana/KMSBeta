@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -63,8 +66,11 @@ func newDiscoveryService(t *testing.T) (*Service, *SQLStore, *nopDiscoveryPublis
 	store := NewSQLStore(conn)
 	pub := &nopDiscoveryPublisher{}
 	svc := NewService(store, &fakeDiscoveryKeyCore{}, &fakeDiscoveryCerts{}, pub)
-	t.Setenv("DISCOVERY_TLS_ENDPOINTS", "api.vecta.local:443,legacy.vecta.local:443")
-	t.Setenv("DISCOVERY_CLOUD_PROVIDERS", "aws,azure")
+	svc.cloud = &testCloud{}
+	// A real TLS endpoint: the network scan handshakes with it.
+	tlsSrv := httptest.NewTLSServer(http.NotFoundHandler())
+	t.Cleanup(tlsSrv.Close)
+	t.Setenv("DISCOVERY_TLS_ENDPOINTS", strings.TrimPrefix(tlsSrv.URL, "https://"))
 	return svc, store, pub
 }
 
@@ -116,4 +122,18 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	return nil
+}
+
+// testCloud stands in for the cloud service's accounts and inventory API.
+type testCloud struct{ err error }
+
+func (c *testCloud) ListAccounts(context.Context, string) ([]map[string]interface{}, error) {
+	return []map[string]interface{}{{"id": "acct-1", "provider": "aws"}}, nil
+}
+
+func (c *testCloud) Inventory(context.Context, string, string) ([]map[string]interface{}, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+	return []map[string]interface{}{{"cloud_key_id": "k-1", "region": "us-east-1", "state": "enabled", "algorithm": "SYMMETRIC_DEFAULT"}}, nil
 }

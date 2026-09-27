@@ -58,7 +58,6 @@ FEATURE_KEYS=(
   mpc_engine
   data_protection
   clustering
-  feature_forge
 )
 
 # Replicable services an operator can select for a custom HA cluster profile.
@@ -90,7 +89,6 @@ CLUSTER_COMPONENT_KEYS=(
   posture
   ai
   cloud
-  featureforge
 )
 
 log() { printf "\n[%s] %s\n" "$1" "$2"; }
@@ -1323,7 +1321,7 @@ collect_inputs() {
     echo "  - cluster-profile-base      : auth, keycore, policy, governance"
     echo "  - cluster-profile-standard  : base + secrets, certs, BYOK, EKM, data protection"
     echo "  - cluster-profile-security  : standard + compliance, posture, discovery, SBOM, reporting"
-    echo "  - cluster-profile-full      : all cluster-aware services incl. AI, KMIP, QKD, QRNG, MPC, PQC, FeatureForge"
+    echo "  - cluster-profile-full      : all cluster-aware services incl. AI, KMIP, QKD, QRNG, MPC, PQC"
     echo "  - custom                    : pick individual services to replicate"
     prompt_default CLUSTER_REPLICATION_PROFILE "Cluster replication profile ID (or 'custom')" "${suggested_cluster_profile}"
     if [[ "${CLUSTER_REPLICATION_PROFILE}" == "custom" || "${CLUSTER_REPLICATION_PROFILE}" == "cluster-profile-custom" ]]; then

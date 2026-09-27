@@ -1,7 +1,6 @@
 # Platform Contract — How Every Feature Wires In
 
-Every capability added to Vecta KMS — whether hand-written, FeatureForge-generated,
-or a customer-side agent — integrates through the same spine. This is enforced by
+Every capability added to Vecta KMS — whether part of a service or a customer-side agent — integrates through the same spine. This is enforced by
 `make conformance` (scripts/conformance.sh); nothing ships without passing it.
 
 ## In-cluster feature services

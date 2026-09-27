@@ -15,6 +15,7 @@ export interface Incident {
   service: string;
   reason: string;
   action: string;
+  recommendation?: string;
   timestamp: string;
 }
 

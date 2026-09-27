@@ -42,7 +42,6 @@ import {
   Users,
   Server,
   RefreshCw,
-  Sparkles,
   Archive,
   ShieldAlert,
   Info,
@@ -96,7 +95,6 @@ const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.S
 const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
-const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m => ({ default: m.FeatureForgeTab })));
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
@@ -203,7 +201,6 @@ const TABS: Record<string, any> = {
   pkcs11: PKCS11Tab,
   admin: AdminTab,
   docs: DocsViewTab,
-  feature_forge: FeatureForgeTab,
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
@@ -305,7 +302,6 @@ const NAV = [
     { id: "backup", icon: Archive, label: "Backup & Restore" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
-    { id: "feature_forge", icon: Sparkles, label: "Feature Forge" },
     { id: "admin", icon: Settings, label: "Administration" },
     { id: "docs", icon: FileText, label: "Documentation" },
   ]},

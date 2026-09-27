@@ -82,14 +82,43 @@ func (c *HTTPKeyCoreClient) ListInterfacePorts(ctx context.Context, tenantID str
 	return items, nil
 }
 
+var errKeycoreNotConfigured = errors.New("keycore URL not configured")
+
 func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error {
 	if strings.TrimSpace(c.baseURL) == "" {
-		return nil
+		return errKeycoreNotConfigured
 	}
 	q := url.Values{}
 	q.Set("tenant_id", strings.TrimSpace(tenantID))
 	body := map[string]string{"reason": strings.TrimSpace(reason)}
 	_, err := c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/rotate?"+q.Encode(), body)
+	return err
+}
+
+// CreateKey creates a key in keycore and returns its id.
+func (c *HTTPKeyCoreClient) CreateKey(ctx context.Context, tenantID string, req map[string]interface{}) (string, error) {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return "", errKeycoreNotConfigured
+	}
+	req["tenant_id"] = strings.TrimSpace(tenantID)
+	out, err := c.doJSON(ctx, http.MethodPost, "/keys?"+url.Values{"tenant_id": {strings.TrimSpace(tenantID)}}.Encode(), req)
+	if err != nil {
+		return "", err
+	}
+	id, _ := out["key_id"].(string)
+	if id == "" {
+		return "", errors.New("keycore returned no key_id")
+	}
+	return id, nil
+}
+
+// DeactivateKey takes a key out of service in keycore.
+func (c *HTTPKeyCoreClient) DeactivateKey(ctx context.Context, tenantID string, keyID string, reason string) error {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return errKeycoreNotConfigured
+	}
+	q := url.Values{"tenant_id": {strings.TrimSpace(tenantID)}}
+	_, err := c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/deactivate?"+q.Encode(), map[string]string{"reason": reason})
 	return err
 }
 

@@ -15,6 +15,20 @@ working backend behind it doesn't count as a feature.
 - UI controls that change nothing in the backend.
 - Security values from non-cryptographic randomness (`Math.random` nonces,
   timestamp fallbacks).
+- **Mock or sample data used as a fallback** (owner directive, 2026-09-27):
+  `MOCK_*` constants rendered when an API call fails, built-in "local
+  catalogue" results when the real source is unreachable, invented defaults
+  shown as reported values.
+- **Invented numbers:** scores for things never measured, dollar costs from
+  a made-up unit price, a readiness of 100% with nothing assessed. Show
+  "not assessed" instead.
+- **False labels:** recording the algorithm, key size, RNG source or
+  provider that was requested rather than what was produced or called.
+- **Fake audit:** an audit event or `result: "success"` for work that didn't
+  happen (a no-op, a log-only action, a same-algorithm rotate audited as a
+  migration). The audit trail is evidence; fake audit fabricates evidence
+  (CLAUDE.md rule 7).
+- Mocks outside `_test` files.
 
 ## What to do instead
 
@@ -55,4 +69,39 @@ working backend behind it doesn't count as a feature.
 | Rotation policy trigger (keycore, 2026-09-27) | Wrote a run marked "running" and rotated nothing; no scheduler existed | Trigger and a primary-only scheduler rotate the matching keys through `RotateKey` |
 | Webhook event delivery (audit, 2026-09-27) | Only the Test button sent anything; the dispatcher was never wired | Every matching persisted audit event is delivered, signed and recorded |
 | Secret Vault envelope switch (dashboard, 2026-09-27) | "Off" claimed secrets were stored as-is; the backend always encrypts | Read-only indicator |
+| PQC and hybrid certificates (certs, 2026-09-27) | ML-DSA/SLH-DSA/XMSS/hybrid certificates and CAs got ECDSA keys, recorded and audited as PQC; `pqc/migrate` issued the same | Refused (`audit.cert.pqc_issuance_refused`); existing records relabelled to their real key; PQ protection is internal mTLS's hybrid ML-KEM key exchange |
 | Tokenize nonce fallback (dashboard) | `Math.random` / timestamp nonces | The browser CSPRNG only; fails closed |
+
+## Fixed or removed (sweep of 2026-09-27, 1.26.0-beta)
+
+Found by reading the code, fixed in 1.26.0-beta. Details and the lessons
+learned: CHANGELOG 1.26.0-beta, [learning.md](../../learning.md).
+
+| Area | What was fake | Now |
+|---|---|---|
+| FPE (dataprotect) | "FF1"/"FF3-1" were an additive keystream | NIST SP 800-38G FF1 in `pkg/crypto` (NIST vectors); FF3-1 refused; `LEGACY-*` decrypt-only for migration |
+| Masking (dataprotect) | Non-consistent `shuffle` was a no-op | CSPRNG Fisher-Yates |
+| Key generation (keycore) | Unimplemented algorithms stored as random bytes; Brainpool/secp256k1 made on P-256; RSA-1024 at 2048; all SLH-DSA as SHAKE-256f; SLH-DSA sign panicked | `planKeyGeneration` generates the named key or refuses (`audit.key.create_refused`); existing records relabelled (`audit.key.algorithm_label_corrected`) |
+| Random sources (keycore) | HSM/QKD/QRNG labels on OS CSPRNG bytes | `hsm-trng` from the tenant HSM (`POST /hsm/random`); QKD/QRNG refused (`audit.crypto.random_refused`) |
+| Dashboard fallbacks | `MOCK_*` data on API failure; Webhooks faked failed writes | The error is shown (1.20.0-beta, e3edda730) |
+| Discovery | Hostname byte-sum "scan", invented cloud keys and certificates, secret stored | TLS handshake, cloud service inventory, certs list, code scan with fingerprints only |
+| SBOM | Built-in CVE list on source failure | 503 "not assessed"; composite partial failure is an error |
+| PQC migration | Steps "completed" without migrating | Successor keys, `rotated`, `manual_required`; rollback deactivates successors |
+| Feature Forge | No environments; guardrail read 200 as permit; nothing applied | Removed |
+| Compliance playbooks | Log-only "OK" actions; dead endpoints; UI actions with no executor | Only executable actions are accepted; compliance actions run in-process |
+| Watchdog | Published actions nothing performed | `action: alert` + labelled `recommendation` |
+| Confidential compute | "Attested key release" released nothing; generic evidence trusted | Verdict (`allow`/`review`/`deny`) labelled as such; generic evidence never allowed |
+| AI gateway | Hard-coded "ok" health | Database ping and detector self-checks |
+| Scores and costs | Invented USD; 50 with no controls; 100% PQC with no keys; name-based "entropy"; minimum what-if reduction | Removed or "not assessed" |
+| FIPS flags (dashboard) | Wrong "approved" flags; unimplemented algorithms | Implemented algorithms with correct status |
+| System Administration | Guessed runtime values | "not reported" |
+| Dashboard cluster status | A failed cluster call showed "0/0 nodes" | "unavailable" |
+| Dead code | `pkg/hwtoken`, `pkg/caim`, unwired keycore types, cloud mock outside tests | Deleted / moved to `_test` |
+| Conformance gate | Missed `MOCK_*` and `newMock…` | Checked (`MOCK_*` since 1.20.0-beta; constructors in 1.26.0-beta) |
+
+## Still open
+
+- **Attested key release** is not built: releasing key material to a verified
+  enclave (wrapped to the attestation's public key) would need keycore
+  support. Until then, confidential compute returns a verdict only and says
+  so.

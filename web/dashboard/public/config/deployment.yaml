@@ -38,7 +38,6 @@ spec:
     key_access_justifications: true
     workload_identity: true
     confidential_compute: true
-    feature_forge: true
     rotation_analytics: true
     compromise_detection: true
     key_analytics: true

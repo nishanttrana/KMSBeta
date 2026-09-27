@@ -5,6 +5,117 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A cipher named after a standard must pass the standard's vectors
+- **What happened:** "FF1" had tests, but they only round-tripped (encrypt
+  then decrypt). An additive keystream round-trips perfectly, and it leaked
+  plaintext differences for years.
+- **Rule:** a primitive named after a standard is tested against that
+  standard's published vectors (NIST FF1 samples 1–9, RFC KATs). A test also
+  proves the known weakness is absent (`TestFF1IsNotAnAdditiveKeystream`).
+
+### A default branch that "generates something" is a fake-key factory
+- **What happened:** `generateMaterialForCreate` ended with "otherwise,
+  return random bytes of a default length". Every algorithm nobody had
+  written a branch for silently became 32 random bytes under its name:
+  XMSS, LMS, DSA, DH, hybrids, and eleven of the twelve SLH-DSA sets.
+- **Also hidden:** SLH-DSA parsing panicked (circl needs the parameter set
+  before `UnmarshalBinary`), so the one "real" SLH-DSA key could never sign.
+  No test ever signed with one.
+- **Rule:** a generator switches on an explicit plan
+  (`planKeyGeneration`) and refuses by default. Every algorithm the UI offers
+  has a sign/verify or encrypt/decrypt test.
+
+### Record the source that produced the bytes, not the one requested
+- **What happened:** `Random()` accepted `hsm-trng` and `qkd-seeded-csprng`,
+  used the OS CSPRNG, and returned and audited the requested label.
+  `SetQRNGClient` existed and was never called.
+- **Rule:** provenance fields (source, algorithm, provider) are set from what
+  actually ran. An integration nothing wires in is dead code. A source
+  unavailable in every mode is refused before mode-specific checks, so the
+  refusal names the real reason (the strict-mode run caught the reverse
+  order).
+
+### A status code is not a policy decision
+- **What happened:** Feature Forge's policy guardrail treated any HTTP 200 as
+  "permitted", but the policy service answers 200 with `decision: deny`. Its
+  apply body also carried fields the policy service rejects
+  (`DisallowUnknownFields`), so nothing was ever applied. The feature
+  "deployed to prod" by changing a status field.
+- **Rule:** a client reads the decision in the body, and a feature's
+  end-to-end path is exercised against the real peer, not a stub, before it
+  ships. A pipeline with no real environment behind its stages is removed,
+  not relabelled.
+
+### A fallback list is fabricated evidence
+- **What happened:** when OSV or Trivy failed, the SBOM answered from a
+  built-in two-entry CVE list with wrong facts, and audited
+  `vulnerability_cnt: 0` whenever lookups failed. Discovery did the same with
+  invented endpoints, cloud keys and certificates.
+- **Rule:** when a source fails the result is "not assessed" with the error,
+  and a composite with any failed source is an error, never a partial answer
+  presented as complete. A zero count is only reported when a check ran.
+
+### "Completed" must mean the thing changed
+- **What happened:** PQC migration marked steps `completed` after a
+  same-algorithm rotate, or after nothing at all for certificates. Playbook
+  aliases reported OK after only logging, and the watchdog emitted
+  "page-oncall" and "freeze-mutations" that nothing consumed.
+- **Rule:** a step's status names what actually happened
+  (`successor_created`, `rotated`, `manual_required`). Advice is labelled a
+  recommendation. An action list contains only what the executor performs,
+  and the save-time allow-list and the UI match it.
+
+### Conformance by name misses fakery by value
+- **What happened:** the `real-capability` check matched `mockX(` calls only.
+  `MOCK_*` constants, `newMockProvider` (no word boundary) and a hostname
+  byte-sum "scanner" all passed.
+- **Rule:** the check now also covers constants and constructors, but review
+  still follows the data: where did this value come from, and did anything
+  observe it?
+
+### No mock, synthetic, fake or simulated data, features or audit
+- **What happened:** a code-wide sweep found about 20 features that
+  invented their output while looking finished:
+  - **Fake crypto:**
+    - FF1/FF3-1 was a per-position additive keystream, not SP 800-38G.
+    - Non-consistent "shuffle" masking was a no-op.
+    - Unimplemented algorithms (XMSS, LMS, DSA, DH, Camellia) were stored
+      as 32 random bytes; Brainpool keys were generated on P-256.
+    - "HSM TRNG", "QKD" and "QRNG" random output was the OS CSPRNG.
+  - **Fake data:**
+    - Discovery picked each TLS algorithm by hashing the endpoint name and
+      invented cloud keys.
+    - The SBOM fell back to a two-entry CVE list with wrong facts.
+    - Three dashboard tabs rendered `MOCK_*` data on API failure.
+  - **Fake success:**
+    - PQC "migration" rotated keys within the same algorithm.
+    - Feature Forge "deployed to prod" without touching anything.
+    - Playbook actions reported OK after only logging.
+    - Watchdog actions were never consumed.
+    - The AI gateway health check was hard-coded.
+  - **Fake audit:** each of these also emitted a success audit event
+    (`audit.pqc.migration_executed`, `audit.crypto.random` with a false
+    `source`, playbook `status=OK`). So the audit trail certified work that
+    never happened, which is worse than no event at all.
+- **Why it survived:** the `real-capability` gate matches only function
+  names (`mockX(`). It misses `MOCK_*` constants, `newMock…` (no word
+  boundary), and fabrication logic that isn't named for it. Fallbacks
+  ("graceful", "local catalog") hid broken integrations. Labels were
+  recorded from the request, not read back from the result.
+- **Rule:** never mock, synthesise, fake or simulate a feature, its data or
+  its audit. See CLAUDE.md rule 8 and
+  [REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md).
+  - On failure, show "unavailable" with the error.
+  - Without measurement, show "not assessed".
+  - Without implementation, remove the feature or return
+    `409 feature_preview`.
+  - Emit audit events and `result: "success"` only after the real effect.
+    Read the label back from the artifact that was produced.
+  - Keep mocks in `_test` files only.
+- **Resolved in 1.26.0-beta:** every finding was made real or removed; see
+  CHANGELOG 1.26.0-beta and the table in REAL_CAPABILITY.md. The lessons
+  from fixing them are the entries below.
+
 ### A sink can't have a hard startup dependency
 - **Context:** every other `pkg/mek` service refuses to start until keycore
   gives it its master key. That is the safe default for a service whose whole

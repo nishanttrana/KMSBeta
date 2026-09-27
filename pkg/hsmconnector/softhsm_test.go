@@ -310,3 +310,42 @@ func TestRefusalsAudited(t *testing.T) {
 	h, rec := newTestHandler(t)
 	routetest.RefusalsAudited(t, h.Router(), rec)
 }
+
+// Random bytes come from C_GenerateRandom on the tenant's token; other
+// callers and unconfigured tenants are refused, and the refusal is audited.
+func TestRandomFromToken(t *testing.T) {
+	h, rec := newTestHandler(t)
+	draw := func(claims *pkgauth.Claims, tenant string, n int) (int, map[string]interface{}) {
+		raw, _ := json.Marshal(map[string]interface{}{"tenant_id": tenant, "length": n})
+		req := httptest.NewRequest(http.MethodPost, "/hsm/random", bytes.NewReader(raw))
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), claims))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		var out map[string]interface{}
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		return w.Code, out
+	}
+	code, out := draw(service("kms-keycore"), "t1", 64)
+	if code != http.StatusOK || len(field(t, out, "bytes_b64")) != 64 {
+		t.Fatalf("draw: %d %v", code, out)
+	}
+	if e := rec.Last(t); e.Action != "random_generated" || e.Event.Result != "success" {
+		t.Fatalf("event %+v", e)
+	}
+	_, again := draw(service("kms-keycore"), "t1", 64)
+	if bytes.Equal(field(t, out, "bytes_b64"), field(t, again, "bytes_b64")) {
+		t.Fatal("two draws returned the same bytes")
+	}
+	if code, _ := draw(service("kms-certs"), "t1", 16); code != http.StatusForbidden {
+		t.Fatalf("other service: %d", code)
+	}
+	if e := rec.Last(t); e.Event.Result != "refused" {
+		t.Fatalf("caller refusal not audited: %+v", e)
+	}
+	if code, _ := draw(service("kms-keycore"), "t9", 16); code != http.StatusConflict {
+		t.Fatalf("unconfigured tenant: %d", code)
+	}
+	if code, _ := draw(service("kms-keycore"), "t1", 5000); code != http.StatusBadRequest {
+		t.Fatalf("oversized draw: %d", code)
+	}
+}

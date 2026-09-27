@@ -174,6 +174,17 @@ func main() {
 	svc.SetCryptoperiodPolicy(NewCryptoperiodPolicy())
 	svc.SetVersionPolicy(DefaultVersionPolicy())
 	svc.SetWakeSelfTestRegistry(NewWakeSelfTestRegistry())
+	go func() {
+		// Records that name a key they don't hold (key_label_correction.go)
+		// are corrected and audited; primary only, idempotent.
+		fixCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if n, err := svc.CorrectKeyAlgorithmLabels(fixCtx); err != nil {
+			logger.Printf("key algorithm label correction: %v", err)
+		} else if n > 0 {
+			logger.Printf("corrected %d key records to the algorithm their material actually is", n)
+		}
+	}()
 	// The customer's HSM, through the hsm-connector (HSM_CONNECTOR_URL).
 	// Unused until a tenant turns on its tenant key or HSM keys.
 	svc.SetHSMBackend(hsm.FromEnv())

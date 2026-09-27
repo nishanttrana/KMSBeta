@@ -138,7 +138,6 @@ type EnterpriseCostOptimization struct {
 	TenantID            string                 `json:"tenant_id"`
 	WindowDays          int                    `json:"window_days"`
 	EstimatedOperations int64                  `json:"estimated_operations"`
-	EstimatedCostUSD    float64                `json:"estimated_cost_usd"`
 	OptimizationScore   int                    `json:"optimization_score"`
 	Recommendations     []string               `json:"recommendations"`
 	Evidence            map[string]interface{} `json:"evidence"`

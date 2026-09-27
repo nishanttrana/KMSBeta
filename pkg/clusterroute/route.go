@@ -27,7 +27,6 @@ var Services = map[string]string{
 	"kms-dataprotect":       "https://dataprotect:8200",
 	"kms-discovery":         "https://discovery:8100",
 	"kms-ekm":               "https://ekm:8130",
-	"kms-featureforge":      "https://featureforge:8300",
 	"kms-governance":        "https://governance:8050",
 	"kms-hyok":              "https://hyok:8120",
 	"kms-key-access":        "https://keyaccess:8270",

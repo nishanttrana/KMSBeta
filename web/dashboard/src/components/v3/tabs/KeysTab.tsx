@@ -301,6 +301,8 @@ function isPublicComponentLike(key: any): boolean {
   return keyType.includes("public");
 }
 
+// Builds only names keycore generates (planKeyGeneration); keycore refuses
+// anything else with algorithm_unsupported.
 function composeCreateAlgorithm(
   algoType: string,
   family: string,
@@ -312,76 +314,28 @@ function composeCreateAlgorithm(
   const spec = String(keySpec || "").trim();
   const mode = String(cipherMode || "GCM").toUpperCase();
   if (type === "symmetric") {
-    if (fam === "AES") {
-      return `AES-${spec || "256"}-${mode}`;
-    }
-    if (fam === "CHACHA20") {
-      return "ChaCha20-Poly1305";
-    }
-    if (fam === "CAMELLIA") {
-      return `Camellia-${spec || "256"}-${mode}`;
-    }
-    if (fam === "3DES") {
-      return "3DES-CBC";
-    }
-    return `AES-${spec || "256"}-${mode}`;
+    return fam === "3DES" ? "3DES-CBC" : `AES-${spec || "256"}-${mode}`;
   }
   if (type === "asymmetric") {
-    if (fam === "RSA") {
-      return `RSA-${spec || "2048"}`;
-    }
     if (fam === "ECC") {
-      if (spec === "Brainpool-P256r1" || spec === "Brainpool-P384r1") {
-        return spec;
-      }
-      if (spec === "P-384") {
-        return "ECDSA-P384";
-      }
-      if (spec === "P-521") {
-        return "ECDSA-P521";
-      }
-      return "ECDSA-P256";
+      return spec === "P-384" ? "ECDSA-P384" : spec === "P-521" ? "ECDSA-P521" : "ECDSA-P256";
     }
     if (fam === "EDDSA") {
-      return spec === "Ed448" ? "Ed448" : "Ed25519";
+      return "Ed25519";
     }
     if (fam === "ECDH") {
-      if (spec === "X25519" || spec === "X448") {
-        return spec;
-      }
-      if (spec === "P-384") {
-        return "ECDH-P384";
-      }
-      return "ECDH-P256";
-    }
-    if (fam === "DSA") {
-      return "DSA-3072";
+      return spec === "X25519" ? "X25519" : spec === "P-384" ? "ECDH-P384" : "ECDH-P256";
     }
     return `RSA-${spec || "2048"}`;
   }
   if (type === "pqc") {
-    if (fam === "ML-KEM") {
-      return `ML-KEM-${spec || "768"}`;
-    }
     if (fam === "ML-DSA") {
       return `ML-DSA-${spec || "65"}`;
     }
     if (fam === "SLH-DSA") {
-      return `SLH-DSA-${spec || "128s"}`;
-    }
-    if (fam === "HSS/LMS") {
-      return `HSS-LMS-${spec || "SHA256-H10"}`;
-    }
-    if (fam === "XMSS") {
-      return `XMSS-${spec || "SHA256-H10"}`;
-    }
-    if (fam === "HYBRID") {
-      return spec || "ECDSA-P384 + ML-DSA-65";
+      return `SLH-DSA-${spec || "SHA2-128s"}`;
     }
     return `ML-KEM-${spec || "768"}`;
-  }
-  if (fam === "CMAC") {
-    return "CMAC-AES-256";
   }
   return `HMAC-${spec || "SHA256"}`;
 }
@@ -592,7 +546,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
    
   const keys=useMemo(()=>(Array.isArray(keyCatalog)?keyCatalog:[]).map((k)=>(k&&k.algoFamily===undefined&&k.__raw)?toViewKey(k.__raw):k),[keyCatalog]);
   const [pqcAlgorithm,setPqcAlgorithm]=useState("ML-KEM-768");
-  const [pqcHybridMode,setPqcHybridMode]=useState("pure");
   const [pqcName,setPqcName]=useState("");
   const [pqcPurpose,setPqcPurpose]=useState("key-agreement");
   const [pqcGenerating,setPqcGenerating]=useState(false);
@@ -632,15 +585,15 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
   const createAlgorithmFamilies=useMemo(()=>{
     if(algoType==="symmetric"){
-      return ["AES","ChaCha20","Camellia","3DES"];
+      return ["AES","3DES"];
     }
     if(algoType==="asymmetric"){
-      return ["RSA","ECC","EdDSA","ECDH","DSA"];
+      return ["RSA","ECC","EdDSA","ECDH"];
     }
     if(algoType==="pqc"){
-      return ["ML-KEM","ML-DSA","SLH-DSA","HSS/LMS","XMSS","Hybrid"];
+      return ["ML-KEM","ML-DSA","SLH-DSA"];
     }
-    return ["HMAC","CMAC"];
+    return ["HMAC"];
   },[algoType]);
 
   const createKeySpecOptions=useMemo(()=>{
@@ -649,12 +602,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       if(fam==="AES"){
         return ["128","192","256"];
       }
-      if(fam==="ChaCha20"){
-        return ["256"];
-      }
-      if(fam==="Camellia"){
-        return ["256"];
-      }
       return ["168"];
     }
     if(algoType==="asymmetric"){
@@ -662,38 +609,29 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         return ["2048","3072","4096","8192"];
       }
       if(fam==="ECC"){
-        return ["P-256","P-384","P-521","Brainpool-P256r1","Brainpool-P384r1"];
+        return ["P-256","P-384","P-521"];
       }
       if(fam==="EdDSA"){
-        return ["Ed25519","Ed448"];
+        return ["Ed25519"];
       }
       if(fam==="ECDH"){
-        return ["X25519","X448","P-256","P-384"];
+        return ["X25519","P-256","P-384"];
       }
-      return ["3072"];
+      return ["2048"];
     }
     if(algoType==="pqc"){
       if(fam==="ML-KEM"){
         return ["768","1024"];
       }
       if(fam==="ML-DSA"){
-        return ["44","65","87"];
+        return ["65","87"];
       }
       if(fam==="SLH-DSA"){
-        return ["128s","128f","192s","192f","256s","256f"];
+        return ["SHA2-128s","SHAKE-128s","SHA2-128f","SHAKE-128f","SHA2-192s","SHAKE-192s","SHA2-192f","SHAKE-192f","SHA2-256s","SHAKE-256s","SHA2-256f","SHAKE-256f"];
       }
-      if(fam==="HSS/LMS"){
-        return ["SHA256-H10","SHA256-H15","SHA256-H20"];
-      }
-      if(fam==="XMSS"){
-        return ["SHA256-H10","SHA256-H16","SHA256-H20"];
-      }
-      return ["ECDSA-P384 + ML-DSA-65","RSA-3072 + ML-DSA-65","Ed25519 + ML-DSA-44","X25519 + ML-KEM-768"];
+      return ["768","1024"];
     }
-    if(fam==="CMAC"){
-      return ["AES-256"];
-    }
-    return ["SHA256","SHA384","SHA512","SHA3-256"];
+    return ["SHA256","SHA384","SHA512"];
   },[algoType,createAlgorithmFamily]);
 
   const resolvedCreateCipherMode=useMemo(()=>{
@@ -1343,10 +1281,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     if(!session||!selectedKey?.id){
       return;
     }
-    if(rotateType==="pqc-migration"){
-      onToast?.("PQC migration rotation is not available in this build yet.");
-      return;
-    }
     setRotating(true);
     try{
       const reason=rotateType==="rekey"?"rekey":"manual";
@@ -1374,7 +1308,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     }
     const algorithm=String(pqcAlgorithm||"ML-KEM-768");
     const pairId=`pair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
-    const labels:any={pqc_hybrid_mode:pqcHybridMode};
+    const labels:any={};
     setPqcGenerating(true);
     try{
       if(String(algorithm).toUpperCase().includes("ML-KEM")){
@@ -1421,7 +1355,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       setModal(null);
       setPqcName("");
       setPqcAlgorithm("ML-KEM-768");
-      setPqcHybridMode("pure");
       setPqcPurpose("key-agreement");
       onToast?.(`PQC key generated: ${name}`);
     }catch(error){
@@ -2737,12 +2670,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <FG label="Rotation Type">
         <Radio label="Standard Rotation - Generate new version, deactivate old" selected={rotateType==="standard"} onSelect={()=>setRotateType("standard")}/>
         <Radio label="Re-key - Generate new key material, same ID (for compromised keys)" selected={rotateType==="rekey"} onSelect={()=>setRotateType("rekey")}/>
-        {isAsymmetricKeyLike(selectedKey)&&<Radio label="PQC Migration - Rotate to post-quantum algorithm (coming soon)" selected={rotateType==="pqc-migration"} onSelect={()=>setRotateType("pqc-migration")}/>}
-      </FG>
-      <FG label="New Algorithm" hint={isAsymmetricKeyLike(selectedKey)?"Usually same as current. Change for PQC migration.":"Symmetric rotation keeps same algorithm family."}>
-        {isAsymmetricKeyLike(selectedKey)?
-          <Sel><option>{selectedKey?.algo} (same)</option><option>ML-DSA-65 (PQC migration)</option><option>ECDSA-P384 + ML-DSA-65 (hybrid)</option></Sel>:
-          <Sel><option>{selectedKey?.algo} (same)</option></Sel>}
       </FG>
       <FG label="Old Version Action">
         <Sel value={rotateOldVersionAction} onChange={(e)=>setRotateOldVersionAction(e.target.value)}>
@@ -2751,8 +2678,6 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <option value="destroy">Destroy old version immediately</option>
         </Sel>
       </FG>
-      <Chk label="Notify BYOK cloud connectors to sync new version" checked={true}/>
-      <Chk label="Notify HYOK endpoints of rotation" checked={false}/>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={rotateSelectedKey} disabled={rotating}>{rotating?"Rotating...":"Rotate Key"}</Btn></div>
     </Modal>
 
@@ -2824,19 +2749,11 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             <option value="ML-KEM-1024">ML-KEM-1024 (FIPS 203)</option>
           </Sel>
         </FG>
-        <FG label="Hybrid Mode" hint="Combine PQC with classical for backward compatibility">
-          <Sel value={pqcHybridMode} onChange={(e)=>setPqcHybridMode(e.target.value)}>
-            <option value="pure">Pure PQC only</option>
-            <option value="hybrid-ecdh">Hybrid: X25519 + ML-KEM-768</option>
-          </Sel>
-        </FG>
       </Row2>
       <Row2>
         <FG label="Key Name" required><Inp placeholder="Enter key name" value={pqcName} onChange={(e)=>setPqcName(e.target.value)}/></FG>
         <FG label="Purpose"><Sel value={pqcPurpose} onChange={(e)=>setPqcPurpose(e.target.value)}><option value="key-agreement">key-agreement</option><option value="key-encapsulation">key-encapsulation</option></Sel></FG>
       </Row2>
-      <Chk label="Store in HSM (if HSM supports PQC)" checked={false}/>
-      <Chk label="Auto-generate classical fallback key (for migration period)" checked={true}/>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={generatePQCKey} disabled={pqcGenerating}>{pqcGenerating?"Generating...":"Generate PQC Key"}</Btn></div>
     </Modal>
     {attestResult&&<div onClick={()=>setAttestResult(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,padding:24}}>

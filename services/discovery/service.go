@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -17,14 +15,12 @@ type Service struct {
 	certs   CertsClient
 	events  EventPublisher
 	now     func() time.Time
+	cloud   CloudClient
 	root    string
 }
 
 func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events EventPublisher) *Service {
-	root := strings.TrimSpace(os.Getenv("WORKSPACE_ROOT"))
-	if root == "" {
-		root = "."
-	}
+	root := strings.TrimSpace(os.Getenv("WORKSPACE_ROOT")) // code scan refuses when unset
 	return &Service{
 		store:   store,
 		keycore: keycore,
@@ -62,9 +58,12 @@ func (s *Service) StartScan(ctx context.Context, req ScanRequest) (DiscoveryScan
 	stats := map[string]interface{}{
 		"network_assets": 0,
 		"cloud_assets":   0,
-		"cert_assets":    0,
+		"certs_assets":   0,
 		"code_assets":    0,
 	}
+	// Each type reports its own outcome: a failed or unconfigured source is
+	// recorded as such, never replaced by invented assets.
+	errs := map[string]string{}
 	for _, scanType := range types {
 		var items []CryptoAsset
 		var err error
@@ -77,24 +76,23 @@ func (s *Service) StartScan(ctx context.Context, req ScanRequest) (DiscoveryScan
 			items, err = s.scanCertificates(ctx, req.TenantID, scan.ID)
 		case "code":
 			items, err = s.scanCode(ctx, req.TenantID, scan.ID)
-		default:
-			items = []CryptoAsset{}
 		}
 		if err != nil {
-			scan.Status = "failed"
-			scan.Stats = map[string]interface{}{"error": err.Error(), "scan_type": scanType}
-			scan.CompletedAt = s.now()
-			_ = s.store.UpdateScan(ctx, scan)
-			_ = s.publishAudit(ctx, "audit.discovery.scan_completed", req.TenantID, map[string]interface{}{
-				"scan_id": scan.ID,
-				"status":  "failed",
-			})
-			return DiscoveryScan{}, err
+			errs[scanType] = err.Error()
 		}
 		assets = append(assets, items...)
 		stats[scanType+"_assets"] = len(items)
 	}
-
+	status := "completed"
+	switch {
+	case len(errs) == len(types):
+		status = "failed"
+	case len(errs) > 0:
+		status = "completed_with_errors"
+	}
+	if len(errs) > 0 {
+		stats["errors"] = errs
+	}
 	seen := map[string]struct{}{}
 	inserted := 0
 	for _, a := range assets {
@@ -113,17 +111,21 @@ func (s *Service) StartScan(ctx context.Context, req ScanRequest) (DiscoveryScan
 		}
 	}
 	stats["assets_discovered"] = inserted
-	scan.Status = "completed"
+	scan.Status = status
 	scan.Stats = stats
 	scan.CompletedAt = s.now()
 	if err := s.store.UpdateScan(ctx, scan); err != nil {
 		return DiscoveryScan{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.discovery.scan_completed", req.TenantID, map[string]interface{}{
+	completed := map[string]interface{}{
 		"scan_id":           scan.ID,
 		"assets_discovered": inserted,
-		"status":            "completed",
-	})
+		"status":            status,
+	}
+	if len(errs) > 0 {
+		completed["errors"] = errs
+	}
+	_ = s.publishAudit(ctx, "audit.discovery.scan_completed", req.TenantID, completed)
 	return s.store.GetScan(ctx, req.TenantID, scan.ID)
 }
 
@@ -228,221 +230,6 @@ func (s *Service) Summary(ctx context.Context, tenantID string) (DiscoverySummar
 	return sum, nil
 }
 
-func (s *Service) scanNetwork(_ context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	endpoints := parseEndpoints(defaultString(os.Getenv("DISCOVERY_TLS_ENDPOINTS"), "api.vecta.local:443,kms.vecta.local:8443,pay.vecta.local:443"))
-	out := make([]CryptoAsset, 0, len(endpoints))
-	for _, ep := range endpoints {
-		alg := pickNetworkAlgorithm(ep)
-		bits := inferBits(alg)
-		cls := classifyAlgorithm(alg, bits)
-		asset := CryptoAsset{
-			ID:             assetDeterministicID(tenantID, "network", "tls_endpoint", ep, ep, alg),
-			TenantID:       tenantID,
-			ScanID:         scanID,
-			AssetType:      "tls_endpoint",
-			Name:           ep,
-			Location:       ep,
-			Source:         "network",
-			Algorithm:      alg,
-			StrengthBits:   bits,
-			Status:         "active",
-			Classification: cls,
-			PQCReady:       isPQCAlgorithm(alg) || isHybridAlgorithm(alg),
-			QSLScore:       round2(algorithmQSL(alg)),
-			Metadata: map[string]interface{}{
-				"protocol": "tls",
-			},
-			FirstSeen: s.now(),
-			LastSeen:  s.now(),
-		}
-		out = append(out, asset)
-	}
-	return out, nil
-}
-
-func (s *Service) scanCloud(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	keys := []map[string]interface{}{}
-	if s.keycore != nil {
-		items, _ := s.keycore.ListKeys(ctx, tenantID, 2000)
-		keys = append(keys, items...)
-	}
-	providers := parseList(defaultString(os.Getenv("DISCOVERY_CLOUD_PROVIDERS"), "aws,azure,gcp"))
-	if len(keys) == 0 {
-		for _, p := range providers {
-			keys = append(keys, map[string]interface{}{
-				"id":        newID("ckey"),
-				"name":      p + "-kms-key",
-				"algorithm": pickProviderAlgorithm(p),
-				"status":    "active",
-				"provider":  p,
-			})
-		}
-	}
-	out := make([]CryptoAsset, 0, len(keys))
-	for _, k := range keys {
-		alg := normalizeAlgorithm(firstString(k["algorithm"]))
-		bits := inferBits(alg)
-		provider := strings.ToLower(defaultString(firstString(k["provider"]), "multi"))
-		id := firstString(k["id"])
-		name := firstString(k["name"], id)
-		asset := CryptoAsset{
-			ID:             assetDeterministicID(tenantID, "cloud", "kms_key", id, provider+":"+name, alg),
-			TenantID:       tenantID,
-			ScanID:         scanID,
-			AssetType:      "kms_key",
-			Name:           name,
-			Location:       provider + "/kms",
-			Source:         "cloud",
-			Algorithm:      alg,
-			StrengthBits:   bits,
-			Status:         strings.ToLower(defaultString(firstString(k["status"]), "active")),
-			Classification: classifyAlgorithm(alg, bits),
-			PQCReady:       isPQCAlgorithm(alg) || isHybridAlgorithm(alg),
-			QSLScore:       round2(algorithmQSL(alg)),
-			Metadata: map[string]interface{}{
-				"provider": provider,
-				"key_id":   id,
-			},
-			FirstSeen: s.now(),
-			LastSeen:  s.now(),
-		}
-		out = append(out, asset)
-	}
-	return out, nil
-}
-
-func (s *Service) scanCertificates(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	items := []map[string]interface{}{}
-	if s.certs != nil {
-		rows, _ := s.certs.ListCertificates(ctx, tenantID, 2000)
-		items = append(items, rows...)
-	}
-	if len(items) == 0 {
-		items = []map[string]interface{}{
-			{"id": newID("cert"), "subject_cn": "api.vecta.local", "algorithm": "RSA-2048", "status": "active"},
-			{"id": newID("cert"), "subject_cn": "pqc.vecta.local", "algorithm": "ML-DSA-65", "status": "active"},
-		}
-	}
-	out := make([]CryptoAsset, 0, len(items))
-	for _, c := range items {
-		alg := normalizeAlgorithm(firstString(c["algorithm"], c["signature_algorithm"], c["cert_class"]))
-		bits := inferBits(alg)
-		cn := firstString(c["subject_cn"], c["id"])
-		id := firstString(c["id"])
-		asset := CryptoAsset{
-			ID:             assetDeterministicID(tenantID, "certs", "certificate", id, cn, alg),
-			TenantID:       tenantID,
-			ScanID:         scanID,
-			AssetType:      "certificate",
-			Name:           cn,
-			Location:       defaultString(firstString(c["location"], c["subject_cn"]), cn),
-			Source:         "certs",
-			Algorithm:      alg,
-			StrengthBits:   bits,
-			Status:         strings.ToLower(defaultString(firstString(c["status"]), "active")),
-			Classification: classifyAlgorithm(alg, bits),
-			PQCReady:       isPQCAlgorithm(alg) || strings.Contains(strings.ToLower(firstString(c["cert_class"])), "hybrid"),
-			QSLScore:       round2(algorithmQSL(alg)),
-			Metadata: map[string]interface{}{
-				"cert_id":    id,
-				"cert_class": firstString(c["cert_class"]),
-				"not_after":  firstString(c["not_after"]),
-			},
-			FirstSeen: s.now(),
-			LastSeen:  s.now(),
-		}
-		out = append(out, asset)
-	}
-	return out, nil
-}
-
-func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	out := make([]CryptoAsset, 0)
-	root := s.root
-	if strings.TrimSpace(root) == "" {
-		root = "."
-	}
-	maxFiles := 400
-	count := 0
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			name := strings.ToLower(d.Name())
-			if name == ".git" || name == "node_modules" || name == "vendor" || name == "bin" || name == "dist" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".go" && ext != ".yaml" && ext != ".yml" && ext != ".json" && ext != ".env" && ext != ".txt" {
-			return nil
-		}
-		if count >= maxFiles {
-			return fs.SkipAll
-		}
-		count++
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-		content := string(raw)
-		alg := "AES-256"
-		if rePrivateKey.MatchString(content) {
-			alg = "RSA-2048"
-		}
-		matched := false
-		kind := "hardcoded_secret"
-		snippet := ""
-		switch {
-		case reAKIA.MatchString(content):
-			matched = true
-			snippet = reAKIA.FindString(content)
-			alg = "UNKNOWN"
-			kind = "cloud_access_key"
-		case rePrivateKey.MatchString(content):
-			matched = true
-			snippet = "PRIVATE KEY BLOCK"
-			kind = "private_key_material"
-		case reHexSecret.MatchString(content):
-			matched = true
-			snippet = reHexSecret.FindString(content)
-			kind = "hex_secret"
-		}
-		if !matched {
-			return nil
-		}
-		bits := inferBits(alg)
-		if alg == "UNKNOWN" {
-			bits = 0
-		}
-		asset := CryptoAsset{
-			ID:             assetDeterministicID(tenantID, "code", kind, path, kind, alg+snippet),
-			TenantID:       tenantID,
-			ScanID:         scanID,
-			AssetType:      kind,
-			Name:           filepath.Base(path),
-			Location:       path,
-			Source:         "code",
-			Algorithm:      alg,
-			StrengthBits:   bits,
-			Status:         "active",
-			Classification: "vulnerable",
-			PQCReady:       false,
-			QSLScore:       round2(algorithmQSL(alg) / 2),
-			Metadata: map[string]interface{}{
-				"snippet": snippet,
-			},
-			FirstSeen: s.now(),
-			LastSeen:  s.now(),
-		}
-		out = append(out, asset)
-		return nil
-	})
-	return out, nil
-}
-
 func normalizeScanTypes(in []string) []string {
 	if len(in) == 0 {
 		return []string{"network", "cloud", "certs", "code"}
@@ -469,56 +256,6 @@ func normalizeScanTypes(in []string) []string {
 		return []string{"network", "cloud", "certs", "code"}
 	}
 	return out
-}
-
-func parseEndpoints(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" || !reTLSHostPort.MatchString(p) {
-			continue
-		}
-		out = append(out, p)
-	}
-	if len(out) == 0 {
-		out = append(out, "api.vecta.local:443")
-	}
-	return out
-}
-
-func parseList(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(strings.ToLower(p))
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-func pickNetworkAlgorithm(endpoint string) string {
-	options := []string{"RSA-2048", "ECDSA-P256", "RSA-3072", "ML-KEM-768-HYBRID", "ML-DSA-65"}
-	h := 0
-	for i := 0; i < len(endpoint); i++ {
-		h += int(endpoint[i])
-	}
-	return options[h%len(options)]
-}
-
-func pickProviderAlgorithm(provider string) string {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "aws":
-		return "RSA-2048"
-	case "azure":
-		return "RSA-3072"
-	case "gcp":
-		return "ECDSA-P256"
-	default:
-		return "AES-256"
-	}
 }
 
 func max(a int, b int) int {

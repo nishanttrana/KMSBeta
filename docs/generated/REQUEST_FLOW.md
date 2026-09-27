@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-27T02:55:41Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T03:40:16Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `950`
-- Routes with exact frontend call sites: `564`
-- Routes whose handlers call `h.svc.*`: `557`
-- Routes with detected store calls: `686`
-- Routes with detected internal `pkg/*` calls: `148`
+- Backend routes analyzed: `947`
+- Routes with exact frontend call sites: `560`
+- Routes whose handlers call `h.svc.*`: `551`
+- Routes with detected store calls: `681`
+- Routes with detected internal `pkg/*` calls: `147`
 
 ## How To Trace One Frontend Click
 
@@ -46,7 +46,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ai-gateway\|DELETE\|/ai-gateway/v1/guardrails/{param} | DELETE /ai-gateway/v1/guardrails/{id} | handleDeleteGuardrail (services/ai-gateway/handler.go:918) |  | DeleteGuardrail |  |  | web/dashboard/src/lib/aigateway.ts:112 |
 | ai-gateway\|GET\|/ai-gateway/v1/audit | GET /ai-gateway/v1/audit | handleListAudit (services/ai-gateway/handler.go:929) |  | ListAudit |  |  | web/dashboard/src/lib/aigateway.ts:137 |
 | ai-gateway\|GET\|/ai-gateway/v1/audit/stats | GET /ai-gateway/v1/audit/stats | handleAuditStats (services/ai-gateway/handler.go:964) |  | GetAuditStats |  |  | web/dashboard/src/lib/aigateway.ts:141 |
-| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:975) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
+| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:207) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
 | audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:235) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:139 |
 | audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:253) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:156 |
@@ -67,10 +67,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:85) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:77 |
 | audit\|GET\|/webhooks | GET /webhooks | listWebhooks (services/audit/handler_webhook.go:43) |  | ListWebhooks |  |  | web/dashboard/src/lib/webhooks.ts:52 |
 | audit\|POST\|/webhooks | POST /webhooks | createWebhook (services/audit/handler_webhook.go:58) |  | CreateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:57 |
-| audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:134) |  | GetWebhook, UpdateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:62 |
-| audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:186) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
-| audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:199) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
-| audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:224) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
+| audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:157) |  | GetWebhook, UpdateWebhook, DeleteWebhook, ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:62 |
+| audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:239) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
+| audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:253) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
+| audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:278) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
 | auth\|GET\|/auth/system-health | GET /auth/system-health | handleSystemHealth (services/auth/handler_system_health.go:13) |  |  | h.healthChecker.Snapshot |  | web/dashboard/src/lib/authAdmin.ts:441 |
 | auth\|POST\|/auth/system-health/restart | POST /auth/system-health/restart | handleRestartSystemService (services/auth/handler_system_health.go:51) |  |  | h.healthChecker.RestartService, h.logger.Printf | pkg/auth.ClaimsFromContext | web/dashboard/src/lib/authAdmin.ts:517 |
 | auth\|POST\|/tenants | POST /tenants | handleCreateTenant (services/auth/handler.go:890) |  |  |  |  | web/dashboard/src/lib/authAdmin.ts:554 |
@@ -223,7 +223,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | confidential\|GET\|/confidential/policy | GET /confidential/policy | handleGetPolicy (services/confidential/handler.go:34) | GetAttestationPolicy | GetAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:136 |
 | confidential\|PUT\|/confidential/policy | PUT /confidential/policy | handleSetPolicy (services/confidential/handler.go:49) | UpdateAttestationPolicy | UpsertAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:148 |
 | confidential\|GET\|/confidential/summary | GET /confidential/summary | handleGetSummary (services/confidential/handler.go:74) | GetAttestationSummary | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:164 |
-| confidential\|POST\|/confidential/evaluate | POST /confidential/evaluate | handleEvaluate (services/confidential/handler.go:89) | EvaluateAttestedRelease | InsertReleaseRecord | s.verifier.Verify |  | web/dashboard/src/lib/confidential.ts:176 |
+| confidential\|POST\|/confidential/evaluate | POST /confidential/evaluate | handleEvaluate (services/confidential/handler.go:89) | EvaluateAttestedRelease | InsertReleaseRecord | s.verifier.Verify, s.events.Publish |  | web/dashboard/src/lib/confidential.ts:176 |
 | confidential\|GET\|/confidential/releases | GET /confidential/releases | handleListReleases (services/confidential/handler.go:114) | ListReleaseHistory | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:195 |
 | confidential\|GET\|/confidential/releases/{param} | GET /confidential/releases/{id} | handleGetRelease (services/confidential/handler.go:135) | GetReleaseRecord | GetReleaseRecord |  |  | web/dashboard/src/lib/confidential.ts:207 |
 | dataprotect\|POST\|/tokenize | POST /tokenize | handleTokenize (services/dataprotect/handler.go:101) | Tokenize, writeAudit | WriteAuditEntry |  |  | web/dashboard/src/lib/dataprotect.ts:468 |
@@ -255,7 +255,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:900) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:799 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1071) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:868 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1102) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:852 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:68) | StartScan | CreateScan, UpdateScan, UpsertAsset, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:68) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
 | discovery\|GET\|/discovery/scans | GET /discovery/scans | handleListScans (services/discovery/handler.go:84) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:77 |
 | discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | handleGetScan (services/discovery/handler.go:98) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:89 |
 | discovery\|GET\|/discovery/assets | GET /discovery/assets | handleListAssets (services/discovery/handler.go:112) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:112 |
@@ -317,12 +317,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|DELETE\|/ekm/google-cse/configs/{param} | DELETE /ekm/google-cse/configs/{id} | handleDeleteGoogleCSEConfig (services/ekm/handler_google_cse.go:139) |  | DeleteGoogleCSEConfig |  |  | web/dashboard/src/lib/ekm.ts:897 |
 | ekm\|POST\|/ekm/google-cse/keys | POST /ekm/google-cse/keys | handleCreateGoogleCSEKey (services/ekm/handler_google_cse.go:156) |  | GetGoogleCSEConfig, CreateGoogleCSEKey, UpdateGoogleCSEConfig |  |  | web/dashboard/src/lib/ekm.ts:917 |
 | ekm\|DELETE\|/ekm/google-cse/keys/{param} | DELETE /ekm/google-cse/keys/{id} | handleDeleteGoogleCSEKey (services/ekm/handler_google_cse.go:243) |  | DeleteGoogleCSEKey |  |  | web/dashboard/src/lib/ekm.ts:927 |
-| featureforge\|GET\|/catalog | GET /catalog | handleCatalog (services/featureforge/handler.go:49) | Catalog |  |  |  | web/dashboard/src/lib/featureforge.ts:72 |
-| featureforge\|GET\|/intents | GET /intents | handleListIntents (services/featureforge/handler.go:53) | List | ListIntents |  |  | web/dashboard/src/lib/featureforge.ts:77 |
-| featureforge\|POST\|/intents | POST /intents | handleSubmit (services/featureforge/handler.go:68) | Submit, Get | NextID, GetIntent, AddApproval, Approvals, Events, ListIntents | s.classifier.Classify, s.policy.Evaluate, s.mcp.Submit, s.mcp.Status, s.sandbox.DryRunConfig, s.policy.Apply, s.gov.RequestApproval, s.gov.ApprovalState | pkg/tenantcheck.Enforce | web/dashboard/src/lib/featureforge.ts:91 |
-| featureforge\|GET\|/intents/{param} | GET /intents/{id} | handleGetIntent (services/featureforge/handler.go:106) | Get, Approvals | GetIntent, Events, Approvals |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/featureforge.ts:98 |
-| featureforge\|POST\|/intents/{param}/approve | POST /intents/{id}/approve | handleApprove (services/featureforge/handler.go:151) | Approve, Get, Approvals | GetIntent, AddApproval, Events, Approvals |  |  | web/dashboard/src/lib/featureforge.ts:107 |
-| featureforge\|POST\|/intents/{param}/promote | POST /intents/{id}/promote | handlePromote (services/featureforge/handler.go:179) | PromoteToProd, Get, Approvals | GetIntent, Approvals, Events | s.gov.RequestApproval, s.gov.ApprovalState |  | web/dashboard/src/lib/featureforge.ts:114 |
 | governance\|GET\|/governance/settings | GET /governance/settings | handleGetSettings (services/governance/handler.go:101) | GetSettings | GetSettings |  |  | web/dashboard/src/lib/governance.ts:124 |
 | governance\|PUT\|/governance/settings | PUT /governance/settings | handleUpdateSettings (services/governance/handler.go:116) | UpdateSettings | GetSettings, UpsertSettings |  |  | web/dashboard/src/lib/governance.ts:184 |
 | governance\|POST\|/governance/settings/smtp/test | POST /governance/settings/smtp/test | handleTestSMTP (services/governance/handler.go:137) | TestSMTP |  |  |  | web/dashboard/src/lib/governance.ts:195 |
@@ -364,48 +358,48 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|GET\|/key-access/codes | GET /key-access/codes | handleListRules (services/keyaccess/handler.go:125) | ListRules | ListRules |  |  | web/dashboard/src/lib/keyaccess.ts:95 |
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | handleDeleteRule (services/keyaccess/handler.go:153) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | handleListDecisions (services/keyaccess/handler.go:163) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
-| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:887 |
+| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/hsm.Encrypt | web/dashboard/src/lib/keycore.ts:887 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:310) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:593 |
-| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:347) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
-| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:381) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:539) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:553 |
-| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:629) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:783 |
-| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:665) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1143, web/dashboard/src/lib/keycore.ts:1155 |
-| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:703) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1169 |
-| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:706) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1177 |
-| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:709) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  | web/dashboard/src/lib/keycore.ts:1132 |
-| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:862) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, ListKeys, ListKeysCursor, GetKey, UpdateKeyMetadata, +16 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get, s.cluster.Publish, s.approval.ensureApproval, s.hsm.Encrypt, +5 more | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:1114 |
-| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1122) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1208 |
-| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:941) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:811 |
-| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1050) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1190 |
-| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | handleGetKeyAccessPolicy (services/keycore/handler.go:1218) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1224 |
-| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | handleSetKeyAccessPolicy (services/keycore/handler.go:1239) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1237 |
-| keycore\|GET\|/access/groups | GET /access/groups | handleListAccessGroups (services/keycore/handler.go:1299) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1363 |
-| keycore\|POST\|/access/groups | POST /access/groups | handleCreateAccessGroup (services/keycore/handler.go:1313) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1374 |
-| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | handleDeleteAccessGroup (services/keycore/handler.go:1349) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1390 |
-| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | handleSetAccessGroupMembers (services/keycore/handler.go:1366) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1402 |
-| keycore\|GET\|/access/settings | GET /access/settings | handleGetAccessSettings (services/keycore/handler.go:1395) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1251 |
-| keycore\|PUT\|/access/settings | PUT /access/settings | handleSetAccessSettings (services/keycore/handler.go:1412) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1262 |
-| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | handleListInterfacePolicies (services/keycore/handler.go:1480) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1278 |
-| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | handleUpsertInterfacePolicy (services/keycore/handler.go:1498) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1289 |
-| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | handleDeleteInterfacePolicy (services/keycore/handler.go:1529) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1301 |
-| keycore\|GET\|/access/interface-tls-config | GET /access/interface-tls-config | handleGetInterfaceTLSConfig (services/keycore/handler.go:1563) | GetKeyInterfaceTLSConfig | GetKeyInterfaceTLSConfig |  |  | web/dashboard/src/lib/keycore.ts:1317 |
-| keycore\|PUT\|/access/interface-tls-config | PUT /access/interface-tls-config | handlePutInterfaceTLSConfig (services/keycore/handler.go:1580) | UpdateKeyInterfaceTLSConfig | UpsertKeyInterfaceTLSConfig, ListKeyInterfacePorts, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1328 |
-| keycore\|GET\|/access/interface-ports | GET /access/interface-ports | handleListInterfacePorts (services/keycore/handler.go:1546) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1309 |
-| keycore\|POST\|/access/interface-ports | POST /access/interface-ports | handleUpsertInterfacePort (services/keycore/handler.go:1611) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1343 |
-| keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | handleDeleteInterfacePort (services/keycore/handler.go:1642) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1355 |
-| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1681) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1415 |
-| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1706) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1427 |
-| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1742) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1442 |
-| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1846) |  |  |  |  | web/dashboard/src/lib/keycore.ts:841 |
-| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1885) |  |  |  |  | web/dashboard/src/lib/keycore.ts:914 |
-| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1924) |  |  |  |  | web/dashboard/src/lib/keycore.ts:938 |
-| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1928) | Verify |  | s.hsm.Verify, s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:956 |
-| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1972) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1031 |
-| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:2052) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1059 |
-| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:2092) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1088 |
-| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:2131) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:981 |
-| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:2159) | Random |  | s.qrng.DrawEntropy, s.policy.Evaluate, s.posture.Controls | pkg/crypto.Zeroize, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.ConstantTimeEqual, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached | web/dashboard/src/lib/keycore.ts:1002 |
+| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:351) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
+| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:385) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:543) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:553 |
+| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:633) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:783 |
+| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:669) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1143, web/dashboard/src/lib/keycore.ts:1155 |
+| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:707) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1169 |
+| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:710) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1177 |
+| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:713) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  | web/dashboard/src/lib/keycore.ts:1132 |
+| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:866) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, ListKeys, ListKeysCursor, GetKey, UpdateKeyMetadata, +16 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get, s.cluster.Publish, s.approval.ensureApproval, s.hsm.Encrypt, +7 more | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached, pkg/hsm.Encrypt, +4 more | web/dashboard/src/lib/keycore.ts:1114 |
+| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1126) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1208 |
+| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:945) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:811 |
+| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1054) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1190 |
+| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | handleGetKeyAccessPolicy (services/keycore/handler.go:1222) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1224 |
+| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | handleSetKeyAccessPolicy (services/keycore/handler.go:1243) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1237 |
+| keycore\|GET\|/access/groups | GET /access/groups | handleListAccessGroups (services/keycore/handler.go:1303) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1363 |
+| keycore\|POST\|/access/groups | POST /access/groups | handleCreateAccessGroup (services/keycore/handler.go:1317) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1374 |
+| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | handleDeleteAccessGroup (services/keycore/handler.go:1353) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1390 |
+| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | handleSetAccessGroupMembers (services/keycore/handler.go:1370) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1402 |
+| keycore\|GET\|/access/settings | GET /access/settings | handleGetAccessSettings (services/keycore/handler.go:1399) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1251 |
+| keycore\|PUT\|/access/settings | PUT /access/settings | handleSetAccessSettings (services/keycore/handler.go:1416) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1262 |
+| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | handleListInterfacePolicies (services/keycore/handler.go:1484) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1278 |
+| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | handleUpsertInterfacePolicy (services/keycore/handler.go:1502) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1289 |
+| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | handleDeleteInterfacePolicy (services/keycore/handler.go:1533) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1301 |
+| keycore\|GET\|/access/interface-tls-config | GET /access/interface-tls-config | handleGetInterfaceTLSConfig (services/keycore/handler.go:1567) | GetKeyInterfaceTLSConfig | GetKeyInterfaceTLSConfig |  |  | web/dashboard/src/lib/keycore.ts:1317 |
+| keycore\|PUT\|/access/interface-tls-config | PUT /access/interface-tls-config | handlePutInterfaceTLSConfig (services/keycore/handler.go:1584) | UpdateKeyInterfaceTLSConfig | UpsertKeyInterfaceTLSConfig, ListKeyInterfacePorts, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1328 |
+| keycore\|GET\|/access/interface-ports | GET /access/interface-ports | handleListInterfacePorts (services/keycore/handler.go:1550) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1309 |
+| keycore\|POST\|/access/interface-ports | POST /access/interface-ports | handleUpsertInterfacePort (services/keycore/handler.go:1615) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1343 |
+| keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | handleDeleteInterfacePort (services/keycore/handler.go:1646) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1355 |
+| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1685) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1415 |
+| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1710) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1427 |
+| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1746) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1442 |
+| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1850) |  |  |  |  | web/dashboard/src/lib/keycore.ts:841 |
+| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1889) |  |  |  |  | web/dashboard/src/lib/keycore.ts:914 |
+| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1928) |  |  |  |  | web/dashboard/src/lib/keycore.ts:938 |
+| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1932) | Verify |  | s.hsm.Verify, s.meter.IncrementOps | pkg/crypto.Zeroize, pkg/hsm.Verify | web/dashboard/src/lib/keycore.ts:956 |
+| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1976) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1031 |
+| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:2056) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1059 |
+| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:2096) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1088 |
+| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:2135) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:981 |
+| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:2163) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:1002 |
 | keycore\|GET\|/ceremony/guardians | GET /ceremony/guardians | handleListGuardians (services/keycore/handler_ceremony.go:11) |  | ListCeremonyGuardians |  |  | web/dashboard/src/lib/ceremony.ts:48 |
 | keycore\|POST\|/ceremony/guardians | POST /ceremony/guardians | handleCreateGuardian (services/keycore/handler_ceremony.go:26) |  | CreateCeremonyGuardian |  |  | web/dashboard/src/lib/ceremony.ts:53 |
 | keycore\|DELETE\|/ceremony/guardians/{param} | DELETE /ceremony/guardians/{id} | handleDeleteGuardian (services/keycore/handler_ceremony.go:66) |  | DeleteCeremonyGuardian |  |  | web/dashboard/src/lib/ceremony.ts:57 |
@@ -449,10 +443,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
 | keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
 | keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
-| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:560) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
-| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:569) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
-| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:595) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
-| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:610) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:561) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:570) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:596) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:611) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
 | kmip\|GET\|/kmip/capabilities | GET /kmip/capabilities | handleCapabilities (services/kmip/http_api.go:47) |  |  |  |  | web/dashboard/src/lib/kmip.ts:183 |
 | kmip\|GET\|/kmip/profiles | GET /kmip/profiles | handleListClientProfiles (services/kmip/http_api.go:210) |  | ListClientProfiles |  |  | web/dashboard/src/lib/kmip.ts:177 |
 | kmip\|POST\|/kmip/profiles | POST /kmip/profiles | handleCreateClientProfile (services/kmip/http_api.go:224) |  |  |  |  | web/dashboard/src/lib/kmip.ts:194 |
@@ -580,14 +574,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | handleExchangeToken (services/workload/handler.go:192) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:227 |
 | workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | handleGetGraph (services/workload/handler.go:208) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:235 |
 | workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | handleListUsage (services/workload/handler.go:219) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:240 |
-| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
+| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
 
 ## All Backend Request Flows
 
@@ -622,8 +618,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ai-gateway\|GET\|/ai-gateway/v1/audit | GET /ai-gateway/v1/audit | handleListAudit (services/ai-gateway/handler.go:929) |  | ListAudit |  |  | web/dashboard/src/lib/aigateway.ts:137 |
 | ai-gateway\|GET\|/ai-gateway/v1/audit/stats | GET /ai-gateway/v1/audit/stats | handleAuditStats (services/ai-gateway/handler.go:964) |  | GetAuditStats |  |  | web/dashboard/src/lib/aigateway.ts:141 |
 | ai-gateway\|GET\|/ai-gateway/v1/audit/{param} | GET /ai-gateway/v1/audit/{id} | handleGetAudit (services/ai-gateway/handler.go:954) |  | GetAudit |  |  |  |
-| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:975) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
-| ai-gateway\|GET\|/ai-gateway/v1/metrics | GET /ai-gateway/v1/metrics | handleMetrics (services/ai-gateway/handler.go:990) |  | GetAuditStats |  |  |  |
+| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
+| ai-gateway\|GET\|/ai-gateway/v1/metrics | GET /ai-gateway/v1/metrics | handleMetrics (services/ai-gateway/handler.go:1009) |  | GetAuditStats |  |  |  |
 | audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:143) | PublishAudit, VerifyChain | QueryEvents, GetEvent, AlertStats, QueryAlerts, GetAlert, UpdateAlertStatus, CreateRule, ListRules, +6 more | h.cluster.Publish, s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:207) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:134 |
 | audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:235) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:139 |
@@ -668,10 +664,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/metrics | GET /metrics | handlePrometheusMetrics (services/audit/handler_prometheus.go:14) |  | GetAllServiceStats |  |  |  |
 | audit\|GET\|/webhooks | GET /webhooks | listWebhooks (services/audit/handler_webhook.go:43) |  | ListWebhooks |  |  | web/dashboard/src/lib/webhooks.ts:52 |
 | audit\|POST\|/webhooks | POST /webhooks | createWebhook (services/audit/handler_webhook.go:58) |  | CreateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:57 |
-| audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:134) |  | GetWebhook, UpdateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:62 |
-| audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:186) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
-| audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:199) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
-| audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:224) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
+| audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:157) |  | GetWebhook, UpdateWebhook, DeleteWebhook, ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:62 |
+| audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:239) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
+| audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:253) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
+| audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:278) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
 | auth\|POST\|/auth/register | POST /auth/register | handleRegister (services/auth/handler.go:173) |  | GetTenant, CreateClientRegistration |  |  |  |
 | auth\|GET\|/auth/register/{param}/status | GET /auth/register/{id}/status | handleRegistrationStatus (services/auth/handler.go:256) |  | GetClientRegistration |  |  |  |
 | auth\|POST\|/auth/login | POST /auth/login | handleLogin (services/auth/handler.go:598) |  | GetUserByUsername, CreateSession | h.logic.IssueJWT, h.meter.IncrementOps | pkg/crypto.Zeroize |  |
@@ -911,18 +907,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/risk/keys | GET /compliance/risk/keys | handleGetKeyRiskRanking (services/compliance/handler_dri.go:194) | publishAudit |  |  |  | web/dashboard/src/lib/dri.ts:54 |
 | compliance\|GET\|/compliance/risk/summary | GET /compliance/risk/summary | handleGetDataRiskSummary (services/compliance/handler_dri.go:244) |  |  |  |  | web/dashboard/src/lib/dri.ts:62 |
 | compliance\|GET\|/compliance/risk/remediation | GET /compliance/risk/remediation | handleGetRiskRemediation (services/compliance/handler_dri.go:322) |  |  |  |  | web/dashboard/src/lib/dri.ts:82 |
-| compliance\|GET\|/compliance/playbooks/summary | GET /compliance/playbooks/summary | handleGetPlaybookSummary (services/compliance/handler_playbooks.go:504) |  | GetPlaybookSummary |  |  |  |
-| compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | handleListPlaybooks (services/compliance/handler_playbooks.go:219) |  | ListPlaybooks |  |  |  |
-| compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | handleCreatePlaybook (services/compliance/handler_playbooks.go:234) |  | CreatePlaybook |  |  |  |
-| compliance\|GET\|/compliance/playbooks/{param} | GET /compliance/playbooks/{id} | handleGetPlaybook (services/compliance/handler_playbooks.go:287) |  | GetPlaybook |  |  |  |
-| compliance\|PUT\|/compliance/playbooks/{param} | PUT /compliance/playbooks/{id} | handleUpdatePlaybook (services/compliance/handler_playbooks.go:307) |  | UpdatePlaybook |  |  |  |
-| compliance\|DELETE\|/compliance/playbooks/{param} | DELETE /compliance/playbooks/{id} | handleDeletePlaybook (services/compliance/handler_playbooks.go:337) |  | DeletePlaybook |  |  |  |
-| compliance\|POST\|/compliance/playbooks/{param}/run | POST /compliance/playbooks/{id}/run | handleRunPlaybook (services/compliance/handler_playbooks.go:357) |  | GetPlaybook, CreatePlaybookRun |  |  |  |
-| compliance\|GET\|/compliance/playbooks/{param}/runs | GET /compliance/playbooks/{id}/runs | handleListPlaybookRuns (services/compliance/handler_playbooks.go:477) |  | ListPlaybookRuns |  |  |  |
+| compliance\|GET\|/compliance/playbooks/summary | GET /compliance/playbooks/summary | handleGetPlaybookSummary (services/compliance/handler_playbooks.go:482) |  | GetPlaybookSummary |  |  |  |
+| compliance\|GET\|/compliance/playbooks | GET /compliance/playbooks | handleListPlaybooks (services/compliance/handler_playbooks.go:197) |  | ListPlaybooks |  |  |  |
+| compliance\|POST\|/compliance/playbooks | POST /compliance/playbooks | handleCreatePlaybook (services/compliance/handler_playbooks.go:212) |  | CreatePlaybook |  |  |  |
+| compliance\|GET\|/compliance/playbooks/{param} | GET /compliance/playbooks/{id} | handleGetPlaybook (services/compliance/handler_playbooks.go:265) |  | GetPlaybook |  |  |  |
+| compliance\|PUT\|/compliance/playbooks/{param} | PUT /compliance/playbooks/{id} | handleUpdatePlaybook (services/compliance/handler_playbooks.go:285) |  | UpdatePlaybook |  |  |  |
+| compliance\|DELETE\|/compliance/playbooks/{param} | DELETE /compliance/playbooks/{id} | handleDeletePlaybook (services/compliance/handler_playbooks.go:315) |  | DeletePlaybook |  |  |  |
+| compliance\|POST\|/compliance/playbooks/{param}/run | POST /compliance/playbooks/{id}/run | handleRunPlaybook (services/compliance/handler_playbooks.go:335) |  | GetPlaybook, CreatePlaybookRun |  |  |  |
+| compliance\|GET\|/compliance/playbooks/{param}/runs | GET /compliance/playbooks/{id}/runs | handleListPlaybookRuns (services/compliance/handler_playbooks.go:455) |  | ListPlaybookRuns |  |  |  |
 | confidential\|GET\|/confidential/policy | GET /confidential/policy | handleGetPolicy (services/confidential/handler.go:34) | GetAttestationPolicy | GetAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:136 |
 | confidential\|PUT\|/confidential/policy | PUT /confidential/policy | handleSetPolicy (services/confidential/handler.go:49) | UpdateAttestationPolicy | UpsertAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:148 |
 | confidential\|GET\|/confidential/summary | GET /confidential/summary | handleGetSummary (services/confidential/handler.go:74) | GetAttestationSummary | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:164 |
-| confidential\|POST\|/confidential/evaluate | POST /confidential/evaluate | handleEvaluate (services/confidential/handler.go:89) | EvaluateAttestedRelease | InsertReleaseRecord | s.verifier.Verify |  | web/dashboard/src/lib/confidential.ts:176 |
+| confidential\|POST\|/confidential/evaluate | POST /confidential/evaluate | handleEvaluate (services/confidential/handler.go:89) | EvaluateAttestedRelease | InsertReleaseRecord | s.verifier.Verify, s.events.Publish |  | web/dashboard/src/lib/confidential.ts:176 |
 | confidential\|GET\|/confidential/releases | GET /confidential/releases | handleListReleases (services/confidential/handler.go:114) | ListReleaseHistory | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:195 |
 | confidential\|GET\|/confidential/releases/{param} | GET /confidential/releases/{id} | handleGetRelease (services/confidential/handler.go:135) | GetReleaseRecord | GetReleaseRecord |  |  | web/dashboard/src/lib/confidential.ts:207 |
 | dataprotect\|POST\|/tokenize | POST /tokenize | handleTokenize (services/dataprotect/handler.go:101) | Tokenize, writeAudit | WriteAuditEntry |  |  | web/dashboard/src/lib/dataprotect.ts:468 |
@@ -975,7 +971,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:900) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:799 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1071) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:868 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1102) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:852 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:68) | StartScan | CreateScan, UpdateScan, UpsertAsset, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:68) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
 | discovery\|GET\|/discovery/scans | GET /discovery/scans | handleListScans (services/discovery/handler.go:84) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:77 |
 | discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | handleGetScan (services/discovery/handler.go:98) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:89 |
 | discovery\|GET\|/discovery/assets | GET /discovery/assets | handleListAssets (services/discovery/handler.go:112) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:112 |
@@ -1062,13 +1058,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ekm\|POST\|/ekm/kacls/wrap | POST /ekm/kacls/wrap | handleKACLSWrap (services/ekm/handler_google_cse.go:272) |  | IncrementGoogleCSEKeyUsage |  |  |  |
 | ekm\|POST\|/ekm/kacls/unwrap | POST /ekm/kacls/unwrap | handleKACLSUnwrap (services/ekm/handler_google_cse.go:333) |  | IncrementGoogleCSEKeyUsage |  |  |  |
 | ekm\|POST\|/ekm/kacls/privilegedunwrap | POST /ekm/kacls/privilegedunwrap | handleKACLSPrivilegedUnwrap (services/ekm/handler_google_cse.go:392) |  | IncrementGoogleCSEKeyUsage |  |  |  |
-| featureforge\|GET\|/catalog | GET /catalog | handleCatalog (services/featureforge/handler.go:49) | Catalog |  |  |  | web/dashboard/src/lib/featureforge.ts:72 |
-| featureforge\|GET\|/intents | GET /intents | handleListIntents (services/featureforge/handler.go:53) | List | ListIntents |  |  | web/dashboard/src/lib/featureforge.ts:77 |
-| featureforge\|POST\|/intents | POST /intents | handleSubmit (services/featureforge/handler.go:68) | Submit, Get | NextID, GetIntent, AddApproval, Approvals, Events, ListIntents | s.classifier.Classify, s.policy.Evaluate, s.mcp.Submit, s.mcp.Status, s.sandbox.DryRunConfig, s.policy.Apply, s.gov.RequestApproval, s.gov.ApprovalState | pkg/tenantcheck.Enforce | web/dashboard/src/lib/featureforge.ts:91 |
-| featureforge\|GET\|/intents/{param} | GET /intents/{id} | handleGetIntent (services/featureforge/handler.go:106) | Get, Approvals | GetIntent, Events, Approvals |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/featureforge.ts:98 |
-| featureforge\|POST\|/intents/{param}/approve | POST /intents/{id}/approve | handleApprove (services/featureforge/handler.go:151) | Approve, Get, Approvals | GetIntent, AddApproval, Events, Approvals |  |  | web/dashboard/src/lib/featureforge.ts:107 |
-| featureforge\|POST\|/intents/{param}/promote | POST /intents/{id}/promote | handlePromote (services/featureforge/handler.go:179) | PromoteToProd, Get, Approvals | GetIntent, Approvals, Events | s.gov.RequestApproval, s.gov.ApprovalState |  | web/dashboard/src/lib/featureforge.ts:114 |
-| featureforge\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
 | governance\|GET\|/governance/settings | GET /governance/settings | handleGetSettings (services/governance/handler.go:101) | GetSettings | GetSettings |  |  | web/dashboard/src/lib/governance.ts:124 |
 | governance\|PUT\|/governance/settings | PUT /governance/settings | handleUpdateSettings (services/governance/handler.go:116) | UpdateSettings | GetSettings, UpsertSettings |  |  | web/dashboard/src/lib/governance.ts:184 |
 | governance\|POST\|/governance/settings/smtp/test | POST /governance/settings/smtp/test | handleTestSMTP (services/governance/handler.go:137) | TestSMTP |  |  |  | web/dashboard/src/lib/governance.ts:195 |
@@ -1139,73 +1128,73 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | handleDeleteRule (services/keyaccess/handler.go:153) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | handleListDecisions (services/keyaccess/handler.go:163) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
 | keyaccess\|POST\|/key-access/evaluate | POST /key-access/evaluate | handleEvaluate (services/keyaccess/handler.go:180) | Evaluate | ListRules, CreateDecision | s.governance.CreateApprovalRequest |  |  |
-| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:887 |
+| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/hsm.Encrypt | web/dashboard/src/lib/keycore.ts:887 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:310) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:593 |
-| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:347) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
-| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:381) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
-| keycore\|POST\|/keys/bulk-import | POST /keys/bulk-import | handleBulkImport (services/keycore/handler.go:416) | ImportKey |  |  | pkg/crypto.Zeroize |  |
-| keycore\|POST\|/keys/bulk-rotate | POST /keys/bulk-rotate | handleBulkRotate (services/keycore/handler.go:443) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual |  |
-| keycore\|POST\|/keys/bulk-delete | POST /keys/bulk-delete | handleBulkDelete (services/keycore/handler.go:478) | ScheduleKeyDestroy | ScheduleDestroy | s.cache.Delete |  |  |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:539) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:553 |
-| keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:591) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
-| keycore\|PUT\|/keys/{param} | PUT /keys/{id} | handleUpdateKey (services/keycore/handler.go:611) | UpdateKey | UpdateKeyMetadata | s.cache.Delete |  |  |
-| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:629) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:783 |
-| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:665) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1143, web/dashboard/src/lib/keycore.ts:1155 |
-| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:703) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1169 |
-| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:706) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1177 |
-| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:709) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  | web/dashboard/src/lib/keycore.ts:1132 |
-| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:862) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, ListKeys, ListKeysCursor, GetKey, UpdateKeyMetadata, +16 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get, s.cluster.Publish, s.approval.ensureApproval, s.hsm.Encrypt, +5 more | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:1114 |
-| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1122) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1208 |
-| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:941) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:811 |
-| keycore\|GET\|/keys/{param}/versions/{param} | GET /keys/{id}/versions/{ver} | handleGetVersion (services/keycore/handler.go:959) | GetVersion | GetVersion |  |  |  |
-| keycore\|POST\|/keys/{param}/versions/{param}/activate | POST /keys/{id}/versions/{ver}/activate | handleActivateVersion (services/keycore/handler.go:974) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/versions/{param}/deactivate | POST /keys/{id}/versions/{ver}/deactivate | handleDeactivateVersion (services/keycore/handler.go:977) |  |  |  |  |  |
-| keycore\|DELETE\|/keys/{param}/versions/{param} | DELETE /keys/{id}/versions/{ver} | handleDeleteVersion (services/keycore/handler.go:996) | publishAudit | DeleteVersion | s.cluster.Publish |  |  |
-| keycore\|GET\|/keys/{param}/kcv | GET /keys/{id}/kcv | handleGetKCV (services/keycore/handler.go:1015) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
-| keycore\|GET\|/keys/{param}/usage | GET /keys/{id}/usage | handleGetUsage (services/keycore/handler.go:1029) | GetUsage | GetUsage |  |  |  |
-| keycore\|POST\|/keys/{param}/usage/meter | POST /keys/{id}/usage/meter | handleMeterUsage (services/keycore/handler.go:1071) | MeterUsage | GetUsage | s.cache.Delete |  |  |
-| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1050) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1190 |
-| keycore\|POST\|/keys/{param}/usage/reset | POST /keys/{id}/usage/reset | handleResetUsage (services/keycore/handler.go:1160) | ResetUsage | ResetUsage | s.cache.Delete |  |  |
-| keycore\|PUT\|/keys/{param}/approval | PUT /keys/{id}/approval | handleSetApproval (services/keycore/handler.go:1173) | SetApproval | SetApproval | s.cache.Delete |  |  |
-| keycore\|GET\|/keys/{param}/approval | GET /keys/{id}/approval | handleGetApproval (services/keycore/handler.go:1204) | GetApproval | GetApproval |  |  |  |
-| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | handleGetKeyAccessPolicy (services/keycore/handler.go:1218) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1224 |
-| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | handleSetKeyAccessPolicy (services/keycore/handler.go:1239) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1237 |
-| keycore\|PUT\|/keys/{param}/iv-mode | PUT /keys/{id}/iv-mode | handleSetIVMode (services/keycore/handler.go:1660) | publishAudit | UpdateIVMode | s.cluster.Publish |  |  |
-| keycore\|GET\|/keys/{param}/iv-log | GET /keys/{id}/iv-log | handleGetIVLog (services/keycore/handler.go:1762) |  | GetIVLog |  |  |  |
-| keycore\|GET\|/keys/{param}/iv-log/{param} | GET /keys/{id}/iv-log/{ref} | handleGetIVByRef (services/keycore/handler.go:1788) |  | GetIVByReference |  |  |  |
-| keycore\|GET\|/access/groups | GET /access/groups | handleListAccessGroups (services/keycore/handler.go:1299) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1363 |
-| keycore\|POST\|/access/groups | POST /access/groups | handleCreateAccessGroup (services/keycore/handler.go:1313) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1374 |
-| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | handleDeleteAccessGroup (services/keycore/handler.go:1349) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1390 |
-| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | handleSetAccessGroupMembers (services/keycore/handler.go:1366) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1402 |
-| keycore\|GET\|/access/settings | GET /access/settings | handleGetAccessSettings (services/keycore/handler.go:1395) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1251 |
-| keycore\|PUT\|/access/settings | PUT /access/settings | handleSetAccessSettings (services/keycore/handler.go:1412) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1262 |
-| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | handleListInterfacePolicies (services/keycore/handler.go:1480) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1278 |
-| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | handleUpsertInterfacePolicy (services/keycore/handler.go:1498) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1289 |
-| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | handleDeleteInterfacePolicy (services/keycore/handler.go:1529) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1301 |
-| keycore\|GET\|/access/interface-tls-config | GET /access/interface-tls-config | handleGetInterfaceTLSConfig (services/keycore/handler.go:1563) | GetKeyInterfaceTLSConfig | GetKeyInterfaceTLSConfig |  |  | web/dashboard/src/lib/keycore.ts:1317 |
-| keycore\|PUT\|/access/interface-tls-config | PUT /access/interface-tls-config | handlePutInterfaceTLSConfig (services/keycore/handler.go:1580) | UpdateKeyInterfaceTLSConfig | UpsertKeyInterfaceTLSConfig, ListKeyInterfacePorts, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1328 |
-| keycore\|GET\|/access/interface-ports | GET /access/interface-ports | handleListInterfacePorts (services/keycore/handler.go:1546) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1309 |
-| keycore\|POST\|/access/interface-ports | POST /access/interface-ports | handleUpsertInterfacePort (services/keycore/handler.go:1611) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1343 |
-| keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | handleDeleteInterfacePort (services/keycore/handler.go:1642) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1355 |
-| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1681) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1415 |
-| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1706) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1427 |
-| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1742) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1442 |
-| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1846) |  |  |  |  | web/dashboard/src/lib/keycore.ts:841 |
-| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1885) |  |  |  |  | web/dashboard/src/lib/keycore.ts:914 |
-| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1924) |  |  |  |  | web/dashboard/src/lib/keycore.ts:938 |
-| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1928) | Verify |  | s.hsm.Verify, s.meter.IncrementOps | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:956 |
-| keycore\|POST\|/keys/{param}/wrap | POST /keys/{id}/wrap | handleWrap (services/keycore/handler.go:1960) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/unwrap | POST /keys/{id}/unwrap | handleUnwrap (services/keycore/handler.go:1964) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/mac | POST /keys/{id}/mac | handleMAC (services/keycore/handler.go:1968) |  |  |  |  |  |
-| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1972) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1031 |
-| keycore\|POST\|/keys/{param}/service-derive | POST /keys/{id}/service-derive | handleServiceDerive (services/keycore/handler.go:2015) | ServiceDerive |  |  | pkg/crypto.Zeroize, pkg/crypto.HKDFSHA256 |  |
-| keycore\|POST\|/cluster/mek/join-key | POST /cluster/mek/join-key | handleClusterJoinKey (services/keycore/handler.go:2785) | CreateClusterJoinKey |  |  | pkg/crypto.NewKEMRecipient |  |
-| keycore\|POST\|/cluster/mek/export | POST /cluster/mek/export | handleClusterMEKExport (services/keycore/handler.go:2795) | ExportClusterMEK |  |  | pkg/crypto.KEMSeal |  |
-| keycore\|POST\|/cluster/mek/import | POST /cluster/mek/import | handleClusterMEKImport (services/keycore/handler.go:2814) | ImportClusterMEK | CountKeys |  | pkg/crypto.Zeroize |  |
-| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:2052) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1059 |
-| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:2092) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1088 |
-| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:2131) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:981 |
-| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:2159) | Random |  | s.qrng.DrawEntropy, s.policy.Evaluate, s.posture.Controls | pkg/crypto.Zeroize, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.ConstantTimeEqual, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached | web/dashboard/src/lib/keycore.ts:1002 |
+| keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:351) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
+| keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:385) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
+| keycore\|POST\|/keys/bulk-import | POST /keys/bulk-import | handleBulkImport (services/keycore/handler.go:420) | ImportKey |  |  | pkg/crypto.Zeroize |  |
+| keycore\|POST\|/keys/bulk-rotate | POST /keys/bulk-rotate | handleBulkRotate (services/keycore/handler.go:447) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual |  |
+| keycore\|POST\|/keys/bulk-delete | POST /keys/bulk-delete | handleBulkDelete (services/keycore/handler.go:482) | ScheduleKeyDestroy | ScheduleDestroy | s.cache.Delete |  |  |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:543) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:553 |
+| keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:595) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
+| keycore\|PUT\|/keys/{param} | PUT /keys/{id} | handleUpdateKey (services/keycore/handler.go:615) | UpdateKey | UpdateKeyMetadata | s.cache.Delete |  |  |
+| keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:633) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:783 |
+| keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:669) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1143, web/dashboard/src/lib/keycore.ts:1155 |
+| keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:707) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1169 |
+| keycore\|POST\|/keys/{param}/disable | POST /keys/{id}/disable | handleDisableKey (services/keycore/handler.go:710) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1177 |
+| keycore\|POST\|/keys/{param}/destroy | POST /keys/{id}/destroy | handleDestroyKey (services/keycore/handler.go:713) | GetKey, ScheduleKeyDestroy, DestroyKeyImmediately | GetKey, ScheduleDestroy, MarkKeyDestroyed | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  | web/dashboard/src/lib/keycore.ts:1132 |
+| keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:866) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, ListKeys, ListKeysCursor, GetKey, UpdateKeyMetadata, +16 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get, s.cluster.Publish, s.approval.ensureApproval, s.hsm.Encrypt, +7 more | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached, pkg/hsm.Encrypt, +4 more | web/dashboard/src/lib/keycore.ts:1114 |
+| keycore\|PUT\|/keys/{param}/export-policy | PUT /keys/{id}/export-policy | handleSetExportPolicy (services/keycore/handler.go:1126) | SetExportAllowed | SetExportAllowed | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1208 |
+| keycore\|GET\|/keys/{param}/versions | GET /keys/{id}/versions | handleListVersions (services/keycore/handler.go:945) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/keycore.ts:811 |
+| keycore\|GET\|/keys/{param}/versions/{param} | GET /keys/{id}/versions/{ver} | handleGetVersion (services/keycore/handler.go:963) | GetVersion | GetVersion |  |  |  |
+| keycore\|POST\|/keys/{param}/versions/{param}/activate | POST /keys/{id}/versions/{ver}/activate | handleActivateVersion (services/keycore/handler.go:978) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/versions/{param}/deactivate | POST /keys/{id}/versions/{ver}/deactivate | handleDeactivateVersion (services/keycore/handler.go:981) |  |  |  |  |  |
+| keycore\|DELETE\|/keys/{param}/versions/{param} | DELETE /keys/{id}/versions/{ver} | handleDeleteVersion (services/keycore/handler.go:1000) | publishAudit | DeleteVersion | s.cluster.Publish |  |  |
+| keycore\|GET\|/keys/{param}/kcv | GET /keys/{id}/kcv | handleGetKCV (services/keycore/handler.go:1019) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
+| keycore\|GET\|/keys/{param}/usage | GET /keys/{id}/usage | handleGetUsage (services/keycore/handler.go:1033) | GetUsage | GetUsage |  |  |  |
+| keycore\|POST\|/keys/{param}/usage/meter | POST /keys/{id}/usage/meter | handleMeterUsage (services/keycore/handler.go:1075) | MeterUsage | GetUsage | s.cache.Delete |  |  |
+| keycore\|PUT\|/keys/{param}/usage/limit | PUT /keys/{id}/usage/limit | handleSetUsageLimit (services/keycore/handler.go:1054) | SetUsageLimit | SetUsageLimit | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1190 |
+| keycore\|POST\|/keys/{param}/usage/reset | POST /keys/{id}/usage/reset | handleResetUsage (services/keycore/handler.go:1164) | ResetUsage | ResetUsage | s.cache.Delete |  |  |
+| keycore\|PUT\|/keys/{param}/approval | PUT /keys/{id}/approval | handleSetApproval (services/keycore/handler.go:1177) | SetApproval | SetApproval | s.cache.Delete |  |  |
+| keycore\|GET\|/keys/{param}/approval | GET /keys/{id}/approval | handleGetApproval (services/keycore/handler.go:1208) | GetApproval | GetApproval |  |  |  |
+| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | handleGetKeyAccessPolicy (services/keycore/handler.go:1222) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1224 |
+| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | handleSetKeyAccessPolicy (services/keycore/handler.go:1243) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1237 |
+| keycore\|PUT\|/keys/{param}/iv-mode | PUT /keys/{id}/iv-mode | handleSetIVMode (services/keycore/handler.go:1664) | publishAudit | UpdateIVMode | s.cluster.Publish |  |  |
+| keycore\|GET\|/keys/{param}/iv-log | GET /keys/{id}/iv-log | handleGetIVLog (services/keycore/handler.go:1766) |  | GetIVLog |  |  |  |
+| keycore\|GET\|/keys/{param}/iv-log/{param} | GET /keys/{id}/iv-log/{ref} | handleGetIVByRef (services/keycore/handler.go:1792) |  | GetIVByReference |  |  |  |
+| keycore\|GET\|/access/groups | GET /access/groups | handleListAccessGroups (services/keycore/handler.go:1303) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1363 |
+| keycore\|POST\|/access/groups | POST /access/groups | handleCreateAccessGroup (services/keycore/handler.go:1317) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1374 |
+| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | handleDeleteAccessGroup (services/keycore/handler.go:1353) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1390 |
+| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | handleSetAccessGroupMembers (services/keycore/handler.go:1370) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1402 |
+| keycore\|GET\|/access/settings | GET /access/settings | handleGetAccessSettings (services/keycore/handler.go:1399) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1251 |
+| keycore\|PUT\|/access/settings | PUT /access/settings | handleSetAccessSettings (services/keycore/handler.go:1416) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1262 |
+| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | handleListInterfacePolicies (services/keycore/handler.go:1484) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1278 |
+| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | handleUpsertInterfacePolicy (services/keycore/handler.go:1502) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1289 |
+| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | handleDeleteInterfacePolicy (services/keycore/handler.go:1533) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1301 |
+| keycore\|GET\|/access/interface-tls-config | GET /access/interface-tls-config | handleGetInterfaceTLSConfig (services/keycore/handler.go:1567) | GetKeyInterfaceTLSConfig | GetKeyInterfaceTLSConfig |  |  | web/dashboard/src/lib/keycore.ts:1317 |
+| keycore\|PUT\|/access/interface-tls-config | PUT /access/interface-tls-config | handlePutInterfaceTLSConfig (services/keycore/handler.go:1584) | UpdateKeyInterfaceTLSConfig | UpsertKeyInterfaceTLSConfig, ListKeyInterfacePorts, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1328 |
+| keycore\|GET\|/access/interface-ports | GET /access/interface-ports | handleListInterfacePorts (services/keycore/handler.go:1550) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1309 |
+| keycore\|POST\|/access/interface-ports | POST /access/interface-ports | handleUpsertInterfacePort (services/keycore/handler.go:1615) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1343 |
+| keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | handleDeleteInterfacePort (services/keycore/handler.go:1646) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1355 |
+| keycore\|GET\|/tags | GET /tags | handleListTags (services/keycore/handler.go:1685) | ListTagCatalog | EnsureDefaultTags, ListTagCatalog |  |  | web/dashboard/src/lib/keycore.ts:1415 |
+| keycore\|POST\|/tags | POST /tags | handleUpsertTag (services/keycore/handler.go:1710) | UpsertTag | EnsureDefaultTags, ListTagCatalog, UpsertTag |  |  | web/dashboard/src/lib/keycore.ts:1427 |
+| keycore\|DELETE\|/tags/{param} | DELETE /tags/{name} | handleDeleteTag (services/keycore/handler.go:1746) | DeleteTag | DeleteTag |  |  | web/dashboard/src/lib/keycore.ts:1442 |
+| keycore\|POST\|/keys/{param}/encrypt | POST /keys/{id}/encrypt | handleEncrypt (services/keycore/handler.go:1850) |  |  |  |  | web/dashboard/src/lib/keycore.ts:841 |
+| keycore\|POST\|/keys/{param}/decrypt | POST /keys/{id}/decrypt | handleDecrypt (services/keycore/handler.go:1889) |  |  |  |  | web/dashboard/src/lib/keycore.ts:914 |
+| keycore\|POST\|/keys/{param}/sign | POST /keys/{id}/sign | handleSign (services/keycore/handler.go:1928) |  |  |  |  | web/dashboard/src/lib/keycore.ts:938 |
+| keycore\|POST\|/keys/{param}/verify | POST /keys/{id}/verify | handleVerify (services/keycore/handler.go:1932) | Verify |  | s.hsm.Verify, s.meter.IncrementOps | pkg/crypto.Zeroize, pkg/hsm.Verify | web/dashboard/src/lib/keycore.ts:956 |
+| keycore\|POST\|/keys/{param}/wrap | POST /keys/{id}/wrap | handleWrap (services/keycore/handler.go:1964) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/unwrap | POST /keys/{id}/unwrap | handleUnwrap (services/keycore/handler.go:1968) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/mac | POST /keys/{id}/mac | handleMAC (services/keycore/handler.go:1972) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/derive | POST /keys/{id}/derive | handleDerive (services/keycore/handler.go:1976) | Derive |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1031 |
+| keycore\|POST\|/keys/{param}/service-derive | POST /keys/{id}/service-derive | handleServiceDerive (services/keycore/handler.go:2019) | ServiceDerive |  |  | pkg/crypto.Zeroize, pkg/crypto.HKDFSHA256 |  |
+| keycore\|POST\|/cluster/mek/join-key | POST /cluster/mek/join-key | handleClusterJoinKey (services/keycore/handler.go:2796) | CreateClusterJoinKey |  |  | pkg/crypto.NewKEMRecipient |  |
+| keycore\|POST\|/cluster/mek/export | POST /cluster/mek/export | handleClusterMEKExport (services/keycore/handler.go:2806) | ExportClusterMEK |  |  | pkg/crypto.KEMSeal |  |
+| keycore\|POST\|/cluster/mek/import | POST /cluster/mek/import | handleClusterMEKImport (services/keycore/handler.go:2825) | ImportClusterMEK | CountKeys |  | pkg/crypto.Zeroize |  |
+| keycore\|POST\|/keys/{param}/kem/encapsulate | POST /keys/{id}/kem/encapsulate | handleKEMEncapsulate (services/keycore/handler.go:2056) | KEMEncapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1059 |
+| keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:2096) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1088 |
+| keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:2135) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:981 |
+| keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:2163) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:1002 |
 | keycore\|GET\|/ceremony/guardians | GET /ceremony/guardians | handleListGuardians (services/keycore/handler_ceremony.go:11) |  | ListCeremonyGuardians |  |  | web/dashboard/src/lib/ceremony.ts:48 |
 | keycore\|POST\|/ceremony/guardians | POST /ceremony/guardians | handleCreateGuardian (services/keycore/handler_ceremony.go:26) |  | CreateCeremonyGuardian |  |  | web/dashboard/src/lib/ceremony.ts:53 |
 | keycore\|DELETE\|/ceremony/guardians/{param} | DELETE /ceremony/guardians/{id} | handleDeleteGuardian (services/keycore/handler_ceremony.go:66) |  | DeleteCeremonyGuardian |  |  | web/dashboard/src/lib/ceremony.ts:57 |
@@ -1245,7 +1234,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/enterprise/dspm/findings | GET /enterprise/dspm/findings | handleListKeyDSPMFindings (services/keycore/handler_enterprise_controls.go:109) |  | ListDSPMFindings |  |  |  |
 | keycore\|POST\|/enterprise/dspm/findings | POST /enterprise/dspm/findings | handleUpsertKeyDSPMFinding (services/keycore/handler_enterprise_controls.go:123) | UpsertDSPMFinding | UpsertDSPMFinding |  |  |  |
 | keycore\|GET\|/enterprise/dspm/events | GET /enterprise/dspm/events | handleExportKeyDSPMEvents (services/keycore/handler_enterprise_controls.go:143) | ExportDSPMPostureEvents | ListDSPMFindings |  |  |  |
-| keycore\|POST\|/enterprise/kdf/derive | POST /enterprise/kdf/derive | handleEnterpriseKDFDerive (services/keycore/handler_enterprise_controls.go:157) | DeriveEnterpriseKDF | UpsertEnterpriseControlRecord |  | pkg/crypto.Zeroize |  |
+| keycore\|POST\|/enterprise/kdf/derive | POST /enterprise/kdf/derive | handleEnterpriseKDFDerive (services/keycore/handler_enterprise_controls.go:157) | DeriveEnterpriseKDF | UpsertEnterpriseControlRecord |  | pkg/crypto.Zeroize, pkg/crypto.HKDFSHA256, pkg/crypto.PBKDF2SHA256, pkg/crypto.Scrypt, pkg/crypto.Argon2id |  |
 | keycore\|GET\|/enterprise/audit-chain/anchors | GET /enterprise/audit-chain/anchors | handleListAuditChainAnchors (services/keycore/handler_enterprise_controls.go:201) |  | ListAuditChainAnchors |  | pkg/features.MarkPreview |  |
 | keycore\|POST\|/enterprise/audit-chain/anchors | POST /enterprise/audit-chain/anchors | handleCreateAuditChainAnchor (services/keycore/handler_enterprise_controls.go:177) | AnchorEnterpriseAuditChain | ListAuditChainAnchors, RecordAuditChainAnchor |  | pkg/features.MarkPreview |  |
 | keycore\|GET\|/enterprise/compliance/dashboard | GET /enterprise/compliance/dashboard | handleEnterpriseComplianceDashboard (services/keycore/handler_enterprise_controls.go:216) | BuildEnterpriseComplianceDashboard | GetKeyHealthSummary, GetCompromiseSummary, ListEnterpriseControlRecords, ListDSPMFindings |  |  |  |
@@ -1307,10 +1296,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
 | keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
 | keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
-| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:560) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
-| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:569) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
-| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:595) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
-| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:610) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:561) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:570) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:596) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:611) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
 | keycore\|POST\|/system-keys/ensure | POST /system-keys/ensure | ensureSystemKey (services/keycore/system_keys.go:155) | EnsureSystemKey | GetSystemKey, InsertSystemKey |  | pkg/tenantcheck.IsServicePrincipal, pkg/tenantcheck.InternalServiceTenant |  |
 | kmip\|GET\|/kmip/capabilities | GET /kmip/capabilities | handleCapabilities (services/kmip/http_api.go:47) |  |  |  |  | web/dashboard/src/lib/kmip.ts:183 |
 | kmip\|GET\|/kmip/profiles | GET /kmip/profiles | handleListClientProfiles (services/kmip/http_api.go:210) |  | ListClientProfiles |  |  | web/dashboard/src/lib/kmip.ts:177 |
@@ -1411,7 +1400,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | handleListPlans (services/pqc/handler.go:183) | ListMigrationPlans | ListMigrationPlans |  |  |  |
 | pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | handleGetPlan (services/pqc/handler.go:197) | GetMigrationPlan | GetMigrationPlan |  |  |  |
 | pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | handleExecutePlan (services/pqc/handler.go:211) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | handleRollbackPlan (services/pqc/handler.go:227) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun |  |  |  |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | handleRollbackPlan (services/pqc/handler.go:227) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  |  |
 | pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | handleListRuns (services/pqc/handler.go:243) | ListMigrationRuns | ListMigrationRuns |  |  |  |
 | pqc\|GET\|/pqc/timeline | GET /pqc/timeline | handleTimeline (services/pqc/handler.go:257) | Timeline |  |  |  |  |
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | handleExportCBOM (services/pqc/handler.go:279) | ExportCBOM |  |  |  |  |
@@ -1520,25 +1509,29 @@ This file connects frontend requests to backend Go processing. It is static anal
 | workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | handleExchangeToken (services/workload/handler.go:192) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:227 |
 | workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | handleGetGraph (services/workload/handler.go:208) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:235 |
 | workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | handleListUsage (services/workload/handler.go:219) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:240 |
-| hsm-connector\|POST\|/hsm/keys | POST /hsm/keys | generate (pkg/hsmconnector/handler.go:155) |  |  |  | pkg/hsm.NormalizeAlgorithm |  |
-| hsm-connector\|POST\|/hsm/tenant-key | POST /hsm/tenant-key | tenantKey (pkg/hsmconnector/handler.go:181) |  |  |  | pkg/hsm.TenantKeyLabel |  |
-| hsm-connector\|POST\|/hsm/encrypt | POST /hsm/encrypt | encrypt (pkg/hsmconnector/handler.go:204) |  |  |  |  |  |
-| hsm-connector\|POST\|/hsm/decrypt | POST /hsm/decrypt | decrypt (pkg/hsmconnector/handler.go:226) |  |  |  |  |  |
-| hsm-connector\|POST\|/hsm/sign | POST /hsm/sign | sign (pkg/hsmconnector/handler.go:247) |  |  |  |  |  |
-| hsm-connector\|POST\|/hsm/verify | POST /hsm/verify | verify (pkg/hsmconnector/handler.go:266) |  |  |  |  |  |
-| hsm-connector\|POST\|/hsm/keys/destroy | POST /hsm/keys/destroy | destroy (pkg/hsmconnector/handler.go:286) |  |  |  | pkg/hsm.TenantKeyLabel |  |
-| hsm-connector\|POST\|/hsm/keys/inspect | POST /hsm/keys/inspect | inspect (pkg/hsmconnector/handler.go:318) |  |  |  |  |  |
-| hsm-connector\|GET\|/hsm/objects | GET /hsm/objects | objects (pkg/hsmconnector/handler.go:334) |  |  |  |  |  |
-| hsm-connector\|GET\|/hsm/status | GET /hsm/status | status (pkg/hsmconnector/handler.go:359) |  |  | h.configs.Load, h.p11.status |  |  |
+| hsm-connector\|POST\|/hsm/keys | POST /hsm/keys | generate (pkg/hsmconnector/handler.go:158) |  |  |  | pkg/hsm.NormalizeAlgorithm |  |
+| hsm-connector\|POST\|/hsm/tenant-key | POST /hsm/tenant-key | tenantKey (pkg/hsmconnector/handler.go:184) |  |  |  | pkg/hsm.TenantKeyLabel |  |
+| hsm-connector\|POST\|/hsm/encrypt | POST /hsm/encrypt | encrypt (pkg/hsmconnector/handler.go:207) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/decrypt | POST /hsm/decrypt | decrypt (pkg/hsmconnector/handler.go:229) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/sign | POST /hsm/sign | sign (pkg/hsmconnector/handler.go:250) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/verify | POST /hsm/verify | verify (pkg/hsmconnector/handler.go:269) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/random | POST /hsm/random | random (pkg/hsmconnector/handler.go:366) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/keys/destroy | POST /hsm/keys/destroy | destroy (pkg/hsmconnector/handler.go:289) |  |  |  | pkg/hsm.TenantKeyLabel |  |
+| hsm-connector\|POST\|/hsm/keys/inspect | POST /hsm/keys/inspect | inspect (pkg/hsmconnector/handler.go:321) |  |  |  |  |  |
+| hsm-connector\|GET\|/hsm/objects | GET /hsm/objects | objects (pkg/hsmconnector/handler.go:337) |  |  |  |  |  |
+| hsm-connector\|GET\|/hsm/status | GET /hsm/status | status (pkg/hsmconnector/handler.go:387) |  |  | h.configs.Load, h.p11.status |  |  |
 | hsm-connector\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
-| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:73 |
-| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
-| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:89 |
+| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:74 |
+| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:90 |
+| audit\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | certs\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | cloud\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | ekm\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |

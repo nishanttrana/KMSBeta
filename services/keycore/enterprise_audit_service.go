@@ -15,7 +15,6 @@ func (s *Service) CalculateKeyHealth(ctx context.Context, tenantID, keyID string
 		return KeyHealthScore{}, err
 	}
 	now := time.Now().UTC()
-	entropyScore := entropyScoreForAlgorithm(key.Algorithm)
 	ageScore := ageScoreForKey(key.CreatedAt, 365)
 	usageScore := usageScoreForKey(key.OpsTotal, key.CreatedAt)
 	algorithmScore := algorithmHealthScore(key.Algorithm)
@@ -39,12 +38,14 @@ func (s *Service) CalculateKeyHealth(ctx context.Context, tenantID, keyID string
 		rotationScore = 20
 	}
 
-	overall := int(float64(entropyScore)*0.15 +
-		float64(ageScore)*0.15 +
+	// No "entropy" factor: key material's entropy is not measured here, and
+	// the old factor was the algorithm's strength again under that name
+	// (removed in 1.26.0-beta).
+	overall := int((float64(ageScore)*0.15 +
 		float64(usageScore)*0.15 +
 		float64(algorithmScore)*0.25 +
 		float64(backupScore)*0.15 +
-		float64(rotationScore)*0.15)
+		float64(rotationScore)*0.15) / 0.85)
 
 	status := normalizeLifecycleStatus(key.Status)
 	if status == StateSuspended && overall > 65 {
@@ -61,7 +62,6 @@ func (s *Service) CalculateKeyHealth(ctx context.Context, tenantID, keyID string
 		KeyID:              keyID,
 		TenantID:           tenantID,
 		HealthScore:        clampScore(overall),
-		EntropyScore:       entropyScore,
 		AgeScore:           ageScore,
 		UsageScore:         usageScore,
 		AlgorithmScore:     algorithmScore,
@@ -378,22 +378,6 @@ func (s *Service) GetEnterpriseAuditSummary(ctx context.Context, tenantID string
 		Controls:     controls,
 		Roadmap:      enterpriseAuditRoadmap(),
 	}, nil
-}
-
-func entropyScoreForAlgorithm(algorithm string) int {
-	bits := algorithmSecurityBits(algorithm)
-	switch {
-	case bits >= 256:
-		return 100
-	case bits >= 192:
-		return 90
-	case bits >= 128:
-		return 80
-	case bits >= 112:
-		return 65
-	default:
-		return 40
-	}
 }
 
 func algorithmSecurityBits(algorithm string) int {

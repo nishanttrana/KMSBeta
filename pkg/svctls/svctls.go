@@ -59,7 +59,6 @@ var Services = map[string]string{
 	"kms-dataprotect":       "dataprotect",
 	"kms-discovery":         "discovery",
 	"kms-ekm":               "ekm",
-	"kms-featureforge":      "featureforge",
 	"kms-governance":        "governance",
 	"kms-hsm":               "hsm-connector",
 	"kms-hyok-proxy":        "hyok",

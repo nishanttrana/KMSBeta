@@ -10,16 +10,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"time"
 	"vecta-kms/pkg/features"
 
-	"golang.org/x/crypto/argon2"
-	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/pbkdf2"
-	"golang.org/x/crypto/scrypt"
 	"vecta-kms/pkg/crypto"
 )
 
@@ -425,9 +420,8 @@ func (s *Service) DeriveEnterpriseKDF(ctx context.Context, req KDFDeriveRequest)
 	)
 	switch algorithm {
 	case "hkdf-sha256":
-		reader := hkdf.New(sha256.New, secret, salt, info)
-		derived = make([]byte, req.Length)
-		if _, err := io.ReadFull(reader, derived); err != nil {
+		derived, err = crypto.HKDFSHA256(secret, salt, info, req.Length)
+		if err != nil {
 			return KDFDeriveResponse{}, err
 		}
 		params = "hash=sha256"
@@ -439,11 +433,17 @@ func (s *Service) DeriveEnterpriseKDF(ctx context.Context, req KDFDeriveRequest)
 		if iterations < 100000 {
 			return KDFDeriveResponse{}, errors.New("pbkdf2 iterations must be >= 100000")
 		}
-		derived = pbkdf2.Key(secret, salt, iterations, req.Length, sha256.New)
+		derived, err = crypto.PBKDF2SHA256(secret, salt, iterations, req.Length)
+		if err != nil {
+			return KDFDeriveResponse{}, err
+		}
 		params = fmt.Sprintf("hash=sha256,iterations=%d", iterations)
 	case "scrypt":
 		n, r, p := scryptParameters(req.MemoryKiB, req.Parallelism)
-		derived, err = scrypt.Key(secret, salt, n, r, p, req.Length)
+		derived, err = crypto.Scrypt(secret, salt, n, r, p, req.Length)
+		if errors.Is(err, crypto.ErrKDFStrict) {
+			return KDFDeriveResponse{}, s.refuseKDF(ctx, req, algorithm, err)
+		}
 		if err != nil {
 			return KDFDeriveResponse{}, err
 		}
@@ -473,7 +473,13 @@ func (s *Service) DeriveEnterpriseKDF(ctx context.Context, req KDFDeriveRequest)
 		if timeCost < 2 {
 			return KDFDeriveResponse{}, errors.New("argon2id iterations/time cost must be >= 2")
 		}
-		derived = argon2.IDKey(secret, salt, timeCost, memory, parallelism, uint32(req.Length))
+		derived, err = crypto.Argon2id(secret, salt, timeCost, memory, parallelism, uint32(req.Length))
+		if errors.Is(err, crypto.ErrKDFStrict) {
+			return KDFDeriveResponse{}, s.refuseKDF(ctx, req, algorithm, err)
+		}
+		if err != nil {
+			return KDFDeriveResponse{}, err
+		}
 		params = fmt.Sprintf("time=%d,memory_kib=%d,parallelism=%d", timeCost, memory, parallelism)
 	}
 	defer crypto.Zeroize(derived)
@@ -513,6 +519,17 @@ func (s *Service) DeriveEnterpriseKDF(ctx context.Context, req KDFDeriveRequest)
 		"derived_key_sha256": resp.DerivedKeySHA256,
 	})
 	return resp, nil
+}
+
+// refuseKDF audits a KDF refused in FIPS strict mode.
+func (s *Service) refuseKDF(ctx context.Context, req KDFDeriveRequest, algorithm string, err error) error {
+	_ = s.publishAudit(ctx, "audit.key.kdf_refused", req.TenantID, map[string]any{
+		"key_id":    req.KeyID,
+		"algorithm": algorithm,
+		"result":    "refused",
+		"reason":    err.Error(),
+	})
+	return err
 }
 
 func (s *Service) AnchorEnterpriseAuditChain(ctx context.Context, tenantID, anchorType, externalRef string, metadata map[string]any) (AuditChainAnchor, error) {
@@ -626,7 +643,11 @@ func (s *Service) BuildEnterpriseComplianceDashboard(ctx context.Context, tenant
 		"key_health":          clampScore(int(health.HealthPercentage)),
 		"compromise_response": clampScore(100 - compromise.OpenEvents*12 - compromise.CriticalEvents*20),
 		"dspm_findings":       clampScore(100 - len(findings)*4 - critical*10),
-		"enterprise_controls": controlCoverageScore(controls),
+	}
+	// Scored only when there are enforced control records; with none it is
+	// not assessed (it used to be a made-up 50).
+	if score, ok := controlCoverageScore(controls); ok {
+		controlScores["enterprise_controls"] = score
 	}
 	total := 0
 	for _, score := range controlScores {
@@ -686,7 +707,6 @@ func (s *Service) BuildEnterpriseCostOptimization(ctx context.Context, tenantID 
 		TenantID:            tenantID,
 		WindowDays:          days,
 		EstimatedOperations: ops,
-		EstimatedCostUSD:    float64(ops) * 0.000003,
 		OptimizationScore:   clampScore(score),
 		Recommendations:     uniqueStrings(recs),
 		Evidence: map[string]interface{}{
@@ -788,9 +808,16 @@ func sha256Hex(raw []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func controlCoverageScore(records []EnterpriseControlRecord) int {
+func controlCoverageScore(all []EnterpriseControlRecord) (int, bool) {
+	// Preview categories store settings and enforce nothing: not controls.
+	records := make([]EnterpriseControlRecord, 0, len(all))
+	for _, r := range all {
+		if status, _ := features.ControlCategoryStatus(r.Category); status != features.StatusPreview {
+			records = append(records, r)
+		}
+	}
 	if len(records) == 0 {
-		return 50
+		return 0, false
 	}
 	totalRisk := 0
 	active := 0
@@ -800,7 +827,7 @@ func controlCoverageScore(records []EnterpriseControlRecord) int {
 			totalRisk += record.RiskScore
 		}
 	}
-	return clampScore(100 - active*2 - totalRisk/max(1, len(records))/2)
+	return clampScore(100 - active*2 - totalRisk/max(1, len(records))/2), true
 }
 
 func uniqueStrings(in []string) []string {

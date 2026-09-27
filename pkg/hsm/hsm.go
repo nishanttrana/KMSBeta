@@ -287,6 +287,22 @@ func (c *Client) EnsureTenantKey(ctx context.Context, tenant string) (string, er
 	return out.Label, nil
 }
 
+// Random draws n bytes from the tenant HSM's generator (C_GenerateRandom).
+func (c *Client) Random(ctx context.Context, tenant string, n int) ([]byte, Identity, error) {
+	var out struct {
+		Bytes string   `json:"bytes_b64"`
+		HSM   Identity `json:"hsm"`
+	}
+	if err := c.call(ctx, http.MethodPost, "/hsm/random", map[string]any{"tenant_id": tenant, "length": n}, &out); err != nil {
+		return nil, Identity{}, err
+	}
+	b, err := unb64(out.Bytes)
+	if err == nil && len(b) != n {
+		err = fmt.Errorf("hsm: random returned %d bytes, want %d", len(b), n)
+	}
+	return b, out.HSM, err
+}
+
 // Encrypt runs AES-GCM in the HSM. The IV comes from the HSM's generator.
 func (c *Client) Encrypt(ctx context.Context, tenant, label string, plaintext, aad []byte) (iv, ciphertext []byte, err error) {
 	var out struct {

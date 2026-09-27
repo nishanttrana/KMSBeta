@@ -53,6 +53,7 @@ type HSMBackend interface {
 	Sign(ctx context.Context, tenant, label, hash string, digest []byte) ([]byte, error)
 	Verify(ctx context.Context, tenant, label, hash string, digest, signature []byte) (bool, error)
 	Destroy(ctx context.Context, tenant, label string) error
+	Random(ctx context.Context, tenant string, n int) ([]byte, hsm.Identity, error)
 	Status(ctx context.Context, tenant string) (hsm.Status, error)
 	Inspect(ctx context.Context, tenant, label string) ([]hsm.ObjectInfo, hsm.Identity, error)
 	Objects(ctx context.Context, tenant string) ([]hsm.ObjectInfo, hsm.Identity, error)

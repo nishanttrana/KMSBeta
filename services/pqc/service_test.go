@@ -81,21 +81,55 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("execute plan: %v", err)
 	}
-	if run.Status != "completed" && run.Status != "failed" {
+	// Key steps change keys in keycore; certificate and interface steps are
+	// manual and never reported as done.
+	if run.Status != "manual_steps_remaining" {
 		t.Fatalf("unexpected run: %+v", run)
 	}
+	after, _ := svc.GetMigrationPlan(ctx, tenantID, plan.ID)
+	successors := 0
+	for _, step := range after.Steps {
+		switch step.Status {
+		case "successor_created":
+			successors++
+			if step.Metadata["successor_key_id"] == nil {
+				t.Fatalf("successor step without a key id: %+v", step)
+			}
+		case "rotated":
+			if step.TargetAlg != step.CurrentAlg {
+				t.Fatalf("rotation reported as migration to %s: %+v", step.TargetAlg, step)
+			}
+		case "manual_required":
+			if isKeyAsset(step.AssetType) {
+				t.Fatalf("key step left manual: %+v", step)
+			}
+		default:
+			t.Fatalf("step status %q: %+v", step.Status, step)
+		}
+	}
 	keycore.mu.Lock()
-	rotated := len(keycore.rotateCalls)
+	created := keycore.created
 	keycore.mu.Unlock()
-	if rotated == 0 {
-		t.Fatalf("expected rotate calls")
+	if successors == 0 || len(created) != successors {
+		t.Fatalf("successors %d, keycore creates %d", successors, len(created))
+	}
+	for _, req := range created {
+		if req["algorithm"] != "ML-DSA-65" && req["algorithm"] != "ML-KEM-768" {
+			t.Fatalf("successor algorithm %v", req["algorithm"])
+		}
 	}
 
 	rolled, err := svc.RollbackMigrationPlan(ctx, tenantID, plan.ID, "tester")
 	if err != nil {
 		t.Fatalf("rollback plan: %v", err)
 	}
-	if rolled.Status != "rolled_back" {
+	keycore.mu.Lock()
+	deactivated := len(keycore.deactivateCalls)
+	keycore.mu.Unlock()
+	if deactivated != successors {
+		t.Fatalf("rollback deactivated %d of %d successor keys", deactivated, successors)
+	}
+	if rolled.Status != "rolled_back" && rolled.Status != "partially_rolled_back" {
 		t.Fatalf("unexpected rollback status: %+v", rolled)
 	}
 	if pub.Count("audit.pqc.migration_rolled_back") == 0 {

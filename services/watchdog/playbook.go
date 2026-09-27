@@ -18,11 +18,15 @@ import (
 // rolling buffer so the UI can show recent failures without querying
 // the audit chain.
 type Incident struct {
-	ID        string    `json:"id"`
-	Service   string    `json:"service"`
-	Reason    string    `json:"reason"`
-	Action    string    `json:"action"`
-	Timestamp time.Time `json:"timestamp"`
+	ID      string `json:"id"`
+	Service string `json:"service"`
+	Reason  string `json:"reason"`
+	// Action is what the watchdog did: publish an audited alert. It takes no
+	// remedial action itself.
+	Action string `json:"action"`
+	// Recommendation is operator guidance, not something that happened.
+	Recommendation string    `json:"recommendation"`
+	Timestamp      time.Time `json:"timestamp"`
 }
 
 // playbookEngine periodically inspects the probe's unhealthy list and
@@ -89,37 +93,33 @@ func (p *playbookEngine) tick(ctx context.Context) {
 		p.suppress[s.Service] = time.Now().Add(coolDown)
 		p.mu.Unlock()
 
-		action := playbookFor(s)
 		inc := Incident{
-			ID:        randomID("inc"),
-			Service:   s.Service,
-			Reason:    "silence_seconds=" + itoa(int(s.SilenceSecs)) + ", state=" + s.State,
-			Action:    action,
-			Timestamp: time.Now().UTC(),
+			ID:             randomID("inc"),
+			Service:        s.Service,
+			Reason:         "silence_seconds=" + itoa(int(s.SilenceSecs)) + ", state=" + s.State,
+			Action:         "alert",
+			Recommendation: recommendationFor(s),
+			Timestamp:      time.Now().UTC(),
 		}
 		p.recordIncident(inc)
 		p.emit(ctx, inc)
 	}
 }
 
-// playbookFor maps a service-level signal to an action string. The
-// action is consumed by downstream systems (PagerDuty, Slack, the
-// reconciler's "trigger now" endpoint) — the watchdog just publishes;
-// it doesn't execute.
-func playbookFor(s ServiceState) string {
+// recommendationFor is the runbook step for an unhealthy service. Until
+// 1.26.0-beta it was emitted as an executed action ("page-oncall",
+// "freeze-mutations", "trigger-reconciler") although nothing consumed it; it
+// is advice for the operator, labelled as such.
+func recommendationFor(s ServiceState) string {
 	switch strings.ToLower(s.Service) {
-	case "keycore":
-		return "page-oncall:keycore-down"
-	case "kmip":
-		return "page-oncall:kmip-down"
+	case "keycore", "kmip":
+		return "page the on-call: " + s.Service + " is unreachable and key operations fail"
 	case "policy":
-		return "trigger-reconciler:policy-restart"
+		return "restart the policy service; policy evaluation fails closed until it returns"
 	case "audit":
-		return "freeze-mutations:audit-degraded"
-	case "reconciler":
-		return "alert-only:reconciler-down"
+		return "restore the audit pipeline; audited mutations are at risk while it is degraded"
 	default:
-		return "alert-only:" + s.Service + "-down"
+		return "investigate " + s.Service + " (unhealthy)"
 	}
 }
 
@@ -154,7 +154,8 @@ func (p *playbookEngine) emit(ctx context.Context, inc Incident) {
 			"incident_id":      inc.ID,
 			"affected_service": inc.Service,
 			"reason":           inc.Reason,
-			"playbook_action":  inc.Action,
+			"action":           inc.Action,
+			"recommendation":   inc.Recommendation,
 		},
 	})
 }

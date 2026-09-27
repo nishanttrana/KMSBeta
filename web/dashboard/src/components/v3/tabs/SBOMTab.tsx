@@ -72,6 +72,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const [vulnLoading, setVulnLoading] = useState(false);
   const [vulnLoaded, setVulnLoaded] = useState(false);
   const [vulnAttempted, setVulnAttempted] = useState(false);
+  const [vulnError, setVulnError] = useState("");
   const [advisoryModalOpen, setAdvisoryModalOpen] = useState(false);
   const [savingAdvisory, setSavingAdvisory] = useState(false);
   const [deletingAdvisory, setDeletingAdvisory] = useState("");
@@ -191,8 +192,13 @@ export const SBOMTab = ({ session, onToast }: any) => {
       const out = await listSBOMVulnerabilities(session);
       setSBOMVulns(Array.isArray(out) ? out : []);
       setVulnLoaded(true);
+      setVulnError("");
       if (opts?.notify) onToast?.("Vulnerability findings updated.");
     } catch (error) {
+      // Not assessed: the sources failed. There is no built-in fallback list.
+      setSBOMVulns([]);
+      setVulnLoaded(false);
+      setVulnError(errMsg(error));
       if (!opts?.suppressToast) onToast?.(`Vulnerability scan failed: ${errMsg(error)}`);
     } finally {
       setVulnLoading(false);
@@ -967,7 +973,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
             <span>{(() => { const ref = String(v?.reference || "").trim(); const safe = /^https?:\/\//i.test(ref); return safe ? <a href={ref} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 10, textDecoration: "none" }}>Link</a> : <span style={{ color: C.muted, fontSize: 10 }}>—</span>; })()}</span>
           </div>)}
           {!filteredVulns.length && <div style={{ padding: "20px 0", textAlign: "center", fontSize: 10, color: C.muted }}>
-            {vulnerabilities.length === 0 ? "No vulnerabilities detected. Refresh BOM to scan." : "No vulnerabilities match the current filter."}
+            {vulnError ? `Not assessed: vulnerability sources unavailable (${vulnError}).` : !vulnLoaded ? "Not assessed yet." : vulnerabilities.length === 0 ? "No vulnerabilities found by the configured sources." : "No vulnerabilities match the current filter."}
           </div>}
         </div>
       </Card>

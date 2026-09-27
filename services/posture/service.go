@@ -1606,7 +1606,10 @@ func buildScenarioSimulator(risk RiskSnapshot, actions []RemediationAction, find
 			continue
 		}
 		seen[action.ActionType] = struct{}{}
-		reduction := max(4, action.ImpactEstimate.RiskReduction)
+		reduction := action.ImpactEstimate.RiskReduction
+		if reduction <= 0 {
+			continue // nothing modeled to show
+		}
 		projected := max(0, risk.Risk24h-reduction)
 		out = append(out, ScenarioSimulation{
 			ID:               action.ID,
@@ -1728,13 +1731,11 @@ func buildSLAOverview(findings []Finding) SLAOverview {
 }
 
 func deriveActionImpact(action RemediationAction, finding Finding) RemediationImpact {
-	reduction := max(4, finding.RiskScore/3)
-	if strings.EqualFold(action.SafetyGate, "low-impact") {
-		reduction = max(5, finding.RiskScore/2)
-	}
-	if action.ApprovalRequired {
-		reduction = max(reduction, 12)
-	}
+	// Modeled: executing the action clears a third of its finding's risk
+	// score. No floor and no bump for approval: before 1.26.0-beta every
+	// action claimed at least 4 points (12 if it needed approval) whatever
+	// its finding was worth.
+	reduction := finding.RiskScore / 3
 	cost := "low"
 	switch strings.ToLower(strings.TrimSpace(action.SafetyGate)) {
 	case "high-impact":

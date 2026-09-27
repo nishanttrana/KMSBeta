@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 )
@@ -109,20 +108,3 @@ func TestServiceCBOMGenerationAndDiff(t *testing.T) {
 	}
 }
 
-func TestServiceVulnerabilityLookupFallsBackToCatalog(t *testing.T) {
-	svc, _, _, _, _, _ := newSBOMService(t)
-	svc.vulnProvider = &stubVulnerabilityProvider{err: errors.New("osv down")}
-
-	items, err := svc.correlateVulnerabilities(context.Background(), []BOMComponent{
-		{Name: "golang.org/x/net", Version: "v0.20.0", Type: "library", Ecosystem: "go"},
-	})
-	if err != nil {
-		t.Fatalf("correlate vulnerabilities: %v", err)
-	}
-	if len(items) != 1 {
-		t.Fatalf("expected catalog fallback match, got %+v", items)
-	}
-	if items[0].ID == "" || items[0].FixedVersion == "" {
-		t.Fatalf("expected populated fallback vulnerability: %+v", items[0])
-	}
-}

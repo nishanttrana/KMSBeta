@@ -42,8 +42,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   sbom: "sbom_cbom",
   // Crypto discovery
   discovery: "crypto_discovery",
-  // ADMIN
-  feature_forge: "feature_forge",
   // Enterprise Advanced Features
   key_analytics: "key_analytics",
   // Unified console (Triage + folded-in canary & scan-target config):

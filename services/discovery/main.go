@@ -81,6 +81,7 @@ func main() {
 		NewHTTPCertsClient(envOr("CERTS_URL", "https://certs:8030"), 5*time.Second),
 		publisher,
 	)
+	svc.cloud = NewHTTPCloudClient(envOr("CLOUD_URL", "https://cloud:8080"), 30*time.Second)
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8100")

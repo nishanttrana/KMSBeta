@@ -1366,7 +1366,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
           <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Post-Quantum Readiness</span>
-              <B c="green">{Math.round(pqcReady)}%</B>
+              {Number(pqc?.total_evaluated||0)>0?<B c="green">{Math.round(pqcReady)}%</B>:<B c="muted">not assessed</B>}
             </div>
             <ResponsiveContainer width="100%" height={140}>
               <PieChart>

@@ -81,13 +81,13 @@ var validTriggerTypes = map[string]bool{
 	"canary_tripped":      true,
 	"risk_score_critical": true,
 	// Key Lifecycle
-	"key_created":        true,
-	"key_rotated":        true,
-	"key_expired":        true,
-	"key_destroyed":      true,
-	"key_compromised":    true,
-	"key_import_failed":  true,
-	"rotation_overdue":   true,
+	"key_created":         true,
+	"key_rotated":         true,
+	"key_expired":         true,
+	"key_destroyed":       true,
+	"key_compromised":     true,
+	"key_import_failed":   true,
+	"rotation_overdue":    true,
 	"key_expiry_imminent": true,
 	// Certificate
 	"cert_expiring_30d": true,
@@ -96,18 +96,18 @@ var validTriggerTypes = map[string]bool{
 	"cert_revoked":      true,
 	"ca_rotation_due":   true,
 	// Compliance
-	"compliance_drop":            true,
-	"compliance_score_drop":      true,
-	"fips_violation_detected":    true,
-	"policy_violation":           true,
-	"audit_gap_detected":         true,
+	"compliance_drop":             true,
+	"compliance_score_drop":       true,
+	"fips_violation_detected":     true,
+	"policy_violation":            true,
+	"audit_gap_detected":          true,
 	"framework_assessment_failed": true,
 	// Access & Auth
-	"auth_failure_spike":            true,
-	"unauthorized_key_access":       true,
-	"privilege_escalation_attempt":  true,
-	"api_key_compromised":           true,
-	"session_anomaly":               true,
+	"auth_failure_spike":           true,
+	"unauthorized_key_access":      true,
+	"privilege_escalation_attempt": true,
+	"api_key_compromised":          true,
+	"session_anomaly":              true,
 	// Infrastructure
 	"hsm_health_degraded":        true,
 	"cluster_node_down":          true,
@@ -115,9 +115,9 @@ var validTriggerTypes = map[string]bool{
 	"backup_failed":              true,
 	"storage_threshold_exceeded": true,
 	// Data Protection
-	"encryption_failure":  true,
-	"decryption_anomaly":  true,
-	"data_leak_detected":  true,
+	"encryption_failure":   true,
+	"decryption_anomaly":   true,
+	"data_leak_detected":   true,
 	"dlp_policy_triggered": true,
 	// Operational
 	"rate_limit_exceeded":     true,
@@ -153,53 +153,31 @@ var validTriggerTypes = map[string]bool{
 // Remediation:
 //   run_custom_script, execute_webhook_action, update_policy, create_backup
 
-// validActionTypes enumerates all recognised action types.
+// validActionTypes is exactly what PlaybookExecutor performs. A playbook
+// can't be saved with anything else. Until 1.26.0-beta the list (and the
+// dashboard) offered actions that did nothing (send_alert, notify_soc,
+// disable_access: logged, reported OK), called endpoints that don't exist
+// (send_email, generate_evidence_report, create_backup) or had no executor
+// at all (quarantine_tenant, failover_cluster, ...).
 var validActionTypes = map[string]bool{
-	// Notification
-	"send_email":                true,
-	"send_slack":                true,
-	"send_teams":                true,
-	"send_webhook":              true,
-	"send_pagerduty":            true,
-	"create_jira_ticket":        true,
+	"send_slack":                 true,
+	"send_teams":                 true,
+	"send_webhook":               true,
+	"send_pagerduty":             true,
+	"create_jira_ticket":         true,
 	"create_servicenow_incident": true,
-	// Legacy / aliases
-	"send_alert":         true,
-	"create_audit_event": true,
-	"disable_access":     true,
-	"notify_soc":         true,
-	// Key Operations
-	"rotate_key":             true,
-	"suspend_key":            true,
-	"revoke_key":             true,
-	"destroy_key":            true,
-	"import_replacement_key": true,
-	"enable_key":             true,
-	// Certificate
-	"renew_certificate":      true,
-	"revoke_certificate":     true,
-	"issue_replacement_cert": true,
-	// Access Control
-	"disable_user":      true,
-	"revoke_api_key":    true,
-	"enforce_mfa":       true,
-	"quarantine_tenant": true,
-	"block_ip_range":    true,
-	// Compliance
-	"trigger_assessment":       true,
-	"generate_evidence_report": true,
-	"enable_fips_strict":       true,
-	"snapshot_posture":         true,
-	// Infrastructure
-	"failover_cluster": true,
-	"scale_service":    true,
-	"flush_cache":      true,
-	"restart_service":  true,
-	// Remediation
-	"run_custom_script":      true,
-	"execute_webhook_action": true,
-	"update_policy":          true,
-	"create_backup":          true,
+	"create_audit_event":         true,
+	"rotate_key":                 true,
+	"suspend_key":                true,
+	"revoke_key":                 true,
+	"destroy_key":                true,
+	"enable_key":                 true,
+	"renew_certificate":          true,
+	"revoke_certificate":         true,
+	"disable_user":               true,
+	"revoke_api_key":             true,
+	"trigger_assessment":         true,
+	"snapshot_posture":           true,
 }
 
 // PlaybookRun represents a single execution of a playbook.

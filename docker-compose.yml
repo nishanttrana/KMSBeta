@@ -613,41 +613,6 @@ services:
       timeout: 5s
       retries: 10
 
-  featureforge:
-    <<: *kms-service
-    profiles: ["feature_forge"]
-    build:
-      context: .
-      dockerfile: services/featureforge/Dockerfile
-    image: vecta/featureforge:${VECTA_VERSION:-latest}
-    depends_on:
-      policy:
-        condition: service_started
-      governance:
-        condition: service_started
-    environment:
-      <<: *kms-common-env
-      POLICY_URL: https://policy:8040
-      GOVERNANCE_URL: https://governance:8050
-      # External, separately-deployed MCP build server. Scaffold (code-build)
-      # mode is disabled until this is set. Config mode runs without it.
-      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
-      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY:-}
-      # 8300/18300: 8260/18260 belong to autokey (see 4b17cb599).
-      HTTP_PORT: "8300"
-      GRPC_PORT: "18300"
-    ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8300:8300"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18300:18300"
-    volumes:
-      - internal-trust:/run/vecta/trust:ro
-      - platform-state:/run/vecta/platform:ro
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18300"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   reconciler:
     <<: *kms-service
     build:

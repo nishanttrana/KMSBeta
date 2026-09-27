@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -422,10 +423,20 @@ func maskString(v string, pattern string, consistent bool, seed []byte) string {
 		runes := []rune(v)
 		out := make([]rune, len(runes))
 		copy(out, runes)
+		// Fisher-Yates. Consistent masking draws from the per-value seed so
+		// equal inputs mask equally; otherwise from the CSPRNG. (Before
+		// 1.26.0-beta the non-consistent branch used j = i, a no-op that
+		// returned the value unmasked.)
 		for i := len(out) - 1; i > 0; i-- {
-			j := i % (i + 1)
+			var j int
 			if consistent && len(seed) > 0 {
 				j = int(seed[i%len(seed)]) % (i + 1)
+			} else {
+				n, err := pkgcrypto.RandomInt(big.NewInt(int64(i + 1)))
+				if err != nil {
+					return strings.Repeat("*", max(4, len(v)))
+				}
+				j = int(n.Int64())
 			}
 			out[i], out[j] = out[j], out[i]
 		}

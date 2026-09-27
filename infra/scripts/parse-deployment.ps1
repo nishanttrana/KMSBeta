@@ -31,8 +31,7 @@ $featureOrder = @(
     "crypto_discovery",
     "mpc_engine",
     "data_protection",
-    "clustering",
-    "feature_forge"
+    "clustering"
 )
 
 $enabled = @{}

@@ -6,6 +6,7 @@
 package hsmconnector
 
 import (
+	"fmt"
 	"encoding/base64"
 	"errors"
 	"log"
@@ -45,6 +46,7 @@ func NewHandler(configs ConfigSource, p11 *Provider, audit route.Emitter, logger
 	r.Handle("POST /hsm/decrypt", route.Spec{Action: "decrypt", Permission: "hsm.key.use", Resource: "hsm_key"}, h.decrypt)
 	r.Handle("POST /hsm/sign", route.Spec{Action: "sign", Permission: "hsm.key.use", Resource: "hsm_key"}, h.sign)
 	r.Handle("POST /hsm/verify", route.Spec{Action: "verify", Permission: "hsm.key.use", Resource: "hsm_key"}, h.verify)
+	r.Handle("POST /hsm/random", route.Spec{Action: "random_generated", Permission: "hsm.key.use", Resource: "hsm"}, h.random)
 	r.Handle("POST /hsm/keys/destroy", route.Spec{Action: "key_destroyed", Permission: "hsm.key.delete", Resource: "hsm_key", Severity: "warning"}, h.destroy)
 	r.Handle("POST /hsm/keys/inspect", route.Spec{Action: "key_inspected", Permission: "hsm.key.read", Resource: "hsm_key"}, h.inspect)
 	r.Handle("GET /hsm/objects", route.Spec{Action: "objects_listed", Permission: "hsm.read", Resource: "hsm"}, h.objects)
@@ -84,6 +86,7 @@ type opRequest struct {
 	AADB64        string `json:"aad_b64"`
 	DigestB64     string `json:"digest_b64"`
 	SignatureB64  string `json:"signature_b64"`
+	Length        int    `json:"length"`
 }
 
 // begin decodes the request, checks the caller and label, and opens a
@@ -354,6 +357,31 @@ func (h *Handler) objects(c *route.Call) {
 	c.Detail("objects", len(objs))
 	c.Detail("managed", managed)
 	c.JSON(http.StatusOK, map[string]interface{}{"objects": objs, "truncated": truncated, "hsm": h.identity(c)})
+}
+
+// maxRandomBytes bounds one C_GenerateRandom draw.
+const maxRandomBytes = 4096
+
+// random draws bytes from the tenant HSM's generator (C_GenerateRandom).
+func (h *Handler) random(c *route.Call) {
+	in, ctx, sh, release, ok := h.begin(c, keyUsers, false)
+	if !ok {
+		return
+	}
+	defer release()
+	c.Detail("length", in.Length)
+	if in.Length <= 0 || in.Length > maxRandomBytes {
+		c.Error(http.StatusBadRequest, "bad_request", "length must be 1..4096")
+		return
+	}
+	out, err := ctx.GenerateRandom(sh, in.Length)
+	if err != nil {
+		h.fail(c, fmt.Errorf("C_GenerateRandom: %w", err))
+		return
+	}
+	id := h.identity(c)
+	c.Detail("hsm_serial", id.SerialNumber)
+	c.JSON(http.StatusOK, map[string]interface{}{"bytes_b64": base64.StdEncoding.EncodeToString(out), "hsm": id})
 }
 
 func (h *Handler) status(c *route.Call) {

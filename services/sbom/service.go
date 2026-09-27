@@ -120,16 +120,20 @@ func (s *Service) GenerateSBOM(ctx context.Context, trigger string) (SBOMSnapsho
 	if err != nil {
 		return SBOMSnapshot{}, err
 	}
-	vulnerabilityCount := 0
-	if matches, err := s.correlateVulnerabilities(ctx, item.Document.Components); err == nil {
-		vulnerabilityCount = len(matches)
+	details := map[string]interface{}{
+		"snapshot_id":     item.ID,
+		"component_count": len(item.Document.Components),
+		"trigger":         defaultString(trigger, "manual"),
 	}
-	_ = s.publishAudit(ctx, "audit.sbom.generated", "", map[string]interface{}{
-		"snapshot_id":       item.ID,
-		"component_count":   len(item.Document.Components),
-		"trigger":           defaultString(trigger, "manual"),
-		"vulnerability_cnt": vulnerabilityCount,
-	})
+	// No count when the sources failed: zero would claim a clean result.
+	if matches, err := s.correlateVulnerabilities(ctx, item.Document.Components); err == nil {
+		details["vulnerabilities_assessed"] = true
+		details["vulnerability_cnt"] = len(matches)
+	} else {
+		details["vulnerabilities_assessed"] = false
+		details["vulnerability_error"] = err.Error()
+	}
+	_ = s.publishAudit(ctx, "audit.sbom.generated", "", details)
 	return item, nil
 }
 
@@ -244,24 +248,24 @@ func (s *Service) DiffSBOM(ctx context.Context, fromID string, toID string) (BOM
 	diff.ToID = toID
 	fromMatches, fromErr := s.correlateVulnerabilities(ctx, from.Document.Components)
 	toMatches, toErr := s.correlateVulnerabilities(ctx, to.Document.Components)
+	diff.Metrics["vulnerabilities_assessed"] = fromErr == nil && toErr == nil
 	if fromErr == nil && toErr == nil {
 		diff.Metrics["vulnerability_delta"] = len(toMatches) - len(fromMatches)
-	} else {
-		diff.Metrics["vulnerability_delta"] = 0
 	}
 	return diff, nil
 }
 
 func (s *Service) correlateVulnerabilities(ctx context.Context, components []BOMComponent) ([]VulnerabilityMatch, error) {
 	if s.vulnProvider == nil {
-		return correlateCatalogVulnerabilities(components), nil
+		return nil, newServiceError(503, "vulnerability_source_unavailable", "no vulnerability source is configured")
 	}
 	items, err := s.vulnProvider.Match(ctx, components)
-	if err == nil {
-		return dedupeVulnerabilityMatches(items), nil
+	if err != nil {
+		// Never a built-in list: before 1.26.0-beta a two-entry catalogue
+		// with wrong facts answered here, and looked like a real scan.
+		return nil, newServiceError(503, "vulnerability_source_unavailable", err.Error())
 	}
-	logger.Printf("external vulnerability providers failed, using local catalog fallback: %v", err)
-	return correlateCatalogVulnerabilities(components), nil
+	return dedupeVulnerabilityMatches(items), nil
 }
 
 func (s *Service) ExportSBOM(ctx context.Context, id string, format string, encoding string) (ExportArtifact, error) {

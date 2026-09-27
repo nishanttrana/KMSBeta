@@ -29,6 +29,7 @@ import (
 	"math/big"
 	"math/bits"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -44,6 +45,7 @@ import (
 	"golang.org/x/crypto/sha3"
 	"vecta-kms/pkg/clustersync"
 	"vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
 	"vecta-kms/pkg/payment"
 )
@@ -63,7 +65,6 @@ type Service struct {
 	fipsMode     FIPSModeProvider
 	approval     *governanceApprovalClient
 	posture      GovernancePostureControlsProvider
-	qrng         QRNGClient
 	cryptoperiod *CryptoperiodPolicy
 	versions     VersionPolicy
 	wakeRegistry *WakeSelfTestRegistry
@@ -780,9 +781,9 @@ func derivePublicFromPrivateMaterial(algorithm string, privateRaw []byte) ([]byt
 		}
 	}
 	if isSLHDSAKeyAlgorithm(algorithm) {
-		var priv slhdsa.PrivateKey
-		if err := priv.UnmarshalBinary(privateRaw); err != nil {
-			return nil, errors.New("invalid SLH-DSA private key material")
+		priv, err := parseSLHDSAPrivateMaterial(algorithm, privateRaw)
+		if err != nil {
+			return nil, err
 		}
 		pub := priv.PublicKey()
 		return pub.MarshalBinary()
@@ -863,6 +864,14 @@ func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, err
 		raw, err = s.resolvePublicMaterialFromPair(ctx, req)
 	} else {
 		raw, err = generateMaterialForCreate(req.Algorithm, req.KeyType)
+	}
+	if errors.Is(err, errKeyAlgorithmUnsupported) {
+		_ = s.publishAudit(ctx, "audit.key.create_refused", req.TenantID, map[string]any{
+			"name":      req.Name,
+			"algorithm": req.Algorithm,
+			"result":    "refused",
+			"reason":    err.Error(),
+		})
 	}
 	if err != nil {
 		return Key{}, err
@@ -1589,6 +1598,11 @@ func (s *Service) FormKey(ctx context.Context, req FormKeyRequest) (Key, []strin
 	}
 	if len(req.Components) < 2 {
 		return Key{}, nil, errors.New("at least two components are required")
+	}
+	if symmetricKeyLength(req.Algorithm) == 0 {
+		// XOR-combined components make a symmetric key; they are never an
+		// RSA, EC or PQC private key.
+		return Key{}, nil, errUnsupportedKeyAlgorithm(req.Algorithm, "key components form symmetric keys only")
 	}
 	materialLen := materialLengthForAlgorithm(req.Algorithm)
 	parity := normalizeParityMode(req.Parity)
@@ -3311,15 +3325,6 @@ func normalizeMLDSAAlgorithm(algorithm string) string {
 	}
 }
 
-func normalizeSLHDSAAlgorithm(algorithm string) string {
-	switch strings.ToLower(strings.TrimSpace(algorithm)) {
-	case "slh-dsa-256f", "slh_dsa_256f", "slh-dsa-shake-256f", "slh_dsa_shake_256f", "sphincs+-shake-256f", "sphincs-shake-256f":
-		return "slh-dsa-256f"
-	default:
-		return ""
-	}
-}
-
 func isPublicKeyType(keyType string) bool {
 	return strings.Contains(strings.ToLower(strings.TrimSpace(keyType)), "public")
 }
@@ -3361,7 +3366,8 @@ func isMLDSAKeyAlgorithm(algorithm string) bool {
 }
 
 func isSLHDSAKeyAlgorithm(algorithm string) bool {
-	return normalizeSLHDSAAlgorithm(algorithm) != ""
+	_, ok := slhdsaParams(algorithm)
+	return ok
 }
 
 func isSupportedSymmetricCipherAlgorithm(algorithm string) bool {
@@ -3468,13 +3474,17 @@ func (s *Service) Hash(ctx context.Context, req HashRequest) (HashResponse, erro
 	}, nil
 }
 
+// errRandomSourceUnavailable is a random source this deployment can't honour.
+var errRandomSourceUnavailable = errors.New("random source unavailable")
+
+// Random returns bytes from the named source, never from a substitute: the
+// response's source is the generator that actually produced them. Before
+// 1.26.0-beta hsm-trng, qkd-seeded-csprng and qrng-seeded-csprng all returned
+// the OS CSPRNG under their own label.
 func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse, error) {
-	if err := s.enforceFIPSRandomSource(ctx, req.TenantID, req.Source); err != nil {
-		return RandomResponse{}, err
-	}
 	source := normalizeRandomSource(req.Source)
 	if source == "" {
-		return RandomResponse{}, errors.New("source must be kms-csprng, hsm-trng, qkd-seeded-csprng, or qrng-seeded-csprng")
+		return RandomResponse{}, errors.New("source must be kms-csprng or hsm-trng")
 	}
 	if req.Length <= 0 {
 		req.Length = 32
@@ -3482,21 +3492,41 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 	if req.Length > 4096 {
 		return RandomResponse{}, errors.New("length must be <= 4096 bytes")
 	}
-
+	refuse := func(reason string) (RandomResponse, error) {
+		_ = s.publishAudit(ctx, "audit.crypto.random_refused", req.TenantID, map[string]any{
+			"source":       source,
+			"length":       req.Length,
+			"reference_id": req.ReferenceID,
+			"result":       "refused",
+			"reason":       reason,
+		})
+		return RandomResponse{}, fmt.Errorf("%w: %s", errRandomSourceUnavailable, reason)
+	}
+	// Unavailable in every mode, so this comes before the FIPS check and the
+	// refusal names the real reason.
+	if source == "qkd-seeded-csprng" || source == "qrng-seeded-csprng" {
+		return refuse("no QKD or QRNG entropy source is integrated; use kms-csprng or hsm-trng")
+	}
+	if err := s.enforceFIPSRandomSource(ctx, req.TenantID, req.Source); err != nil {
+		return RandomResponse{}, err
+	}
+	details := map[string]any{"source": source, "length": req.Length, "reference_id": req.ReferenceID}
 	var raw []byte
-	if source == "qrng-seeded-csprng" && s.qrng != nil {
-		// Draw from QRNG pool (already conditioned with SHA-256 + XOR'd with OS CSPRNG)
-		var err error
-		raw, err = s.qrng.DrawEntropy(ctx, req.TenantID, req.Length)
-		if err != nil {
-			// Graceful fallback to OS CSPRNG
-			raw = make([]byte, req.Length)
-			if _, err := rand.Read(raw); err != nil {
-				return RandomResponse{}, err
-			}
-			source = "kms-csprng" // report actual source used
+	switch source {
+	case "hsm-trng":
+		if s.hsm == nil {
+			return refuse("no HSM connector is configured")
 		}
-	} else {
+		b, id, err := s.hsm.Random(ctx, req.TenantID, req.Length)
+		if errors.Is(err, hsm.ErrNotConfigured) {
+			return refuse("this tenant has no HSM configured")
+		}
+		if err != nil {
+			return RandomResponse{}, s.hsmFailure(ctx, req.TenantID, "", "crypto.random", err)
+		}
+		raw = b
+		details["hsm_serial"] = id.SerialNumber
+	default:
 		raw = make([]byte, req.Length)
 		if _, err := rand.Read(raw); err != nil {
 			return RandomResponse{}, err
@@ -3504,11 +3534,7 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 	}
 	out := base64.StdEncoding.EncodeToString(raw)
 	crypto.Zeroize(raw)
-	_ = s.publishAudit(ctx, "audit.crypto.random", req.TenantID, map[string]any{
-		"source":       source,
-		"length":       req.Length,
-		"reference_id": req.ReferenceID,
-	})
+	_ = s.publishAudit(ctx, "audit.crypto.random", req.TenantID, details)
 	return RandomResponse{
 		BytesB64: out,
 		Length:   req.Length,
@@ -4088,16 +4114,24 @@ func parseMLDSA87PublicMaterial(raw []byte) (*mldsa87.PublicKey, error) {
 	return &key, nil
 }
 
-func parseSLHDSAPrivateMaterial(raw []byte) (*slhdsa.PrivateKey, error) {
-	var key slhdsa.PrivateKey
+func parseSLHDSAPrivateMaterial(algorithm string, raw []byte) (*slhdsa.PrivateKey, error) {
+	id, ok := slhdsaParams(algorithm)
+	if !ok {
+		return nil, errors.New("unknown SLH-DSA parameter set")
+	}
+	key := slhdsa.PrivateKey{ID: id}
 	if err := key.UnmarshalBinary(raw); err != nil {
 		return nil, errors.New("invalid SLH-DSA private key material")
 	}
 	return &key, nil
 }
 
-func parseSLHDSAPublicMaterial(raw []byte) (*slhdsa.PublicKey, error) {
-	var key slhdsa.PublicKey
+func parseSLHDSAPublicMaterial(algorithm string, raw []byte) (*slhdsa.PublicKey, error) {
+	id, ok := slhdsaParams(algorithm)
+	if !ok {
+		return nil, errors.New("unknown SLH-DSA parameter set")
+	}
+	key := slhdsa.PublicKey{ID: id}
 	if err := key.UnmarshalBinary(raw); err != nil {
 		return nil, errors.New("invalid SLH-DSA public key material")
 	}
@@ -4230,7 +4264,7 @@ func signWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byt
 		if isPublicKeyType(keyType) {
 			return nil, errors.New("slh-dsa sign requires private key material")
 		}
-		priv, err := parseSLHDSAPrivateMaterial(keyMaterial)
+		priv, err := parseSLHDSAPrivateMaterial(keyAlgorithm, keyMaterial)
 		if err != nil {
 			return nil, err
 		}
@@ -4368,13 +4402,13 @@ func verifyWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []b
 	case isSLHDSAKeyAlgorithm(alg):
 		var pub *slhdsa.PublicKey
 		if isPublicKeyType(keyType) {
-			parsed, err := parseSLHDSAPublicMaterial(keyMaterial)
+			parsed, err := parseSLHDSAPublicMaterial(keyAlgorithm, keyMaterial)
 			if err != nil {
 				return false, err
 			}
 			pub = parsed
 		} else {
-			priv, err := parseSLHDSAPrivateMaterial(keyMaterial)
+			priv, err := parseSLHDSAPrivateMaterial(keyAlgorithm, keyMaterial)
 			if err != nil {
 				return false, err
 			}
@@ -4679,173 +4713,6 @@ func defaultIV(v string) string {
 	return strings.ToLower(v)
 }
 
-func generateMaterial(algorithm string) ([]byte, error) {
-	l := materialLengthForAlgorithm(algorithm)
-	out := make([]byte, l)
-	_, err := rand.Read(out)
-	return out, err
-}
-
-func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error) {
-	if isRSAKeyAlgorithm(algorithm) {
-		bits := 2048
-		up := strings.ToUpper(strings.TrimSpace(algorithm))
-		switch {
-		case strings.Contains(up, "8192"):
-			bits = 8192
-		case strings.Contains(up, "4096"):
-			bits = 4096
-		case strings.Contains(up, "3072"):
-			bits = 3072
-		}
-		priv, err := rsa.GenerateKey(rand.Reader, bits)
-		if err != nil {
-			return nil, err
-		}
-		if isPublicKeyType(keyType) {
-			pubDER, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-			if err != nil {
-				return nil, err
-			}
-			return pubDER, nil
-		}
-		privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-		if err != nil {
-			return nil, err
-		}
-		return privDER, nil
-	}
-	up := strings.ToUpper(strings.TrimSpace(algorithm))
-	if strings.Contains(up, "ECDSA") || strings.Contains(up, "ECDH") || strings.Contains(up, "BRAINPOOL") {
-		curve := elliptic.P256()
-		switch {
-		case strings.Contains(up, "521"):
-			curve = elliptic.P521()
-		case strings.Contains(up, "384"):
-			curve = elliptic.P384()
-		default:
-			curve = elliptic.P256()
-		}
-		priv, err := ecdsa.GenerateKey(curve, rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		if isPublicKeyType(keyType) {
-			pubDER, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
-			if err != nil {
-				return nil, err
-			}
-			return pubDER, nil
-		}
-		privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-		if err != nil {
-			return nil, err
-		}
-		return privDER, nil
-	}
-	if strings.Contains(up, "ED25519") {
-		pub, priv, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		if isPublicKeyType(keyType) {
-			pubDER, err := x509.MarshalPKIXPublicKey(pub)
-			if err != nil {
-				return nil, err
-			}
-			return pubDER, nil
-		}
-		privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-		if err != nil {
-			return nil, err
-		}
-		return privDER, nil
-	}
-	if strings.Contains(up, "X25519") {
-		priv, err := ecdh.X25519().GenerateKey(rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		if isPublicKeyType(keyType) {
-			pubDER, err := x509.MarshalPKIXPublicKey(priv.PublicKey())
-			if err != nil {
-				return nil, err
-			}
-			return pubDER, nil
-		}
-		privDER, err := x509.MarshalPKCS8PrivateKey(priv)
-		if err != nil {
-			return nil, err
-		}
-		return privDER, nil
-	}
-	if isMLDSAKeyAlgorithm(algorithm) {
-		switch normalizeMLDSAAlgorithm(algorithm) {
-		case "ml-dsa-65":
-			pub, priv, err := mldsa65.GenerateKey(rand.Reader)
-			if err != nil {
-				return nil, err
-			}
-			if isPublicKeyType(keyType) {
-				return pub.Bytes(), nil
-			}
-			return priv.Bytes(), nil
-		case "ml-dsa-87":
-			pub, priv, err := mldsa87.GenerateKey(rand.Reader)
-			if err != nil {
-				return nil, err
-			}
-			if isPublicKeyType(keyType) {
-				return pub.Bytes(), nil
-			}
-			return priv.Bytes(), nil
-		}
-	}
-	if isSLHDSAKeyAlgorithm(algorithm) {
-		pub, priv, err := slhdsa.GenerateKey(rand.Reader, slhdsa.SHAKE_256f)
-		if err != nil {
-			return nil, err
-		}
-		if isPublicKeyType(keyType) {
-			return pub.MarshalBinary()
-		}
-		return priv.MarshalBinary()
-	}
-	if strings.Contains(up, "ED448") || strings.Contains(up, "X448") {
-		return nil, errors.New("requested algorithm is not supported in this build")
-	}
-	kemAlg := normalizeKEMAlgorithm(algorithm)
-	if strings.Contains(up, "ML-KEM") && kemAlg == "" {
-		return nil, errors.New("ml-kem algorithm must be ML-KEM-768 or ML-KEM-1024")
-	}
-	if kemAlg == "" {
-		return generateMaterial(algorithm)
-	}
-	isPublic := isPublicKeyType(keyType)
-	switch kemAlg {
-	case "ml-kem-768":
-		dk, err := mlkem.GenerateKey768()
-		if err != nil {
-			return nil, err
-		}
-		if isPublic {
-			return dk.EncapsulationKey().Bytes(), nil
-		}
-		return dk.Bytes(), nil
-	case "ml-kem-1024":
-		dk, err := mlkem.GenerateKey1024()
-		if err != nil {
-			return nil, err
-		}
-		if isPublic {
-			return dk.EncapsulationKey().Bytes(), nil
-		}
-		return dk.Bytes(), nil
-	default:
-		return generateMaterial(algorithm)
-	}
-}
-
 func normalizeAESKey(k []byte) ([]byte, error) {
 	switch len(k) {
 	case 16, 24, 32:
@@ -4985,4 +4852,248 @@ func newID(prefix string) string {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
+}
+
+// Key generation produces exactly the key the algorithm names, or refuses.
+//
+// Until 1.26.0-beta any name without its own branch (XMSS, HSS/LMS, DSA, DH,
+// ML-DSA-44, "hybrid" pairs, every SLH-DSA set but 256f) was stored as 32
+// random bytes under that name, Brainpool and secp256k1 became P-256, RSA-1024
+// became RSA-2048, and every SLH-DSA key was SHAKE-256f. correctKeyLabels
+// (key_label_correction.go) repairs the records that produced.
+
+var errKeyAlgorithmUnsupported = errors.New("key algorithm not supported")
+
+func errUnsupportedKeyAlgorithm(algorithm, why string) error {
+	return fmt.Errorf("%w: %s (%s)", errKeyAlgorithmUnsupported, strings.TrimSpace(algorithm), why)
+}
+
+// symmetricKeyLength is the key size in bytes for a symmetric algorithm keycore
+// generates, 0 for anything else.
+func symmetricKeyLength(algorithm string) int {
+	a := strings.ToUpper(strings.TrimSpace(algorithm))
+	switch {
+	case strings.Contains(a, "+"):
+		return 0
+	case strings.Contains(a, "AES"):
+		switch {
+		case strings.Contains(a, "128"):
+			return 16
+		case strings.Contains(a, "192"):
+			return 24
+		}
+		return 32
+	case strings.Contains(a, "2DES"):
+		return 16
+	case strings.Contains(a, "3DES"), strings.Contains(a, "TDES"):
+		return 24
+	case strings.Contains(a, "DES"):
+		return 8
+	case strings.Contains(a, "HMAC"), strings.Contains(a, "CHACHA20"):
+		return 32
+	}
+	return 0
+}
+
+// rsaBits is the modulus size named by an RSA algorithm; a bare "RSA" means
+// 2048. Other sizes are refused rather than silently substituted.
+func rsaBits(a string) (int, error) {
+	for _, bits := range []int{8192, 4096, 3072, 2048} {
+		if strings.Contains(a, fmt.Sprint(bits)) {
+			return bits, nil
+		}
+	}
+	if regexp.MustCompile(`RSA[-_ ]?\d`).MatchString(a) || strings.Contains(a, "1024") {
+		return 0, errUnsupportedKeyAlgorithm(a, "RSA keys are 2048, 3072, 4096 or 8192 bits")
+	}
+	return 2048, nil
+}
+
+// ecCurve is the NIST curve named by an EC algorithm; a bare "ECDSA"/"ECDH"
+// means P-256. Brainpool, secp256k1 and others are refused (not implemented).
+func ecCurve(a string) (elliptic.Curve, error) {
+	if strings.Contains(a, "BRAINPOOL") || strings.Contains(a, "K1") || strings.Contains(a, "224") {
+		return nil, errUnsupportedKeyAlgorithm(a, "EC keys use NIST P-256, P-384 or P-521")
+	}
+	switch {
+	case strings.Contains(a, "521"):
+		return elliptic.P521(), nil
+	case strings.Contains(a, "384"):
+		return elliptic.P384(), nil
+	}
+	return elliptic.P256(), nil
+}
+
+var slhdsaNamePattern = regexp.MustCompile(`^SLH-?DSA-(?:(SHA2|SHAKE)-)?(128|192|256)([SF])$`)
+
+// slhdsaParams maps an SLH-DSA name to its FIPS 205 parameter set.
+// "SLH-DSA-256f" without a hash family means SHAKE (the only set keycore
+// generated before 1.26.0-beta).
+func slhdsaParams(algorithm string) (slhdsa.ID, bool) {
+	a := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(algorithm), "_", "-"))
+	a = strings.Replace(a, "SPHINCS+-", "SLH-DSA-", 1)
+	a = strings.Replace(a, "SPHINCS-", "SLH-DSA-", 1)
+	m := slhdsaNamePattern.FindStringSubmatch(a)
+	if m == nil {
+		return 0, false
+	}
+	family := m[1]
+	if family == "" {
+		family = "SHAKE"
+	}
+	id, err := slhdsa.IDByName("SLH-DSA-" + family + "-" + m[2] + strings.ToLower(m[3]))
+	return id, err == nil
+}
+
+// generateMaterial draws a symmetric key of the algorithm's size.
+func generateMaterial(algorithm string) ([]byte, error) {
+	n := symmetricKeyLength(algorithm)
+	if n == 0 {
+		return nil, errUnsupportedKeyAlgorithm(algorithm, "no symmetric key size for this algorithm")
+	}
+	out := make([]byte, n)
+	if _, err := rand.Read(out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// keyGenPlan is what generateMaterialForCreate will produce for an algorithm.
+type keyGenPlan struct {
+	kind   string // rsa, ec, ed25519, x25519, ml-dsa-65, ml-dsa-87, slh-dsa, ml-kem-768, ml-kem-1024, symmetric
+	bits   int
+	curve  elliptic.Curve
+	slh    slhdsa.ID
+	symLen int
+}
+
+// planKeyGeneration validates an algorithm name without generating anything.
+func planKeyGeneration(algorithm string) (keyGenPlan, error) {
+	up := strings.ToUpper(strings.TrimSpace(algorithm))
+	switch {
+	case up == "":
+		return keyGenPlan{}, errors.New("algorithm is required")
+	case strings.Contains(up, "+"):
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "hybrid (composite) keys are not implemented; create each component key")
+	case strings.Contains(up, "XMSS"), strings.Contains(up, "LMS"), strings.Contains(up, "HSS"):
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "stateful hash-based signatures are not implemented")
+	case strings.Contains(up, "ED448"), strings.Contains(up, "X448"):
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "Ed448/X448 are not implemented")
+	case isRSAKeyAlgorithm(up):
+		bits, err := rsaBits(up)
+		return keyGenPlan{kind: "rsa", bits: bits}, err
+	case strings.Contains(up, "ED25519"):
+		return keyGenPlan{kind: "ed25519"}, nil
+	case strings.Contains(up, "X25519"):
+		return keyGenPlan{kind: "x25519"}, nil
+	case strings.Contains(up, "ECDSA"), strings.Contains(up, "ECDH"), strings.Contains(up, "BRAINPOOL"), strings.Contains(up, "SECP"):
+		curve, err := ecCurve(up)
+		return keyGenPlan{kind: "ec", curve: curve}, err
+	case strings.Contains(up, "ML-DSA"), strings.Contains(up, "MLDSA"), strings.Contains(up, "DILITHIUM"):
+		if k := normalizeMLDSAAlgorithm(algorithm); k != "" {
+			return keyGenPlan{kind: k}, nil
+		}
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "ML-DSA keys are ML-DSA-65 or ML-DSA-87")
+	case strings.Contains(up, "SLH"), strings.Contains(up, "SPHINCS"):
+		id, ok := slhdsaParams(algorithm)
+		if !ok {
+			return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "name an SLH-DSA parameter set, e.g. SLH-DSA-SHA2-128s")
+		}
+		return keyGenPlan{kind: "slh-dsa", slh: id}, nil
+	case strings.Contains(up, "ML-KEM"), strings.Contains(up, "MLKEM"), strings.Contains(up, "KYBER"):
+		if k := normalizeKEMAlgorithm(algorithm); k != "" {
+			return keyGenPlan{kind: k}, nil
+		}
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "ML-KEM keys are ML-KEM-768 or ML-KEM-1024")
+	}
+	if n := symmetricKeyLength(up); n > 0 {
+		return keyGenPlan{kind: "symmetric", symLen: n}, nil
+	}
+	return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "keycore does not generate this algorithm")
+}
+
+func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error) {
+	plan, err := planKeyGeneration(algorithm)
+	if err != nil {
+		return nil, err
+	}
+	public := isPublicKeyType(keyType)
+	pkix := func(pub any, priv any) ([]byte, error) {
+		if public {
+			return x509.MarshalPKIXPublicKey(pub)
+		}
+		return x509.MarshalPKCS8PrivateKey(priv)
+	}
+	switch plan.kind {
+	case "rsa":
+		priv, err := rsa.GenerateKey(rand.Reader, plan.bits)
+		if err != nil {
+			return nil, err
+		}
+		return pkix(&priv.PublicKey, priv)
+	case "ed25519":
+		pub, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		return pkix(pub, priv)
+	case "x25519":
+		priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		return pkix(priv.PublicKey(), priv)
+	case "ec":
+		priv, err := ecdsa.GenerateKey(plan.curve, rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		return pkix(&priv.PublicKey, priv)
+	case "ml-dsa-65":
+		pub, priv, err := mldsa65.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		if public {
+			return pub.Bytes(), nil
+		}
+		return priv.Bytes(), nil
+	case "ml-dsa-87":
+		pub, priv, err := mldsa87.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+		if public {
+			return pub.Bytes(), nil
+		}
+		return priv.Bytes(), nil
+	case "slh-dsa":
+		pub, priv, err := slhdsa.GenerateKey(rand.Reader, plan.slh)
+		if err != nil {
+			return nil, err
+		}
+		if public {
+			return pub.MarshalBinary()
+		}
+		return priv.MarshalBinary()
+	case "ml-kem-768":
+		dk, err := mlkem.GenerateKey768()
+		if err != nil {
+			return nil, err
+		}
+		if public {
+			return dk.EncapsulationKey().Bytes(), nil
+		}
+		return dk.Bytes(), nil
+	case "ml-kem-1024":
+		dk, err := mlkem.GenerateKey1024()
+		if err != nil {
+			return nil, err
+		}
+		if public {
+			return dk.EncapsulationKey().Bytes(), nil
+		}
+		return dk.Bytes(), nil
+	}
+	return generateMaterial(algorithm)
 }

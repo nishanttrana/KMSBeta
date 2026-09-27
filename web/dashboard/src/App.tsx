@@ -57,8 +57,7 @@ const FEATURE_KEYS: FeatureKey[] = [
   "posture_management",
   "qrng_generator",
   "hsm_hardware",
-  "hsm_software",
-  "feature_forge"
+  "hsm_software"
 ];
 
 const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
@@ -89,8 +88,7 @@ const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
   clustering: ["cluster-manager", "kms-cluster-manager", "etcd"],
   hsm_hardware: ["hsm-connector", "kms-hsm-connector"],
   // No HSM: keys stay under keycore's master key; no extra service runs.
-  hsm_software: [],
-  feature_forge: ["kms-featureforge"]
+  hsm_software: []
 };
 
 const FEATURE_ALIAS: Record<string, FeatureKey> = {

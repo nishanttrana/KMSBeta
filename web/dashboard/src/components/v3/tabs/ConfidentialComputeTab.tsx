@@ -79,7 +79,7 @@ function parseJsonObject(raw: string, label: string): Record<string, string> {
 
 function decisionColor(decision: string): string {
   const value = String(decision || "").trim().toLowerCase();
-  if (value === "release") return "green";
+  if (value === "allow" || value === "release") return "green";
   if (value === "review") return "amber";
   return "red";
 }
@@ -216,7 +216,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
   const summaryCards = [
     { label: "Policy", value: summary?.policy_enabled ? "On" : "Off", sub: summary?.provider || policy.provider || "—", color: summary?.policy_enabled ? "green" : "amber" },
     { label: "Approved Images", value: String(summary?.approved_image_count || 0), sub: `${summary?.key_scope_count || 0} key scopes`, color: "accent" },
-    { label: "Releases 24h", value: String(summary?.release_count_24h || 0), sub: `${summary?.cryptographically_verified_count_24h || 0} verified`, color: "green" },
+    { label: "Allowed 24h", value: String(summary?.release_count_24h || 0), sub: `${summary?.cryptographically_verified_count_24h || 0} verified`, color: "green" },
     { label: "Denies 24h", value: String(summary?.deny_count_24h || 0), sub: summary?.latest_decision ? `Latest: ${summary.latest_decision}` : "No decisions yet", color: "red" },
     { label: "Cluster Nodes", value: String(summary?.unique_cluster_nodes || 0), sub: summary?.last_decision_at ? shortTs(summary.last_decision_at) : "No release history", color: "blue" }
   ];
@@ -273,7 +273,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
       }
       const result = await evaluateConfidentialRelease(session, payload);
       setDecision(result || null);
-      onToast?.(`Attested release decision: ${String(result?.decision || "unknown").toUpperCase()}`);
+      onToast?.(`Attestation verdict: ${String(result?.decision || "unknown").toUpperCase()}`);
       await refresh(true);
     } catch (error) {
       onToast?.(`Attested release evaluation failed: ${errMsg(error)}`);
@@ -299,9 +299,10 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
           ))}
         </div>
         <Card style={{ padding: 16, background: `linear-gradient(135deg, ${C.card} 0%, rgba(40,95,145,.12) 100%)`, marginBottom: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Attested key release for verified workloads</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>Attestation verdicts for workload key access</div>
           <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
-            Gate key release on enclave or TEE evidence instead of host-only identity. Tenant policy controls provider, approved images,
+            Verifies enclave or TEE evidence (AWS Nitro, Azure MAA, GCP Confidential Space) against tenant policy and returns an allow, review or deny verdict.
+            The KMS releases no key material here; your key broker enforces the verdict. Self-asserted (generic) evidence is never allowed. Tenant policy controls provider, approved images,
             workload subject claims, PCR or measurement matching, cluster-node allowlists, and runtime safety checks like secure boot and debug-disabled posture.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>

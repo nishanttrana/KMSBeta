@@ -342,7 +342,9 @@ Read-only: partition objects can't yet be adopted as KMS keys.
 Only `kms-keycore` and `kms-governance` may call the key routes (others get
 `403 caller_not_allowed`). Labels must start with `vecta:<tenant_id>:`.
 Routes: `POST /hsm/keys`, `/hsm/tenant-key`, `/hsm/encrypt`,
-`/hsm/decrypt`, `/hsm/sign`, `/hsm/verify`, `/hsm/keys/destroy`, and
+`/hsm/decrypt`, `/hsm/sign`, `/hsm/verify`, `/hsm/keys/destroy`,
+`/hsm/random` (body `tenant_id`, `length` 1–4096; returns `bytes_b64` from the
+token's `C_GenerateRandom` and the token identity `hsm`), and
 `GET /hsm/status` (also open to tenant administrators). Keycore only:
 `POST /hsm/keys/inspect` (body `tenant_id`, `label`) and
 `GET /hsm/objects?tenant_id=` return object attributes and the token's
@@ -389,7 +391,7 @@ Bearer, roles: operator or admin.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | Yes | Unique key name |
-| algorithm | string | Yes | Algorithm |
+| algorithm | string | Yes | One keycore generates: AES-128/192/256[-mode], 3DES, HMAC-SHA256/384/512, RSA-2048/3072/4096/8192, ECDSA/ECDH P-256/P-384/P-521, Ed25519, X25519, ML-KEM-768/1024, ML-DSA-65/87, SLH-DSA-{SHA2,SHAKE}-{128,192,256}{s,f}. Anything else: `400 algorithm_unsupported` (audited `audit.key.create_refused`) |
 | purpose | string | Yes | encrypt / sign / both / wrap / derive |
 | hsmGroup | string | No | HSM group name |
 | tags | object | No | Searchable tags |
@@ -812,12 +814,15 @@ Policy: `grants[]` — subject, subjectType (user/client/role), operations[], co
 
 ### POST /svc/keycore/random
 
-Body: `size` (1–65536), `encoding` (base64/hex), `source` (csprng/qrng/hsm). Response: `random`, `source`, `size`, `generatedAt`
+Body: `tenant_id`, `length` (1–4096, default 32), `source`: `kms-csprng` (default) or `hsm-trng`. Response: `bytes` (base64), `length`, `source` — always the generator that produced the bytes.
+
+- `hsm-trng` draws from the tenant HSM's `C_GenerateRandom` (the audit event records `hsm_serial`).
+- `409 random_source_unavailable` (audited `audit.crypto.random_refused`) when there is no tenant HSM, and always for `qkd-seeded-csprng` / `qrng-seeded-csprng`: no QKD or QRNG source is integrated. Before 1.26.0-beta these returned OS CSPRNG bytes under their label.
 
 ```bash
 curl -sk -X POST https://localhost/svc/keycore/random \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"size":32,"encoding":"hex","source":"csprng"}'
+  -d '{"tenant_id":"root","length":32,"source":"kms-csprng"}'
 ```
 
 ---
@@ -1811,7 +1816,7 @@ Returns the workload identity relationship graph: trust domain, issued SVIDs, re
 
 ## Service 10: Confidential (`/svc/confidential/`)
 
-TEE attestation verification and attested key release. Keys released only to measured runtimes.
+TEE attestation verification (AWS Nitro COSE, Azure MAA and GCP Confidential Space JWTs) against tenant policy. Each evaluation returns a **verdict** — `allow`, `review` or `deny` — that the caller's key broker enforces. **No key material is released by this service**, and no keycore operation consults the verdict (see docs/SECURITY/REAL_CAPABILITY.md, "Still open"). `generic` (self-asserted) evidence is never allowed. Before 1.26.0-beta the allow verdict was called `release`; stored records keep that value.
 
 ---
 
@@ -1844,7 +1849,7 @@ Updates the confidential compute policy. Body: same fields as GET response.
 
 ### POST /svc/confidential/confidential/attest/key-release
 
-Evaluates attestation evidence and, if valid, releases the requested key.
+Evaluates attestation evidence against the tenant policy and records a verdict (`allow` / `review` / `deny`). Despite the route name it releases no key.
 
 **Request Body**:
 | Field | Type | Required | Description |
@@ -1994,6 +1999,26 @@ Creates a PQC migration plan.
 
 ---
 
+### POST /svc/pqc/pqc/migration/plans/{id}/execute and /rollback
+
+`execute` (body `actor`, `dry_run`) changes keys in keycore, step by step:
+
+| Step | Outcome (step `status`) |
+|---|---|
+| key whose target is another algorithm (ML-DSA-65, ML-KEM-768, AES-256) | `successor_created`: a new keycore key of the target algorithm, id in `metadata.successor_key_id` (label `pqc_successor_of`); the old key is untouched until its consumers move |
+| key already at the target algorithm | `rotated` |
+| certificate, TLS endpoint, code finding | `manual_required` (the KMS can't change it) |
+| keycore error | `failed` with `metadata.error` |
+
+The plan ends `completed`, `manual_steps_remaining` or `failed`. A dry run
+changes nothing and marks nothing done. `rollback` deactivates the successor
+keys the plan created; rotations are reported as not reversible (plan status
+`partially_rolled_back`). Events: `audit.pqc.migration_step_executed`,
+`audit.pqc.migration_executed`, `audit.pqc.migration_failed`,
+`audit.pqc.migration_rolled_back`.
+
+---
+
 ### GET /svc/pqc/pqc/migration/plans / GET /svc/pqc/pqc/migration/plan/{id}
 
 List or get migration plans.
@@ -2089,6 +2114,14 @@ Lists evaluated justification decisions.
 ## Service 13: Dataprotect (`/svc/dataprotect/`)
 
 Tokenization, masking, field-level encryption, and secure vault search.
+
+**FPE** (`POST /fpe/encrypt`, `POST /fpe/decrypt`; body `tenant_id`, `key_id`,
+`algorithm`, `radix` 2–36, `tweak`, `plaintext`/`ciphertext`): `FF1` (NIST
+SP 800-38G; the default). `FF3`/`FF3-1` → `400 fpe_algorithm_refused`
+(audited `audit.dataprotect.fpe_refused`). `LEGACY-FF1` / `LEGACY-FF3-1` decrypt
+pre-1.26.0 ciphertext for migration only (audited
+`audit.dataprotect.fpe_legacy_decrypted`); encrypting with them is refused.
+See docs/DATA_PROTECTION.md.
 
 **Working keys** come from keycore `service-derive` (v2). Keys that predate
 2026-09-25 start in state `legacy` (identifier-derived, v1) until migrated.
@@ -3364,6 +3397,25 @@ curl -sk -X PUT https://localhost/svc/secrets/policy/services/database \
 
 ---
 
+## Discovery (`/svc/discovery/`) — scan sources
+
+`POST /discovery/scan` (body `tenant_id`, `scan_types`: `network`, `cloud`,
+`certs`, `code`) records only what each source observed:
+
+- `network`: a TLS handshake with each endpoint in `DISCOVERY_TLS_ENDPOINTS`
+  (operator config, no default). It records the negotiated key exchange,
+  protocol, cipher, leaf key and `chain_trusted`.
+- `cloud`: each registered account's live KMS inventory via the cloud
+  service (`CLOUD_URL`, default `https://cloud:8080`).
+- `certs`: the certs service's certificates.
+- `code`: the tree mounted at `WORKSPACE_ROOT` (required). It records
+  file:line and `fingerprint_sha256_prefix`, never the secret.
+
+An unconfigured or failed source is recorded in `stats.errors`. The scan
+status is then `completed_with_errors`, or `failed` if every source failed.
+
+---
+
 ## Service 26: SBOM (`/svc/sbom/`)
 
 Software BOM, Cryptographic BOM, vulnerability correlation, offline advisory management.
@@ -3402,7 +3454,7 @@ Returns status of a SBOM ingest job.
 
 ### GET /svc/sbom/sbom/vulnerabilities
 
-Returns merged vulnerability findings from OSV online, Trivy, and manual advisories.
+Returns merged vulnerability findings from OSV online, Trivy, and manual advisories. If any enabled source fails, the response is `503 vulnerability_source_unavailable` (not assessed): there is no built-in fallback list, and partial results are not returned as complete. `OSV_ENABLED=false` disables OSV for air-gapped installs; `TRIVY_ENABLED=false` disables Trivy.
 
 **Response 200**: `items[]` — id (CVE), source (OSV/Trivy/manual), severity, component, installedVersion, fixedVersion, summary, reference
 
@@ -3503,6 +3555,14 @@ Returns PQC readiness metrics from the latest CBOM.
   }
 }
 ```
+
+---
+
+## AI gateway health
+
+`GET /ai-gateway/v1/health` returns the checks it ran: `database` (a
+round trip), and `dlp` / `guardrails` (the detectors run on a known input).
+It answers `503` with `status: degraded` when any check fails.
 
 ---
 
@@ -3716,13 +3776,19 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.mpc.* | MPC ceremonies |
 | audit.signing.* | Artifact signing |
 | audit.workload.* | Workload identity |
-| audit.confidential.* | Attested key release |
+| audit.confidential.* | Attestation verdicts (no key material is released) |
 | audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |
 | audit.sbom.* | SBOM/CBOM generation |
 | audit.ai.* | AI queries and recommendations |
 
 Selected events with dedicated audit classification:
+- `audit.dataprotect.fpe_encrypted`, `audit.dataprotect.fpe_decrypted` (FF1), `audit.dataprotect.fpe_legacy_decrypted` (pre-1.26.0 migration), `audit.dataprotect.fpe_refused` (FF3-1, legacy encrypt, unknown; `result: refused`)
+- `audit.key.create_refused` (unsupported algorithm), `audit.key.algorithm_label_corrected` (startup relabel of faked key material), `audit.key.kdf_refused` (scrypt/Argon2id in strict mode)
+- `audit.crypto.random` (with the source that produced the bytes; `hsm_serial` for `hsm-trng`), `audit.crypto.random_refused` (QKD/QRNG/no HSM)
+- `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
+- `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
+- `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count)
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation

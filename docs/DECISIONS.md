@@ -7,6 +7,56 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Fake capabilities: make real where the path exists, otherwise remove
+**Decision** (1.26.0-beta, owner directive "fix all of this"):
+- **Made real** where a real dependency already existed:
+  - FF1 (NIST SP 800-38G on the module's AES);
+  - `hsm-trng` (the tenant HSM's `C_GenerateRandom` through hsm-connector);
+  - discovery (TLS handshakes, the cloud service's live inventory, the certs
+    list, a mounted code tree);
+  - PQC migration (successor keys in keycore);
+  - playbook `trigger_assessment` / `snapshot_posture` (run in-process);
+  - AI gateway health (a database ping and detector self-checks).
+- **Removed** where no real path exists:
+  - Feature Forge, which had no environments to stage or deploy to;
+  - FF3-1, withdrawn by NIST's SP 800-38G Rev. 1 draft;
+  - the QKD and QRNG random sources;
+  - playbook actions without an executor;
+  - the SBOM fallback CVE list;
+  - the invented cost figure and "entropy" score;
+  - dead code (`pkg/hwtoken`, `pkg/caim`, unwired keycore types).
+- **Relabelled** where the capability is real but was overclaimed:
+  confidential compute returns a *verdict*, not a key release; watchdog
+  incidents are alerts with a recommendation.
+
+**Why:** CLAUDE.md rule 8 (preferring removal over a stand-in) and rule 7
+(never fabricate evidence), including audit events that certified work that
+never happened.
+
+**Rejected:**
+- *Keeping Feature Forge with a "preview" label.* It stored nothing a preview
+  could honestly describe, and its guardrails and apply path were broken.
+- *Mapping FF3-1 to FF1.* Its ciphertext would silently change meaning.
+- *Building attested key release now* (wrapping to the enclave's public key).
+  It needs a keycore export-to-recipient endpoint restricted to the
+  confidential service identity; it is recorded as open in
+  REAL_CAPABILITY.md.
+- *Deleting keys whose material was faked.* They are relabelled
+  (`INVALID-MATERIAL`, or the real algorithm) and audited instead, so nothing
+  is destroyed without the customer's decision.
+
+**Migration:** pre-1.26.0 FPE ciphertext is readable through decrypt-only
+`LEGACY-FF1` / `LEGACY-FF3-1` (audited), then re-encrypted with FF1. This is a
+per-value migration, never a silent switch (CLAUDE.md rule 6).
+
+**Enforced by:**
+- NIST FF1 vector tests;
+- refusal tests for each removed path;
+- a real TLS server in the discovery tests and real SoftHSM2 in the HSM
+  random tests;
+- `make conformance` `real-capability` (now also `MOCK_*` constants and
+  `newMock…` constructors).
+
 ## 2026-09-27 — Webhook credentials: one sealed envelope, key opened in the background
 
 - **Decision:** the secret and all header values of a webhook go into one

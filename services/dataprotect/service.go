@@ -60,7 +60,7 @@ func WithWrapperJWT(secret string, issuer string, audience string, ttl time.Dura
 var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
 var supportedFieldProtectionWriteActions = []string{"encrypt", "tokenize", "redact", "passthrough"}
 var supportedFieldProtectionReadActions = []string{"decrypt", "mask", "token_only", "redact", "passthrough"}
-var supportedFieldProtectionEncryptAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305", "FPE-FF1", "FPE-FF3"}
+var supportedFieldProtectionEncryptAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305", "FPE-FF1"}
 
 func defaultDataAlgorithmProfilePolicy() map[string][]string {
 	return map[string][]string{
@@ -3524,12 +3524,15 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]in
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.Plaintext = strings.TrimSpace(req.Plaintext)
-	algo := strings.ToUpper(strings.TrimSpace(req.Algorithm))
+	algo := normalizeFPEAlgorithm(req.Algorithm)
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and plaintext are required")
 	}
 	if req.Radix == 0 {
 		req.Radix = 10
+	}
+	if algo != "FF1" {
+		return nil, s.refuseFPE(ctx, req, "encrypt", algo)
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
@@ -3539,21 +3542,13 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]in
 		return nil, err
 	}
 	defer pkgcrypto.Zeroize(key)
-	var cipherText string
-	switch algo {
-	case "", "FF1":
-		cipherText, err = ff1Encrypt(key, req.Tweak, req.Plaintext, req.Radix)
-	case "FF3", "FF3-1", "FF31":
-		cipherText, err = ff3Encrypt(key, req.Tweak, req.Plaintext, req.Radix)
-	default:
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "unsupported FPE algorithm")
-	}
+	cipherText, err := ff1Encrypt(key, req.Tweak, req.Plaintext, req.Radix)
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_encrypted", req.TenantID, map[string]interface{}{
 		"key_id":    req.KeyID,
-		"algorithm": defaultString(algo, "FF1"),
+		"algorithm": algo,
 		"radix":     req.Radix,
 	})
 	return map[string]interface{}{"ciphertext": cipherText}, nil
@@ -3563,12 +3558,15 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]in
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.Ciphertext = strings.TrimSpace(req.Ciphertext)
-	algo := strings.ToUpper(strings.TrimSpace(req.Algorithm))
+	algo := normalizeFPEAlgorithm(req.Algorithm)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and ciphertext are required")
 	}
 	if req.Radix == 0 {
 		req.Radix = 10
+	}
+	if algo != "FF1" && algo != fpeLegacyFF1 && algo != fpeLegacyFF3 {
+		return nil, s.refuseFPE(ctx, req, "decrypt", algo)
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
 		return nil, err
@@ -3580,22 +3578,61 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]in
 	defer pkgcrypto.Zeroize(key)
 	var plain string
 	switch algo {
-	case "", "FF1":
+	case "FF1":
 		plain, err = ff1Decrypt(key, req.Tweak, req.Ciphertext, req.Radix)
-	case "FF3", "FF3-1", "FF31":
-		plain, err = ff3Decrypt(key, req.Tweak, req.Ciphertext, req.Radix)
 	default:
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "unsupported FPE algorithm")
+		plain, err = legacyFPEDecrypt(key, req.Tweak, req.Ciphertext, req.Radix, algo == fpeLegacyFF3)
 	}
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_decrypted", req.TenantID, map[string]interface{}{
+	subject := "audit.dataprotect.fpe_decrypted"
+	if algo != "FF1" {
+		// Migration path only: the caller must re-encrypt the value with FF1.
+		subject = "audit.dataprotect.fpe_legacy_decrypted"
+	}
+	_ = s.publishAudit(ctx, subject, req.TenantID, map[string]interface{}{
 		"key_id":    req.KeyID,
-		"algorithm": defaultString(algo, "FF1"),
+		"algorithm": algo,
 		"radix":     req.Radix,
 	})
 	return map[string]interface{}{"plaintext": plain}, nil
+}
+
+const (
+	fpeLegacyFF1 = "LEGACY-FF1"
+	fpeLegacyFF3 = "LEGACY-FF3-1"
+)
+
+func normalizeFPEAlgorithm(v string) string {
+	switch a := strings.ToUpper(strings.TrimSpace(v)); a {
+	case "", "FF1", "FPE-FF1":
+		return "FF1"
+	case "FF3", "FF3-1", "FF31", "FPE-FF3":
+		return "FF3-1"
+	default:
+		return a
+	}
+}
+
+// refuseFPE audits and rejects an FPE request for an algorithm that is not
+// offered: FF3-1 (withdrawn), legacy encrypt, or anything unknown.
+func (s *Service) refuseFPE(ctx context.Context, req FPERequest, op string, algo string) error {
+	reason := "unsupported FPE algorithm; use FF1"
+	switch algo {
+	case "FF3-1":
+		reason = "FF3-1 is not offered (withdrawn in NIST SP 800-38G Rev. 1 draft); use FF1"
+	case fpeLegacyFF1, fpeLegacyFF3:
+		reason = "legacy FPE is decrypt-only, for migrating pre-1.26.0 ciphertext to FF1"
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_refused", req.TenantID, map[string]interface{}{
+		"key_id":    req.KeyID,
+		"algorithm": algo,
+		"operation": op,
+		"result":    "refused",
+		"reason":    reason,
+	})
+	return newServiceError(http.StatusBadRequest, "fpe_algorithm_refused", reason)
 }
 
 func (s *Service) CreateMaskingPolicy(ctx context.Context, tenantID string, in MaskingPolicy) (MaskingPolicy, error) {

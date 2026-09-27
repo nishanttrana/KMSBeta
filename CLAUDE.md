@@ -95,6 +95,22 @@ an approach, record it here or in the matching doc below.
      effect, and records presented as enforcement.
    - A capability that isn't built yet is either removed (preferred) or a
      labelled preview returning `409 feature_preview`. It never pretends.
+   - **No mock, synthetic, fake or simulated data, features or audit**
+     (owner directive, 2026-09-27). This covers:
+     - **Data:** no `MOCK_*`/sample constants rendered when an API call
+       fails; show "unavailable" with the error. No built-in fallback
+       catalogues, invented defaults, or scores for assets that were never
+       measured (show "not assessed").
+     - **Labels:** an algorithm, key size, RNG source or provider label
+       must match what was actually produced or called.
+     - **Audit:** events and `result: "success"` fire only for work that
+       actually happened. A no-op, a log-only action, or a same-algorithm
+       rotate is never audited as the operation it names.
+     - **Tests:** mocks belong in `_test` files only, and HSM and wire
+       protocols are tested against the real thing.
+     - **Learnings:** every fake that is fixed or removed adds a learning.md
+       entry naming how it slipped through (owner directive, 2026-09-27:
+       "keep adding the learning").
    - Before calling any feature real, follow the data: the secret, the
      network call, the check. `make conformance` (`real-capability`) fails on
      `simulate*`, `synthetic*`, `fake*` or `mock*` functions outside tests,

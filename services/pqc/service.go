@@ -479,58 +479,75 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 	migrated := 0
 	failed := 0
 	skipped := 0
+	manual := 0
+	done := map[string]bool{"completed": true, "rotated": true, "successor_created": true}
 	for i := range plan.Steps {
 		step := &plan.Steps[i]
-		if !req.DryRun && step.Status == "completed" {
+		if step.Metadata == nil {
+			step.Metadata = map[string]interface{}{}
+		}
+		if !req.DryRun && done[step.Status] {
 			skipped++
 			continue
 		}
 		if req.DryRun {
-			step.Status = "dry_run"
-			if step.Metadata == nil {
-				step.Metadata = map[string]interface{}{}
-			}
-			step.Metadata["dry_run"] = "true"
-			migrated++
+			// A dry run changes nothing and says so; it is not a migration.
+			step.Metadata["dry_run_would"] = map[bool]string{true: "change key in keycore", false: "require a manual change"}[isKeyAsset(step.AssetType)]
 			continue
 		}
-		if err := s.applyMigrationStep(ctx, tenantID, *step, actor); err != nil {
+		outcome, newKeyID, err := s.applyMigrationStep(ctx, tenantID, *step, actor)
+		if errors.Is(err, errManualStep) {
+			manual++
+			step.Status = "manual_required"
+			step.Metadata["reason"] = "the KMS cannot change a " + step.AssetType + "; change it at its source"
+			continue
+		}
+		if err != nil {
 			failed++
 			step.Status = "failed"
-			if step.Metadata == nil {
-				step.Metadata = map[string]interface{}{}
-			}
 			step.Metadata["error"] = err.Error()
 			_ = s.publishAudit(ctx, "audit.pqc.migration_failed", tenantID, map[string]interface{}{
 				"plan_id":   planID,
 				"step_id":   step.ID,
 				"asset_id":  step.AssetID,
 				"algorithm": step.CurrentAlg,
+				"result":    "failure",
 				"reason":    err.Error(),
 			})
 			continue
 		}
 		migrated++
-		step.Status = "completed"
+		step.Status = outcome
 		step.ExecutedAt = s.now()
-		_ = s.publishAudit(ctx, "audit.pqc.migration_executed", tenantID, map[string]interface{}{
+		step.ExecutedBy = actor
+		ev := map[string]interface{}{
 			"plan_id":  planID,
 			"step_id":  step.ID,
 			"asset_id": step.AssetID,
 			"from":     step.CurrentAlg,
 			"to":       step.TargetAlg,
+			"outcome":  outcome,
 			"actor":    actor,
-		})
+		}
+		if newKeyID != "" {
+			step.Metadata["successor_key_id"] = newKeyID
+			ev["successor_key_id"] = newKeyID
+		}
+		_ = s.publishAudit(ctx, "audit.pqc.migration_step_executed", tenantID, ev)
 	}
 
-	if req.DryRun {
+	switch {
+	case req.DryRun:
 		plan.Status = "planned"
-	} else if failed > 0 {
+	case failed > 0:
 		plan.Status = "failed"
-	} else {
+	case manual > 0:
+		plan.Status = "manual_steps_remaining"
+	default:
 		plan.Status = "completed"
 		plan.ExecutedAt = s.now()
 	}
+	plan.Summary["manual_steps"] = manual
 	plan.Summary["migrated_steps"] = migrated
 	plan.Summary["failed_steps"] = failed
 	plan.Summary["skipped_steps"] = skipped
@@ -548,6 +565,7 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 		"migrated_steps": migrated,
 		"failed_steps":   failed,
 		"skipped_steps":  skipped,
+		"manual_steps":   manual,
 		"actor":          actor,
 		"plan_status":    plan.Status,
 	}
@@ -566,6 +584,8 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 		_ = s.publishAudit(ctx, "audit.pqc.migration_executed", tenantID, map[string]interface{}{
 			"plan_id":        planID,
 			"migrated_steps": migrated,
+			"manual_steps":   manual,
+			"plan_status":    plan.Status,
 		})
 	}
 	return run, nil
@@ -581,16 +601,38 @@ func (s *Service) RollbackMigrationPlan(ctx context.Context, tenantID string, pl
 	if err != nil {
 		return MigrationPlan{}, err
 	}
-	rolled := 0
+	// Rollback deactivates the successor keys this plan created. A rotation
+	// cannot be undone and is reported as such, never marked rolled back.
+	rolled, irreversible, rollbackFailed := 0, 0, 0
 	for i := range plan.Steps {
-		if plan.Steps[i].Status != "completed" {
-			continue
+		step := &plan.Steps[i]
+		switch step.Status {
+		case "successor_created":
+			id := firstString(step.Metadata["successor_key_id"])
+			if s.keycore == nil || id == "" {
+				rollbackFailed++
+				continue
+			}
+			if err := s.keycore.DeactivateKey(ctx, tenantID, id, "pqc migration rollback by "+defaultString(actor, "system")); err != nil {
+				rollbackFailed++
+				step.Metadata["rollback_error"] = err.Error()
+				continue
+			}
+			step.Status = "rolled_back"
+			step.RolledBackAt = s.now()
+			step.RolledBackBy = defaultString(actor, "system")
+			rolled++
+		case "rotated", "completed":
+			irreversible++
+			step.Metadata["rollback"] = "not reversible: the key was rotated"
 		}
-		plan.Steps[i].Status = "rolled_back"
-		plan.Steps[i].RolledBackAt = s.now()
-		rolled++
 	}
 	plan.Status = "rolled_back"
+	if rollbackFailed > 0 || irreversible > 0 {
+		plan.Status = "partially_rolled_back"
+	}
+	plan.Summary["irreversible_steps"] = irreversible
+	plan.Summary["rollback_failed_steps"] = rollbackFailed
 	plan.Summary["rolled_back_steps"] = rolled
 	plan.Summary["rollback_actor"] = defaultString(actor, "system")
 	if err := s.store.UpdateMigrationPlan(ctx, plan); err != nil {
@@ -870,14 +912,7 @@ func keyInventoryMode(item map[string]interface{}) string {
 	if strings.Contains(alg, "HYBRID") {
 		return "hybrid"
 	}
-	labels, _ := item["labels"].(map[string]interface{})
-	if labels != nil {
-		hybridMode := strings.ToLower(strings.TrimSpace(firstString(labels["pqc_hybrid_mode"])))
-		switch hybridMode {
-		case "hybrid-ecdh", "hybrid-signature", "hybrid":
-			return "hybrid"
-		}
-	}
+	// A key's mode is its algorithm; a label never makes a key hybrid.
 	if isPQCAlgorithm(alg) {
 		return "pqc_only"
 	}
@@ -1090,15 +1125,42 @@ func (s *Service) collectAssets(ctx context.Context, tenantID string) ([]discove
 	return assets, nil
 }
 
-func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step MigrationStep, actor string) error {
+var errManualStep = errors.New("manual step")
+
+// applyMigrationStep performs a key step in keycore and returns what it did:
+// "rotated" (target is the current algorithm) or "successor_created" (a new
+// key of the target algorithm, id returned). Non-key assets return
+// errManualStep: nothing is changed and the step is never marked completed.
+// Before 1.26.0-beta every step was marked completed after a same-algorithm
+// rotate, or after nothing at all.
+func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step MigrationStep, actor string) (string, string, error) {
+	if !isKeyAsset(step.AssetType) {
+		return "", "", errManualStep
+	}
 	if s.keycore == nil {
-		return nil
+		return "", "", errKeycoreNotConfigured
 	}
-	if step.AssetType == "key" || step.AssetType == "kms_key" {
-		reason := "pqc migration by " + defaultString(actor, "system") + ": " + step.CurrentAlg + " -> " + step.TargetAlg
-		return s.keycore.RotateKey(ctx, tenantID, step.AssetID, reason)
+	reason := "pqc migration by " + defaultString(actor, "system") + ": " + step.CurrentAlg + " -> " + step.TargetAlg
+	if normalizeAlgorithm(step.TargetAlg) == normalizeAlgorithm(step.CurrentAlg) {
+		return "rotated", "", s.keycore.RotateKey(ctx, tenantID, step.AssetID, reason)
 	}
-	return nil
+	keyType, purpose := "symmetric", "encrypt-decrypt"
+	switch target := normalizeAlgorithm(step.TargetAlg); {
+	case strings.Contains(target, "ML-DSA"), strings.Contains(target, "SLH-DSA"):
+		keyType, purpose = "asymmetric-private", "sign-verify"
+	case strings.Contains(target, "ML-KEM"):
+		keyType, purpose = "asymmetric-private", "key-encapsulation"
+	}
+	id, err := s.keycore.CreateKey(ctx, tenantID, map[string]interface{}{
+		"name":       defaultString(step.Name, step.AssetID) + "-" + strings.ToLower(step.TargetAlg),
+		"algorithm":  step.TargetAlg,
+		"key_type":   keyType,
+		"purpose":    purpose,
+		"owner":      defaultString(actor, "system"),
+		"created_by": defaultString(actor, "system"),
+		"labels":     map[string]string{"pqc_successor_of": step.AssetID},
+	})
+	return "successor_created", id, err
 }
 
 func (s *Service) timelineStatusMap(readinessScore int) map[string]interface{} {
@@ -1189,23 +1251,38 @@ func timelineReadinessStatus(readinessScore int, due time.Time, now time.Time) s
 	return "not_started"
 }
 
+// migrationTarget is a key algorithm keycore generates for key assets. Other
+// assets (TLS endpoints, certificates, code) get a description of the change;
+// their steps are manual, since the KMS cannot change them.
 func migrationTarget(alg string, assetType string) string {
 	alg = normalizeAlgorithm(alg)
 	assetType = strings.ToLower(strings.TrimSpace(assetType))
+	if !isKeyAsset(assetType) {
+		if strings.Contains(assetType, "tls") {
+			return "hybrid ML-KEM key exchange (X25519MLKEM768)"
+		}
+		return "replace with an ML-DSA-65 or ML-KEM-768 based credential"
+	}
 	switch {
-	case isPQCAlgorithm(alg):
+	case isPQCAlgorithm(alg) && !isHybridAlgorithm(alg):
 		return alg
-	case isHybridAlgorithm(alg):
-		return "ML-KEM-768 + ML-DSA-65"
-	case strings.Contains(assetType, "signature") || strings.Contains(alg, "RSA") || strings.Contains(alg, "ECDSA") || strings.Contains(alg, "ED25519"):
-		return "ML-DSA-65-HYBRID"
-	case strings.Contains(alg, "ECDH") || strings.Contains(assetType, "tls"):
-		return "ML-KEM-768-HYBRID"
 	case strings.Contains(alg, "AES-128"):
 		return "AES-256"
+	case strings.Contains(alg, "AES"), strings.Contains(alg, "HMAC"):
+		return alg
+	case strings.Contains(alg, "RSA"), strings.Contains(alg, "ECDSA"), strings.Contains(alg, "ED25519"), strings.Contains(assetType, "signature"):
+		return "ML-DSA-65"
 	default:
-		return "ML-KEM-768-HYBRID"
+		return "ML-KEM-768"
 	}
+}
+
+func isKeyAsset(assetType string) bool {
+	switch strings.ToLower(strings.TrimSpace(assetType)) {
+	case "key", "kms_key":
+		return true
+	}
+	return false
 }
 
 func migrationPhase(current string, target string) string {

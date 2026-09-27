@@ -57,7 +57,7 @@ export function HealthTab(_: Props) {
           <h2 style={{ margin: 0, color: C.text }}>Health & Reconciliation</h2>
           <p style={{ margin: "0.25rem 0 0", color: C.dim, fontSize: 13 }}>
             Live service heartbeats, reconciler controllers, and recent
-            playbook-triggered incidents.
+            watchdog alerts (the watchdog alerts; it does not remediate).
           </p>
         </div>
         <button
@@ -152,7 +152,7 @@ export function HealthTab(_: Props) {
                 <th style={{ padding: "0.5rem 0.75rem" }}>Time</th>
                 <th style={{ padding: "0.5rem 0.75rem" }}>Service</th>
                 <th style={{ padding: "0.5rem 0.75rem" }}>Reason</th>
-                <th style={{ padding: "0.5rem 0.75rem" }}>Playbook</th>
+                <th style={{ padding: "0.5rem 0.75rem" }}>Recommended action</th>
               </tr>
             </thead>
             <tbody>
@@ -161,7 +161,7 @@ export function HealthTab(_: Props) {
                   <td style={{ padding: "0.5rem 0.75rem" }}>{i.timestamp}</td>
                   <td style={{ padding: "0.5rem 0.75rem" }}>{i.service}</td>
                   <td style={{ padding: "0.5rem 0.75rem" }}>{i.reason}</td>
-                  <td style={{ padding: "0.5rem 0.75rem" }}>{i.action}</td>
+                  <td style={{ padding: "0.5rem 0.75rem" }}>{i.recommendation || "—"}</td>
                 </tr>
               ))}
             </tbody>

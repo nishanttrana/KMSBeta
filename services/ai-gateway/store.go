@@ -57,6 +57,11 @@ type SQLStore struct {
 	db *pkgdb.DB
 }
 
+// Ping is a database round trip for the health check.
+func (s *SQLStore) Ping(ctx context.Context) error {
+	return s.db.SQL().PingContext(ctx)
+}
+
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
 	return &SQLStore{db: db}
 }

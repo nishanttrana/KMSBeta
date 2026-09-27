@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-27T02:55:41Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T03:40:16Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `33`
-- Tab/component mappings: `41`
+- Dashboard navigation items: `32`
+- Tab/component mappings: `40`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `950` across `31` services
-- Backend routes on the `pkg/route` kernel: `82` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `618`
-- Frontend call sites with exact backend route match: `568`
+- Backend HTTP routes discovered: `947` across `30` services
+- Backend routes on the `pkg/route` kernel: `86` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `612`
+- Frontend call sites with exact backend route match: `562`
 - Frontend call sites needing review or dynamic/runtime confirmation: `50`
-- Clickable controls with static `onClick` handlers: `828`
-- Backend request flows with handler/service/package summaries: `950`
+- Clickable controls with static `onClick` handlers: `824`
+- Backend request flows with handler/service/package summaries: `947`
 
 ## How To Use This For Launch
 
@@ -126,9 +126,6 @@ flowchart LR
   tab_webhooks["Webhooks & SIEM"]
   UI --> tab_webhooks
   tab_webhooks --> svc_audit
-  tab_feature_forge["Feature Forge"]
-  UI --> tab_feature_forge
-  tab_feature_forge --> svc_featureforge
   tab_byok["byok"]
   UI --> tab_byok
   tab_byok --> svc_cloud
@@ -154,7 +151,7 @@ flowchart LR
   tab_restapi --> svc_secrets
   svc_ai["ai"]
   svc_ai_gateway["ai-gateway (31 routes)"]
-  svc_audit["audit (48 routes)"]
+  svc_audit["audit (51 routes)"]
   svc_auth["auth (82 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -165,7 +162,6 @@ flowchart LR
   svc_compliance["compliance (42 routes)"]
   svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (64 routes)"]
-  svc_featureforge["featureforge (7 routes)"]
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
@@ -217,7 +213,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | DevSecOps / IaC | devsecops | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | - | 0 |
 | Platform | Webhooks & SIEM | webhooks | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | audit | 6 |
-| Platform | Feature Forge | feature_forge | web/dashboard/src/components/v3/tabs/FeatureForgeTab.tsx | featureforge | 6 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | Platform | Documentation | docs | web/dashboard/src/components/v3/tabs/DocsViewTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
@@ -234,7 +229,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
 | ai-gateway | 31 | 23 |
-| audit | 48 | 27 |
+| audit | 51 | 27 |
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
@@ -246,9 +241,8 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | dataprotect | 50 | 29 |
 | discovery | 26 | 20 |
 | ekm | 64 | 44 |
-| featureforge | 7 | 6 |
 | governance | 40 | 29 |
-| hsm-connector | 11 | 0 |
+| hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
 | keycore | 173 | 123 |
@@ -451,7 +445,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 67 |
 | compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 68 |
 
-Showing `120` of `386`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `387`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

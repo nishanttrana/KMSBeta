@@ -13,6 +13,8 @@ type KeyCoreClient interface {
 	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
 	ListInterfacePorts(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error
+	CreateKey(ctx context.Context, tenantID string, req map[string]interface{}) (string, error)
+	DeactivateKey(ctx context.Context, tenantID string, keyID string, reason string) error
 }
 
 type DiscoveryClient interface {

@@ -4,6 +4,184 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.26.0-beta] — 2026-09-27
+
+A code-wide sweep for fake, simulated, mock or fabricated capability (CLAUDE.md
+rule 8, owner directive of 2026-09-27: "no mock, synthetic, fake simulation
+data or feature, no fake audit"). Each item below was either made real or
+removed. [learning.md](learning.md) records how each one slipped through.
+[docs/SECURITY/REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md) lists the
+items and what replaced them.
+
+### Security: format-preserving encryption is real FF1 (breaking)
+- **What was wrong.** "FF1" and "FF3-1" were an additive keystream: the round
+  keys never depended on the data, so a single known plaintext/ciphertext pair
+  decrypted every other value of that length under the same key and tweak.
+- **Now.** FF1 follows NIST SP 800-38G (`pkg/crypto.FF1Encrypt`) on the
+  certified module's AES, and passes all nine NIST sample vectors.
+  **FF3-1 is refused**, because NIST's SP 800-38G Rev. 1 draft withdraws it.
+  The FF1 minimum domain applies (radix^length >= 1,000,000; for example, at
+  least 6 digits).
+- **Existing ciphertext.** Ciphertext produced before 1.26.0-beta does not
+  decrypt as FF1. Decrypt it with `algorithm: LEGACY-FF1` or `LEGACY-FF3-1`
+  (decrypt only, audited as `audit.dataprotect.fpe_legacy_decrypted`), then
+  re-encrypt with FF1. See [docs/DATA_PROTECTION.md](docs/DATA_PROTECTION.md).
+- Refusals are audited as `audit.dataprotect.fpe_refused`.
+
+### Security: masking
+- The non-consistent `shuffle` mask did nothing: it returned the value
+  unmasked. It now shuffles with the CSPRNG.
+
+### Security: keys are the algorithm they name (breaking)
+- **What was wrong.**
+  - Key creation stored 32 random bytes for any algorithm without its own
+    branch: XMSS, HSS/LMS, DSA, DH, ML-DSA-44, hybrid pairs, and every SLH-DSA
+    set except 256f.
+  - Brainpool and secp256k1 keys were made on P-256, and RSA-1024 keys at
+    2048 bits.
+  - Every SLH-DSA key was SHAKE-256f, and SLH-DSA sign and verify panicked
+    because the parameter set was never supplied.
+- **Now.**
+  - keycore generates exactly the named key or refuses with
+    `400 algorithm_unsupported`, audited as `audit.key.create_refused`.
+  - All twelve FIPS 205 SLH-DSA parameter sets are generated, sign and verify.
+  - XOR key components (`/keys/form`) form symmetric keys only.
+- **Existing records.** On the primary, keycore relabels every key whose
+  material is not what its label says: the real algorithm, or
+  `INVALID-MATERIAL` when the bytes are not a key (every operation then
+  refuses it). Each correction is audited as
+  `audit.key.algorithm_label_corrected`.
+- **Dashboard.** The Keys tab offers only what keycore generates. Removed:
+  Camellia, ChaCha20, DSA, Brainpool, Ed448, X448, ML-DSA-44, HSS/LMS, XMSS,
+  hybrid pairs, CMAC and HMAC-SHA3. Also removed: the unwired "New algorithm"
+  and "PQC migration (coming soon)" rotate options, the always-checked
+  BYOK/HYOK notify boxes, and the PQC "hybrid mode" label that the PQC
+  inventory then counted as a hybrid key.
+
+### Security: random sources are what they say
+- **What was wrong.** `hsm-trng`, `qkd-seeded-csprng` and
+  `qrng-seeded-csprng` returned the OS CSPRNG under their own label, and were
+  audited that way.
+- **Now.**
+  - `hsm-trng` draws from the tenant HSM's `C_GenerateRandom` through the new
+    connector route `POST /hsm/random` (audited as
+    `audit.hsm.random_generated`). With no tenant HSM it is refused.
+  - QKD and QRNG are refused (no such source is integrated), and the unused
+    QRNG client is removed.
+  - Refusals return `409 random_source_unavailable` and are audited as
+    `audit.crypto.random_refused`.
+
+### Removed: invented values in the dashboard
+- (The Leak Scanner, Rotation Scheduler and Webhooks `MOCK_*` fallbacks were
+  removed in 1.20.0-beta, e3edda730.)
+- System Administration showed guessed values when the service reported
+  nothing (entropy sample of 4096 bytes, CTR_DRBG, TLS 1.2+ FIPS, and entropy
+  "ok"). It now shows "not reported".
+- The home dashboard showed "0/0 nodes" when the cluster service didn't
+  answer. It now shows "unavailable".
+- The Crypto tab's hard-coded "FIPS-approved" algorithm list marked Poly1305,
+  3DES encryption and DSA as approved, and offered algorithms keycore doesn't
+  implement. It now lists only implemented algorithms, with correct approval
+  status.
+
+### Discovery scans observe instead of inventing (breaking)
+- **Network.** The scan never connected: each endpoint's "algorithm" was the
+  sum of its hostname's bytes mod 5, and the default endpoints were
+  `*.vecta.local`. It now performs a TLS handshake with each endpoint in
+  `DISCOVERY_TLS_ENDPOINTS` (no default), and records the negotiated key
+  exchange (including X25519MLKEM768), the protocol, the cipher, the leaf key
+  and whether the chain is trusted.
+- **Cloud.** The scan made up AWS, Azure and GCP keys. It now reads each
+  registered account's live KMS inventory through the cloud service
+  (`CLOUD_URL`).
+- **Certificates.** When there were none, the scan invented two certificates
+  (one "ML-DSA-65"). It now reports the certs service's list or its error.
+- **Code.** The scan walked the container's own filesystem, gave secrets an
+  arbitrary algorithm and **stored the matched secret** (rule 9). It now needs
+  `WORKSPACE_ROOT`, records file:line and a fingerprint, never the secret,
+  and names a private key by the key it parses to.
+- A scan type that fails or isn't configured is recorded in `stats.errors`,
+  with status `completed_with_errors` or `failed`.
+- The unused `pkg/caim` library is deleted; its TLS probe now lives in
+  discovery.
+
+### SBOM vulnerabilities
+- When OSV or Trivy failed, the SBOM silently returned a built-in two-entry CVE
+  list with wrong facts (CVE-2024-24784 listed against gRPC). That list is
+  gone:
+  - A failed source now returns `503 vulnerability_source_unavailable`.
+  - Partial results from a composite with a failed source are refused.
+  - `audit.sbom.generated` records `vulnerabilities_assessed: false` instead
+    of counting zero.
+- New setting: `OSV_ENABLED=false` for air-gapped installs.
+
+### PQC migration does what it records (breaking)
+- **What was wrong.** "Execute" marked every step `completed`: key steps
+  after a same-algorithm rotate, and other steps after nothing at all.
+- **Now.**
+  - Key steps create a real successor key of the target algorithm (ML-DSA-65,
+    ML-KEM-768 or AES-256), recorded as `successor_created` with the new key
+    id.
+  - A key already at the target algorithm is rotated (`rotated`).
+  - Certificates, TLS endpoints and code become `manual_required`, and the
+    plan ends as `manual_steps_remaining`.
+  - Rollback deactivates the successor keys. Rotations are reported as not
+    reversible.
+- New audit event: `audit.pqc.migration_step_executed`.
+
+### Removed: Feature Forge
+- It had no staging or production environment ("deployed to prod" changed a
+  status field). Its "sandbox dry-run" was two parameter checks, and its
+  policy guardrail read HTTP 200 as "permitted" even when the policy service
+  denied. Its apply body was also rejected by the policy service, so nothing
+  was ever applied.
+- Removed: the `featureforge` service, the Compose profile, the Envoy routes,
+  the dashboard tab, the installer module, the cluster component and its
+  docs.
+- Last present at a71088391; the 1.26.0-beta commit removes it.
+
+### Compliance playbooks
+- `send_alert`, `notify_soc` and `disable_access` only logged, yet reported
+  OK. `send_email`, `generate_evidence_report` and `create_backup` called
+  endpoints that don't exist. The dashboard also offered ten actions with no
+  executor.
+- A playbook now accepts only the actions the executor performs.
+- `trigger_assessment` and `snapshot_posture` now run in-process.
+
+### Other corrections
+- **Watchdog.** Incidents claimed actions ("page-oncall", "freeze-mutations")
+  that nothing performed. They now record `action: alert` and a labelled
+  `recommendation`.
+- **Confidential compute.** Evaluations return an `allow` / `review` / `deny`
+  *verdict*, not a "release": no key material is released. Self-asserted
+  `generic` evidence is never allowed.
+- **AI gateway.** `/ai-gateway/v1/health` hard-coded every check as "ok". It
+  now pings the database and runs the DLP and injection detectors, and
+  returns `503 degraded` on failure.
+- **Keycore scores.**
+  - The cost-optimisation dollar figure came from an invented unit price and
+    is removed.
+  - The compliance dashboard no longer scores controls as 50 when there are
+    none; preview records don't count.
+  - The key-health "entropy score" was the algorithm's strength again and is
+    removed.
+- **Compliance.** PQC readiness is "not assessed" (0 evaluated) instead of
+  100% with no keys.
+- **Posture.** The what-if no longer claims at least 4 points (12 with
+  approval) for every action.
+- **Keycore KDF.** scrypt and Argon2id move to `pkg/crypto` and are refused in
+  FIPS strict mode (`audit.key.kdf_refused`; impact catalogue entry).
+  HKDF-SHA256 and PBKDF2-SHA256 use the certified module.
+- **Dead code deleted:** `pkg/hwtoken` (a fabricated fallback token, and the
+  PIN on the command line), and keycore's unwired `HBSTracker`,
+  `PQCAttestation`, `RotationForecaster` and composite-key types. The cloud
+  test double moves to a `_test` file.
+
+### Enforcement
+- `make conformance` (`real-capability`) now also fails on `newMock…` /
+  `newFake…` constructors outside tests (sample-data constants have been
+  checked since 1.20.0-beta).
+
 ## [1.25.0-beta] — 2026-09-27
 
 ### Webhook credentials encrypted at rest under an audit service master key

@@ -197,57 +197,35 @@ const TRIGGER_GROUPS = [
 // Flat list for compatibility
 const TRIGGER_TYPES = TRIGGER_GROUPS.flatMap(g => g.items);
 
+// Exactly the actions the compliance executor performs (validActionTypes).
 const ACTION_GROUPS = [
   { group: "Notification", items: [
-    { value: "send_email", label: "Send Email" },
     { value: "send_slack", label: "Send Slack" },
     { value: "send_teams", label: "Send Teams" },
     { value: "send_webhook", label: "Send Webhook" },
     { value: "send_pagerduty", label: "Send PagerDuty" },
     { value: "create_jira_ticket", label: "Create Jira Ticket" },
     { value: "create_servicenow_incident", label: "Create ServiceNow Incident" },
-    { value: "send_alert", label: "Send Alert (Legacy)" },
-    { value: "notify_soc", label: "Notify SOC (Legacy)" },
   ]},
   { group: "Key Operations", items: [
     { value: "rotate_key", label: "Rotate Key" },
     { value: "suspend_key", label: "Suspend Key" },
     { value: "revoke_key", label: "Revoke Key" },
     { value: "destroy_key", label: "Destroy Key" },
-    { value: "import_replacement_key", label: "Import Replacement Key" },
     { value: "enable_key", label: "Enable Key" },
   ]},
   { group: "Certificate", items: [
     { value: "renew_certificate", label: "Renew Certificate" },
     { value: "revoke_certificate", label: "Revoke Certificate" },
-    { value: "issue_replacement_cert", label: "Issue Replacement Cert" },
   ]},
   { group: "Access Control", items: [
     { value: "disable_user", label: "Disable User" },
-    { value: "disable_access", label: "Disable Access (Legacy)" },
     { value: "revoke_api_key", label: "Revoke API Key" },
-    { value: "enforce_mfa", label: "Enforce MFA" },
-    { value: "quarantine_tenant", label: "Quarantine Tenant" },
-    { value: "block_ip_range", label: "Block IP Range" },
   ]},
   { group: "Compliance", items: [
     { value: "trigger_assessment", label: "Trigger Assessment" },
-    { value: "generate_evidence_report", label: "Generate Evidence Report" },
-    { value: "enable_fips_strict", label: "Enable FIPS Strict" },
     { value: "snapshot_posture", label: "Snapshot Posture" },
-    { value: "create_audit_event", label: "Create Audit Event (Legacy)" },
-  ]},
-  { group: "Infrastructure", items: [
-    { value: "failover_cluster", label: "Failover Cluster" },
-    { value: "scale_service", label: "Scale Service" },
-    { value: "flush_cache", label: "Flush Cache" },
-    { value: "restart_service", label: "Restart Service" },
-  ]},
-  { group: "Remediation", items: [
-    { value: "run_custom_script", label: "Run Custom Script" },
-    { value: "execute_webhook_action", label: "Execute Webhook Action" },
-    { value: "update_policy", label: "Update Policy" },
-    { value: "create_backup", label: "Create Backup" },
+    { value: "create_audit_event", label: "Create Audit Event" },
   ]},
 ];
 
@@ -320,7 +298,7 @@ export function PlaybooksTab({ session }: { session: any }) {
     trigger_type: "canary_tripped",
     threshold: "0",
     enabled: true,
-    actions: [{ type: "send_email", delay_seconds: "0", params: "" }],
+    actions: [{ type: "send_webhook", delay_seconds: "0", params: "" }],
   });
   const [form, setForm] = useState(emptyForm());
   const [creating, setCreating] = useState(false);
@@ -461,7 +439,7 @@ export function PlaybooksTab({ session }: { session: any }) {
     setView("create");
   };
 
-  const addAction = () => setForm(p => ({ ...p, actions: [...p.actions, { type: "send_email", delay_seconds: "0", params: "" }] }));
+  const addAction = () => setForm(p => ({ ...p, actions: [...p.actions, { type: "send_webhook", delay_seconds: "0", params: "" }] }));
   const removeAction = (i: number) => setForm(p => ({ ...p, actions: p.actions.filter((_: any, idx: number) => idx !== i) }));
   const updateAction = (i: number, field: string, value: string) => setForm(p => ({
     ...p,

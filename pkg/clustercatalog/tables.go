@@ -120,10 +120,6 @@ var Replicated = map[string][]string{
 		"ekm_mek_state",
 		"ekm_tde_keys",
 	},
-	"featureforge": {
-		"ff_approvals",
-		"ff_intents",
-	},
 	"governance": {
 		"approval_policies",
 		"approval_requests",
@@ -277,7 +273,6 @@ var NodeLocal = map[string]string{
 	"dataprotect_audit_log":               "per-node data protection log",
 	"dr_drill_runs":                       "DR drill executions of this node",
 	"ekm_key_access_log":                  "per-node access log",
-	"ff_events":                           "per-node feature-forge event log",
 	"field_encryption_usage_receipts":     "usage receipts reported to this node",
 	"field_encryption_wrapper_challenges": "short-lived challenges issued by this node",
 	"governance_backup_jobs":              "backups taken on this node",

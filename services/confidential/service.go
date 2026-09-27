@@ -256,7 +256,7 @@ func (s *Service) GetAttestationSummary(ctx context.Context, tenantID string) (A
 	for _, item := range items {
 		if !item.CreatedAt.IsZero() && item.CreatedAt.After(since) {
 			switch strings.ToLower(strings.TrimSpace(item.Decision)) {
-			case "release":
+			case "allow", "release": // "release" in records before 1.26.0-beta
 				summary.ReleaseCount24h++
 			case "review":
 				summary.ReviewCount24h++
@@ -340,7 +340,12 @@ func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleas
 		reasons = append(reasons, "attestation issuer is not approved")
 		missingAttributes = append(missingAttributes, "attester")
 	}
-	if normalizeProvider(evaluated.Provider) != "generic" && !verification.CryptographicallyVerified {
+	if normalizeProvider(evaluated.Provider) == "generic" {
+		// Generic evidence is whatever the caller typed (claims, secure boot,
+		// debug state): it can be recorded for review, never allowed.
+		reasons = append(reasons, "generic evidence is self-asserted, not cryptographically verified; use a provider with verifiable attestation")
+		missingAttributes = append(missingAttributes, "cryptographic_verification")
+	} else if !verification.CryptographicallyVerified {
 		reasons = append(reasons, "provider attestation document was not cryptographically verified")
 		missingAttributes = append(missingAttributes, "cryptographic_verification")
 	}
@@ -401,7 +406,10 @@ func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleas
 		matchedMeasurements = append(matchedMeasurements, key)
 	}
 
-	decision := "release"
+	// A verdict only: no key material leaves the KMS here, and no keycore
+	// operation consults it. The caller's key broker enforces it. (Until
+	// 1.26.0-beta the verdict was called "release".)
+	decision := "allow"
 	allowed := true
 	if len(reasons) > 0 {
 		allowed = false

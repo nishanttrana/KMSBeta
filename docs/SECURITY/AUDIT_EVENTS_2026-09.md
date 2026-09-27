@@ -27,6 +27,14 @@ security meaning where a generic request record isn't enough.
 | `audit.key.service_derive` | keycore | an internal service derives a purpose-bound working key | info |
 | `audit.key.derive_refused` | keycore | a generic derive tries to use the reserved service-derive context | critical |
 | `audit.cert.ocsp_refused` | certs | an OCSP request with a SHA-1 CertID in FIPS strict mode | warning |
+| `audit.dataprotect.fpe_refused` | dataprotect | FPE request for FF3-1, legacy encrypt or an unknown algorithm (`reason`, `result: refused`) | warning |
+| `audit.dataprotect.fpe_legacy_decrypted` | dataprotect | pre-1.26.0 ciphertext decrypted for migration (`LEGACY-FF1`/`LEGACY-FF3-1`) | warning |
+| `audit.key.create_refused` | keycore | key creation for an algorithm keycore does not generate (`reason`, `result: refused`) | warning |
+| `audit.key.algorithm_label_corrected` | keycore (primary, startup) | a key record named material it didn't hold is relabelled to the real algorithm or `INVALID-MATERIAL` (recorded vs actual) | warning |
+| `audit.crypto.random_refused` | keycore | random bytes requested from a source that is unavailable (QKD, QRNG, no tenant HSM) | warning |
+| `audit.hsm.random_generated` | hsm-connector (kernel) | random bytes drawn from a tenant HSM with `C_GenerateRandom` (refusals included) | info |
+| `audit.key.kdf_refused` | keycore | scrypt or Argon2id KDF refused in FIPS strict mode | warning |
+| `audit.pqc.migration_step_executed` | pqc | one migration step changed a key in keycore (`outcome`: `successor_created` with `successor_key_id`, or `rotated`) | info |
 | `audit.dataprotect.kdf_legacy_used` | dataprotect | identifier-derived (v1) working keys are used (at most every 5 min per key, with a count) | warning |
 | `audit.dataprotect.kdf_refused` | dataprotect | a derivation is refused: v1 after migration, v2 before it, or v1 in strict mode (at most once a minute per key and reason, with a count) | critical for v1 after migration, else warning |
 | `audit.dataprotect.kdf_migration_started` / `_vault_reprotected` / `_migration_completed` / `_migration_aborted` | dataprotect | per-key migration steps (actor, pinned version, counts; forced completion noted) | info; warning when forced or rows failed |

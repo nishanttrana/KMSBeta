@@ -107,19 +107,32 @@ All examples in this document use the dashboard proxy base path.
 
 Format-Preserving Encryption (FPE) is a class of symmetric encryption where the ciphertext occupies the same format domain as the plaintext. For a numeric 16-digit credit card number, the FPE output is also a 16-digit numeric string. For a 9-digit SSN, the output is a 9-digit numeric string.
 
-Vecta KMS implements the two NIST-standardized FPE modes from **NIST SP 800-38G**:
+Vecta KMS implements **FF1** from **NIST SP 800-38G** (`pkg/crypto.FF1Encrypt`),
+verified against NIST's nine published FF1 sample vectors.
 
 **FF1 (NIST SP 800-38G, Section 5.1):**
-- Based on AES in Feistel network mode with variable radix and length
-- Supports tweaks up to 2^32 bytes (practically unlimited)
-- Requires minimum plaintext length of 2 characters in the specified alphabet
-- Best choice for general-purpose FPE; PCI DSS and HIPAA use cases
-- Underlying key: AES-128, AES-192, or AES-256
+- AES Feistel network (10 rounds) with a CBC-MAC PRF; variable radix and length
+- Alphabet here: `0-9a-z` (radix 2 to 36), letter case preserved
+- Minimum domain: radix^length >= 1,000,000 (for example, at least 6 decimal digits); maximum length 4096
+- Tweak: the request's `tweak` string as bytes, up to 256 bytes
+- Key: the AES-256 working key keycore derives for the `fpe` purpose
 
-**FF3-1 (NIST SP 800-38G, Section 5.2, Revised):**
-- Also AES-based Feistel; tweak is exactly 7 bytes (56 bits)
-- Faster than FF1 for short strings (credit card numbers, SSNs)
-- Note: FF3 (original) had a known attack reducing security margin; FF3-1 fixes the tweak construction. Vecta implements FF3-1 only.
+**FF3-1 is not offered.** NIST's SP 800-38G Rev. 1 draft withdraws it after
+published attacks. Requests for `FF3`/`FF3-1` are refused and audited
+(`audit.dataprotect.fpe_refused`).
+
+**Ciphertext from before 1.26.0-beta.** Until 1.26.0-beta both names ran an
+additive keystream, not FF1: its round keys never depended on the data, so one
+known plaintext/ciphertext pair revealed every other value of the same length
+under the same key and tweak. Treat that ciphertext as weakly protected and
+migrate it:
+
+1. Decrypt with `POST /fpe/decrypt` and `algorithm: "LEGACY-FF1"` (or
+   `"LEGACY-FF3-1"` for values encrypted as FF3/FF3-1), with the same key,
+   tweak and radix. This is decrypt-only and audited as
+   `audit.dataprotect.fpe_legacy_decrypted`.
+2. Re-encrypt with `POST /fpe/encrypt` (`algorithm: "FF1"`).
+3. Replace the stored value. Legacy encrypt is refused.
 
 **How FPE works conceptually:**
 1. The plaintext string is split into a left half `A` and right half `B`.
@@ -238,15 +251,15 @@ A tokenization scheme encapsulates all parameters needed to tokenize and detoken
 |---|---|---|---|---|
 | `name` | string | Yes | — | Unique human-readable identifier for the scheme within the tenant. Must match `^[a-z0-9][a-z0-9\-]{1,62}[a-z0-9]$`. |
 | `description` | string | No | `""` | Free-text description for documentation and audit purposes. |
-| `mode` | string | Yes | — | Tokenization mode. One of: `fpe` (format-preserving encryption via FF1/FF3-1), `vault` (random token with vault storage), `format_preserving` (alias for `fpe`). |
-| `algorithm` | string | Required if `mode=fpe` | — | FPE algorithm. One of: `FF1`, `FF3-1`. Ignored for `mode=vault`. |
+| `mode` | string | Yes | — | Tokenization mode. One of: `fpe` (format-preserving encryption via FF1), `vault` (random token with vault storage), `format_preserving` (alias for `fpe`). |
+| `algorithm` | string | Required if `mode=fpe` | — | FPE algorithm: `FF1` (FF3-1 is refused since 1.26.0-beta). Ignored for `mode=vault`. |
 | `keyId` | string (UUID) | Yes | — | ID of the AES key in Vecta KMS to use for encryption. Key must have purpose `tokenize` or `encrypt`. Must be in `ACTIVE` state. |
 | `inputAlphabet` | string | No | `"0123456789"` | Ordered set of unique characters that appear in the input. All input characters must belong to this set. Minimum 2 characters, maximum 95. |
 | `outputAlphabet` | string | No | Same as `inputAlphabet` | Ordered set of unique characters for the output token. Must have same length as `inputAlphabet` (bijective mapping). Leave unset to use same alphabet as input. |
 | `minLength` | int | No | `2` | Minimum input length (in characters). Inputs shorter than this are rejected. |
 | `maxLength` | int | No | `256` | Maximum input length. Inputs longer than this are rejected. |
 | `tweakSource` | string | No | `"static"` | How the FPE tweak is derived. One of: `static` (use `staticTweak` for every call), `field` (caller provides tweak per request), `random` (random tweak per call, stored in token). |
-| `staticTweak` | string (hex) | Required if `tweakSource=static` | — | Exactly 32 hex characters (16 bytes) for FF1; exactly 14 hex characters (7 bytes) for FF3-1. |
+| `staticTweak` | string (hex) | Required if `tweakSource=static` | — | Exactly 32 hex characters (16 bytes) for FF1. |
 | `preservePrefix` | int | No | `0` | Number of leading characters to copy unchanged from input to output. These characters are not encrypted. |
 | `preserveSuffix` | int | No | `0` | Number of trailing characters to copy unchanged from input to output. These characters are not encrypted. |
 | `luhnPreserve` | boolean | No | `false` | When `true`, the FPE output's final digit is adjusted to make the result pass the Luhn check. Only valid for numeric alphabet. |

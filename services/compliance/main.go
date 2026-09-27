@@ -97,6 +97,7 @@ func main() {
 
 	// Playbook execution engine
 	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, policyURL, auditURL, auditClient, logger)
+	executor.ops = svc
 
 	handler := NewHandler(svc)
 	handler.SetExecutor(executor)

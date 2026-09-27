@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"context"
 	"sync"
 	"testing"
@@ -33,9 +34,25 @@ func (p *nopPQCPublisher) Count(subject string) int {
 }
 
 type fakePQCKeyCore struct {
-	mu            sync.Mutex
-	rotateCalls   []string
-	failRotateFor map[string]bool
+	mu              sync.Mutex
+	rotateCalls     []string
+	failRotateFor   map[string]bool
+	created         []map[string]interface{}
+	deactivateCalls []string
+}
+
+func (f *fakePQCKeyCore) CreateKey(_ context.Context, _ string, req map[string]interface{}) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.created = append(f.created, req)
+	return fmt.Sprintf("new-%d", len(f.created)), nil
+}
+
+func (f *fakePQCKeyCore) DeactivateKey(_ context.Context, _ string, keyID string, _ string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.deactivateCalls = append(f.deactivateCalls, keyID)
+	return nil
 }
 
 func (f *fakePQCKeyCore) ListKeys(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {

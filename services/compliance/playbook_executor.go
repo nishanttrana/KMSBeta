@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -45,6 +46,13 @@ type PlaybookExecutor struct {
 	audit      *pkgaudit.Client
 	http       *http.Client
 	logger     *log.Logger
+	// ops runs compliance actions in-process (this service owns them).
+	ops complianceOps
+}
+
+type complianceOps interface {
+	RunAssessment(ctx context.Context, tenantID string, trigger string, recompute bool, templateID string) (AssessmentResult, error)
+	GetPosture(ctx context.Context, tenantID string, refresh bool) (PostureSnapshot, error)
 }
 
 // NewPlaybookExecutor creates an executor wired to all service endpoints.
@@ -200,8 +208,6 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, action PlaybookAct
 
 	// ── Notification Actions ────────────────────────────────────────────────────
 
-	case "send_email":
-		return e.actionSendEmail(ctx, action.Parameters, runCtx)
 	case "send_slack":
 		return e.actionSendSlack(ctx, action.Parameters)
 	case "send_teams":
@@ -246,33 +252,23 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, action PlaybookAct
 
 	case "trigger_assessment":
 		return e.actionTriggerAssessment(ctx, action.Parameters, runCtx)
-	case "generate_evidence_report":
-		return e.actionGenerateEvidenceReport(ctx, action.Parameters, runCtx)
 	case "snapshot_posture":
 		return e.actionSnapshotPosture(ctx, action.Parameters, runCtx)
 
-	// ── Infrastructure Actions ──────────────────────────────────────────────────
-
-	case "create_backup":
-		return e.actionCreateBackup(ctx, action.Parameters, runCtx)
-
-	// ── Legacy/alias actions (log-only) ─────────────────────────────────────────
-
-	case "send_alert", "create_audit_event", "disable_access", "notify_soc":
-		e.logger.Printf("run=%s legacy action=%s treated as audit log", runCtx.RunID, action.Type)
-		if e.audit != nil {
-			return e.audit.Emit(ctx, "playbook_action", pkgaudit.Event{
-				TenantID:   runCtx.TenantID,
-				TargetType: "playbook_run",
-				TargetID:   runCtx.RunID,
-				Details: map[string]interface{}{
-					"action":     action.Type,
-					"parameters": action.Parameters,
-					"run_id":     runCtx.RunID,
-				},
-			})
+	case "create_audit_event":
+		if e.audit == nil {
+			return errors.New("create_audit_event: audit client not configured")
 		}
-		return nil
+		return e.audit.Emit(ctx, "playbook_action", pkgaudit.Event{
+			TenantID:   runCtx.TenantID,
+			TargetType: "playbook_run",
+			TargetID:   runCtx.RunID,
+			Details: map[string]interface{}{
+				"action":     action.Type,
+				"parameters": action.Parameters,
+				"run_id":     runCtx.RunID,
+			},
+		})
 
 	default:
 		return fmt.Errorf("unsupported action type: %s", action.Type)
@@ -280,23 +276,6 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, action PlaybookAct
 }
 
 // ── Notification Action Implementations ─────────────────────────────────────
-
-func (e *PlaybookExecutor) actionSendEmail(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	for _, required := range []string{"to", "subject", "body"} {
-		if strings.TrimSpace(params[required]) == "" {
-			return fmt.Errorf("send_email: missing required param %q", required)
-		}
-	}
-	// POST to governance SMTP endpoint
-	governanceURL := envOr("GOVERNANCE_URL", "https://governance:8050")
-	payload := map[string]string{
-		"to":        params["to"],
-		"subject":   params["subject"],
-		"body":      params["body"],
-		"tenant_id": runCtx.TenantID,
-	}
-	return e.doPost(ctx, governanceURL+"/governance/notify", payload, nil)
-}
 
 func (e *PlaybookExecutor) actionSendSlack(ctx context.Context, params map[string]string) error {
 	webhookURL := strings.TrimSpace(params["webhook_url"])
@@ -568,43 +547,22 @@ func (e *PlaybookExecutor) actionRevokeAPIKey(ctx context.Context, params map[st
 
 // ── Compliance Action Implementations ───────────────────────────────────────
 
-func (e *PlaybookExecutor) actionTriggerAssessment(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	// POST to self (compliance service) to trigger an assessment
-	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
-	body := map[string]string{
-		"tenant_id":   runCtx.TenantID,
-		"template_id": params["template_id"],
-	}
-	return e.doPost(ctx, complianceURL+"/compliance/assess", body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionGenerateEvidenceReport(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
-	body := map[string]string{
-		"tenant_id":    runCtx.TenantID,
-		"framework_id": params["framework_id"],
-	}
-	return e.doPost(ctx, complianceURL+"/compliance/evidence/report", body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionSnapshotPosture(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
-	body := map[string]string{
-		"tenant_id": runCtx.TenantID,
-		"refresh":   "true",
-	}
-	return e.doPost(ctx, complianceURL+"/compliance/posture", body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
 // ── Infrastructure Action Implementations ───────────────────────────────────
 
-func (e *PlaybookExecutor) actionCreateBackup(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	backupURL := envOr("BACKUP_URL", "https://backup:8290")
-	body := map[string]string{
-		"tenant_id": runCtx.TenantID,
-		"label":     params["label"],
+func (e *PlaybookExecutor) actionTriggerAssessment(ctx context.Context, params map[string]string, runCtx RunContext) error {
+	if e.ops == nil {
+		return errors.New("trigger_assessment: compliance service not wired")
 	}
-	return e.doPost(ctx, backupURL+"/backup/snapshot", body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
+	_, err := e.ops.RunAssessment(ctx, runCtx.TenantID, "playbook:"+runCtx.RunID, true, params["template_id"])
+	return err
+}
+
+func (e *PlaybookExecutor) actionSnapshotPosture(ctx context.Context, _ map[string]string, runCtx RunContext) error {
+	if e.ops == nil {
+		return errors.New("snapshot_posture: compliance service not wired")
+	}
+	_, err := e.ops.GetPosture(ctx, runCtx.TenantID, true)
+	return err
 }
 
 // ── HTTP helpers ────────────────────────────────────────────────────────────

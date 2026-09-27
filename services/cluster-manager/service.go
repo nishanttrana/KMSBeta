@@ -60,8 +60,8 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 	{
 		ID:          "cluster-profile-full",
 		Name:        "full-platform",
-		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, HYOK, and FeatureForge services.",
-		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai", "featureforge"},
+		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
 	},
 }
 
@@ -2106,7 +2106,7 @@ func parseEnvBool(key string, def bool) bool {
 }
 
 // parseEnvComponents reads a comma/space-separated component list from an env
-// var (e.g. CLUSTER_BOOTSTRAP_COMPONENTS="secrets,certs,featureforge") and
+// var (e.g. CLUSTER_BOOTSTRAP_COMPONENTS="secrets,certs,pqc") and
 // normalizes it to canonical component names. Unknown names are dropped by
 // normalizeComponents. Used to seed an operator-defined custom replication
 // profile at bootstrap.

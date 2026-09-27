@@ -20,7 +20,6 @@ services/confidential/handler.go
 services/dataprotect/handler.go
 services/discovery/handler.go
 services/ekm/handler.go
-services/featureforge/handler.go
 services/governance/handler.go
 services/hyok/handler.go
 services/keyaccess/handler.go

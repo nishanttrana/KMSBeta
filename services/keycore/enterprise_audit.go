@@ -95,7 +95,7 @@ type KeyHealthScore struct {
 	KeyID              string     `json:"key_id"`
 	TenantID           string     `json:"tenant_id"`
 	HealthScore        int        `json:"health_score"`
-	EntropyScore       int        `json:"entropy_score"`
+	EntropyScore       int        `json:"-"` // legacy column; not measured, not reported
 	AgeScore           int        `json:"age_score"`
 	UsageScore         int        `json:"usage_score"`
 	AlgorithmScore     int        `json:"algorithm_score"`

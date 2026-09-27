@@ -171,8 +171,7 @@
             "pqc_migration",
             "crypto_discovery",
             "data_protection",
-            "clustering",
-            "feature_forge"
+            "clustering"
           ],
           "properties": {
             "secrets": { "type": "boolean" },
@@ -195,8 +194,7 @@
             "pqc_migration": { "type": "boolean" },
             "crypto_discovery": { "type": "boolean" },
             "data_protection": { "type": "boolean" },
-            "clustering": { "type": "boolean" },
-            "feature_forge": { "type": "boolean" }
+            "clustering": { "type": "boolean" }
           }
         },
         "cluster_bootstrap": {
