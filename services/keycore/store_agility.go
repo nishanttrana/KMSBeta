@@ -5,13 +5,13 @@ import (
 	"database/sql"
 )
 
-// GetAlgorithmDistribution queries the keys table to count keys per algorithm
-// for the given tenant.
+// GetAlgorithmDistribution counts the tenant's live keys per algorithm.
+// Deleted and destroyed keys hold no usable material, so they are excluded.
 func (s *SQLStore) GetAlgorithmDistribution(ctx context.Context, tenantID string) ([]AlgorithmUsage, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT algorithm, COUNT(*) AS key_count
 FROM keys
-WHERE tenant_id = $1
+WHERE tenant_id = $1 AND status NOT IN ('deleted', 'destroyed')
 GROUP BY algorithm
 ORDER BY key_count DESC
 `, tenantID)
@@ -107,14 +107,16 @@ RETURNING id, tenant_id, name, from_algorithm, to_algorithm, affected_keys,
 	return scanMigrationPlanSingleRow(row)
 }
 
-func (s *SQLStore) UpdateMigrationPlan(ctx context.Context, tenantID, id, status string, completedKeys int) (MigrationPlan, error) {
+// UpdateMigrationPlan sets the operator's plan status. Progress is never
+// stored from input; handlers derive it from the keys table.
+func (s *SQLStore) UpdateMigrationPlan(ctx context.Context, tenantID, id, status string) (MigrationPlan, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 UPDATE agility_migration_plans
-SET status=$3, completed_keys=$4
+SET status=$3
 WHERE tenant_id=$1 AND id=$2
 RETURNING id, tenant_id, name, from_algorithm, to_algorithm, affected_keys,
           completed_keys, status, created_at, target_date
-`, tenantID, id, status, completedKeys)
+`, tenantID, id, status)
 
 	mp, err := scanMigrationPlanSingleRow(row)
 	if err == sql.ErrNoRows {

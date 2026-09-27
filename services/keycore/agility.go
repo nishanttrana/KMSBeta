@@ -13,6 +13,9 @@ type AlgorithmUsage struct {
 
 // AgilityScore summarises the overall cryptographic agility posture for a tenant.
 type AgilityScore struct {
+	// Assessed is false when the tenant has no live keys: there is nothing to
+	// score, and Score/Grade are zero values rather than a perfect result.
+	Assessed         bool             `json:"assessed"`
 	Score            int              `json:"score"`             // 0–100
 	Grade            string           `json:"grade"`             // A–F
 	QuantumReadiness int              `json:"quantum_readiness"` // percentage
@@ -35,8 +38,9 @@ type MigrationPlan struct {
 	Name          string     `json:"name"`
 	FromAlgorithm string     `json:"from_algorithm"`
 	ToAlgorithm   string     `json:"to_algorithm"`
-	AffectedKeys  int        `json:"affected_keys"`
-	CompletedKeys int        `json:"completed_keys"`
+	AffectedKeys  int        `json:"affected_keys"`  // live from_algorithm keys when the plan was created
+	CompletedKeys int        `json:"completed_keys"` // derived: affected_keys - remaining_keys, floored at 0
+	RemainingKeys int        `json:"remaining_keys"` // derived: live from_algorithm keys now
 	Status        string     `json:"status"`
 	CreatedAt     time.Time  `json:"created_at"`
 	TargetDate    *time.Time `json:"target_date,omitempty"`
@@ -86,6 +90,9 @@ func computeAgilityScore(algos []AlgorithmUsage) AgilityScore {
 	var totalKeys int
 	for i := range algos {
 		totalKeys += algos[i].KeyCount
+	}
+	if totalKeys == 0 {
+		return AgilityScore{Algorithms: algos, Recommendations: []string{}}
 	}
 
 	// Annotate algorithms and compute totals.
@@ -153,6 +160,7 @@ func computeAgilityScore(algos []AlgorithmUsage) AgilityScore {
 	}
 
 	return AgilityScore{
+		Assessed:         true,
 		Score:            intScore,
 		Grade:            grade,
 		QuantumReadiness: int(quantumPct + 0.5),

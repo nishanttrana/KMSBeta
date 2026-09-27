@@ -85,7 +85,7 @@ type Store interface {
 	ListKeysByAlgorithm(ctx context.Context, tenantID, algorithm string) ([]Key, error)
 	ListMigrationPlans(ctx context.Context, tenantID string) ([]MigrationPlan, error)
 	CreateMigrationPlan(ctx context.Context, mp MigrationPlan) (MigrationPlan, error)
-	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string, completedKeys int) (MigrationPlan, error)
+	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string) (MigrationPlan, error)
 
 	// Ceremony
 	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)

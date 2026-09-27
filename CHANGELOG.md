@@ -4,6 +4,101 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.19.0-beta] — 2026-09-27
+
+### Removed: post-quantum and hybrid certificates (they were never real)
+- **What was fake.** Certificates and CAs requested as ML-DSA, SLH-DSA,
+  HSS/LMS, XMSS or hybrid (`ECDSA-P384+ML-DSA-65`) got a classical ECDSA key.
+  They were recorded as class `pqc`/`hybrid` and audited as
+  `audit.cert.pqc_cert_issued` (rule 8). Real ML-DSA isn't possible here: the
+  certified FIPS 140-3 Go Cryptographic Module v1.0.0 has no ML-DSA. Owner
+  decision: remove.
+- **Now refused and audited.** Issuance, CA creation and profile creation
+  with a PQC or hybrid algorithm or class return an error and emit
+  `audit.cert.pqc_issuance_refused`.
+- **Removed:**
+  - the routes `POST /certs/validate-pqc`, `POST /certs/pqc/migrate/{id}`,
+    `GET /certs/pqc-readiness` and `GET /certs/ots-status/{ca_id}`, and their
+    RPCs in `proto/certs.proto`;
+  - the stateful-signature (XMSS/LMS) counters and their certificate
+    extension;
+  - the four seeded PQC profiles (`pqc-tls-server`, `hybrid-tls`,
+    `quantum-safe-smime`, `pqc-code-signing`);
+  - in the dashboard: the PQC Issue button and modal, the PQC and hybrid
+    algorithm menus (CA, issue, sign CSR) and the PQC stat card.
+- **Existing data.** On the primary, certs relabels every PQC- or
+  hybrid-labelled certificate and CA with the key it actually carries and the
+  `classical` class (`audit.certs.certificate_key_label_corrected`,
+  `reason: pqc_label_removed`), and deletes PQC profiles
+  (`audit.certs.pqc_profile_removed`).
+- **Post-quantum protection that is real** stays: hybrid ML-KEM key
+  exchange on internal mTLS (Certificates / PKI > Service mTLS), and the
+  CBOM/compliance PQC readiness reports, which inventory algorithms.
+- **Fix: the dashboard's API catalog** (`generate-rest-catalog.mjs`) read
+  only `handler.go`/`http_api.go` and only `mux.HandleFunc`. It now reads
+  every service file and route-kernel `Handle` registrations: 28 routes it
+  was missing are listed (Service mTLS, secrets, keycore HSM,
+  `generate-data-key`).
+- **Correction to 1.16.0-beta.** Its notes cited
+  `TestGeneratedKeyMatchesRequestedAlgorithm` and `TestCorrectKeyLabels` as
+  proof, but the test file was never written (the command that should have
+  created it didn't run). Both tests exist now and pass.
+
+## [1.18.0-beta] — 2026-09-27
+
+### Crypto Agility: real data only; plan progress measured from keys
+- **Removed invented data from the dashboard.** When keycore failed to answer,
+  the Crypto Agility tab showed built-in numbers as the customer's own: an
+  agility score of 78, an inventory (for example "AES-256-GCM 1,842 keys",
+  "RSA-2048 634 keys", "ML-KEM-768 94 keys") and three migration plans with
+  progress. A failed plan creation also added a made-up plan to the list.
+  Those constants and fallbacks are gone. On failure, the tab now says **"Not
+  assessed: crypto agility data is unavailable"**, shows the error and offers
+  Retry. A failed create shows its error in the dialog.
+- **The tab now reads what keycore really returns.** It had expected fields
+  keycore never sent (NIST status, ops over 30 days, urgency, replacement,
+  family). Against a live keycore it showed a 0 score and blank columns. It
+  now shows score and grade, quantum-safe share, legacy-algorithm key count,
+  keycore's recommendations, and an inventory of live keys (share,
+  quantum-safe, legacy).
+- **No perfect score for an empty tenant.** With no live keys, keycore scored
+  100/A. `GET /agility/score` now returns `assessed: false` (score 0, empty
+  grade), and the tab shows "Not assessed".
+- **Deleted and destroyed keys no longer count** toward the inventory or the
+  score.
+- **Migration plan progress is measured, not typed in.**
+  - `affected_keys` is counted by keycore at creation: the live keys on the
+    source algorithm.
+  - `completed_keys` and the new `remaining_keys` are derived on every read
+    from the keys table.
+  - Before, both counts came from the client (the dashboard always sent 0),
+    and `PATCH` let anyone set `completed_keys` to any number.
+  - `PATCH` now changes `status` only.
+  - The plans table gets a status selector wired to it.
+- **Security fix: cross-tenant plan creation.** `POST
+  /agility/migration-plans` trusted a `tenant_id` in the body without checking
+  it against the caller's token. An authenticated user could write plans into
+  another tenant. All six `/agility/*` routes now go through the `pkg/route`
+  kernel:
+  - the tenant is enforced;
+  - permissions are required: new `key.agility.read` and
+    `key.agility.write`, both included in admin's `*`;
+  - each call emits its own `audit.key.agility_*` event, refusals
+    included. Before, none were audited beyond the request log.
+  - **Breaking:** non-admin roles need `key.agility.read` to open the tab,
+    and `key.agility.write` to manage plans.
+- The dashboard's target-date input sends `YYYY-MM-DD`, which the old handler
+  rejected (RFC3339 only), so plan creation always failed and fell through to
+  the invented plan. Both formats are accepted now.
+- Tests: `services/keycore/handler_agility_test.go`
+  - figures derive from keys;
+  - client-supplied counts are rejected;
+  - the empty tenant is not assessed;
+  - body-tenant smuggling is refused and audited;
+  - `routetest.RefusalsAudited` passes for all agility routes.
+- Still open: the Webhooks, Leak Scanner and Rotation Scheduler tabs have the
+  same `MOCK_*` fallback pattern (see learning.md, 2026-09-27).
+
 ## [1.17.0-beta] — 2026-09-27
 
 ### Product map: dashboard calls to a service chosen at runtime

@@ -5,6 +5,44 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A test that doesn't exist also passes
+- **What happened:** 1.16.0-beta cited two tests as proof, and a filtered
+  `go test -run` printed `ok`. The test file had never been written: the
+  command creating it was chained after a failing `go build`. A `-run`
+  pattern that matches nothing still reports `ok` (`[no tests to run]`).
+- **Rule:** before citing a test as evidence, see it run: `-v` and its
+  `--- PASS` line, and the file in `git status`. Never chain a file write
+  after a command that may fail.
+
+### A post-quantum label needs a post-quantum key
+- **What happened:** "PQC" certificates were ECDSA certificates with an
+  ML-DSA label, and the certified module has no ML-DSA to make them real.
+- **Rule:** a feature that names an algorithm reads the algorithm back from
+  what it produced (the certificate's public key), and refuses when the
+  library can't produce it.
+
+### A "fallback" that renders sample data hides a broken integration
+- **What happened:** the Crypto Agility tab caught any keycore error and
+  rendered `MOCK_SCORE`, `MOCK_ALGORITHMS` and `MOCK_PLANS` as the tenant's
+  data. The tab's types also didn't match keycore's response. Against a
+  live keycore it rendered zeros and blanks. Plan creation always failed
+  (date format), and the catch added a fabricated plan.
+- **Why nobody noticed:** the mocks made the page look finished. The
+  fallback hid both the broken contract and the failing create.
+- **Also hidden underneath:** the create handler trusted body `tenant_id`
+  with no token check. That was cross-tenant writes on a route no one
+  exercised for real.
+- **Rule:** a dashboard fetch failure renders "not assessed / unavailable"
+  with the error, never constants. Type the client from the Go structs, and
+  check the page against a real backend response, not the mock.
+- **Same pattern, still open:** `WebhooksTab.tsx` (`MOCK_WEBHOOKS`,
+  `MOCK_DELIVERIES`, and a fabricated webhook on a failed create),
+  `LeakScannerTab.tsx` (`MOCK_TARGETS`, `MOCK_FINDINGS`, `MOCK_JOBS`) and
+  `RotationSchedulerTab.tsx` (`MOCK_POLICIES`, `MOCK_UPCOMING`,
+  `MOCK_RUNS`). The `real-capability` conformance check only scans function
+  names (`mock*`), so it misses `MOCK_*` constants. Extending it to the
+  dashboard would catch these.
+
 ### A label is not the key: check what was generated, not what was asked
 - **What happened:** `generateLeafKey` and `generateSigningKey` switched on
   "RSA" or "ECDSA" and ignored the size. Every "RSA-3072" certificate had a

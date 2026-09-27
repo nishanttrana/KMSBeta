@@ -96,6 +96,8 @@ are per tenant, with actor type `service`, and carry `item_type`, `count`
 | `audit.<svc>.mek_exposure_listed` / `mek_exposure_acknowledged` | kernel events for `GET /mek/exposure` and the acknowledge route (refusals included) | info / warning |
 | `audit.<svc>.mek_backup_rewrap` | governance re-wrapped backup contents through the service (counts; `result: refused` for any other caller) | warning |
 | `audit.key.data_key_generated` | keycore `POST /keys/{id}/generate-data-key` (kernel event; details `key_bytes`, `include_plaintext`, `version`; refusals `result: refused` with `reason`: `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access refusals, HSM refusals, `permission_denied`) | info; warning for refusals |
+| `audit.key.agility_score_read`, `agility_inventory_read`, `agility_keys_by_algorithm_read`, `agility_migration_plans_listed` | kernel events for keycore's crypto-agility reads (refusals `result: refused`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`) | info; warning for refusals |
+| `audit.key.agility_migration_plan_created` / `agility_migration_plan_updated` | kernel events for creating a migration plan (details `from_algorithm`, `to_algorithm`, server-counted `affected_keys`) and changing its status (detail `status`); refusals as above | info; warning for refusals |
 | `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info |
 | `audit.key.system_key_created` | keycore created a service's system key | info |
 | `audit.key.system_key_change_refused` | destroy, disable, version delete or export of a system key was refused (`operation`, `reason: system_key_protected`) | critical |
@@ -147,15 +149,17 @@ SSH logins themselves are in the hsm-integration container log (sshd,
 | `audit.certs.internal_mtls_rotated` | an identity's certificate was revoked and replaced; `restart_mode` graceful or force | warning |
 | `audit.certs.internal_mtls_rotated_all` | every internal certificate was rotated, with staggered restarts | critical |
 | `audit.certs.internal_mtls_applied` | every reporting instance runs the new generation (from their reports, not the request); serials | info |
-| `audit.certs.certificate_key_label_corrected` | a certificate or CA record named a key its certificate doesn't carry, and was corrected (`recorded_algorithm`, `actual_algorithm`) | warning |
+| `audit.certs.certificate_key_label_corrected` | a certificate or CA record named a key its certificate doesn't carry, and was corrected (`recorded_algorithm`, `recorded_class`, `actual_algorithm`, `reason`: `key_size_mismatch` or `pqc_label_removed`) | warning |
+| `audit.certs.pqc_profile_removed` | a certificate profile with a PQC or hybrid algorithm was deleted (PQC certificates removed, 1.19.0-beta) | warning |
+| `audit.cert.pqc_issuance_refused` | a PQC or hybrid certificate, CA or profile was requested and refused (`kind`, `algorithm`, `class`, `result: refused`, `reason: pqc_certificates_removed`); replaces `audit.cert.pqc_cert_issued`, `pqc_cert_validated` and `pqc_migration_executed` | warning |
 
 Refusals carry `result: refused` and a `reason`: `not_root_tenant`,
 `unchanged`, `invalid_policy`, `unknown_identity`,
 `kx_profile_not_applicable`, `force_not_available`,
 `confirmation_required`, and the kernel's own. Proven by
 `TestMTLSRoutesRefusalsAudited`, `TestMTLSRoutesRootOnlyAndAudited`,
-`TestMTLSAppliedOnlyWhenReportedAndAuditedOnce` and `TestCorrectKeyLabels`
-(services/certs).
+`TestMTLSAppliedOnlyWhenReportedAndAuditedOnce`, `TestCorrectKeyLabels` and
+`TestPQCCertificatesRefusedAndAudited` (services/certs).
 
 **How a restart shows:** a service restarting for a policy change logs
 `mTLS policy for <identity> changed (...): graceful|force restart`. Its

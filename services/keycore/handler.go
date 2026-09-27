@@ -188,13 +188,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /crypto/hash", h.handleHash)
 	mux.HandleFunc("POST /crypto/random", h.handleRandom)
 
-	// Crypto Agility
-	mux.HandleFunc("GET /agility/score", h.handleGetAgilityScore)
-	mux.HandleFunc("GET /agility/algorithms", h.handleGetAlgorithmInventory)
-	mux.HandleFunc("GET /agility/keys-by-algorithm", h.handleGetKeysByAlgorithm)
-	mux.HandleFunc("GET /agility/migration-plans", h.handleListMigrationPlans)
-	mux.HandleFunc("POST /agility/migration-plans", h.handleCreateMigrationPlan)
-	mux.HandleFunc("PATCH /agility/migration-plans/{id}", h.handleUpdateMigrationPlan)
+	h.agilityRouter(kernelEmitter{h}).MountOn(mux)
 
 	// Ceremony routes
 	mux.HandleFunc("GET /ceremony/guardians", h.handleListGuardians)

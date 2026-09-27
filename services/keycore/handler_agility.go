@@ -4,171 +4,193 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/route"
 )
 
-func (h *Handler) handleGetAgilityScore(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	algos, err := h.svc.store.GetAlgorithmDistribution(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "agility_score_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	score := computeAgilityScore(algos)
-	writeJSON(w, http.StatusOK, map[string]any{"data": score})
+// agilityRouter serves the crypto-agility inventory, score and migration plans
+// through the pkg/route kernel (tenant, permission and audit by construction);
+// the legacy mux mounts it. Every figure is computed from the tenant's keys
+// table: nothing here is estimated or seeded.
+func (h *Handler) agilityRouter(audit route.Emitter) *route.Router {
+	r := route.New("key", audit, nil)
+	r.Handle("GET /agility/score", route.Spec{Action: "agility_score_read", Permission: "key.agility.read", Resource: "agility"}, h.getAgilityScore)
+	r.Handle("GET /agility/algorithms", route.Spec{Action: "agility_inventory_read", Permission: "key.agility.read", Resource: "agility"}, h.getAlgorithmInventory)
+	r.Handle("GET /agility/keys-by-algorithm", route.Spec{Action: "agility_keys_by_algorithm_read", Permission: "key.agility.read", Resource: "agility"}, h.getKeysByAlgorithm)
+	r.Handle("GET /agility/migration-plans", route.Spec{Action: "agility_migration_plans_listed", Permission: "key.agility.read", Resource: "migration_plan"}, h.listMigrationPlans)
+	r.Handle("POST /agility/migration-plans", route.Spec{Action: "agility_migration_plan_created", Permission: "key.agility.write", Resource: "migration_plan"}, h.createMigrationPlan)
+	r.Handle("PATCH /agility/migration-plans/{id}", route.Spec{Action: "agility_migration_plan_updated", Permission: "key.agility.write", Resource: "migration_plan", TargetParam: "id"}, h.updateMigrationPlan)
+	return r
 }
 
-func (h *Handler) handleGetAlgorithmInventory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	algos, err := h.svc.store.GetAlgorithmDistribution(r.Context(), tenantID)
+var migrationPlanStatuses = map[string]bool{"planned": true, "in_progress": true, "paused": true, "completed": true}
+
+func (h *Handler) getAgilityScore(c *route.Call) {
+	algos, err := h.svc.store.GetAlgorithmDistribution(c.R.Context(), c.Tenant)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "algorithm_inventory_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "agility_score_failed", err.Error())
 		return
 	}
-	// Annotate is_legacy / is_quantum_safe without computing a full score.
-	var total int
-	for _, a := range algos {
-		total += a.KeyCount
-	}
-	for i := range algos {
-		if total > 0 {
-			algos[i].Percentage = float64(algos[i].KeyCount) / float64(total) * 100
-		}
-		algos[i].IsLegacy = legacyAlgorithms[algos[i].Algorithm]
-		algos[i].IsQuantumSafe = quantumSafeAlgorithms[algos[i].Algorithm]
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": algos, "total_keys": total})
+	c.JSON(http.StatusOK, map[string]interface{}{"data": computeAgilityScore(algos)})
 }
 
-func (h *Handler) handleGetKeysByAlgorithm(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getAlgorithmInventory(c *route.Call) {
+	algos, err := h.svc.store.GetAlgorithmDistribution(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "algorithm_inventory_failed", err.Error())
 		return
 	}
-	algorithm := strings.TrimSpace(r.URL.Query().Get("algorithm"))
+	score := computeAgilityScore(algos) // annotates percentage / legacy / quantum-safe
+	c.JSON(http.StatusOK, map[string]interface{}{"data": score.Algorithms, "total_keys": score.TotalKeys})
+}
+
+func (h *Handler) getKeysByAlgorithm(c *route.Call) {
+	algorithm := strings.TrimSpace(c.R.URL.Query().Get("algorithm"))
 	if algorithm == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "algorithm query parameter is required", reqID, tenantID)
+		c.Error(http.StatusBadRequest, "bad_request", "algorithm query parameter is required")
 		return
 	}
-	keys, err := h.svc.store.ListKeysByAlgorithm(r.Context(), tenantID, algorithm)
+	c.Detail("algorithm", algorithm)
+	keys, err := h.svc.store.ListKeysByAlgorithm(c.R.Context(), c.Tenant, algorithm)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "keys_by_algorithm_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "keys_by_algorithm_failed", err.Error())
 		return
 	}
-	result := KeysByAlgorithm{Algorithm: algorithm, Keys: keys}
-	writeJSON(w, http.StatusOK, map[string]any{"data": result})
+	c.JSON(http.StatusOK, map[string]interface{}{"data": KeysByAlgorithm{Algorithm: algorithm, Keys: keys}})
 }
 
-func (h *Handler) handleListMigrationPlans(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	plans, err := h.svc.store.ListMigrationPlans(r.Context(), tenantID)
+// liveKeyCounts maps algorithm to the tenant's live (not deleted) key count.
+func (h *Handler) liveKeyCounts(c *route.Call) (map[string]int, bool) {
+	algos, err := h.svc.store.GetAlgorithmDistribution(c.R.Context(), c.Tenant)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_migration_plans_failed", err.Error(), reqID, tenantID)
-		return
+		c.Error(http.StatusInternalServerError, "algorithm_inventory_failed", err.Error())
+		return nil, false
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": plans})
+	out := make(map[string]int, len(algos))
+	for _, a := range algos {
+		out[a.Algorithm] = a.KeyCount
+	}
+	return out, true
 }
 
-func (h *Handler) handleCreateMigrationPlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req struct {
-		TenantID      string  `json:"tenant_id"`
-		Name          string  `json:"name"`
-		FromAlgorithm string  `json:"from_algorithm"`
-		ToAlgorithm   string  `json:"to_algorithm"`
-		AffectedKeys  int     `json:"affected_keys"`
-		Status        string  `json:"status"`
-		TargetDate    *string `json:"target_date"`
+// withProgress derives progress from the keys table: remaining is the live
+// key count still on from_algorithm; completed is how far that has fallen
+// below the count recorded when the plan was created.
+func withProgress(mp MigrationPlan, counts map[string]int) MigrationPlan {
+	mp.RemainingKeys = counts[mp.FromAlgorithm]
+	mp.CompletedKeys = mp.AffectedKeys - mp.RemainingKeys
+	if mp.CompletedKeys < 0 {
+		mp.CompletedKeys = 0
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+	return mp
+}
+
+func (h *Handler) listMigrationPlans(c *route.Call) {
+	plans, err := h.svc.store.ListMigrationPlans(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "list_migration_plans_failed", err.Error())
 		return
 	}
-	tenantID := req.TenantID
-	if tenantID == "" {
-		tenantID = mustTenant(r, reqID, w)
-		if tenantID == "" {
-			return
+	counts, ok := h.liveKeyCounts(c)
+	if !ok {
+		return
+	}
+	for i := range plans {
+		plans[i] = withProgress(plans[i], counts)
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": plans})
+}
+
+// parsePlanDate accepts a calendar date (the dashboard's date input) or RFC3339.
+func parsePlanDate(s string) (*time.Time, bool) {
+	for _, layout := range []string{"2006-01-02", time.RFC3339} {
+		if t, err := time.Parse(layout, s); err == nil {
+			t = t.UTC()
+			return &t, true
 		}
 	}
-	if req.Name == "" || req.FromAlgorithm == "" || req.ToAlgorithm == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "name, from_algorithm, and to_algorithm are required", reqID, tenantID)
+	return nil, false
+}
+
+func (h *Handler) createMigrationPlan(c *route.Call) {
+	var req struct {
+		TenantID      string `json:"tenant_id"` // enforced by the kernel
+		Name          string `json:"name"`
+		FromAlgorithm string `json:"from_algorithm"`
+		ToAlgorithm   string `json:"to_algorithm"`
+		TargetDate    string `json:"target_date"`
+	}
+	if !c.Decode(&req) {
 		return
 	}
-	status := req.Status
-	if status == "" {
-		status = "planned"
+	req.Name, req.FromAlgorithm, req.ToAlgorithm = strings.TrimSpace(req.Name), strings.TrimSpace(req.FromAlgorithm), strings.TrimSpace(req.ToAlgorithm)
+	if req.Name == "" || req.FromAlgorithm == "" || req.ToAlgorithm == "" {
+		c.Error(http.StatusBadRequest, "bad_request", "name, from_algorithm and to_algorithm are required")
+		return
+	}
+	if req.FromAlgorithm == req.ToAlgorithm {
+		c.Error(http.StatusBadRequest, "bad_request", "from_algorithm and to_algorithm must differ")
+		return
 	}
 	var targetDate *time.Time
-	if req.TargetDate != nil && *req.TargetDate != "" {
-		t, err := time.Parse(time.RFC3339, *req.TargetDate)
-		if err != nil {
-			writeErr(w, http.StatusBadRequest, "bad_request", "target_date must be RFC3339", reqID, tenantID)
+	if s := strings.TrimSpace(req.TargetDate); s != "" {
+		t, ok := parsePlanDate(s)
+		if !ok {
+			c.Error(http.StatusBadRequest, "bad_request", "target_date must be YYYY-MM-DD or RFC3339")
 			return
 		}
-		targetDate = &t
+		targetDate = t
 	}
-	mp := MigrationPlan{
+	counts, ok := h.liveKeyCounts(c)
+	if !ok {
+		return
+	}
+	created, err := h.svc.store.CreateMigrationPlan(c.R.Context(), MigrationPlan{
 		ID:            newID("migplan"),
-		TenantID:      tenantID,
+		TenantID:      c.Tenant,
 		Name:          req.Name,
 		FromAlgorithm: req.FromAlgorithm,
 		ToAlgorithm:   req.ToAlgorithm,
-		AffectedKeys:  req.AffectedKeys,
-		Status:        status,
+		AffectedKeys:  counts[req.FromAlgorithm],
+		Status:        "planned",
 		TargetDate:    targetDate,
-	}
-	created, err := h.svc.store.CreateMigrationPlan(r.Context(), mp)
+	})
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_migration_plan_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "create_migration_plan_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"data": created})
+	c.Target(created.ID)
+	c.Detail("from_algorithm", created.FromAlgorithm)
+	c.Detail("to_algorithm", created.ToAlgorithm)
+	c.Detail("affected_keys", created.AffectedKeys)
+	c.JSON(http.StatusCreated, map[string]interface{}{"data": withProgress(created, counts)})
 }
 
-func (h *Handler) handleUpdateMigrationPlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	planID := strings.TrimSpace(r.PathValue("id"))
-	if planID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "plan id is required", reqID, tenantID)
-		return
-	}
+func (h *Handler) updateMigrationPlan(c *route.Call) {
 	var req struct {
-		Status        string `json:"status"`
-		CompletedKeys int    `json:"completed_keys"`
+		TenantID string `json:"tenant_id"` // enforced by the kernel
+		Status   string `json:"status"`
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
 	}
-	if req.Status == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "status is required", reqID, tenantID)
+	if !migrationPlanStatuses[req.Status] {
+		c.Error(http.StatusBadRequest, "bad_request", "status must be planned, in_progress, paused or completed")
 		return
 	}
-	updated, err := h.svc.store.UpdateMigrationPlan(r.Context(), tenantID, planID, req.Status, req.CompletedKeys)
+	c.Detail("status", req.Status)
+	updated, err := h.svc.store.UpdateMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"), req.Status)
+	if err == errStoreNotFound {
+		c.Error(http.StatusNotFound, "not_found", "migration plan not found")
+		return
+	}
 	if err != nil {
-		if err == errStoreNotFound {
-			writeErr(w, http.StatusNotFound, "not_found", "migration plan not found", reqID, tenantID)
-			return
-		}
-		writeErr(w, http.StatusInternalServerError, "update_migration_plan_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "update_migration_plan_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": updated})
+	counts, ok := h.liveKeyCounts(c)
+	if !ok {
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": withProgress(updated, counts)})
 }

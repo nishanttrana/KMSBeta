@@ -575,6 +575,34 @@ Encrypt the data locally with the DEK, discard it, and store `wrapped_dek` +
 
 ---
 
+### Crypto agility: /svc/keycore/agility/*
+
+Every figure is computed from the tenant's live keys (status not `deleted` or
+`destroyed`); nothing is estimated or seeded. Served by the `pkg/route` kernel:
+the tenant comes from the token (a conflicting `tenant_id` is refused as
+`tenant_mismatch`), and each call emits its own audit event, refusals
+included.
+
+| Route | Permission | Audit | Response `data` |
+|---|---|---|---|
+| `GET /agility/score` | `key.agility.read` | `audit.key.agility_score_read` | `assessed` (false with no live keys: `score` 0, `grade` ""), `score`, `grade`, `quantum_readiness`, `legacy_key_count`, `total_keys`, `algorithms`, `recommendations` |
+| `GET /agility/algorithms` | `key.agility.read` | `audit.key.agility_inventory_read` | `[{algorithm, key_count, percentage, is_legacy, is_quantum_safe}]`, plus top-level `total_keys` |
+| `GET /agility/keys-by-algorithm?algorithm=` | `key.agility.read` | `audit.key.agility_keys_by_algorithm_read` | `{algorithm, keys}` |
+| `GET /agility/migration-plans` | `key.agility.read` | `audit.key.agility_migration_plans_listed` | plans with derived progress |
+| `POST /agility/migration-plans` | `key.agility.write` | `audit.key.agility_migration_plan_created` | the new plan (`201`) |
+| `PATCH /agility/migration-plans/{id}` | `key.agility.write` | `audit.key.agility_migration_plan_updated` | the updated plan |
+
+- Create body: `name`, `from_algorithm`, `to_algorithm` (must differ),
+  optional `target_date` (`YYYY-MM-DD` or RFC3339). Unknown fields are
+  rejected: `affected_keys` is counted by keycore, never supplied.
+- Update body: `status` only (`planned`, `in_progress`, `paused`,
+  `completed`). Progress can't be set.
+- Plan progress: `affected_keys` is the live `from_algorithm` key count when
+  the plan was created; `remaining_keys` is that count now; `completed_keys` =
+  `affected_keys - remaining_keys`, floored at 0.
+
+---
+
 ### POST /svc/keycore/keys/{id}/derive
 
 Body: `algorithm` (HKDF-SHA256/384/512, PBKDF2-SHA256, SP800-108-CTR), `salt`, `info`, `outputLength` (16–64), `outputKeySpec` (optional)
@@ -3566,6 +3594,7 @@ Selected events with dedicated audit classification:
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
+- `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
@@ -3573,6 +3602,7 @@ Selected events with dedicated audit classification:
 - `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
 - `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
+- `audit.cert.pqc_issuance_refused` (`reason: pqc_certificates_removed`), `audit.certs.pqc_profile_removed`: post-quantum and hybrid certificates are removed (1.19.0); `POST /certs/validate-pqc`, `POST /certs/pqc/migrate/{id}`, `GET /certs/pqc-readiness` and `GET /certs/ots-status/{ca_id}` no longer exist, and `audit.cert.pqc_cert_issued`, `pqc_cert_validated` and `pqc_migration_executed` are no longer emitted
 - `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
