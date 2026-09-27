@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-27T00:43:48Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T00:52:19Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `898`
-- Routes with exact frontend call sites: `538`
-- Routes whose handlers call `h.svc.*`: `535`
-- Routes with detected store calls: `670`
-- Routes with detected internal `pkg/*` calls: `130`
+- Backend routes analyzed: `950`
+- Routes with exact frontend call sites: `553`
+- Routes whose handlers call `h.svc.*`: `560`
+- Routes with detected store calls: `690`
+- Routes with detected internal `pkg/*` calls: `151`
 
 ## How To Trace One Frontend Click
 
@@ -360,6 +360,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|GET\|/key-access/codes | GET /key-access/codes | handleListRules (services/keyaccess/handler.go:125) | ListRules | ListRules |  |  | web/dashboard/src/lib/keyaccess.ts:95 |
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | handleDeleteRule (services/keyaccess/handler.go:153) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | handleListDecisions (services/keyaccess/handler.go:163) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
+| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:887 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:322) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:593 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:359) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:393) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
@@ -445,6 +446,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/threat/dashboard | GET /threat/dashboard | handleThreatDashboard (services/keycore/handler_threat.go:50) | GetThreatDashboard | ListThreatSignals, ListCanaryKeys, ListCompromiseEvents |  |  | web/dashboard/src/lib/threatProtection.ts:6 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | handleListCanaryKeys (services/keycore/handler_canary.go:39) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/threatProtection.ts:27 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | handleCreateCanaryKey (services/keycore/handler_canary.go:54) |  | CreateCanaryKey |  |  | web/dashboard/src/lib/threatProtection.ts:33 |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:560) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:569) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:595) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:610) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
 | kmip\|GET\|/kmip/capabilities | GET /kmip/capabilities | handleCapabilities (services/kmip/http_api.go:47) |  |  |  |  | web/dashboard/src/lib/kmip.ts:183 |
 | kmip\|GET\|/kmip/profiles | GET /kmip/profiles | handleListClientProfiles (services/kmip/http_api.go:210) |  | ListClientProfiles |  |  | web/dashboard/src/lib/kmip.ts:177 |
 | kmip\|POST\|/kmip/profiles | POST /kmip/profiles | handleCreateClientProfile (services/kmip/http_api.go:224) |  |  |  |  | web/dashboard/src/lib/kmip.ts:194 |
@@ -541,6 +546,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | handleCBOMPQCReadiness (services/sbom/handler.go:286) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:257 |
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | handleCBOMDiff (services/sbom/handler.go:300) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:228 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | handleCBOMExport (services/sbom/handler.go:258) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:219 |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
+| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:161) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:145 |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:183) | UpdateSecret | UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:126 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:202) | DeleteSecret | DeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:134 |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:227) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:218 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:249) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:182 |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:259) | GetSecretAuditLog | GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:190 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:272) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:198 |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:294) | GetStats | GetStats |  |  | web/dashboard/src/lib/secrets.ts:177 |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:89) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:88 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:100) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/signing.ts:93 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:116) | GetSummary | ListProfiles, ListRecords |  |  | web/dashboard/src/lib/signing.ts:101 |
@@ -818,6 +833,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/scep/pkiclient.exe | POST /scep/pkiclient.exe | handleSCEPPKIOperation (services/certs/handler.go:1033) | loadCASigner, SCEPPKIOperation | GetCA |  | pkg/crypto.Zeroize | web/dashboard/src/lib/certs.ts:927 |
 | certs\|POST\|/cmpv2 | POST /cmpv2 | handleCMPv2 (services/certs/handler.go:1165) | CMPv2Request | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:948 |
 | certs\|POST\|/cmpv2/confirm | POST /cmpv2/confirm | handleCMPv2Confirm (services/certs/handler.go:1226) | CMPv2Confirm, CMPv2Error | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:1042 |
+| certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:44) | RegisterAccount | CreateAccount, GetAccount |  | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope | web/dashboard/src/lib/cloud.ts:135 |
 | cloud\|GET\|/cloud/accounts | GET /cloud/accounts | handleListAccounts (services/cloud/handler.go:59) | ListAccounts | ListAccounts |  |  |  |
 | cloud\|DELETE\|/cloud/accounts/{param} | DELETE /cloud/accounts/{id} | handleDeleteAccount (services/cloud/handler.go:73) | DeleteAccount | DeleteAccountCascade | s.exposure.Retire |  | web/dashboard/src/lib/cloud.ts:152 |
@@ -1041,7 +1057,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | featureforge\|GET\|/intents/{param} | GET /intents/{id} | handleGetIntent (services/featureforge/handler.go:106) | Get, Approvals | GetIntent, Events, Approvals |  | pkg/tenantcheck.Enforce | web/dashboard/src/lib/featureforge.ts:98 |
 | featureforge\|POST\|/intents/{param}/approve | POST /intents/{id}/approve | handleApprove (services/featureforge/handler.go:151) | Approve, Get, Approvals | GetIntent, AddApproval, Events, Approvals |  |  | web/dashboard/src/lib/featureforge.ts:107 |
 | featureforge\|POST\|/intents/{param}/promote | POST /intents/{id}/promote | handlePromote (services/featureforge/handler.go:179) | PromoteToProd, Get, Approvals | GetIntent, Approvals, Events | s.gov.RequestApproval, s.gov.ApprovalState |  | web/dashboard/src/lib/featureforge.ts:114 |
-| featureforge\|GET\|/healthz | GET /healthz | func(w http.ResponseWriter, _ *http.Request) { 		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "service": "featureforge"}) 	} (:) |  |  |  |  |  |
+| featureforge\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
 | governance\|GET\|/governance/settings | GET /governance/settings | handleGetSettings (services/governance/handler.go:101) | GetSettings | GetSettings |  |  | web/dashboard/src/lib/governance.ts:124 |
 | governance\|PUT\|/governance/settings | PUT /governance/settings | handleUpdateSettings (services/governance/handler.go:116) | UpdateSettings | GetSettings, UpsertSettings |  |  | web/dashboard/src/lib/governance.ts:184 |
 | governance\|POST\|/governance/settings/smtp/test | POST /governance/settings/smtp/test | handleTestSMTP (services/governance/handler.go:137) | TestSMTP |  |  |  | web/dashboard/src/lib/governance.ts:195 |
@@ -1112,6 +1128,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | handleDeleteRule (services/keyaccess/handler.go:153) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | handleListDecisions (services/keyaccess/handler.go:163) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
 | keyaccess\|POST\|/key-access/evaluate | POST /key-access/evaluate | handleEvaluate (services/keyaccess/handler.go:180) | Evaluate | ListRules, CreateDecision | s.governance.CreateApprovalRequest |  |  |
+| keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:887 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:322) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:593 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:359) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:748 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:393) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:717 |
@@ -1279,6 +1296,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle |  |  |  |  |
 | keycore\|POST\|/tenants/onboard | POST /tenants/onboard | handleTenantOnboard (services/keycore/handler_lifecycle.go:43) | publishAudit |  | s.cluster.Publish |  |  |
 | keycore\|POST\|/keys/{param}/archive | POST /keys/{id}/archive | handleArchiveKey (services/keycore/handler_lifecycle.go:83) | publishAudit |  | s.cluster.Publish |  |  |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:560) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:569) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:709 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:595) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:683 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:610) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:689 |
+| keycore\|POST\|/system-keys/ensure | POST /system-keys/ensure | ensureSystemKey (services/keycore/system_keys.go:155) | EnsureSystemKey | GetSystemKey, InsertSystemKey |  | pkg/tenantcheck.IsServicePrincipal, pkg/tenantcheck.InternalServiceTenant |  |
 | kmip\|GET\|/kmip/capabilities | GET /kmip/capabilities | handleCapabilities (services/kmip/http_api.go:47) |  |  |  |  | web/dashboard/src/lib/kmip.ts:183 |
 | kmip\|GET\|/kmip/profiles | GET /kmip/profiles | handleListClientProfiles (services/kmip/http_api.go:210) |  | ListClientProfiles |  |  | web/dashboard/src/lib/kmip.ts:177 |
 | kmip\|POST\|/kmip/profiles | POST /kmip/profiles | handleCreateClientProfile (services/kmip/http_api.go:224) |  |  |  |  | web/dashboard/src/lib/kmip.ts:194 |
@@ -1382,8 +1404,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | handleListRuns (services/pqc/handler.go:243) | ListMigrationRuns | ListMigrationRuns |  |  |  |
 | pqc\|GET\|/pqc/timeline | GET /pqc/timeline | handleTimeline (services/pqc/handler.go:257) | Timeline |  |  |  |  |
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | handleExportCBOM (services/pqc/handler.go:279) | ExportCBOM |  |  |  |  |
-| reconciler\|GET\|/reconciler/status | GET /reconciler/status | func(w http.ResponseWriter, r *http.Request) { 		writeJSON(w, http.StatusOK, runner.Status()) 	} (:) |  |  |  |  |  |
-| reconciler\|GET\|/healthz | GET /healthz | func(w http.ResponseWriter, r *http.Request) { 		w.WriteHeader(http.StatusOK) 	} (:) |  |  |  |  |  |
+| reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  |  |
+| reconciler\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
 | reporting\|GET\|/alerts | GET /alerts | handleAlerts (services/reporting/handler.go:108) | ListAlerts | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:162 |
 | reporting\|GET\|/alerts/feed | GET /alerts/feed | handleAlertsFeed (services/reporting/handler.go:133) |  |  |  |  |  |
 | reporting\|GET\|/alerts/unread | GET /alerts/unread | handleAlertsUnread (services/reporting/handler.go:170) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:170 |
@@ -1435,6 +1457,28 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | handleCBOMDiff (services/sbom/handler.go:300) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:228 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | handleCBOMExport (services/sbom/handler.go:258) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:219 |
 | sbom\|GET\|/cbom/{param} | GET /cbom/{id} | handleCBOMByID (services/sbom/handler.go:244) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
+| secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:152) | GetSecret | GetSecret |  |  |  |
+| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:161) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:145 |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:183) | UpdateSecret | UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:126 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:202) | DeleteSecret | DeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:134 |
+| secrets\|POST\|/secrets/generate/ssh_key | POST /secrets/generate/ssh_key | generateSSHKey (services/secrets/handler.go:211) | GenerateSSHKey |  |  | pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM |  |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:227) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:218 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:249) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:182 |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:259) | GetSecretAuditLog | GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:190 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:272) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:198 |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:294) | GetStats | GetStats |  |  | web/dashboard/src/lib/secrets.ts:177 |
+| secrets\|GET\|/v1/sys/health | GET /v1/sys/health | vaultSysHealth (services/secrets/handler.go:303) |  |  |  |  |  |
+| secrets\|GET\|/v1/sys/seal-status | GET /v1/sys/seal-status | vaultSealStatus (services/secrets/handler.go:318) |  |  |  |  |  |
+| secrets\|POST\|/v1/auth/token/lookup-self | POST /v1/auth/token/lookup-self | vaultTokenLookupSelf (services/secrets/handler.go:333) |  |  |  |  |  |
+| secrets\|GET\|/v1/{param}/data/{param} | GET /v1/{mount}/data/{path...} | vaultKVRead (services/secrets/handler.go:362) | GetSecretByName, GetSecretValue | GetSecretByName, GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/data/{param} | POST /v1/{mount}/data/{path...} | vaultKVWrite (services/secrets/handler.go:401) | GetSecretByName, CreateSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/data/{param} | DELETE /v1/{mount}/data/{path...} | vaultKVDelete (services/secrets/handler.go:448) | GetSecretByName, DeleteSecret | GetSecretByName, DeleteSecret |  |  |  |
+| secrets\|GET\|/v1/{param}/metadata/{param} | GET /v1/{mount}/metadata/{path...} | vaultKV2Metadata (services/secrets/handler.go:467) | GetSecretByName | GetSecretByName |  |  |  |
+| secrets\|GET\|/v1/{param}/{param} | GET /v1/{mount}/{path...} | vaultKVRead (services/secrets/handler.go:362) | GetSecretByName, GetSecretValue | GetSecretByName, GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/{param} | POST /v1/{mount}/{path...} | vaultKVWrite (services/secrets/handler.go:401) | GetSecretByName, CreateSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/{param} | DELETE /v1/{mount}/{path...} | vaultKVDelete (services/secrets/handler.go:448) | GetSecretByName, DeleteSecret | GetSecretByName, DeleteSecret |  |  |  |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:89) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:88 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:100) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/signing.ts:93 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:116) | GetSummary | ListProfiles, ListRecords |  |  | web/dashboard/src/lib/signing.ts:101 |
@@ -1446,9 +1490,9 @@ This file connects frontend requests to backend Go processing. It is static anal
 | signing\|POST\|/signing/blob | POST /signing/blob | handleSignBlob (services/signing/handler.go:182) |  |  |  |  | web/dashboard/src/lib/signing.ts:144 |
 | signing\|POST\|/signing/git | POST /signing/git | handleSignGit (services/signing/handler.go:186) |  |  |  |  | web/dashboard/src/lib/signing.ts:157 |
 | signing\|POST\|/signing/verify | POST /signing/verify | handleVerify (services/signing/handler.go:207) | VerifyArtifact | GetRecord, ListRecords | s.keycore.Verify |  | web/dashboard/src/lib/signing.ts:165 |
-| watchdog\|GET\|/watchdog/heartbeats | GET /watchdog/heartbeats | func(w http.ResponseWriter, r *http.Request) { 		writeJSON(w, http.StatusOK, probe.Snapshot()) 	} (:) |  |  |  |  |  |
-| watchdog\|GET\|/watchdog/incidents | GET /watchdog/incidents | func(w http.ResponseWriter, r *http.Request) { 		writeJSON(w, http.StatusOK, pb.Incidents()) 	} (:) |  |  |  |  |  |
-| watchdog\|GET\|/healthz | GET /healthz | func(w http.ResponseWriter, r *http.Request) { 		w.WriteHeader(http.StatusOK) 	} (:) |  |  |  |  |  |
+| watchdog\|GET\|/watchdog/heartbeats | GET /watchdog/heartbeats | <inline func> (:) |  |  |  |  |  |
+| watchdog\|GET\|/watchdog/incidents | GET /watchdog/incidents | <inline func> (:) |  |  |  |  |  |
+| watchdog\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
 | workload\|GET\|/workload-identity/settings | GET /workload-identity/settings | handleGetSettings (services/workload/handler.go:45) | GetSettings |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:146 |
 | workload\|PUT\|/workload-identity/settings | PUT /workload-identity/settings | handlePutSettings (services/workload/handler.go:56) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/workloadIdentity.ts:151 |
 | workload\|GET\|/workload-identity/summary | GET /workload-identity/summary | handleGetSummary (services/workload/handler.go:72) | GetSummary | ListRegistrations, ListFederationBundles, ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:159 |
@@ -1465,3 +1509,26 @@ This file connects frontend requests to backend Go processing. It is static anal
 | workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | handleExchangeToken (services/workload/handler.go:192) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:227 |
 | workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | handleGetGraph (services/workload/handler.go:208) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:235 |
 | workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | handleListUsage (services/workload/handler.go:219) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:240 |
+| hsm-connector\|POST\|/hsm/keys | POST /hsm/keys | generate (pkg/hsmconnector/handler.go:155) |  |  |  | pkg/hsm.NormalizeAlgorithm |  |
+| hsm-connector\|POST\|/hsm/tenant-key | POST /hsm/tenant-key | tenantKey (pkg/hsmconnector/handler.go:181) |  |  |  | pkg/hsm.TenantKeyLabel |  |
+| hsm-connector\|POST\|/hsm/encrypt | POST /hsm/encrypt | encrypt (pkg/hsmconnector/handler.go:204) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/decrypt | POST /hsm/decrypt | decrypt (pkg/hsmconnector/handler.go:226) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/sign | POST /hsm/sign | sign (pkg/hsmconnector/handler.go:247) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/verify | POST /hsm/verify | verify (pkg/hsmconnector/handler.go:266) |  |  |  |  |  |
+| hsm-connector\|POST\|/hsm/keys/destroy | POST /hsm/keys/destroy | destroy (pkg/hsmconnector/handler.go:286) |  |  |  | pkg/hsm.TenantKeyLabel |  |
+| hsm-connector\|POST\|/hsm/keys/inspect | POST /hsm/keys/inspect | inspect (pkg/hsmconnector/handler.go:318) |  |  |  |  |  |
+| hsm-connector\|GET\|/hsm/objects | GET /hsm/objects | objects (pkg/hsmconnector/handler.go:334) |  |  |  |  |  |
+| hsm-connector\|GET\|/hsm/status | GET /hsm/status | status (pkg/hsmconnector/handler.go:359) |  |  | h.configs.Load, h.p11.status |  |  |
+| hsm-connector\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
+| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  |  |
+| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  |  |
+| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  |  |
+| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  |  |
+| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  |  |
+| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  |  |
+| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  |  |
+| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  |  |
+| certs\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
+| cloud\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
+| ekm\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
+| secrets\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |

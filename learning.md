@@ -11,8 +11,19 @@ Newest entries on top.
   first keycore route registered through the `pkg/route` kernel
   (`r.Handle("POST /keys/{id}/generate-data-key", ...)`) looked unregistered.
 - **Fix:** the pattern now matches `Handle(` and `HandleFunc(`.
-- **Still open:** `scripts/generate_product_map.py` has the same blind spot.
-  Kernel routes don't appear in `docs/generated/backend-routes.csv`.
+- **Also fixed (1.14.0-beta):** `scripts/generate_product_map.py` had the
+  same blind spot, so 52 kernel routes were missing from `docs/generated/`.
+  It now parses `route.Spec` registrations and records permission and
+  action.
+- **Trap when matching the kernel:** `pkg/route`'s own `Router.Handle`
+  forwards its `pattern` parameter to `mux.HandleFunc`. A scanner that binds
+  call-site arguments to parameters (needed for `pkg/mek`'s
+  `Routes(r, domain)`) then "finds" every kernel route a second time, inside
+  `pkg/route`. Registrations whose pattern has no string literal are
+  wrappers and are skipped.
+- **Lesson:** anything that discovers routes by text search has to change
+  when registration changes shape. Look for the other scanners (tests,
+  generators, conformance) whenever a new registration API lands.
 
 ### "Envelope encryption" can be faked with nothing but metadata
 - A KEK/DEK table with names, versions and a "rewrap job" queue looks like a

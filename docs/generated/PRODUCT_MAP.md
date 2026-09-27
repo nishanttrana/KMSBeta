@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-27T00:43:48Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T00:52:19Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,12 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `33`
 - Tab/component mappings: `41`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `898` across `29` services
+- Backend HTTP routes discovered: `950` across `31` services
+- Backend routes on the `pkg/route` kernel: `52` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `615`
-- Frontend call sites with exact backend route match: `548`
-- Frontend call sites needing review or dynamic/runtime confirmation: `67`
+- Frontend call sites with exact backend route match: `563`
+- Frontend call sites needing review or dynamic/runtime confirmation: `52`
 - Clickable controls with static `onClick` handlers: `816`
-- Backend request flows with handler/service/package summaries: `898`
+- Backend request flows with handler/service/package summaries: `950`
 
 ## How To Use This For Launch
 
@@ -158,23 +159,23 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (64 routes)"]
-  svc_cloud["cloud (11 routes)"]
+  svc_certs["certs (68 routes)"]
+  svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
   svc_discovery["discovery (26 routes)"]
-  svc_ekm["ekm (61 routes)"]
+  svc_ekm["ekm (64 routes)"]
   svc_featureforge["featureforge (7 routes)"]
   svc_governance["governance (40 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (167 routes)"]
+  svc_keycore["keycore (173 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (19 routes)"]
   svc_pqc["pqc (16 routes)"]
   svc_reporting["reporting (33 routes)"]
   svc_sbom["sbom (18 routes)"]
-  svc_secrets["secrets"]
+  svc_secrets["secrets (25 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (16 routes)"]
@@ -237,19 +238,20 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 64 | 48 |
-| cloud | 11 | 10 |
+| certs | 68 | 48 |
+| cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
 | confidential | 6 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 26 | 20 |
-| ekm | 61 | 44 |
+| ekm | 64 | 44 |
 | featureforge | 7 | 6 |
 | governance | 40 | 29 |
+| hsm-connector | 11 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 167 | 124 |
+| keycore | 173 | 124 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -258,6 +260,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | reconciler | 2 | 0 |
 | reporting | 33 | 23 |
 | sbom | 18 | 16 |
+| secrets | 25 | 10 |
 | signing | 11 | 9 |
 | watchdog | 3 | 0 |
 | workload | 16 | 12 |
@@ -308,11 +311,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /health/scores | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 6 |
 | keycore | POST | /health/scores/{param}/refresh | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 12 |
 | keycore | GET | /inventory/export | trackedFetch | web/dashboard/src/lib/keyInventory.ts | 18 |
-| keycore | GET | /hsm/objects | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 683 |
-| keycore | GET | /keys/{param}/hsm | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 689 |
-| keycore | GET | /hsm/settings | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 702 |
-| keycore | PUT | /hsm/settings | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 709 |
-| keycore | POST | /keys/{param}/generate-data-key | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 887 |
 | $dynamic-service | GET | /mek/exposure | serviceRequestRaw | web/dashboard/src/lib/mekExposure.ts | 73 |
 | $dynamic-service | POST | /mek/exposure/{param}/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/mekExposure.ts | 89 |
 | keycore | GET | /ml/anomalies | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 6 |
@@ -325,147 +323,137 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 236 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 280 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 71 |
-| secrets | GET | /secrets | serviceRequest | web/dashboard/src/lib/secrets.ts | 82 |
-| secrets | POST | /secrets | serviceRequest | web/dashboard/src/lib/secrets.ts | 87 |
-| secrets | PUT | /secrets/{param} | serviceRequest | web/dashboard/src/lib/secrets.ts | 126 |
-| secrets | DELETE | /secrets/{param} | serviceRequest | web/dashboard/src/lib/secrets.ts | 134 |
-| secrets | GET | /secrets/{param}/value | serviceRequest | web/dashboard/src/lib/secrets.ts | 145 |
-| secrets | GET | /secrets/stats | serviceRequest | web/dashboard/src/lib/secrets.ts | 177 |
-| secrets | GET | /secrets/{param}/versions | serviceRequest | web/dashboard/src/lib/secrets.ts | 182 |
-| secrets | GET | /secrets/{param}/audit | serviceRequest | web/dashboard/src/lib/secrets.ts | 190 |
-| secrets | POST | /secrets/{param}/rotate | serviceRequest | web/dashboard/src/lib/secrets.ts | 198 |
-| secrets | POST | /secrets/generate/keypair | serviceRequest | web/dashboard/src/lib/secrets.ts | 218 |
 
-Showing `67` of `67`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `52` of `52`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
 These may be public API routes, protocol integrations, routes used through SDKs, or unused implementation. They should be classified before launch.
 
-| Service | Method | Path | Handler | File | Line |
-| --- | --- | --- | --- | --- | --- |
-| ai-gateway | POST | /ai-gateway/v1/chat/completions | h.handleChatCompletions | services/ai-gateway/handler.go | 30 |
-| ai-gateway | POST | /ai-gateway/v1/completions | h.handleCompletions | services/ai-gateway/handler.go | 31 |
-| ai-gateway | POST | /ai-gateway/v1/embeddings | h.handleEmbeddings | services/ai-gateway/handler.go | 32 |
-| ai-gateway | GET | /ai-gateway/v1/policies/{id} | h.handleGetPolicy | services/ai-gateway/handler.go | 42 |
-| ai-gateway | PUT | /ai-gateway/v1/policies/{id} | h.handleUpdatePolicy | services/ai-gateway/handler.go | 43 |
-| ai-gateway | PUT | /ai-gateway/v1/models/{id} | h.handleUpdateModel | services/ai-gateway/handler.go | 49 |
-| ai-gateway | GET | /ai-gateway/v1/audit/{id} | h.handleGetAudit | services/ai-gateway/handler.go | 72 |
-| ai-gateway | GET | /ai-gateway/v1/metrics | h.handleMetrics | services/ai-gateway/handler.go | 76 |
-| audit | POST | /audit/publish | h.handlePublish | services/audit/handler.go | 81 |
-| audit | POST | /audit/search | h.handleSearch | services/audit/handler.go | 87 |
-| audit | GET | /audit/stats | h.handleAuditStats | services/audit/handler.go | 89 |
-| audit | GET | /audit/stream | h.handleStream | services/audit/handler.go | 90 |
-| audit | GET | /alerts/{id} | h.handleAlert | services/audit/handler.go | 94 |
-| audit | PUT | /alerts/{id}/{action} | h.handleAlertActionPath | services/audit/handler.go | 95 |
-| audit | GET | /alerts/stream | h.handleAlertStream | services/audit/handler.go | 97 |
-| audit | POST | /alerts/rules | h.handleCreateRule | services/audit/handler.go | 98 |
-| audit | GET | /alerts/rules | h.handleListRules | services/audit/handler.go | 99 |
-| audit | PUT | /alerts/rules/{id} | h.handleUpdateRule | services/audit/handler.go | 100 |
-| audit | DELETE | /alerts/rules/{id} | h.handleDeleteRule | services/audit/handler.go | 101 |
-| audit | POST | /alerts/test-rule | h.handleTestRule | services/audit/handler.go | 102 |
-| audit | GET | /alerts/channels | h.handleGetChannels | services/audit/handler.go | 103 |
-| audit | PUT | /alerts/channels | h.handleUpdateChannels | services/audit/handler.go | 104 |
-| audit | POST | /alerts/channels/test | h.handleTestChannel | services/audit/handler.go | 105 |
-| audit | GET | /audit/merkle/epochs/{id} | h.handleMerkleEpoch | services/audit/handler.go | 110 |
-| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey | services/audit/handler.go | 115 |
-| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport | services/audit/handler.go | 116 |
-| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport | services/audit/handler.go | 117 |
-| audit | POST | /ops-metrics/record | h.handleRecordOp | services/audit/handler.go | 133 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary | services/audit/handler.go | 136 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory | services/audit/handler.go | 139 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff | services/audit/handler.go | 140 |
-| audit | GET | /metrics | h.handlePrometheusMetrics | services/audit/handler.go | 143 |
-| auth | POST | /auth/register | h.handleRegister | services/auth/handler.go | 61 |
-| auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus | services/auth/handler.go | 62 |
-| auth | POST | /auth/login | h.handleLogin | services/auth/handler.go | 63 |
-| auth | POST | /auth/client-token | h.handleClientToken | services/auth/handler.go | 64 |
-| auth | POST | /auth/cluster/mint | h.handleClusterMint | services/auth/handler.go | 65 |
-| auth | POST | /auth/workload-token | h.handleIssueWorkloadToken | services/auth/handler.go | 66 |
-| auth | POST | /auth/refresh | h.withAuth(h.handleRefresh, "auth.token.refresh") | services/auth/handler.go | 69 |
-| auth | POST | /auth/change-password | h.withAuth(h.handleChangePassword, "") | services/auth/handler.go | 70 |
-| auth | POST | /auth/register/{id}/activate | h.withAuth(h.handleActivateRegistration, "auth.client.activate") | services/auth/handler.go | 72 |
-| auth | POST | /auth/logout | h.withAuth(h.handleLogout, "auth.session.logout") | services/auth/handler.go | 73 |
-| auth | GET | /auth/me | h.withAuth(h.handleMe, "auth.self.read") | services/auth/handler.go | 74 |
-| auth | GET | /tenants/{id} | h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin") | services/auth/handler.go | 78 |
-| auth | POST | /tenants/{id}/roles | h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin") | services/auth/handler.go | 83 |
-| auth | PUT | /tenants/{id}/roles/{name} | h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin") | services/auth/handler.go | 84 |
-| auth | DELETE | /tenants/{id}/roles/{name} | h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin") | services/auth/handler.go | 85 |
-| auth | GET | /auth/users | h.withAuth(h.handleListUsers, "auth.user.read") | services/auth/handler.go | 87 |
-| auth | GET | /auth/identity/providers/{provider} | h.withAuth(h.handleGetIdentityProviderConfig, "auth.user.read") | services/auth/handler.go | 90 |
-| auth | GET | /auth/identity/providers/{provider}/users | h.withAuth(h.handleListIdentityProviderUsers, "auth.user.read") | services/auth/handler.go | 93 |
-| auth | GET | /auth/identity/providers/{provider}/groups | h.withAuth(h.handleListIdentityProviderGroups, "auth.user.read") | services/auth/handler.go | 94 |
-| auth | GET | /auth/identity/providers/{provider}/groups/{id}/members | h.withAuth(h.handleListIdentityProviderGroupMembers, "auth.user.read") | services/auth/handler.go | 95 |
-| auth | POST | /auth/api-keys | h.withAuth(h.handleCreateAPIKey, "auth.api_key.write") | services/auth/handler.go | 118 |
-| auth | DELETE | /auth/api-keys/{id} | h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write") | services/auth/handler.go | 119 |
-| auth | POST | /auth/sso/{provider}/callback | h.handleSSOCallback | services/auth/handler.go | 124 |
-| auth | GET | /auth/sso/{provider}/callback | h.handleSSOCallback | services/auth/handler.go | 125 |
-| auth | GET | /auth/sso/saml/metadata | h.handleSAMLMetadata | services/auth/handler.go | 126 |
-| auth | GET | /scim/v2/ServiceProviderConfig | h.handleSCIMServiceProviderConfig | services/auth/handler.go | 134 |
-| auth | GET | /scim/v2/Schemas | h.handleSCIMSchemas | services/auth/handler.go | 135 |
-| auth | GET | /scim/v2/ResourceTypes | h.handleSCIMResourceTypes | services/auth/handler.go | 136 |
-| auth | GET | /scim/v2/Users | h.handleSCIMListUsers | services/auth/handler.go | 137 |
-| auth | POST | /scim/v2/Users | h.handleSCIMCreateUser | services/auth/handler.go | 138 |
-| auth | GET | /scim/v2/Users/{id} | h.handleSCIMGetUser | services/auth/handler.go | 139 |
-| auth | PUT | /scim/v2/Users/{id} | h.handleSCIMReplaceUser | services/auth/handler.go | 140 |
-| auth | PATCH | /scim/v2/Users/{id} | h.handleSCIMPatchUser | services/auth/handler.go | 141 |
-| auth | DELETE | /scim/v2/Users/{id} | h.handleSCIMDeleteUser | services/auth/handler.go | 142 |
-| auth | GET | /scim/v2/Groups | h.handleSCIMListGroups | services/auth/handler.go | 143 |
-| auth | POST | /scim/v2/Groups | h.handleSCIMCreateGroup | services/auth/handler.go | 144 |
-| auth | GET | /scim/v2/Groups/{id} | h.handleSCIMGetGroup | services/auth/handler.go | 145 |
-| auth | PUT | /scim/v2/Groups/{id} | h.handleSCIMReplaceGroup | services/auth/handler.go | 146 |
-| auth | PATCH | /scim/v2/Groups/{id} | h.handleSCIMPatchGroup | services/auth/handler.go | 147 |
-| auth | DELETE | /scim/v2/Groups/{id} | h.handleSCIMDeleteGroup | services/auth/handler.go | 148 |
-| autokey | POST | /autokey/templates | h.handleUpsertTemplate | services/autokey/handler.go | 34 |
-| autokey | PUT | /autokey/templates/{id} | h.handleUpsertTemplate | services/autokey/handler.go | 35 |
-| autokey | POST | /autokey/service-policies | h.handleUpsertServicePolicy | services/autokey/handler.go | 38 |
-| autokey | PUT | /autokey/service-policies/{service} | h.handleUpsertServicePolicy | services/autokey/handler.go | 39 |
-| backup | GET | /healthz | h.handleHealth | services/backup/handler.go | 48 |
-| certs | GET | /certs/{id} | h.handleGetCert | services/certs/handler.go | 45 |
-| certs | POST | /certs/profiles | h.handleCreateProfile | services/certs/handler.go | 50 |
-| certs | GET | /certs/profiles/{id} | h.handleGetProfile | services/certs/handler.go | 52 |
-| certs | POST | /certs/validate-pqc | h.handleValidatePQC | services/certs/handler.go | 53 |
-| certs | GET | /certs/ots-status/{ca_id} | h.handleOTSStatus | services/certs/handler.go | 54 |
-| certs | POST | /certs/pqc/migrate/{id} | h.handleMigratePQC | services/certs/handler.go | 55 |
-| certs | GET | /certs/pqc-readiness | h.handlePQCReadiness | services/certs/handler.go | 56 |
-| certs | POST | /certs/ocsp | h.handleOCSP | services/certs/handler.go | 59 |
-| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy | services/certs/handler.go | 64 |
-| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch | services/certs/handler.go | 83 |
-| certs | GET | /acme/directory | h.handleACMEDirectory | services/certs/handler.go | 87 |
-| certs | HEAD | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 88 |
-| certs | POST | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 89 |
-| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo | services/certs/handler.go | 92 |
-| certs | GET | /acme/cert/{id} | h.handleACMECertDownload | services/certs/handler.go | 96 |
-| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts | services/certs/handler.go | 98 |
-| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll | services/certs/handler.go | 101 |
-| cloud | GET | /cloud/accounts | h.handleListAccounts | services/cloud/handler.go | 31 |
-| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings | services/cloud/handler.go | 34 |
-| cloud | GET | /cloud/inventory | h.handleInventory | services/cloud/handler.go | 38 |
-| cloud | GET | /cloud/bindings | h.handleListBindings | services/cloud/handler.go | 39 |
-| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding | services/cloud/handler.go | 40 |
-| cluster-manager | GET | /healthz | h.handleHealth | services/cluster-manager/handler.go | 32 |
-| cluster-manager | GET | /cluster/members | h.handleMembers | services/cluster-manager/handler.go | 35 |
-| cluster-manager | GET | /cluster/nodes | h.handleNodes | services/cluster-manager/handler.go | 36 |
-| cluster-manager | GET | /cluster/profiles | h.handleListProfiles | services/cluster-manager/handler.go | 38 |
-| cluster-manager | POST | /cluster/join/complete | h.handleJoinComplete | services/cluster-manager/handler.go | 43 |
-| cluster-manager | POST | /cluster/join/exchange | h.handleJoinExchange | services/cluster-manager/handler.go | 44 |
-| cluster-manager | POST | /cluster/nodes/{id}/heartbeat | h.handleNodeHeartbeat | services/cluster-manager/handler.go | 49 |
-| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent | services/cluster-manager/handler.go | 53 |
-| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck | services/cluster-manager/handler.go | 55 |
-| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus | services/cluster-manager/handler.go | 58 |
-| compliance | GET | /compliance/posture | h.handlePosture | services/compliance/handler.go | 36 |
-| compliance | GET | /compliance/posture/history | h.handlePostureHistory | services/compliance/handler.go | 37 |
-| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate | services/compliance/handler.go | 47 |
-| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls | services/compliance/handler.go | 51 |
-| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned | services/compliance/handler.go | 55 |
-| compliance | GET | /compliance/keys/expired | h.handleExpired | services/compliance/handler.go | 56 |
-| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations | services/compliance/handler.go | 58 |
-| compliance | GET | /compliance/sbom | h.handleSBOM | services/compliance/handler.go | 61 |
-| compliance | GET | /compliance/sbom/services | h.handleSBOMServices | services/compliance/handler.go | 62 |
-| compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService | services/compliance/handler.go | 63 |
-| compliance | GET | /compliance/sbom/vulnerabilities | h.handleSBOMVulnerabilities | services/compliance/handler.go | 64 |
+| Service | Method | Path | Handler | Permission | File | Line |
+| --- | --- | --- | --- | --- | --- | --- |
+| ai-gateway | POST | /ai-gateway/v1/chat/completions | h.handleChatCompletions |  | services/ai-gateway/handler.go | 30 |
+| ai-gateway | POST | /ai-gateway/v1/completions | h.handleCompletions |  | services/ai-gateway/handler.go | 31 |
+| ai-gateway | POST | /ai-gateway/v1/embeddings | h.handleEmbeddings |  | services/ai-gateway/handler.go | 32 |
+| ai-gateway | GET | /ai-gateway/v1/policies/{id} | h.handleGetPolicy |  | services/ai-gateway/handler.go | 42 |
+| ai-gateway | PUT | /ai-gateway/v1/policies/{id} | h.handleUpdatePolicy |  | services/ai-gateway/handler.go | 43 |
+| ai-gateway | PUT | /ai-gateway/v1/models/{id} | h.handleUpdateModel |  | services/ai-gateway/handler.go | 49 |
+| ai-gateway | GET | /ai-gateway/v1/audit/{id} | h.handleGetAudit |  | services/ai-gateway/handler.go | 72 |
+| ai-gateway | GET | /ai-gateway/v1/metrics | h.handleMetrics |  | services/ai-gateway/handler.go | 76 |
+| audit | POST | /audit/publish | h.handlePublish |  | services/audit/handler.go | 81 |
+| audit | POST | /audit/search | h.handleSearch |  | services/audit/handler.go | 87 |
+| audit | GET | /audit/stats | h.handleAuditStats |  | services/audit/handler.go | 89 |
+| audit | GET | /audit/stream | h.handleStream |  | services/audit/handler.go | 90 |
+| audit | GET | /alerts/{id} | h.handleAlert |  | services/audit/handler.go | 94 |
+| audit | PUT | /alerts/{id}/{action} | h.handleAlertActionPath |  | services/audit/handler.go | 95 |
+| audit | GET | /alerts/stream | h.handleAlertStream |  | services/audit/handler.go | 97 |
+| audit | POST | /alerts/rules | h.handleCreateRule |  | services/audit/handler.go | 98 |
+| audit | GET | /alerts/rules | h.handleListRules |  | services/audit/handler.go | 99 |
+| audit | PUT | /alerts/rules/{id} | h.handleUpdateRule |  | services/audit/handler.go | 100 |
+| audit | DELETE | /alerts/rules/{id} | h.handleDeleteRule |  | services/audit/handler.go | 101 |
+| audit | POST | /alerts/test-rule | h.handleTestRule |  | services/audit/handler.go | 102 |
+| audit | GET | /alerts/channels | h.handleGetChannels |  | services/audit/handler.go | 103 |
+| audit | PUT | /alerts/channels | h.handleUpdateChannels |  | services/audit/handler.go | 104 |
+| audit | POST | /alerts/channels/test | h.handleTestChannel |  | services/audit/handler.go | 105 |
+| audit | GET | /audit/merkle/epochs/{id} | h.handleMerkleEpoch |  | services/audit/handler.go | 110 |
+| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 115 |
+| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 116 |
+| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 117 |
+| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 133 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 136 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 139 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 140 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 143 |
+| auth | POST | /auth/register | h.handleRegister |  | services/auth/handler.go | 61 |
+| auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 62 |
+| auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 63 |
+| auth | POST | /auth/client-token | h.handleClientToken |  | services/auth/handler.go | 64 |
+| auth | POST | /auth/cluster/mint | h.handleClusterMint |  | services/auth/handler.go | 65 |
+| auth | POST | /auth/workload-token | h.handleIssueWorkloadToken |  | services/auth/handler.go | 66 |
+| auth | POST | /auth/refresh | h.withAuth(h.handleRefresh, "auth.token.refresh") |  | services/auth/handler.go | 69 |
+| auth | POST | /auth/change-password | h.withAuth(h.handleChangePassword, "") |  | services/auth/handler.go | 70 |
+| auth | POST | /auth/register/{id}/activate | h.withAuth(h.handleActivateRegistration, "auth.client.activate") |  | services/auth/handler.go | 72 |
+| auth | POST | /auth/logout | h.withAuth(h.handleLogout, "auth.session.logout") |  | services/auth/handler.go | 73 |
+| auth | GET | /auth/me | h.withAuth(h.handleMe, "auth.self.read") |  | services/auth/handler.go | 74 |
+| auth | GET | /tenants/{id} | h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin") |  | services/auth/handler.go | 78 |
+| auth | POST | /tenants/{id}/roles | h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 83 |
+| auth | PUT | /tenants/{id}/roles/{name} | h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 84 |
+| auth | DELETE | /tenants/{id}/roles/{name} | h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 85 |
+| auth | GET | /auth/users | h.withAuth(h.handleListUsers, "auth.user.read") |  | services/auth/handler.go | 87 |
+| auth | GET | /auth/identity/providers/{provider} | h.withAuth(h.handleGetIdentityProviderConfig, "auth.user.read") |  | services/auth/handler.go | 90 |
+| auth | GET | /auth/identity/providers/{provider}/users | h.withAuth(h.handleListIdentityProviderUsers, "auth.user.read") |  | services/auth/handler.go | 93 |
+| auth | GET | /auth/identity/providers/{provider}/groups | h.withAuth(h.handleListIdentityProviderGroups, "auth.user.read") |  | services/auth/handler.go | 94 |
+| auth | GET | /auth/identity/providers/{provider}/groups/{id}/members | h.withAuth(h.handleListIdentityProviderGroupMembers, "auth.user.read") |  | services/auth/handler.go | 95 |
+| auth | POST | /auth/api-keys | h.withAuth(h.handleCreateAPIKey, "auth.api_key.write") |  | services/auth/handler.go | 118 |
+| auth | DELETE | /auth/api-keys/{id} | h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write") |  | services/auth/handler.go | 119 |
+| auth | POST | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 124 |
+| auth | GET | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 125 |
+| auth | GET | /auth/sso/saml/metadata | h.handleSAMLMetadata |  | services/auth/handler.go | 126 |
+| auth | GET | /scim/v2/ServiceProviderConfig | h.handleSCIMServiceProviderConfig |  | services/auth/handler.go | 134 |
+| auth | GET | /scim/v2/Schemas | h.handleSCIMSchemas |  | services/auth/handler.go | 135 |
+| auth | GET | /scim/v2/ResourceTypes | h.handleSCIMResourceTypes |  | services/auth/handler.go | 136 |
+| auth | GET | /scim/v2/Users | h.handleSCIMListUsers |  | services/auth/handler.go | 137 |
+| auth | POST | /scim/v2/Users | h.handleSCIMCreateUser |  | services/auth/handler.go | 138 |
+| auth | GET | /scim/v2/Users/{id} | h.handleSCIMGetUser |  | services/auth/handler.go | 139 |
+| auth | PUT | /scim/v2/Users/{id} | h.handleSCIMReplaceUser |  | services/auth/handler.go | 140 |
+| auth | PATCH | /scim/v2/Users/{id} | h.handleSCIMPatchUser |  | services/auth/handler.go | 141 |
+| auth | DELETE | /scim/v2/Users/{id} | h.handleSCIMDeleteUser |  | services/auth/handler.go | 142 |
+| auth | GET | /scim/v2/Groups | h.handleSCIMListGroups |  | services/auth/handler.go | 143 |
+| auth | POST | /scim/v2/Groups | h.handleSCIMCreateGroup |  | services/auth/handler.go | 144 |
+| auth | GET | /scim/v2/Groups/{id} | h.handleSCIMGetGroup |  | services/auth/handler.go | 145 |
+| auth | PUT | /scim/v2/Groups/{id} | h.handleSCIMReplaceGroup |  | services/auth/handler.go | 146 |
+| auth | PATCH | /scim/v2/Groups/{id} | h.handleSCIMPatchGroup |  | services/auth/handler.go | 147 |
+| auth | DELETE | /scim/v2/Groups/{id} | h.handleSCIMDeleteGroup |  | services/auth/handler.go | 148 |
+| autokey | POST | /autokey/templates | h.handleUpsertTemplate |  | services/autokey/handler.go | 34 |
+| autokey | PUT | /autokey/templates/{id} | h.handleUpsertTemplate |  | services/autokey/handler.go | 35 |
+| autokey | POST | /autokey/service-policies | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 38 |
+| autokey | PUT | /autokey/service-policies/{service} | h.handleUpsertServicePolicy |  | services/autokey/handler.go | 39 |
+| backup | GET | /healthz | h.handleHealth |  | services/backup/handler.go | 48 |
+| certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 45 |
+| certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 50 |
+| certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 52 |
+| certs | POST | /certs/validate-pqc | h.handleValidatePQC |  | services/certs/handler.go | 53 |
+| certs | GET | /certs/ots-status/{ca_id} | h.handleOTSStatus |  | services/certs/handler.go | 54 |
+| certs | POST | /certs/pqc/migrate/{id} | h.handleMigratePQC |  | services/certs/handler.go | 55 |
+| certs | GET | /certs/pqc-readiness | h.handlePQCReadiness |  | services/certs/handler.go | 56 |
+| certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 59 |
+| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 64 |
+| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch |  | services/certs/handler.go | 83 |
+| certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 87 |
+| certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 88 |
+| certs | POST | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 89 |
+| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo |  | services/certs/handler.go | 92 |
+| certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 96 |
+| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 98 |
+| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 101 |
+| certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
+| cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
+| cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
+| cloud | GET | /cloud/inventory | h.handleInventory |  | services/cloud/handler.go | 38 |
+| cloud | GET | /cloud/bindings | h.handleListBindings |  | services/cloud/handler.go | 39 |
+| cloud | GET | /cloud/bindings/{id} | h.handleGetBinding |  | services/cloud/handler.go | 40 |
+| cluster-manager | GET | /healthz | h.handleHealth |  | services/cluster-manager/handler.go | 32 |
+| cluster-manager | GET | /cluster/members | h.handleMembers |  | services/cluster-manager/handler.go | 35 |
+| cluster-manager | GET | /cluster/nodes | h.handleNodes |  | services/cluster-manager/handler.go | 36 |
+| cluster-manager | GET | /cluster/profiles | h.handleListProfiles |  | services/cluster-manager/handler.go | 38 |
+| cluster-manager | POST | /cluster/join/complete | h.handleJoinComplete |  | services/cluster-manager/handler.go | 43 |
+| cluster-manager | POST | /cluster/join/exchange | h.handleJoinExchange |  | services/cluster-manager/handler.go | 44 |
+| cluster-manager | POST | /cluster/nodes/{id}/heartbeat | h.handleNodeHeartbeat |  | services/cluster-manager/handler.go | 49 |
+| cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
+| cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
+| cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
+| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 36 |
+| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 37 |
+| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 47 |
+| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 51 |
+| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 55 |
+| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 56 |
+| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 58 |
+| compliance | GET | /compliance/sbom | h.handleSBOM |  | services/compliance/handler.go | 61 |
+| compliance | GET | /compliance/sbom/services | h.handleSBOMServices |  | services/compliance/handler.go | 62 |
+| compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService |  | services/compliance/handler.go | 63 |
 
-Showing `120` of `360`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `397`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

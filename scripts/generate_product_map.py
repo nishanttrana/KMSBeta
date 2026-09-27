@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import functools
 import json
 import re
 from collections import Counter, defaultdict
@@ -98,39 +99,237 @@ def node_id(prefix: str, value: str) -> str:
     return f"{prefix}_{raw[:64]}"
 
 
+GO_MODULE = "vecta-kms"
+PKG_ROOT = REPO_ROOT / "pkg"
+
+# Route registrations: `mux.HandleFunc("GET /x", h)`, `mux.Handle("GET /x", h)`
+# and pkg/route kernel routes `r.Handle("GET /x", route.Spec{...}, h)`.
+ROUTE_CALL_RE = re.compile(r"\b\w+\.(?:Handle|HandleFunc)\s*\(")
+GO_FUNC_RE = re.compile(
+    r"^func\s+(?:\(\s*\w+\s+\*?([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(",
+    re.MULTILINE,
+)
+GO_STRING_DECL_RE = re.compile(r"^\s*(\w+)(?:\s+string)?\s*=\s*(\"(?:[^\"\\]|\\.)*\"|`[^`]*`)\s*(?://.*)?$", re.MULTILINE)
+SPEC_FIELDS = ("Permission", "Action", "Resource", "Public")
+
+_package_consts: Dict[Path, Dict[str, str]] = {}
+
+
+def go_source_files(directory: Path) -> List[Path]:
+    return [path for path in sorted(directory.glob("*.go")) if not path.name.endswith("_test.go")]
+
+
+def go_package_consts(pkg_dir: Path) -> Dict[str, str]:
+    """Top-level string consts and vars of one Go package directory."""
+    if pkg_dir not in _package_consts:
+        consts: Dict[str, str] = {}
+        for path in go_source_files(pkg_dir):
+            text = read_text(path)
+            blocks = [m.group(1) for m in re.finditer(r"^(?:const|var)\s*\((.*?)^\)", text, re.DOTALL | re.MULTILINE)]
+            blocks += [m.group(1) for m in re.finditer(r"^(?:const|var)\s+(\w.*)$", text, re.MULTILINE)]
+            for block in blocks:
+                for m in GO_STRING_DECL_RE.finditer(block):
+                    consts.setdefault(m.group(1), m.group(2)[1:-1])
+        _package_consts[pkg_dir] = consts
+    return _package_consts[pkg_dir]
+
+
+def split_top_level(text: str, sep: str) -> List[str]:
+    parts, start, depth, quote = [], 0, 0, None
+    for i, ch in enumerate(text):
+        if quote:
+            if ch == quote and (quote == "`" or text[i - 1] != "\\"):
+                quote = None
+        elif ch in "\"`'":
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == sep and depth == 0:
+            parts.append(text[start:i].strip())
+            start = i + 1
+    parts.append(text[start:].strip())
+    return [part for part in parts if part]
+
+
+def go_string(expr: str, env: Dict[str, str], imports: Dict[str, str]) -> Optional[str]:
+    """Evaluate a Go string expression built from literals, consts and `+`."""
+    out = []
+    for term in split_top_level(expr, "+"):
+        if len(term) >= 2 and term[0] in "\"`" and term[-1] == term[0]:
+            out.append(term[1:-1])
+        elif term in env:
+            out.append(env[term])
+        elif re.fullmatch(r"\w+\.\w+", term):
+            alias, name = term.split(".")
+            import_path = imports.get(alias, "")
+            if not import_path.startswith(GO_MODULE + "/"):
+                return None
+            value = go_package_consts(REPO_ROOT / import_path[len(GO_MODULE) + 1 :]).get(name)
+            if value is None:
+                return None
+            out.append(value)
+        else:
+            return None
+    return "".join(out)
+
+
+def go_expr_at(text: str, pos: int) -> str:
+    """The expression starting at pos: a selector chain plus one {...} or (...) block."""
+    m = re.compile(r"\s*[\w.]+\s*").match(text, pos)
+    if not m:
+        return ""
+    end = m.end()
+    if end < len(text) and text[end] == "{":
+        _, end = extract_brace_block(text, end)
+    elif end < len(text) and text[end] == "(":
+        _, end = extract_call_arguments(text, end)
+    return text[pos:end].strip()
+
+
+def spec_literal(body: str, env: Dict[str, str], imports: Dict[str, str]) -> Dict[str, str]:
+    fields: Dict[str, str] = {}
+    for item in split_top_level(body, ","):
+        key, sep, value = item.partition(":")
+        if sep and key.strip() in SPEC_FIELDS:
+            value = value.strip()
+            fields[key.strip()] = go_string(value, env, imports) or value
+    return fields
+
+
+def resolve_spec(expr: str, scope: str, env: Dict[str, str], imports: Dict[str, str]) -> Dict[str, str]:
+    """Resolve a route.Spec argument: a literal, a local Spec-returning closure
+    call, or a local variable (with later `v.Field = x` assignments applied).
+    scope is the enclosing function's source up to the registration."""
+    expr = expr.strip()
+    literal = re.match(r"(?:route\.)?Spec\s*\{", expr)
+    if literal:
+        return spec_literal(extract_brace_block(expr, literal.end() - 1)[0], env, imports)
+    call = re.fullmatch(r"(\w+)\s*\((.*)\)", expr, re.DOTALL)
+    if call:
+        closures = list(re.finditer(r"\b" + call.group(1) + r"\s*:=\s*func\s*\(([^)]*)\)\s*(?:route\.)?Spec\s*\{", scope))
+        if not closures:
+            return {}
+        closure = closures[-1]
+        body, _ = extract_brace_block(scope, closure.end() - 1)
+        ret = re.search(r"\breturn\s+(?:route\.)?Spec\s*\{", body)
+        if not ret:
+            return {}
+        params = [p.split()[0] for p in closure.group(1).split(",") if p.strip()]
+        inner = dict(env)
+        for name, arg in zip(params, split_top_level(call.group(2), ",")):
+            inner[name] = go_string(arg, env, imports) or arg
+        return spec_literal(extract_brace_block(body, ret.end() - 1)[0], inner, imports)
+    if re.fullmatch(r"\w+", expr):
+        defs = list(re.finditer(r"\b" + expr + r"\s*:=", scope))
+        if not defs:
+            return {}
+        rhs = go_expr_at(scope, defs[-1].end())
+        fields = resolve_spec(rhs, scope[: defs[-1].start()], env, imports)
+        for m in re.finditer(r"\b" + expr + r"\.(\w+)\s*=\s*([^\n]+)", scope[defs[-1].end() :]):
+            if m.group(1) in SPEC_FIELDS:
+                value = m.group(2).split("//", 1)[0].strip()
+                fields[m.group(1)] = go_string(value, env, imports) or value
+        return fields
+    return {}
+
+
+def enclosing_go_func(text: str, pos: int) -> Tuple[str, str, List[str], int]:
+    """(receiver type, name, parameter names, body start) of the top-level func containing pos."""
+    found = ("", "", [], 0)
+    for m in GO_FUNC_RE.finditer(text):
+        if m.start() > pos:
+            break
+        params_text, _ = extract_call_arguments(text, m.end() - 1)
+        params = [p.split()[0] for p in split_top_level(params_text or "", ",")]
+        found = (m.group(1) or "", m.group(2), params, m.start())
+    return found
+
+
+@functools.lru_cache(maxsize=None)
+def pkg_route_mounts(pkg_dir: Path, receiver: str, func_name: str) -> List[Tuple[str, Dict[int, str]]]:
+    """Services that mount a pkg route set by calling func_name, with the
+    string arguments they pass bound to the function's parameter names."""
+    import_path = f"{GO_MODULE}/{pkg_dir.relative_to(REPO_ROOT).as_posix()}"
+    call_re = r"\.{0}\s*\(" if receiver else r"\b{alias}\.{0}\s*\("
+    mounts: List[Tuple[str, Dict[int, str]]] = []
+    for path in iter_files(SERVICES_ROOT, [".go"]):
+        if path.name.endswith("_test.go"):
+            continue
+        text = read_text(path)
+        imports = extract_go_imports(text)
+        alias = next((a for a, p in imports.items() if p == import_path), None)
+        if not alias:
+            continue
+        env = go_package_consts(path.parent)
+        for m in re.finditer(call_re.format(func_name, alias=re.escape(alias)), text):
+            args_text, _ = extract_call_arguments(text, m.end() - 1)
+            args = [go_string(arg, env, imports) for arg in split_top_level(args_text or "", ",")]
+            mounts.append((path.relative_to(SERVICES_ROOT).parts[0], {i: a for i, a in enumerate(args) if a is not None}))
+    return mounts
+
+
+def route_record(service: str, method: str, route_path: str, handler: str, path: Path, line: int,
+                 code_scope: str, registration: str, spec: Dict[str, str]) -> Dict[str, object]:
+    return {
+        "service": service,
+        "method": method,
+        "path": route_path,
+        "normalized_path": normalize_path(route_path),
+        "handler": "<inline func>" if handler.startswith("func") else handler,
+        "registration": registration,
+        "permission": spec.get("Permission") or ("public" if spec.get("Public") == "true" else ""),
+        "action": spec.get("Action", ""),
+        "resource": spec.get("Resource", ""),
+        "file": rel(path),
+        "line": line,
+        "code_scope": code_scope,
+        "match_key": "|".join(route_match_key(service, method, route_path)),
+    }
+
+
 def extract_backend_routes() -> List[Dict[str, object]]:
     routes: List[Dict[str, object]] = []
-    route_re = re.compile(r"\bmux\.HandleFunc\s*\(", re.MULTILINE)
-    for path in iter_files(SERVICES_ROOT, [".go"]):
+    sources = [(path, True) for path in iter_files(SERVICES_ROOT, [".go"])]
+    sources += [(path, False) for path in iter_files(PKG_ROOT, [".go"])]
+    for path, in_service in sources:
+        if path.name.endswith("_test.go"):
+            continue
         text = read_text(path)
-        try:
-            service = path.relative_to(SERVICES_ROOT).parts[0]
-        except Exception:
-            service = ""
-        for match in route_re.finditer(text):
+        if not ROUTE_CALL_RE.search(text):
+            continue
+        imports = extract_go_imports(text)
+        consts = go_package_consts(path.parent)
+        for match in ROUTE_CALL_RE.finditer(text):
             args_text, _ = extract_call_arguments(text, match.end() - 1)
-            if args_text is None:
+            args = split_top_level(args_text or "", ",")
+            # The pattern must carry a literal; a bare parameter is a wrapper
+            # (pkg/route's own Router.Handle), not a registration.
+            if len(args) not in (2, 3) or not re.search(r"[\"`]", args[0]):
                 continue
-            args = split_top_level_args(args_text)
-            if len(args) < 2:
-                continue
-            route_match = re.match(r"\s*([\"'`])([A-Z]+)\s+([^\"'`]+)\1", args[0])
-            if not route_match:
-                continue
-            method, route_path = route_match.group(2), route_match.group(3)
-            handler = args[1].strip()
-            routes.append(
-                {
-                    "service": service,
-                    "method": method,
-                    "path": route_path.strip(),
-                    "normalized_path": normalize_path(route_path),
-                    "handler": handler.strip(),
-                    "file": rel(path),
-                    "line": line_number(text, match.start()),
-                    "match_key": "|".join(route_match_key(service, method, route_path)),
-                }
-            )
+            receiver, func_name, params, func_start = enclosing_go_func(text, match.start())
+            if in_service:
+                service = path.relative_to(SERVICES_ROOT).parts[0]
+                mounts = [(service, {})]
+                code_scope = service
+            else:
+                mounts = pkg_route_mounts(path.parent, receiver, func_name)
+                code_scope = "pkg/" + path.parent.relative_to(PKG_ROOT).as_posix()
+            for service, bound in mounts:
+                env = dict(consts)
+                env.update({params[i]: value for i, value in bound.items() if i < len(params)})
+                pattern = go_string(args[0], env, imports) or ""
+                route_match = re.fullmatch(r"([A-Z]+)\s+(/\S*)", pattern.strip())
+                if not route_match:
+                    continue
+                spec = resolve_spec(args[1], text[func_start : match.start()], env, imports) if len(args) == 3 else {}
+                routes.append(
+                    route_record(
+                        service, route_match.group(1), route_match.group(2), args[-1].strip(), path,
+                        line_number(text, match.start()), code_scope, "kernel" if len(args) == 3 else "mux", spec,
+                    )
+                )
     return routes
 
 
@@ -190,13 +389,13 @@ def extract_go_functions() -> Dict[Tuple[str, str, str], Dict[str, object]]:
         r"\bfunc\s+(?:\(\s*(\w+)\s+\*?([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(",
         re.MULTILINE,
     )
-    for path in iter_files(SERVICES_ROOT, [".go"]):
+    sources = [(path, path.relative_to(SERVICES_ROOT).parts[0]) for path in iter_files(SERVICES_ROOT, [".go"])]
+    # pkg route sets (e.g. pkg/hsmconnector) keep their handlers in pkg; kernel
+    # routes point at them through code_scope.
+    sources += [(path, "pkg/" + path.parent.relative_to(PKG_ROOT).as_posix()) for path in iter_files(PKG_ROOT, [".go"])]
+    for path, service in sources:
         text = read_text(path)
         imports = extract_go_imports(text)
-        try:
-            service = path.relative_to(SERVICES_ROOT).parts[0]
-        except Exception:
-            service = ""
         for match in func_re.finditer(text):
             recv_name, recv_type, func_name = match.groups()
             open_brace = text.find("{", match.end())
@@ -360,9 +559,12 @@ def build_request_flows(
     flows: List[Dict[str, object]] = []
     for route in backend_routes:
         service = str(route.get("service") or "")
+        scope = str(route.get("code_scope") or service)
         handler_name = handler_func_name(route.get("handler"))
-        handler_func = functions.get((service, "Handler", handler_name))
-        service_func_names = functions_by_service_name.get(service, [])
+        handler_func = functions.get((scope, "Handler", handler_name))
+        if handler_func is None and route.get("registration") == "kernel":
+            handler_func = next((f for (s, _r, n), f in functions.items() if s == scope and n == handler_name), None)
+        service_func_names = functions_by_service_name.get(scope, [])
         handler_summary = summarize_go_function(handler_func, service_func_names)
 
         service_method_details = []
@@ -372,7 +574,7 @@ def build_request_flows(
         aggregate_external_pkg_calls: List[str] = []
         aggregate_helper_calls: List[str] = []
         for method_name in handler_summary["service_calls"]:
-            service_func = functions.get((service, "Service", method_name))
+            service_func = functions.get((scope, "Service", method_name))
             summary = summarize_go_function(service_func, service_func_names)
             if service_func:
                 service_method_details.append(
@@ -1681,6 +1883,7 @@ def main() -> None:
         f"- Tab/component mappings: `{len(tab_to_component)}`",
         f"- Sub-pane groups: `{len(subpanes)}`",
         f"- Backend HTTP routes discovered: `{len(backend_routes)}` across `{len(route_counts)}` services",
+        f"- Backend routes on the `pkg/route` kernel: `{sum(1 for r in backend_routes if r['registration'] == 'kernel')}` (permission and audit action in `backend-routes.csv`)",
         f"- Frontend API call sites discovered: `{len(frontend_calls)}`",
         f"- Frontend call sites with exact backend route match: `{len(matched_calls)}`",
         f"- Frontend call sites needing review or dynamic/runtime confirmation: `{len(unmatched_calls)}`",
@@ -1758,13 +1961,14 @@ def main() -> None:
         "These may be public API routes, protocol integrations, routes used through SDKs, or unused implementation. They should be classified before launch.",
         "",
         table(
-            ["Service", "Method", "Path", "Handler", "File", "Line"],
+            ["Service", "Method", "Path", "Handler", "Permission", "File", "Line"],
             (
                 [
                     route["service"],
                     route["method"],
                     route["path"],
                     route["handler"],
+                    route["permission"],
                     route["file"],
                     route["line"],
                 ]
@@ -1924,7 +2128,10 @@ def main() -> None:
     write_csv(
         OUT_DIR / "backend-routes.csv",
         backend_routes,
-        ["service", "method", "path", "normalized_path", "handler", "file", "line", "match_key"],
+        [
+            "service", "method", "path", "normalized_path", "handler", "registration",
+            "permission", "action", "resource", "file", "line", "match_key",
+        ],
     )
     write_csv(
         OUT_DIR / "request-flows.csv",

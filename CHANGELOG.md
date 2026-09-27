@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.14.0-beta] — 2026-09-27
+
+### Fixed: the product map missed every `pkg/route` kernel route
+- `scripts/generate_product_map.py` found routes only by `mux.HandleFunc(`.
+  The 52 routes registered through the route kernel
+  (`r.Handle("METHOD /path", route.Spec{...}, h)`) were missing from
+  `docs/generated/` (backend routes, request flows, product map JSON and
+  graph). Examples: keycore `POST /keys/{id}/generate-data-key` and
+  `GET /hsm/settings`, all of secrets, and hsm-connector.
+- The generator now parses kernel registrations and records each route's
+  `permission`, audit `action` and `resource` from its `route.Spec`.
+  `backend-routes.csv` has new `registration` (`kernel` | `mux`),
+  `permission`, `action` and `resource` columns. Public routes show
+  `public`.
+  - It resolves literal specs, local spec helpers (`secret("read",
+    permRead)`), spec variables with later field assignments, and patterns
+    built from constants (`"POST "+svctls.EnrollPath`).
+  - Route sets defined in `pkg/` are attributed to each service that
+    mounts them, with that service's arguments: `pkg/mek` exposure routes
+    appear under certs, cloud, ekm and secrets, each with its own
+    permission domain; `pkg/hsmconnector` appears under hsm-connector.
+- Result: 898 → 950 backend routes; dashboard calls with no matching
+  backend route drop from 67 to 52.
+- Test files are no longer scanned for routes, and inline handler funcs
+  show as `<inline func>` instead of their whole body.
+
 ## [1.13.0-beta] — 2026-09-27
 
 ### Removed: keycore "Envelope Encryption" hierarchy (it held no keys)

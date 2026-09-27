@@ -250,6 +250,7 @@ certs|GET|/scep/pkiclient.exe,certs,GET,/scep/pkiclient.exe,/scep/pkiclient.exe,
 certs|POST|/scep/pkiclient.exe,certs,POST,/scep/pkiclient.exe,/scep/pkiclient.exe,web/dashboard/src/lib/certs.ts:927,handleSCEPPKIOperation,services/certs/handler.go,1033,"loadCASigner, SCEPPKIOperation",GetCA,,pkg/crypto.Zeroize,"encoding/pem.EncodeToMemory, io.ReadAll, strings.ToLower, strings.TrimSpace, github.com/smallstep/scep.ParsePKIMessage, errors.New"
 certs|POST|/cmpv2,certs,POST,/cmpv2,/cmpv2,web/dashboard/src/lib/certs.ts:948,handleCMPv2,services/certs/handler.go,1165,CMPv2Request,GetCertificate,,,"bytes.TrimSpace, io.ReadAll, strings.TrimSpace, strings.EqualFold, encoding/json.Unmarshal, errors.New, fmt.Errorf, strings.ToLower"
 certs|POST|/cmpv2/confirm,certs,POST,/cmpv2/confirm,/cmpv2/confirm,web/dashboard/src/lib/certs.ts:1042,handleCMPv2Confirm,services/certs/handler.go,1226,"CMPv2Confirm, CMPv2Error",GetCertificate,,,"errors.New, fmt.Errorf, strings.TrimSpace, strings.ToLower"
+certs|POST|/v1/enroll,certs,POST,/v1/enroll,/v1/enroll,,<inline func>,,,,,,,
 cloud|POST|/cloud/accounts,cloud,POST,/cloud/accounts,/cloud/accounts,web/dashboard/src/lib/cloud.ts:135,handleRegisterAccount,services/cloud/handler.go,44,RegisterAccount,"CreateAccount, GetAccount",,"pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope","errors.New, strings.TrimSpace"
 cloud|GET|/cloud/accounts,cloud,GET,/cloud/accounts,/cloud/accounts,,handleListAccounts,services/cloud/handler.go,59,ListAccounts,ListAccounts,,,"errors.New, strings.TrimSpace"
 cloud|DELETE|/cloud/accounts/{param},cloud,DELETE,/cloud/accounts/{id},/cloud/accounts/{param},web/dashboard/src/lib/cloud.ts:152,handleDeleteAccount,services/cloud/handler.go,73,DeleteAccount,DeleteAccountCascade,s.exposure.Retire,,"strings.TrimSpace, errors.New"
@@ -473,9 +474,7 @@ featureforge|POST|/intents,featureforge,POST,/intents,/intents,web/dashboard/src
 featureforge|GET|/intents/{param},featureforge,GET,/intents/{id},/intents/{param},web/dashboard/src/lib/featureforge.ts:98,handleGetIntent,services/featureforge/handler.go,106,"Get, Approvals","GetIntent, Events, Approvals",,pkg/tenantcheck.Enforce,
 featureforge|POST|/intents/{param}/approve,featureforge,POST,/intents/{id}/approve,/intents/{param}/approve,web/dashboard/src/lib/featureforge.ts:107,handleApprove,services/featureforge/handler.go,151,"Approve, Get, Approvals","GetIntent, AddApproval, Events, Approvals",,,"errors.New, fmt.Errorf, strings.TrimSpace, strings.EqualFold"
 featureforge|POST|/intents/{param}/promote,featureforge,POST,/intents/{id}/promote,/intents/{param}/promote,web/dashboard/src/lib/featureforge.ts:114,handlePromote,services/featureforge/handler.go,179,"PromoteToProd, Get, Approvals","GetIntent, Approvals, Events","s.gov.RequestApproval, s.gov.ApprovalState",,"errors.New, fmt.Errorf, strings.TrimSpace"
-featureforge|GET|/healthz,featureforge,GET,/healthz,/healthz,,"func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{""status"": ""ok"", ""service"": ""featureforge""})
-	}",,,,,,,
+featureforge|GET|/healthz,featureforge,GET,/healthz,/healthz,,<inline func>,,,,,,,
 governance|GET|/governance/settings,governance,GET,/governance/settings,/governance/settings,web/dashboard/src/lib/governance.ts:124,handleGetSettings,services/governance/handler.go,101,GetSettings,GetSettings,,,
 governance|PUT|/governance/settings,governance,PUT,/governance/settings,/governance/settings,web/dashboard/src/lib/governance.ts:184,handleUpdateSettings,services/governance/handler.go,116,UpdateSettings,"GetSettings, UpsertSettings",,,"errors.New, strings.TrimSpace"
 governance|POST|/governance/settings/smtp/test,governance,POST,/governance/settings/smtp/test,/governance/settings/smtp/test,web/dashboard/src/lib/governance.ts:195,handleTestSMTP,services/governance/handler.go,137,TestSMTP,,,,"errors.New, strings.TrimSpace"
@@ -546,6 +545,7 @@ keyaccess|PUT|/key-access/codes/{param},keyaccess,PUT,/key-access/codes/{id},/ke
 keyaccess|DELETE|/key-access/codes/{param},keyaccess,DELETE,/key-access/codes/{id},/key-access/codes/{param},web/dashboard/src/lib/keyaccess.ts:110,handleDeleteRule,services/keyaccess/handler.go,153,DeleteRule,DeleteRule,,,strings.TrimSpace
 keyaccess|GET|/key-access/decisions,keyaccess,GET,/key-access/decisions,/key-access/decisions,web/dashboard/src/lib/keyaccess.ts:123,handleListDecisions,services/keyaccess/handler.go,163,ListDecisions,ListDecisions,,,"strconv.Atoi, strings.TrimSpace, strings.ToLower"
 keyaccess|POST|/key-access/evaluate,keyaccess,POST,/key-access/evaluate,/key-access/evaluate,,handleEvaluate,services/keyaccess/handler.go,180,Evaluate,"ListRules, CreateDecision",s.governance.CreateApprovalRequest,,strings.TrimSpace
+keycore|POST|/keys/{param}/generate-data-key,keycore,POST,/keys/{id}/generate-data-key,/keys/{param}/generate-data-key,web/dashboard/src/lib/keycore.ts:887,generateDataKey,services/keycore/data_key.go,29,Encrypt,,"s.hsm.Encrypt, s.meter.IncrementOps","pkg/crypto.RandomBytes, pkg/crypto.Zeroize","encoding/hex.EncodeToString, errors.New, errors.Is, strings.TrimSpace, strings.ToUpper"
 keycore|POST|/keys,keycore,POST,/keys,/keys,web/dashboard/src/lib/keycore.ts:593,handleCreateKey,services/keycore/handler.go,322,CreateKey,,,pkg/crypto.Zeroize,"encoding/hex.EncodeToString, errors.As, strings.ToUpper, strings.TrimSpace"
 keycore|POST|/keys/import,keycore,POST,/keys/import,/keys/import,web/dashboard/src/lib/keycore.ts:748,handleImportKey,services/keycore/handler.go,359,ImportKey,,,pkg/crypto.Zeroize,"encoding/hex.EncodeToString, errors.As, strings.ToUpper, errors.New, strings.TrimSpace"
 keycore|POST|/keys/form,keycore,POST,/keys/form,/keys/form,web/dashboard/src/lib/keycore.ts:717,handleFormKey,services/keycore/handler.go,393,FormKey,,,pkg/crypto.Zeroize,"encoding/hex.EncodeToString, errors.As, strings.ToUpper, errors.New, fmt.Errorf, fmt.Sprintf, strings.TrimSpace"
@@ -713,6 +713,11 @@ keycore|POST|/keys/{param}/zeroize-verify,keycore,POST,/keys/{id}/zeroize-verify
 keycore|GET|/keys/due-for-lifecycle,keycore,GET,/keys/due-for-lifecycle,/keys/due-for-lifecycle,,handleDueForLifecycle,services/keycore/handler_lifecycle.go,19,dueForLifecycle,,,,"strconv.Atoi, strings.TrimSpace, time.Now"
 keycore|POST|/tenants/onboard,keycore,POST,/tenants/onboard,/tenants/onboard,,handleTenantOnboard,services/keycore/handler_lifecycle.go,43,publishAudit,,s.cluster.Publish,,"strings.TrimSpace, time.Now"
 keycore|POST|/keys/{param}/archive,keycore,POST,/keys/{id}/archive,/keys/{param}/archive,,handleArchiveKey,services/keycore/handler_lifecycle.go,83,publishAudit,,s.cluster.Publish,,"strings.TrimSpace, time.Now"
+keycore|GET|/hsm/settings,keycore,GET,/hsm/settings,/hsm/settings,web/dashboard/src/lib/keycore.ts:702,getHSM,services/keycore/hsm.go,560,HSMStatus,GetHSMSettings,s.hsm.Status,pkg/hsm.Status,
+keycore|PUT|/hsm/settings,keycore,PUT,/hsm/settings,/hsm/settings,web/dashboard/src/lib/keycore.ts:709,putHSM,services/keycore/hsm.go,569,UpdateHSMSettings,"GetHSMSettings, UpsertHSMSettings","s.hsm.Status, s.hsm.EnsureTenantKey","pkg/hsm.Status, pkg/hsm.EnsureTenantKey",errors.As
+keycore|GET|/hsm/objects,keycore,GET,/hsm/objects,/hsm/objects,web/dashboard/src/lib/keycore.ts:683,listHSMObjects,services/keycore/hsm.go,595,ListHSMObjects,,s.hsm.Objects,"pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel","errors.As, fmt.Sscanf, strings.TrimPrefix, strings.HasPrefix, strings.Split"
+keycore|GET|/keys/{param}/hsm,keycore,GET,/keys/{id}/hsm,/keys/{param}/hsm,web/dashboard/src/lib/keycore.ts:689,inspectHSMKey,services/keycore/hsm.go,610,InspectHSMKey,ListVersions,s.hsm.Inspect,pkg/hsm.Inspect,"errors.As, errors.Is"
+keycore|POST|/system-keys/ensure,keycore,POST,/system-keys/ensure,/system-keys/ensure,,ensureSystemKey,services/keycore/system_keys.go,155,EnsureSystemKey,"GetSystemKey, InsertSystemKey",,"pkg/tenantcheck.IsServicePrincipal, pkg/tenantcheck.InternalServiceTenant","errors.Is, errors.New, strings.TrimSpace, strings.HasPrefix, strings.ToLower"
 kmip|GET|/kmip/capabilities,kmip,GET,/kmip/capabilities,/kmip/capabilities,web/dashboard/src/lib/kmip.ts:183,handleCapabilities,services/kmip/http_api.go,47,,,,,"fmt.Sprintf, strings.TrimSpace, github.com/ovh/kmip-go/ttlv.EnumStr"
 kmip|GET|/kmip/profiles,kmip,GET,/kmip/profiles,/kmip/profiles,web/dashboard/src/lib/kmip.ts:177,handleListClientProfiles,services/kmip/http_api.go,210,,ListClientProfiles,,,
 kmip|POST|/kmip/profiles,kmip,POST,/kmip/profiles,/kmip/profiles,web/dashboard/src/lib/kmip.ts:194,handleCreateClientProfile,services/kmip/http_api.go,224,,,,,
@@ -816,12 +821,8 @@ pqc|POST|/pqc/migration/plans/{param}/rollback,pqc,POST,/pqc/migration/plans/{id
 pqc|GET|/pqc/migration/plans/{param}/runs,pqc,GET,/pqc/migration/plans/{id}/runs,/pqc/migration/plans/{param}/runs,,handleListRuns,services/pqc/handler.go,243,ListMigrationRuns,ListMigrationRuns,,,strings.TrimSpace
 pqc|GET|/pqc/timeline,pqc,GET,/pqc/timeline,/pqc/timeline,,handleTimeline,services/pqc/handler.go,257,Timeline,,,,
 pqc|GET|/pqc/cbom/export,pqc,GET,/pqc/cbom/export,/pqc/cbom/export,,handleExportCBOM,services/pqc/handler.go,279,ExportCBOM,,,,
-reconciler|GET|/reconciler/status,reconciler,GET,/reconciler/status,/reconciler/status,,"func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, runner.Status())
-	}",,,,,,,
-reconciler|GET|/healthz,reconciler,GET,/healthz,/healthz,,"func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}",,,,,,,
+reconciler|GET|/reconciler/status,reconciler,GET,/reconciler/status,/reconciler/status,,<inline func>,,,,,,,
+reconciler|GET|/healthz,reconciler,GET,/healthz,/healthz,,<inline func>,,,,,,,
 reporting|GET|/alerts,reporting,GET,/alerts,/alerts,web/dashboard/src/lib/reporting.ts:162,handleAlerts,services/reporting/handler.go,108,ListAlerts,ListAlerts,,,"strings.ToLower, strings.TrimSpace"
 reporting|GET|/alerts/feed,reporting,GET,/alerts/feed,/alerts/feed,,handleAlertsFeed,services/reporting/handler.go,133,,,,,"time.NewTicker, time.Now"
 reporting|GET|/alerts/unread,reporting,GET,/alerts/unread,/alerts/unread,web/dashboard/src/lib/reporting.ts:170,handleAlertsUnread,services/reporting/handler.go,170,CountUnread,CountUnreadBySeverity,,,
@@ -873,6 +874,28 @@ sbom|GET|/cbom/pqc-readiness,sbom,GET,/cbom/pqc-readiness,/cbom/pqc-readiness,we
 sbom|GET|/cbom/diff,sbom,GET,/cbom/diff,/cbom/diff,web/dashboard/src/lib/sbom.ts:228,handleCBOMDiff,services/sbom/handler.go,300,DiffCBOM,GetCBOMSnapshotByID,,,strings.TrimSpace
 sbom|GET|/cbom/{param}/export,sbom,GET,/cbom/{id}/export,/cbom/{param}/export,web/dashboard/src/lib/sbom.ts:219,handleCBOMExport,services/sbom/handler.go,258,ExportCBOM,,,,
 sbom|GET|/cbom/{param},sbom,GET,/cbom/{id},/cbom/{param},,handleCBOMByID,services/sbom/handler.go,244,GetCBOMByID,GetCBOMSnapshotByID,,,strings.TrimSpace
+secrets|POST|/secrets,secrets,POST,/secrets,/secrets,web/dashboard/src/lib/secrets.ts:87,createSecret,services/secrets/handler.go,121,CreateSecret,"CreateSecret, GetSecret",,pkg/crypto.Zeroize,"errors.New, strings.TrimSpace"
+secrets|GET|/secrets,secrets,GET,/secrets,/secrets,web/dashboard/src/lib/secrets.ts:82,listSecrets,services/secrets/handler.go,139,ListSecrets,ListSecrets,,,"strings.TrimSpace, errors.New"
+secrets|GET|/secrets/{param},secrets,GET,/secrets/{id},/secrets/{param},,getSecret,services/secrets/handler.go,152,GetSecret,GetSecret,,,"errors.New, strings.TrimSpace"
+secrets|GET|/secrets/{param}/value,secrets,GET,/secrets/{id}/value,/secrets/{param}/value,web/dashboard/src/lib/secrets.ts:145,getSecretValue,services/secrets/handler.go,161,GetSecretValue,GetSecretWithValue,,pkg/crypto.Zeroize,"strings.TrimSpace, strings.ToLower, errors.New, time.Now"
+secrets|PUT|/secrets/{param},secrets,PUT,/secrets/{id},/secrets/{param},web/dashboard/src/lib/secrets.ts:126,updateSecret,services/secrets/handler.go,183,UpdateSecret,UpdateSecret,,pkg/crypto.Zeroize,"errors.New, strings.TrimSpace"
+secrets|DELETE|/secrets/{param},secrets,DELETE,/secrets/{id},/secrets/{param},web/dashboard/src/lib/secrets.ts:134,deleteSecret,services/secrets/handler.go,202,DeleteSecret,DeleteSecret,,,"errors.New, strings.TrimSpace"
+secrets|POST|/secrets/generate/ssh_key,secrets,POST,/secrets/generate/ssh_key,/secrets/generate/ssh_key,,generateSSHKey,services/secrets/handler.go,211,GenerateSSHKey,,,"pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM","strings.TrimSpace, golang.org/x/crypto/ssh.NewPublicKey, golang.org/x/crypto/ssh.MarshalAuthorizedKey"
+secrets|POST|/secrets/generate/keypair,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,web/dashboard/src/lib/secrets.ts:218,generateKeyPair,services/secrets/handler.go,227,GenerateKeyPair,,,,"errors.New, strings.TrimSpace, strings.ToLower"
+secrets|GET|/secrets/{param}/versions,secrets,GET,/secrets/{id}/versions,/secrets/{param}/versions,web/dashboard/src/lib/secrets.ts:182,listVersions,services/secrets/handler.go,249,ListVersions,ListVersions,,,"errors.New, strings.TrimSpace"
+secrets|GET|/secrets/{param}/audit,secrets,GET,/secrets/{id}/audit,/secrets/{param}/audit,web/dashboard/src/lib/secrets.ts:190,secretAuditLog,services/secrets/handler.go,259,GetSecretAuditLog,GetSecretAuditLog,,,"errors.New, strings.TrimSpace"
+secrets|POST|/secrets/{param}/rotate,secrets,POST,/secrets/{id}/rotate,/secrets/{param}/rotate,web/dashboard/src/lib/secrets.ts:198,rotateSecret,services/secrets/handler.go,272,RotateSecret,,,,"errors.New, strings.TrimSpace"
+secrets|GET|/secrets/stats,secrets,GET,/secrets/stats,/secrets/stats,web/dashboard/src/lib/secrets.ts:177,stats,services/secrets/handler.go,294,GetStats,GetStats,,,"errors.New, strings.TrimSpace"
+secrets|GET|/v1/sys/health,secrets,GET,/v1/sys/health,/v1/sys/health,,vaultSysHealth,services/secrets/handler.go,303,,,,,time.Now
+secrets|GET|/v1/sys/seal-status,secrets,GET,/v1/sys/seal-status,/v1/sys/seal-status,,vaultSealStatus,services/secrets/handler.go,318,,,,,time.Now
+secrets|POST|/v1/auth/token/lookup-self,secrets,POST,/v1/auth/token/lookup-self,/v1/auth/token/lookup-self,,vaultTokenLookupSelf,services/secrets/handler.go,333,,,,,time.Now
+secrets|GET|/v1/{param}/data/{param},secrets,GET,/v1/{mount}/data/{path...},/v1/{param}/data/{param},,vaultKVRead,services/secrets/handler.go,362,"GetSecretByName, GetSecretValue","GetSecretByName, GetSecretWithValue",,pkg/crypto.Zeroize,"errors.Is, errors.New, strings.TrimSpace, strings.ToLower, time.Now"
+secrets|POST|/v1/{param}/data/{param},secrets,POST,/v1/{mount}/data/{path...},/v1/{param}/data/{param},,vaultKVWrite,services/secrets/handler.go,401,"GetSecretByName, CreateSecret, UpdateSecret","GetSecretByName, CreateSecret, GetSecret, UpdateSecret",,pkg/crypto.Zeroize,"errors.Is, strings.TrimSpace, errors.New"
+secrets|DELETE|/v1/{param}/data/{param},secrets,DELETE,/v1/{mount}/data/{path...},/v1/{param}/data/{param},,vaultKVDelete,services/secrets/handler.go,448,"GetSecretByName, DeleteSecret","GetSecretByName, DeleteSecret",,,"errors.New, strings.TrimSpace"
+secrets|GET|/v1/{param}/metadata/{param},secrets,GET,/v1/{mount}/metadata/{path...},/v1/{param}/metadata/{param},,vaultKV2Metadata,services/secrets/handler.go,467,GetSecretByName,GetSecretByName,,,"errors.New, strings.TrimSpace"
+secrets|GET|/v1/{param}/{param},secrets,GET,/v1/{mount}/{path...},/v1/{param}/{param},,vaultKVRead,services/secrets/handler.go,362,"GetSecretByName, GetSecretValue","GetSecretByName, GetSecretWithValue",,pkg/crypto.Zeroize,"errors.Is, errors.New, strings.TrimSpace, strings.ToLower, time.Now"
+secrets|POST|/v1/{param}/{param},secrets,POST,/v1/{mount}/{path...},/v1/{param}/{param},,vaultKVWrite,services/secrets/handler.go,401,"GetSecretByName, CreateSecret, UpdateSecret","GetSecretByName, CreateSecret, GetSecret, UpdateSecret",,pkg/crypto.Zeroize,"errors.Is, strings.TrimSpace, errors.New"
+secrets|DELETE|/v1/{param}/{param},secrets,DELETE,/v1/{mount}/{path...},/v1/{param}/{param},,vaultKVDelete,services/secrets/handler.go,448,"GetSecretByName, DeleteSecret","GetSecretByName, DeleteSecret",,,"errors.New, strings.TrimSpace"
 signing|GET|/signing/settings,signing,GET,/signing/settings,/signing/settings,web/dashboard/src/lib/signing.ts:88,handleGetSettings,services/signing/handler.go,89,GetSettings,,,,
 signing|PUT|/signing/settings,signing,PUT,/signing/settings,/signing/settings,web/dashboard/src/lib/signing.ts:93,handlePutSettings,services/signing/handler.go,100,UpdateSettings,UpsertSettings,,,
 signing|GET|/signing/summary,signing,GET,/signing/summary,/signing/summary,web/dashboard/src/lib/signing.ts:101,handleGetSummary,services/signing/handler.go,116,GetSummary,"ListProfiles, ListRecords",,,"sort.Slice, strings.EqualFold"
@@ -884,15 +907,9 @@ signing|GET|/signing/records,signing,GET,/signing/records,/signing/records,web/d
 signing|POST|/signing/blob,signing,POST,/signing/blob,/signing/blob,web/dashboard/src/lib/signing.ts:144,handleSignBlob,services/signing/handler.go,182,,,,,
 signing|POST|/signing/git,signing,POST,/signing/git,/signing/git,web/dashboard/src/lib/signing.ts:157,handleSignGit,services/signing/handler.go,186,,,,,
 signing|POST|/signing/verify,signing,POST,/signing/verify,/signing/verify,web/dashboard/src/lib/signing.ts:165,handleVerify,services/signing/handler.go,207,VerifyArtifact,"GetRecord, ListRecords",s.keycore.Verify,,"crypto/sha256.Sum256, encoding/hex.EncodeToString, encoding/json.Unmarshal, encoding/json.Marshal, strings.TrimSpace, strings.EqualFold, strings.ToLower, time.Now"
-watchdog|GET|/watchdog/heartbeats,watchdog,GET,/watchdog/heartbeats,/watchdog/heartbeats,,"func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, probe.Snapshot())
-	}",,,,,,,
-watchdog|GET|/watchdog/incidents,watchdog,GET,/watchdog/incidents,/watchdog/incidents,,"func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, pb.Incidents())
-	}",,,,,,,
-watchdog|GET|/healthz,watchdog,GET,/healthz,/healthz,,"func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}",,,,,,,
+watchdog|GET|/watchdog/heartbeats,watchdog,GET,/watchdog/heartbeats,/watchdog/heartbeats,,<inline func>,,,,,,,
+watchdog|GET|/watchdog/incidents,watchdog,GET,/watchdog/incidents,/watchdog/incidents,,<inline func>,,,,,,,
+watchdog|GET|/healthz,watchdog,GET,/healthz,/healthz,,<inline func>,,,,,,,
 workload|GET|/workload-identity/settings,workload,GET,/workload-identity/settings,/workload-identity/settings,web/dashboard/src/lib/workloadIdentity.ts:146,handleGetSettings,services/workload/handler.go,45,GetSettings,,,,
 workload|PUT|/workload-identity/settings,workload,PUT,/workload-identity/settings,/workload-identity/settings,web/dashboard/src/lib/workloadIdentity.ts:151,handlePutSettings,services/workload/handler.go,56,UpdateSettings,UpsertSettings,,,strings.EqualFold
 workload|GET|/workload-identity/summary,workload,GET,/workload-identity/summary,/workload-identity/summary,web/dashboard/src/lib/workloadIdentity.ts:159,handleGetSummary,services/workload/handler.go,72,GetSummary,"ListRegistrations, ListFederationBundles, ListIssuanceRecords",,,time.Duration
@@ -909,3 +926,26 @@ workload|GET|/workload-identity/issuances,workload,GET,/workload-identity/issuan
 workload|POST|/workload-identity/token/exchange,workload,POST,/workload-identity/token/exchange,/workload-identity/token/exchange,web/dashboard/src/lib/workloadIdentity.ts:227,handleExchangeToken,services/workload/handler.go,192,ExchangeToken,"ListFederationBundles, TouchRegistrationUsed",s.auth.IssueWorkloadToken,,"strings.TrimSpace, time.Until, time.Duration"
 workload|GET|/workload-identity/graph,workload,GET,/workload-identity/graph,/workload-identity/graph,web/dashboard/src/lib/workloadIdentity.ts:235,handleGetGraph,services/workload/handler.go,208,GetGraph,ListRegistrations,,,"sort.Slice, strings.TrimSpace"
 workload|GET|/workload-identity/usage,workload,GET,/workload-identity/usage,/workload-identity/usage,web/dashboard/src/lib/workloadIdentity.ts:240,handleListUsage,services/workload/handler.go,219,ListUsage,,,,"strconv.Atoi, strings.TrimSpace"
+hsm-connector|POST|/hsm/keys,hsm-connector,POST,/hsm/keys,/hsm/keys,,generate,pkg/hsmconnector/handler.go,155,,,,pkg/hsm.NormalizeAlgorithm,
+hsm-connector|POST|/hsm/tenant-key,hsm-connector,POST,/hsm/tenant-key,/hsm/tenant-key,,tenantKey,pkg/hsmconnector/handler.go,181,,,,pkg/hsm.TenantKeyLabel,errors.Is
+hsm-connector|POST|/hsm/encrypt,hsm-connector,POST,/hsm/encrypt,/hsm/encrypt,,encrypt,pkg/hsmconnector/handler.go,204,,,,,
+hsm-connector|POST|/hsm/decrypt,hsm-connector,POST,/hsm/decrypt,/hsm/decrypt,,decrypt,pkg/hsmconnector/handler.go,226,,,,,
+hsm-connector|POST|/hsm/sign,hsm-connector,POST,/hsm/sign,/hsm/sign,,sign,pkg/hsmconnector/handler.go,247,,,,,
+hsm-connector|POST|/hsm/verify,hsm-connector,POST,/hsm/verify,/hsm/verify,,verify,pkg/hsmconnector/handler.go,266,,,,,
+hsm-connector|POST|/hsm/keys/destroy,hsm-connector,POST,/hsm/keys/destroy,/hsm/keys/destroy,,destroy,pkg/hsmconnector/handler.go,286,,,,pkg/hsm.TenantKeyLabel,
+hsm-connector|POST|/hsm/keys/inspect,hsm-connector,POST,/hsm/keys/inspect,/hsm/keys/inspect,,inspect,pkg/hsmconnector/handler.go,318,,,,,
+hsm-connector|GET|/hsm/objects,hsm-connector,GET,/hsm/objects,/hsm/objects,,objects,pkg/hsmconnector/handler.go,334,,,,,
+hsm-connector|GET|/hsm/status,hsm-connector,GET,/hsm/status,/hsm/status,,status,pkg/hsmconnector/handler.go,359,,,"h.configs.Load, h.p11.status",,errors.Is
+hsm-connector|GET|/healthz,hsm-connector,GET,/healthz,/healthz,,<inline func>,,,,,,,
+certs|GET|/mek/exposure,certs,GET,/mek/exposure,/mek/exposure,,listExposure,pkg/mek/http.go,65,,,,,
+cloud|GET|/mek/exposure,cloud,GET,/mek/exposure,/mek/exposure,,listExposure,pkg/mek/http.go,65,,,,,
+ekm|GET|/mek/exposure,ekm,GET,/mek/exposure,/mek/exposure,,listExposure,pkg/mek/http.go,65,,,,,
+secrets|GET|/mek/exposure,secrets,GET,/mek/exposure,/mek/exposure,,listExposure,pkg/mek/http.go,65,,,,,
+certs|POST|/mek/exposure/{param}/{param}/acknowledge,certs,POST,/mek/exposure/{item_type}/{item_id}/acknowledge,/mek/exposure/{param}/{param}/acknowledge,,acknowledge,pkg/mek/http.go,82,,,,,strings.TrimSpace
+cloud|POST|/mek/exposure/{param}/{param}/acknowledge,cloud,POST,/mek/exposure/{item_type}/{item_id}/acknowledge,/mek/exposure/{param}/{param}/acknowledge,,acknowledge,pkg/mek/http.go,82,,,,,strings.TrimSpace
+ekm|POST|/mek/exposure/{param}/{param}/acknowledge,ekm,POST,/mek/exposure/{item_type}/{item_id}/acknowledge,/mek/exposure/{param}/{param}/acknowledge,,acknowledge,pkg/mek/http.go,82,,,,,strings.TrimSpace
+secrets|POST|/mek/exposure/{param}/{param}/acknowledge,secrets,POST,/mek/exposure/{item_type}/{item_id}/acknowledge,/mek/exposure/{param}/{param}/acknowledge,,acknowledge,pkg/mek/http.go,82,,,,,strings.TrimSpace
+certs|POST|/mek/rewrap-legacy,certs,POST,/mek/rewrap-legacy,/mek/rewrap-legacy,,rewrapLegacy,pkg/mek/http.go,106,,,,"pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal",
+cloud|POST|/mek/rewrap-legacy,cloud,POST,/mek/rewrap-legacy,/mek/rewrap-legacy,,rewrapLegacy,pkg/mek/http.go,106,,,,"pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal",
+ekm|POST|/mek/rewrap-legacy,ekm,POST,/mek/rewrap-legacy,/mek/rewrap-legacy,,rewrapLegacy,pkg/mek/http.go,106,,,,"pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal",
+secrets|POST|/mek/rewrap-legacy,secrets,POST,/mek/rewrap-legacy,/mek/rewrap-legacy,,rewrapLegacy,pkg/mek/http.go,106,,,,"pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal",
