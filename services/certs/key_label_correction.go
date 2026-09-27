@@ -18,10 +18,10 @@ import (
 // certificate actually carries and audits every correction
 // (audit.certs.certificate_key_label_corrected). Idempotent; primary only.
 //
-// PQC and hybrid labels are left alone for now: issuance gave those an ECDSA
-// key too (the certified module v1.0.0 has no ML-DSA), and whether that
-// capability is removed or made a preview is the owner's decision
-// (docs/DECISIONS.md, 2026-09-27).
+// Records labelled post-quantum or hybrid (removed in 1.19.0-beta,
+// pqc_removed.go) carry a classical key too: they get the actual key name and
+// the classical class or CA type (reason pqc_label_removed). Profiles with a
+// PQC or hybrid algorithm are deleted, since nothing can issue under them.
 
 // actualKeyAlgorithm names the key in certPEM, "" if not a classical key.
 func actualKeyAlgorithm(certPEM string) string {
@@ -54,14 +54,49 @@ func sameKeyLabel(recorded, actual string) bool {
 	return norm(recorded) == norm(actual)
 }
 
-func (s *SQLStore) setCertificateAlgorithm(ctx context.Context, tenantID, id, alg string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `UPDATE cert_certificates SET algorithm = $1 WHERE tenant_id = $2 AND id = $3`, alg, tenantID, id)
+func (s *SQLStore) setCertificateAlgorithm(ctx context.Context, tenantID, id, alg, class string) error {
+	_, err := s.db.SQL().ExecContext(ctx, `UPDATE cert_certificates SET algorithm = $1, cert_class = $2 WHERE tenant_id = $3 AND id = $4`, alg, class, tenantID, id)
 	return err
 }
 
-func (s *SQLStore) setCAAlgorithm(ctx context.Context, tenantID, id, alg string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `UPDATE cert_cas SET algorithm = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3`, alg, tenantID, id)
+func (s *SQLStore) setCAAlgorithm(ctx context.Context, tenantID, id, alg, caType string) error {
+	_, err := s.db.SQL().ExecContext(ctx, `UPDATE cert_cas SET algorithm = $1, ca_type = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3 AND id = $4`, alg, caType, tenantID, id)
 	return err
+}
+
+// retiredPQCProfiles returns the profiles of tenantID with a PQC or hybrid
+// algorithm or class.
+func (s *SQLStore) retiredPQCProfiles(ctx context.Context, tenantID string) ([]CertificateProfile, error) {
+	all, err := s.ListProfiles(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	var out []CertificateProfile
+	for _, p := range all {
+		if isPQCAlgorithm(p.Algorithm) || isHybridAlgorithm(p.Algorithm) || pqcClasses[strings.ToLower(p.CertClass)] {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+func (s *SQLStore) deleteProfile(ctx context.Context, tenantID, id string) error {
+	_, err := s.db.SQL().ExecContext(ctx, `DELETE FROM cert_profiles WHERE tenant_id = $1 AND id = $2`, tenantID, id)
+	return err
+}
+
+// labelIsWrong reports why a record's label must change: its key size, or a
+// retired post-quantum label on a classical key. "" when it's right.
+func labelIsWrong(recordedAlg, class, actual string) string {
+	switch {
+	case actual == "":
+		return ""
+	case isPQCAlgorithm(recordedAlg) || isHybridAlgorithm(recordedAlg) || pqcClasses[strings.ToLower(strings.TrimSpace(class))]:
+		return "pqc_label_removed"
+	case !sameKeyLabel(recordedAlg, actual):
+		return "key_size_mismatch"
+	}
+	return ""
 }
 
 // CorrectKeyLabels returns how many certificate and CA records it corrected.
@@ -75,17 +110,21 @@ func (s *Service) CorrectKeyLabels(ctx context.Context, emit route.Emitter) (int
 		return 0, err
 	}
 	n := 0
-	correct := func(tenantID, kind, id, recorded, actual string, update func() error) error {
+	correct := func(tenantID, kind, id, recorded, recordedClass, actual, reason string, update func() error) error {
 		if err := update(); err != nil {
 			return err
 		}
 		n++
+		description := "the record named a key size the certificate doesn't carry (key generation ignored the requested size before 1.16.0-beta); the record now names the actual key"
+		if reason == "pqc_label_removed" {
+			description = "the record was labelled post-quantum or hybrid but the certificate carries a classical key (PQC certificates were never real and are removed in 1.19.0-beta); the record now names the actual key and the classical class"
+		}
 		if emit != nil {
 			_ = emit.Emit(ctx, "certificate_key_label_corrected", pkgaudit.Event{
 				TenantID: tenantID, ActorID: "kms-certs", ActorType: "service", TargetType: kind, TargetID: id, Result: "success",
 				Details: map[string]interface{}{
-					"recorded_algorithm": recorded, "actual_algorithm": actual,
-					"description": "the record named a key size the certificate doesn't carry (key generation ignored the requested size before 1.16.0-beta); the record now names the actual key",
+					"recorded_algorithm": recorded, "recorded_class": recordedClass, "actual_algorithm": actual,
+					"reason": reason, "description": description,
 				},
 			})
 		}
@@ -98,10 +137,15 @@ func (s *Service) CorrectKeyLabels(ctx context.Context, emit route.Emitter) (int
 		}
 		for _, ca := range cas {
 			actual := actualKeyAlgorithm(ca.CertPEM)
-			if actual == "" || sameKeyLabel(ca.Algorithm, actual) || isPQCAlgorithm(ca.Algorithm) || isHybridAlgorithm(ca.Algorithm) {
+			reason := labelIsWrong(ca.Algorithm, ca.CAType, actual)
+			if reason == "" {
 				continue
 			}
-			if err := correct(tenantID, "ca", ca.ID, ca.Algorithm, actual, func() error { return st.setCAAlgorithm(ctx, tenantID, ca.ID, actual) }); err != nil {
+			caType := ca.CAType
+			if pqcClasses[strings.ToLower(caType)] {
+				caType = "classical"
+			}
+			if err := correct(tenantID, "ca", ca.ID, ca.Algorithm, ca.CAType, actual, reason, func() error { return st.setCAAlgorithm(ctx, tenantID, ca.ID, actual, caType) }); err != nil {
 				return n, err
 			}
 		}
@@ -112,15 +156,36 @@ func (s *Service) CorrectKeyLabels(ctx context.Context, emit route.Emitter) (int
 			}
 			for _, c := range page {
 				actual := actualKeyAlgorithm(c.CertPEM)
-				if actual == "" || sameKeyLabel(c.Algorithm, actual) || isPQCAlgorithm(c.Algorithm) || isHybridAlgorithm(c.Algorithm) {
+				reason := labelIsWrong(c.Algorithm, c.CertClass, actual)
+				if reason == "" {
 					continue
 				}
-				if err := correct(tenantID, "certificate", c.ID, c.Algorithm, actual, func() error { return st.setCertificateAlgorithm(ctx, tenantID, c.ID, actual) }); err != nil {
+				class := c.CertClass
+				if pqcClasses[strings.ToLower(class)] {
+					class = "classical"
+				}
+				if err := correct(tenantID, "certificate", c.ID, c.Algorithm, c.CertClass, actual, reason, func() error { return st.setCertificateAlgorithm(ctx, tenantID, c.ID, actual, class) }); err != nil {
 					return n, err
 				}
 			}
 			if len(page) < 500 {
 				break
+			}
+		}
+		profiles, err := st.retiredPQCProfiles(ctx, tenantID)
+		if err != nil {
+			return n, err
+		}
+		for _, p := range profiles {
+			if err := st.deleteProfile(ctx, tenantID, p.ID); err != nil {
+				return n, err
+			}
+			n++
+			if emit != nil {
+				_ = emit.Emit(ctx, "pqc_profile_removed", pkgaudit.Event{
+					TenantID: tenantID, ActorID: "kms-certs", ActorType: "service", TargetType: "certificate_profile", TargetID: p.ID, Result: "success",
+					Details: map[string]interface{}{"name": p.Name, "algorithm": p.Algorithm, "class": p.CertClass, "reason": "pqc_certificates_removed"},
+				})
 			}
 		}
 	}

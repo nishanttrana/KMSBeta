@@ -73,7 +73,7 @@ func TestHandlerCreateCAAndIssue(t *testing.T) {
 	}
 }
 
-func TestHandlerPQCReadinessAndOCSP(t *testing.T) {
+func TestHandlerOCSPAndRemovedPQCRoutes(t *testing.T) {
 	h, svc := newCertsHandler(t)
 	ctx := context.Background()
 	ca, err := svc.CreateCA(ctx, CreateCARequest{
@@ -90,23 +90,26 @@ func TestHandlerPQCReadinessAndOCSP(t *testing.T) {
 	cert, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
 		TenantID:  "t2",
 		CAID:      ca.ID,
-		SubjectCN: "pqc-service",
+		SubjectCN: "service",
 		CertType:  "tls-server",
-		Algorithm: "ML-DSA-65",
-		CertClass: "pqc",
+		Algorithm: "ECDSA-P256",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	readinessReq := httptest.NewRequest(http.MethodGet, "/certs/pqc-readiness?tenant_id=t2", nil)
-	readinessRR := httptest.NewRecorder()
-	h.ServeHTTP(readinessRR, readinessReq)
-	if readinessRR.Code != http.StatusOK {
-		t.Fatalf("readiness status=%d body=%s", readinessRR.Code, readinessRR.Body.String())
-	}
-	if !strings.Contains(readinessRR.Body.String(), "\"pqc\":1") {
-		t.Fatalf("expected pqc count in response body=%s", readinessRR.Body.String())
+	// The PQC certificate routes are removed (pqc_removed.go).
+	for _, rt := range []struct{ method, path string }{
+		{http.MethodGet, "/certs/pqc-readiness?tenant_id=t2"},
+		{http.MethodPost, "/certs/validate-pqc?tenant_id=t2"},
+		{http.MethodPost, "/certs/pqc/migrate/" + cert.ID + "?tenant_id=t2"},
+		{http.MethodGet, "/certs/ots-status/" + ca.ID + "?tenant_id=t2"},
+	} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path, nil))
+		if rr.Code == http.StatusOK {
+			t.Fatalf("%s %s must be gone, got 200", rt.method, rt.path)
+		}
 	}
 
 	ocspReq := httptest.NewRequest(http.MethodGet, "/certs/ocsp?tenant_id=t2&cert_id="+cert.ID, nil)

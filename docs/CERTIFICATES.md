@@ -38,7 +38,7 @@ Public certificate authorities (Let's Encrypt, DigiCert, Sectigo, etc.) are the 
 | Key custody | CA generates or accepts CSR | HSM-backed, you own every key |
 | Audit trail | None for relying parties | Immutable per-cert audit log |
 | Revocation speed | CRL/OCSP depends on CA | Instant, under your control |
-| PQC readiness | Vendor roadmap-dependent | ML-DSA available today |
+| PQC | Vendor roadmap-dependent | Post-quantum (hybrid ML-KEM) key exchange for internal TLS; no ML-DSA certificates (see below) |
 
 ### 1.2 Primary Use Cases
 
@@ -52,7 +52,7 @@ Public certificate authorities (Let's Encrypt, DigiCert, Sectigo, etc.) are the 
 
 **Email Encryption (S/MIME)** — Issue certificates to email addresses. Users can sign and encrypt email in Outlook, Apple Mail, and Thunderbird without depending on a third-party CA.
 
-**Post-Quantum Readiness** — Issue ML-DSA (Dilithium) certificates today for internal services that must survive harvest-now/decrypt-later attacks. Dual-algorithm issuance (classic + PQC) lets relying parties choose based on capability.
+**Post-quantum** — Certificates are classical (RSA, ECDSA, Ed25519). The KMS does **not** issue ML-DSA, SLH-DSA, XMSS/LMS or hybrid certificates: it runs on the certified FIPS 140-3 Go Cryptographic Module v1.0.0, which has no ML-DSA, and such a request is refused (`audit.cert.pqc_issuance_refused`). Until 1.19.0-beta these requests were accepted and got a classical key while labelled post-quantum; that was removed. Harvest-now/decrypt-later protection for internal traffic is the hybrid ML-KEM key exchange of internal mTLS (Certificates / PKI > Service mTLS, docs/SECURITY/INTERNAL_TLS.md).
 
 ### 1.3 PKI Hierarchy Design Principles
 
@@ -77,7 +77,7 @@ A well-designed PKI follows a trust chain where each level signs the level below
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        ROOT CA                                  │
-│   Algorithm: RSA-4096 or ML-DSA-87                             │
+│   Algorithm: RSA-4096 or ECDSA-P384                            │
 │   Validity: 20 years (7300 days)                               │
 │   Key backend: HSM (offline after initial setup)               │
 │   Signs: Intermediate CA certificates only                      │
@@ -117,11 +117,9 @@ The root CA is the trust anchor. Once it has signed the intermediate CA certific
 | CA Level | Recommended Algorithm | Rationale |
 |---|---|---|
 | Root CA | RSA-4096 | Maximum compatibility with legacy clients; 20-year validity means it outlives current quantum threats on a conservative timeline |
-| Root CA (PQC) | ML-DSA-87 | NIST FIPS 204 standard; highest ML-DSA security level for a trust anchor |
 | Intermediate CA | EC-P384 | Strong security, smaller signatures than RSA, well-supported |
 | Issuing CA (TLS) | EC-P256 or EC-P384 | P256 for broadest compatibility including embedded systems; P384 for higher assurance |
 | Issuing CA (Code Signing) | Ed25519 | Deterministic signatures, immune to nonce reuse, compact |
-| Issuing CA (PQC) | ML-DSA-65 | NIST FIPS 204; balanced security/performance for issuing volume |
 
 ### 2.4 CA Validity Periods
 
@@ -2079,55 +2077,18 @@ crypto pki enroll VECTA-INTERNAL
 
 ---
 
-### Use Case 8 — Post-Quantum Certificate Authority (ML-DSA)
+### Use Case 8 — Post-quantum certificates: not supported
 
-**Scenario:** An organization wants to begin issuing ML-DSA (FIPS 204, Dilithium) certificates for internal services that must be secure against quantum computers.
-
-```bash
-# Create PQC Root CA
-curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Vecta PQC Root CA",
-    "ca_type": "root",
-    "algorithm": "ML-DSA-87",
-    "key_backend": "hsm",
-    "validity_days": 7300,
-    "subject": {
-      "cn": "Vecta PQC Root CA",
-      "org": "Acme Corp",
-      "country": "US"
-    }
-  }'
-
-# Create PQC Issuing CA
-curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Vecta PQC Issuing CA",
-    "ca_type": "issuing",
-    "parent_ca_id": "PQC_ROOT_CA_ID",
-    "algorithm": "ML-DSA-65",
-    "key_backend": "hsm",
-    "validity_days": 730
-  }'
-
-# Issue PQC server certificate
-curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "ca_id": "PQC_ISSUING_CA_ID",
-    "subject_cn": "api.internal.acme.com",
-    "sans": [{"type": "dns", "value": "api.internal.acme.com"}],
-    "cert_type": "server",
-    "validity_days": 90,
-    "algorithm": "ML-DSA-65"
-  }'
-```
-
-**Dual-algorithm (hybrid) issuance:** Issue both a classical EC-P256 cert and an ML-DSA cert for the same identity. Configure the TLS server to present both; clients that understand ML-DSA validate it, others fall back to EC-P256.
+ML-DSA, SLH-DSA, XMSS/LMS and hybrid certificates and CAs are refused with
+`post-quantum and hybrid certificates are not supported` and audited as
+`audit.cert.pqc_issuance_refused`. The certified FIPS 140-3 Go Cryptographic
+Module v1.0.0 has no ML-DSA, and a classical key must not be labelled
+post-quantum. Records issued by earlier releases under such a label carry a
+classical key; certs relabels them at start
+(`audit.certs.certificate_key_label_corrected`, `reason: pqc_label_removed`)
+and deletes PQC profiles (`audit.certs.pqc_profile_removed`). For
+post-quantum protection of internal traffic, set **PQC required** on the
+service under Certificates / PKI > Service mTLS.
 
 ---
 

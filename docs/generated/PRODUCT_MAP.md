@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-27T00:59:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T02:55:41Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `33`
 - Tab/component mappings: `41`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `954` across `31` services
-- Backend routes on the `pkg/route` kernel: `56` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `619`
-- Frontend call sites with exact backend route match: `569`
+- Backend HTTP routes discovered: `950` across `31` services
+- Backend routes on the `pkg/route` kernel: `82` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `618`
+- Frontend call sites with exact backend route match: `568`
 - Frontend call sites needing review or dynamic/runtime confirmation: `50`
-- Clickable controls with static `onClick` handlers: `821`
-- Backend request flows with handler/service/package summaries: `954`
+- Clickable controls with static `onClick` handlers: `828`
+- Backend request flows with handler/service/package summaries: `950`
 
 ## How To Use This For Launch
 
@@ -159,7 +159,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (72 routes)"]
+  svc_certs["certs (68 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
@@ -195,7 +195,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 94 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
-| Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 6 |
+| Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 5 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 100 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -238,7 +238,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 72 | 52 |
+| certs | 68 | 52 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
@@ -251,7 +251,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 11 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 173 | 124 |
+| keycore | 173 | 123 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -320,7 +320,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 236 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 280 |
-| keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 71 |
+| keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
 Showing `50` of `50`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
@@ -357,11 +357,11 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 115 |
 | audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 116 |
 | audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 117 |
-| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 133 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 136 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 139 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 140 |
-| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 143 |
+| audit | POST | /ops-metrics/record | h.handleRecordOp |  | services/audit/handler.go | 128 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 131 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 134 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 135 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 138 |
 | auth | POST | /auth/register | h.handleRegister |  | services/auth/handler.go | 61 |
 | auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 62 |
 | auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 63 |
@@ -410,20 +410,16 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /certs/{id} | h.handleGetCert |  | services/certs/handler.go | 45 |
 | certs | POST | /certs/profiles | h.handleCreateProfile |  | services/certs/handler.go | 50 |
 | certs | GET | /certs/profiles/{id} | h.handleGetProfile |  | services/certs/handler.go | 52 |
-| certs | POST | /certs/validate-pqc | h.handleValidatePQC |  | services/certs/handler.go | 53 |
-| certs | GET | /certs/ots-status/{ca_id} | h.handleOTSStatus |  | services/certs/handler.go | 54 |
-| certs | POST | /certs/pqc/migrate/{id} | h.handleMigratePQC |  | services/certs/handler.go | 55 |
-| certs | GET | /certs/pqc-readiness | h.handlePQCReadiness |  | services/certs/handler.go | 56 |
-| certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 59 |
-| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 64 |
-| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch |  | services/certs/handler.go | 83 |
-| certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 87 |
-| certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 88 |
-| certs | POST | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 89 |
-| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo |  | services/certs/handler.go | 92 |
-| certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 96 |
-| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 98 |
-| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 101 |
+| certs | POST | /certs/ocsp | h.handleOCSP |  | services/certs/handler.go | 55 |
+| certs | GET | /certs/clm/policy | h.handleGetCLMPolicy |  | services/certs/handler.go | 60 |
+| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch |  | services/certs/handler.go | 79 |
+| certs | GET | /acme/directory | h.handleACMEDirectory |  | services/certs/handler.go | 83 |
+| certs | HEAD | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 84 |
+| certs | POST | /acme/new-nonce | h.handleACMENonce |  | services/certs/handler.go | 85 |
+| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo |  | services/certs/handler.go | 88 |
+| certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 92 |
+| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 94 |
+| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 97 |
 | certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
@@ -450,8 +446,12 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/sbom | h.handleSBOM |  | services/compliance/handler.go | 61 |
 | compliance | GET | /compliance/sbom/services | h.handleSBOMServices |  | services/compliance/handler.go | 62 |
 | compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService |  | services/compliance/handler.go | 63 |
+| compliance | GET | /compliance/sbom/vulnerabilities | h.handleSBOMVulnerabilities |  | services/compliance/handler.go | 64 |
+| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 66 |
+| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 67 |
+| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 68 |
 
-Showing `120` of `389`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `386`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

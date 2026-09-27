@@ -39,7 +39,6 @@ import (
 var (
 	oidVectaMeta                     = []int{1, 3, 6, 1, 4, 1, 55555, 7, 1}
 	oidVectaComposite                = []int{1, 3, 6, 1, 4, 1, 55555, 7, 2}
-	oidVectaOTSIndex                 = []int{1, 3, 6, 1, 4, 1, 55555, 7, 3}
 	defaultValidityCA          int64 = 3650
 	defaultValidityLeaf        int64 = 397
 	defaultCertExpiryAlertDays       = 30
@@ -185,14 +184,11 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 	if req.ValidityDays <= 0 {
 		req.ValidityDays = defaultValidityCA
 	}
-	if req.OTSMax < 0 {
-		req.OTSMax = 0
-	}
-	if req.OTSAlertThreshold < 0 {
-		req.OTSAlertThreshold = 0
-	}
 	if req.TenantID == "" || req.Name == "" || req.CALevel == "" || req.Algorithm == "" {
 		return CA{}, errors.New("tenant_id, name, ca_level, algorithm are required")
+	}
+	if err := s.refusePQC(ctx, req.TenantID, "ca", req.Algorithm, req.CAType); err != nil {
+		return CA{}, err
 	}
 	if err := s.enforceFIPS(req.Algorithm); err != nil {
 		return CA{}, err
@@ -292,7 +288,7 @@ func (s *Service) mintCA(req CreateCARequest, caID string, signer crypto.Signer,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 	}
-	addCertMetaExtensions(tpl, req.Algorithm, req.CAType, 0, nil)
+	addCertMetaExtensions(tpl, req.Algorithm, req.CAType, nil)
 
 	parentTpl := tpl
 	parentSigner := signer
@@ -333,8 +329,6 @@ func (s *Service) mintCA(req CreateCARequest, caID string, signer crypto.Signer,
 		Subject:            req.Subject,
 		Status:             CAStatusActive,
 		OTSCurrent:         0,
-		OTSMax:             req.OTSMax,
-		OTSAlertThreshold:  req.OTSAlertThreshold,
 		SignerWrappedDEK:   encSigner.WrappedDEK,
 		SignerWrappedDEKIV: encSigner.WrappedDEKIV,
 		SignerCiphertext:   encSigner.Ciphertext,
@@ -440,6 +434,9 @@ func (s *Service) CreateProfile(ctx context.Context, req CreateProfileRequest) (
 	if req.TenantID == "" || req.Name == "" || req.Algorithm == "" {
 		return CertificateProfile{}, errors.New("tenant_id, name, algorithm are required")
 	}
+	if err := s.refusePQC(ctx, req.TenantID, "profile", req.Algorithm, req.CertClass); err != nil {
+		return CertificateProfile{}, err
+	}
 	if err := s.enforceFIPS(req.Algorithm); err != nil {
 		return CertificateProfile{}, err
 	}
@@ -531,6 +528,9 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if req.Algorithm == "" {
 		req.Algorithm = "ECDSA-P384"
 	}
+	if err := s.refusePQC(ctx, req.TenantID, "certificate", req.Algorithm, req.CertClass); err != nil {
+		return Certificate{}, "", err
+	}
 	if err := s.enforceFIPS(req.Algorithm); err != nil {
 		return Certificate{}, "", err
 	}
@@ -613,19 +613,11 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	}
 	tpl.DNSNames, tpl.IPAddresses = splitSANs(sans)
 
-	var otsIndex int64
-	if isStatefulAlgorithm(ca.Algorithm) {
-		idx, err := s.store.ReserveOTSIndex(ctx, req.TenantID, ca.ID)
-		if err != nil {
-			return Certificate{}, "", err
-		}
-		otsIndex = idx
-	}
-	compositeSig, err := s.signWithKeyCoreIfConfigured(ctx, req.TenantID, ca.KeyBackend, ca.KeyRef, buildLeafSigningIntent(req, serial, sans, otsIndex))
+	compositeSig, err := s.signWithKeyCoreIfConfigured(ctx, req.TenantID, ca.KeyBackend, ca.KeyRef, buildLeafSigningIntent(req, serial, sans, 0))
 	if err != nil {
 		return Certificate{}, "", err
 	}
-	addCertMetaExtensions(tpl, req.Algorithm, req.CertClass, otsIndex, compositeSig)
+	addCertMetaExtensions(tpl, req.Algorithm, req.CertClass, compositeSig)
 
 	der, err := x509.CreateCertificate(rand.Reader, tpl, issuerCert, pubKey, issuerSigner)
 	if err != nil {
@@ -658,17 +650,12 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if err != nil {
 		return Certificate{}, "", err
 	}
-	event := "audit.cert.issued"
-	if out.CertClass == "pqc" || out.CertClass == "hybrid" {
-		event = "audit.cert.pqc_cert_issued"
-	}
-	_ = s.publishAudit(ctx, event, req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.cert.issued", req.TenantID, map[string]interface{}{
 		"cert_id":       out.ID,
 		"ca_id":         out.CAID,
 		"algorithm":     out.Algorithm,
 		"class":         out.CertClass,
 		"protocol":      out.Protocol,
-		"ots_index":     otsIndex,
 		"server_keygen": req.ServerKeygen,
 	})
 	return out, privateKeyPEM, nil
@@ -985,108 +972,6 @@ func (s *Service) DeleteCertificate(ctx context.Context, tenantID string, certID
 		"revoked_before": !current.RevokedAt.IsZero(),
 	})
 	return nil
-}
-
-func (s *Service) ValidatePQCChain(ctx context.Context, req ValidatePQCChainRequest) (bool, []string, error) {
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	if req.TenantID == "" || len(req.CertIDs) == 0 {
-		return false, nil, errors.New("tenant_id and cert_ids are required")
-	}
-	issues := make([]string, 0)
-	for _, certID := range req.CertIDs {
-		c, err := s.store.GetCertificate(ctx, req.TenantID, certID)
-		if err != nil {
-			issues = append(issues, "missing cert "+certID)
-			continue
-		}
-		if c.CertClass != "pqc" && c.CertClass != "hybrid" {
-			issues = append(issues, "non-pqc class for cert "+certID)
-		}
-		if c.Status != CertStatusActive {
-			issues = append(issues, "non-active cert "+certID)
-		}
-		if time.Now().UTC().After(c.NotAfter) {
-			issues = append(issues, "expired cert "+certID)
-		}
-		if _, err := s.store.GetCA(ctx, req.TenantID, c.CAID); err != nil {
-			issues = append(issues, "missing issuer ca for cert "+certID)
-		}
-	}
-	valid := len(issues) == 0
-	_ = s.publishAudit(ctx, "audit.cert.pqc_cert_validated", req.TenantID, map[string]interface{}{
-		"cert_ids": req.CertIDs,
-		"valid":    valid,
-		"issues":   issues,
-	})
-	return valid, issues, nil
-}
-
-func (s *Service) MigrateToPQC(ctx context.Context, req MigrateToPQCRequest) (Certificate, error) {
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	req.CertID = strings.TrimSpace(req.CertID)
-	req.TargetAlgorithm = normalizeAlgorithm(req.TargetAlgorithm)
-	if req.TenantID == "" || req.CertID == "" || req.TargetAlgorithm == "" {
-		return Certificate{}, errors.New("tenant_id, cert_id, target_algorithm are required")
-	}
-	oldCert, err := s.store.GetCertificate(ctx, req.TenantID, req.CertID)
-	if err != nil {
-		return Certificate{}, err
-	}
-	out, _, err := s.IssueCertificate(ctx, IssueCertificateRequest{
-		TenantID:     req.TenantID,
-		CAID:         oldCert.CAID,
-		ProfileID:    req.TargetProfileID,
-		CertType:     oldCert.CertType,
-		Algorithm:    req.TargetAlgorithm,
-		CertClass:    normalizeCertClass("", req.TargetAlgorithm),
-		SubjectCN:    oldCert.SubjectCN,
-		SANs:         oldCert.SANs,
-		Protocol:     "migrate",
-		ValidityDays: defaultValidityLeaf,
-	})
-	if err != nil {
-		return Certificate{}, err
-	}
-	_ = s.publishAudit(ctx, "audit.cert.pqc_migration_executed", req.TenantID, map[string]interface{}{
-		"source_cert_id": req.CertID,
-		"target_cert_id": out.ID,
-		"algorithm":      req.TargetAlgorithm,
-	})
-	return out, nil
-}
-
-func (s *Service) GetOTSStatus(ctx context.Context, tenantID string, caID string) (OTSStatus, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	caID = strings.TrimSpace(caID)
-	if tenantID == "" || caID == "" {
-		return OTSStatus{}, errors.New("tenant_id and ca_id are required")
-	}
-	ca, err := s.store.GetCA(ctx, tenantID, caID)
-	if err != nil {
-		return OTSStatus{}, err
-	}
-	remaining := int64(0)
-	if ca.OTSMax > 0 {
-		remaining = ca.OTSMax - ca.OTSCurrent
-		if remaining < 0 {
-			remaining = 0
-		}
-	}
-	alert := ca.OTSAlertThreshold > 0 && remaining <= ca.OTSAlertThreshold
-	return OTSStatus{
-		CurrentIndex: ca.OTSCurrent,
-		MaxIndex:     ca.OTSMax,
-		Remaining:    remaining,
-		Alert:        alert,
-	}, nil
-}
-
-func (s *Service) GetPQCReadiness(ctx context.Context, tenantID string) (PQCReadiness, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return PQCReadiness{}, errors.New("tenant_id is required")
-	}
-	return s.store.GetPQCReadiness(ctx, tenantID)
 }
 
 func (s *Service) GenerateCRL(ctx context.Context, tenantID string, caID string) (string, time.Time, error) {
@@ -2491,10 +2376,6 @@ func defaultProtocolConfig(tenantID string, protocol string) ProtocolConfig {
 
 func (s *Service) ensureDefaultProfiles(ctx context.Context, tenantID string) error {
 	defaults := []CreateProfileRequest{
-		{TenantID: tenantID, Name: "pqc-tls-server", CertType: "tls-server", Algorithm: "ML-DSA-65", CertClass: "pqc", ProfileJSON: `{"key_exchange":"ECDHE","pqc":"enabled"}`, IsDefault: true},
-		{TenantID: tenantID, Name: "hybrid-tls", CertType: "tls-server", Algorithm: "ECDSA-P384+ML-DSA-65", CertClass: "hybrid", ProfileJSON: `{"composite_signature":true}`, IsDefault: true},
-		{TenantID: tenantID, Name: "quantum-safe-smime", CertType: "email", Algorithm: "ML-DSA-87+ML-KEM-1024", CertClass: "pqc", ProfileJSON: `{"eku":"emailProtection"}`, IsDefault: true},
-		{TenantID: tenantID, Name: "pqc-code-signing", CertType: "code-signing", Algorithm: "SLH-DSA-256f", CertClass: "pqc", ProfileJSON: `{"eku":"codeSigning"}`, IsDefault: true},
 		{TenantID: tenantID, Name: "internal-mtls-service", CertType: "tls-client", Algorithm: "ECDSA-P384", CertClass: "classical", ProfileJSON: `{"mtls":"internal"}`, IsDefault: true},
 	}
 	for _, p := range defaults {
@@ -2994,13 +2875,7 @@ func (s *Service) enforceFIPS(algorithm string) error {
 	}
 	alg := strings.ToUpper(strings.TrimSpace(algorithm))
 	switch {
-	case strings.Contains(alg, "ML-DSA"),
-		strings.Contains(alg, "SLH-DSA"),
-		strings.Contains(alg, "ML-KEM"),
-		strings.Contains(alg, "HSS"),
-		strings.Contains(alg, "LMS"),
-		strings.Contains(alg, "XMSS"),
-		strings.Contains(alg, "ECDSA"),
+	case strings.Contains(alg, "ECDSA"),
 		strings.Contains(alg, "RSA"),
 		strings.Contains(alg, "ED25519"):
 		return nil
@@ -3009,7 +2884,7 @@ func (s *Service) enforceFIPS(algorithm string) error {
 	}
 }
 
-func addCertMetaExtensions(tpl *x509.Certificate, algorithm string, certClass string, otsIndex int64, compositeSig []byte) {
+func addCertMetaExtensions(tpl *x509.Certificate, algorithm string, certClass string, compositeSig []byte) {
 	meta, _ := json.Marshal(map[string]interface{}{
 		"algorithm": normalizeAlgorithm(algorithm),
 		"class":     normalizeCertClass(certClass, algorithm),
@@ -3025,13 +2900,6 @@ func addCertMetaExtensions(tpl *x509.Certificate, algorithm string, certClass st
 			Id:       oidVectaComposite,
 			Critical: false,
 			Value:    []byte(base64.StdEncoding.EncodeToString(compositeSig)),
-		})
-	}
-	if otsIndex > 0 {
-		tpl.ExtraExtensions = append(tpl.ExtraExtensions, pkix.Extension{
-			Id:       oidVectaOTSIndex,
-			Critical: false,
-			Value:    []byte(fmt.Sprintf("%d", otsIndex)),
 		})
 	}
 }
@@ -3313,30 +3181,21 @@ func normalizeCALevel(v string) string {
 	}
 }
 
-func normalizeCAType(v string, algorithm string) string {
-	n := strings.ToLower(strings.TrimSpace(v))
-	if n == "classical" || n == "hybrid" || n == "pqc" || n == "composite" {
+// normalizeCAType: every CA is classical. "pqc", "hybrid" and "composite"
+// are refused by refusePQC before this is reached.
+func normalizeCAType(v string, _ string) string {
+	if n := strings.ToLower(strings.TrimSpace(v)); pqcClasses[n] {
 		return n
-	}
-	if isHybridAlgorithm(algorithm) {
-		return "hybrid"
-	}
-	if isPQCAlgorithm(algorithm) {
-		return "pqc"
 	}
 	return "classical"
 }
 
-func normalizeCertClass(v string, algorithm string) string {
+// normalizeCertClass keeps classical, internal-mtls and star; a PQC class
+// is kept only so refusePQC can refuse it.
+func normalizeCertClass(v string, _ string) string {
 	n := strings.ToLower(strings.TrimSpace(v))
-	if n == "classical" || n == "hybrid" || n == "pqc" || n == "internal-mtls" {
+	if n == "internal-mtls" || pqcClasses[n] {
 		return n
-	}
-	if isHybridAlgorithm(algorithm) {
-		return "hybrid"
-	}
-	if isPQCAlgorithm(algorithm) {
-		return "pqc"
 	}
 	return "classical"
 }
@@ -3375,11 +3234,6 @@ func isPQCAlgorithm(algorithm string) bool {
 func isHybridAlgorithm(algorithm string) bool {
 	alg := strings.ToUpper(strings.TrimSpace(algorithm))
 	return strings.Contains(alg, "+") || strings.Contains(alg, "HYBRID")
-}
-
-func isStatefulAlgorithm(algorithm string) bool {
-	alg := strings.ToUpper(strings.TrimSpace(algorithm))
-	return strings.Contains(alg, "HSS") || strings.Contains(alg, "LMS") || strings.Contains(alg, "XMSS")
 }
 
 func dedupStrings(in []string) []string {

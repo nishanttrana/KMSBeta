@@ -50,10 +50,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /certs/profiles", h.handleCreateProfile)
 	mux.HandleFunc("GET /certs/profiles", h.handleListProfiles)
 	mux.HandleFunc("GET /certs/profiles/{id}", h.handleGetProfile)
-	mux.HandleFunc("POST /certs/validate-pqc", h.handleValidatePQC)
-	mux.HandleFunc("GET /certs/ots-status/{ca_id}", h.handleOTSStatus)
-	mux.HandleFunc("POST /certs/pqc/migrate/{id}", h.handleMigratePQC)
-	mux.HandleFunc("GET /certs/pqc-readiness", h.handlePQCReadiness)
 	mux.HandleFunc("GET /certs/crl", h.handleCRL)
 	mux.HandleFunc("GET /certs/ocsp", h.handleOCSP)
 	mux.HandleFunc("POST /certs/ocsp", h.handleOCSP)
@@ -108,7 +104,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /cmpv2/confirm", h.handleCMPv2Confirm)
 
 	// CT Log Monitor
-
 
 	return mux
 }
@@ -375,76 +370,6 @@ func (h *Handler) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"profile": out, "request_id": reqID})
-}
-
-func (h *Handler) handleValidatePQC(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req ValidatePQCChainRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	valid, issues, err := h.svc.ValidatePQCChain(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "validate_failed", err.Error(), reqID, req.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"valid": valid, "issues": issues, "request_id": reqID})
-}
-
-func (h *Handler) handleOTSStatus(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	out, err := h.svc.GetOTSStatus(r.Context(), tenantID, r.PathValue("ca_id"))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "ots_status_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": out, "request_id": reqID})
-}
-
-func (h *Handler) handleMigratePQC(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var body struct {
-		TargetAlgorithm string `json:"target_algorithm"`
-		TargetProfileID string `json:"target_profile_id"`
-	}
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	out, err := h.svc.MigrateToPQC(r.Context(), MigrateToPQCRequest{
-		TenantID:        tenantID,
-		CertID:          r.PathValue("id"),
-		TargetAlgorithm: body.TargetAlgorithm,
-		TargetProfileID: body.TargetProfileID,
-	})
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "migrate_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"certificate": out, "request_id": reqID})
-}
-
-func (h *Handler) handlePQCReadiness(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	out, err := h.svc.GetPQCReadiness(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "readiness_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"readiness": out, "request_id": reqID})
 }
 
 func (h *Handler) handleCRL(w http.ResponseWriter, r *http.Request) {

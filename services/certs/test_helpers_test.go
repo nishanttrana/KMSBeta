@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	pkgdb "vecta-kms/pkg/db"
@@ -12,6 +13,28 @@ import (
 type nopCertPublisher struct{}
 
 func (nopCertPublisher) Publish(_ context.Context, _ string, _ []byte) error { return nil }
+
+// subjectRecorder counts published audit subjects.
+type subjectRecorder struct {
+	mu       sync.Mutex
+	subjects map[string]int
+}
+
+func (r *subjectRecorder) Publish(_ context.Context, subject string, _ []byte) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.subjects == nil {
+		r.subjects = map[string]int{}
+	}
+	r.subjects[subject]++
+	return nil
+}
+
+func (r *subjectRecorder) count(subject string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.subjects[subject]
+}
 
 func newCertsService(t *testing.T) (*Service, *SQLStore) {
 	t.Helper()

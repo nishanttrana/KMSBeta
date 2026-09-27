@@ -300,8 +300,6 @@ export type CreateCAInput = {
   key_ref?: string;
   subject: string;
   validity_days?: number;
-  ots_max?: number;
-  ots_alert_threshold?: number;
 };
 
 export type IssueCertificateInput = {

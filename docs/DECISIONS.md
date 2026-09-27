@@ -74,13 +74,15 @@ host by DNS or redirect.
 - Per-group lists: they can break callers.
 - ML-DSA certificate keys: the certified module v1.0.0 has none.
 
-**Open, for the owner:** certificates and CAs requested as PQC (ML-DSA) or
-hybrid are issued with ECDSA keys while recorded as PQC (rule 8). They can't
-be made real on the certified module. The choice is between:
-- removing PQC certificate issuance (the rule's preferred option);
-- making it a labelled preview that returns `409 feature_preview`.
-
-Existing records are left unchanged until then.
+**Resolved (owner, 2026-09-27): PQC certificates removed** (1.19.0-beta).
+Certificates and CAs requested as PQC (ML-DSA, SLH-DSA, XMSS/LMS) or hybrid
+got ECDSA keys while recorded and audited as PQC (rule 8). They can't be made
+real on the certified module, so the feature is removed rather than kept as
+a preview:
+- Such requests are refused and audited (`audit.cert.pqc_issuance_refused`).
+- The PQC routes, profiles and stateful-signature counters are gone.
+- Existing records are relabelled to their real key and deleted PQC
+  profiles are audited.
 
 ---
 
@@ -257,8 +259,9 @@ plain; the hybrid group asserted), the certs enrolment tests, and the
 - *A sidecar mesh (Istio or Consul Connect)*: it adds a second, unmanaged
   PKI and control plane. Go's TLS in the certified module already covers
   the need.
-- *ML-DSA certificates*: Go's TLS doesn't support them. PQC is offered for
-  key exchange only, and labelled that way.
+- *ML-DSA certificates*: the certified Go Cryptographic Module v1.0.0 has no
+  ML-DSA (Go's TLS supports it from module v1.26.0). PQC is offered for key
+  exchange only, and labelled that way.
 
 **Plan:** four slices (docs/SECURITY/INTERNAL_TLS.md), each tested against
 real TLS handshakes and real dependencies.

@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.21.0-beta] — 2026-09-27
+
+### Landed: the post-quantum certificate removal documented under 1.19.0-beta
+- The 1.19.0-beta notes, learning and audit-event docs reached main early,
+  in commit `a71088391` (another session committed a shared working tree).
+  The code they describe lands here: PQC and hybrid certificate, CA and
+  profile requests are refused (`audit.cert.pqc_issuance_refused`), the four
+  PQC routes and their RPCs, the stateful-signature counters and the seeded
+  PQC profiles are removed, existing PQC-labelled records are relabelled to
+  their real key (`audit.certs.certificate_key_label_corrected`,
+  `reason: pqc_label_removed`) and PQC profiles deleted
+  (`audit.certs.pqc_profile_removed`), and the dashboard's PQC issue flow
+  and menus are gone. See 1.19.0-beta for the details.
+- Also here: the dashboard API catalog generator reads every service file
+  and route-kernel registrations, and `key_label_correction_test.go`
+  (`TestGeneratedKeyMatchesRequestedAlgorithm`, `TestCorrectKeyLabels`).
+
 ## [1.20.0-beta] — 2026-09-27
 
 ### Rotation policies, webhooks and the leak scanner: real, with no sample data

@@ -110,18 +110,16 @@ type DownloadCertificateRequest struct {
 }
 
 type CreateCARequest struct {
-	TenantID          string `json:"tenant_id"`
-	Name              string `json:"name"`
-	ParentCAID        string `json:"parent_ca_id"`
-	CALevel           string `json:"ca_level"`
-	Algorithm         string `json:"algorithm"`
-	CAType            string `json:"ca_type"`
-	KeyBackend        string `json:"key_backend"`
-	KeyRef            string `json:"key_ref"`
-	Subject           string `json:"subject"`
-	ValidityDays      int64  `json:"validity_days"`
-	OTSMax            int64  `json:"ots_max"`
-	OTSAlertThreshold int64  `json:"ots_alert_threshold"`
+	TenantID     string `json:"tenant_id"`
+	Name         string `json:"name"`
+	ParentCAID   string `json:"parent_ca_id"`
+	CALevel      string `json:"ca_level"`
+	Algorithm    string `json:"algorithm"`
+	CAType       string `json:"ca_type"`
+	KeyBackend   string `json:"key_backend"`
+	KeyRef       string `json:"key_ref"`
+	Subject      string `json:"subject"`
+	ValidityDays int64  `json:"validity_days"`
 }
 
 type RenewCertificateRequest struct {
@@ -144,32 +142,6 @@ type CreateProfileRequest struct {
 	CertClass   string `json:"cert_class"`
 	ProfileJSON string `json:"profile_json"`
 	IsDefault   bool   `json:"is_default"`
-}
-
-type ValidatePQCChainRequest struct {
-	TenantID string   `json:"tenant_id"`
-	CertIDs  []string `json:"cert_ids"`
-}
-
-type MigrateToPQCRequest struct {
-	TenantID        string `json:"tenant_id"`
-	CertID          string `json:"cert_id"`
-	TargetAlgorithm string `json:"target_algorithm"`
-	TargetProfileID string `json:"target_profile_id"`
-}
-
-type OTSStatus struct {
-	CurrentIndex int64 `json:"current_index"`
-	MaxIndex     int64 `json:"max_index"`
-	Remaining    int64 `json:"remaining"`
-	Alert        bool  `json:"alert"`
-}
-
-type PQCReadiness struct {
-	Total     int64 `json:"total"`
-	Classical int64 `json:"classical"`
-	Hybrid    int64 `json:"hybrid"`
-	PQC       int64 `json:"pqc"`
 }
 
 type InventoryCertificateItem struct {
@@ -326,7 +298,6 @@ type CMPv2RequestMessage struct {
 	Protected     bool   `json:"protected"`
 	ProtectionAlg string `json:"protection_alg"`
 }
-
 
 // ── Certificate Transparency (Merkle) types ──────────────────
 

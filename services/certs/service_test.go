@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"context"
 	"strings"
 	"testing"
@@ -223,94 +224,55 @@ func TestDeleteRuntimeRootCABlocked(t *testing.T) {
 	}
 }
 
-func TestStatefulOTSBudget(t *testing.T) {
+// Post-quantum and hybrid certificates, CAs and profiles are removed: they got
+// classical keys while recorded as PQC (pqc_removed.go). Every request is
+// refused and audited.
+func TestPQCCertificatesRefusedAndAudited(t *testing.T) {
 	svc, _ := newCertsService(t)
+	pub := &subjectRecorder{}
+	svc.SetPublisher(pub)
 	ctx := context.Background()
-	ca, err := svc.CreateCA(ctx, CreateCARequest{
-		TenantID:          "t2",
-		Name:              "xmss-ca",
-		CALevel:           "root",
-		Algorithm:         "XMSS",
-		KeyBackend:        "software",
-		Subject:           "CN=XMSS Root",
-		OTSMax:            2,
-		OTSAlertThreshold: 1,
-	})
+	ca, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t3", Name: "root", CALevel: "root", Algorithm: "ECDSA-P384", KeyBackend: "software", Subject: "CN=Root"})
 	if err != nil {
-		t.Fatalf("create ca: %v", err)
+		t.Fatal(err)
 	}
-	for i := 0; i < 2; i++ {
-		_, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
-			TenantID:  "t2",
-			CAID:      ca.ID,
-			SubjectCN: "host-" + string(rune('a'+i)),
-			CertType:  "device",
-			Algorithm: "XMSS",
-		})
-		if err != nil {
-			t.Fatalf("issue %d: %v", i, err)
+	attempts := map[string]func() error{
+		"ML-DSA CA": func() error {
+			_, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t3", Name: "pq", CALevel: "root", Algorithm: "ML-DSA-65", Subject: "CN=PQ"})
+			return err
+		},
+		"XMSS CA": func() error {
+			_, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t3", Name: "x", CALevel: "root", Algorithm: "XMSS-SHA256", Subject: "CN=X"})
+			return err
+		},
+		"hybrid profile": func() error {
+			_, err := svc.CreateProfile(ctx, CreateProfileRequest{TenantID: "t3", Name: "h", Algorithm: "ECDSA-P384+ML-DSA-65"})
+			return err
+		},
+		"ML-DSA certificate": func() error {
+			_, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "t3", CAID: ca.ID, SubjectCN: "a", CertType: "tls-server", Algorithm: "ML-DSA-65"})
+			return err
+		},
+		"SLH-DSA certificate": func() error {
+			_, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "t3", CAID: ca.ID, SubjectCN: "b", CertType: "tls-server", Algorithm: "SLH-DSA-256f"})
+			return err
+		},
+		"classical key labelled pqc": func() error {
+			_, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "t3", CAID: ca.ID, SubjectCN: "c", CertType: "tls-server", Algorithm: "ECDSA-P256", CertClass: "pqc"})
+			return err
+		},
+	}
+	for name, try := range attempts {
+		before := pub.count("audit.cert.pqc_issuance_refused")
+		if err := try(); !errors.Is(err, errPQCRemoved) {
+			t.Fatalf("%s: must be refused as removed, got %v", name, err)
+		}
+		if pub.count("audit.cert.pqc_issuance_refused") != before+1 {
+			t.Fatalf("%s: the refusal must be audited", name)
 		}
 	}
-	_, _, err = svc.IssueCertificate(ctx, IssueCertificateRequest{
-		TenantID:  "t2",
-		CAID:      ca.ID,
-		SubjectCN: "host-overflow",
-		CertType:  "device",
-		Algorithm: "XMSS",
-	})
-	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "ots") {
-		t.Fatalf("expected ots exhaustion error, got %v", err)
-	}
-	status, err := svc.GetOTSStatus(ctx, "t2", ca.ID)
-	if err != nil {
-		t.Fatalf("ots status: %v", err)
-	}
-	if !status.Alert || status.Remaining != 0 {
-		t.Fatalf("expected alert at zero remaining: %+v", status)
-	}
-}
-
-func TestPQCReadinessAndMigration(t *testing.T) {
-	svc, _ := newCertsService(t)
-	ctx := context.Background()
-	ca, err := svc.CreateCA(ctx, CreateCARequest{
-		TenantID:   "t3",
-		Name:       "root",
-		CALevel:    "root",
-		Algorithm:  "ECDSA-P384",
-		KeyBackend: "software",
-		Subject:    "CN=Root",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	classical, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
-		TenantID:  "t3",
-		CAID:      ca.ID,
-		SubjectCN: "legacy-app",
-		CertType:  "tls-server",
-		Algorithm: "ECDSA-P256",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	migrated, err := svc.MigrateToPQC(ctx, MigrateToPQCRequest{
-		TenantID:        "t3",
-		CertID:          classical.ID,
-		TargetAlgorithm: "ML-DSA-65",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if migrated.CertClass != "pqc" {
-		t.Fatalf("expected pqc class after migration, got %s", migrated.CertClass)
-	}
-	readiness, err := svc.GetPQCReadiness(ctx, "t3")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if readiness.Total < 2 || readiness.PQC < 1 || readiness.Classical < 1 {
-		t.Fatalf("unexpected readiness summary: %+v", readiness)
+	if c, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "t3", CAID: ca.ID, SubjectCN: "d", CertType: "tls-server", Algorithm: "ECDSA-P256"}); err != nil || c.CertClass != "classical" {
+		t.Fatalf("classical issuance is unaffected: %v %s", err, c.CertClass)
 	}
 }
 

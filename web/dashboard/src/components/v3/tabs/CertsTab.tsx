@@ -512,10 +512,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const all=Array.isArray(certs)?certs:[];
     const active=all.filter((c)=>String(c.status||"").toLowerCase()==="active").length;
     const revoked=all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length;
-    const pqc=all.filter((c)=>{
-      const cls=String(c.cert_class||"").toLowerCase();
-      return cls==="pqc"||cls==="hybrid";
-    }).length;
     const expiring=(Array.isArray(inventory)?inventory:[]).filter((it)=>{
       const cert=certByID.get(String(it.cert_id||""));
       if(!alertPolicyIncludeExternal&&String(cert?.ca_id||"").toLowerCase()==="external-ca"){
@@ -633,13 +629,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setCertPageIndex(Math.max(0,certTotalPages-1));
     }
   },[certPageIndex,certTotalPages]);
-
-  const currentPQCProfiles=useMemo(()=>{
-    return (Array.isArray(profiles)?profiles:[]).filter((p)=>{
-      const cls=String(p.cert_class||"").toLowerCase();
-      return cls==="pqc"||cls==="hybrid";
-    });
-  },[profiles]);
 
   const inferCAName=(subject:string, fallback:string)=>{
     const m=String(subject||"").match(/CN\s*=\s*([^,]+)/i);
@@ -775,9 +764,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         algorithm:caAlgorithm,
         key_backend:caBackend==="hsm"&&caHSMCapable(caAlgorithm)?"hsm":"software",
         subject,
-        validity_days:validity,
-        ots_max:Number(caPathLength||"0")>0&&String(caAlgorithm).toUpperCase().includes("XMSS")?10000:0,
-        ots_alert_threshold:Number(caPathLength||"0")>0&&String(caAlgorithm).toUpperCase().includes("XMSS")?100:0
+        validity_days:validity
       });
       onToast?.("Certificate Authority created.");
       setModal(null);
@@ -809,7 +796,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     return {validity_days:days,not_after:undefined};
   };
 
-  const submitIssueCert=async(isPQC:boolean)=>{
+  const submitIssueCert=async()=>{
     if(!session){
       onToast?.("Missing active session.");
       return;
@@ -844,21 +831,18 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     setSubmitting(true);
     try{
       const selectedProfile=(Array.isArray(profiles)?profiles:[]).find((p)=>String(p.id)===String(issueProfileID));
-      const selectedAlgorithm=isPQC
-        ? (selectedProfile?.algorithm||issueAlgorithm||"ML-DSA-65")
-        : (selectedProfile?.algorithm||issueAlgorithm||"ECDSA-P384");
+      const selectedAlgorithm=selectedProfile?.algorithm||issueAlgorithm||"ECDSA-P384";
       const out=await issueCertificate(session,{
         ca_id:issueCAID,
         profile_id:issueProfileID||undefined,
         cert_type:issueCertType,
         algorithm:selectedAlgorithm,
-        cert_class:isPQC?"pqc":undefined,
         subject_cn:issueCN.trim(),
         sans,
         server_keygen:true,
         validity_days:validity.validity_days,
         not_after:validity.not_after,
-        protocol:isPQC?"ui-pqc-issue":"ui-issue",
+        protocol:"ui-issue",
         metadata_json:JSON.stringify(metadata)
       });
       onToast?.(
@@ -1548,14 +1532,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{String(stats.cas)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>{roots.length} root</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.purpleTint} 100%)`}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Fingerprint size={14} color={C.purple}/>
-            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>PQC</span>
-          </div>
-          <div style={{fontSize:22,fontWeight:800,color:C.purple,lineHeight:1}}>{String(stats.pqc)}</div>
-          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total</div>
-        </Card>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?"${C.amberTint}":"${C.greenTint}"} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
@@ -1945,7 +1921,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <Btn small primary onClick={()=>setModal("issue")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><FileText size={11}/>Issue Certificate</span></Btn>
           <Btn small onClick={()=>setModal("sign-csr")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Fingerprint size={11}/>Sign CSR</span></Btn>
-          <Btn small onClick={()=>setModal("issue-pqc")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Shield size={11}/>PQC Issue</span></Btn>
           <Btn small onClick={()=>setModal("upload-3p")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Globe size={11}/>Upload 3rd-Party</span></Btn>
           <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><AlertTriangle size={11}/>Alert Policy</span></Btn>
           <Btn small onClick={()=>setModal("cert-clm-policy")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Clock size={11}/>CLM 47-Day</span></Btn>
@@ -2257,18 +2232,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
             <option value="ECDSA-P384-SHA384">ECDSA-P384-SHA384</option>
             <option value="ECDSA-P256-SHA256">ECDSA-P256-SHA256</option>
           </optgroup>
-          <optgroup label="Post-Quantum">
-            <option value="ML-DSA-87">ML-DSA-87</option>
-            <option value="ML-DSA-65">ML-DSA-65</option>
-            <option value="SLH-DSA-256f">SLH-DSA-256f</option>
-            <option value="SLH-DSA-128f">SLH-DSA-128f</option>
-            <option value="HSS-LMS-SHA256">HSS/LMS-SHA256</option>
-            <option value="XMSS-SHA256">XMSS-SHA256</option>
-          </optgroup>
-          <optgroup label="Hybrid">
-            <option value="ECDSA-P384+ML-DSA-65">ECDSA-P384 + ML-DSA-65</option>
-            <option value="RSA-3072+ML-DSA-65">RSA-3072 + ML-DSA-65</option>
-          </optgroup>
         </Sel>
       </FG>
       <Row2>
@@ -2300,7 +2263,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       </div>
     </Modal>
 
-    <Modal open={modal==="issue"||modal==="issue-pqc"} onClose={()=>setModal(null)} title={modal==="issue-pqc"?"Issue PQC Certificate":"Issue Certificate"} wide>
+    <Modal open={modal==="issue"} onClose={()=>setModal(null)} title="Issue Certificate" wide>
       <Row2>
         <FG label="Issuing CA" required>
           <Sel value={issueCAID} onChange={(e)=>setIssueCAID(e.target.value)}>
@@ -2311,24 +2274,17 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         <FG label="Profile">
           <Sel value={issueProfileID} onChange={(e)=>setIssueProfileID(e.target.value)}>
             <option value="">Default profile</option>
-            {(modal==="issue-pqc"?currentPQCProfiles:profiles).map((p)=><option key={p.id} value={p.id}>{p.name} ({p.algorithm})</option>)}
+            {profiles.map((p)=><option key={p.id} value={p.id}>{p.name} ({p.algorithm})</option>)}
           </Sel>
         </FG>
       </Row2>
       <Row2>
-        <FG label={modal==="issue-pqc"?"PQC Algorithm":"Signing Algorithm"} required>
+        <FG label="Signing Algorithm" required>
           <Sel value={issueAlgorithm} onChange={(e)=>setIssueAlgorithm(e.target.value)}>
-            {modal==="issue-pqc"?<>
-              <option value="ML-DSA-65">ML-DSA-65</option>
-              <option value="ML-DSA-87">ML-DSA-87</option>
-              <option value="SLH-DSA-256f">SLH-DSA-256f</option>
-              <option value="ECDSA-P384+ML-DSA-65">ECDSA-P384 + ML-DSA-65</option>
-            </>:<>
-              <option value="ECDSA-P384">ECDSA-P384</option>
-              <option value="ECDSA-P256">ECDSA-P256</option>
-              <option value="RSA-3072">RSA-3072</option>
-              <option value="RSA-4096">RSA-4096</option>
-            </>}
+            <option value="ECDSA-P384">ECDSA-P384</option>
+            <option value="ECDSA-P256">ECDSA-P256</option>
+            <option value="RSA-3072">RSA-3072</option>
+            <option value="RSA-4096">RSA-4096</option>
           </Sel>
         </FG>
         <FG label="Profile Type">
@@ -2379,7 +2335,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       <Chk label="Enable OCSP stapling" checked={issueEnableOCSP} onChange={()=>setIssueEnableOCSP((v)=>!v)}/>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
         <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
-        <Btn primary onClick={()=>void submitIssueCert(modal==="issue-pqc")} disabled={submitting||loading}>{submitting?"Issuing...":"Issue Certificate"}</Btn>
+        <Btn primary onClick={()=>void submitIssueCert()} disabled={submitting||loading}>{submitting?"Issuing...":"Issue Certificate"}</Btn>
       </div>
     </Modal>
 
@@ -2414,8 +2370,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
             <option value="ECDSA-P256">ECDSA-P256</option>
             <option value="RSA-3072">RSA-3072</option>
             <option value="RSA-4096">RSA-4096</option>
-            <option value="ML-DSA-65">ML-DSA-65</option>
-            <option value="ML-DSA-87">ML-DSA-87</option>
           </Sel>
         </FG>
       </Row2>

@@ -701,7 +701,9 @@ async function walk(dir) {
     if (!entry.name.endsWith(".go")) {
       continue;
     }
-    if (entry.name !== "handler.go" && entry.name !== "http_api.go") {
+    // Routes live in any file of a service (handler_agility.go, ...), not
+    // only handler.go; test files register fake servers, not routes.
+    if (entry.name.endsWith("_test.go")) {
       continue;
     }
     files.push(full);
@@ -756,7 +758,9 @@ async function main() {
   }
 
   const files = await walk(servicesRoot);
-  const routeRegex = /mux\.HandleFunc\("([A-Z]+)\s+([^"]+)"\s*,/g;
+  // mux.HandleFunc("GET /x", h) and the pkg/route kernel's
+  // r.Handle("GET /x", route.Spec{...}, h) (CLAUDE.md rule 2), literal patterns.
+  const routeRegex = /\b(?:mux\.HandleFunc|\w+\.Handle)\("(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\/[^"]*)"\s*,/g;
   const unique = new Map();
 
   for (const filePath of files) {

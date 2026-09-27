@@ -19,11 +19,6 @@ service CertsService {
   rpc ListProfiles (ListProfilesRequest) returns (ListProfilesResponse);
   rpc GetProfile (GetProfileRequest) returns (GetProfileResponse);
 
-  rpc ValidatePQCChain (ValidatePQCChainRequest) returns (ValidatePQCChainResponse);
-  rpc MigrateToPQC (MigrateToPQCRequest) returns (IssueCertificateResponse);
-  rpc GetOTSStatus (GetOTSStatusRequest) returns (GetOTSStatusResponse);
-  rpc GetPQCReadiness (GetPQCReadinessRequest) returns (GetPQCReadinessResponse);
-
   rpc GenerateCRL (GenerateCRLRequest) returns (GenerateCRLResponse);
   rpc CheckOCSP (CheckOCSPRequest) returns (CheckOCSPResponse);
 
@@ -103,8 +98,9 @@ message CreateCARequest {
   string key_ref = 8;
   string subject = 9;
   int64 validity_days = 10;
-  int64 ots_max = 11;
-  int64 ots_alert_threshold = 12;
+  // ots_max and ots_alert_threshold: stateful-signature (XMSS/LMS) counters
+  // of the removed PQC certificates (1.19.0-beta).
+  reserved 11, 12;
 }
 
 message CreateCAResponse {
@@ -221,46 +217,6 @@ message GetProfileRequest {
 
 message GetProfileResponse {
   CertificateProfile profile = 1;
-}
-
-message ValidatePQCChainRequest {
-  string tenant_id = 1;
-  repeated string cert_ids = 2;
-}
-
-message ValidatePQCChainResponse {
-  bool valid = 1;
-  repeated string issues = 2;
-}
-
-message MigrateToPQCRequest {
-  string tenant_id = 1;
-  string cert_id = 2;
-  string target_algorithm = 3;
-  string target_profile_id = 4;
-}
-
-message GetOTSStatusRequest {
-  string tenant_id = 1;
-  string ca_id = 2;
-}
-
-message GetOTSStatusResponse {
-  int64 current_index = 1;
-  int64 max_index = 2;
-  int64 remaining = 3;
-  bool alert = 4;
-}
-
-message GetPQCReadinessRequest {
-  string tenant_id = 1;
-}
-
-message GetPQCReadinessResponse {
-  int64 total = 1;
-  int64 classical = 2;
-  int64 hybrid = 3;
-  int64 pqc = 4;
 }
 
 message GenerateCRLRequest {

@@ -139,9 +139,10 @@ Every action and every refusal is audited:
   records to the key their certificate carries
   (`audit.certs.certificate_key_label_corrected`), and it reissues the edge
   certificate at the RSA-3072 it was supposed to have.
-- **PQC certificates are open.** A "PQC" (ML-DSA) certificate issued
-  without a CSR got an ECDSA key. That is left for the owner to decide
-  (docs/DECISIONS.md).
+- **PQC certificates removed (1.19.0-beta).** A "PQC" (ML-DSA)
+  certificate issued without a CSR got an ECDSA key. On the owner's
+  decision the feature is removed: such requests are refused, and existing
+  records are relabelled to their real key (docs/DECISIONS.md).
 
 ### Done in slice 1 (1.8.0-beta)
 

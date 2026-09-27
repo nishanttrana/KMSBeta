@@ -26,7 +26,6 @@ type Store interface {
 	CountChildCAs(ctx context.Context, tenantID string, caID string) (int64, error)
 	CountCertificatesByCA(ctx context.Context, tenantID string, caID string) (int64, error)
 	UpdateCASignerEncryption(ctx context.Context, tenantID string, caID string, enc EncryptedSigner) error
-	ReserveOTSIndex(ctx context.Context, tenantID string, caID string) (int64, error)
 
 	CreateProfile(ctx context.Context, profile CertificateProfile) error
 	ListProfiles(ctx context.Context, tenantID string) ([]CertificateProfile, error)
@@ -42,7 +41,6 @@ type Store interface {
 	UpdateCertificateStatus(ctx context.Context, tenantID string, certID string, status string) error
 
 	ListRevokedByCA(ctx context.Context, tenantID string, caID string) ([]Certificate, error)
-	GetPQCReadiness(ctx context.Context, tenantID string) (PQCReadiness, error)
 	GetInventory(ctx context.Context, tenantID string) ([]InventoryCertificateItem, error)
 	GetProtocolConfig(ctx context.Context, tenantID string, protocol string) (ProtocolConfig, error)
 	ListProtocolConfigs(ctx context.Context, tenantID string) ([]ProtocolConfig, error)
@@ -75,7 +73,6 @@ type Store interface {
 	ListCertMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]CertMerkleEpoch, error)
 	GetCertMerkleEpoch(ctx context.Context, tenantID string, epochID string) (CertMerkleEpoch, error)
 	GetCertMerkleProof(ctx context.Context, tenantID string, certID string) (*CertMerkleProofResponse, error)
-
 }
 
 type SQLStore struct {
@@ -308,35 +305,6 @@ INSERT INTO cert_certificates (
 		cert.ProfileID, cert.Protocol, cert.CertClass, cert.CertPEM, cert.Status, cert.NotBefore, cert.NotAfter,
 		nullableTime(cert.RevokedAt), cert.RevocationReason, cert.KeyRef)
 	return err
-}
-
-func (s *SQLStore) ReserveOTSIndex(ctx context.Context, tenantID string, caID string) (int64, error) {
-	tx, err := s.db.SQL().BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	res, err := tx.ExecContext(ctx, `
-UPDATE cert_cas
-SET ots_current = ots_current + 1, updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $1 AND id = $2 AND (ots_max = 0 OR ots_current < ots_max)
-`, tenantID, caID)
-	if err != nil {
-		return 0, err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return 0, errors.New("ots budget exhausted")
-	}
-	var idx int64
-	if err := tx.QueryRowContext(ctx, `SELECT ots_current FROM cert_cas WHERE tenant_id = $1 AND id = $2`, tenantID, caID).Scan(&idx); err != nil {
-		return 0, err
-	}
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-	return idx, nil
 }
 
 func (s *SQLStore) GetCertificate(ctx context.Context, tenantID string, certID string) (Certificate, error) {
@@ -589,37 +557,6 @@ ORDER BY revoked_at DESC
 			return nil, err
 		}
 		out = append(out, c)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) GetPQCReadiness(ctx context.Context, tenantID string) (PQCReadiness, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT cert_class, COUNT(1)
-FROM cert_certificates
-WHERE tenant_id = $1
-GROUP BY cert_class
-`, tenantID)
-	if err != nil {
-		return PQCReadiness{}, err
-	}
-	defer rows.Close() //nolint:errcheck
-	out := PQCReadiness{}
-	for rows.Next() {
-		var class string
-		var n int64
-		if err := rows.Scan(&class, &n); err != nil {
-			return PQCReadiness{}, err
-		}
-		out.Total += n
-		switch strings.ToLower(strings.TrimSpace(class)) {
-		case "pqc":
-			out.PQC += n
-		case "hybrid":
-			out.Hybrid += n
-		default:
-			out.Classical += n
-		}
 	}
 	return out, rows.Err()
 }

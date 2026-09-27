@@ -59,23 +59,20 @@ func TestStoreCAAndProfileRoundTrip(t *testing.T) {
 	}
 }
 
-func TestStoreReserveOTSAndCertificateLifecycle(t *testing.T) {
+func TestStoreCertificateLifecycle(t *testing.T) {
 	_, store := newCertsService(t)
 	ctx := context.Background()
 	ca := CA{
 		ID:                 "ca2",
 		TenantID:           "t2",
-		Name:               "xmss-root",
+		Name:               "root-ca",
 		CALevel:            "root",
-		Algorithm:          "XMSS",
-		CAType:             "pqc",
+		Algorithm:          "ECDSA-P384",
+		CAType:             "classical",
 		KeyBackend:         "software",
 		CertPEM:            "pem",
-		Subject:            "CN=xmss",
+		Subject:            "CN=root",
 		Status:             "active",
-		OTSCurrent:         0,
-		OTSMax:             1,
-		OTSAlertThreshold:  1,
 		SignerWrappedDEK:   []byte("w1"),
 		SignerWrappedDEKIV: []byte("w2"),
 		SignerCiphertext:   []byte("w3"),
@@ -83,16 +80,6 @@ func TestStoreReserveOTSAndCertificateLifecycle(t *testing.T) {
 	}
 	if err := store.CreateCA(ctx, ca); err != nil {
 		t.Fatal(err)
-	}
-	idx, err := store.ReserveOTSIndex(ctx, "t2", "ca2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != 1 {
-		t.Fatalf("expected ots index=1 got %d", idx)
-	}
-	if _, err := store.ReserveOTSIndex(ctx, "t2", "ca2"); err == nil {
-		t.Fatalf("expected ots exhaustion error")
 	}
 	c := Certificate{
 		ID:           "c1",
@@ -102,10 +89,10 @@ func TestStoreReserveOTSAndCertificateLifecycle(t *testing.T) {
 		SubjectCN:    "host1",
 		SANs:         []string{"host1"},
 		CertType:     "device",
-		Algorithm:    "XMSS",
+		Algorithm:    "ECDSA-P256",
 		ProfileID:    "",
 		Protocol:     "scep",
-		CertClass:    "pqc",
+		CertClass:    "classical",
 		CertPEM:      "pem",
 		Status:       "active",
 		NotBefore:    time.Now().UTC(),
