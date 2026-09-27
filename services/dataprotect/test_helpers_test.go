@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
@@ -13,12 +14,30 @@ import (
 type nopDataProtectPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *nopDataProtectPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *nopDataProtectPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
+	return nil
+}
+
+// Data returns the "data" of the last event published on subject (nil if none).
+func (p *nopDataProtectPublisher) Data(subject string) map[string]interface{} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := len(p.subjects) - 1; i >= 0; i-- {
+		if p.subjects[i] == subject {
+			var ev struct {
+				Data map[string]interface{} `json:"data"`
+			}
+			_ = json.Unmarshal(p.payloads[i], &ev)
+			return ev.Data
+		}
+	}
 	return nil
 }
 

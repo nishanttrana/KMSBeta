@@ -4,13 +4,15 @@ import (
 	"context"
 	"log"
 	"math"
-	"strings"
 	"time"
+
+	pkgaudit "vecta-kms/pkg/audit"
 )
 
 // OpSample is one key operation taken from its audit event.
 type OpSample struct {
 	TenantID string
+	Node     string // chain node whose service ran it ("" unclustered)
 	Service  string
 	OpType   string
 	At       time.Time
@@ -64,6 +66,21 @@ type OpsOverview struct {
 	AvgLatencyMs   float64   `json:"avg_latency_ms"`
 	TotalLatencyMs int64     `json:"total_latency_ms"`
 	ComputedAt     time.Time `json:"computed_at"`
+	// Scope is what the figures cover: "standalone" (unclustered), "cluster"
+	// (the primary: its own and every member's operations) or "node" (a
+	// member: its own only).
+	Scope string `json:"scope"`
+	// ByNode splits the window's operations by the node that ran them.
+	ByNode []NodeOps `json:"by_node"`
+	// RecordedSince is the first hour with any recorded operation for the
+	// tenant (nil if none): operations before it were not measured.
+	RecordedSince *time.Time `json:"recorded_since"`
+}
+
+// NodeOps is one node's share of a window's operations.
+type NodeOps struct {
+	Node     string `json:"node"`
+	TotalOps int64  `json:"total_ops"`
 }
 
 // OpsTimeSeries is a single hourly data point of operation statistics.
@@ -99,10 +116,10 @@ type ServiceOpsStats struct {
 
 // ErrorBreakdown aggregates error counts by op type.
 type ErrorBreakdown struct {
-	Service     string `json:"service"`
-	OpType      string `json:"op_type"`
-	ErrorCount  int64  `json:"error_count"`
-	TotalCount  int64  `json:"total_count"`
+	Service    string `json:"service"`
+	OpType     string `json:"op_type"`
+	ErrorCount int64  `json:"error_count"`
+	TotalCount int64  `json:"total_count"`
 }
 
 // PrometheusMetricRow is a cross-tenant aggregate row for Prometheus exposition.
@@ -137,35 +154,37 @@ func windowStart(window string) time.Time {
 	return time.Now().UTC().Add(-time.Duration(windowHours(window)) * time.Hour).Truncate(time.Hour)
 }
 
-// meteredKeyOps are the keycore operations the Operations metrics count.
-// Keycore emits audit.key.<op> for each one it runs, refuses or fails
-// (services/keycore/crypto_op_audit.go).
-var meteredKeyOps = map[string]bool{
-	"encrypt": true, "decrypt": true, "wrap": true, "unwrap": true,
-	"sign": true, "verify": true, "mac": true, "derive": true,
-	"kem_encapsulate": true, "kem_decapsulate": true,
-}
-
-// opSampleFromEvent turns a persisted key-operation event into a metrics
-// sample. Anything else — other events, or an operation parked for
-// approval — is not an operation that ran, and is not counted.
+// opSampleFromEvent turns a persisted event that carries
+// pkg/audit.MeteredOp into a metrics sample. Emitters set duration_ms and
+// result either on the event or in its details (legacy publishers nest
+// both). An operation parked for approval, or any other result, did not
+// run and is not counted.
 func opSampleFromEvent(evt AuditEvent) (OpSample, bool) {
-	op, ok := strings.CutPrefix(evt.Action, "audit.key.")
-	if !ok || !meteredKeyOps[op] || evt.Service != "keycore" {
+	op, _ := evt.Details[pkgaudit.MeteredOp].(string)
+	if !pkgaudit.ValidMeteredOp(op) || evt.Service == "" {
 		return OpSample{}, false
 	}
-	switch evt.Result {
+	result := evt.Result
+	if r, ok := evt.Details["result"].(string); ok && r != "" {
+		result = r
+	}
+	switch result {
 	case "success", "failure", "refused":
 	default:
 		return OpSample{}, false
 	}
+	ms := evt.DurationMS
+	if ms == 0 {
+		ms, _ = evt.Details["duration_ms"].(float64)
+	}
 	return OpSample{
 		TenantID: evt.TenantID,
+		Node:     evt.ChainNode,
 		Service:  evt.Service,
 		OpType:   op,
 		At:       evt.Timestamp,
-		Latency:  time.Duration(evt.DurationMS * float64(time.Millisecond)),
-		IsError:  evt.Result != "success",
+		Latency:  time.Duration(ms * float64(time.Millisecond)),
+		IsError:  result != "success",
 	}, true
 }
 

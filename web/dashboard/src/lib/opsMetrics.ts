@@ -1,8 +1,10 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
-// Operations metrics are built by the audit service from the
-// audit.key.<op> events keycore emits for every key operation.
+// Operations metrics are built by the audit service from every audit event
+// marked as a metered cryptographic operation (pkg/audit.MeteredOp):
+// keycore key operations, dataprotect, payment, certificate signing, and
+// kernel routes declared Metered.
 
 export type OpsWindow = "1h" | "24h" | "7d" | "30d";
 
@@ -12,6 +14,12 @@ export interface OpsOverview {
   total_errors: number;
   error_rate: number;
   avg_latency_ms: number;
+  // standalone: one node; cluster: this is the primary and counts every
+  // node; node: this is a member and counts only its own operations.
+  scope: "standalone" | "cluster" | "node";
+  by_node: { node: string; total_ops: number }[];
+  // First hour with any recorded operation; earlier operations were not measured.
+  recorded_since: string | null;
 }
 
 // Percentiles are histogram bucket upper bounds; null means the sample

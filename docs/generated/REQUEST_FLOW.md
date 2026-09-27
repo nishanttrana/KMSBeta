@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-27T18:47:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T19:07:43Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -60,10 +60,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/audit/merkle/epochs | GET /audit/merkle/epochs | handleMerkleEpochs (services/audit/handler.go:768) |  | ListMerkleEpochs |  |  | web/dashboard/src/lib/audit.ts:363 |
 | audit\|GET\|/audit/events/{param}/proof | GET /audit/events/{id}/proof | handleEventProof (services/audit/handler.go:801) |  | GetEventMerkleProof |  |  | web/dashboard/src/lib/audit.ts:374 |
 | audit\|POST\|/audit/merkle/verify | POST /audit/merkle/verify | handleMerkleVerify (services/audit/handler.go:819) |  |  |  |  | web/dashboard/src/lib/audit.ts:398 |
-| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:45 |
-| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:50 |
-| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
-| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
+| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:53 |
+| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:58 |
+| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:63 |
+| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:68 |
 | audit\|GET\|/webhooks | GET /webhooks | listWebhooks (services/audit/handler_webhook.go:43) |  | ListWebhooks |  |  | web/dashboard/src/lib/webhooks.ts:52 |
 | audit\|POST\|/webhooks | POST /webhooks | createWebhook (services/audit/handler_webhook.go:58) |  | CreateWebhook |  |  | web/dashboard/src/lib/webhooks.ts:57 |
 | audit\|PATCH\|/webhooks/{param} | PATCH /webhooks/{id} | updateWebhook (services/audit/handler_webhook.go:157) |  | GetWebhook, UpdateWebhook, DeleteWebhook, ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:62 |
@@ -625,11 +625,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|POST\|/audit/cluster/signing-key/join-key | POST /audit/cluster/signing-key/join-key | handleClusterKeyJoinKey (services/audit/cluster.go:169) | auditCluster |  |  |  |  |
 | audit\|POST\|/audit/cluster/signing-key/export | POST /audit/cluster/signing-key/export | handleClusterKeyExport (services/audit/cluster.go:182) | signing, auditCluster |  |  | pkg/clusterkey.Seal |  |
 | audit\|POST\|/audit/cluster/signing-key/import | POST /audit/cluster/signing-key/import | handleClusterKeyImport (services/audit/cluster.go:212) | auditCluster, signing |  |  | pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize |  |
-| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:45 |
+| audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:53 |
 | audit\|GET\|/ops-metrics/timeseries | GET /ops-metrics/timeseries | handleGetOpsTimeSeries (services/audit/handler_ops_metrics.go:26) |  | GetOpsTimeSeries |  |  |  |
-| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:50 |
-| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
-| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
+| audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:58 |
+| audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:63 |
+| audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:68 |
 | audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:611) |  |  |  |  |  |
 | audit\|GET\|/audit/cbom/inventory | GET /audit/cbom/inventory | handleCBOMInventory (services/audit/handler_cbom.go:17) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/audit/cbom/diff | GET /audit/cbom/diff | handleCBOMDiff (services/audit/handler_cbom.go:51) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
@@ -1082,7 +1082,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|DELETE\|/key-access/codes/{param} | DELETE /key-access/codes/{id} | handleDeleteRule (services/keyaccess/handler.go:153) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/keyaccess.ts:110 |
 | keyaccess\|GET\|/key-access/decisions | GET /key-access/decisions | handleListDecisions (services/keyaccess/handler.go:163) | ListDecisions | ListDecisions |  |  | web/dashboard/src/lib/keyaccess.ts:123 |
 | keyaccess\|POST\|/key-access/evaluate | POST /key-access/evaluate | handleEvaluate (services/keyaccess/handler.go:180) | Evaluate | ListRules, CreateDecision | s.governance.CreateApprovalRequest |  |  |
-| keycore\|POST\|/keys/{param}/attested-release | POST /keys/{id}/attested-release | attestedRelease (services/keycore/attested_release.go:140) | AttestedRelease |  |  | pkg/crypto.RecipientKeyBinding, pkg/tenantcheck.IsServicePrincipal, pkg/crypto.ParseRecipientPublicKey, pkg/crypto.Zeroize, pkg/crypto.SealToRecipient |  |
+| keycore\|POST\|/keys/{param}/attested-release | POST /keys/{id}/attested-release | attestedRelease (services/keycore/attested_release.go:142) | AttestedRelease |  |  | pkg/crypto.RecipientKeyBinding, pkg/tenantcheck.IsServicePrincipal, pkg/crypto.ParseRecipientPublicKey, pkg/crypto.Zeroize, pkg/crypto.SealToRecipient |  |
 | keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/hsm.Encrypt | web/dashboard/src/lib/keycore.ts:872 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:293) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:334) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |

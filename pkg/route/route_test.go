@@ -205,3 +205,27 @@ func TestOpaqueBodyTenantIsData(t *testing.T) {
 		t.Fatalf("opaque body treated as a tenant claim: %d %s", w.Code, w.Body)
 	}
 }
+
+// A metered route marks every event, refusals included, as one operation
+// (pkg/audit.MeteredOp); an invalid operation name stops registration.
+func TestMeteredRouteMarksEveryEvent(t *testing.T) {
+	rec := &routetest.Recorder{}
+	r := route.New("demo", rec, nil)
+	r.Handle("POST /things/{id}/seal", route.Spec{Action: "thing.sealed", Permission: "demo.use", Resource: "thing", TargetParam: "id", Metered: "seal"}, func(c *route.Call) {
+		c.JSON(http.StatusOK, nil)
+	})
+	serve(t, r, "POST", "/things/t1/seal?tenant_id=t1", "", claims("t1", "demo.use"))
+	if e := rec.Last(t).Event; e.Result != "success" || e.Details["metered_op"] != "seal" {
+		t.Fatalf("metered success %+v", e)
+	}
+	serve(t, r, "POST", "/things/t1/seal?tenant_id=t1", "", claims("t1"))
+	if e := rec.Last(t).Event; e.Result != "refused" || e.Details["metered_op"] != "seal" {
+		t.Fatalf("metered refusal %+v", e)
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("invalid Metered name registered")
+		}
+	}()
+	r.Handle("POST /bad", route.Spec{Action: "bad", Permission: "demo.use", Metered: "Not Valid"}, func(c *route.Call) {})
+}

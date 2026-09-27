@@ -11,12 +11,12 @@ func keyOpEvent(tenant, op, result string, ms float64) AuditEvent {
 		TenantID: tenant, Service: "keycore", Action: "audit.key." + op,
 		ActorID: "u1", ActorType: "user", TargetType: "key", TargetID: "k1",
 		Result: result, DurationMS: ms, Timestamp: time.Now().UTC(),
-		Details: map[string]interface{}{"key_id": "k1"},
+		Details: map[string]interface{}{"key_id": "k1", "metered_op": op},
 	}
 }
 
-// Operations metrics come only from key-operation events that went through
-// ingest: counts, errors (refusals and failures), measured latency and
+// Operations metrics come only from metered-operation events that went
+// through ingest: counts, errors (refusals and failures), measured latency and
 // histogram percentiles. Other events and pending approvals don't count.
 func TestOpsMetricsBuiltFromIngestedKeyOpEvents(t *testing.T) {
 	_, svc, store, _ := newAuditHandler(t, false, false)
@@ -29,7 +29,8 @@ func TestOpsMetricsBuiltFromIngestedKeyOpEvents(t *testing.T) {
 		keyOpEvent("t1", "encrypt", "pending_approval", 0.1), // never ran
 		keyOpEvent("t2", "sign", "success", 1),               // other tenant
 		{TenantID: "t1", Service: "auth", Action: "audit.auth.login", ActorID: "u1", Result: "success", Timestamp: time.Now().UTC()},
-		{TenantID: "t1", Service: "other", Action: "audit.key.encrypt", ActorID: "u1", Result: "success", Timestamp: time.Now().UTC()},
+		// Not marked as a metered operation: never counted.
+		{TenantID: "t1", Service: "keycore", Action: "audit.key.encrypt", ActorID: "u1", Result: "success", Timestamp: time.Now().UTC()},
 	}
 	for _, e := range events {
 		if _, _, err := svc.ProcessEvent(ctx, e); err != nil {
@@ -81,5 +82,74 @@ func TestBucketPercentileOverflowIsNotAnswered(t *testing.T) {
 	}
 	if latencyBucket(1500*time.Microsecond) != 4 || latencyBucket(2*time.Second) != len(latencyBucketsMs) {
 		t.Fatal("bucket boundaries")
+	}
+}
+
+// Any service's event marked metered_op is counted. A legacy publisher
+// nests result and duration_ms under "data"; ingest reads them from there.
+func TestOpsMetricsCountAnyServicesMeteredEvents(t *testing.T) {
+	_, svc, store, _ := newAuditHandler(t, false, false)
+	ctx := context.Background()
+	for _, raw := range []string{
+		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenized","data":{"metered_op":"tokenize","duration_ms":0.3}}`,
+		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenize_refused","data":{"metered_op":"tokenize","duration_ms":0.1,"result":"refused","reason":"permission_denied"}}`,
+		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenized","data":{"metered_op":"Bad Name","duration_ms":1}}`,
+	} {
+		ev, err := parseIncomingEvent("audit.dataprotect.x", []byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := svc.ProcessEvent(ctx, ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stats, err := store.GetServiceStats(ctx, "t1", "24h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stats) != 1 || stats[0].Service != "dataprotect" || stats[0].TotalOps != 2 || stats[0].TotalErrors != 1 {
+		t.Fatalf("service stats = %+v", stats)
+	}
+	ov, err := store.GetOpsOverview(ctx, "t1", "24h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ov.RecordedSince == nil || ov.Scope != "standalone" || len(ov.ByNode) != 1 || ov.ByNode[0].TotalOps != 2 {
+		t.Fatalf("overview = %+v", ov)
+	}
+	if empty, _ := store.GetOpsOverview(ctx, "nobody", "24h"); empty.RecordedSince != nil {
+		t.Fatalf("recorded_since for a tenant with no operations: %v", empty.RecordedSince)
+	}
+}
+
+// On the primary, a member's metered operation is counted under that
+// member when the relay cursor passes it, in the same transaction, so the
+// primary's metrics cover the cluster. Non-metered events only move the
+// cursor.
+func TestRelayCountsMemberOperationsOnce(t *testing.T) {
+	store := newAuditStore(t)
+	ctx := context.Background()
+	member := keyOpEvent("t1", "sign", "success", 2)
+	member.Sequence = 7
+	if err := store.advanceRelay(ctx, "t1", "node-b", member); err != nil {
+		t.Fatal(err)
+	}
+	other := AuditEvent{TenantID: "t1", Service: "auth", Action: "audit.auth.login", Result: "success", Sequence: 8, Timestamp: time.Now().UTC()}
+	if err := store.advanceRelay(ctx, "t1", "node-b", other); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RecordOp(ctx, OpSample{TenantID: "t1", Node: "node-a", Service: "keycore", OpType: "sign", At: time.Now(), Latency: time.Millisecond}); err != nil {
+		t.Fatal(err)
+	}
+	ov, err := store.GetOpsOverview(ctx, "t1", "24h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ov.TotalOps != 2 || len(ov.ByNode) != 2 || ov.ByNode[0].Node != "node-a" || ov.ByNode[1].Node != "node-b" || ov.ByNode[1].TotalOps != 1 {
+		t.Fatalf("overview = %+v", ov)
+	}
+	var last int64
+	if err := store.db.SQL().QueryRowContext(ctx, `SELECT last_sequence FROM audit_relay_cursor WHERE tenant_id='t1' AND chain_node='node-b'`).Scan(&last); err != nil || last != 8 {
+		t.Fatalf("relay cursor = %d, %v", last, err)
 	}
 }

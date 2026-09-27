@@ -2,28 +2,39 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
+
+	"vecta-kms/pkg/clusterstate"
 )
 
-// RecordOp adds one operation to its hour's row: count, errors, summed
-// latency (µs) and one histogram bucket.
+type sqlExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// RecordOp adds one operation to its node's hour row: count, errors,
+// summed latency (µs) and one histogram bucket.
 func (s *SQLStore) RecordOp(ctx context.Context, op OpSample) error {
+	return recordOp(ctx, s.db.SQL(), op)
+}
+
+func recordOp(ctx context.Context, db sqlExecer, op OpSample) error {
 	hour := op.At.UTC().Truncate(time.Hour)
 	errorCount := 0
 	if op.IsError {
 		errorCount = 1
 	}
 	bucket := fmt.Sprintf("lat_b%02d", latencyBucket(op.Latency))
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO ops_metrics_hourly (tenant_id, hour, service, op_type, count, error_count, total_latency_us, `+bucket+`)
-VALUES ($1, $2, $3, $4, 1, $5, $6, 1)
-ON CONFLICT (tenant_id, hour, service, op_type) DO UPDATE
+	_, err := db.ExecContext(ctx, `
+INSERT INTO ops_metrics_hourly (tenant_id, hour, node, service, op_type, count, error_count, total_latency_us, `+bucket+`)
+VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 1)
+ON CONFLICT (tenant_id, hour, node, service, op_type) DO UPDATE
 SET count            = ops_metrics_hourly.count + 1,
-    error_count      = ops_metrics_hourly.error_count + $5,
-    total_latency_us = ops_metrics_hourly.total_latency_us + $6,
+    error_count      = ops_metrics_hourly.error_count + $6,
+    total_latency_us = ops_metrics_hourly.total_latency_us + $7,
     `+bucket+`       = ops_metrics_hourly.`+bucket+` + 1
-`, op.TenantID, hour, op.Service, op.OpType, errorCount, op.Latency.Microseconds())
+`, op.TenantID, hour, op.Node, op.Service, op.OpType, errorCount, op.Latency.Microseconds())
 	return err
 }
 
@@ -43,6 +54,7 @@ WHERE tenant_id=$1 AND hour >= $2
 		return OpsOverview{}, err
 	}
 	ov := OpsOverview{
+		Scope:          s.opsScope(ctx),
 		TenantID:       tenantID,
 		Window:         window,
 		TotalOps:       totalOps,
@@ -53,6 +65,33 @@ WHERE tenant_id=$1 AND hour >= $2
 	if totalOps > 0 {
 		ov.ErrorRate = float64(totalErrors) / float64(totalOps)
 		ov.AvgLatencyMs = float64(totalLatency) / 1000 / float64(totalOps)
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT node, COALESCE(SUM(count),0) FROM ops_metrics_hourly
+WHERE tenant_id=$1 AND hour >= $2 GROUP BY node ORDER BY node`, tenantID, since)
+	if err != nil {
+		return OpsOverview{}, err
+	}
+	defer rows.Close() //nolint:errcheck
+	ov.ByNode = []NodeOps{}
+	for rows.Next() {
+		var n NodeOps
+		if err := rows.Scan(&n.Node, &n.TotalOps); err != nil {
+			return OpsOverview{}, err
+		}
+		ov.ByNode = append(ov.ByNode, n)
+	}
+	if err := rows.Err(); err != nil {
+		return OpsOverview{}, err
+	}
+	var first interface{}
+	if err := s.db.SQL().QueryRowContext(ctx, `SELECT MIN(hour) FROM ops_metrics_hourly WHERE tenant_id=$1`, tenantID).Scan(&first); err != nil {
+		return OpsOverview{}, err
+	}
+	if first != nil {
+		if t := parseTimeValue(first); !t.IsZero() {
+			ov.RecordedSince = &t
+		}
 	}
 	return ov, nil
 }
@@ -243,4 +282,18 @@ ORDER BY error_count DESC
 		out = append(out, eb)
 	}
 	return out, rows.Err()
+}
+
+// opsScope is what this node's metrics cover: every node's operations on
+// a cluster primary (it counts members' relayed events), only its own on
+// a member, or the single node when unclustered.
+func (s *SQLStore) opsScope(ctx context.Context) string {
+	switch {
+	case s.chainNode(ctx) == "":
+		return "standalone"
+	case clusterstate.RunsPrimaryJobs(ctx):
+		return "cluster"
+	default:
+		return "node"
+	}
 }

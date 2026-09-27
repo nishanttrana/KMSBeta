@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	pkgaudit "vecta-kms/pkg/audit"
 )
 
 // cryptoOpName is the operation a key call actually performed: the
@@ -49,16 +51,16 @@ func cryptoOpOutcome(err error) (result, reason string) {
 }
 
 // auditCryptoOp emits audit.key.<op> for every key operation — success,
-// refusal or failure — with its measured duration. The audit service
-// builds the Operations metrics from these events, so every counted
-// operation and latency sample is one that actually ran.
+// refusal or failure — with its measured duration, marked as a metered
+// operation (pkg/audit.MeteredOp) for the Operations metrics.
 func (s *Service) auditCryptoOp(ctx context.Context, op, tenantID, keyID string, start time.Time, err error, extra map[string]any) {
 	result, reason := cryptoOpOutcome(err)
 	data := map[string]any{
-		"key_id":      keyID,
-		"operation":   op,
-		"result":      result,
-		"duration_ms": float64(time.Since(start).Microseconds()) / 1000,
+		"key_id":           keyID,
+		"operation":        op,
+		pkgaudit.MeteredOp: op,
+		"result":           result,
+		"duration_ms":      float64(time.Since(start).Microseconds()) / 1000,
 	}
 	for k, v := range extra {
 		data[k] = v

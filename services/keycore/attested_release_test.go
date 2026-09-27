@@ -64,7 +64,7 @@ func TestAttestedReleaseSealsToRecipientOnlyForConfidentialService(t *testing.T)
 	if !bytes.Equal(material, want) || out["aad"] != attestedReleaseAAD("t1", key.ID, 1, "rel_1") {
 		t.Fatal("released material or binding differs from the key")
 	}
-	if e := rec.Last(t); e.Action != "attested_release" || e.Event.Result != "success" || e.Event.TargetID != key.ID {
+	if e := rec.Last(t); e.Action != "attested_release" || e.Event.Result != "success" || e.Event.TargetID != key.ID || e.Event.Details["metered_op"] != "attested_release" {
 		t.Fatalf("success event %+v", e)
 	}
 	other, _ := rsa.GenerateKey(rand.Reader, 2048)

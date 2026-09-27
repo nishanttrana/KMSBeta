@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,12 +20,28 @@ import (
 type nopPaymentPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *nopPaymentPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *nopPaymentPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
+	return nil
+}
+
+// Event returns the last event published on subject (nil if none).
+func (p *nopPaymentPublisher) Event(subject string) map[string]interface{} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := len(p.subjects) - 1; i >= 0; i-- {
+		if p.subjects[i] == subject {
+			var ev map[string]interface{}
+			_ = json.Unmarshal(p.payloads[i], &ev)
+			return ev
+		}
+	}
 	return nil
 }
 

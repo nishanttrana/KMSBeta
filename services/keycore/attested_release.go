@@ -128,11 +128,13 @@ func (s *Service) AttestedRelease(ctx context.Context, keyID string, req Atteste
 }
 
 // attestedReleaseRouter serves the release through the pkg/route kernel,
-// which audits it as audit.key.attested_release (refusals included).
+// which audits it as audit.key.attested_release (refusals included) and
+// meters it: the key is sealed to the recipient here.
 func (h *Handler) attestedReleaseRouter(audit route.Emitter) *route.Router {
 	r := route.New("key", audit, nil)
 	r.Handle("POST /keys/{id}/attested-release", route.Spec{
 		Action: "attested_release", Permission: "key.attested_release", Resource: "key", TargetParam: "id", Severity: "warning",
+		Metered: "attested_release",
 	}, h.attestedRelease)
 	return r
 }

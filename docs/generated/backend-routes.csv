@@ -519,7 +519,7 @@ keyaccess,PUT,/key-access/codes/{id},/key-access/codes/{param},h.handleUpsertRul
 keyaccess,DELETE,/key-access/codes/{id},/key-access/codes/{param},h.handleDeleteRule,mux,,,,services/keyaccess/handler.go,36,keyaccess|DELETE|/key-access/codes/{param}
 keyaccess,GET,/key-access/decisions,/key-access/decisions,h.handleListDecisions,mux,,,,services/keyaccess/handler.go,37,keyaccess|GET|/key-access/decisions
 keyaccess,POST,/key-access/evaluate,/key-access/evaluate,h.handleEvaluate,mux,,,,services/keyaccess/handler.go,38,keyaccess|POST|/key-access/evaluate
-keycore,POST,/keys/{id}/attested-release,/keys/{param}/attested-release,h.attestedRelease,kernel,key.attested_release,attested_release,key,services/keycore/attested_release.go,134,keycore|POST|/keys/{param}/attested-release
+keycore,POST,/keys/{id}/attested-release,/keys/{param}/attested-release,h.attestedRelease,kernel,key.attested_release,attested_release,key,services/keycore/attested_release.go,135,keycore|POST|/keys/{param}/attested-release
 keycore,POST,/keys/{id}/generate-data-key,/keys/{param}/generate-data-key,h.generateDataKey,kernel,key.wrap,data_key_generated,key,services/keycore/data_key.go,23,keycore|POST|/keys/{param}/generate-data-key
 keycore,POST,/keys,/keys,h.handleCreateKey,mux,,,,services/keycore/handler.go,117,keycore|POST|/keys
 keycore,POST,/keys/import,/keys/import,h.handleImportKey,mux,,,,services/keycore/handler.go,118,keycore|POST|/keys/import

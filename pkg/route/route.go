@@ -102,6 +102,11 @@ type Spec struct {
 	// Severity is info (default), warning or critical. Refusals are at
 	// least warning.
 	Severity string
+	// Metered names the cryptographic operation the route performs (e.g.
+	// "tokenize"). Its event then carries pkg/audit.MeteredOp, and the
+	// audit service counts every call, refusals and failures included, in
+	// the Operations metrics.
+	Metered string
 }
 
 // Route is one registered pattern with its contract.
@@ -169,6 +174,9 @@ func (s Spec) validate(pattern string) error {
 	}
 	if !actionRE.MatchString(s.Action) {
 		return errors.New("Action is required (lowercase, dot-separated)")
+	}
+	if s.Metered != "" && !pkgaudit.ValidMeteredOp(s.Metered) {
+		return errors.New("Metered must be a lowercase operation name")
 	}
 	if !s.Public && s.Permission == "" {
 		return errors.New("Permission is required (or route.Authenticated, or Public)")
@@ -464,6 +472,9 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 		severity = "warning"
 	}
 	details := map[string]interface{}{"severity": severity}
+	if spec.Metered != "" {
+		details[pkgaudit.MeteredOp] = spec.Metered
+	}
 	for k, v := range c.details {
 		details[k] = v
 	}
@@ -488,7 +499,7 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 		Method:        r.Method,
 		Endpoint:      r.URL.Path,
 		CorrelationID: headerOr(r, "X-Correlation-ID", c.RequestID),
-		DurationMS:    float64(took.Milliseconds()),
+		DurationMS:    float64(took.Microseconds()) / 1000,
 		Details:       details,
 	}
 	if c.Claims != nil {

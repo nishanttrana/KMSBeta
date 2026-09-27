@@ -308,15 +308,38 @@ GROUP BY e.tenant_id, e.chain_node`, self)
 			if err := pkgaudit.Relay(ctx, pub, relayEvent(ev)); err != nil {
 				return relayed, err
 			}
-			if _, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO audit_relay_cursor (tenant_id, chain_node, last_sequence) VALUES ($1,$2,$3)
-ON CONFLICT (tenant_id, chain_node) DO UPDATE SET last_sequence = EXCLUDED.last_sequence`, c.tenant, c.node, ev.Sequence); err != nil {
+			if err := s.advanceRelay(ctx, c.tenant, c.node, ev); err != nil {
 				return relayed, err
 			}
 			relayed++
 		}
 	}
 	return relayed, nil
+}
+
+// advanceRelay moves the relay cursor past ev and, if ev is a metered
+// operation, counts it in this node's Operations metrics under the member
+// that ran it. Both happen in one transaction, so the primary counts each
+// member operation exactly once (the member's own ingest never reaches the
+// primary's metrics table).
+func (s *SQLStore) advanceRelay(ctx context.Context, tenantID, node string, ev AuditEvent) error {
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if sample, ok := opSampleFromEvent(ev); ok {
+		sample.Node = node
+		if err := recordOp(ctx, tx, sample); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO audit_relay_cursor (tenant_id, chain_node, last_sequence) VALUES ($1,$2,$3)
+ON CONFLICT (tenant_id, chain_node) DO UPDATE SET last_sequence = EXCLUDED.last_sequence`, tenantID, node, ev.Sequence); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *SQLStore) eventsAfter(ctx context.Context, tenantID, chainNode string, after int64, limit int) ([]AuditEvent, error) {

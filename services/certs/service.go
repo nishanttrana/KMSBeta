@@ -551,6 +551,7 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if err != nil {
 		return Certificate{}, "", err
 	}
+	signStart, local := time.Now(), signsLocally(issuerSigner)
 
 	subjectCN := strings.TrimSpace(req.SubjectCN)
 	sans := dedupStrings(req.SANs)
@@ -621,6 +622,7 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 
 	der, err := x509.CreateCertificate(rand.Reader, tpl, issuerCert, pubKey, issuerSigner)
 	if err != nil {
+		s.signingFailed(ctx, local, "cert_issue", req.TenantID, signStart, err)
 		return Certificate{}, "", err
 	}
 	certPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
@@ -650,14 +652,14 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if err != nil {
 		return Certificate{}, "", err
 	}
-	_ = s.publishAudit(ctx, "audit.cert.issued", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.cert.issued", req.TenantID, meteredIf(local, map[string]interface{}{
 		"cert_id":       out.ID,
 		"ca_id":         out.CAID,
 		"algorithm":     out.Algorithm,
 		"class":         out.CertClass,
 		"protocol":      out.Protocol,
 		"server_keygen": req.ServerKeygen,
-	})
+	}, "cert_issue", signStart))
 	return out, privateKeyPEM, nil
 }
 
@@ -1121,6 +1123,7 @@ func (s *Service) CheckOCSPDER(ctx context.Context, tenantID string, reqDER []by
 	if err != nil {
 		return nil, "", "", time.Time{}, err
 	}
+	signStart, local := time.Now(), signsLocally(issuerSigner)
 
 	status := "good"
 	reason := ""
@@ -1165,15 +1168,16 @@ func (s *Service) CheckOCSPDER(ctx context.Context, tenantID string, reqDER []by
 	}
 	der, err := ocsp.CreateResponse(issuerCert, issuerCert, resp, issuerSigner)
 	if err != nil {
+		s.signingFailed(ctx, local, "ocsp_sign", tenantID, signStart, err)
 		return nil, "", "", time.Time{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.cert.ocsp_query", tenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.cert.ocsp_query", tenantID, meteredIf(local, map[string]interface{}{
 		"cert_id":     c.ID,
 		"serial":      c.SerialNumber,
 		"ocsp_status": status,
 		"ocsp_reason": reason,
 		"wire":        true,
-	})
+	}, "ocsp_sign", signStart))
 	return der, status, reason, producedAt, nil
 }
 
@@ -2483,6 +2487,9 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		"action":    subject,
 		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 		"data":      data,
+	}
+	if r, ok := data["result"].(string); ok && r != "" {
+		payload["result"] = r
 	}
 	for _, key := range []string{"target_id", "description", "actor_id", "source_ip", "correlation_id"} {
 		if data == nil {

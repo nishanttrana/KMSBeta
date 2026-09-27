@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-27T18:47:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T19:07:43Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -490,7 +490,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeysTab.tsx | 2780 | keys | Btn | navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 128 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
+| web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 144 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
 | web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 453 | - | Btn | void loadAll(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 454 | - | Btn | (icon or dynamic label) | saveAll} disabled={loading \|\| saving |
 | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 824 | payment | Btn | void refreshAP2Profile()} disabled= > |  |

@@ -235,6 +235,26 @@ Proven by `routetest.RefusalsAudited` for every route, and by the
 tests (`handler_tenancy_test.go`: cross-tenant refusals audited, identity from
 the token).
 
+## Metered cryptographic operations (2.2.0-beta)
+
+An event whose details carry `metered_op` (`pkg/audit.MeteredOp`), with
+`duration_ms` and `result`, is one cryptographic operation. The audit
+service builds the Operations metrics from these events alone
+(docs/DECISIONS.md, 2.2.0-beta). Each operation is metered once, by the
+service that does the cryptography.
+
+| Event | When | Severity | Test |
+|---|---|---|---|
+| `audit.key.<op>` (see Key access) and `audit.key.attested_release` (kernel, `Spec.Metered`) | keycore key operations and attested release | info; warning for refusals | `TestCryptoOpsAuditedWithOutcomeAndDuration`, `TestAttestedReleaseSealsToRecipientOnlyForConfidentialService` |
+| any kernel event of a route with `route.Spec.Metered` | every call, refusals included, carries `metered_op` | per route | `TestMeteredRouteMarksEveryEvent` (pkg/route) |
+| `audit.dataprotect.tokenized`, `detokenized`, `fpe_encrypted`, `fpe_decrypted`, `fpe_legacy_decrypted`, `field_encrypted`, `field_decrypted`, `envelope_encrypted`, `envelope_decrypted`, `searchable_encrypted`, `searchable_decrypted` | the operation completed; now metered | info | `TestDataProtectOperationsMetered` |
+| `audit.dataprotect.<op>_refused` / `audit.dataprotect.<op>_failed` | the operation was refused (401/403/409/429, `reason` = error code) or failed (`error`); `fpe_refused` stays the event for a withdrawn FPE algorithm and is metered | warning / info | `TestDataProtectOperationsMetered` |
+| `audit.payment.tr31_created`, `tr31_parsed`, `tr31_translated`, `tr31_validated`, `pin_translated`, `pvv_generated`, `pvv_verified`, `pin_offset_generated`, `pin_offset_verified`, `cvv_computed`, `cvv_verified`, `mac_computed`, `mac_verified`, `lau_generated`, `lau_verified` | the operation ran (a verify that finds a mismatch is a success with `verified: false`); metered | info | `TestPaymentOperationsAuditedAndMetered` |
+| `audit.payment.iso20022_signed`, `iso20022_verified`, `iso20022_encrypted`, `iso20022_decrypted` | the ISO 20022 operation ran; not metered (keycore does the crypto and meters it) | info | `TestPaymentOperationsAuditedAndMetered` |
+| `audit.payment.<op>_refused` / `audit.payment.<op>_failed` | any payment operation above was refused or failed (`reason`, `error`) | warning / info | `TestPaymentOperationsAuditedAndMetered` |
+| `audit.cert.issued`, `audit.cert.ocsp_query` (wire) | metered when the CA key is local (`cert_issue`, `ocsp_sign`); an HSM/keycore CA is metered by keycore | info | `TestLocalCertificateSigningMetered` |
+| `audit.cert.cert_issue_failed` / `audit.cert.ocsp_sign_failed` | the CA could not produce the signature (`error`) | warning | `TestCertSigningFailureAuditedAndMetered` |
+
 ## What can't be audited, and how it shows instead
 
 A service that **refuses to start** has no audit pipeline yet, because it exits

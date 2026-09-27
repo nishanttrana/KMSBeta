@@ -997,7 +997,11 @@ func (s *Service) RotatePaymentKey(ctx context.Context, id string, req RotatePay
 	}, nil
 }
 
-func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (CreateTR31Response, error) {
+func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (_ CreateTR31Response, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"tr31_create", "audit.payment.tr31_created", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" {
@@ -1086,13 +1090,13 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	sourceFormat := tr31FormatForVersion(version)
-	_ = s.publishAudit(ctx, "audit.payment.tr31_created", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"key_id":       req.KeyID,
 		"tr31_version": version,
 		"usage_code":   usage,
 		"source":       sourceFormat,
 		"kbpk_key_id":  kbpkRef,
-	})
+	}
 	return CreateTR31Response{
 		Version:      version,
 		Algorithm:    tr31AlgorithmNameFromCode(algorithmCode),
@@ -1104,7 +1108,11 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 	}, nil
 }
 
-func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR31Response, error) {
+func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (_ ParseTR31Response, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"tr31_parse", "audit.payment.tr31_parsed", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyBlock = strings.TrimSpace(req.KeyBlock)
 	if req.TenantID == "" || req.KeyBlock == "" {
@@ -1182,17 +1190,21 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 		}
 		out.ImportedKeyID = keyID
 	}
-	_ = s.publishAudit(ctx, "audit.payment.tr31_parsed", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"version":       version,
 		"algorithm":     algorithm,
 		"usage_code":    usage,
 		"import_to_kms": req.ImportToKMS,
 		"kbpk_key_id":   kbpkRef,
-	})
+	}
 	return out, nil
 }
 
-func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (TranslateTR31Response, error) {
+func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (_ TranslateTR31Response, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"tr31_translate", "audit.payment.tr31_translated", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return TranslateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1358,12 +1370,12 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	if err := s.store.CreateTR31Translation(ctx, tx); err != nil {
 		return TranslateTR31Response{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.payment.tr31_translated", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"id":            tx.ID,
 		"source_format": sourceFmt,
 		"target_format": targetFmt,
 		"source_key_id": sourceKeyID,
-	})
+	}
 	return TranslateTR31Response{
 		ID:           tx.ID,
 		SourceFormat: sourceFmt,
@@ -1373,7 +1385,11 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	}, nil
 }
 
-func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (ValidateTR31Response, error) {
+func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (_ ValidateTR31Response, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"tr31_validate", "audit.payment.tr31_validated", true}, req.TenantID, start, err, extra)
+	}()
 	req.KeyBlock = strings.TrimSpace(req.KeyBlock)
 	if strings.TrimSpace(req.TenantID) == "" || req.KeyBlock == "" {
 		return ValidateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_block are required")
@@ -1442,7 +1458,11 @@ func (s *Service) SupportedTR31KeyUsages() []string {
 	return out
 }
 
-func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (string, error) {
+func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"pin_translate", "audit.payment.pin_translated", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1551,16 +1571,20 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (st
 		ZPKKeyID:     sourceZPK + "->" + targetZPK,
 		Result:       "success",
 	})
-	_ = s.publishAudit(ctx, "audit.payment.pin_translated", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"source_format": source,
 		"target_format": target,
 		"source_zpk":    sourceZPK,
 		"target_zpk":    targetZPK,
-	})
+	}
 	return block, nil
 }
 
-func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (string, error) {
+func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"pvv_generate", "audit.payment.pvv_generated", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1606,14 +1630,18 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (stri
 		ZPKKeyID:     strings.TrimSpace(req.ZPKKeyID),
 		Result:       "success",
 	})
-	_ = s.publishAudit(ctx, "audit.payment.pvv_generated", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"source_format": normalizePINFormat(req.SourceFmt),
 		"zpk_key_id":    strings.TrimSpace(req.ZPKKeyID),
-	})
+	}
 	return pvv, nil
 }
 
-func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (bool, error) {
+func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"pvv_verify", "audit.payment.pvv_verified", true}, req.TenantID, start, err, extra)
+	}()
 	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "pin.pvv.verify")
 	if err != nil {
 		return false, err
@@ -1656,14 +1684,18 @@ func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (bool, er
 		ZPKKeyID:     strings.TrimSpace(req.ZPKKeyID),
 		Result:       boolStatus(ok),
 	})
-	_ = s.publishAudit(ctx, "audit.payment.pvv_verified", strings.TrimSpace(req.TenantID), map[string]interface{}{
+	extra = map[string]interface{}{
 		"verified":   ok,
 		"zpk_key_id": strings.TrimSpace(req.ZPKKeyID),
-	})
+	}
 	return ok, nil
 }
 
-func (s *Service) GenerateOffset(ctx context.Context, req OffsetGenerateRequest) (string, error) {
+func (s *Service) GenerateOffset(ctx context.Context, req OffsetGenerateRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"pin_offset_generate", "audit.payment.pin_offset_generated", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1695,13 +1727,17 @@ func (s *Service) GenerateOffset(ctx context.Context, req OffsetGenerateRequest)
 		ZPKKeyID:     strings.TrimSpace(req.ZPKKeyID),
 		Result:       "success",
 	})
-	_ = s.publishAudit(ctx, "audit.payment.pin_offset_generated", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"zpk_key_id": strings.TrimSpace(req.ZPKKeyID),
-	})
+	}
 	return offset, nil
 }
 
-func (s *Service) VerifyOffset(ctx context.Context, req OffsetVerifyRequest) (bool, error) {
+func (s *Service) VerifyOffset(ctx context.Context, req OffsetVerifyRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"pin_offset_verify", "audit.payment.pin_offset_verified", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1730,14 +1766,18 @@ func (s *Service) VerifyOffset(ctx context.Context, req OffsetVerifyRequest) (bo
 		ZPKKeyID:     strings.TrimSpace(req.ZPKKeyID),
 		Result:       boolStatus(ok),
 	})
-	_ = s.publishAudit(ctx, "audit.payment.pin_offset_verified", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"verified":   ok,
 		"zpk_key_id": strings.TrimSpace(req.ZPKKeyID),
-	})
+	}
 	return ok, nil
 }
 
-func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (string, error) {
+func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"cvv_compute", "audit.payment.cvv_computed", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -1783,13 +1823,17 @@ func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (string
 		ZPKKeyID:     "",
 		Result:       "success",
 	})
-	_ = s.publishAudit(ctx, "audit.payment.cvv_computed", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"service_code": strings.TrimSpace(req.ServiceCode),
-	})
+	}
 	return cvv, nil
 }
 
-func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (bool, error) {
+func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"cvv_verify", "audit.payment.cvv_verified", true}, req.TenantID, start, err, extra)
+	}()
 	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "pin.cvv.verify")
 	if err != nil {
 		return false, err
@@ -1823,13 +1867,17 @@ func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (bool, er
 		return false, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	ok := subtle.ConstantTimeCompare([]byte(cvv), []byte(strings.TrimSpace(req.CVV))) == 1
-	_ = s.publishAudit(ctx, "audit.payment.cvv_verified", strings.TrimSpace(req.TenantID), map[string]interface{}{
+	extra = map[string]interface{}{
 		"verified": ok,
-	})
+	}
 	return ok, nil
 }
 
-func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error) {
+func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"mac_compute", "audit.payment.mac_computed", true}, req.TenantID, start, err, extra)
+	}()
 	op := "mac.retail"
 	switch normalizeMACType(req.Type) {
 	case "iso9797":
@@ -1871,7 +1919,11 @@ func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error
 	return base64.StdEncoding.EncodeToString(mac), nil
 }
 
-func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (bool, error) {
+func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"mac_verify", "audit.payment.mac_verified", true}, req.TenantID, start, err, extra)
+	}()
 	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "mac.verify")
 	if err != nil {
 		return false, err
@@ -1948,7 +2000,11 @@ func computeMACRaw(macType string, algorithm int, key []byte, data []byte) ([]by
 	}
 }
 
-func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (map[string]string, error) {
+func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (_ map[string]string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"iso20022_sign", "audit.payment.iso20022_signed", false}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	xml := normalizeISOXML(req.XML)
@@ -1988,16 +2044,20 @@ func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (ma
 		return nil, newServiceError(http.StatusBadGateway, "keycore_sign_failed", "signature missing in keycore response")
 	}
 	signedXML := xml + "\n<SignatureValue>" + sig + "</SignatureValue>"
-	_ = s.publishAudit(ctx, "audit.payment.iso20022_signed", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"key_id": req.KeyID,
-	})
+	}
 	return map[string]string{
 		"signature_b64": sig,
 		"signed_xml":    signedXML,
 	}, nil
 }
 
-func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest) (bool, error) {
+func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"iso20022_verify", "audit.payment.iso20022_verified", false}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	xml := normalizeISOXML(req.XML)
@@ -2036,7 +2096,11 @@ func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest)
 	return boolValue(out["verified"]), nil
 }
 
-func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptRequest) (map[string]string, error) {
+func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptRequest) (_ map[string]string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"iso20022_encrypt", "audit.payment.iso20022_encrypted", false}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	xml := normalizeISOXML(req.XML)
@@ -2072,16 +2136,20 @@ func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptReques
 	if ciphertext == "" {
 		return nil, newServiceError(http.StatusBadGateway, "keycore_encrypt_failed", "ciphertext missing in keycore response")
 	}
-	_ = s.publishAudit(ctx, "audit.payment.iso20022_encrypted", req.TenantID, map[string]interface{}{
+	extra = map[string]interface{}{
 		"key_id": req.KeyID,
-	})
+	}
 	return map[string]string{
 		"ciphertext": ciphertext,
 		"iv":         iv,
 	}, nil
 }
 
-func (s *Service) ISO20022Decrypt(ctx context.Context, req ISO20022DecryptRequest) (string, error) {
+func (s *Service) ISO20022Decrypt(ctx context.Context, req ISO20022DecryptRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"iso20022_decrypt", "audit.payment.iso20022_decrypted", false}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || strings.TrimSpace(req.CiphertextB64) == "" {
@@ -2120,7 +2188,11 @@ func (s *Service) ISO20022Decrypt(ctx context.Context, req ISO20022DecryptReques
 	return string(raw), nil
 }
 
-func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (string, error) {
+func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (_ string, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"lau_generate", "audit.payment.lau_generated", true}, req.TenantID, start, err, extra)
+	}()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" || strings.TrimSpace(req.Message) == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and message are required")
@@ -2157,7 +2229,11 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
 }
 
-func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (bool, error) {
+func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (_ bool, err error) {
+	start, extra := time.Now(), map[string]interface{}{}
+	defer func() {
+		s.auditOp(ctx, opAudit{"lau_verify", "audit.payment.lau_verified", true}, req.TenantID, start, err, extra)
+	}()
 	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "iso20022.lau.verify")
 	if err != nil {
 		return false, err
@@ -2446,6 +2522,7 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		"tenant_id": tenantID,
 		"service":   "payment",
 		"action":    subject,
+		"result":    auditResult(data),
 		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 		"data":      data,
 	})

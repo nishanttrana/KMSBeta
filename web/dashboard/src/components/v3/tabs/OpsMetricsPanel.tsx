@@ -90,7 +90,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
     <div style={{ fontFamily: '"IBM Plex Sans", sans-serif', color: C.text }}>
       {/* Controls */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: C.muted }}>Key operation throughput, latency and errors, from the audit events of every operation keycore ran, refused or failed</div>
+        <div style={{ fontSize: 12, color: C.muted }}>Cryptographic operation throughput, latency and errors, from the audit event of every operation that ran, was refused or failed</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", gap: 2, background: C.surface, borderRadius: 6, padding: 2, border: `1px solid ${C.border}` }}>
             {(["1h", "24h", "7d", "30d"] as const).map(w => (
@@ -108,6 +108,22 @@ export function OpsMetricsPanel({ session }: { session: any }) {
       </div>
 
       {loadErr && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>Operations metrics unavailable: {loadErr}</div>}
+
+      {!loadErr && !loading && overview && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: C.muted, marginBottom: 12 }}>
+          <span style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, color: ov.scope === "node" ? C.amber : C.dim }}>
+            {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only: open the primary for the whole cluster" : "Single node"}
+          </span>
+          {(ov.by_node ?? []).length > 1 && (ov.by_node ?? []).map((n: any) => (
+            <span key={n.node || "local"} style={{ fontFamily: "monospace" }}>{n.node || "(unclustered)"}: {fmt(n.total_ops)}</span>
+          ))}
+          <span>
+            {ov.recorded_since
+              ? `Measured since ${new Date(ov.recorded_since).toLocaleString()}; earlier operations were not recorded.`
+              : "Nothing recorded yet."}
+          </span>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
@@ -142,7 +158,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
               <Activity size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
-              <div style={{ fontSize: 13 }}>No key operations in this window. Encrypt, decrypt, wrap, sign, verify, MAC, derive and KEM calls appear here as they run.</div>
+              <div style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, payment PIN/CVV/MAC/TR-31, and certificate and OCSP signing appear here as they run.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -178,7 +194,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Latency by Operation Type <span style={{ fontSize: 11, fontWeight: 400, color: C.muted, marginLeft: 8 }}>average is exact; percentiles are the histogram bucket each falls in</span></div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : latency.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No key operations in this window.</div>
+            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -217,7 +233,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, fontSize: 13, fontWeight: 700 }}>Operations by Service</div>
           {loading ? <div style={{ padding: 24, textAlign: "center", color: C.muted }}>Loading...</div> : services.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No key operations in this window.</div>
+            <div style={{ padding: 40, textAlign: "center", color: C.muted }}>No operations in this window.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>

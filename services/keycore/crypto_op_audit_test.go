@@ -48,6 +48,8 @@ func TestCryptoOpsAuditedWithOutcomeAndDuration(t *testing.T) {
 	}
 	if ev := rec.find("audit.key.wrap"); ev == nil || ev["result"] != "success" {
 		t.Fatalf("wrap event: %+v", ev)
+	} else if d, _ := ev["details"].(map[string]any); d["metered_op"] != "wrap" {
+		t.Fatalf("wrap event not metered: %+v", d)
 	}
 	if ev := rec.find("audit.key.encrypt"); ev != nil {
 		t.Fatalf("wrap was audited as encrypt: %+v", ev)

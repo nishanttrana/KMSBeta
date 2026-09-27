@@ -7,6 +7,45 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Operations metrics: any metered event, cluster-wide on the primary, no backfill (2.2.0-beta)
+
+**Decision.** An event is counted when its details carry
+`pkg/audit.MeteredOp`. Each operation is metered once, by the service
+whose code does the cryptography. The primary counts members' operations
+from the relay of their replicated events, and history before 2.1.0 is not
+backfilled.
+
+**Why.** A metering flag on the event, instead of a list of actions in the
+audit service, lets every service and every kernel route (`Spec.Metered`)
+join without changing the consumer. Metering where the crypto runs keeps one
+request from being counted by both the front service and keycore. The relay
+cursor already delivers each member event to the primary exactly once. Doing
+the metric write in the same transaction as the cursor gives the same
+guarantee with no new transport or node-to-node endpoint. The primary's
+ingest still skips the relayed copy, so nothing is counted twice.
+
+**Rejected.**
+- Metering from `pkg/auditmw`'s generic request event. It is whole-ms, can
+  be switched off with `AUDIT_CAPTURE_HTTP_REQUESTS`, cannot tell a refusal
+  from a failure, and misses payment's TCP server.
+- Replicating `ops_metrics_hourly`. Rows are upserted on every node, which
+  logical replication with a single writer per row doesn't allow.
+- Computing metrics by query over `audit_events`. It reads millions of rows
+  per page load, and percentiles need Postgres-only functions.
+- Backfilling from old events. Before 2.1.0 a wrap was logged as an
+  encrypt, a MAC as a sign, with no duration and no refusals, so the
+  history would be relabelled guesses (CLAUDE.md rule 8). The dashboard
+  shows `recorded_since` instead.
+
+**How.** `TestOpsMetricsCountAnyServicesMeteredEvents`,
+`TestRelayCountsMemberOperationsOnce`, `TestMeteredRouteMarksEveryEvent`,
+`TestDataProtectOperationsMetered`, `TestPaymentOperationsAuditedAndMetered`,
+`TestLocalCertificateSigningMetered`, `TestCryptoOpsAuditedWithOutcomeAndDuration`.
+
+**Still open.** A member shows only its own operations: open the primary
+for the cluster view. Batch APIs (tokenize, detokenize) count one operation
+per request and carry the value count in `count`.
+
 ## 2026-09-28 — Operations metrics come from audit events, shown in Analytics (2.1.0-beta)
 
 **Decision.** Key-operation throughput, latency and errors are the
@@ -33,8 +72,7 @@ numbers. Estimating percentiles from the average: that is fabricated data
 (rule 7). Storing every sample for exact percentiles: that is unbounded
 growth on a hot path. Histogram bounds are the honest resolution.
 
-**Open.** Metrics are per node (`ops_metrics_hourly` is node-local). A
-cluster-wide view would need members to report to the primary.
+**Closed in 2.2.0-beta.** Metrics were per node; see the next entry.
 
 ---
 

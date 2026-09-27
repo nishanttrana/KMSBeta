@@ -174,6 +174,11 @@ entirely. So:
   derivation state from replicated inputs without recording it, and records
   legacy (v1) use only in the audit event.
 - `fle_metadata` is node-local (written during `/app/encrypt-fields`).
+- **Operations metrics:** `ops_metrics_hourly` is node-local, with a `node`
+  column. The primary counts members' metered operations when its audit relay
+  passes their replicated events, in the cursor's transaction, so its
+  Analytics > Operations view is cluster-wide. A member's view is its own
+  (2.2.0-beta).
 
 Still open (slice 3b): the event-driven consumers that write replicated
 tables from a node's own audit stream (reporting alerts, compliance

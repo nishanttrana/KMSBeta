@@ -17,6 +17,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
@@ -3047,7 +3048,9 @@ db.token_vault_records.createIndex({tenant_id:1, vault_id:1, created_at:-1}, {na
 	}, nil
 }
 
-func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[string]interface{}, error) {
+func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) (_ []map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "tokenize", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.Mode = normalizeTokenMode(req.Mode)
 	req.VaultID = strings.TrimSpace(req.VaultID)
@@ -3344,7 +3347,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		results = append(results, out)
 	}
 	if req.Mode == "vaultless" {
-		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, map[string]interface{}{
+		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 			"mode":                "vaultless",
 			"count":               len(results),
 			"token_type":          vault.TokenType,
@@ -3352,20 +3355,22 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			"custom_token_format": vault.CustomTokenFormat,
 			"key_id":              vault.KeyID,
 			"one_time":            req.OneTimeToken,
-		})
+		}, "tokenize", start))
 		return results, nil
 	}
 	if created > 0 {
-		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, map[string]interface{}{
+		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 			"vault_id": req.VaultID,
 			"count":    created,
 			"one_time": req.OneTimeToken,
-		})
+		}, "tokenize", start))
 	}
 	return results, nil
 }
 
-func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[string]interface{}, error) {
+func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) (_ []map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "detokenize", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.Purpose = strings.TrimSpace(req.Purpose)
 	req.Workflow = strings.TrimSpace(req.Workflow)
@@ -3510,17 +3515,19 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[
 		})
 	}
 	if okCount > 0 {
-		_ = s.publishAudit(ctx, "audit.dataprotect.detokenized", req.TenantID, map[string]interface{}{
+		_ = s.publishAudit(ctx, "audit.dataprotect.detokenized", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 			"count":           okCount,
 			"purpose":         req.Purpose,
 			"workflow":        req.Workflow,
 			"renew_ttl_hours": req.RenewTTLHours,
-		})
+		}, "detokenize", start))
 	}
 	return results, nil
 }
 
-func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]interface{}, error) {
+func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "fpe_encrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.Plaintext = strings.TrimSpace(req.Plaintext)
@@ -3532,7 +3539,7 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]in
 		req.Radix = 10
 	}
 	if algo != "FF1" {
-		return nil, s.refuseFPE(ctx, req, "encrypt", algo)
+		return nil, s.refuseFPE(ctx, req, "encrypt", algo, start)
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
@@ -3546,15 +3553,17 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]in
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_encrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_encrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"key_id":    req.KeyID,
 		"algorithm": algo,
 		"radix":     req.Radix,
-	})
+	}, "fpe_encrypt", start))
 	return map[string]interface{}{"ciphertext": cipherText}, nil
 }
 
-func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]interface{}, error) {
+func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "fpe_decrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.Ciphertext = strings.TrimSpace(req.Ciphertext)
@@ -3566,7 +3575,7 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]in
 		req.Radix = 10
 	}
 	if algo != "FF1" && algo != fpeLegacyFF1 && algo != fpeLegacyFF3 {
-		return nil, s.refuseFPE(ctx, req, "decrypt", algo)
+		return nil, s.refuseFPE(ctx, req, "decrypt", algo, start)
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
 		return nil, err
@@ -3591,11 +3600,11 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]in
 		// Migration path only: the caller must re-encrypt the value with FF1.
 		subject = "audit.dataprotect.fpe_legacy_decrypted"
 	}
-	_ = s.publishAudit(ctx, subject, req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, subject, req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"key_id":    req.KeyID,
 		"algorithm": algo,
 		"radix":     req.Radix,
-	})
+	}, "fpe_decrypt", start))
 	return map[string]interface{}{"plaintext": plain}, nil
 }
 
@@ -3617,7 +3626,7 @@ func normalizeFPEAlgorithm(v string) string {
 
 // refuseFPE audits and rejects an FPE request for an algorithm that is not
 // offered: FF3-1 (withdrawn), legacy encrypt, or anything unknown.
-func (s *Service) refuseFPE(ctx context.Context, req FPERequest, op string, algo string) error {
+func (s *Service) refuseFPE(ctx context.Context, req FPERequest, op string, algo string, start time.Time) error {
 	reason := "unsupported FPE algorithm; use FF1"
 	switch algo {
 	case "FF3-1":
@@ -3625,13 +3634,13 @@ func (s *Service) refuseFPE(ctx context.Context, req FPERequest, op string, algo
 	case fpeLegacyFF1, fpeLegacyFF3:
 		reason = "legacy FPE is decrypt-only, for migrating pre-1.26.0 ciphertext to FF1"
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_refused", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.fpe_refused", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"key_id":    req.KeyID,
 		"algorithm": algo,
 		"operation": op,
 		"result":    "refused",
 		"reason":    reason,
-	})
+	}, "fpe_"+op, start))
 	return newServiceError(http.StatusBadRequest, "fpe_algorithm_refused", reason)
 }
 
@@ -3891,7 +3900,9 @@ func (s *Service) Redact(ctx context.Context, req RedactRequest) (map[string]int
 	}, nil
 }
 
-func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[string]interface{}, error) {
+func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "field_encrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.DocumentID = defaultString(strings.TrimSpace(req.DocumentID), newID("doc"))
@@ -3971,11 +3982,11 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		})
 		done = append(done, field)
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.field_encrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"document_id": req.DocumentID,
 		"fields":      done,
 		"algorithm":   algorithm,
-	})
+	}, "field_encrypt", start))
 	return map[string]interface{}{
 		"document":         doc,
 		"document_id":      req.DocumentID,
@@ -3983,7 +3994,9 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	}, nil
 }
 
-func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[string]interface{}, error) {
+func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "field_decrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.DocumentID = strings.TrimSpace(req.DocumentID)
@@ -4084,17 +4097,19 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		pkgcrypto.Zeroize(pt)
 		done = append(done, field)
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.field_decrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_decrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"document_id": defaultString(req.DocumentID, "unknown"),
 		"fields":      done,
-	})
+	}, "field_decrypt", start))
 	return map[string]interface{}{
 		"document":         doc,
 		"fields_decrypted": done,
 	}, nil
 }
 
-func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map[string]interface{}, error) {
+func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "envelope_encrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
@@ -4139,10 +4154,10 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.envelope_encrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.envelope_encrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"algorithm": alg,
 		"key_id":    req.KeyID,
-	})
+	}, "envelope_encrypt", start))
 	return map[string]interface{}{
 		"ciphertext":     b64(ciphertext),
 		"iv":             b64(iv),
@@ -4153,7 +4168,9 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	}, nil
 }
 
-func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map[string]interface{}, error) {
+func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "envelope_decrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" || req.WrappedDEK == "" {
@@ -4213,16 +4230,18 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 		return nil, err
 	}
 	defer pkgcrypto.Zeroize(pt)
-	_ = s.publishAudit(ctx, "audit.dataprotect.envelope_decrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.envelope_decrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"algorithm": alg,
 		"key_id":    req.KeyID,
-	})
+	}, "envelope_decrypt", start))
 	return map[string]interface{}{
 		"plaintext": string(pt),
 	}, nil
 }
 
-func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) (map[string]interface{}, error) {
+func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "searchable_encrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
@@ -4256,13 +4275,15 @@ func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) 
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.dataprotect.searchable_encrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.searchable_encrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"key_id": req.KeyID,
-	})
+	}, "searchable_encrypt", start))
 	return map[string]interface{}{"ciphertext": b64(ct)}, nil
 }
 
-func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) (map[string]interface{}, error) {
+func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) (_ map[string]interface{}, err error) {
+	start := time.Now()
+	defer func() { s.meterFailure(ctx, "searchable_decrypt", req.TenantID, start, err) }()
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" {
@@ -4301,9 +4322,9 @@ func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) 
 		return nil, err
 	}
 	defer pkgcrypto.Zeroize(pt)
-	_ = s.publishAudit(ctx, "audit.dataprotect.searchable_decrypted", req.TenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.dataprotect.searchable_decrypted", req.TenantID, pkgaudit.Metered(map[string]interface{}{
 		"key_id": req.KeyID,
-	})
+	}, "searchable_decrypt", start))
 	return map[string]interface{}{"plaintext": string(pt)}, nil
 }
 

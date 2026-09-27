@@ -2773,7 +2773,9 @@ func (s *Service) ensureApprovalAllowed(ctx context.Context, key Key, tenantID s
 
 func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest) (_ CryptoResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "encrypt"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "encrypt"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -2874,7 +2876,9 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 
 func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest) (_ CryptoResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "decrypt"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "decrypt"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -2966,7 +2970,9 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 
 func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (_ CryptoResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "sign"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "sign"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -3056,7 +3062,9 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (_ Cr
 
 func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (_ CryptoResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "verify"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "verify"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return CryptoResponse{}, err
@@ -3504,7 +3512,9 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 
 func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (_ DeriveResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "derive"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "derive"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return DeriveResponse{}, err
@@ -3615,7 +3625,9 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 
 func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncapsulateRequest) (_ KEMResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-encapsulate"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-encapsulate"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return KEMResponse{}, err
@@ -3696,7 +3708,9 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 
 func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecapsulateRequest) (_ KEMResponse, err error) {
 	start, extra := time.Now(), map[string]any{}
-	defer func() { s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-decapsulate"), req.TenantID, keyID, start, err, extra) }()
+	defer func() {
+		s.auditCryptoOp(ctx, cryptoOpName(req.Operation, "kem-decapsulate"), req.TenantID, keyID, start, err, extra)
+	}()
 	key, err := s.GetKey(ctx, req.TenantID, keyID)
 	if err != nil {
 		return KEMResponse{}, err

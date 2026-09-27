@@ -4,6 +4,52 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.2.0-beta] — 2026-09-28
+
+### Operations metrics cover the cluster and every service that does crypto
+Closes the three items 2.1.0-beta left open.
+
+- **Cluster-wide on the primary.** Each row names the node that ran the
+  operations (migration 008). A member counts its own. The primary also
+  counts every member's metered operation when its audit relay passes the
+  replicated event, in the same transaction as the relay cursor, so each is
+  counted exactly once. The overview returns `scope` (`cluster` on the
+  primary, `node` on a member, `standalone`) and `by_node`. Analytics >
+  Operations shows the scope and the per-node split.
+- **Not just keycore.** Any audit event carrying `metered_op`
+  (`pkg/audit.MeteredOp`, set with `pkg/audit.Metered`) with its
+  `duration_ms` and `result` is counted:
+  - **dataprotect:** tokenize, detokenize, FPE, field, envelope and
+    searchable encrypt/decrypt.
+  - **payment:** PIN translate, PVV, PIN offset, CVV, MAC, LAU, and TR-31
+    create/parse/translate/validate.
+  - **certs:** certificate issuance and OCSP response signing with a local
+    CA key.
+  - **keycore:** attested release.
+  - **Kernel routes:** any route that declares `route.Spec.Metered`, so new
+    routes get metering by construction.
+
+  Operations that only call keycore (ISO 20022, signing, hyok, ekm, kmip,
+  HSM-held CAs, generate-data-key, service-derive) are counted once, by
+  keycore.
+- **New audit events for operations that had none.** payment:
+  `tr31_validated`, `mac_computed`, `mac_verified`, `lau_generated`,
+  `lau_verified`, `iso20022_verified`, `iso20022_decrypted`. Every payment
+  operation now also emits `audit.payment.<op>_refused` or `<op>_failed`.
+  dataprotect: `audit.dataprotect.<op>_refused` / `<op>_failed` (an FPE
+  algorithm refusal stays `fpe_refused`). certs: `audit.cert.cert_issue_failed`
+  and `audit.cert.ocsp_sign_failed`. Before this, a refused or failed
+  operation in these services left no specific event.
+- **Refusals are recorded as refusals.** payment, dataprotect and certs
+  publish the event's `result` at top level. The audit record used to say
+  `success` for every event these services sent.
+- **When measurement started is shown.** The overview returns
+  `recorded_since`, and the dashboard says "Measured since …; earlier
+  operations were not recorded". History is not backfilled: pre-2.1.0 events
+  recorded a wrap as an encrypt and a MAC as a sign, had no duration, and
+  left out refusals, so any backfill would mislabel it (docs/DECISIONS.md).
+- The route kernel records `duration_ms` to the microsecond.
+
 ## [2.1.0-beta] — 2026-09-28
 
 ### Operations metrics are real, and live in Analytics

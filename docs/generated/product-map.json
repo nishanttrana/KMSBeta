@@ -7805,7 +7805,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/attested_release.go",
       "handler": "h.attestedRelease",
-      "line": 134,
+      "line": 135,
       "match_key": "keycore|POST|/keys/{param}/attested-release",
       "method": "POST",
       "normalized_path": "/keys/{param}/attested-release",
@@ -16702,7 +16702,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/attested_release.go",
       "handler": "h.attestedRelease",
-      "line": 134,
+      "line": 135,
       "match_key": "keycore|POST|/keys/{param}/attested-release",
       "method": "POST",
       "normalized_path": "/keys/{param}/attested-release",
@@ -23908,7 +23908,7 @@
       "file": "web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx",
       "handler": "",
       "label": "setSection(s.id as any)} style={{ padding: \"8px 16px\", border: \"none\", backgr...",
-      "line": 128,
+      "line": 144,
       "tabs": [],
       "tag": "button"
     },
@@ -32044,7 +32044,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 45,
+      "line": 53,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -32057,7 +32057,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 50,
+      "line": 58,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -32070,7 +32070,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 55,
+      "line": 63,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -32083,7 +32083,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
-      "line": 60,
+      "line": 68,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -33796,7 +33796,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-27T18:47:18Z",
+  "generated_at": "2026-09-27T19:07:43Z",
   "navigation": [
     {
       "group": "Overview",
@@ -36489,7 +36489,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
           "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 45,
+          "line": 53,
           "source": "serviceRequest"
         }
       ],
@@ -36564,7 +36564,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
           "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 50,
+          "line": 58,
           "source": "serviceRequest"
         }
       ],
@@ -36605,7 +36605,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
           "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 55,
+          "line": 63,
           "source": "serviceRequest"
         }
       ],
@@ -36646,7 +36646,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
           "file": "web/dashboard/src/lib/opsMetrics.ts",
-          "line": 60,
+          "line": 68,
           "source": "serviceRequest"
         }
       ],
@@ -42442,6 +42442,7 @@
             "ListProfiles",
             "ensureDefaultProfiles",
             "IssueCertificate",
+            "signsLocally",
             "dedupStrings",
             "parseCSRPEM",
             "csrSANs",
@@ -42452,7 +42453,9 @@
             "selectExtKeyUsage",
             "splitSANs",
             "buildLeafSigningIntent",
+            "signingFailed",
             "GetCertificate",
+            "meteredIf",
             "RunTenantExpiryAlertSweep",
             "DownloadCertificate",
             "normalizeDownloadAsset",
@@ -42743,6 +42746,7 @@
         "GetCA",
         "parseCertificatePEM",
         "loadCASigner",
+        "signsLocally",
         "dedupStrings",
         "parseCSRPEM",
         "csrSANs",
@@ -42757,9 +42761,11 @@
         "buildLeafSigningIntent",
         "addCertMetaExtensions",
         "CreateCertificate",
+        "signingFailed",
         "newID",
         "GetCertificate",
-        "publishAudit"
+        "publishAudit",
+        "meteredIf"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -42787,6 +42793,7 @@
             "GetCA",
             "parseCertificatePEM",
             "loadCASigner",
+            "signsLocally",
             "dedupStrings",
             "parseCSRPEM",
             "csrSANs",
@@ -42801,9 +42808,11 @@
             "buildLeafSigningIntent",
             "addCertMetaExtensions",
             "CreateCertificate",
+            "signingFailed",
             "newID",
             "GetCertificate",
-            "publishAudit"
+            "publishAudit",
+            "meteredIf"
           ],
           "internal_package_calls": [],
           "line": 492,
@@ -42884,6 +42893,7 @@
         "GetCA",
         "parseCertificatePEM",
         "loadCASigner",
+        "signsLocally",
         "dedupStrings",
         "parseCSRPEM",
         "csrSANs",
@@ -42898,9 +42908,11 @@
         "buildLeafSigningIntent",
         "addCertMetaExtensions",
         "CreateCertificate",
+        "signingFailed",
         "newID",
         "GetCertificate",
-        "publishAudit"
+        "publishAudit",
+        "meteredIf"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -42928,6 +42940,7 @@
             "GetCA",
             "parseCertificatePEM",
             "loadCASigner",
+            "signsLocally",
             "dedupStrings",
             "parseCSRPEM",
             "csrSANs",
@@ -42942,9 +42955,11 @@
             "buildLeafSigningIntent",
             "addCertMetaExtensions",
             "CreateCertificate",
+            "signingFailed",
             "newID",
             "GetCertificate",
-            "publishAudit"
+            "publishAudit",
+            "meteredIf"
           ],
           "internal_package_calls": [],
           "line": 492,
@@ -43028,7 +43043,7 @@
             "RunTenantExpiryAlertSweep"
           ],
           "internal_package_calls": [],
-          "line": 664,
+          "line": 666,
           "name": "ListCertificates",
           "receiver_calls": [],
           "store_calls": [
@@ -43085,7 +43100,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 673,
+          "line": 675,
           "name": "GetCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43161,7 +43176,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 944,
+          "line": 946,
           "name": "DeleteCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43257,7 +43272,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 682,
+          "line": 684,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43330,7 +43345,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 881,
+          "line": 883,
           "name": "RenewCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43403,7 +43418,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 920,
+          "line": 922,
           "name": "RevokeCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43686,6 +43701,9 @@
         "GetCertificateBySerial",
         "defaultString",
         "CheckOCSPDER",
+        "signsLocally",
+        "signingFailed",
+        "meteredIf",
         "Inventory",
         "RunTenantExpiryAlertSweep",
         "GetInventory",
@@ -43703,10 +43721,7 @@
         "RefreshTenantRenewalIntelligence",
         "ListCertificates",
         "ListCertExpiryAlertStates",
-        "DeleteCertExpiryAlertState",
-        "UpdateCertificateStatus",
-        "UpsertCertExpiryAlertState",
-        "AcmeNewAccount"
+        "DeleteCertExpiryAlertState"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
@@ -43747,6 +43762,9 @@
             "GetCertificateBySerial",
             "defaultString",
             "CheckOCSPDER",
+            "signsLocally",
+            "signingFailed",
+            "meteredIf",
             "Inventory",
             "RunTenantExpiryAlertSweep",
             "GetInventory",
@@ -43871,7 +43889,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 977,
+          "line": 979,
           "name": "GenerateCRL",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -44017,7 +44035,10 @@
         "GetCA",
         "parseCertificatePEM",
         "loadCASigner",
+        "signsLocally",
         "defaultString",
+        "signingFailed",
+        "meteredIf",
         "Inventory",
         "RunTenantExpiryAlertSweep",
         "GetInventory",
@@ -44040,10 +44061,7 @@
         "UpsertCertExpiryAlertState",
         "AcmeNewAccount",
         "ensureProtocolEnabled",
-        "newID",
-        "CreateACMEAccount",
-        "AcmeNewOrder",
-        "acmeOptions"
+        "newID"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
@@ -44078,7 +44096,10 @@
             "GetCA",
             "parseCertificatePEM",
             "loadCASigner",
+            "signsLocally",
             "defaultString",
+            "signingFailed",
+            "meteredIf",
             "Inventory",
             "RunTenantExpiryAlertSweep",
             "GetInventory",
@@ -44199,7 +44220,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 1075,
+          "line": 1077,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -44253,7 +44274,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1036,
+          "line": 1038,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -44358,7 +44379,10 @@
         "GetCA",
         "parseCertificatePEM",
         "loadCASigner",
+        "signsLocally",
         "defaultString",
+        "signingFailed",
+        "meteredIf",
         "Inventory",
         "RunTenantExpiryAlertSweep",
         "GetInventory",
@@ -44381,10 +44405,7 @@
         "UpsertCertExpiryAlertState",
         "AcmeNewAccount",
         "ensureProtocolEnabled",
-        "newID",
-        "CreateACMEAccount",
-        "AcmeNewOrder",
-        "acmeOptions"
+        "newID"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
@@ -44419,7 +44440,10 @@
             "GetCA",
             "parseCertificatePEM",
             "loadCASigner",
+            "signsLocally",
             "defaultString",
+            "signingFailed",
+            "meteredIf",
             "Inventory",
             "RunTenantExpiryAlertSweep",
             "GetInventory",
@@ -44540,7 +44564,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 1075,
+          "line": 1077,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -44594,7 +44618,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1036,
+          "line": 1038,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -44696,7 +44720,7 @@
             "GetInventory"
           ],
           "internal_package_calls": [],
-          "line": 1180,
+          "line": 1184,
           "name": "Inventory",
           "receiver_calls": [],
           "store_calls": [
@@ -44757,7 +44781,7 @@
             "Status"
           ],
           "internal_package_calls": [],
-          "line": 2502,
+          "line": 2509,
           "name": "SecurityStatus",
           "receiver_calls": [
             "s.securityProvider.Status"
@@ -44821,7 +44845,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1252,
+          "line": 1256,
           "name": "GetCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -44903,7 +44927,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1275,
+          "line": 1279,
           "name": "UpsertCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -44933,7 +44957,7 @@
             "UpsertCertExpiryAlertState"
           ],
           "internal_package_calls": [],
-          "line": 1318,
+          "line": 1322,
           "name": "RunTenantExpiryAlertSweep",
           "receiver_calls": [],
           "store_calls": [
@@ -45231,7 +45255,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2476,
+          "line": 2480,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -45794,7 +45818,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2476,
+          "line": 2480,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -45858,7 +45882,7 @@
             "defaultProtocolConfig"
           ],
           "internal_package_calls": [],
-          "line": 1189,
+          "line": 1193,
           "name": "ListProtocolConfigs",
           "receiver_calls": [],
           "store_calls": [
@@ -45986,7 +46010,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1216,
+          "line": 1220,
           "name": "UpsertProtocolConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -46084,7 +46108,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1825,
+          "line": 1829,
           "name": "UploadThirdPartyCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -46347,7 +46371,7 @@
             "parseACMEProtocolOptions"
           ],
           "internal_package_calls": [],
-          "line": 1998,
+          "line": 2002,
           "name": "acmeOptions",
           "receiver_calls": [],
           "store_calls": []
@@ -46395,7 +46419,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2101,
+          "line": 2105,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46449,7 +46473,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2101,
+          "line": 2105,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46527,7 +46551,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2118,
+          "line": 2122,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46544,7 +46568,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2101,
+          "line": 2105,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46566,7 +46590,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1408,
+          "line": 1412,
           "name": "AcmeNewAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -46654,7 +46678,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2118,
+          "line": 2122,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46671,7 +46695,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2101,
+          "line": 2105,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -46701,7 +46725,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 1433,
+          "line": 1437,
           "name": "AcmeNewOrder",
           "receiver_calls": [],
           "store_calls": [
@@ -46841,7 +46865,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 2175,
+          "line": 2179,
           "name": "ACMEChallengeInfo",
           "receiver_calls": [],
           "store_calls": [
@@ -46913,7 +46937,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1505,
+          "line": 1509,
           "name": "AcmeRespondChallenge",
           "receiver_calls": [],
           "store_calls": [
@@ -46995,7 +47019,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2118,
+          "line": 2122,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -47012,7 +47036,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2101,
+          "line": 2105,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -47037,7 +47061,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 1538,
+          "line": 1542,
           "name": "AcmeFinalize",
           "receiver_calls": [],
           "store_calls": [
@@ -47125,7 +47149,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 682,
+          "line": 684,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -47184,7 +47208,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 1913,
+          "line": 1917,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -47252,7 +47276,7 @@
             "ListProfiles"
           ],
           "internal_package_calls": [],
-          "line": 2234,
+          "line": 2238,
           "name": "ESTCSRAttributes",
           "receiver_calls": [],
           "store_calls": [
@@ -47335,7 +47359,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1581,
+          "line": 1585,
           "name": "ESTSimpleEnroll",
           "receiver_calls": [],
           "store_calls": []
@@ -47409,7 +47433,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1614,
+          "line": 1618,
           "name": "ESTSimpleReenroll",
           "receiver_calls": [],
           "store_calls": [
@@ -47481,7 +47505,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1656,
+          "line": 1660,
           "name": "ESTServerKeygen",
           "receiver_calls": [],
           "store_calls": []
@@ -47561,7 +47585,7 @@
             "dedupStrings"
           ],
           "internal_package_calls": [],
-          "line": 1927,
+          "line": 1931,
           "name": "SCEPCapabilities",
           "receiver_calls": [],
           "store_calls": []
@@ -47578,7 +47602,7 @@
             "GetCertificateBySerial"
           ],
           "internal_package_calls": [],
-          "line": 2262,
+          "line": 2266,
           "name": "SCEPGetCert",
           "receiver_calls": [],
           "store_calls": [
@@ -47596,7 +47620,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 1913,
+          "line": 1917,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -47693,7 +47717,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2390,
+          "line": 2394,
           "name": "loadCASigner",
           "receiver_calls": [],
           "store_calls": []
@@ -47712,7 +47736,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1688,
+          "line": 1692,
           "name": "SCEPPKIOperation",
           "receiver_calls": [],
           "store_calls": []
@@ -47806,7 +47830,7 @@
             "GetCertificate"
           ],
           "internal_package_calls": [],
-          "line": 1740,
+          "line": 1744,
           "name": "CMPv2Request",
           "receiver_calls": [],
           "store_calls": [
@@ -47884,7 +47908,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2292,
+          "line": 2296,
           "name": "CMPv2Confirm",
           "receiver_calls": [],
           "store_calls": [
@@ -47898,7 +47922,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2338,
+          "line": 2342,
           "name": "CMPv2Error",
           "receiver_calls": [],
           "store_calls": []
@@ -53763,7 +53787,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3050,
+          "line": 3051,
           "name": "Tokenize",
           "receiver_calls": [],
           "store_calls": []
@@ -53775,7 +53799,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54326,7 +54350,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3368,
+          "line": 3371,
           "name": "Detokenize",
           "receiver_calls": [],
           "store_calls": []
@@ -54338,7 +54362,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54398,7 +54422,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3050,
+          "line": 3051,
           "name": "Tokenize",
           "receiver_calls": [],
           "store_calls": []
@@ -54410,7 +54434,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54470,7 +54494,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3368,
+          "line": 3371,
           "name": "Detokenize",
           "receiver_calls": [],
           "store_calls": []
@@ -54482,7 +54506,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54546,7 +54570,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 2889,
+          "line": 2890,
           "name": "ListTokenVaults",
           "receiver_calls": [],
           "store_calls": [
@@ -54658,7 +54682,7 @@
             "GetTokenVault"
           ],
           "internal_package_calls": [],
-          "line": 2790,
+          "line": 2791,
           "name": "CreateTokenVault",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -54675,7 +54699,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54736,7 +54760,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2937,
+          "line": 2938,
           "name": "GetExternalTokenVaultSetup",
           "receiver_calls": [],
           "store_calls": []
@@ -54780,7 +54804,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2897,
+          "line": 2898,
           "name": "GetTokenVault",
           "receiver_calls": [],
           "store_calls": []
@@ -54850,7 +54874,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2919,
+          "line": 2920,
           "name": "DeleteTokenVault",
           "receiver_calls": [],
           "store_calls": [
@@ -54864,7 +54888,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54932,7 +54956,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3523,
+          "line": 3528,
           "name": "FPEEncrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -54944,7 +54968,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55011,7 +55035,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3557,
+          "line": 3564,
           "name": "FPEDecrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -55023,7 +55047,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55133,7 +55157,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 3706,
+          "line": 3715,
           "name": "ListMaskingPolicies",
           "receiver_calls": [],
           "store_calls": [
@@ -55212,7 +55236,7 @@
             "GetMaskingPolicy"
           ],
           "internal_package_calls": [],
-          "line": 3638,
+          "line": 3647,
           "name": "CreateMaskingPolicy",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -55283,7 +55307,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3670,
+          "line": 3679,
           "name": "UpdateMaskingPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -55341,7 +55365,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3691,
+          "line": 3700,
           "name": "DeleteMaskingPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -55451,7 +55475,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 3820,
+          "line": 3829,
           "name": "ListRedactionPolicies",
           "receiver_calls": [],
           "store_calls": [
@@ -55538,7 +55562,7 @@
             "GetRedactionPolicy"
           ],
           "internal_package_calls": [],
-          "line": 3781,
+          "line": 3790,
           "name": "CreateRedactionPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -55607,7 +55631,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3894,
+          "line": 3903,
           "name": "EncryptFields",
           "receiver_calls": [],
           "store_calls": []
@@ -55619,7 +55643,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55686,7 +55710,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 3986,
+          "line": 3997,
           "name": "DecryptFields",
           "receiver_calls": [],
           "store_calls": []
@@ -55698,7 +55722,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55765,7 +55789,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 4097,
+          "line": 4110,
           "name": "EnvelopeEncrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -55777,7 +55801,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55843,7 +55867,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 4156,
+          "line": 4171,
           "name": "EnvelopeDecrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -55855,7 +55879,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55921,7 +55945,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 4225,
+          "line": 4242,
           "name": "SearchableEncrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -55933,7 +55957,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55999,7 +56023,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 4265,
+          "line": 4284,
           "name": "SearchableDecrypt",
           "receiver_calls": [],
           "store_calls": []
@@ -56011,7 +56035,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -56080,7 +56104,7 @@
             "normalizeDataProtectionPolicy"
           ],
           "internal_package_calls": [],
-          "line": 385,
+          "line": 386,
           "name": "GetDataProtectionPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -56156,7 +56180,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 400,
+          "line": 401,
           "name": "UpdateDataProtectionPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -56170,7 +56194,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5246,
+          "line": 5267,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -56236,7 +56260,7 @@
             "normalizeFieldProtectionProfile"
           ],
           "internal_package_calls": [],
-          "line": 730,
+          "line": 731,
           "name": "ListFieldProtectionProfiles",
           "receiver_calls": [],
           "store_calls": [
@@ -56296,7 +56320,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 706,
+          "line": 707,
           "name": "UpsertFieldProtectionProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -56359,7 +56383,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 706,
+          "line": 707,
           "name": "UpsertFieldProtectionProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -56422,7 +56446,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 752,
+          "line": 753,
           "name": "DeleteFieldProtectionProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -56516,7 +56540,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 836,
+          "line": 837,
           "name": "ResolveFieldProtectionPolicyBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -56582,7 +56606,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 927,
+          "line": 928,
           "name": "ListFieldEncryptionWrappers",
           "receiver_calls": [],
           "store_calls": [
@@ -56641,7 +56665,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 951,
+          "line": 952,
           "name": "InitFieldEncryptionWrapperRegistration",
           "receiver_calls": [],
           "store_calls": []
@@ -56740,7 +56764,7 @@
           "internal_package_calls": [
             "pkg/crypto.Ed25519VerifyRaw"
           ],
-          "line": 1009,
+          "line": 1010,
           "name": "CompleteFieldEncryptionWrapperRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -56934,7 +56958,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1142,
+          "line": 1143,
           "name": "IssueFieldEncryptionLease",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -57008,7 +57032,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 939,
+          "line": 940,
           "name": "ListFieldEncryptionLeases",
           "receiver_calls": [],
           "store_calls": [
@@ -57117,7 +57141,7 @@
             "CreateFieldEncryptionUsageReceipt"
           ],
           "internal_package_calls": [],
-          "line": 1287,
+          "line": 1288,
           "name": "SubmitFieldEncryptionUsageReceipt",
           "receiver_calls": [],
           "store_calls": [
@@ -57205,7 +57229,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1445,
+          "line": 1446,
           "name": "RenewFieldEncryptionLease",
           "receiver_calls": [],
           "store_calls": [
@@ -57280,7 +57304,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1422,
+          "line": 1423,
           "name": "RevokeFieldEncryptionLease",
           "receiver_calls": [],
           "store_calls": [
@@ -57337,7 +57361,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 5260,
+          "line": 5281,
           "name": "ListAuditLog",
           "receiver_calls": [],
           "store_calls": [
@@ -57393,7 +57417,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 5264,
+          "line": 5285,
           "name": "GetStats",
           "receiver_calls": [],
           "store_calls": [
@@ -66924,7 +66948,7 @@
         "pkg/crypto.RecipientKeyBinding",
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 140,
+      "handler_line": 142,
       "handler_name": "attestedRelease",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -66935,7 +66959,7 @@
       "normalized_path": "/keys/{param}/attested-release",
       "path": "/keys/{id}/attested-release",
       "route_file": "services/keycore/attested_release.go",
-      "route_line": 134,
+      "route_line": 135,
       "service": "keycore",
       "service_external_package_calls": [
         "encoding/hex.EncodeToString",
@@ -71324,7 +71348,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Verify"
           ],
-          "line": 3057,
+          "line": 3063,
           "name": "Verify",
           "receiver_calls": [
             "s.hsm.Verify",
@@ -71521,7 +71545,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3505,
+          "line": 3513,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -71887,7 +71911,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3616,
+          "line": 3626,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -71984,7 +72008,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3697,
+          "line": 3709,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -72052,7 +72076,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3409,
+          "line": 3417,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -72136,7 +72160,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3444,
+          "line": 3452,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -78515,10 +78539,12 @@
       "service_external_package_calls": [
         "strings.TrimSpace",
         "strings.ToUpper",
+        "time.Now",
         "github.com/moov-io/tr31/pkg/tr31.NewHeader",
         "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -78541,8 +78567,7 @@
         "Error",
         "computePaymentKCV",
         "tr31AlgorithmNameFromCode",
-        "tr31FormatForVersion",
-        "publishAudit"
+        "tr31FormatForVersion"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -78552,11 +78577,13 @@
           "external_package_calls": [
             "strings.TrimSpace",
             "strings.ToUpper",
+            "time.Now",
             "github.com/moov-io/tr31/pkg/tr31.NewHeader",
             "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -78579,8 +78606,7 @@
             "Error",
             "computePaymentKCV",
             "tr31AlgorithmNameFromCode",
-            "tr31FormatForVersion",
-            "publishAudit"
+            "tr31FormatForVersion"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
@@ -78626,9 +78652,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "strings.TrimSpace",
-        "strings.ToUpper"
+        "strings.ToUpper",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -78647,8 +78675,7 @@
         "isTR31ExportabilityAllowed",
         "computePaymentKCV",
         "ImportKey",
-        "defaultString",
-        "publishAudit"
+        "defaultString"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -78657,10 +78684,12 @@
         {
           "external_package_calls": [
             "strings.TrimSpace",
-            "strings.ToUpper"
+            "strings.ToUpper",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -78679,13 +78708,12 @@
             "isTR31ExportabilityAllowed",
             "computePaymentKCV",
             "ImportKey",
-            "defaultString",
-            "publishAudit"
+            "defaultString"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1107,
+          "line": 1111,
           "name": "ParseTR31",
           "receiver_calls": [
             "s.keycore.ImportKey"
@@ -78738,10 +78766,12 @@
       "service_external_package_calls": [
         "strings.TrimSpace",
         "strings.ToUpper",
+        "time.Now",
         "github.com/moov-io/tr31/pkg/tr31.NewHeader",
         "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -78766,8 +78796,7 @@
         "isTR31ExportabilityAllowed",
         "defaultTR31KeyVersion",
         "resolveKBPKMaterial",
-        "tr31AlgorithmCode",
-        "publishAudit"
+        "tr31AlgorithmCode"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -78777,11 +78806,13 @@
           "external_package_calls": [
             "strings.TrimSpace",
             "strings.ToUpper",
+            "time.Now",
             "github.com/moov-io/tr31/pkg/tr31.NewHeader",
             "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -78806,13 +78837,12 @@
             "isTR31ExportabilityAllowed",
             "defaultTR31KeyVersion",
             "resolveKBPKMaterial",
-            "tr31AlgorithmCode",
-            "publishAudit"
+            "tr31AlgorithmCode"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1195,
+          "line": 1203,
           "name": "TranslateTR31",
           "receiver_calls": [],
           "store_calls": [
@@ -78864,9 +78894,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "strings.TrimSpace",
-        "strings.ToUpper"
+        "strings.ToUpper",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -78891,10 +78923,12 @@
         {
           "external_package_calls": [
             "strings.TrimSpace",
-            "strings.ToUpper"
+            "strings.ToUpper",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -78915,7 +78949,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1376,
+          "line": 1388,
           "name": "ValidateTR31",
           "receiver_calls": [],
           "store_calls": []
@@ -78958,7 +78992,7 @@
           "file": "services/payment/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1439,
+          "line": 1455,
           "name": "SupportedTR31KeyUsages",
           "receiver_calls": [],
           "store_calls": []
@@ -79008,9 +79042,11 @@
         "encoding/hex.DecodeString",
         "encoding/hex.EncodeToString",
         "strings.TrimSpace",
-        "strings.ToUpper"
+        "strings.ToUpper",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -79031,8 +79067,7 @@
         "buildPINClearBlock",
         "tdesECBEncrypt",
         "CreatePINOperationLog",
-        "newID",
-        "publishAudit"
+        "newID"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -79043,10 +79078,12 @@
             "encoding/hex.DecodeString",
             "encoding/hex.EncodeToString",
             "strings.TrimSpace",
-            "strings.ToUpper"
+            "strings.ToUpper",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -79067,13 +79104,12 @@
             "buildPINClearBlock",
             "tdesECBEncrypt",
             "CreatePINOperationLog",
-            "newID",
-            "publishAudit"
+            "newID"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1445,
+          "line": 1461,
           "name": "TranslatePIN",
           "receiver_calls": [],
           "store_calls": [
@@ -79124,9 +79160,11 @@
       "route_line": 49,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -79141,8 +79179,7 @@
         "Error",
         "CreatePINOperationLog",
         "newID",
-        "normalizePINFormat",
-        "publishAudit"
+        "normalizePINFormat"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -79150,10 +79187,12 @@
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -79168,13 +79207,12 @@
             "Error",
             "CreatePINOperationLog",
             "newID",
-            "normalizePINFormat",
-            "publishAudit"
+            "normalizePINFormat"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1563,
+          "line": 1583,
           "name": "GeneratePVV",
           "receiver_calls": [],
           "store_calls": [
@@ -79226,9 +79264,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "crypto/subtle.ConstantTimeCompare",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "enforceOperationPolicy",
         "withPaymentPolicy",
         "enforceOperationHardPolicies",
@@ -79243,8 +79283,7 @@
         "Error",
         "CreatePINOperationLog",
         "newID",
-        "boolStatus",
-        "publishAudit"
+        "boolStatus"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -79253,10 +79292,12 @@
         {
           "external_package_calls": [
             "crypto/subtle.ConstantTimeCompare",
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "enforceOperationPolicy",
             "withPaymentPolicy",
             "enforceOperationHardPolicies",
@@ -79271,13 +79312,12 @@
             "Error",
             "CreatePINOperationLog",
             "newID",
-            "boolStatus",
-            "publishAudit"
+            "boolStatus"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1616,
+          "line": 1640,
           "name": "VerifyPVV",
           "receiver_calls": [],
           "store_calls": [
@@ -79321,9 +79361,11 @@
       "route_line": 51,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -79333,17 +79375,18 @@
         "generatePINOffset",
         "Error",
         "CreatePINOperationLog",
-        "newID",
-        "publishAudit"
+        "newID"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -79353,11 +79396,10 @@
             "generatePINOffset",
             "Error",
             "CreatePINOperationLog",
-            "newID",
-            "publishAudit"
+            "newID"
           ],
           "internal_package_calls": [],
-          "line": 1666,
+          "line": 1694,
           "name": "GenerateOffset",
           "receiver_calls": [],
           "store_calls": [
@@ -79401,9 +79443,11 @@
       "route_line": 52,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -79413,17 +79457,18 @@
         "verifyPINOffset",
         "CreatePINOperationLog",
         "newID",
-        "boolStatus",
-        "publishAudit"
+        "boolStatus"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -79433,11 +79478,10 @@
             "verifyPINOffset",
             "CreatePINOperationLog",
             "newID",
-            "boolStatus",
-            "publishAudit"
+            "boolStatus"
           ],
           "internal_package_calls": [],
-          "line": 1704,
+          "line": 1736,
           "name": "VerifyOffset",
           "receiver_calls": [],
           "store_calls": [
@@ -79488,9 +79532,11 @@
       "route_line": 53,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -79504,8 +79550,7 @@
         "computeCVVWithTDES",
         "Error",
         "CreatePINOperationLog",
-        "newID",
-        "publishAudit"
+        "newID"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -79513,10 +79558,12 @@
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -79530,13 +79577,12 @@
             "computeCVVWithTDES",
             "Error",
             "CreatePINOperationLog",
-            "newID",
-            "publishAudit"
+            "newID"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1740,
+          "line": 1776,
           "name": "ComputeCVV",
           "receiver_calls": [],
           "store_calls": [
@@ -79588,9 +79634,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "crypto/subtle.ConstantTimeCompare",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "enforceOperationPolicy",
         "withPaymentPolicy",
         "enforceOperationHardPolicies",
@@ -79602,8 +79650,7 @@
         "resolveOperationKeyMaterial",
         "consumeMeter",
         "computeCVVWithTDES",
-        "Error",
-        "publishAudit"
+        "Error"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize"
@@ -79612,10 +79659,12 @@
         {
           "external_package_calls": [
             "crypto/subtle.ConstantTimeCompare",
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "enforceOperationPolicy",
             "withPaymentPolicy",
             "enforceOperationHardPolicies",
@@ -79627,13 +79676,12 @@
             "resolveOperationKeyMaterial",
             "consumeMeter",
             "computeCVVWithTDES",
-            "Error",
-            "publishAudit"
+            "Error"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1792,
+          "line": 1832,
           "name": "VerifyCVV",
           "receiver_calls": [],
           "store_calls": []
@@ -79762,9 +79810,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "crypto/subtle.ConstantTimeCompare",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "enforceOperationPolicy",
         "withPaymentPolicy",
         "enforceOperationHardPolicies",
@@ -79784,10 +79834,12 @@
         {
           "external_package_calls": [
             "crypto/subtle.ConstantTimeCompare",
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "enforceOperationPolicy",
             "withPaymentPolicy",
             "enforceOperationHardPolicies",
@@ -79803,7 +79855,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1874,
+          "line": 1922,
           "name": "VerifyMAC",
           "receiver_calls": [],
           "store_calls": []
@@ -79850,9 +79902,11 @@
       "route_line": 61,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "normalizeISOXML",
         "newServiceError",
         "enforceOperationPolicy",
@@ -79863,17 +79917,18 @@
         "consumeMeter",
         "Sign",
         "Error",
-        "firstString",
-        "publishAudit"
+        "firstString"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "normalizeISOXML",
             "newServiceError",
             "enforceOperationPolicy",
@@ -79884,11 +79939,10 @@
             "consumeMeter",
             "Sign",
             "Error",
-            "firstString",
-            "publishAudit"
+            "firstString"
           ],
           "internal_package_calls": [],
-          "line": 1951,
+          "line": 2003,
           "name": "ISO20022Sign",
           "receiver_calls": [
             "s.keycore.Sign"
@@ -79939,9 +79993,11 @@
       "route_line": 62,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "normalizeISOXML",
         "newServiceError",
         "enforceOperationPolicy",
@@ -79958,10 +80014,12 @@
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "normalizeISOXML",
             "newServiceError",
             "enforceOperationPolicy",
@@ -79975,7 +80033,7 @@
             "boolValue"
           ],
           "internal_package_calls": [],
-          "line": 2000,
+          "line": 2056,
           "name": "ISO20022Verify",
           "receiver_calls": [
             "s.keycore.Verify"
@@ -80026,9 +80084,11 @@
       "route_line": 63,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "normalizeISOXML",
         "newServiceError",
         "enforceOperationPolicy",
@@ -80038,17 +80098,18 @@
         "consumeMeter",
         "Encrypt",
         "Error",
-        "firstString",
-        "publishAudit"
+        "firstString"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "normalizeISOXML",
             "newServiceError",
             "enforceOperationPolicy",
@@ -80058,11 +80119,10 @@
             "consumeMeter",
             "Encrypt",
             "Error",
-            "firstString",
-            "publishAudit"
+            "firstString"
           ],
           "internal_package_calls": [],
-          "line": 2039,
+          "line": 2099,
           "name": "ISO20022Encrypt",
           "receiver_calls": [
             "s.keycore.Encrypt"
@@ -80113,9 +80173,11 @@
       "route_line": 64,
       "service": "payment",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -80132,10 +80194,12 @@
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -80149,7 +80213,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2084,
+          "line": 2148,
           "name": "ISO20022Decrypt",
           "receiver_calls": [
             "s.keycore.Decrypt"
@@ -80201,9 +80265,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "crypto/hmac.New",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "newServiceError",
         "enforceOperationPolicy",
         "withPaymentPolicy",
@@ -80219,10 +80285,12 @@
         {
           "external_package_calls": [
             "crypto/hmac.New",
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "newServiceError",
             "enforceOperationPolicy",
             "withPaymentPolicy",
@@ -80234,7 +80302,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2123,
+          "line": 2191,
           "name": "GenerateLAU",
           "receiver_calls": [],
           "store_calls": []
@@ -80282,9 +80350,11 @@
       "service": "payment",
       "service_external_package_calls": [
         "crypto/subtle.ConstantTimeCompare",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "time.Now"
       ],
       "service_helper_calls": [
+        "auditOp",
         "enforceOperationPolicy",
         "withPaymentPolicy",
         "enforceOperationHardPolicies",
@@ -80299,10 +80369,12 @@
         {
           "external_package_calls": [
             "crypto/subtle.ConstantTimeCompare",
-            "strings.TrimSpace"
+            "strings.TrimSpace",
+            "time.Now"
           ],
           "file": "services/payment/service.go",
           "helper_calls": [
+            "auditOp",
             "enforceOperationPolicy",
             "withPaymentPolicy",
             "enforceOperationHardPolicies",
@@ -80313,7 +80385,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2160,
+          "line": 2232,
           "name": "VerifyLAU",
           "receiver_calls": [],
           "store_calls": []
@@ -94208,7 +94280,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
             "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 45,
+            "line": 53,
             "source": "serviceRequest"
           }
         ],
@@ -94265,7 +94337,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/ops-metrics/latency?window=${window}`)",
             "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 50,
+            "line": 58,
             "source": "serviceRequest"
           }
         ],
@@ -94297,7 +94369,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/ops-metrics/by-service?window=${window}`)",
             "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 55,
+            "line": 63,
             "source": "serviceRequest"
           }
         ],
@@ -94329,7 +94401,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/ops-metrics/errors?window=${window}`)",
             "file": "web/dashboard/src/lib/opsMetrics.ts",
-            "line": 60,
+            "line": 68,
             "source": "serviceRequest"
           }
         ],
@@ -110405,7 +110477,7 @@
         "frontendSites": [],
         "handler": "attestedRelease",
         "handlerFile": "services/keycore/attested_release.go",
-        "handlerLine": 140,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.RecipientKeyBinding",
@@ -116887,6 +116959,7 @@
         "externalPackages": [
           "strings.TrimSpace",
           "strings.ToUpper",
+          "time.Now",
           "github.com/moov-io/tr31/pkg/tr31.NewHeader",
           "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
         ],
@@ -116925,7 +116998,8 @@
         "complexity": 2,
         "externalPackages": [
           "strings.TrimSpace",
-          "strings.ToUpper"
+          "strings.ToUpper",
+          "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleTR31Parse",
@@ -116958,6 +117032,7 @@
         "externalPackages": [
           "strings.TrimSpace",
           "strings.ToUpper",
+          "time.Now",
           "github.com/moov-io/tr31/pkg/tr31.NewHeader",
           "github.com/moov-io/tr31/pkg/tr31.NewKeyBlock"
         ],
@@ -116998,7 +117073,8 @@
         "complexity": 1,
         "externalPackages": [
           "strings.TrimSpace",
-          "strings.ToUpper"
+          "strings.ToUpper",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117062,7 +117138,8 @@
           "encoding/hex.DecodeString",
           "encoding/hex.EncodeToString",
           "strings.TrimSpace",
-          "strings.ToUpper"
+          "strings.ToUpper",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117100,7 +117177,8 @@
       {
         "complexity": 2,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117139,7 +117217,8 @@
         "complexity": 2,
         "externalPackages": [
           "crypto/subtle.ConstantTimeCompare",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117177,7 +117256,8 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleOffsetGenerate",
@@ -117206,7 +117286,8 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleOffsetVerify",
@@ -117235,7 +117316,8 @@
       {
         "complexity": 2,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117274,7 +117356,8 @@
         "complexity": 1,
         "externalPackages": [
           "crypto/subtle.ConstantTimeCompare",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117380,7 +117463,8 @@
         "complexity": 1,
         "externalPackages": [
           "crypto/subtle.ConstantTimeCompare",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117416,7 +117500,8 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117452,7 +117537,8 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117488,7 +117574,8 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117524,7 +117611,8 @@
       {
         "complexity": 2,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117563,7 +117651,8 @@
         "complexity": 1,
         "externalPackages": [
           "crypto/hmac.New",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -117600,7 +117689,8 @@
         "complexity": 1,
         "externalPackages": [
           "crypto/subtle.ConstantTimeCompare",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "time.Now"
         ],
         "frontendSites": [
           {
@@ -123483,7 +123573,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-27T18:47:18Z",
+    "generatedAt": "2026-09-27T19:07:43Z",
     "methods": [
       "DELETE",
       "GET",

@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### "Everything else calls keycore" was an assumption, and it hid unaudited crypto
+- **What happened:** 2.1.0-beta said only keycore's operations mattered for
+  metrics because "everything else calls keycore". It was never checked.
+  Payment runs PIN, CVV, MAC, LAU and TR-31 with local TDES and CMAC, and
+  dataprotect runs FF1 and AES-GCM with derived working keys. Checking also
+  showed that payment's MAC, LAU, TR-31 validate and ISO 20022
+  verify/decrypt emitted no audit event at all. No refused or failed
+  operation in payment or dataprotect was audited. Their publishers never
+  set `result`, so the audit record said `success` even for a refusal.
+- **Why it slipped through:** the audit register listed the events that
+  existed, and nothing listed the operations that should have one. A grep
+  for `"audit\.[a-z_]+\.[a-z_]+"` skips subjects with digits (`tr31`,
+  `iso20022`), so the survey under-counted what was audited.
+- **Rule:** before claiming coverage, list the operations (routes and
+  service methods) and check each one against its event, not the events
+  against themselves. A crypto operation's event is emitted from a deferred
+  call on the method's named `err`, so no return path can skip it.
+
 ### A metrics tab read a table that nothing wrote (Operations Metrics)
 - **What happened:** Operations Metrics was always empty. Its only writer
   was `POST /ops-metrics/record`, and no service called it. The latency

@@ -288,7 +288,7 @@ var NodeLocal = map[string]string{
 	"key_usage_events":                    "per-node crypto-operation log (written on every node)",
 	"kmip_operations":                     "per-node KMIP operation log",
 	"kmip_sessions":                       "KMIP connections held by this node",
-	"ops_metrics_hourly":                  "per-node operation metrics",
+	"ops_metrics_hourly":                  "operation metrics by node; the primary also counts members' relayed operations",
 	"pin_operations_log":                  "per-node PIN operation log",
 	"platform_fips_observed":              "the FIPS mode this node runs",
 	"platform_mtls_observed":              "the internal mTLS certificate and key exchange this node's services run",

@@ -1094,14 +1094,21 @@ Response:
 
 ### Operations metrics: /svc/audit/ops-metrics
 
-Built by the audit service from the `audit.key.<op>` events keycore emits
-for every key operation (2.1.0-beta). There is no write endpoint:
-`POST /ops-metrics/record` was removed. Every read takes
-`?window=1h|6h|24h|7d|30d` (default `24h`) and counts per node.
+Built by the audit service from every persisted event whose details carry
+`metered_op` (`pkg/audit.MeteredOp`) with `duration_ms` and `result`
+(`success`, `refused` or `failure`). Emitters set it with
+`pkg/audit.Metered(details, op, start)`, and a kernel route with
+`route.Spec{Metered: "<op>"}`. Meter an operation only in the service that
+does its cryptography, so one request is counted once. There is no write
+endpoint (the record endpoint was removed in 2.1.0-beta). Every read takes
+`?window=1h|6h|24h|7d|30d` (default `24h`). On a cluster primary the
+figures cover every node: members' operations are counted as the audit
+relay passes their replicated events. A member counts only its own
+(2.2.0-beta).
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/svc/audit/ops-metrics/overview` | `overview`: `total_ops`, `total_errors` (refused + failed), `error_rate`, `avg_latency_ms` |
+| GET | `/svc/audit/ops-metrics/overview` | `overview`: `total_ops`, `total_errors` (refused + failed), `error_rate`, `avg_latency_ms`, `scope` (`cluster` on the primary, `node` on a member, `standalone`), `by_node` (`node`, `total_ops`), `recorded_since` (first recorded hour, or `null`: operations before it were not measured) |
 | GET | `/svc/audit/ops-metrics/timeseries` | `items`: per hour `total_ops`, `total_errors`, `avg_latency_ms` |
 | GET | `/svc/audit/ops-metrics/latency` | `items`: per service and `op_type`, `avg_ms` (exact) and `p50_ms` / `p90_ms` / `p99_ms`: the upper bound of the histogram bucket (0.1 to 1000 ms) each percentile falls in; `null` is slower than 1000 ms |
 | GET | `/svc/audit/ops-metrics/by-service` | `items`: `total_ops`, `total_errors`, `error_rate`, `avg_latency_ms` |
@@ -2857,6 +2864,10 @@ Selected events with dedicated audit classification:
 - `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` (kernel events, permission `health.read`; refusals `unauthenticated`, `permission_denied`): platform health reads (1.39.0-beta)
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.wrap`, `audit.key.unwrap`, `audit.key.sign`, `audit.key.verify`, `audit.key.mac`, `audit.key.derive`, `audit.key.kem_encapsulate`, `audit.key.kem_decapsulate`: every key operation, named after the operation that ran, with `duration_ms` and `result` `success` / `refused` (`reason`) / `failure` / `pending_approval` (2.1.0-beta; these feed the Operations metrics)
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`
+- `audit.dataprotect.<op>_refused`, `audit.dataprotect.<op>_failed` (`op`: `tokenize`, `detokenize`, `fpe_encrypt`, `fpe_decrypt`, `field_encrypt`, `field_decrypt`, `envelope_encrypt`, `envelope_decrypt`, `searchable_encrypt`, `searchable_decrypt`)
+- `audit.payment.tr31_validated`, `audit.payment.mac_computed`, `audit.payment.mac_verified`, `audit.payment.lau_generated`, `audit.payment.lau_verified`, `audit.payment.iso20022_verified`, `audit.payment.iso20022_decrypted`, and `audit.payment.<op>_refused` / `<op>_failed` for every payment operation (2.2.0-beta)
+- `audit.cert.cert_issue_failed`, `audit.cert.ocsp_sign_failed`
+- Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain): audit trail integrity
