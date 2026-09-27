@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.39.0-beta] — 2026-09-28
+
+### One Health view, in Administration
+- **Platform > Health is gone; its content moved to Administration >
+  Health.** The two screens showed different things under the same name,
+  and the Platform one was always empty: it fetched `/api/watchdog/*` and
+  `/api/reconciler/*`, which Envoy never routed, sent no token, and turned
+  every failure into "No heartbeats received yet". A saved `health` tab or
+  `#health` link now opens Administration.
+- Administration > Health keeps the live service list (`/auth/system-health`,
+  restart buttons) and adds **Heartbeats & Watchdog** (self-reported liveness
+  and recent incidents) and **Reconciler Controllers**. A section whose call
+  fails says "Unavailable: <error>"; it never shows an empty list instead.
+- **Watchdog and reconciler are on the route kernel.** Their read routes
+  were unauthenticated raw muxes. They now need a verified token with the
+  new `health.read` permission (administrators hold it through `*`) and emit
+  `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed` and
+  `audit.reconciler.status_read`, refusals included. Envoy routes
+  `/svc/watchdog/` and `/svc/reconciler/` over mTLS. Both services now
+  refuse to start without their audit connection. Their unused `/healthz`
+  is removed (compose checks the port).
+- **Every `platform.Boot` service publishes a heartbeat** once it is
+  serving (hsm-connector, payment, secrets, certs, dataprotect), so they
+  appear in the watchdog without per-service wiring.
+- The reconciler reports no `last_run_at` for a controller that has not run
+  yet; it used to send `0001-01-01T00:00:00Z`.
+
 ## [1.38.0-beta] — 2026-09-27
 
 ### Key history lives on the key; the fake lineage tamper check is gone

@@ -2656,6 +2656,28 @@ Returns PQC readiness metrics from the latest CBOM.
 
 ---
 
+## Platform health (watchdog, reconciler)
+
+Shown in **Administration > System Administration > Health**, under the
+live service list from `GET /auth/system-health` (1.39.0-beta; the separate
+Platform > Health tab is gone). Both services are on the `pkg/route` kernel:
+a verified bearer token holding `health.read` is required (administrators
+hold it through `*`), and every read is audited, refusals included. Before
+1.39.0-beta these routes were unauthenticated and Envoy did not route them,
+so the dashboard tab was always empty.
+
+| Method | Path | Returns | Audit |
+|---|---|---|---|
+| GET | `/svc/watchdog/watchdog/heartbeats` | `items[]`: `service`, `state`, `last_seen`, `silence_seconds`, `healthy` (silent over 90s or reporting `degraded` = unhealthy), sorted by service | `audit.watchdog.heartbeats_listed` |
+| GET | `/svc/watchdog/watchdog/incidents` | `items[]`: `id`, `service`, `reason`, `action`, `recommendation`, `timestamp` (rolling in-memory window) | `audit.watchdog.incidents_listed` |
+| GET | `/svc/reconciler/reconciler/status` | `items[]`: `name`, `last_run_at` (absent until the first pass), `last_error` | `audit.reconciler.status_read` |
+
+Heartbeats come from `pkg/heartbeat` on `health.<service>.heartbeat`. Every
+service started through `platform.Boot` publishes one once it is serving;
+keycore, kmip, audit and policy publish their own.
+
+---
+
 ## AI gateway health
 
 `GET /ai-gateway/v1/health` returns the checks it ran: `database` (a
@@ -2784,6 +2806,9 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |
 | audit.sbom.* | SBOM/CBOM generation |
+| audit.watchdog.* | Watchdog heartbeat and incident reads |
+| audit.reconciler.* | Reconciler status reads |
+| audit.health.* | Watchdog incidents (a service went silent or degraded) |
 | audit.ai.* | AI queries and recommendations |
 
 Selected events with dedicated audit classification:
@@ -2795,6 +2820,7 @@ Selected events with dedicated audit classification:
 - `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
+- `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` (kernel events, permission `health.read`; refusals `unauthenticated`, `permission_denied`): platform health reads (1.39.0-beta)
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
@@ -3749,6 +3775,10 @@ from the code; do not edit by hand.
 - `GET /svc/pqc/pqc/scans/{id}`
 - `GET /svc/pqc/pqc/timeline`
 
+### reconciler (`/svc/reconciler/`)
+
+- `GET /svc/reconciler/reconciler/status`
+
 ### reporting (`/svc/reporting/`)
 
 - `GET /svc/reporting/alerts`
@@ -3844,6 +3874,11 @@ from the code; do not edit by hand.
 - `PUT /svc/signing/signing/settings`
 - `GET /svc/signing/signing/summary`
 - `POST /svc/signing/signing/verify`
+
+### watchdog (`/svc/watchdog/`)
+
+- `GET /svc/watchdog/watchdog/heartbeats`
+- `GET /svc/watchdog/watchdog/incidents`
 
 ### workload (`/svc/workload/`)
 

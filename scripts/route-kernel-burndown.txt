@@ -29,7 +29,5 @@ services/kmip/http_api.go
 services/payment/handler.go
 services/policy/handler.go
 services/pqc/handler.go
-services/reconciler/main.go
 services/signing/handler.go
-services/watchdog/main.go
 services/workload/handler.go

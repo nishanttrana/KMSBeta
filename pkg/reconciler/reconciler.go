@@ -143,9 +143,9 @@ func (r *Runner) Status() []Status {
 	out := make([]Status, 0, len(r.reconcs))
 	for _, rec := range r.reconcs {
 		name := rec.Name()
-		s := Status{
-			Name:      name,
-			LastRunAt: r.lastRunAt[name],
+		s := Status{Name: name}
+		if t, ok := r.lastRunAt[name]; ok {
+			s.LastRunAt = &t
 		}
 		if e := r.lastError[name]; e != nil {
 			s.LastError = e.Error()
@@ -164,9 +164,9 @@ func (r *Runner) logf(format string, args ...any) {
 
 // Status is a single reconciler's latest outcome.
 type Status struct {
-	Name      string    `json:"name"`
-	LastRunAt time.Time `json:"last_run_at"`
-	LastError string    `json:"last_error,omitempty"`
+	Name      string     `json:"name"`
+	LastRunAt *time.Time `json:"last_run_at,omitempty"` // nil until the first pass
+	LastError string     `json:"last_error,omitempty"`
 }
 
 func nextBackoff(current, cap time.Duration) time.Duration {

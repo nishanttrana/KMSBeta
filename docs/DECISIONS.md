@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — One Health view, in Administration (1.39.0-beta)
+
+**Decision.** Platform > Health and Administration > Health are merged into
+Administration > Health. The live service list (auth's discovery and TCP
+checks, with restart) stays on top. Watchdog heartbeats, incidents and
+reconciler status sit under it as their own sections.
+
+**Why.** They answer the same operator question ("is the platform up?")
+from different signals: probes from outside versus liveness each service
+reports. Two tabs with one name that disagreed was confusing, and one of
+them never worked. Restart is an administration action, so the merged view
+belongs there.
+
+**How.** The watchdog and reconciler serve their reads through `pkg/route`
+with a new `health.read` permission, instead of reusing `auth.self.read` as
+`/auth/system-health` does. Incidents and controller errors are operational
+detail, not something every user needs. The dashboard calls them directly
+through Envoy (`/svc/watchdog`, `/svc/reconciler`); auth does not proxy
+them.
+
+**Rejected.** Aggregating everything in auth's `/auth/system-health`: it
+would couple auth to two more services and hide which one failed.
+
 ## 2026-09-27 — A key's history comes from its audit trail, shown on the key (1.38.0-beta)
 
 **Decision.** Source Traceability (a discovery-owned `lineage_events` store

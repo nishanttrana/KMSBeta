@@ -241,6 +241,10 @@ static_resources:
                 route: { cluster: pqc_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
               - match: { prefix: "/svc/ekm/" }
                 route: { cluster: ekm_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/watchdog/" }
+                route: { cluster: watchdog_http, timeout: 30s, prefix_rewrite: "/" }
+              - match: { prefix: "/svc/reconciler/" }
+                route: { cluster: reconciler_http, timeout: 30s, prefix_rewrite: "/" }
               - match: { prefix: "/auth" }
                 route: { cluster: auth_http, timeout: 30s }
                 typed_per_filter_config:
@@ -1125,6 +1129,64 @@ static_resources:
             match_typed_subject_alt_names:
             - san_type: DNS
               matcher: { exact: ai-gateway }
+  - name: watchdog_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: watchdog_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: watchdog, port_value: 8480 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: watchdog
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: watchdog }
+  - name: reconciler_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: reconciler_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: reconciler, port_value: 8470 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: reconciler
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: reconciler }
   - name: kmip_tcp
     connect_timeout: 1s
     type: STRICT_DNS

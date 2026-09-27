@@ -48,6 +48,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 	pkgsvctls "vecta-kms/pkg/svctls"
@@ -194,6 +195,13 @@ func (rt *Runtime) Serve(handler http.Handler) error {
 			httpErr <- err
 		}
 	}()
+
+	// Liveness for the watchdog (health.<service>.heartbeat), published only
+	// once the listener is starting, so every Boot service shows in the
+	// Health panel by construction. A nil NC makes it a no-op.
+	hb := pkgheartbeat.New(rt.NC, rt.opts.ServiceName, os.Getenv("CLUSTER_NODE_ID"), "")
+	hb.Start(rt.Ctx)
+	defer hb.Stop()
 
 	grpcSrv := pkggrpc.NewServer(id.ServerConfig(), rt.Logger)
 	lis, err := net.Listen("tcp", ":"+grpcPort)

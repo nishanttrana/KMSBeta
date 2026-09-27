@@ -3,6 +3,23 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-28
+
+### A "No data yet" empty state hid a tab that could never load (Platform > Health)
+- **What happened:** Platform > Health always said "No heartbeats received
+  yet" while Administration > Health showed every service. The tab called
+  `/api/watchdog/*` and `/api/reconciler/*`, which Envoy never routed, with
+  a plain `fetch` and no token, and `.catch(() => [])` turned each failure
+  into an empty list. The watchdog and reconciler endpoints were also
+  unauthenticated raw muxes.
+- **Why it slipped through:** the empty state reads like a quiet system, so
+  a broken wire looked like "nothing to report". The dashboard did not use
+  `serviceRequest`, so the `/svc/<name>` routing check never saw the calls.
+- **Rule:** never catch a fetch into an empty list; show "Unavailable:
+  <error>". Dashboard calls go through `serviceRequest` (`/svc/<name>`), and
+  one concept gets one screen: a second screen with the same name is merged,
+  not kept.
+
 ## 2026-09-27
 
 ### SQLite returns MIN/MAX of a time column as Go's `time.String()` text

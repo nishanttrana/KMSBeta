@@ -17,8 +17,10 @@ import (
 	"time"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgevents "vecta-kms/pkg/events"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 )
 
 var logger = log.New(os.Stdout, "[watchdog] ", log.LstdFlags|log.Lmicroseconds)
@@ -44,19 +46,26 @@ func main() {
 	pb := newPlaybookEngine(probe, logger)
 	go pb.Run(ctx)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /watchdog/heartbeats", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, probe.Snapshot())
-	})
-	mux.HandleFunc("GET /watchdog/incidents", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, pb.Incidents())
-	})
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	// The read API is audited as audit.watchdog.<action> on the unified
+	// stream; it refuses to serve unaudited.
+	apiConn, err := pkgevents.Connect(natsURL, "kms-watchdog-api", logger.Printf)
+	if err != nil {
+		logger.Fatalf("refusing to start: audit connection failed: %v", err)
+	}
+	defer apiConn.Close()
+	js, err := apiConn.JetStream()
+	if err != nil {
+		logger.Fatalf("refusing to start: jetstream unavailable: %v", err)
+	}
+	audit, err := pkgaudit.NewClient(js, "watchdog")
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
+	router := newRouter(probe.Snapshot, pb.Incidents, audit, logger)
+	handler := pkgjwtauth.MustWrap("WATCHDOG", cfg.JWTIssuer, cfg.JWTAudience, router, logger)
 
 	port := envOr("HTTP_PORT", "8480")
-	srv := pkgconfig.NewHTTPServer(port, mux)
+	srv := pkgconfig.NewHTTPServer(port, handler)
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", port)
 		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -77,6 +86,3 @@ func envOr(k, d string) string {
 	}
 	return v
 }
-
-// unused-import guard
-var _ = pkgevents.Connect

@@ -1,6 +1,8 @@
-// Watchdog + reconciler health client. The watchdog exposes /watchdog/*
-// endpoints; the reconciler exposes /reconciler/status. Both are
-// lightweight read APIs and safe to poll from the dashboard.
+// Watchdog + reconciler health client, shown in Administration > Health.
+// Both services serve these reads through the route kernel: the caller needs
+// health.read and every read is audited (audit.watchdog.*, audit.reconciler.*).
+import type { AuthSession } from "./auth";
+import { serviceRequest } from "./serviceApi";
 
 export interface ServiceState {
   service: string;
@@ -21,32 +23,25 @@ export interface Incident {
 
 export interface ReconcilerStatus {
   name: string;
-  last_run_at: string;
+  last_run_at?: string; // absent until the controller's first pass
   last_error?: string;
 }
 
-const watchdogBase = () =>
-  (typeof window !== "undefined" && (window as any).__VECTA_WATCHDOG_BASE__) || "/api/watchdog";
+type Items<T> = { items?: T[] };
 
-const reconcilerBase = () =>
-  (typeof window !== "undefined" && (window as any).__VECTA_RECONCILER_BASE__) || "/api/reconciler";
+const opts = { skipGlobalLoading: true };
 
-async function getJSON<T>(url: string): Promise<T> {
-  const resp = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!resp.ok) {
-    throw new Error(`${url} → HTTP ${resp.status}`);
-  }
-  return resp.json() as Promise<T>;
+export async function fetchHeartbeats(session: AuthSession): Promise<ServiceState[]> {
+  const out = await serviceRequest<Items<ServiceState>>(session, "watchdog", "/watchdog/heartbeats", opts);
+  return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function fetchHeartbeats(): Promise<ServiceState[]> {
-  return getJSON<ServiceState[]>(watchdogBase() + "/watchdog/heartbeats");
+export async function fetchIncidents(session: AuthSession): Promise<Incident[]> {
+  const out = await serviceRequest<Items<Incident>>(session, "watchdog", "/watchdog/incidents", opts);
+  return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function fetchIncidents(): Promise<Incident[]> {
-  return getJSON<Incident[]>(watchdogBase() + "/watchdog/incidents");
-}
-
-export async function fetchReconcilerStatus(): Promise<ReconcilerStatus[]> {
-  return getJSON<ReconcilerStatus[]>(reconcilerBase() + "/reconciler/status");
+export async function fetchReconcilerStatus(session: AuthSession): Promise<ReconcilerStatus[]> {
+  const out = await serviceRequest<Items<ReconcilerStatus>>(session, "reconciler", "/reconciler/status", opts);
+  return Array.isArray(out?.items) ? out.items : [];
 }

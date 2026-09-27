@@ -24,6 +24,14 @@ import {
   type CertificateItem
 } from "../../lib/certs";
 import {
+  fetchHeartbeats,
+  fetchIncidents,
+  fetchReconcilerStatus,
+  type Incident,
+  type ReconcilerStatus,
+  type ServiceState
+} from "../../lib/health";
+import {
   createGovernanceBackup,
   deleteGovernanceBackup,
   downloadGovernanceBackupArtifact,
@@ -107,6 +115,20 @@ const heartbeatToneClass=(status:string):string=>{
   if(s==="down") return "vecta-hb-down";
   return "vecta-hb-unknown";
 };
+
+// A health list the panel loaded, or the error that stopped it: a failed call
+// shows as "unavailable", never as an empty list.
+type HealthList<T>={items:T[];error:string;loaded:boolean};
+const emptyHealthList={items:[],error:"",loaded:false};
+const settleHealthList=<T,>(r:PromiseSettledResult<T[]>):HealthList<T>=>
+  r.status==="fulfilled"?{items:r.value,error:"",loaded:true}:{items:[],error:errMsg(r.reason),loaded:true};
+
+function HealthListBody<T>({list,empty,children}:{list:HealthList<T>;empty:string;children:React.ReactNode}){
+  if(!list.loaded) return <div style={{fontSize:10,color:C.muted}}>Loading...</div>;
+  if(list.error) return <div style={{fontSize:10,color:C.red}}>{`Unavailable: ${list.error}`}</div>;
+  if(!list.items.length) return <div style={{fontSize:10,color:C.muted}}>{empty}</div>;
+  return <>{children}</>;
+}
 
 const interfaceTone=(status:string):"green"|"amber"|"red"|"blue"=>{
   const s=String(status||"").toLowerCase();
@@ -730,6 +752,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const promptDialog=usePromptDialog();
   const [health,setHealth]=useState<AuthSystemHealthSnapshot>({services:[],summary:{}});
   const [healthLoading,setHealthLoading]=useState(false);
+  const [heartbeats,setHeartbeats]=useState<HealthList<ServiceState>>(emptyHealthList);
+  const [incidents,setIncidents]=useState<HealthList<Incident>>(emptyHealthList);
+  const [reconcilers,setReconcilers]=useState<HealthList<ReconcilerStatus>>(emptyHealthList);
   const [restartBusy,setRestartBusy]=useState("");
   const [restartAllBusy,setRestartAllBusy]=useState(false);
   const [serviceStatusOverride,setServiceStatusOverride]=useState<Record<string,string>>({});
@@ -1075,6 +1100,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const loadHealth=useCallback(async()=>{
     if(!session?.token){setHealth({services:[],summary:{}});return;}
     setHealthLoading(true);
+    // Watchdog and reconciler are separate services: each section shows its
+    // own error without holding up the service list.
+    void Promise.allSettled([fetchHeartbeats(session),fetchIncidents(session),fetchReconcilerStatus(session)]).then(([hb,inc,rec])=>{
+      setHeartbeats(settleHealthList(hb));
+      setIncidents(settleHealthList(inc));
+      setReconcilers(settleHealthList(rec));
+    });
     try{
       setHealth(await getAuthSystemHealth(session));
       setServiceStatusOverride({});
@@ -2191,6 +2223,52 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           {!(health.services||[]).length?<div style={{fontSize:10,color:C.muted,paddingTop:8}}>No health data available.</div>:null}
         </div>
         <div style={{fontSize:10,color:C.dim,marginTop:8}}>Live status from backend service discovery and health checks.</div>
+      </Card>
+    </Section>
+    <Section title="Heartbeats & Watchdog">
+      <Card style={{padding:10,borderRadius:8}}>
+        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Liveness each service reports over NATS every 30s. The watchdog marks a service unhealthy after 90s of silence or a degraded report, and raises an audited incident. It alerts; it does not remediate.</div>
+        <HealthListBody list={heartbeats} empty="No service has published a heartbeat yet.">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
+            {heartbeats.items.map((h)=>{
+              const status=h.healthy?"running":h.state==="degraded"?"degraded":"down";
+              return <div key={h.service} style={{border:`1px solid ${C.border}`,background:C.bg,borderRadius:8,padding:"6px 9px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+                  <span style={{fontSize:11,color:C.text,fontWeight:700}}>{h.service}</span>
+                  <span style={{fontSize:10,color:C[tone(status)],fontWeight:700}}><span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />{h.healthy?"alive":"silent"}</span>
+                </div>
+                <div style={{fontSize:10,color:C.dim,marginTop:2}}>{`${h.state||"unknown"} · last seen ${h.silence_seconds}s ago`}</div>
+              </div>;
+            })}
+          </div>
+        </HealthListBody>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,margin:"12px 0 6px"}}>Recent incidents</div>
+        <HealthListBody list={incidents} empty="No incidents in the rolling window.">
+          <div style={{maxHeight:220,overflowY:"auto"}}>
+            {incidents.items.slice(-20).reverse().map((i)=><div key={i.id} style={{display:"grid",gridTemplateColumns:"150px 110px 1fr",gap:8,borderBottom:`1px solid ${C.border}`,padding:"5px 0",fontSize:10}}>
+              <span style={{color:C.dim}}>{new Date(i.timestamp).toLocaleString()}</span>
+              <span style={{color:C.text,fontWeight:700}}>{i.service}</span>
+              <span style={{color:C.text}}>{i.reason}{i.recommendation?<span style={{color:C.dim}}>{` · ${i.recommendation}`}</span>:null}</span>
+            </div>)}
+          </div>
+        </HealthListBody>
+      </Card>
+    </Section>
+    <Section title="Reconciler Controllers">
+      <Card style={{padding:10,borderRadius:8}}>
+        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Control loops that converge live state (tenants, key lifecycle, KMIP clients, quotas) to the declared manifest.</div>
+        <HealthListBody list={reconcilers} empty="No reconciler controllers registered.">
+          {reconcilers.items.map((r)=>{
+            const status=r.last_error?"down":r.last_run_at?"running":"unknown";
+            return <div key={r.name} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,padding:"6px 0"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{r.name}</div>
+                <div style={{fontSize:10,color:r.last_error?C.red:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.last_error||""}>{r.last_error?`error: ${r.last_error}`:r.last_run_at?`last pass ${new Date(r.last_run_at).toLocaleString()}`:"not run yet"}</div>
+              </div>
+              <span style={{fontSize:10,color:C[tone(status)],fontWeight:700}}><span className={`vecta-hb-dot ${heartbeatToneClass(status)}`} />{r.last_error?"error":r.last_run_at?"ok":"pending"}</span>
+            </div>;
+          })}
+        </HealthListBody>
       </Card>
     </Section>
     </>}

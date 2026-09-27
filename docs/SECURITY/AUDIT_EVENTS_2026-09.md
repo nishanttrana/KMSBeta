@@ -222,6 +222,7 @@ refusals are listed below. Handlers add their own (for example
 | `audit.secrets.*` | every secrets route; see the table in `docs/API_REFERENCE.md` (Service 25) | info; `value_read` and `deleted` are warning | `TestSecretsRoutesRefuseAndAudit`, `TestCreateSecretRefusesCrossTenantBody` |
 | `audit.sbom.*` | every sbom/cbom route (1.33.0-beta); list in `docs/API_REFERENCE.md` (Audit Action Subject Reference) | info; `sbom_advisory_deleted` is warning | `TestSBOMRoutesRefusalsAudited`, `TestCBOMGenerateCrossTenantRefusedAndAudited` |
 | `audit.sbom.<action>`, `result: refused`, `reason: platform_tenant_required` | a tenant other than the platform tenant tries to generate the platform SBOM or save/delete an advisory (403) | warning | `TestSBOMPlatformWritesRefusedOutsidePlatformTenant` |
+| `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` | a platform health read (1.39.0-beta), permission `health.read`; refusals `unauthenticated`, `permission_denied` | info | `TestWatchdogReadsAudited`, `TestWatchdogRoutesRefusalsAudited`, `TestReconcilerStatusReadAudited`, `TestReconcilerRoutesRefusalsAudited` |
 | `audit.reporting.*` | every reporting route (1.33.0-beta); the actor is the verified caller, never a body field, `actor` query or `X-Actor-ID` | info; `rule_deleted` and `report_deleted` are warning | `TestReportingRoutesRefusalsAudited`, `TestGenerateReportRequesterIsVerifiedCaller`, `TestAlertOperationActorIsVerifiedCaller` |
 
 Proven by `routetest.RefusalsAudited` for every route, and by the

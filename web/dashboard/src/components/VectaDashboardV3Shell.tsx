@@ -1,6 +1,5 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   BarChart3,
   BarChart2,
   Bell,
@@ -102,7 +101,6 @@ const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default:
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
 const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
-const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
 const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
@@ -207,7 +205,6 @@ const TABS: Record<string, any> = {
   devsecops: DevSecOpsTab,
   ai_gateway: AIGatewayTab,
   playbooks: PlaybooksTab,
-  health: HealthTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
   threat_exposure: ThreatExposureTab,
@@ -250,7 +247,6 @@ const TITLES: Record<string, string> = {
   devsecops: "DevSecOps / IaC",
   ai_gateway: "AI Security Gateway",
   playbooks: "Playbooks",
-  health: "Health & Reconciliation",
   // Enterprise Advanced Features
   key_analytics: "Key Analytics",
   threat_exposure: "Threat & Exposure",
@@ -293,7 +289,6 @@ const NAV = [
   ]},
   { g: "Platform", items: [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
-    { id: "health", icon: Activity, label: "Health" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
@@ -360,10 +355,9 @@ export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, alerts, audit, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
     try {
-      const hash = window.location.hash.replace("#", "");
-      if (hash) return hash;
-      const stored = localStorage.getItem(TAB_STORAGE_KEY);
-      if (stored) return stored;
+      const saved = window.location.hash.replace("#", "") || localStorage.getItem(TAB_STORAGE_KEY);
+      // Platform > Health merged into Administration > Health (1.38.0-beta).
+      if (saved) return saved === "health" ? "admin" : saved;
     } catch { /* ignored */ }
     return "home";
   });

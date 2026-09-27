@@ -21,7 +21,10 @@ import (
 	"time"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgconfig "vecta-kms/pkg/config"
+	pkgevents "vecta-kms/pkg/events"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgreconciler "vecta-kms/pkg/reconciler"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -33,7 +36,6 @@ func main() {
 	// (http_helpers.go authorize); keycore refuses anonymous key use.
 	servicetoken.SetDefault(servicetoken.FromEnv("kms-reconciler"))
 	cfg := pkgconfig.Load()
-	_ = cfg
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -59,16 +61,25 @@ func main() {
 		tenant, keylife, kmipClients, quota,
 	)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /reconciler/status", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, runner.Status())
-	})
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	// The status API is audited as audit.reconciler.<action> on the unified
+	// stream; it refuses to serve unaudited.
+	nc, err := pkgevents.Connect(cfg.NATSURL, "kms-reconciler", logger.Printf)
+	if err != nil {
+		logger.Fatalf("refusing to start: audit connection failed: %v", err)
+	}
+	defer nc.Close()
+	js, err := nc.JetStream()
+	if err != nil {
+		logger.Fatalf("refusing to start: jetstream unavailable: %v", err)
+	}
+	audit, err := pkgaudit.NewClient(js, "reconciler")
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
+	handler := pkgjwtauth.MustWrap("RECONCILER", cfg.JWTIssuer, cfg.JWTAudience, newRouter(runner.Status, audit, logger), logger)
 
 	port := envOr("HTTP_PORT", "8470")
-	srv := pkgconfig.NewHTTPServer(port, mux)
+	srv := pkgconfig.NewHTTPServer(port, handler)
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", port)
 		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
