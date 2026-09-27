@@ -7,6 +7,22 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — OpenAPI specs: remove the fabricated one, check the rest (1.29.0-beta)
+
+**Decision.** The `ai` OpenAPI spec is deleted rather than rewritten as an
+`ai-gateway` spec, and the other four specs are checked by
+`scripts/check-doc-routes.py` in conformance: servers must be edge
+`/svc/<name>` paths and every operation must be a registered route of that
+service. **Why:** rule 8 prefers removing what is not real, and a new
+hand-written spec for 30 ai-gateway routes would be another unchecked
+contract (only paths are checked today). `ai-gateway` routes are listed in
+the generated route index in `docs/API_REFERENCE.md`. *Rejected:* keeping
+`http://localhost:<port>` servers labelled "direct" (services are reached
+through Envoy, not plain HTTP); a separate OpenAPI checker (it would duplicate
+the route and Envoy-prefix resolution the doc check already has).
+
+---
+
 ## 2026-09-27 — Closing the 1.27 open items (1.28.0-beta)
 
 **Microsoft DKE.** Entra ID tokens are verified with `pkg/oidc` against the

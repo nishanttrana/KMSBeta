@@ -14,7 +14,12 @@ with a reason.
 
 A route parameter matches a doc placeholder or an ID-like value, never a
 plain lowercase word, so /certs/cas does not pass as /certs/{id}.
+
+Every operation in docs/openapi/*.openapi.json is checked the same way: its
+servers must be edge paths (/svc/<name>, never a plain http:// URL) and each
+METHOD path must be a route of the service behind that prefix.
 """
+import json
 import os
 import re
 import sys
@@ -143,6 +148,30 @@ def check(routes, prefixes, allow):
     return bad
 
 
+def check_openapi(routes, prefixes):
+    bad = []
+    top = os.path.join("docs", "openapi")
+    for f in sorted(os.listdir(top)) if os.path.isdir(top) else []:
+        if not f.endswith(".openapi.json"):
+            continue
+        path = os.path.join(top, f)
+        spec = json.load(open(path))
+        urls = [s.get("url", "") for s in spec.get("servers", [])]
+        edge = [u for u in urls if re.fullmatch(r"/svc/[a-z0-9-]+", u)]
+        for u in urls:
+            if u not in edge:
+                bad.append("%s: server %s is not an edge /svc/<name> path" % (path, u))
+        svcs = {prefixes.get(u.split("/")[2]) for u in edge}
+        if not edge or None in svcs:
+            bad.append("%s: no service is routed at %s" % (path, ", ".join(urls) or "(no servers)"))
+            continue
+        for p, ops in spec.get("paths", {}).items():
+            for meth in ops:
+                if meth.upper() in METHODS.split("|") and not any(exists(routes, meth.upper(), p, s) for s in svcs):
+                    bad.append("%s: %s %s" % (path, meth.upper(), p))
+    return bad
+
+
 def write_index(routes, prefixes):
     by_svc = {v: k for k, v in prefixes.items()}
     lines = [INDEX_START, "", "Every route each service registers, as reached through the edge. Generated",
@@ -175,7 +204,7 @@ def main():
                 allow.add((parts[0], parts[1]))
     if "--write-index" in sys.argv:
         write_index(routes, prefixes)
-    bad = check(routes, prefixes, allow)
+    bad = check(routes, prefixes, allow) + check_openapi(routes, prefixes)
     if bad:
         print("FAIL [doc-routes]: docs name routes no service registers:")
         print("\n".join("  " + b for b in bad))

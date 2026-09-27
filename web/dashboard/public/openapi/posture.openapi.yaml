@@ -3,13 +3,11 @@ info:
   title: Vecta KMS Security Posture API
   version: 1.0.0
   description: OpenAPI contract for posture dashboards, risk drivers, remediation
-    cockpit, blast radius views, and scenario simulation. Use `/svc/posture`
-    through the dashboard proxy or `http://localhost:8220` directly.
+    cockpit, blast radius views, and what-if risk projections for pending
+    remediation actions. Served at `/svc/posture` through the Envoy edge.
 servers:
   - url: /svc/posture
-    description: Dashboard reverse proxy
-  - url: http://localhost:8220
-    description: Direct posture service
+    description: Envoy edge
 tags:
   - name: Posture Dashboard
   - name: Posture Findings

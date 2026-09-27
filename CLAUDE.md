@@ -236,7 +236,7 @@ changes code without touching CHANGELOG.md or learning.md.
 
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS
-  bash 3.2, and that every route a doc names is registered
+  bash 3.2, and that every route a doc or OpenAPI spec names is registered
   (`scripts/check-doc-routes.py`; `--write-index` refreshes the route index
   in `docs/API_REFERENCE.md`).
 - `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and

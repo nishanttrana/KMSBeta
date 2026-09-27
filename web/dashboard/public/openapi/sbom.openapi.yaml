@@ -3,13 +3,11 @@ info:
   title: Vecta KMS SBOM and CBOM Service API
   version: 1.0.0
   description: OpenAPI contract for SBOM generation, vulnerability correlation,
-    offline advisories, and CBOM/PQC readiness. Use `/svc/sbom` through the
-    dashboard proxy or `http://localhost:8180` directly.
+    offline advisories, and CBOM/PQC readiness. Served at `/svc/sbom` through
+    the Envoy edge.
 servers:
   - url: /svc/sbom
-    description: Dashboard reverse proxy
-  - url: http://localhost:8180
-    description: Direct SBOM service
+    description: Envoy edge
 tags:
   - name: SBOM
   - name: SBOM Advisories

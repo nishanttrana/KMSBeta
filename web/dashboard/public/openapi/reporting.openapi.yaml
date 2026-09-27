@@ -3,13 +3,11 @@ info:
   title: Vecta KMS Reporting and Alerting API
   version: 1.0.0
   description: OpenAPI contract for report templates, evidence-pack generation,
-    report jobs, and alert timing analytics including MTTD. Use `/svc/reporting`
-    through the dashboard proxy or `http://localhost:8140` directly.
+    report jobs, and alert timing analytics including MTTD. Served at
+    `/svc/reporting` through the Envoy edge.
 servers:
   - url: /svc/reporting
-    description: Dashboard reverse proxy
-  - url: http://localhost:8140
-    description: Direct reporting service
+    description: Envoy edge
 tags:
   - name: Reporting
   - name: Reporting Stats

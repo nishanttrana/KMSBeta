@@ -92,301 +92,6 @@ const queryCbomFormat = {
 const media = (schema) => ({ "application/json": { schema } });
 const err = (description) => ({ description, content: media({ $ref: "#/components/schemas/ErrorEnvelope" }) });
 
-function buildAIComponents() {
-  return {
-    parameters: {
-      RequestIdHeader: headerRequestId,
-      TenantHeader: headerTenant,
-      TenantQuery: queryTenant,
-    },
-    schemas: {
-      ErrorEnvelope: {
-        type: "object",
-        required: ["error"],
-        properties: {
-          error: {
-            type: "object",
-            required: ["code", "message", "request_id", "tenant_id"],
-            properties: {
-              code: { type: "string", example: "bad_request" },
-              message: { type: "string", example: "tenant_id is required" },
-              request_id: { type: "string", example: "req_1a2b3c4d5e6f7a8b" },
-              tenant_id: { type: "string", example: "root" },
-            },
-          },
-        },
-      },
-      StringList: { type: "array", items: { type: "string" } },
-      ContextKeysConfig: {
-        type: "object",
-        properties: {
-          enabled: { type: "boolean" },
-          limit: { type: "integer", minimum: 0 },
-          fields: { $ref: "#/components/schemas/StringList" },
-        },
-      },
-      ContextPoliciesConfig: {
-        type: "object",
-        properties: {
-          enabled: { type: "boolean" },
-          all: { type: "boolean" },
-          limit: { type: "integer", minimum: 0 },
-        },
-      },
-      ContextAuditConfig: {
-        type: "object",
-        properties: {
-          enabled: { type: "boolean" },
-          last_hours: { type: "integer", minimum: 0 },
-          limit: { type: "integer", minimum: 0 },
-        },
-      },
-      ContextPostureConfig: {
-        type: "object",
-        properties: {
-          enabled: { type: "boolean" },
-          current: { type: "boolean" },
-        },
-      },
-      ContextAlertsConfig: {
-        type: "object",
-        properties: {
-          enabled: { type: "boolean" },
-          unresolved: { type: "boolean" },
-          limit: { type: "integer", minimum: 0 },
-        },
-      },
-      ContextSources: {
-        type: "object",
-        properties: {
-          keys: { $ref: "#/components/schemas/ContextKeysConfig" },
-          policies: { $ref: "#/components/schemas/ContextPoliciesConfig" },
-          audit: { $ref: "#/components/schemas/ContextAuditConfig" },
-          posture: { $ref: "#/components/schemas/ContextPostureConfig" },
-          alerts: { $ref: "#/components/schemas/ContextAlertsConfig" },
-        },
-      },
-      ProviderAuthConfig: {
-        type: "object",
-        required: ["required", "type"],
-        properties: {
-          required: { type: "boolean" },
-          type: { type: "string", enum: ["api_key", "bearer", "none"] },
-        },
-      },
-      MCPConfig: {
-        type: "object",
-        required: ["enabled", "endpoint"],
-        properties: {
-          enabled: { type: "boolean" },
-          endpoint: { type: "string", example: "mcp://kms-ai" },
-        },
-      },
-      AIConfig: {
-        type: "object",
-        required: ["tenant_id", "backend", "endpoint", "model", "api_key_secret", "provider_auth", "mcp", "max_context_tokens", "temperature", "context_sources", "redaction_fields", "updated_at"],
-        properties: {
-          tenant_id: { type: "string", example: "root" },
-          backend: { type: "string", enum: ["claude", "openai", "azure-openai", "copilot", "self-hosted", "ollama", "vllm", "llamacpp"] },
-          endpoint: { type: "string", example: "https://api.anthropic.com/v1/messages" },
-          model: { type: "string", example: "claude-sonnet-4-20250514" },
-          api_key_secret: { type: "string", example: "ai-provider-token" },
-          provider_auth: { $ref: "#/components/schemas/ProviderAuthConfig" },
-          mcp: { $ref: "#/components/schemas/MCPConfig" },
-          max_context_tokens: { type: "integer", minimum: 256 },
-          temperature: { type: "number", minimum: 0, maximum: 2 },
-          context_sources: { $ref: "#/components/schemas/ContextSources" },
-          redaction_fields: { $ref: "#/components/schemas/StringList" },
-          updated_at: isoDateTime,
-        },
-      },
-      AIConfigUpdate: {
-        type: "object",
-        properties: {
-          backend: { type: "string", enum: ["claude", "openai", "azure-openai", "copilot", "self-hosted", "ollama", "vllm", "llamacpp"] },
-          endpoint: { type: "string" },
-          model: { type: "string" },
-          api_key_secret: { type: "string" },
-          provider_auth: { $ref: "#/components/schemas/ProviderAuthConfig" },
-          mcp: { $ref: "#/components/schemas/MCPConfig" },
-          max_context_tokens: { type: "integer", minimum: 256 },
-          temperature: { type: "number", minimum: 0, maximum: 2 },
-          context_sources: { $ref: "#/components/schemas/ContextSources" },
-          redaction_fields: { $ref: "#/components/schemas/StringList" },
-        },
-      },
-      QueryRequest: {
-        type: "object",
-        required: ["query"],
-        properties: {
-          tenant_id: { type: "string" },
-          query: { type: "string", minLength: 1 },
-          include_context: { type: "boolean" },
-        },
-      },
-      IncidentAnalysisRequest: {
-        type: "object",
-        properties: {
-          tenant_id: { type: "string" },
-          incident_id: { type: "string" },
-          title: { type: "string" },
-          description: { type: "string" },
-          details: objectAny,
-        },
-      },
-      PostureRecommendationRequest: {
-        type: "object",
-        properties: {
-          tenant_id: { type: "string" },
-          focus: { type: "string" },
-        },
-      },
-      PolicyExplainRequest: {
-        type: "object",
-        properties: {
-          tenant_id: { type: "string" },
-          policy_id: { type: "string" },
-          policy: objectAny,
-        },
-      },
-      AIResponse: {
-        type: "object",
-        required: ["action", "tenant_id", "answer", "backend", "model", "redactions_applied", "context_summary", "generated_at"],
-        properties: {
-          action: { type: "string", enum: ["query", "incident_analysis", "posture_recommendation", "policy_explanation"] },
-          tenant_id: { type: "string" },
-          answer: { type: "string" },
-          backend: { type: "string" },
-          model: { type: "string" },
-          redactions_applied: { type: "integer", minimum: 0 },
-          context_summary: objectAny,
-          context: objectAny,
-          warnings: { $ref: "#/components/schemas/StringList" },
-          generated_at: isoDateTime,
-        },
-      },
-      AIConfigEnvelope: {
-        type: "object",
-        required: ["config", "request_id"],
-        properties: {
-          config: { $ref: "#/components/schemas/AIConfig" },
-          request_id: { type: "string" },
-        },
-      },
-      AIResultEnvelope: {
-        type: "object",
-        required: ["result", "request_id"],
-        properties: {
-          result: { $ref: "#/components/schemas/AIResponse" },
-          request_id: { type: "string" },
-        },
-      },
-    },
-  };
-}
-
-function buildAISpec() {
-  const params = [
-    { $ref: "#/components/parameters/RequestIdHeader" },
-    { $ref: "#/components/parameters/TenantQuery" },
-    { $ref: "#/components/parameters/TenantHeader" },
-  ];
-  return {
-    openapi: "3.0.3",
-    info: {
-      title: "Vecta KMS AI Service API",
-      version: "1.0.0",
-      description: "OpenAPI contract for AI configuration and assistant workflows. Use `/svc/ai` through the dashboard proxy or `http://localhost:8090` directly.",
-    },
-    servers: [
-      { url: "/svc/ai", description: "Dashboard reverse proxy" },
-      { url: "http://localhost:8090", description: "Direct AI service" },
-    ],
-    tags: [
-      { name: "AI Config" },
-      { name: "AI Assistant" },
-    ],
-    paths: {
-      "/ai/config": {
-        get: {
-          tags: ["AI Config"],
-          operationId: "getAIConfig",
-          parameters: params,
-          responses: {
-            200: { description: "Tenant AI configuration.", content: media({ $ref: "#/components/schemas/AIConfigEnvelope" }) },
-            400: err("Missing tenant scope."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-        put: {
-          tags: ["AI Config"],
-          operationId: "updateAIConfig",
-          parameters: params,
-          requestBody: { required: true, content: media({ $ref: "#/components/schemas/AIConfigUpdate" }) },
-          responses: {
-            200: { description: "Merged AI configuration.", content: media({ $ref: "#/components/schemas/AIConfigEnvelope" }) },
-            400: err("Configuration validation failed."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-      },
-      "/ai/query": {
-        post: {
-          tags: ["AI Assistant"],
-          operationId: "queryAI",
-          parameters: params,
-          requestBody: { required: true, content: media({ $ref: "#/components/schemas/QueryRequest" }) },
-          responses: {
-            200: { description: "AI query result.", content: media({ $ref: "#/components/schemas/AIResultEnvelope" }) },
-            400: err("Missing tenant or query."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-      },
-      "/ai/analyze/incident": {
-        post: {
-          tags: ["AI Assistant"],
-          operationId: "analyzeIncident",
-          parameters: params,
-          requestBody: { required: true, content: media({ $ref: "#/components/schemas/IncidentAnalysisRequest" }) },
-          responses: {
-            200: { description: "Incident analysis result.", content: media({ $ref: "#/components/schemas/AIResultEnvelope" }) },
-            400: err("Missing tenant or malformed payload."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-      },
-      "/ai/recommend/posture": {
-        post: {
-          tags: ["AI Assistant"],
-          operationId: "recommendPosture",
-          parameters: params,
-          requestBody: { required: true, content: media({ $ref: "#/components/schemas/PostureRecommendationRequest" }) },
-          responses: {
-            200: { description: "Posture recommendation result.", content: media({ $ref: "#/components/schemas/AIResultEnvelope" }) },
-            400: err("Missing tenant or malformed payload."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-      },
-      "/ai/explain/policy": {
-        post: {
-          tags: ["AI Assistant"],
-          operationId: "explainPolicy",
-          parameters: params,
-          requestBody: { required: true, content: media({ $ref: "#/components/schemas/PolicyExplainRequest" }) },
-          responses: {
-            200: { description: "Policy explanation result.", content: media({ $ref: "#/components/schemas/AIResultEnvelope" }) },
-            400: err("Missing tenant or malformed payload."),
-            500: err("Unhandled AI service failure."),
-          },
-        },
-      },
-    },
-    components: buildAIComponents(),
-  };
-}
-
 function buildSBOMComponents() {
   return {
     parameters: {
@@ -639,11 +344,10 @@ function buildSBOMSpec() {
     info: {
       title: "Vecta KMS SBOM and CBOM Service API",
       version: "1.0.0",
-      description: "OpenAPI contract for SBOM generation, vulnerability correlation, offline advisories, and CBOM/PQC readiness. Use `/svc/sbom` through the dashboard proxy or `http://localhost:8180` directly.",
+      description: "OpenAPI contract for SBOM generation, vulnerability correlation, offline advisories, and CBOM/PQC readiness. Served at `/svc/sbom` through the Envoy edge.",
     },
     servers: [
-      { url: "/svc/sbom", description: "Dashboard reverse proxy" },
-      { url: "http://localhost:8180", description: "Direct SBOM service" },
+      { url: "/svc/sbom", description: "Envoy edge" },
     ],
     tags: [
       { name: "SBOM" },
@@ -1139,11 +843,10 @@ function buildPostureSpec() {
     info: {
       title: "Vecta KMS Security Posture API",
       version: "1.0.0",
-      description: "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and scenario simulation. Use `/svc/posture` through the dashboard proxy or `http://localhost:8220` directly.",
+      description: "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and what-if risk projections for pending remediation actions. Served at `/svc/posture` through the Envoy edge.",
     },
     servers: [
-      { url: "/svc/posture", description: "Dashboard reverse proxy" },
-      { url: "http://localhost:8220", description: "Direct posture service" },
+      { url: "/svc/posture", description: "Envoy edge" },
     ],
     tags: [
       { name: "Posture Dashboard" },
@@ -1415,11 +1118,10 @@ function buildComplianceSpec() {
     info: {
       title: "Vecta KMS Compliance API",
       version: "1.0.0",
-      description: "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Use `/svc/compliance` through the dashboard proxy or `http://localhost:8110` directly.",
+      description: "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Served at `/svc/compliance` through the Envoy edge.",
     },
     servers: [
-      { url: "/svc/compliance", description: "Dashboard reverse proxy" },
-      { url: "http://localhost:8110", description: "Direct compliance service" },
+      { url: "/svc/compliance", description: "Envoy edge" },
     ],
     tags: [
       { name: "Compliance Posture" },
@@ -1649,11 +1351,10 @@ function buildReportingSpec() {
     info: {
       title: "Vecta KMS Reporting and Alerting API",
       version: "1.0.0",
-      description: "OpenAPI contract for report templates, evidence-pack generation, report jobs, and alert timing analytics including MTTD. Use `/svc/reporting` through the dashboard proxy or `http://localhost:8140` directly.",
+      description: "OpenAPI contract for report templates, evidence-pack generation, report jobs, and alert timing analytics including MTTD. Served at `/svc/reporting` through the Envoy edge.",
     },
     servers: [
-      { url: "/svc/reporting", description: "Dashboard reverse proxy" },
-      { url: "http://localhost:8140", description: "Direct reporting service" },
+      { url: "/svc/reporting", description: "Envoy edge" },
     ],
     tags: [
       { name: "Reporting" },
@@ -1850,7 +1551,6 @@ function viewerHTML(title, specFile) {
 
 async function writeViewerPages() {
   await fs.mkdir(publicOutDir, { recursive: true });
-  await fs.writeFile(path.join(publicOutDir, "ai.html"), viewerHTML("Vecta KMS AI Service OpenAPI", "ai.openapi.json"), "utf8");
   await fs.writeFile(path.join(publicOutDir, "sbom.html"), viewerHTML("Vecta KMS SBOM / CBOM OpenAPI", "sbom.openapi.json"), "utf8");
   await fs.writeFile(path.join(publicOutDir, "posture.html"), viewerHTML("Vecta KMS Security Posture OpenAPI", "posture.openapi.json"), "utf8");
   await fs.writeFile(path.join(publicOutDir, "compliance.html"), viewerHTML("Vecta KMS Compliance OpenAPI", "compliance.openapi.json"), "utf8");
@@ -1858,7 +1558,6 @@ async function writeViewerPages() {
 }
 
 async function main() {
-  await writeSpec("ai", buildAISpec());
   await writeSpec("sbom", buildSBOMSpec());
   await writeSpec("posture", buildPostureSpec());
   await writeSpec("compliance", buildComplianceSpec());

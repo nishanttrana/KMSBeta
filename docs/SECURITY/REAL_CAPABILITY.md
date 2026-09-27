@@ -131,6 +131,7 @@ The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
 | Governance (1.28) | `approver_roles` stored, never used | Role holders become approvers when a request opens |
 | JCA provider (1.28) | Cipher/Signature/KeyStore over missing routes; SDK zip of hand-written Java | `Cipher.VectaKeyWrap` over the real API, tested by a JCA consumer; SDK is the embedded source |
 | Docs (1.28) | 151 API_REFERENCE endpoints and whole services that do not exist | Removed; `check-doc-routes.py` in conformance |
+| OpenAPI (1.29) | `ai` spec for a `/svc/ai` service that does not exist; `http://localhost` servers | Removed; specs checked by `check-doc-routes.py` |
 | Unused packages (1.28) | 11 `pkg/` packages imported by nothing | Deleted |
 
 ## Still open
@@ -153,7 +154,13 @@ The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
   documented route exists, not that every documented request or response
   field matches the handler. Tables that give paths relative to a base
   (without `/svc/`) are not checked either.
-- **OpenAPI specs** in `docs/openapi/` (written by
-  `web/dashboard/scripts/generate-openapi.mjs` and served by the dashboard)
-  are not checked against the routers; `ai.openapi.*` describes a `/svc/ai`
-  service that does not exist.
+- **OpenAPI schemas**: `check-doc-routes.py` checks that every operation in
+  `docs/openapi/` is a registered route, not that its parameters, request
+  body or response schema match the handler.
+- **Tenant and actor from the request** (found while checking the specs):
+  legacy posture routes accept tokenless requests and default the tenant to
+  all tenants on the dashboard, risk and scan routes; `POST /cbom/generate`
+  and `POST /reports/generate` take `tenant_id` from the body without the
+  tenant check; posture action execution and report deletion take the actor
+  from the body, a query parameter or `X-Actor-ID`. These routes are on the
+  route-kernel burn-down list and are fixed by moving them onto `pkg/route`.

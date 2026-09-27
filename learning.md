@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A generated doc is only as true as its input (OpenAPI specs)
+- **What happened:** `docs/openapi/ai.openapi.*` documented a `/svc/ai`
+  service with six operations. No such service exists; the AI service is
+  `ai-gateway` under `/ai-gateway/v1/`. Every spec also listed a
+  `http://localhost:<port>` server, though services are reached only
+  through the Envoy edge.
+- **Why it slipped through:** the specs are generated, and CI's "Validate
+  OpenAPI artifacts" step proves the committed files match the generator.
+  That reads like verification, but the generator's input is hand-written
+  definitions, so the check only proved the fiction was consistent.
+  `check-doc-routes.py` covered Markdown only.
+- **Rule:** anything that describes an API is checked against the routers,
+  whatever its format. `check-doc-routes.py` now reads
+  `docs/openapi/*.openapi.json` too. When adding a new doc format that names
+  routes, add it to that script in the same change.
+- **Also:** the "Validate OpenAPI artifacts" step was already failing: a
+  dependency update committed the new Swagger UI bundle but not its CSS and
+  preset. Run `validate:openapi` after `npm ci` in a clean worktree, since a
+  stale local install hides or invents drift.
+
 ### A JCA provider is proven only by a JCA consumer (jca-provider)
 - **What happened:** the Java provider registered AES-GCM, two signature
   algorithms and a key store. None could work: it called ekm routes that do

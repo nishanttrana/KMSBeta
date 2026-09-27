@@ -3,16 +3,12 @@
   "info": {
     "title": "Vecta KMS Compliance API",
     "version": "1.0.0",
-    "description": "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Use `/svc/compliance` through the dashboard proxy or `http://localhost:8110` directly."
+    "description": "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Served at `/svc/compliance` through the Envoy edge."
   },
   "servers": [
     {
       "url": "/svc/compliance",
-      "description": "Dashboard reverse proxy"
-    },
-    {
-      "url": "http://localhost:8110",
-      "description": "Direct compliance service"
+      "description": "Envoy edge"
     }
   ],
   "tags": [

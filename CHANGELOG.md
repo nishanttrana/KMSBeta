@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.29.0-beta] — 2026-09-27
+
+### OpenAPI specs describe only real services (breaking for anyone using them)
+- **The `ai` spec is removed.** `docs/openapi/ai.openapi.*` and the
+  dashboard's `/openapi/ai.html` described a `/svc/ai` service
+  (`/ai/config`, `/ai/query`, `/ai/analyze/incident`, `/ai/recommend/posture`,
+  `/ai/explain/policy`) that does not exist. The only AI service is
+  `ai-gateway` (`/svc/ai-gateway/ai-gateway/v1/...`), listed in the route
+  index in [docs/API_REFERENCE.md](docs/API_REFERENCE.md). Its generator
+  entry, viewer page and validation entries are gone.
+- **No plain-HTTP "direct service" servers.** The `sbom`, `posture`,
+  `compliance` and `reporting` specs offered `http://localhost:<port>` as a
+  second server. Services are reached through the Envoy edge at
+  `/svc/<name>`; that is now the only server listed.
+- **Checked against the routers.** `scripts/check-doc-routes.py` (run by
+  `make conformance`) now reads every `docs/openapi/*.openapi.json`: each
+  server must be an edge `/svc/<name>` path routed to a service, and each
+  operation must be a route that service registers. All 39 operations in the
+  four remaining specs match their routers.
+- **Swagger UI assets match the pinned version.** The committed
+  `swagger-ui.css` and `swagger-ui-standalone-preset.js` were still 5.32.x
+  while the bundle and lockfile were 5.33.0, so "Validate OpenAPI artifacts"
+  failed on a clean `npm ci`. Both are now the 5.33.0 files.
+- **Still open:** request and response schemas and tenant parameters are not
+  yet checked against the handlers (see
+  [REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md)).
+
 ## [1.28.0-beta] — 2026-09-27
 
 Closes the items 1.27.0-beta left open in

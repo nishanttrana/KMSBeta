@@ -5,8 +5,6 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const generatedPaths = [
-  "docs/openapi/ai.openapi.yaml",
-  "docs/openapi/ai.openapi.json",
   "docs/openapi/sbom.openapi.yaml",
   "docs/openapi/sbom.openapi.json",
   "docs/openapi/posture.openapi.yaml",
