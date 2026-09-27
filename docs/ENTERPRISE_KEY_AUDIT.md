@@ -644,7 +644,7 @@ The `GET /enterprise/summary` response includes a `roadmap` array for all 20 ide
 Focused package validation:
 
 ```bash
-GOCACHE="$PWD/.cache/go-build" go test ./pkg/analytics ./pkg/health
+GOCACHE="$PWD/.cache/go-build" go test ./pkg/health
 GOCACHE=/private/tmp/kms-go-build-cache go test ./services/keycore
 GOCACHE=/private/tmp/kms-go-build-cache go test ./pkg/auditmw ./services/audit
 ```

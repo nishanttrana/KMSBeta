@@ -1,0 +1,3 @@
+# Routes docs may name that scripts/check-doc-routes.py cannot see, one per
+# line as "METHOD /path  # reason". Keep this short.
+POST /v1/enroll  # certs internal enrolment, registered via svctls.EnrollPath

@@ -235,8 +235,10 @@ changes code without touching CHANGELOG.md or learning.md.
 ## Before calling a change done
 
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
-  the `pkg/route` kernel, and that every shell script parses under macOS
-  bash 3.2.
+  the `pkg/route` kernel, that every shell script parses under macOS
+  bash 3.2, and that every route a doc names is registered
+  (`scripts/check-doc-routes.py`; `--write-index` refreshes the route index
+  in `docs/API_REFERENCE.md`).
 - `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and
   `only`. A test of a non-approved feature calls `fipstest.SkipIfStrict` and
   is paired with a `fipstest.StrictOnly` test proving the clean refusal. Its allowlist only

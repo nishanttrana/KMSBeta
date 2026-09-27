@@ -157,7 +157,7 @@ No outbound internet connectivity. All updates delivered via signed update bundl
 The dashboard (React, served on `:5173`) uses a **development proxy** and a **production reverse proxy** to forward all service API calls via the path prefix `/svc/{service}/`. This means:
 
 - `/svc/keycore/keys` → keycore service
-- `/svc/auth/tokens` → auth service
+- `/svc/auth/auth/login` → auth service
 - `/svc/certs/certificates` → certs service
 - `/svc/audit/events` → audit service
 
@@ -320,7 +320,7 @@ Event N+1: {data: "...", hash_of_N: "ghi789", self_hash: "jkl012"}
 
 Chain verification:
 ```bash
-curl https://localhost/svc/audit/chain/verify?tenant_id=acme-corp \
+curl https://localhost/svc/audit/audit/chain/verify?tenant_id=acme-corp \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 
 # Returns:
@@ -447,7 +447,7 @@ docker compose up -d
 docker compose ps
 
 # Check service health
-curl https://localhost/svc/keycore/health
+curl https://localhost/svc/keycore/health/summary
 # Expected: {"status":"ok","version":"1.0.0-beta"}
 
 # Dashboard available at:
@@ -676,7 +676,7 @@ After first startup, a default `root` tenant and `admin` user are created.
 **Via API:**
 ```bash
 # First, get a token with the initial password
-TOKEN=$(curl -sk -X POST https://localhost/svc/auth/tokens \
+TOKEN=$(curl -sk -X POST https://localhost/svc/auth/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -685,7 +685,7 @@ TOKEN=$(curl -sk -X POST https://localhost/svc/auth/tokens \
   }' | jq -r '.token')
 
 # Change password
-curl -X POST https://localhost/svc/auth/users/admin/change-password \
+curl -X POST https://localhost/svc/auth/auth/change-password \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

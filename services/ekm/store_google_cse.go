@@ -11,19 +11,20 @@ import (
 
 func (s *SQLStore) CreateGoogleCSEConfig(ctx context.Context, cfg GoogleCSEConfig) error {
 	domainsJSON, _ := json.Marshal(cfg.AllowedDomains)
+	clientIDsJSON, _ := json.Marshal(cleanStrings(cfg.AuthenticationClientIDs))
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO ekm_google_cse_configs (
 	tenant_id, id, google_workspace_customer_id, service_account_email,
 	service_account_key_json, allowed_domains, kacls_endpoint,
-	status, key_count, last_activity_at, created_at
+	status, key_count, last_activity_at, authentication_client_ids, created_at
 ) VALUES (
 	$1,$2,$3,$4,
 	$5,$6,$7,
-	$8,$9,$10,CURRENT_TIMESTAMP
+	$8,$9,$10,$11,CURRENT_TIMESTAMP
 )
 `, cfg.TenantID, cfg.ID, cfg.GoogleWorkspaceCustomerID, cfg.ServiceAccountEmail,
 		cfg.ServiceAccountKeyJSON, string(domainsJSON), cfg.KACLSEndpoint,
-		cfg.Status, cfg.KeyCount, nullableTime(cfg.LastActivityAt))
+		cfg.Status, cfg.KeyCount, nullableTime(cfg.LastActivityAt), string(clientIDsJSON))
 	return err
 }
 
@@ -31,7 +32,7 @@ func (s *SQLStore) GetGoogleCSEConfig(ctx context.Context, tenantID, configID st
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT tenant_id, id, google_workspace_customer_id, service_account_email,
        service_account_key_json, allowed_domains, kacls_endpoint,
-       status, key_count, last_activity_at, created_at
+       status, key_count, last_activity_at, created_at, authentication_client_ids
 FROM ekm_google_cse_configs
 WHERE tenant_id = $1 AND id = $2
 `, tenantID, configID)
@@ -46,7 +47,7 @@ func (s *SQLStore) ListGoogleCSEConfigs(ctx context.Context, tenantID string) ([
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, google_workspace_customer_id, service_account_email,
        service_account_key_json, allowed_domains, kacls_endpoint,
-       status, key_count, last_activity_at, created_at
+       status, key_count, last_activity_at, created_at, authentication_client_ids
 FROM ekm_google_cse_configs
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -69,20 +70,22 @@ LIMIT 500
 
 func (s *SQLStore) UpdateGoogleCSEConfig(ctx context.Context, cfg GoogleCSEConfig) error {
 	domainsJSON, _ := json.Marshal(cfg.AllowedDomains)
+	clientIDsJSON, _ := json.Marshal(cleanStrings(cfg.AuthenticationClientIDs))
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE ekm_google_cse_configs
-SET google_workspace_customer_id = $1,
+SET authentication_client_ids = $11,
+    google_workspace_customer_id = $1,
     service_account_email = $2,
     service_account_key_json = CASE WHEN $3 = '' THEN service_account_key_json ELSE $3 END,
     allowed_domains = $4,
     kacls_endpoint = $5,
     status = $6,
     key_count = $7,
-    last_activity_at = CASE WHEN $8::TEXT = '' THEN last_activity_at ELSE $8 END
+    last_activity_at = COALESCE($8, last_activity_at)
 WHERE tenant_id = $9 AND id = $10
 `, cfg.GoogleWorkspaceCustomerID, cfg.ServiceAccountEmail, cfg.ServiceAccountKeyJSON,
 		string(domainsJSON), cfg.KACLSEndpoint, cfg.Status, cfg.KeyCount,
-		nullableTime(cfg.LastActivityAt), cfg.TenantID, cfg.ID)
+		nullableTime(cfg.LastActivityAt), cfg.TenantID, cfg.ID, string(clientIDsJSON))
 	if err != nil {
 		return err
 	}
@@ -236,13 +239,14 @@ func scanGoogleCSEConfig(scanner interface {
 	var (
 		out            GoogleCSEConfig
 		domainsRaw     string
+		clientIDsRaw   string
 		lastActivityAt interface{}
 		createdRaw     interface{}
 	)
 	err := scanner.Scan(
 		&out.TenantID, &out.ID, &out.GoogleWorkspaceCustomerID, &out.ServiceAccountEmail,
 		&out.ServiceAccountKeyJSON, &domainsRaw, &out.KACLSEndpoint,
-		&out.Status, &out.KeyCount, &lastActivityAt, &createdRaw,
+		&out.Status, &out.KeyCount, &lastActivityAt, &createdRaw, &clientIDsRaw,
 	)
 	if err != nil {
 		return GoogleCSEConfig{}, err
@@ -255,6 +259,8 @@ func scanGoogleCSEConfig(scanner interface {
 	if out.AllowedDomains == nil {
 		out.AllowedDomains = []string{}
 	}
+	_ = json.Unmarshal([]byte(clientIDsRaw), &out.AuthenticationClientIDs)
+	out.AuthenticationClientIDs = cleanStrings(out.AuthenticationClientIDs)
 	return out, nil
 }
 
@@ -277,4 +283,15 @@ func scanGoogleCSEKey(scanner interface {
 	out.LastUsedAt = parseTimeValue(lastUsed)
 	out.CreatedAt = parseTimeValue(createdRaw)
 	return out, nil
+}
+
+// cleanStrings trims each value and drops empty ones; never nil.
+func cleanStrings(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, v := range in {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }

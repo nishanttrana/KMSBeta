@@ -6,11 +6,11 @@
 
     <groupId>com.vecta.kms</groupId>
     <artifactId>vecta-jca-provider</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
     <packaging>jar</packaging>
 
     <name>Vecta KMS JCA Provider</name>
-    <description>Java Cryptography Architecture provider backed by Vecta KMS with local key caching</description>
+    <description>JCA provider: Cipher.VectaKeyWrap wraps and unwraps keys under a Vecta KMS key</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

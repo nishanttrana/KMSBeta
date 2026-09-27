@@ -8,7 +8,7 @@ This document provides exhaustive technical documentation for three interconnect
 2. **Confidential Computing and TEE Attestation** — Cryptographic proof of runtime environment before key release
 3. **Key Access Justifications** — Structured audit trail of why keys are used
 4. **Post-Quantum Cryptography** — NIST FIPS 203/204/205 algorithm support and migration tooling
-5. **AI-Assisted Operations** — Natural language queries, policy recommendations, anomaly detection
+5. **AI gateway** — where AI traffic goes (there is no separate AI service)
 6. **Reference Use Cases** — Eight complete, end-to-end implementation scenarios
 
 ---
@@ -38,7 +38,7 @@ This document provides exhaustive technical documentation for three interconnect
   - [Confidential Service Endpoints](#confidential-service-endpoints)
 - [Section 3: Key Access Justifications](#section-3-key-access-justifications)
 - [Section 4: Post-Quantum Cryptography](#section-4-post-quantum-cryptography)
-- [Section 5: AI-Assisted Operations](#section-5-ai-assisted-operations)
+- [Section 5: AI gateway](#section-5-ai-gateway)
 - [Section 6: Reference Use Cases](#section-6-reference-use-cases)
 
 ---
@@ -166,7 +166,7 @@ Default SVID TTL is 3600 seconds (1 hour). The vecta-agent renews SVIDs automati
 Create the trust domain in Vecta:
 
 ```bash
-curl -sk -X POST https://localhost/svc/workload/workload-identity/settings \
+curl -sk -X PUT https://localhost/svc/workload/workload-identity/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2303,7 +2303,7 @@ Response:
 
 ```bash
 curl -s -X POST \
-  "https://localhost/svc/pqc/pqc/assess" \
+  "https://localhost/svc/pqc/pqc/scan" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2339,7 +2339,7 @@ Generate a prioritized migration plan:
 
 ```bash
 curl -s -X POST \
-  "https://localhost/svc/pqc/pqc/migration/plan" \
+  "https://localhost/svc/pqc/pqc/migration/plans" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2422,42 +2422,9 @@ Returns or updates the tenant PQC enforcement policy. See examples above.
 
 Returns full PQC asset inventory. Query params: `?asset_type=key|certificate|tls_interface`, `?risk=CRITICAL|HIGH|MEDIUM|LOW|NONE`, `?status=classical|hybrid|pqc_ready`.
 
-#### GET /svc/pqc/pqc/inventory/{resourceId}
+#### POST /svc/pqc/pqc/migration/plans
 
-Returns the PQC classification for a single asset.
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/inventory/key-root-ca-rsa4096?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "item": {
-    "resource_id": "key-root-ca-rsa4096",
-    "resource_type": "key",
-    "algorithm": "RSA-4096",
-    "pqc_status": "classical",
-    "quantum_risk": "CRITICAL",
-    "risk_rationale": "Root CA key signs all subordinate certificates. Compromise via Shor's algorithm cascades to entire PKI.",
-    "recommended_action": "Migrate to ML-DSA-87 or hybrid RSA-4096+ML-DSA-87",
-    "harvest_risk": "HIGH",
-    "migration_urgency": "immediate"
-  },
-  "request_id": "req_507"
-}
-```
-
-#### GET /svc/pqc/pqc/algorithms
-
-Returns metadata for all PQC algorithms supported by Vecta, including NIST level, key/signature sizes, and hybrid pairing options.
-
-#### POST /svc/pqc/pqc/migration/plan
-
-Generates a prioritized migration plan. See Phase 3–5 example above.
+Create a migration plan with `POST /svc/pqc/pqc/migration/plans`; execute or roll it back with `.../plans/{id}/execute` and `.../plans/{id}/rollback`.
 
 #### GET /svc/pqc/pqc/migration/plans
 
@@ -2473,39 +2440,9 @@ curl -sk "https://localhost/svc/pqc/pqc/migration/plans?tenant_id=root" \
 
 Returns a specific migration plan by ID.
 
-#### POST /svc/pqc/pqc/assess
+#### POST /svc/pqc/pqc/scan
 
-Runs a PQC risk assessment. See Phase 2 example above.
-
-#### GET /svc/pqc/pqc/findings
-
-Lists all open PQC findings for the tenant.
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/findings?tenant_id=root&risk=CRITICAL" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "items": [
-    {
-      "id": "finding_001",
-      "asset_id": "key-root-ca-rsa4096",
-      "risk": "CRITICAL",
-      "title": "Root CA uses RSA-4096 — vulnerable to Shor's algorithm",
-      "status": "open",
-      "detected_at": "2026-03-23T00:00:00Z",
-      "remediation": "Migrate to ML-DSA-87 or hybrid RSA-4096+ML-DSA-87 before 2030"
-    }
-  ],
-  "total": 3,
-  "request_id": "req_508"
-}
-```
+Run a scan with `POST /svc/pqc/pqc/scan`; results are at `GET /svc/pqc/pqc/scans` and `GET /svc/pqc/pqc/scans/{id}`.
 
 #### GET /svc/pqc/pqc/readiness
 
@@ -2584,235 +2521,14 @@ Response:
 
 ---
 
-## Section 5: AI-Assisted Operations
+## Section 5: AI gateway
 
-### What the AI Service Provides
-
-The Vecta AI service connects a configured LLM backend (Claude, GPT-4o, or any OpenAI-compatible endpoint) to a governance-aware context assembly layer. Before any prompt is sent to the provider, Vecta assembles relevant KMS context — recent audit events, current posture findings, key inventory, unresolved alerts — and redacts sensitive fields (key material, password hashes, API secrets). The result is an assistant that understands your specific KMS state without ever exposing raw secrets to the LLM.
-
-**Capabilities:**
-- **Natural language audit queries:** Ask questions like "show all decrypt operations on the payments key last week" without writing filter syntax
-- **Policy recommendations:** Describe what you need in plain English and receive a draft key policy or access rule
-- **PQC migration guidance:** Get a prioritized migration plan explained in plain language with rationale per asset
-- **Posture recommendations:** Ask for the highest-priority security actions for your current posture state
-- **Incident analysis:** Submit an incident description and receive an AI-generated explanation with suggested investigation steps
-
-Service prefix: `/svc/ai/ai`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
-
----
-
-### GET /svc/ai/ai/config
-
-Returns the current AI configuration for the tenant.
-
-```bash
-curl -sk "https://localhost/svc/ai/ai/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "backend": "claude",
-    "endpoint": "https://api.anthropic.com/v1/messages",
-    "model": "claude-sonnet-4-6",
-    "provider_auth": {
-      "required": true,
-      "type": "bearer"
-    },
-    "mcp": {
-      "enabled": false,
-      "endpoint": ""
-    },
-    "max_context_tokens": 8000,
-    "temperature": 0.3,
-    "context_sources": {
-      "keys": {"enabled": true, "limit": 25, "fields": ["id", "name", "algorithm", "status"]},
-      "policies": {"enabled": true, "all": false, "limit": 20},
-      "audit": {"enabled": true, "last_hours": 24, "limit": 100},
-      "posture": {"enabled": true, "current": true},
-      "alerts": {"enabled": true, "unresolved": true, "limit": 50}
-    },
-    "redaction_fields": ["encrypted_material", "wrapped_dek", "pwd_hash", "api_key", "passphrase"],
-    "updated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_600"
-}
-```
-
----
-
-### POST /svc/ai/ai/query
-
-Submits a natural language query. Vecta assembles context from the configured sources, redacts sensitive fields, builds the prompt, and returns the LLM answer.
-
-#### Example: Audit log query
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "query": "Show all decrypt operations in the last week on the key named customer-data-enc, grouped by actor",
-    "include_context": true
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "action": "query",
-    "tenant_id": "root",
-    "answer": "Over the past 7 days, there were 84 decrypt operations on customer-data-enc. Breakdown by actor:\n- payments-service (SPIFFE): 71 operations (85%)\n- admin@example.com: 8 operations (10%)\n- audit-pipeline: 5 operations (6%)\n\nAll operations had valid justification codes. The spike on 2026-03-19 (31 decrypts in one hour by payments-service) aligns with the scheduled batch processing window.",
-    "backend": "claude",
-    "model": "claude-sonnet-4-6",
-    "redactions_applied": 3,
-    "context_summary": {
-      "audit_events": 84,
-      "keys": 1,
-      "alerts": 0
-    },
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_601"
-}
-```
-
-#### Example: Policy recommendation
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "query": "I need a key for encrypting user PII, accessed only by the payments-service workload in the prod namespace. What key policy and justification rule should I create?",
-    "include_context": true
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "answer": "For a PII encryption key accessed only by payments-service in prod, I recommend:\n\n**Key:** AES-256-GCM, purpose=encrypt, rotation every 365 days, labels: data-class=pii, team=payments\n\n**Access policy:** Allow encrypt+decrypt only for SPIFFE ID spiffe://example.com/ns/prod/sa/payments-service. Deny all other identities including admin roles (break-glass should go through justification escalation).\n\n**Justification rule:** Apply to this key for decrypt operations. Required codes: CUSTOMER_INITIATED_ACCESS, CUSTOMER_INITIATED_SUPPORT, LEGAL_HOLD, BREAKGLASS_EMERGENCY. Mode: enforce. Require detail text. Route BREAKGLASS_EMERGENCY to privacy-leads for approval.\n\nDraft curl commands for each are below...",
-    "backend": "claude",
-    "model": "claude-sonnet-4-6",
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_602"
-}
-```
-
----
-
-### POST /svc/ai/ai/recommend/posture
-
-Builds posture guidance for a specific focus area.
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/recommend/posture \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "focus": "pqc-migration"
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "action": "recommend_posture",
-    "answer": "Your tenant has 3 CRITICAL and 11 HIGH risk assets still using classical algorithms. Immediate priorities:\n\n1. **key-root-ca-rsa4096 (CRITICAL):** Migrate to ML-DSA-87 hybrid. This is the highest-blast-radius asset — compromise cascades to all 23 subordinate certificates. Estimated effort: 2 days (ceremony + re-signing).\n\n2. **key-financial-records-enc (HIGH):** Migrate wrapping key to ML-KEM-768. 84 decrypts/week means this is actively used. Plan a maintenance window.\n\n3. **TLS interfaces (MEDIUM, 12 total):** Enable X25519+ML-KEM-768 hybrid key share in your TLS config. No key rotation required — just reconfigure cipher preferences.\n\nAt the current migration rate, you will reach CNSA 2.0 compliance by approximately Q3 2028.",
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_603"
-}
-```
-
----
-
-### POST /svc/ai/ai/analyze/incident
-
-Produces an AI explanation for a security or governance event.
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/analyze/incident \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "incident_id": "inc-2026-003",
-    "title": "Unauthorized key export attempt on production signing key",
-    "description": "A service account attempted to export the raw private key material for key-code-signing-prod at 03:14 UTC.",
-    "details": {
-      "key_id": "key-code-signing-prod",
-      "actor": "svc-ci-runner@internal",
-      "approval_status": "missing",
-      "time_utc": "2026-03-23T03:14:00Z"
-    }
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "action": "analyze_incident",
-    "answer": "This event warrants immediate investigation. Key findings:\n\n1. **The actor is anomalous for this operation.** svc-ci-runner has 340 prior sign operations on key-code-signing-prod over the past 90 days but zero prior export attempts. Export of private key material is not a normal CI pipeline operation.\n\n2. **Time is suspicious.** 03:14 UTC is outside business hours and outside the scheduled CI pipeline windows (06:00–22:00 UTC).\n\n3. **No approval or justification.** The key policy requires governance approval for export operations. None was present.\n\n**Recommended immediate actions:**\n- Suspend svc-ci-runner credentials pending investigation\n- Review svc-ci-runner's recent audit trail for unusual access patterns\n- Check if svc-ci-runner credentials were recently used from an unexpected IP\n- Initiate key rotation for key-code-signing-prod as a precautionary measure",
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_604"
-}
-```
-
----
-
-### POST /svc/ai/ai/explain/policy
-
-Explains an existing policy in plain English.
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/explain/policy \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "policy_id": "policy-pii-key-access"
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "action": "explain_policy",
-    "answer": "This policy controls access to all keys tagged data-class=pii. Here is what it does in plain English:\n\n- Only the payments-service workload (identified by SPIFFE ID) can encrypt or decrypt. All other identities — including human administrators — are denied by default.\n- Decrypt operations require a justification code. Acceptable codes are CUSTOMER_INITIATED_ACCESS, CUSTOMER_INITIATED_SUPPORT, LEGAL_HOLD, and BREAKGLASS_EMERGENCY.\n- BREAKGLASS_EMERGENCY decrypts are held for approval by the privacy-leads group before proceeding.\n- Keys under this policy rotate automatically every 365 days.\n- The policy is currently active and was last updated by ops-admin on 2026-03-15.",
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_605"
-}
-```
-
----
+There is no `/svc/ai` service. AI traffic goes through the AI gateway
+(`/svc/ai-gateway/ai-gateway/v1/...`): chat and completion proxying with DLP
+scanning, redaction and guardrails (`POST .../v1/chat/completions`,
+`.../v1/scan`, `.../v1/redact`, `.../v1/evaluate`), plus model, policy,
+guardrail, access-rule and budget administration. See the route index in
+[API_REFERENCE.md](API_REFERENCE.md#appendix-route-index-generated).
 
 ## Section 6: Reference Use Cases
 
@@ -2832,7 +2548,7 @@ Response:
 1. Configure trust domain and enable JWT SVIDs:
 
 ```bash
-curl -sk -X POST https://localhost/svc/workload/workload-identity/settings \
+curl -sk -X PUT https://localhost/svc/workload/workload-identity/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2923,7 +2639,7 @@ curl -sk "https://localhost/svc/workload/workload-identity/graph?tenant_id=root"
 1. Register the attested key release policy pinned to the enclave image PCR:
 
 ```bash
-curl -sk -X POST https://localhost/svc/confidential/confidential/policy \
+curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3098,7 +2814,7 @@ curl -sk -X POST https://localhost/svc/reporting/reports/generate \
 1. Run PQC assessment to confirm the Root CA is the top priority:
 
 ```bash
-curl -sk -X POST https://localhost/svc/pqc/pqc/assess \
+curl -sk -X POST https://localhost/svc/pqc/pqc/scan \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3315,7 +3031,7 @@ curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
 ```
 
 ```bash
-curl -sk -X POST https://localhost/svc/confidential/confidential/policy \
+curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3364,7 +3080,7 @@ curl -sk "https://localhost/svc/pqc/pqc/inventory?tenant_id=root" \
   -H "X-Tenant-ID: root" > pqc_inventory_q1_2026.json
 
 # Run fresh assessment
-curl -sk -X POST https://localhost/svc/pqc/pqc/assess \
+curl -sk -X POST https://localhost/svc/pqc/pqc/scan \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3388,18 +3104,6 @@ curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
 ```
 
 4. Use AI to generate the executive summary:
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "query": "Generate an executive summary of our PQC readiness status for a board-level audience, including: current readiness score, CNSA 2.0 compliance status, top 3 risks, migration progress since last quarter, and estimated timeline to full compliance.",
-    "include_context": true
-  }'
-```
 
 5. Generate the evidence pack for auditors:
 

@@ -269,158 +269,19 @@ All endpoints require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root` hea
 
 #### Create a Tokenization Scheme
 
-`POST /svc/dataprotect/schemes`
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/schemes \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "pan-tokenizer",
-    "description": "PCI DSS compliant PAN tokenization using FF1",
-    "mode": "fpe",
-    "algorithm": "FF1",
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "inputAlphabet": "0123456789",
-    "outputAlphabet": "0123456789",
-    "minLength": 13,
-    "maxLength": 19,
-    "tweakSource": "static",
-    "staticTweak": "0123456789abcdef0123456789abcdef",
-    "preservePrefix": 6,
-    "preserveSuffix": 4,
-    "luhnPreserve": true,
-    "nullHandling": "passthrough"
-  }'
-```
-
-**Response `201 Created`:**
-
-```json
-{
-  "item": {
-    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "name": "pan-tokenizer",
-    "description": "PCI DSS compliant PAN tokenization using FF1",
-    "mode": "fpe",
-    "algorithm": "FF1",
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "inputAlphabet": "0123456789",
-    "outputAlphabet": "0123456789",
-    "minLength": 13,
-    "maxLength": 19,
-    "tweakSource": "static",
-    "preservePrefix": 6,
-    "preserveSuffix": 4,
-    "luhnPreserve": true,
-    "nullHandling": "passthrough",
-    "createdAt": "2026-03-23T10:00:00Z",
-    "updatedAt": "2026-03-23T10:00:00Z",
-    "createdBy": "admin@example.com"
-  },
-  "request_id": "req_dp_001"
-}
-```
-
-> **Note:** The `staticTweak` is stored internally but never returned in read responses to minimize exposure. Store it separately if you need to audit the tweak value.
-
----
+Tokenization settings live in a token vault: `POST /svc/dataprotect/token-vaults`.
 
 #### List Tokenization Schemes
 
-`GET /svc/dataprotect/schemes`
-
-Query parameters: `pageSize` (int, default 20), `pageToken` (string, for pagination), `mode` (filter by mode: `fpe`, `vault`).
-
-```bash
-curl "https://localhost/svc/dataprotect/schemes?pageSize=10&mode=fpe" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "items": [
-    {
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "name": "pan-tokenizer",
-      "mode": "fpe",
-      "algorithm": "FF1",
-      "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "createdAt": "2026-03-23T10:00:00Z"
-    },
-    {
-      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-      "name": "ssn-tokenizer",
-      "mode": "fpe",
-      "algorithm": "FF1",
-      "keyId": "4ab96g75-6828-5673-c4gd-3d074g77bgb7",
-      "createdAt": "2026-03-23T10:05:00Z"
-    }
-  ],
-  "nextPageToken": null,
-  "totalCount": 2,
-  "request_id": "req_dp_002"
-}
-```
-
----
+`GET /svc/dataprotect/token-vaults`
 
 #### Get a Scheme
 
-`GET /svc/dataprotect/schemes/{id}`
-
-```bash
-curl "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:** Returns the full scheme object (same shape as create response, minus `staticTweak`).
-
----
-
-#### Update a Scheme
-
-`PATCH /svc/dataprotect/schemes/{id}`
-
-Only `name`, `description`, and `nullHandling` are mutable after creation. Algorithm and key changes require creating a new scheme.
-
-```bash
-curl -X PATCH \
-  "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "description": "Updated: PCI DSS PAN tokenization — production",
-    "nullHandling": "error"
-  }'
-```
-
-**Response `200 OK`:** Returns updated scheme object.
-
----
+`GET /svc/dataprotect/token-vaults/{id}`
 
 #### Delete a Scheme
 
-`DELETE /svc/dataprotect/schemes/{id}`
-
-Fails with `409 Conflict` if any active tokenized records reference this scheme. Deactivate all dependent systems before deleting.
-
-```bash
-curl -X DELETE \
-  "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `204 No Content`** on success.
-
----
+`DELETE /svc/dataprotect/token-vaults/{id}`
 
 #### Tokenize a Single Value
 
@@ -550,51 +411,6 @@ curl -X POST https://localhost/svc/dataprotect/detokenize/batch \
 
 ---
 
-#### Vault Search
-
-`GET /svc/dataprotect/vault/search`
-
-For vault-mode schemes only. Query parameters: `schemeId` (required), `token` (optional), `original` (optional).
-
-```bash
-curl "https://localhost/svc/dataprotect/vault/search?schemeId=b2c3d4e5-f6a7-8901-bcde-f12345678901&token=TKN-a8f2c9d1e4b3" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "items": [
-    {
-      "token": "TKN-a8f2c9d1e4b3",
-      "createdAt": "2026-03-10T14:22:00Z",
-      "schemeId": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-    }
-  ],
-  "originalValue": "4532015112830366",
-  "request_id": "req_dp_030"
-}
-```
-
-**Summary of Tokenization Endpoints:**
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/svc/dataprotect/schemes` | List schemes (pagination, mode filter) |
-| `POST` | `/svc/dataprotect/schemes` | Create scheme |
-| `GET` | `/svc/dataprotect/schemes/{id}` | Get scheme |
-| `PATCH` | `/svc/dataprotect/schemes/{id}` | Update (name, description, nullHandling) |
-| `DELETE` | `/svc/dataprotect/schemes/{id}` | Delete (fails if scheme in use) |
-| `POST` | `/svc/dataprotect/tokenize` | Tokenize single value |
-| `POST` | `/svc/dataprotect/tokenize/batch` | Tokenize up to 1000 values |
-| `POST` | `/svc/dataprotect/detokenize` | Detokenize single token |
-| `POST` | `/svc/dataprotect/detokenize/batch` | Detokenize up to 1000 tokens |
-| `GET` | `/svc/dataprotect/vault/search` | Search vault by token or original value |
-
----
-
 ## 3. Data Masking and Redaction
 
 Data masking transforms sensitive values into representations that conceal the original while preserving enough structure for the intended audience. Unlike tokenization, masking is typically one-way: the original cannot be recovered from the masked output.
@@ -697,56 +513,7 @@ Output:  7819302847561243   (random numeric, 16 chars, Luhn invalid)
 
 #### Create a Masking Policy
 
-`POST /svc/dataprotect/masking/policies`
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/masking/policies \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "credit-card-masking",
-    "description": "Dynamic masking by caller role for PAN fields",
-    "fieldPattern": "pan|credit_card|card_number",
-    "maskMode": "dynamic",
-    "maskChar": "X",
-    "visiblePrefix": 0,
-    "visibleSuffix": 4,
-    "roleExemptions": ["dba", "payment-processor"],
-    "dynamicRules": [
-      {"roles": ["analyst"], "visiblePrefix": 0, "visibleSuffix": 4, "maskChar": "X"},
-      {"roles": ["support"], "visiblePrefix": 0, "visibleSuffix": 4, "maskChar": "*"},
-      {"roles": ["auditor"], "visiblePrefix": 0, "visibleSuffix": 0, "maskChar": "X"}
-    ]
-  }'
-```
-
-**Response `201 Created`:**
-
-```json
-{
-  "item": {
-    "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-    "name": "credit-card-masking",
-    "fieldPattern": "pan|credit_card|card_number",
-    "maskMode": "dynamic",
-    "maskChar": "X",
-    "visiblePrefix": 0,
-    "visibleSuffix": 4,
-    "roleExemptions": ["dba", "payment-processor"],
-    "dynamicRules": [
-      {"roles": ["analyst"], "visiblePrefix": 0, "visibleSuffix": 4, "maskChar": "X"},
-      {"roles": ["support"], "visiblePrefix": 0, "visibleSuffix": 4, "maskChar": "*"},
-      {"roles": ["auditor"], "visiblePrefix": 0, "visibleSuffix": 0, "maskChar": "X"}
-    ],
-    "createdAt": "2026-03-23T10:10:00Z",
-    "createdBy": "admin@example.com"
-  },
-  "request_id": "req_dp_040"
-}
-```
-
----
+`POST /svc/dataprotect/masking-policies`; list with `GET`, change with `PUT /svc/dataprotect/masking-policies/{id}`, delete with `DELETE /svc/dataprotect/masking-policies/{id}`.
 
 #### Apply Masking to a Record
 
@@ -788,41 +555,6 @@ curl -X POST https://localhost/svc/dataprotect/mask \
 
 ---
 
-#### Batch Mask
-
-`POST /svc/dataprotect/mask/batch`
-
-Up to 1000 records per request.
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/mask/batch \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "policyId": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-    "callerRoles": ["support"],
-    "records": [
-      {"id": "r1", "card_number": "4532015112830366"},
-      {"id": "r2", "card_number": "5425233430109903"}
-    ]
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "items": [
-    {"index": 0, "maskedRecord": {"id": "r1", "card_number": "************0366"}, "error": null},
-    {"index": 1, "maskedRecord": {"id": "r2", "card_number": "************9903"}, "error": null}
-  ],
-  "successCount": 2,
-  "errorCount": 0,
-  "request_id": "req_dp_042"
-}
-```
-
 ### 3.3 Field Encryption
 
 Field encryption encrypts individual fields with AES-256-GCM, supporting per-field associated data for integrity binding.
@@ -850,115 +582,17 @@ The re-encrypt endpoint accepts old ciphertext, decrypts with the current key ve
 
 #### Encrypt a Field
 
-`POST /svc/dataprotect/encrypt/field`
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/encrypt/field \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "patient-00192",
-    "plaintext": "123-45-6789",
-    "deterministic": false
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "ciphertext": "AQIDAHjK9mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7wL2VGhTkL9mP3==",
-  "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "keyVersion": 1,
-  "algorithm": "AES-256-GCM",
-  "deterministic": false,
-  "fieldName": "ssn",
-  "recordId": "patient-00192",
-  "request_id": "req_dp_050"
-}
-```
-
-The `ciphertext` is base64-encoded: key version prefix (4 bytes) + IV (12 bytes) + GCM tag (16 bytes) + encrypted content.
-
----
+`POST /svc/dataprotect/app/encrypt-fields` encrypts the named fields of a JSON document.
 
 #### Decrypt a Field
 
-`POST /svc/dataprotect/decrypt/field`
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/decrypt/field \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "patient-00192",
-    "ciphertext": "AQIDAHjK9mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7wL2VGhTkL9mP3=="
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "plaintext": "123-45-6789",
-  "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "keyVersion": 1,
-  "request_id": "req_dp_051"
-}
-```
-
----
-
-#### Re-encrypt a Field (Key Rotation)
-
-`POST /svc/dataprotect/reencrypt/field`
-
-```bash
-curl -X POST https://localhost/svc/dataprotect/reencrypt/field \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "patient-00192",
-    "oldCiphertext": "AQIDAHjK9mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7wL2VGhTkL9mP3=="
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "oldCiphertext": "AQIDAHjK9mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7wL2VGhTkL9mP3==",
-  "newCiphertext": "AQIEBHkL9mQ4rS8xM3Yl9mQ4rS8xM3Yl9mQ4rS8xM3WIiUlM9mQ4==",
-  "oldKeyVersion": 1,
-  "newKeyVersion": 2,
-  "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "request_id": "req_dp_052"
-}
-```
+`POST /svc/dataprotect/app/decrypt-fields` reverses `encrypt-fields`.
 
 ### 3.4 API Endpoints — Masking and Field Encryption
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/svc/dataprotect/masking/policies` | List masking policies |
-| `POST` | `/svc/dataprotect/masking/policies` | Create masking policy |
-| `GET` | `/svc/dataprotect/masking/policies/{id}` | Get policy |
-| `PATCH` | `/svc/dataprotect/masking/policies/{id}` | Update policy |
-| `DELETE` | `/svc/dataprotect/masking/policies/{id}` | Delete policy |
 | `POST` | `/svc/dataprotect/mask` | Apply masking to a single record |
-| `POST` | `/svc/dataprotect/mask/batch` | Apply masking to up to 1000 records |
-| `POST` | `/svc/dataprotect/encrypt/field` | Encrypt a single field value |
-| `POST` | `/svc/dataprotect/decrypt/field` | Decrypt a single field value |
-| `POST` | `/svc/dataprotect/reencrypt/field` | Re-encrypt during key rotation |
 
 ---
 
@@ -1065,89 +699,20 @@ Total: 16 characters
 
 #### Wrap a Key in a TR-31 Block
 
-`POST /svc/payment/tr31/wrap`
-
-```bash
-curl -X POST https://localhost/svc/payment/tr31/wrap \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workingKeyId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "kbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "keyUsage": "P0",
-    "algorithm": "A",
-    "modeOfUse": "N",
-    "exportability": "S",
-    "keyVersionNumber": "01",
-    "optionalBlocks": {}
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "keyBlock": "D0096P0AN01S0000F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4",
-  "header": {
-    "versionId": "D",
-    "blockLength": 96,
-    "keyUsage": "P0",
-    "algorithm": "A",
-    "modeOfUse": "N",
-    "keyVersionNumber": "01",
-    "exportability": "S",
-    "numOptionalBlocks": 0
-  },
-  "kbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "workingKeyId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-  "request_id": "req_pay_001"
-}
-```
-
----
+`POST /svc/payment/payment/tr31/create` builds a TR-31 key block.
 
 #### Unwrap a TR-31 Key Block
 
-`POST /svc/payment/tr31/unwrap`
-
-```bash
-curl -X POST https://localhost/svc/payment/tr31/unwrap \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyBlock": "D0096P0AN01S0000F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4",
-    "kbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "importedKeyName": "zpk-zone-a-2026"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "importedKeyId": "d4e5f6a7-b8c9-0123-def0-123456789abc",
-  "importedKeyName": "zpk-zone-a-2026",
-  "keyUsage": "P0",
-  "algorithm": "A",
-  "modeOfUse": "N",
-  "exportability": "S",
-  "keyVersionNumber": "01",
-  "request_id": "req_pay_002"
-}
-```
-
----
+`POST /svc/payment/payment/tr31/parse` opens a TR-31 key block.
 
 #### Translate a TR-31 Key Block
 
-`POST /svc/payment/tr31/translate`
+`POST /svc/payment/payment/tr31/translate`
 
 Re-wraps a key block from one KBPK to another without exposing the working key in plaintext.
 
 ```bash
-curl -X POST https://localhost/svc/payment/tr31/translate \
+curl -X POST https://localhost/svc/payment/payment/tr31/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1214,44 +779,14 @@ Encrypted PIN block transmitted = DES/AES-encrypt(04 12 67 DF EA EE D7 CF, ZPK)
 
 ---
 
-#### Generate a PIN Block
-
-`POST /svc/payment/pin/generate-block`
-
-```bash
-curl -X POST https://localhost/svc/payment/pin/generate-block \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pin": "1234",
-    "pan": "4532015112830366",
-    "format": 0,
-    "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "encryptedPinBlock": "A3F7E29D4B1C8F62",
-  "format": 0,
-  "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-  "request_id": "req_pay_010"
-}
-```
-
----
-
 #### Translate a PIN Block
 
-`POST /svc/payment/pin/translate`
+`POST /svc/payment/payment/pin/translate`
 
 Translates a PIN block from one ZPK to another without exposing the PIN in plaintext.
 
 ```bash
-curl -X POST https://localhost/svc/payment/pin/translate \
+curl -X POST https://localhost/svc/payment/payment/pin/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1281,112 +816,11 @@ curl -X POST https://localhost/svc/payment/pin/translate \
 
 #### Verify PIN — Visa PVV Method
 
-`POST /svc/payment/pin/verify/pvv`
-
-**PVV Algorithm:**
-1. Input: `PVKI (1) || PAN_RIGHT_12 (12 excl. check) || PIN_length (1)` = 14 digits
-2. Encrypt under PVK
-3. Scan result left-to-right, extract first 4 decimal nibbles → 4-digit PVV
-4. Stored on card Track 2. At verification: re-derive and compare.
-
-```bash
-curl -X POST https://localhost/svc/payment/pin/verify/pvv \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "encryptedPinBlock": "A3F7E29D4B1C8F62",
-    "pan": "4532015112830366",
-    "pinBlockFormat": 0,
-    "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "pvk1Id": "7de29b53-8164-4e19-c712-5f48a22bf093",
-    "pvki": "1",
-    "pvv": "8421"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "verified": true,
-  "pan": "4532015112830366",
-  "pvki": "1",
-  "request_id": "req_pay_020"
-}
-```
-
----
+`POST /svc/payment/payment/pin/pvv/verify`; generate a PVV with `POST /svc/payment/payment/pin/pvv/generate`.
 
 #### Verify PIN — IBM 3624 Offset Method
 
-`POST /svc/payment/pin/verify/offset`
-
-**IBM 3624 Algorithm:**
-1. PVK encrypts rightmost 12 PAN digits (excl. check digit)
-2. Extract leftmost 4 nibbles, reduce to decimal → "Natural PIN"
-3. Customer PIN Offset = `(Customer PIN digit - Natural PIN digit) mod 10` per digit
-4. Stored on card. At verification: re-derive Natural PIN, apply offset, compare to entered PIN.
-
-```bash
-curl -X POST https://localhost/svc/payment/pin/verify/offset \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "encryptedPinBlock": "A3F7E29D4B1C8F62",
-    "pan": "4532015112830366",
-    "pinBlockFormat": 0,
-    "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "pvkId": "7de29b53-8164-4e19-c712-5f48a22bf093",
-    "pinOffset": "3829"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "verified": true,
-  "pan": "4532015112830366",
-  "request_id": "req_pay_021"
-}
-```
-
----
-
-#### Generate a PIN (Initial Card Issuance)
-
-`POST /svc/payment/pin/generate`
-
-Generates a cryptographically random PIN and returns it encrypted in a PIN block. The cleartext PIN is never returned.
-
-```bash
-curl -X POST https://localhost/svc/payment/pin/generate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "pan": "4532015112830366",
-    "pinLength": 4,
-    "format": 0,
-    "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "pvk1Id": "7de29b53-8164-4e19-c712-5f48a22bf093",
-    "pvki": "1"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "encryptedPinBlock": "B7C4D82E3A91F056",
-  "pvv": "6193",
-  "format": 0,
-  "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-  "request_id": "req_pay_030"
-}
-```
+`POST /svc/payment/payment/pin/offset/verify`; generate an offset with `POST /svc/payment/payment/pin/offset/generate`.
 
 ### 4.3 ISO 20022 Signing
 
@@ -1396,10 +830,10 @@ ISO 20022 is the international standard for electronic data interchange between 
 
 #### Sign an ISO 20022 Message
 
-`POST /svc/payment/iso20022/sign`
+`POST /svc/payment/payment/iso20022/sign`
 
 ```bash
-curl -X POST https://localhost/svc/payment/iso20022/sign \
+curl -X POST https://localhost/svc/payment/payment/iso20022/sign \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1431,10 +865,10 @@ curl -X POST https://localhost/svc/payment/iso20022/sign \
 
 #### Verify an ISO 20022 Signature
 
-`POST /svc/payment/iso20022/verify`
+`POST /svc/payment/payment/iso20022/verify`
 
 ```bash
-curl -X POST https://localhost/svc/payment/iso20022/verify \
+curl -X POST https://localhost/svc/payment/payment/iso20022/verify \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1464,16 +898,10 @@ curl -X POST https://localhost/svc/payment/iso20022/verify \
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/svc/payment/tr31/wrap` | Wrap working key in TR-31 block under KBPK |
-| `POST` | `/svc/payment/tr31/unwrap` | Unwrap TR-31 block and import to KMS |
-| `POST` | `/svc/payment/tr31/translate` | Translate TR-31 block from one KBPK to another |
-| `POST` | `/svc/payment/pin/generate-block` | Generate encrypted PIN block |
-| `POST` | `/svc/payment/pin/translate` | Translate PIN block between ZPKs/formats |
-| `POST` | `/svc/payment/pin/verify/pvv` | Verify PIN using Visa PVV method |
-| `POST` | `/svc/payment/pin/verify/offset` | Verify PIN using IBM 3624 offset method |
-| `POST` | `/svc/payment/pin/generate` | Generate random PIN, return encrypted block |
-| `POST` | `/svc/payment/iso20022/sign` | Sign ISO 20022 message (XMLDSig or JWS) |
-| `POST` | `/svc/payment/iso20022/verify` | Verify ISO 20022 message signature |
+| `POST` | `/svc/payment/payment/tr31/translate` | Translate TR-31 block from one KBPK to another |
+| `POST` | `/svc/payment/payment/pin/translate` | Translate PIN block between ZPKs/formats |
+| `POST` | `/svc/payment/payment/iso20022/sign` | Sign ISO 20022 message (XMLDSig or JWS) |
+| `POST` | `/svc/payment/payment/iso20022/verify` | Verify ISO 20022 message signature |
 
 ---
 
@@ -1491,32 +919,22 @@ PKCS#11 library in `hsm-connector` ([HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATIO
 ## 6. JCA/JCE Provider
 
 The JCA provider is source in `services/jca-provider` (also downloadable as a
-zip from the dashboard's Java SDK view). Build it with Maven and register the
-provider class:
-
-```bash
-cd services/jca-provider && mvn package
-```
+zip from the dashboard's Java SDK view, built from the same files). It
+registers one service, `Cipher.VectaKeyWrap`, which wraps and unwraps keys
+under a Vecta KMS TDE key through the ekm API; the Vecta key never leaves the
+KMS. There is no local cipher, signature, key store or `SecureRandom`.
 
 ```java
-java.security.Security.addProvider(new com.vecta.kms.VectaKMSProvider());
+Security.addProvider(new com.vecta.kms.VectaKMSProvider());
+Cipher c = Cipher.getInstance("VectaKeyWrap", "VectaKMS");
+c.init(Cipher.WRAP_MODE, new VectaKMSKey("tde_key_123"));
+byte[] wrapped = c.wrap(dataKey);   // keep c.getIV() with it
 ```
 
-It is configured by environment variables: `VECTA_BASE_URL`, `VECTA_TENANT_ID`,
-`VECTA_AUTH_TOKEN`, `VECTA_MTLS_CERT`, `VECTA_MTLS_KEY`, `VECTA_MTLS_CA`,
-`VECTA_API_KEY`, `VECTA_JWT_ENDPOINT`, `VECTA_KEY_CACHE_TTL`.
-
-It registers exactly these services:
-
-| Service | Algorithm | Where it runs |
-|---|---|---|
-| Cipher | `AES/GCM/NoPadding` | locally from a cached exportable key, else in the KMS |
-| Signature | `SHA256withRSA`, `SHA256withECDSA` | in the KMS |
-| KeyStore | `VectaKMS` | lists and loads keys from the KMS |
-
-There is no `SecureRandom` service (the former `VectaQRNG` called an endpoint
-that does not exist and silently used the JVM's own generator); use the JVM's
-`SecureRandom`.
+Configuration: `VECTA_BASE_URL` (https only), `VECTA_TENANT_ID`,
+`VECTA_AUTH_TOKEN`, optional `VECTA_CA_CERT`; TLS 1.3. It runs on OpenJDK
+builds; Oracle JDK loads a `Cipher` provider only from a jar signed with an
+Oracle JCE code-signing certificate. See `services/jca-provider/README.md`.
 
 ## 7. Autokey — Automatic Key Provisioning
 
@@ -1680,20 +1098,6 @@ The complete lifecycle of a handle request from developer to provisioned key:
 
 **Step 1 — Developer requests a handle**
 
-```bash
-curl -X POST https://localhost/svc/autokey/autokey/handles \
-  -H "Authorization: Bearer $DEV_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "templateId": "e5f6a7b8-c9d0-1234-efab-567890123456",
-    "handleName": "payments-service-dek-prod",
-    "serviceId": "payments-service",
-    "environment": "prod",
-    "justification": "Production DEK for PAN field encryption in the payments microservice"
-  }'
-```
-
 **Response `202 Accepted`** (immediate provisioning since `requiresApproval: false`):
 
 ```json
@@ -1713,12 +1117,6 @@ curl -X POST https://localhost/svc/autokey/autokey/handles \
 ```
 
 **Step 2 — Poll handle status** (for async provisioning)
-
-```bash
-curl "https://localhost/svc/autokey/autokey/handles/g7b8c9d0-e1f2-3456-gabc-789012345678" \
-  -H "Authorization: Bearer $DEV_TOKEN" \
-  -H "X-Tenant-ID: root"
-```
 
 **Response `200 OK`** (provisioning complete):
 
@@ -1762,17 +1160,6 @@ curl "https://localhost/svc/autokey/autokey/handles?handleName=payments-service-
 
 **Step 4 — Admin approves an approval-required request** (for templates with `requiresApproval: true`)
 
-```bash
-curl -X POST \
-  "https://localhost/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/approve" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "comment": "Approved for production CA signing key — reviewed CSR and key purpose"
-  }'
-```
-
 **Response `200 OK`:**
 
 ```json
@@ -1789,17 +1176,6 @@ curl -X POST \
 ```
 
 **Step 5 — Admin rejects a request**
-
-```bash
-curl -X POST \
-  "https://localhost/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/reject" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reason": "CA signing keys require a separate governance ceremony. Please open a ticket with the platform team."
-  }'
-```
 
 **Response `200 OK`:**
 
@@ -1822,14 +1198,8 @@ curl -X POST \
 |---|---|---|---|
 | `GET` | `/svc/autokey/autokey/templates` | List templates | Admin |
 | `POST` | `/svc/autokey/autokey/templates` | Create template | Admin |
-| `GET` | `/svc/autokey/autokey/templates/{id}` | Get template | Admin |
-| `PATCH` | `/svc/autokey/autokey/templates/{id}` | Update template | Admin |
 | `DELETE` | `/svc/autokey/autokey/templates/{id}` | Delete template | Admin |
-| `POST` | `/svc/autokey/autokey/handles` | Request a key handle | Developer |
 | `GET` | `/svc/autokey/autokey/handles` | List handles (filter by status, template) | Developer/Admin |
-| `GET` | `/svc/autokey/autokey/handles/{id}` | Get handle status | Developer/Admin |
-| `POST` | `/svc/autokey/autokey/handles/{id}/approve` | Approve pending handle | Admin |
-| `POST` | `/svc/autokey/autokey/handles/{id}/reject` | Reject pending handle | Admin |
 
 ---
 
@@ -2062,36 +1432,6 @@ curl -X DELETE \
 
 ---
 
-#### Hard Delete (Destroy) a Specific Version
-
-`POST /svc/secrets/secrets/{path}/destroy/{version}`
-
-Permanently and irreversibly removes a specific version's value. Use when a secret value has been compromised and must not be recoverable.
-
-```bash
-curl -X POST \
-  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/destroy/2" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "path": "/apps/payments/prod/db-password",
-  "version": 2,
-  "destroyed": true,
-  "destroyedAt": "2026-03-23T12:05:00Z",
-  "destroyedBy": "security-admin@example.com",
-  "request_id": "req_sec_010"
-}
-```
-
-> **Warning:** Destroy is permanent. The version record is retained (metadata only, no value) to maintain audit continuity, but the secret value cannot be recovered.
-
----
-
 #### List Versions
 
 `GET /svc/secrets/secrets/{path}/versions`
@@ -2116,64 +1456,6 @@ curl "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-passw
   "request_id": "req_sec_011"
 }
 ```
-
----
-
-#### Get Specific Version
-
-`GET /svc/secrets/secrets/{path}/versions/{version}`
-
-```bash
-curl "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/versions/3" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:** Returns the full secret object for version 3, including value.
-
----
-
-#### Rollback to a Previous Version
-
-`POST /svc/secrets/secrets/{path}/rollback/{version}`
-
-Creates a new version whose value is copied from the specified historical version. Does not restore destroyed versions.
-
-```bash
-curl -X POST \
-  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/rollback/3" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "item": {
-    "path": "/apps/payments/prod/db-password",
-    "version": 5,
-    "rolledBackFrom": 3,
-    "createdAt": "2026-03-23T12:10:00Z",
-    "createdBy": "platform-admin@example.com"
-  },
-  "request_id": "req_sec_015"
-}
-```
-
-**Summary of Secrets Endpoints:**
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/svc/secrets/secrets` | List secrets by prefix |
-| `POST` | `/svc/secrets/secrets` | Create secret (version 1) |
-| `GET` | `/svc/secrets/secrets/{path}` | Get latest version (with value) |
-| `PUT` | `/svc/secrets/secrets/{path}` | Create new version |
-| `DELETE` | `/svc/secrets/secrets/{path}` | Soft delete |
-| `POST` | `/svc/secrets/secrets/{path}/destroy/{version}` | Hard delete specific version |
-| `GET` | `/svc/secrets/secrets/{path}/versions` | List all versions |
-| `GET` | `/svc/secrets/secrets/{path}/versions/{version}` | Get specific version with value |
-| `POST` | `/svc/secrets/secrets/{path}/rollback/{version}` | Rollback to historical version |
 
 ---
 
@@ -2249,17 +1531,6 @@ curl -X POST https://localhost/svc/dataprotect/detokenize \
 **Step 1 — Encrypt SSN on record creation:**
 
 ```bash
-curl -X POST https://localhost/svc/dataprotect/encrypt/field \
-  -H "Authorization: Bearer $APP_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "patient-00192",
-    "plaintext": "123-45-6789",
-    "deterministic": false
-  }'
 # Store ciphertext "AQIDAHjK..." in the ssn column
 ```
 
@@ -2268,17 +1539,6 @@ curl -X POST https://localhost/svc/dataprotect/encrypt/field \
 If the application needs `SELECT * FROM patients WHERE ssn = ?`:
 
 ```bash
-curl -X POST https://localhost/svc/dataprotect/encrypt/field \
-  -H "Authorization: Bearer $APP_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "search-context",
-    "plaintext": "123-45-6789",
-    "deterministic": true
-  }'
 # Same SSN always produces same ciphertext — allows index-based search
 # Security trade-off: reveals that two patients have the same SSN
 ```
@@ -2286,18 +1546,6 @@ curl -X POST https://localhost/svc/dataprotect/encrypt/field \
 **Step 3 — Key rotation (annual or on incident):**
 
 ```bash
-# Re-encrypt all SSN ciphertexts to new key version
-# Call this for every patient record during the maintenance window:
-curl -X POST https://localhost/svc/dataprotect/reencrypt/field \
-  -H "Authorization: Bearer $ROTATION_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "fieldName": "ssn",
-    "recordId": "patient-00192",
-    "oldCiphertext": "AQIDAHjK9mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7wL2VGhTkL9mP3=="
-  }'
 # Update DB: SET ssn = newCiphertext WHERE patient_id = 'patient-00192'
 ```
 
@@ -2316,29 +1564,12 @@ curl -X POST https://localhost/svc/dataprotect/reencrypt/field \
 
 **Step 1 — Wrap ZPK for transport to the POS terminal's key injection device:**
 
-```bash
-curl -X POST https://localhost/svc/payment/tr31/wrap \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workingKeyId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "kbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "keyUsage": "P0",
-    "algorithm": "A",
-    "modeOfUse": "N",
-    "exportability": "S",
-    "keyVersionNumber": "01"
-  }'
-# Returns TR-31 key block: "D0096P0AN01S0000..."
-```
-
 **Step 2 — Transmit key block to the key injection facility (KIF).**
 
 The KIF's own KBPK may differ from the KMS KBPK. Use `translate` to re-wrap for the KIF's KBPK without exposing the ZPK:
 
 ```bash
-curl -X POST https://localhost/svc/payment/tr31/translate \
+curl -X POST https://localhost/svc/payment/payment/tr31/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2365,27 +1596,10 @@ curl -X POST https://localhost/svc/payment/tr31/translate \
 
 **Step 1 — Verify old PIN (PVV method):**
 
-```bash
-curl -X POST https://localhost/svc/payment/pin/verify/pvv \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "encryptedPinBlock": "A3F7E29D4B1C8F62",
-    "pan": "4532015112830366",
-    "pinBlockFormat": 0,
-    "zpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "pvk1Id": "7de29b53-8164-4e19-c712-5f48a22bf093",
-    "pvki": "1",
-    "pvv": "8421"
-  }'
-# Response: {"verified": true}
-```
-
 **Step 2 — Translate new PIN block from ATM ZPK to host ZPK:**
 
 ```bash
-curl -X POST https://localhost/svc/payment/pin/translate \
+curl -X POST https://localhost/svc/payment/payment/pin/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2420,26 +1634,6 @@ The new PVV is derived during the `translate` or a separate `generate` call, the
 
 The API gateway extracts the caller's roles from the JWT and passes them to the masking service:
 
-```bash
-curl -X POST https://localhost/svc/dataprotect/mask/batch \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "policyId": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-    "callerRoles": ["analyst"],
-    "records": [
-      {
-        "customer_id": "C-10045",
-        "card_number": "4532015112830366",
-        "ssn": "123-45-6789",
-        "full_name": "Jane Smith",
-        "transaction_amount": 142.50
-      }
-    ]
-  }'
-```
-
 **Response — analyst sees:**
 
 ```json
@@ -2472,128 +1666,32 @@ Pass `"callerRoles": ["dba"]` — the `roleExemptions` list includes `dba`, so t
 
 ### 9.6 Java Microservice Using JCA — Zero Code Change
 
-**Context:** An existing Java microservice uses `javax.crypto.Cipher` with a locally-managed AES key. The security team wants to migrate the key into Vecta KMS without modifying the microservice's business logic.
+**Context:** A Java service encrypts records with AES-GCM data keys and
+wants those data keys protected by a Vecta KMS key (envelope encryption).
 
-**Prerequisites:**
-- Vecta JCA provider dependency added to the service's `pom.xml`
-- Vecta provider registered at application startup (see Section 6.1)
-- Existing key migrated into Vecta KMS and accessible as alias `data-encryption-key`
-
-**Before (local key management):**
+The service keeps its own `AES/GCM/NoPadding` cipher (the JVM's provider) for
+the data, and uses the Vecta provider only to wrap and unwrap each data key:
 
 ```java
-// Old code — key loaded from a local keystore file
-KeyStore ks = KeyStore.getInstance("PKCS12");
-ks.load(new FileInputStream("/etc/service/keystore.p12"), "changeit".toCharArray());
-SecretKey key = (SecretKey) ks.getKey("data-encryption-key", "changeit".toCharArray());
+Security.addProvider(new VectaKMSProvider());
+KeyGenerator gen = KeyGenerator.getInstance("AES");
+gen.init(256);
+SecretKey dataKey = gen.generateKey();
 
-Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-cipher.init(Cipher.ENCRYPT_MODE, key);
-byte[] ciphertext = cipher.doFinal(plaintext);
+Cipher kek = Cipher.getInstance("VectaKeyWrap", "VectaKMS");
+kek.init(Cipher.WRAP_MODE, new VectaKMSKey("tde_key_123"));
+byte[] wrappedDataKey = kek.wrap(dataKey);
+byte[] wrapIV = kek.getIV();          // store both with the ciphertext
+
+Cipher data = Cipher.getInstance("AES/GCM/NoPadding");   // JVM provider
+data.init(Cipher.ENCRYPT_MODE, dataKey);
+byte[] ciphertext = data.doFinal(plaintext);
 ```
 
-**After (Vecta KMS, same code structure):**
-
-```java
-// Only change: register VectaProvider at startup (in main() or @Configuration)
-Security.insertProviderAt(new VectaProvider(vectaConfig), 1);
-
-// Business logic code unchanged:
-KeyStore ks = KeyStore.getInstance("VectaKMS"); // <- only this string changes
-ks.load(null, null);
-SecretKey key = (SecretKey) ks.getKey("data-encryption-key", null);
-
-Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding"); // unchanged
-cipher.init(Cipher.ENCRYPT_MODE, key);                    // unchanged
-byte[] ciphertext = cipher.doFinal(plaintext);            // unchanged
-```
-
-The `KeyStore.getInstance("VectaKMS")` call is the only change in the business logic layer. All subsequent JCA calls — `Cipher.getInstance`, `cipher.init`, `cipher.doFinal` — are identical. The JCA provider intercepts these calls and routes them to Vecta KMS.
-
-**Compliance outcome:** Private key material removed from the filesystem. Key rotation, access policy, and audit logging managed centrally in Vecta KMS. Zero changes to the service's business logic or test suite.
-
----
-
-### 9.7 PostgreSQL Column Encryption via PKCS#11
-
-**Context:** A PostgreSQL 16 cluster needs to encrypt specific columns (SSNs, account numbers) using server-side transparent column encryption backed by Vecta KMS keys.
-
-**Prerequisites:**
-- Vecta PKCS#11 library installed at `/usr/lib/vecta/pkcs11/libvecta-pkcs11.so`
-- PostgreSQL `pgcrypto` extension or a custom C extension that can call PKCS#11
-- Encryption key `pg-column-encryption-key` in Vecta KMS, purpose `encrypt`/`decrypt`, tagged `pkcs11-slot=prod`
-
-**Step 1 — Configure the PKCS#11 library:**
-
-Create `/etc/vecta/pkcs11.conf` with `key_filter = tag:pkcs11-slot=prod` so only the column encryption key appears in the slot (see Section 5.3).
-
-**Step 2 — Create a PostgreSQL wrapper function that calls PKCS#11:**
-
-```sql
--- Create extension that wraps PKCS#11 encrypt/decrypt
--- (requires a custom C extension or pg_pkcs11 contrib module)
-CREATE EXTENSION IF NOT EXISTS pg_vecta_pkcs11;
-
--- Configure the module to use the Vecta library
-SELECT pg_vecta_pkcs11.configure(
-    '/usr/lib/vecta/pkcs11/libvecta-pkcs11.so',
-    'VectaKMS-Production',
-    'pg-column-encryption-key'
-);
-
--- Encrypt/decrypt helper functions
-CREATE OR REPLACE FUNCTION encrypt_field(plaintext TEXT) RETURNS BYTEA
-  LANGUAGE SQL AS $$
-    SELECT pg_vecta_pkcs11.encrypt(plaintext::BYTEA, 'pg-column-encryption-key', 'AES/GCM');
-  $$;
-
-CREATE OR REPLACE FUNCTION decrypt_field(ciphertext BYTEA) RETURNS TEXT
-  LANGUAGE SQL SECURITY DEFINER AS $$
-    SELECT convert_from(
-        pg_vecta_pkcs11.decrypt(ciphertext, 'pg-column-encryption-key', 'AES/GCM'),
-        'UTF8'
-    );
-  $$;
-```
-
-**Step 3 — Encrypt sensitive column on insert:**
-
-```sql
-CREATE TABLE patients (
-    patient_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    full_name   TEXT NOT NULL,
-    ssn_enc     BYTEA,          -- stores encrypted SSN
-    dob         DATE
-);
-
--- Insert with encryption
-INSERT INTO patients (full_name, ssn_enc, dob)
-VALUES (
-    'Jane Smith',
-    encrypt_field('123-45-6789'),
-    '1985-04-12'
-);
-```
-
-**Step 4 — Decrypt on read (authorized roles only):**
-
-```sql
--- Grant decrypt_field only to authorized roles
-GRANT EXECUTE ON FUNCTION decrypt_field(BYTEA) TO phi_reader_role;
-REVOKE EXECUTE ON FUNCTION decrypt_field(BYTEA) FROM PUBLIC;
-
--- Authorized read
-SELECT patient_id, full_name, decrypt_field(ssn_enc) AS ssn
-FROM patients
-WHERE patient_id = '...';
-
--- Unauthorized read sees only ciphertext
-SELECT patient_id, full_name, ssn_enc FROM patients;
-```
-
-**Compliance outcome:** SSN values stored as ciphertext in PostgreSQL. Encryption key lives in Vecta KMS and never touches PostgreSQL disk or memory in plaintext. Column decryption restricted to explicitly authorized database roles.
-
----
+To read, unwrap the data key with `UNWRAP_MODE` and
+`new IvParameterSpec(wrapIV)`, then decrypt locally. Every wrap and unwrap is
+a KMS call, checked against the key's access policy and audited
+(`audit.ekm.tde_key_accessed`).
 
 ### 9.8 Autokey for Microservice Fleet — Self-Service
 
@@ -2605,21 +1703,6 @@ SELECT patient_id, full_name, ssn_enc FROM patients;
 - CI/CD pipeline service account holds the `developer` KMS role
 
 **Step 1 — Developer requests a handle during service onboarding:**
-
-```bash
-# Run by the CI/CD pipeline during `make provision-keys`
-curl -X POST https://localhost/svc/autokey/autokey/handles \
-  -H "Authorization: Bearer $CI_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "templateId": "e5f6a7b8-c9d0-1234-efab-567890123456",
-    "handleName": "inventory-service-dek-prod",
-    "serviceId": "inventory-service",
-    "environment": "prod",
-    "justification": "DEK for product catalog field encryption in inventory-service prod"
-  }'
-```
 
 **Response:** Handle provisioned immediately (no approval required for this template). `keyId` returned within 2 seconds.
 
@@ -2639,11 +1722,6 @@ export VECTA_DEK_KEY_ID=$KEY_ID
 **Step 3 — Service uses the key ID for field encryption at runtime:**
 
 ```bash
-curl -X POST https://localhost/svc/dataprotect/encrypt/field \
-  -H "Authorization: Bearer $SVC_TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d "{
     \"keyId\": \"$VECTA_DEK_KEY_ID\",
     \"fieldName\": \"product_cost\",
     \"recordId\": \"SKU-00912\",

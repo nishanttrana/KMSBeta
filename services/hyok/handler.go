@@ -33,7 +33,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/keys/{id}", h.handleMicrosoftDKEGetKey)
-	mux.HandleFunc("POST /api/v1/keys/{id}/decrypt", h.handleMicrosoftDKEDecrypt)
+	mux.HandleFunc("POST /api/v1/keys/{id}/{version}/decrypt", h.handleMicrosoftDKEDecrypt)
 	mux.HandleFunc("POST /hyok/dke/v1/keys/{id}/decrypt", h.handleDKEDecrypt)
 	mux.HandleFunc("GET /hyok/dke/v1/keys/{id}/publickey", h.handleDKEPublicKey)
 	mux.HandleFunc("POST /hyok/salesforce/v1/keys/{id}/wrap", h.handleSalesforceWrap)
@@ -59,29 +59,21 @@ func (h *Handler) routes() *http.ServeMux {
 
 func (h *Handler) handleMicrosoftDKEGetKey(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	identity, tenantID, ok := h.authenticateAndTenant(r, w, reqID)
+	identity, tenantID, ok := h.dkeCaller(w, r, reqID, true)
 	if !ok {
 		return
 	}
-	out, err := h.svc.GetMicrosoftDKEKey(r.Context(), tenantID, r.PathValue("id"), r.URL.Path, r.Host, identity)
+	out, err := h.svc.GetMicrosoftDKEKey(r.Context(), tenantID, r.PathValue("id"), r.URL.Path, r.Host, dkeKeyURL(r), identity)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.refuseDKE(w, r, reqID, tenantID, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"kty":     out.KTY,
-		"key_ops": out.KeyOps,
-		"n":       out.N,
-		"e":       out.E,
-		"alg":     out.Alg,
-		"kid":     out.KID,
-		"use":     out.Use,
-	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"key": out.Key, "cache": out.Cache})
 }
 
 func (h *Handler) handleMicrosoftDKEDecrypt(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	identity, tenantID, ok := h.authenticateAndTenant(r, w, reqID)
+	identity, tenantID, ok := h.dkeCaller(w, r, reqID, false)
 	if !ok {
 		return
 	}
@@ -90,9 +82,9 @@ func (h *Handler) handleMicrosoftDKEDecrypt(w http.ResponseWriter, r *http.Reque
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
-	out, err := h.svc.ProcessMicrosoftDKEDecrypt(r.Context(), tenantID, r.PathValue("id"), r.URL.Path, r.Host, identity, req)
+	out, err := h.svc.ProcessMicrosoftDKEDecrypt(r.Context(), tenantID, r.PathValue("id"), r.PathValue("version"), r.URL.Path, r.Host, identity, req)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.refuseDKE(w, r, reqID, tenantID, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"value": out.Value})
@@ -307,6 +299,77 @@ func (h *Handler) authenticateAndTenant(r *http.Request, w http.ResponseWriter, 
 		return AuthIdentity{}, "", false
 	}
 	return identity, tenantID, true
+}
+
+// dkeKeyURL is the public URL of a DKE key: the host and the path the client
+// called, before Envoy's /svc/hyok prefix rewrite (x-envoy-original-path).
+// It is only echoed back as the kid; the caller's own view of the URL.
+func dkeKeyURL(r *http.Request) string {
+	path := r.URL.Path
+	if orig := strings.TrimSpace(r.Header.Get("X-Envoy-Original-Path")); strings.HasPrefix(orig, "/") && strings.HasSuffix(strings.SplitN(orig, "?", 2)[0], path) {
+		path = strings.SplitN(orig, "?", 2)[0]
+	}
+	return "https://" + r.Host + path
+}
+
+// dkeCaller authenticates a Microsoft DKE call. The public key may be fetched
+// without a token (Office does), on the host an endpoint's key_uri_hostname
+// names; otherwise the caller presents an Entra ID token (verified against
+// the Entra tenant) or a Vecta token. Every refusal is audited.
+func (h *Handler) dkeCaller(w http.ResponseWriter, r *http.Request, reqID string, allowAnonymous bool) (AuthIdentity, string, bool) {
+	hint := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
+	authz := strings.TrimSpace(r.Header.Get("Authorization"))
+	raw := ""
+	if strings.HasPrefix(strings.ToLower(authz), "bearer ") {
+		raw = strings.TrimSpace(authz[7:])
+	}
+	var (
+		identity AuthIdentity
+		tenantID string
+		err      error
+	)
+	switch {
+	case authz == "" && allowAnonymous:
+		host := normalizeHost(r.Host)
+		tenantID, _, err = h.svc.resolveDKETenant(r.Context(), hint, func(m DKEEndpointMetadata) bool {
+			return m.KeyURIHostname != "" && strings.EqualFold(strings.TrimSpace(m.KeyURIHostname), host)
+		})
+		identity = AuthIdentity{Mode: authModeAnonymous, RemoteIP: strings.TrimSpace(r.RemoteAddr)}
+	case raw != "" && isEntraToken(raw):
+		identity, tenantID, err = h.svc.AuthenticateEntraDKE(r.Context(), hint, raw, strings.TrimSpace(r.RemoteAddr))
+	default:
+		identity, err = h.authenticate(r, hint)
+		tenantID = firstNonEmpty(hint, identity.TenantID)
+		if err == nil && tenantID == "" {
+			err = newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+		}
+		if err != nil && !errors.As(err, new(serviceError)) {
+			err = newServiceError(http.StatusUnauthorized, "unauthorized", err.Error())
+		}
+	}
+	if err != nil {
+		h.refuseDKE(w, r, reqID, hint, err)
+		return AuthIdentity{}, "", false
+	}
+	return identity, tenantID, true
+}
+
+// refuseDKE writes a DKE error and audits it: a refusal (4xx) with its
+// reason, or a failure.
+func (h *Handler) refuseDKE(w http.ResponseWriter, r *http.Request, reqID, tenantID string, err error) {
+	h.writeServiceError(w, err, reqID, tenantID)
+	status, reason, result := http.StatusInternalServerError, "internal_error", "failed"
+	var svcErr serviceError
+	if errors.As(err, &svcErr) {
+		status, reason = svcErr.HTTPStatus, svcErr.Message
+		if status < 500 {
+			result = "refused"
+		}
+	}
+	_ = h.svc.publishAudit(r.Context(), "audit.hyok.dke_refused", tenantID, map[string]interface{}{
+		"route": r.Method + " " + r.URL.Path, "key_id": r.PathValue("id"), "reason": reason,
+		"result": result, "severity": "warning", "status": status,
+	})
 }
 
 // authenticate accepts only a verified Bearer JWT. The TLS peer certificate

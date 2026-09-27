@@ -4,6 +4,122 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.28.0-beta] — 2026-09-27
+
+Closes the items 1.27.0-beta left open in
+[REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md), and the fakes found
+while doing it. [learning.md](learning.md) records how each slipped through.
+
+### Microsoft DKE works with Office and Entra ID tokens (breaking)
+- **Entra ID tokens.** hyok verified only Vecta JWTs, so a DKE endpoint whose
+  `valid_issuers` named Entra could never be satisfied. A decrypt call may now
+  carry an Entra ID access token. It is verified with `pkg/oidc` against the
+  Entra tenant's signing keys (`login.microsoftonline.com/{tid}/discovery/v2.0/keys`).
+  The token's issuer must be one of the endpoint's `valid_issuers`, its
+  audience one of `jwt_audiences`, and its `tid` must match the issuer. The
+  user must be listed by user name (`upn` or `preferred_username`; the mutable `email` claim is not used) in the
+  new `authorized_emails` metadata, or hold an app role (`roles`) in the new
+  `authorized_roles`. An endpoint with no audiences or no authorized users
+  refuses every Entra token. The Vecta tenant is the one whose DKE endpoint
+  trusts the token's issuer, or `tenant_id` when the key URI names it. For
+  Entra callers, `authorized_tenants` lists Entra tenant IDs.
+- **The Office wire format.** The adapter did not speak DKE as Office does
+  (checked against Microsoft's reference service). `GET /api/v1/keys/{id}`
+  now returns `{"key": {kty, n, e (number), alg, kid}, "cache": {"exp"}}`. The
+  `kid` is the key's public URL plus its current version, including the
+  `/svc/hyok` prefix (from `x-envoy-original-path`). Decrypt moved to
+  `POST /api/v1/keys/{id}/{version}/decrypt` (the `kid` plus `/decrypt`).
+  Values are standard base64; base64url input is still accepted. The old
+  `POST /api/v1/keys/{id}/decrypt` is removed. Only the key's current version
+  decrypts: a `kid` naming another version gets `409 key_version_not_current`,
+  because keycore decrypts with the current version.
+- **The public key without a token.** Office fetches the public key
+  anonymously. hyok now serves it without a token, but only on the host an
+  enabled endpoint's `key_uri_hostname` names. Decrypt always needs a token.
+- **Every DKE refusal is audited:** `audit.hyok.dke_refused` (`reason`,
+  `result: refused`, status), including Vecta-token refusals that were not
+  audited before.
+- Dashboard: HYOK > DKE has Authorized User Emails and Authorized App Roles
+  fields, and explains when Entra tokens are accepted.
+
+### Google CSE checks the authentication token's audience (breaking)
+- A CSE config now has `authentication_client_ids`: the OAuth client IDs of
+  the customer's CSE identity provider. The authentication token's `aud`
+  (string or list) must be one of them. Creating a config requires at least
+  one. **Existing configs have none and refuse every request until an
+  administrator sets them** (dashboard: EKM > Google CSE > Client IDs).
+  Migration `006_google_cse_client_ids.sql`.
+- Fixed: `UpdateGoogleCSEConfig` and `UpdateAzureEKMConfig` failed on every
+  call on Postgres (`CASE types text and timestamp without time zone cannot be
+  matched`). Updating a CSE or Azure EKM config, and the CSE key count, never
+  worked. Both now use `COALESCE`, verified on Postgres 17.
+- Creating a CSE key without a `kacls_endpoint` is refused. It used to fall
+  back to the placeholder host `kacls.vecta-kms.example.com`.
+
+### Governance approver roles decide who may vote
+- `approver_roles` was stored but ignored. When a request opens, every active
+  user of the tenant who holds one of the policy's roles, directly or through
+  a group role binding (key-access groups, and SCIM groups when group role
+  mapping is on), becomes an approver alongside `approver_users`. The
+  requester is never an approver, so an all-approvers quorum stays reachable.
+  A policy whose roles nobody holds opens no request.
+- Dashboard: the policy editor has an Approver Roles field. Saving a policy
+  used to wipe its stored roles.
+- Vote refusals (not an approver, requester voting, bad challenge code) are
+  now audited as `audit.governance.approval_refused` with
+  `reason: vote_refused`. Before, they only returned 400.
+
+### Java JCA provider rebuilt for real (breaking)
+- The provider could not work. It called ekm routes that do not exist
+  (`/sign`, `/verify`, a key list). Its `AES/GCM/NoPadding` cipher discarded
+  data passed to `update()` and ignored its IV on the remote path. Its key
+  cache was never filled, its keystore invented creation dates, and its
+  mTLS/API-key settings were never read. The SDK download shipped a second,
+  hand-written Java client embedded in Go strings.
+- It now registers one service, `Cipher.VectaKeyWrap`
+  (`WRAP_MODE`/`UNWRAP_MODE`), over the real ekm wrap/unwrap API, with TLS 1.3,
+  `VECTA_CA_CERT` trust, and a bearer token that is never logged. Signature,
+  KeyStore, the AES-GCM cipher and the cache are removed. The SDK download is
+  the provider source itself (`go:embed`).
+- `services/ekm/jca_consumer_test.go` drives it through `javax.crypto.Cipher`
+  against the ekm API over TLS: a round trip, plus refusals for a forged
+  token, an untrusted server certificate and plain HTTP. CI runs it on
+  Temurin 17. **Oracle JDK** loads a `Cipher` provider only from a jar signed
+  with an Oracle JCE code-signing certificate, so the provider runs on
+  OpenJDK builds.
+
+### Docs name only APIs that exist
+- API_REFERENCE.md described 151 endpoints that no service registers,
+  including whole MPC, QKD, QRNG and `/svc/ai` services (MPC, QKD and QRNG
+  moved to KMSExtension). They are removed. Paths that missed the service's
+  own prefix are corrected, and a route index generated from the code lists
+  every real route.
+- KEYS.md, DATA_PROTECTION.md, IDENTITY_AND_PQC.md, INFRASTRUCTURE.md,
+  REST_API_ADDITIONS.md, FEATURE_REFERENCE.md, ADMINISTRATION.md,
+  CERTIFICATES.md, CLOUD_INTEGRATION.md, GOVERNANCE_AND_COMPLIANCE.md and
+  AUTOMATION_ALKM_PQC.md now point at real routes, or no longer describe what
+  does not exist. That includes the "Vecta PKCS#11 library" walkthrough.
+- `scripts/check-doc-routes.py`, in `make conformance`, fails when a doc
+  names a `METHOD /path` that no service registers. `--write-index`
+  regenerates the route index. The dashboard REST catalog and
+  `docs/generated/` are regenerated.
+
+### Removed
+- 11 packages in `pkg/` that nothing imported: `keyrisk`, `sprawlscanner`,
+  `analytics`, `multicloudsync`, `keylineage`, `geofence`, `classification`,
+  `cicd`, `imagesign`, `dynamicsecrets`, `breakglass` (about 7,600 lines).
+  `go mod tidy` dropped the AWS IAM and S3 SDKs they alone used. They are
+  recoverable from git history before this release.
+
+### Fixed
+- The ekm-agent Windows build: `pkg/svctls` called `syscall.Kill`, which does
+  not exist on Windows. A graceful restart on Windows exits for the service
+  manager to restart (`restart_windows.go`). CI now cross-builds the agent for
+  Windows.
+- A racy posture test (`TestLeakScanFindsSecretsAndResolverIsTheCaller`)
+  read the last audit event while the background scan could already have
+  emitted `leak_scan_completed`. It now looks for the start event.
+
 ## [1.27.0-beta] — 2026-09-27
 
 The second sweep for fake capability (CLAUDE.md rule 8), covering the

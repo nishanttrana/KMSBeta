@@ -290,6 +290,9 @@ else
   echo "PASS [route-kernel] ($(printf '%s\n' "$listed" | grep -c . | tr -d ' ') legacy file(s) left to migrate)"
 fi
 
+# Docs name only routes that exist (CLAUDE.md rule 8: no invented APIs).
+if python3 scripts/check-doc-routes.py; then :; else FAIL=1; fi
+
 # Rule 4: every shell script parses. Checked with /bin/bash when present,
 # which is bash 3.2 on macOS, the oldest shell the installers must run on.
 SH_BIN=/bin/bash; [ -x "$SH_BIN" ] || SH_BIN=bash

@@ -31,15 +31,32 @@ type GoogleCSEProvider struct {
 
 // GoogleCSEClaims holds validated claims from Google's JWT tokens.
 type GoogleCSEClaims struct {
-	Email        string `json:"email"`
-	HD           string `json:"hd"`            // hosted domain
-	ResourceName string `json:"resource_name"` // from authorization JWT
-	KeyURI       string `json:"kacls_url"`     // KACLS key URI from authorization JWT
-	Issuer       string `json:"iss"`
-	Subject      string `json:"sub"`
-	Audience     string `json:"aud"`
-	ExpiresAt    int64  `json:"exp"`
-	IssuedAt     int64  `json:"iat"`
+	Email        string      `json:"email"`
+	HD           string      `json:"hd"`            // hosted domain
+	ResourceName string      `json:"resource_name"` // from authorization JWT
+	KeyURI       string      `json:"kacls_url"`     // KACLS key URI from authorization JWT
+	Issuer       string      `json:"iss"`
+	Subject      string      `json:"sub"`
+	Audience     jwtAudience `json:"aud"`
+	ExpiresAt    int64       `json:"exp"`
+	IssuedAt     int64       `json:"iat"`
+}
+
+// jwtAudience is a JWT "aud" claim, which may be one string or a list.
+type jwtAudience []string
+
+func (a *jwtAudience) UnmarshalJSON(b []byte) error {
+	var one string
+	if err := json.Unmarshal(b, &one); err == nil {
+		*a = jwtAudience{one}
+		return nil
+	}
+	var many []string
+	if err := json.Unmarshal(b, &many); err != nil {
+		return fmt.Errorf("aud must be a string or a list of strings")
+	}
+	*a = many
+	return nil
 }
 
 // googleJWKSResponse represents Google's JWKS endpoint response.
@@ -137,10 +154,11 @@ func (p *GoogleCSEProvider) fetchGooglePublicKeys() (map[string]crypto.PublicKey
 	return keys, nil
 }
 
-// ValidateGoogleJWT validates a JWT from Google's CSE infrastructure.
-// It verifies the signature using Google's OIDC public keys, checks issuer and expiry,
-// and validates the hosted domain (hd) against the allowed domains.
-func (p *GoogleCSEProvider) ValidateGoogleJWT(tokenString string, allowedDomains []string) (*GoogleCSEClaims, error) {
+// ValidateGoogleJWT validates a CSE authentication token: a Google ID token
+// signed with Google's OIDC keys, unexpired, issued to one of the config's
+// OAuth client IDs (aud) for a user whose hosted domain (hd) the config
+// allows. A config with no client IDs or no domains admits nobody.
+func (p *GoogleCSEProvider) ValidateGoogleJWT(tokenString string, allowedDomains, clientIDs []string) (*GoogleCSEClaims, error) {
 	tokenString = strings.TrimSpace(tokenString)
 	if tokenString == "" {
 		return nil, fmt.Errorf("google cse: empty JWT token")
@@ -215,6 +233,24 @@ func (p *GoogleCSEProvider) ValidateGoogleJWT(tokenString string, allowedDomains
 	}
 	if claims.IssuedAt > 0 && now < claims.IssuedAt-60 {
 		return nil, fmt.Errorf("google cse: JWT issued in the future: iat=%d, now=%d", claims.IssuedAt, now)
+	}
+
+	// The token must have been issued to the customer's CSE client: an ID
+	// token Google minted for any other application is not an
+	// authentication for this KACLS.
+	if len(clientIDs) == 0 {
+		return nil, fmt.Errorf("google cse: config lists no authentication client IDs")
+	}
+	audienceAllowed := false
+	for _, aud := range claims.Audience {
+		for _, id := range clientIDs {
+			if aud != "" && aud == strings.TrimSpace(id) {
+				audienceAllowed = true
+			}
+		}
+	}
+	if !audienceAllowed {
+		return nil, fmt.Errorf("google cse: token audience %v is not a configured client ID", []string(claims.Audience))
 	}
 
 	// The user's hosted domain must be one the config allows; a config that

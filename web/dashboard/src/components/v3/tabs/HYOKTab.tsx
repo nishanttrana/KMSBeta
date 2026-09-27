@@ -198,6 +198,8 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
   const [dkeJWTAudiences, setDkeJWTAudiences] = useState("");
   const [dkeKeyURIHostname, setDkeKeyURIHostname] = useState("");
   const [dkeAllowedAlgorithms, setDkeAllowedAlgorithms] = useState("RSA-OAEP-256");
+  const [dkeAuthorizedEmails, setDkeAuthorizedEmails] = useState("");
+  const [dkeAuthorizedRoles, setDkeAuthorizedRoles] = useState("");
 
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
   const [requestFilter, setRequestFilter] = useState<string>("");
@@ -257,12 +259,16 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
         setDkeJWTAudiences(Array.isArray(meta.jwt_audiences) ? meta.jwt_audiences.join(", ") : String(meta.jwt_audiences || ""));
         setDkeKeyURIHostname(String(meta.key_uri_hostname || ""));
         setDkeAllowedAlgorithms(Array.isArray(meta.allowed_algorithms) ? meta.allowed_algorithms.join(", ") : String(meta.allowed_algorithms || "RSA-OAEP-256"));
+        setDkeAuthorizedEmails(Array.isArray(meta.authorized_emails) ? meta.authorized_emails.join(", ") : "");
+        setDkeAuthorizedRoles(Array.isArray(meta.authorized_roles) ? meta.authorized_roles.join(", ") : "");
       } catch {
         setDkeAuthorizedTenants("");
         setDkeValidIssuers("");
         setDkeJWTAudiences("");
         setDkeKeyURIHostname("");
         setDkeAllowedAlgorithms("RSA-OAEP-256");
+        setDkeAuthorizedEmails("");
+        setDkeAuthorizedRoles("");
       }
     }
     setModal("config");
@@ -284,6 +290,10 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       else delete meta.key_uri_hostname;
       if (dkeAllowedAlgorithms.trim()) meta.allowed_algorithms = parseCSV(dkeAllowedAlgorithms);
       else delete meta.allowed_algorithms;
+      if (dkeAuthorizedEmails.trim()) meta.authorized_emails = parseCSV(dkeAuthorizedEmails);
+      else delete meta.authorized_emails;
+      if (dkeAuthorizedRoles.trim()) meta.authorized_roles = parseCSV(dkeAuthorizedRoles);
+      else delete meta.authorized_roles;
       return JSON.stringify(meta, null, 2);
     }
     return cfgMetadata;
@@ -546,10 +556,10 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
       {cfgProtocol === "dke" && (<>
         <div style={{ fontSize: 11, color: C.text, fontWeight: 600, marginTop: 12, marginBottom: 6 }}>Microsoft DKE Configuration</div>
         <div style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>
-          These fields control which Microsoft tenants and token issuers are authorized to use this DKE endpoint. Leave empty to allow all.
+          Office fetches the public key without a token on the Key URI Hostname, and decrypts with an Entra ID token. An Entra token is accepted only when its issuer is listed below, its audience is one of the JWT Audiences, and the user's email or app role is authorized; without audiences and authorized users every Entra token is refused.
         </div>
         <Row2>
-          <FG label="Authorized Azure AD Tenant IDs" hint="Comma-separated. Only these tenants can use this endpoint.">
+          <FG label="Authorized Entra Tenant IDs" hint="Comma-separated. Optional: Entra callers must come from one of these tenants.">
             <Inp value={dkeAuthorizedTenants} onChange={(e) => setDkeAuthorizedTenants(e.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" mono />
           </FG>
           <FG label="Valid Token Issuers" hint="Comma-separated. E.g., https://login.microsoftonline.com/{tenant}/v2.0">
@@ -562,6 +572,14 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
           </FG>
           <FG label="Key URI Hostname" hint="If set, the Host header must match this hostname.">
             <Inp value={dkeKeyURIHostname} onChange={(e) => setDkeKeyURIHostname(e.target.value)} placeholder="dke.example.com" mono />
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="Authorized User Emails" hint="Comma-separated. Entra users (UPN or preferred_username; the email claim is not trusted) who may decrypt.">
+            <Inp value={dkeAuthorizedEmails} onChange={(e) => setDkeAuthorizedEmails(e.target.value)} placeholder="alice@contoso.com" mono />
+          </FG>
+          <FG label="Authorized App Roles" hint="Comma-separated. Users holding one of these app roles (token roles claim) may decrypt.">
+            <Inp value={dkeAuthorizedRoles} onChange={(e) => setDkeAuthorizedRoles(e.target.value)} placeholder="DKE.Decrypt" mono />
           </FG>
         </Row2>
         <FG label="Allowed Algorithms" hint="Comma-separated. DKE typically uses RSA-OAEP-256.">

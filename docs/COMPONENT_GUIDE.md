@@ -684,7 +684,7 @@ Use it when:
 
 Use it when:
 
-- Java applications must consume KMS-backed crypto through standard JCA/JCE abstractions
+- Java applications wrap and unwrap data keys under a Vecta KMS key through the standard `javax.crypto.Cipher` API (`Cipher.VectaKeyWrap`)
 
 ### Shared `pkg/` Modules
 

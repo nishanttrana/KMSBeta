@@ -126,6 +126,12 @@ The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
 | Autokey | Template versioning/drift never called, no table | Removed |
 | EKM health | "Within threshold" with no metrics; "healthy" before any heartbeat | "unknown" until reported |
 | Dead code | `pkg/tsa` (invented OID), `pkg/compliance` + `pkg/evidence` (hard-coded pass) | Deleted |
+| Microsoft DKE (1.28) | Only Vecta tokens; flat JWK, wrong decrypt URL and encoding for Office | Entra ID tokens verified (`pkg/oidc`), Office wire format, anonymous public key on the DKE host |
+| Google CSE (1.28) | Authentication token `aud` unchecked; config updates failed on Postgres | `authentication_client_ids` enforced; update SQL fixed |
+| Governance (1.28) | `approver_roles` stored, never used | Role holders become approvers when a request opens |
+| JCA provider (1.28) | Cipher/Signature/KeyStore over missing routes; SDK zip of hand-written Java | `Cipher.VectaKeyWrap` over the real API, tested by a JCA consumer; SDK is the embedded source |
+| Docs (1.28) | 151 API_REFERENCE endpoints and whole services that do not exist | Removed; `check-doc-routes.py` in conformance |
+| Unused packages (1.28) | 11 `pkg/` packages imported by nothing | Deleted |
 
 ## Still open
 
@@ -133,23 +139,21 @@ The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
   enclave (wrapped to the attestation's public key) would need keycore
   support. Until then, confidential compute returns a verdict only and says
   so.
-- **Microsoft DKE with Entra ID tokens**: hyok verifies only Vecta-issued
-  JWTs, so a DKE endpoint whose `valid_issuers` names Entra cannot be
-  satisfied. Verifying Entra tokens (`pkg/oidc` against the tenant's issuer)
-  is not built.
-- **Google CSE authentication audience**: the authentication token's `aud`
-  is not checked (no client ID is configured); the verified authorization
-  token and the email match carry the binding.
-- **Governance `approver_roles`** are stored and shown but do not decide who
-  may vote; approvers are the emails a request is sent to.
-- **Docs describing APIs that do not exist**: for example
-  CLOUD_INTEGRATION.md's signing `/policies` with `branch_policy`, and
-  report schedules with frequency/day/time fields. A docs accuracy pass
-  against the routers is needed.
-- **Unused packages** still in `pkg/`, imported by nothing: `keyrisk`,
-  `sprawlscanner`, `analytics`, `multicloudsync`, `keylineage`, `geofence`,
-  `classification`, `cicd`, `imagesign`, `dynamicsecrets`, `breakglass`. They
-  are not capability; review each and delete or wire it.
-- **JCA provider** has no test with a real JCA consumer.
-- **ekm-agent Windows build** fails in `pkg/svctls` (`syscall.Kill`), which
-  predates this sweep.
+- **DKE key rotation**: DKE decrypts only with the key's current version
+  (keycore decrypts with the current version), so a document wrapped under an
+  older version cannot be opened after the key rotates. Decrypting with a
+  named version needs keycore support.
+- **DKE and CSE on sovereign clouds**: Entra verification covers the public
+  cloud issuers only (`sts.windows.net`, `login.microsoftonline.com`), and CSE
+  authentication tokens must be Google ID tokens (no third-party IdP yet).
+- **JCA provider on Oracle JDK**: it runs on OpenJDK builds; Oracle JDK needs
+  the jar signed with an Oracle JCE code-signing certificate, which Vecta does
+  not have.
+- **Doc request bodies**: `scripts/check-doc-routes.py` proves every
+  documented route exists, not that every documented request or response
+  field matches the handler. Tables that give paths relative to a base
+  (without `/svc/`) are not checked either.
+- **OpenAPI specs** in `docs/openapi/` (written by
+  `web/dashboard/scripts/generate-openapi.mjs` and served by the dashboard)
+  are not checked against the routers; `ai.openapi.*` describes a `/svc/ai`
+  service that does not exist.

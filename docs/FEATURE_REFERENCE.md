@@ -437,49 +437,6 @@ Operators can see:
 - Posture: transparency gaps and verification failures
 - Compliance: provenance coverage and signing-policy adherence
 
-## Threshold Signing And Quorum Crypto
-
-### What It Is
-
-The MPC service gives the KMS a quorum-backed cryptography path where no single party owns the complete private key. In practice this supports FROST-style operational models for threshold signing ceremonies, participant approval, and share-backed recovery.
-
-### Why Teams Use It
-
-Use it when:
-
-- a root CA or treasury signer must require multiple contributors
-- a single admin or host must never be able to sign alone
-- ceremony history itself is part of the control evidence
-
-### UI
-
-- `MPC / FROST`
-- `Compliance`
-- `Posture`
-- `Governance`
-
-### Primary APIs
-
-- `POST /svc/mpc/mpc/dkg/initiate`
-- `POST /svc/mpc/mpc/sign/initiate`
-- `POST /svc/mpc/mpc/sign/{id}/contribute`
-- `GET /svc/mpc/mpc/sign/{id}/result`
-- `GET /svc/mpc/mpc/overview?tenant_id=root`
-
-### Operational Outcome
-
-Operators can answer:
-
-- how many active quorum-backed keys exist
-- which ceremonies are stalled, pending, completed, or failed
-- whether participant roster and threshold policy still match the intended control model
-
-### Evidence Surfaces
-
-- Audit: DKG, sign, decrypt, participant, share, and policy ceremony history
-- Posture: pending or failed ceremony drift
-- Compliance: split-operator and quorum-control evidence
-
 ## ACME Renewal Intelligence
 
 ### What It Is

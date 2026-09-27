@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -601,7 +602,13 @@ func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID st
 	return out, nil
 }
 
-func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID string, endpointPath string, host string, identity AuthIdentity) (MicrosoftDKEKeyResponse, error) {
+// dkeKeyCacheTTL is how long Office may cache a DKE public key.
+const dkeKeyCacheTTL = 24 * time.Hour
+
+// GetMicrosoftDKEKey serves a DKE key's public part. keyURL is the public URL
+// the call came in on; the kid is keyURL/<current version>, and Office posts
+// decrypt requests to kid/decrypt.
+func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID string, endpointPath string, host string, keyURL string, identity AuthIdentity) (MicrosoftDKEKeyResponse, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
 	if tenantID == "" || keyID == "" {
@@ -614,8 +621,10 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 	if !cfg.Enabled {
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusForbidden, "endpoint_disabled", "protocol endpoint is disabled")
 	}
-	if err := checkAuthMode(cfg.AuthMode, identity.Mode); err != nil {
-		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusUnauthorized, "unauthorized", err.Error())
+	if identity.Mode != authModeAnonymous {
+		if err := checkAuthMode(cfg.AuthMode, identity.Mode); err != nil {
+			return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusUnauthorized, "unauthorized", err.Error())
+		}
 	}
 	meta, err := parseDKEEndpointMetadata(cfg.MetadataJSON)
 	if err != nil {
@@ -674,20 +683,24 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
 	}
-	jwkN, jwkE, err := pkgcrypto.RSAPublicKeyJWK(rsaPub)
+	jwkN, _, err := pkgcrypto.RSAPublicKeyJWK(rsaPub)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
 	}
-	alg := inferDKEAlg(keyMeta, meta)
+	version := extractInt(keyMeta["current_version"])
+	if version <= 0 {
+		version = 1
+	}
 	out := MicrosoftDKEKeyResponse{
-		KTY:    "RSA",
-		KeyOps: []string{"decrypt"},
-		N:      jwkN,
-		E:      jwkE,
-		Alg:    alg,
-		KID:    keyID,
-		Use:    "enc",
+		Key: MicrosoftDKEPublicKey{
+			KTY: "RSA",
+			N:   jwkN,
+			E:   rsaPub.E,
+			Alg: inferDKEAlg(keyMeta, meta),
+			KID: strings.TrimRight(keyURL, "/") + "/" + strconv.Itoa(version),
+		},
+		Cache: MicrosoftDKEKeyCache{Exp: time.Now().UTC().Add(dkeKeyCacheTTL).Format(time.RFC3339)},
 	}
 	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(out), "", "", policyDecision)
 	_ = s.publishAudit(ctx, "audit.hyok.dke_request", tenantID, map[string]interface{}{
@@ -701,7 +714,11 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 	return out, nil
 }
 
-func (s *Service) ProcessMicrosoftDKEDecrypt(ctx context.Context, tenantID string, keyID string, endpointPath string, host string, identity AuthIdentity, req MicrosoftDKEDecryptRequest) (MicrosoftDKEDecryptResponse, error) {
+// ProcessMicrosoftDKEDecrypt decrypts a DKE-wrapped content key posted to
+// kid/decrypt. Only the key's current version can be decrypted: keycore
+// decrypts with the current version, so an older kid is refused rather than
+// tried against the wrong key.
+func (s *Service) ProcessMicrosoftDKEDecrypt(ctx context.Context, tenantID string, keyID string, version string, endpointPath string, host string, identity AuthIdentity, req MicrosoftDKEDecryptRequest) (MicrosoftDKEDecryptResponse, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
 	if tenantID == "" || keyID == "" {
@@ -731,18 +748,26 @@ func (s *Service) ProcessMicrosoftDKEDecrypt(ctx context.Context, tenantID strin
 	if err := validateDKEAlg(strings.TrimSpace(req.Alg), meta); err != nil {
 		return MicrosoftDKEDecryptResponse{}, err
 	}
-	if kid := strings.TrimSpace(req.KID); kid != "" && !strings.EqualFold(kid, keyID) {
-		return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "kid does not match key id")
+	keyMeta, err := s.keycore.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusBadGateway, "keycore_failed", err.Error())
+	}
+	if current := extractInt(keyMeta["current_version"]); current > 0 && strings.TrimSpace(version) != strconv.Itoa(current) {
+		return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusConflict, "key_version_not_current", "only the key's current version can decrypt; this kid names another version")
 	}
 
-	ciphertextRaw, err := base64.RawURLEncoding.DecodeString(ciphertextB64URL)
+	// Office sends standard base64; base64url is accepted too.
+	ciphertextRaw, err := base64.StdEncoding.DecodeString(ciphertextB64URL)
 	if err != nil {
-		return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "value must be base64url")
+		if ciphertextRaw, err = base64.RawURLEncoding.DecodeString(strings.TrimRight(ciphertextB64URL, "=")); err != nil {
+			return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "value must be base64")
+		}
 	}
 	ciphertextB64 := base64.StdEncoding.EncodeToString(ciphertextRaw)
 
 	cryptoResp, err := s.ProcessCrypto(ctx, tenantID, ProtocolDKE, "decrypt", keyID, endpointPath, identity, ProxyCryptoRequest{
-		CiphertextB64: ciphertextB64,
+		CiphertextB64:  ciphertextB64,
+		RequesterEmail: dkeRequesterEmail(identity),
 	})
 	if err != nil {
 		return MicrosoftDKEDecryptResponse{}, err
@@ -753,12 +778,17 @@ func (s *Service) ProcessMicrosoftDKEDecrypt(ctx context.Context, tenantID strin
 	}
 	plainRaw, err := base64.StdEncoding.DecodeString(plaintextB64)
 	if err != nil {
-		if rawURL, errURL := base64.RawURLEncoding.DecodeString(plaintextB64); errURL == nil {
-			return MicrosoftDKEDecryptResponse{Value: base64.RawURLEncoding.EncodeToString(rawURL)}, nil
-		}
 		return MicrosoftDKEDecryptResponse{}, newServiceError(http.StatusBadGateway, "keycore_failed", "invalid decrypt plaintext encoding")
 	}
-	return MicrosoftDKEDecryptResponse{Value: base64.RawURLEncoding.EncodeToString(plainRaw)}, nil
+	return MicrosoftDKEDecryptResponse{Value: base64.StdEncoding.EncodeToString(plainRaw)}, nil
+}
+
+// dkeRequesterEmail is the verified Entra user's email, for key access rules.
+func dkeRequesterEmail(identity AuthIdentity) string {
+	if identity.EntraTenantID != "" && strings.Contains(identity.UserID, "@") {
+		return identity.UserID
+	}
+	return ""
 }
 
 func (s *Service) endpointForProtocol(ctx context.Context, tenantID string, protocol string) (EndpointConfig, error) {
@@ -941,6 +971,8 @@ func parseDKEEndpointMetadata(raw string) (DKEEndpointMetadata, error) {
 		extractStringSlice(body["jwt_audience"]),
 		extractStringSlice(body["audience"]),
 	)
+	meta.AuthorizedEmails = nonEmptyStrings(extractStringSlice(body["authorized_emails"]))
+	meta.AuthorizedRoles = nonEmptyStrings(extractStringSlice(body["authorized_roles"]))
 	meta.KeyURIHostname = strings.TrimSpace(firstString(body["key_uri_hostname"], body["keyURIHostname"]))
 	meta.AllowedAlgorithms = nonEmptyStrings(
 		extractStringSlice(body["allowed_algorithms"]),
@@ -951,7 +983,18 @@ func parseDKEEndpointMetadata(raw string) (DKEEndpointMetadata, error) {
 }
 
 func validateDKEIdentity(meta DKEEndpointMetadata, tenantID string, host string, identity AuthIdentity) error {
-	if len(meta.AuthorizedTenants) > 0 && !containsFold(meta.AuthorizedTenants, tenantID) {
+	if identity.Mode == authModeAnonymous {
+		// Office fetches the public key without a token; only on the host
+		// this endpoint names, and never for decrypt (checkAuthMode).
+		if meta.KeyURIHostname == "" || !strings.EqualFold(strings.TrimSpace(meta.KeyURIHostname), strings.TrimSpace(host)) {
+			return newServiceError(http.StatusUnauthorized, "unauthorized", "a Bearer token is required")
+		}
+		return nil
+	}
+	// For an Entra caller the authorized tenants are Entra tenant IDs; for a
+	// Vecta token they are the Vecta tenant.
+	callerTenant := firstNonEmpty(identity.EntraTenantID, tenantID)
+	if len(meta.AuthorizedTenants) > 0 && !containsFold(meta.AuthorizedTenants, callerTenant) {
 		return newServiceError(http.StatusForbidden, "policy_denied", "tenant is not authorized for this DKE endpoint")
 	}
 	if len(meta.ValidIssuers) > 0 {

@@ -216,7 +216,11 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 		return ApprovalRequest{}, err
 	}
 	expiryMinutes := clamp(settings.ApprovalExpiryMinutes, 1, 1440)
-	approvers := resolveApprovers(policy, in.TargetDetails)
+	roleHolders, err := s.store.RoleHolderEmails(ctx, in.TenantID, policy.ApproverRoles)
+	if err != nil {
+		return ApprovalRequest{}, err
+	}
+	approvers := resolveApprovers(policy, roleHolders, in.TargetDetails, in.RequesterEmail)
 	if len(approvers) == 0 {
 		return ApprovalRequest{}, errors.New("no approvers configured for policy")
 	}
@@ -1186,12 +1190,18 @@ func normalizeVoteInput(in VoteInput) VoteInput {
 	return in
 }
 
-func resolveApprovers(policy ApprovalPolicy, targetDetails map[string]interface{}) []string {
+// resolveApprovers fixes who may vote on a request when it opens: the
+// policy's approver users, every user holding one of its approver roles, and
+// any approver emails a platform service named. The requester is never an
+// approver, so they cannot count toward an all-approvers quorum they could
+// never reach.
+func resolveApprovers(policy ApprovalPolicy, roleHolders []string, targetDetails map[string]interface{}, requesterEmail string) []string {
+	requesterEmail = strings.ToLower(strings.TrimSpace(requesterEmail))
 	seen := map[string]struct{}{}
 	var out []string
 	add := func(v string) {
 		v = strings.ToLower(strings.TrimSpace(v))
-		if v == "" {
+		if v == "" || v == requesterEmail {
 			return
 		}
 		if _, ok := seen[v]; ok {
@@ -1201,6 +1211,9 @@ func resolveApprovers(policy ApprovalPolicy, targetDetails map[string]interface{
 		out = append(out, v)
 	}
 	for _, u := range policy.ApproverUsers {
+		add(u)
+	}
+	for _, u := range roleHolders {
 		add(u)
 	}
 	if raw, ok := targetDetails["approver_emails"]; ok {

@@ -46,8 +46,19 @@ jobs:
       - name: Install SoftHSM2 (a real PKCS#11 library for the HSM connector tests)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
 
+      - name: Setup OpenJDK (the JCA provider's real-consumer test)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: go test (fips140=${{ matrix.mode }})
+        env:
+          VECTA_REQUIRE_JDK: "1"
         run: go test ./pkg/... ./services/...
+
+      - name: Cross-build the Windows customer agent
+        run: GOOS=windows GOARCH=amd64 go build ./services/ekm-agent/...
 
   cluster-replication:
     # Two real Postgres 17 servers: selective per-component logical replication

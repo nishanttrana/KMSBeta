@@ -1,44 +1,72 @@
 package com.vecta.kms;
 
-import com.vecta.kms.spi.VectaCipherSpi;
-import com.vecta.kms.spi.VectaKeyStoreSpi;
-import com.vecta.kms.spi.VectaSignatureSpi;
+import com.vecta.kms.internal.KMSHttpClient;
+import com.vecta.kms.spi.VectaKeyWrapCipherSpi;
 
+import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 
 /**
- * Vecta KMS JCA Provider.
+ * Vecta KMS JCA provider.
  *
- * Registers cryptographic services backed by the Vecta KMS:
- * - Cipher: AES/GCM/NoPadding (local cache or remote)
- * - Signature: SHA256withRSA, SHA256withECDSA (always remote)
- * - KeyStore: VectaKMS (fetch keys from KMS)
+ * <p>Registers one service, {@code Cipher.VectaKeyWrap}: it wraps and unwraps
+ * keys under a Vecta KMS TDE key through the ekm service
+ * ({@code POST /ekm/tde/keys/{id}/wrap} and {@code .../unwrap}). The Vecta key
+ * never leaves the KMS; only the wrapped key comes back. Nothing else is
+ * offered: there is no local cipher, signature or key store.
  *
- * Configuration via environment variables:
- *   VECTA_BASE_URL, VECTA_TENANT_ID, VECTA_AUTH_TOKEN,
- *   VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA,
- *   VECTA_API_KEY, VECTA_JWT_ENDPOINT, VECTA_KEY_CACHE_TTL
+ * <pre>{@code
+ * Security.addProvider(new VectaKMSProvider());
+ * Cipher c = Cipher.getInstance(VectaKMSProvider.KEY_WRAP, VectaKMSProvider.NAME);
+ * c.init(Cipher.WRAP_MODE, new VectaKMSKey("tde_key_123"));
+ * byte[] wrapped = c.wrap(dataKey);
+ * byte[] iv = c.getIV();              // keep with the wrapped key
+ * c.init(Cipher.UNWRAP_MODE, new VectaKMSKey("tde_key_123"), new IvParameterSpec(iv));
+ * SecretKey back = (SecretKey) c.unwrap(wrapped, "AES", Cipher.SECRET_KEY);
+ * }</pre>
+ *
+ * <p>Configuration: {@link VectaKMSConfig#fromEnvironment()} for the no-arg
+ * constructor, or pass a {@link VectaKMSConfig}.
  */
-public class VectaKMSProvider extends Provider {
+public final class VectaKMSProvider extends Provider {
 
-    private static final long serialVersionUID = 1L;
-    public static final String PROVIDER_NAME = "VectaKMS";
-    public static final double VERSION = 1.0;
+    private static final long serialVersionUID = 2L;
+    public static final String NAME = "VectaKMS";
+    public static final String KEY_WRAP = "VectaKeyWrap";
 
+    private final transient VectaKMSConfig config;
+    private transient KMSHttpClient client;
+
+    /** Reads its configuration from the environment on first use. */
     public VectaKMSProvider() {
-        super(PROVIDER_NAME, String.valueOf(VERSION), "Vecta KMS JCA Provider — AES-GCM, RSA/ECDSA sign, KeyStore");
-        registerServices();
+        this(null);
     }
 
-    private void registerServices() {
-        // Cipher
-        put("Cipher.AES/GCM/NoPadding", VectaCipherSpi.class.getName());
+    public VectaKMSProvider(VectaKMSConfig config) {
+        super(NAME, "2.0", "Vecta KMS key wrapping (Cipher " + KEY_WRAP + ")");
+        this.config = config;
+        putService(new KeyWrapService(this));
+    }
 
-        // Signature
-        put("Signature.SHA256withRSA", VectaSignatureSpi.class.getName() + "$SHA256withRSA");
-        put("Signature.SHA256withECDSA", VectaSignatureSpi.class.getName() + "$SHA256withECDSA");
+    synchronized KMSHttpClient client() {
+        if (client == null) {
+            client = new KMSHttpClient(config != null ? config : VectaKMSConfig.fromEnvironment());
+        }
+        return client;
+    }
 
-        // KeyStore
-        put("KeyStore.VectaKMS", VectaKeyStoreSpi.class.getName());
+    private static final class KeyWrapService extends Provider.Service {
+        KeyWrapService(VectaKMSProvider provider) {
+            super(provider, "Cipher", KEY_WRAP, VectaKeyWrapCipherSpi.class.getName(), null, null);
+        }
+
+        @Override
+        public Object newInstance(Object constructorParameter) throws NoSuchAlgorithmException {
+            try {
+                return new VectaKeyWrapCipherSpi(((VectaKMSProvider) getProvider()).client());
+            } catch (RuntimeException e) {
+                throw new NoSuchAlgorithmException("Vecta KMS provider is not configured: " + e.getMessage(), e);
+            }
+        }
     }
 }

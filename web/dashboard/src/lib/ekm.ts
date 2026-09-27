@@ -848,6 +848,7 @@ export type GoogleCSEConfig = {
   service_account_email: string;
   service_account_key_json: string;
   allowed_domains: string[];
+  authentication_client_ids: string[];
   kacls_endpoint: string;
   status: string;
   key_count: number;
@@ -882,11 +883,27 @@ export async function createGoogleCSEConfig(session: AuthSession, input: {
   service_account_email?: string;
   service_account_key_json?: string;
   allowed_domains: string[];
+  authentication_client_ids: string[];
   kacls_endpoint?: string;
 }): Promise<GoogleCSEConfig> {
   const { config } = await serviceRequest<{ config: GoogleCSEConfig }>(
     session, "ekm", "/ekm/google-cse/configs", {
       method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, ...input }),
+    }
+  );
+  return config;
+}
+
+// Only the fields given change; the others keep their stored values.
+export async function updateGoogleCSEConfig(session: AuthSession, configID: string, input: {
+  allowed_domains?: string[];
+  authentication_client_ids?: string[];
+  kacls_endpoint?: string;
+}): Promise<GoogleCSEConfig> {
+  const { config } = await serviceRequest<{ config: GoogleCSEConfig }>(
+    session, "ekm", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+      method: "PUT",
       body: JSON.stringify({ tenant_id: session.tenantId, ...input }),
     }
   );

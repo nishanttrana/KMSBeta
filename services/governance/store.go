@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -39,6 +40,7 @@ type Store interface {
 	ConsumeToken(ctx context.Context, requestID string, tokenRaw string, expectedAction string) (ApprovalToken, error)
 	UserEmail(ctx context.Context, tenantID string, userID string) (string, error)
 	RequestApprovers(ctx context.Context, requestID string) ([]string, error)
+	RoleHolderEmails(ctx context.Context, tenantID string, roles []string) ([]string, error)
 	ApplyVote(ctx context.Context, req ApprovalRequest, policy ApprovalPolicy, vote ApprovalVote) (ApprovalRequest, error)
 	ExpirePendingRequests(ctx context.Context, now time.Time) ([]ApprovalRequest, error)
 	GetSettings(ctx context.Context, tenantID string) (GovernanceSettings, error)
@@ -383,6 +385,54 @@ SELECT DISTINCT LOWER(approver_email) FROM approval_tokens WHERE request_id=$1 A
 			return nil, err
 		}
 		out = append(out, email)
+	}
+	return out, rows.Err()
+}
+
+// RoleHolderEmails lists the emails of the tenant's active users who hold
+// one of roles, directly or through a group role binding (the same effective
+// roles the auth service puts in their token).
+func (s *SQLStore) RoleHolderEmails(ctx context.Context, tenantID string, roles []string) ([]string, error) {
+	args := []interface{}{strings.TrimSpace(tenantID)}
+	marks := make([]string, 0, len(roles))
+	for _, role := range roles {
+		if role = strings.ToLower(strings.TrimSpace(role)); role != "" {
+			args = append(args, role)
+			marks = append(marks, fmt.Sprintf("$%d", len(args)))
+		}
+	}
+	if len(marks) == 0 {
+		return nil, nil
+	}
+	in := strings.Join(marks, ",")
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT DISTINCT LOWER(u.email)
+FROM auth_users u
+WHERE u.tenant_id=$1 AND LOWER(COALESCE(u.status,'active'))='active' AND COALESCE(u.email,'')<>''
+  AND (LOWER(u.role) IN (`+in+`) OR EXISTS (
+    SELECT 1
+    FROM auth_group_role_bindings gr
+    JOIN (
+        SELECT tenant_id, group_id, user_id FROM key_access_group_members
+        UNION
+        SELECT tenant_id, group_id, user_id
+        FROM auth_scim_group_members
+        WHERE COALESCE((SELECT group_role_mappings_enabled FROM auth_scim_settings WHERE tenant_id=$1), TRUE)=TRUE
+    ) gm ON gm.tenant_id=gr.tenant_id AND gm.group_id=gr.group_id
+    WHERE gr.tenant_id=$1 AND gm.user_id=u.id AND LOWER(gr.role_name) IN (`+in+`)))
+ORDER BY 1
+`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, err
+		}
+		out = append(out, strings.TrimSpace(email))
 	}
 	return out, rows.Err()
 }

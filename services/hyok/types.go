@@ -63,6 +63,9 @@ type AuthIdentity struct {
 	RemoteIP     string   `json:"remote_ip"`
 	JWTIssuer    string   `json:"jwt_issuer,omitempty"`
 	JWTAudiences []string `json:"jwt_audiences,omitempty"`
+	// EntraTenantID is the verified Entra ID tenant (tid) of a Microsoft
+	// DKE caller; empty for a Vecta token.
+	EntraTenantID string `json:"entra_tenant_id,omitempty"`
 }
 
 type ProxyCryptoRequest struct {
@@ -102,20 +105,29 @@ type DKEPublicKeyResponse struct {
 
 // MicrosoftDKEKeyResponse follows the public key payload shape expected by
 // Microsoft-compatible DKE clients.
+// MicrosoftDKEKeyResponse is the DKE public key document Office reads: the
+// key, whose kid is the URL Office posts decrypt requests under, and how
+// long Office may cache it.
 type MicrosoftDKEKeyResponse struct {
-	KTY    string   `json:"kty"`
-	KeyOps []string `json:"key_ops,omitempty"`
-	N      string   `json:"n"`
-	E      string   `json:"e"`
-	Alg    string   `json:"alg,omitempty"`
-	KID    string   `json:"kid,omitempty"`
-	Use    string   `json:"use,omitempty"`
+	Key   MicrosoftDKEPublicKey `json:"key"`
+	Cache MicrosoftDKEKeyCache  `json:"cache"`
+}
+
+type MicrosoftDKEPublicKey struct {
+	KTY string `json:"kty"`
+	N   string `json:"n"`
+	E   int    `json:"e"`
+	Alg string `json:"alg"`
+	KID string `json:"kid"`
+}
+
+type MicrosoftDKEKeyCache struct {
+	Exp string `json:"exp"`
 }
 
 type MicrosoftDKEDecryptRequest struct {
-	Alg   string `json:"alg,omitempty"`
+	Alg   string `json:"alg"`
 	Value string `json:"value"`
-	KID   string `json:"kid,omitempty"`
 }
 
 type MicrosoftDKEDecryptResponse struct {
@@ -128,6 +140,10 @@ type DKEEndpointMetadata struct {
 	JWTAudiences      []string
 	KeyURIHostname    string
 	AllowedAlgorithms []string
+	// Who may decrypt with an Entra ID token: users with one of these
+	// emails, or with one of these app roles (the token's roles claim).
+	AuthorizedEmails []string
+	AuthorizedRoles  []string
 }
 
 type PolicyEvaluateRequest struct {

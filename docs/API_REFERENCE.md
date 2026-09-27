@@ -26,13 +26,10 @@ Complete endpoint reference for all 27 Vecta KMS services.
 | ekm | /svc/ekm/ | Database TDE, BitLocker |
 | kmip | /svc/kmip/ | KMIP protocol management |
 | signing | /svc/signing/ | Artifact, container, git signing |
-| mpc | /svc/mpc/ | MPC groups, FROST threshold signing |
 | cluster | /svc/cluster/ | Cluster nodes, HSM registration |
-| qkd | /svc/qkd/ | Quantum key distribution links |
-| qrng | /svc/qrng/ | Quantum random number generation |
 | secrets | /svc/secrets/ | Secret vault |
 | sbom | /svc/sbom/ | SBOM/CBOM inventory |
-| ai | /svc/ai/ | AI guidance and recommendations |
+| ai-gateway | /svc/ai-gateway/ | AI gateway (DLP, guardrails) |
 
 ---
 
@@ -153,24 +150,6 @@ Public. Body: `refreshToken`. Response: `token`, `refreshToken`, `expiresAt`.
 
 ---
 
-### GET /svc/auth/auth/session
-
-Bearer required. Response: `userId`, `username`, `email`, `tenantId`, `roles[]`, `issuedAt`, `expiresAt`, `mfaVerified`, `clientId`
-
----
-
-### POST /svc/auth/auth/mfa/totp/setup
-
-Bearer required. No body. Response: `secret` (base32), `qrCodeUrl` (data URI), `backupCodes[10]`
-
----
-
-### POST /svc/auth/auth/mfa/totp/verify
-
-Bearer required. Body: `code` (6-digit TOTP). Response: `verified` (boolean), `backupCodesRemaining` (int)
-
----
-
 ### POST /svc/auth/auth/client-token
 
 Issues sender-constrained client tokens. Supports mTLS (`oauth_mtls`), DPoP, HTTP Message Signature binding.
@@ -187,7 +166,7 @@ Bearer, admin. Response: `totalClients`, `senderConstrainedClients`, `legacyClie
 
 ---
 
-### GET /svc/auth/users
+### GET /svc/auth/auth/users
 
 Bearer, admin. Query: `pageSize`, `pageToken`, `search`, `role`, `tenantId`, `locked`. Response: paginated UserSummary[].
 
@@ -195,43 +174,25 @@ UserSummary fields: id, username, email, displayName, roles[], tenantId, lastLog
 
 ---
 
-### POST /svc/auth/users
+### POST /svc/auth/auth/users
 
 Bearer, admin. Body: `username`, `email`, `displayName`, `password`, `roles[]`, `tenantId`, `sendWelcomeEmail`. Response 201: User.
 
 ```bash
-curl -sk -X POST https://localhost/svc/auth/users \
+curl -sk -X POST https://localhost/svc/auth/auth/users \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"username":"bob","email":"bob@example.com","password":"SecurePass123!","roles":["operator"],"tenantId":"root"}'
 ```
 
 ---
 
-### GET/PATCH/DELETE /svc/auth/users/{id}
-
-GET returns full User. PATCH accepts `displayName`, `email`, `roles[]`, `locked`. DELETE returns 204.
-
----
-
-### POST /svc/auth/users/{id}/reset-password
+### POST /svc/auth/auth/users/{id}/reset-password
 
 Body: `newPassword` OR `sendResetEmail: true`. Response 200: `{"message": "Password reset successful"}`
 
 ---
 
-### POST /svc/auth/users/{id}/lock / .../unlock
-
-No body. Returns updated User.
-
----
-
-### GET /svc/auth/roles
-
-Response: `Role[]` — name, description, permissions[].
-
----
-
-### GET /svc/auth/tenants / POST /svc/auth/tenants / GET/PATCH/DELETE /svc/auth/tenants/{id}
+### GET/POST /svc/auth/tenants / GET/DELETE /svc/auth/tenants/{id}
 
 Create body: `id` (slug), `name`, `plan`, `config` (maxKeys, maxUsers, enforceMfa, sessionTimeoutMinutes, allowedIpRanges[]).
 
@@ -243,33 +204,21 @@ curl -sk -X POST https://localhost/svc/auth/tenants \
 
 ---
 
-### GET/POST/PATCH/DELETE /svc/auth/idp / POST /svc/auth/idp/{id}/test
-
-Types: `ldap`, `saml`, `oidc`, `entra`. OIDC fields: issuerUrl, clientId, clientSecret, scopes[], usernameClaim, groupsClaim. Test returns `{"success": true, "latencyMs": 42}`.
-
----
-
-### GET/PUT /svc/auth/scim/settings
+### GET/PUT /svc/auth/auth/scim/settings
 
 Settings: `enabled`, `defaultRole`, `deprovisionMode` (disable/delete), `groupRoleMappingActive`, `requirePasswordChangeOnFirstLogin`
 
 ---
 
-### POST /svc/auth/scim/settings/rotate-token
+### POST /svc/auth/auth/scim/settings/rotate-token
 
 Returns raw SCIM bearer token once. Response: `{"token": "...", "rotatedAt": "..."}`
 
 ---
 
-### GET /svc/auth/scim/summary
+### GET /svc/auth/auth/scim/summary
 
 Response: `managedUsers`, `managedGroups`, `memberships`, `roleMappedGroups`, `lastProvisionedAt`, `lastDeprovisionedAt`
-
----
-
-### GET/POST/PUT/PATCH/DELETE /svc/auth/clients / POST /svc/auth/clients/{id}/rotate-secret
-
-`clientSecret` shown once on create and rotate. Body: name, tenantId, roles[], allowedIps[], tokenTtlSeconds, authMode (secret/mtls/dpop/http_message_signature).
 
 ---
 
@@ -296,7 +245,6 @@ service principal); refusals emit `audit.auth.cluster_mint_refused`.
 ## Service 2: Keycore (`/svc/keycore/`)
 
 Key lifecycle management and all cryptographic operations.
-
 
 ### HSM integration: `GET/PUT /svc/keycore/hsm/settings`
 
@@ -440,18 +388,6 @@ Query: `pageSize`, `pageToken`, `algorithm`, `purpose`, `state`, `search`, `tag:
 ### GET /svc/keycore/keys/{id}
 
 Returns full Key object.
-
----
-
-### PATCH /svc/keycore/keys/{id}
-
-Updatable: `name`, `tags`, `metadata`, `expiresAt`, `rotationPolicy`, `exportPolicy`, `interfacePolicy`
-
----
-
-### DELETE /svc/keycore/keys/{id}
-
-Schedules deletion. Sets `state: PENDING_DELETION`.
 
 ---
 
@@ -764,18 +700,6 @@ Audit: `audit.key.service_derive`. See
 
 ---
 
-### POST /svc/keycore/keys/{id}/encapsulate (KEM)
-
-For ML-KEM keys. No body. Response: `ciphertext` (KEM ciphertext), `sharedSecret`, `algorithm`
-
----
-
-### POST /svc/keycore/keys/{id}/hash
-
-Body: `data` (base64), `algorithm` (SHA-256/384/512, SHA3-256/512, BLAKE2b-256). Response: `hash` (base64), `algorithm`
-
----
-
 ### POST /svc/keycore/keys/{id}/mac
 
 Body: `data`, `operation` (generate/verify), `mac` (for verify), `algorithm` (HMAC-SHA256/384/512, CMAC). Response: `mac` or `valid`.
@@ -788,12 +712,6 @@ Body: `format` (raw/pkcs8/spki/jwk/pkcs12), `wrappingKeyId` (if required). Respo
 
 ---
 
-### POST /svc/keycore/keys/{id}/reencrypt
-
-Body: `ciphertext`, `iv`, `aad`, `targetKeyId` (optional), `targetKeyVersion`. Response: new `ciphertext`, `iv`, `keyId`, `keyVersion`
-
----
-
 ### GET /svc/keycore/keys/{id}/versions
 
 Response: `KeyVersion[]` — version, state, fingerprint, createdAt, retiredAt
@@ -803,27 +721,6 @@ Response: `KeyVersion[]` — version, state, fingerprint, createdAt, retiredAt
 ### GET /svc/keycore/keys/{id}/versions/{version}
 
 Single version detail.
-
----
-
-### GET/PUT /svc/keycore/keys/{id}/policy
-
-Policy: `grants[]` — subject, subjectType (user/client/role), operations[], conditions
-
----
-
-### POST /svc/keycore/random
-
-Body: `tenant_id`, `length` (1–4096, default 32), `source`: `kms-csprng` (default) or `hsm-trng`. Response: `bytes` (base64), `length`, `source` — always the generator that produced the bytes.
-
-- `hsm-trng` draws from the tenant HSM's `C_GenerateRandom` (the audit event records `hsm_serial`).
-- `409 random_source_unavailable` (audited `audit.crypto.random_refused`) when there is no tenant HSM, and always for `qkd-seeded-csprng` / `qrng-seeded-csprng`: no QKD or QRNG source is integrated. Before 1.26.0-beta these returned OS CSPRNG bytes under their label.
-
-```bash
-curl -sk -X POST https://localhost/svc/keycore/random \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"tenant_id":"root","length":32,"source":"kms-csprng"}'
-```
 
 ---
 
@@ -1060,7 +957,7 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 
 ---
 
-### GET /svc/certs/cas / POST /svc/certs/cas
+### GET /svc/certs/certs/ca
 
 Create: `name`, `type`, `keyId`, `subject`, `validityDays`, `pathLen`, `permittedDNS[]`, `permittedIP[]`, `crlUrls[]`, `ocspUrls[]`, `issuingCaId` (required for non-root)
 
@@ -1071,63 +968,9 @@ takes ECDSA P-256/P-384 only (`400` otherwise) and needs HSM keys enabled for
 the tenant. A CRL that can't be signed is an error
 (`audit.cert.crl_generation_failed`), never an unsigned placeholder.
 
-```bash
-curl -sk -X POST https://localhost/svc/certs/cas \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Acme Issuing CA","type":"issuing","keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","subject":{"cn":"Acme Issuing CA","o":"Acme Corp","c":"US"},"validityDays":1825,"issuingCaId":"root-ca-id"}'
-```
-
 ---
 
-### GET/PATCH/DELETE /svc/certs/cas/{id}
-
-PATCH: name, crlUrls, ocspUrls.
-
----
-
-### POST /svc/certs/cas/{id}/issue
-
-Body: `csr` (PEM), `profileId`, `expiresAt`, `san` (dnsNames[], ipAddresses[], emailAddresses[], uris[]), `customExtensions[]`
-
-Response: Certificate — id, pem, chain, subject, san, notBefore, notAfter, serialNumber, fingerprint, revoked, issuingCaId, keyUsage[], extendedKeyUsage[]
-
----
-
-### GET/POST /svc/certs/certificates
-
-List (query: caId, state, expiresBeforeDays, search) or import external cert.
-
----
-
-### GET/DELETE /svc/certs/certificates/{id}
-
----
-
-### POST /svc/certs/certificates/{id}/revoke
-
-Body: `reason` (unspecified/keyCompromise/caCompromise/affiliationChanged/superseded/cessationOfOperation/certificateHold), `comment`
-
-```bash
-curl -sk -X POST https://localhost/svc/certs/certificates/cert-abc123/revoke \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"reason":"keyCompromise","comment":"Key compromised in INC-2025-042"}'
-```
-
----
-
-### POST /svc/certs/certificates/{id}/renew
-
-Body: `validityDays` (optional). Response: new Certificate.
-
----
-
-### GET /svc/certs/certificates/{id}/chain
-
-Response: `chain` (full PEM, leaf to root)
-
----
-
-### GET/POST/PATCH/DELETE /svc/certs/profiles
+### GET/POST/DELETE /svc/certs/certs/profiles
 
 Fields: name, type (server/client/code_signing/email/ca), keyUsage[], extendedKeyUsage[], validityDays, allowedAlgorithms[], requireCsr
 
@@ -1160,11 +1003,14 @@ Fields: name, type (server/client/code_signing/email/ca), keyUsage[], extendedKe
 
 ### EST / SCEP / CRL / OCSP
 
-- `POST /svc/certs/est/{caLabel}/.well-known/est/simpleenroll` — EST enrollment (PKCS#10)
-- `POST /svc/certs/est/{caLabel}/.well-known/est/simplereenroll` — EST re-enrollment
-- `POST /svc/certs/scep/{profile}` — SCEP PKIOperation
-- `GET /svc/certs/crl/{caId}` — DER CRL download
-- `POST /svc/certs/ocsp/{caId}` — OCSP responder (RFC 6960)
+- `GET /svc/certs/est/.well-known/est/cacerts`, `.../csrattrs` — EST CA certificates and CSR attributes
+- `POST /svc/certs/est/.well-known/est/simpleenroll` — EST enrollment (PKCS#10)
+- `POST /svc/certs/est/.well-known/est/simplereenroll` — EST re-enrollment
+- `POST /svc/certs/est/.well-known/est/serverkeygen` — EST server-side key generation
+- `GET/POST /svc/certs/scep/pkiclient.exe` — SCEP GetCACert / PKIOperation
+- `POST /svc/certs/cmpv2`, `POST /svc/certs/cmpv2/confirm` — CMPv2
+- `GET /svc/certs/certs/crl` — CRL download
+- `GET/POST /svc/certs/certs/ocsp` — OCSP responder (RFC 6960)
 
 ---
 
@@ -1178,14 +1024,14 @@ id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorN
 
 ---
 
-### GET /svc/audit/events
+### GET /svc/audit/audit/events
 
 Bearer, roles: auditor or admin.
 
 Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`, `action_prefix` (repeatable, up to 5, OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`)
 
 ```bash
-curl -sk "https://localhost/svc/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
+curl -sk "https://localhost/svc/audit/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1217,55 +1063,24 @@ Response:
 
 ---
 
-### GET /svc/audit/events/{id}
+### GET /svc/audit/audit/events/{id}
 
 Single event.
 
 ---
 
-### GET /svc/audit/events/{id}/proof
+### GET /svc/audit/audit/events/{id}/proof
 
 Merkle inclusion proof. Response: `eventId`, `merkleRoot`, `proof[]`, `proofIndex`, `chainHeight`
 
 ---
 
-### POST /svc/audit/verify
-
-Body: `startEventId`, `endEventId`. Response: `valid`, `eventsChecked`, `chainIntact`, `errors[]`, `verifiedAt`
-
----
-
-### GET /svc/audit/chain/status
-
-Response: `leader`, `lastEventId`, `lastEventAt`, `chainHash`, `totalEvents`, `healthy`
-
----
-
-### GET /svc/audit/export/targets / POST /svc/audit/export/targets
-
-List or create SIEM export targets. Fields: name, type (siem_syslog/siem_http/splunk/elasticsearch/s3/azure_sentinel), endpoint, format (cef/leef/json/raw), credentials, filters, batchSize, flushIntervalSeconds
-
-```bash
-curl -sk -X POST https://localhost/svc/audit/export/targets \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Splunk Cloud","type":"splunk","endpoint":"https://splunk.acme.example:8088/services/collector","format":"json","credentials":{"token":"splunk-hec-token"},"batchSize":200}'
-```
-
----
-
-### PATCH/DELETE /svc/audit/export/targets/{id}
-
-### POST /svc/audit/export/targets/{id}/test
-
-No body. Response: `{"success": true, "latencyMs": 123}`
-
-### POST /svc/audit/export/targets/{id}/enable / .../disable
-
-No body. Returns updated ExportTarget.
-
----
-
 ## Service 5: Governance (`/svc/governance/`)
+
+**Approver roles (1.28.0-beta).** When a request opens, its approvers are the
+policy's `approver_users` plus every active user of the tenant who holds one of
+its `approver_roles`, directly or through a group role binding, minus the
+requester. A policy whose roles nobody holds opens no request.
 
 Multi-party approvals, encrypted backup/restore, emergency bypass, system state.
 
@@ -1294,12 +1109,12 @@ System-admin refusals are audited as `audit.governance.system_admin_refused`.
 
 ---
 
-### GET /svc/governance/policies / POST /svc/governance/policies
+### GET /svc/governance/governance/policies / POST /svc/governance/governance/policies
 
 GovernancePolicy: name, triggerActions[], minApprovers, approverGroups[], timeoutHours, notificationChannels[], emergencyBypassAllowed
 
 ```bash
-curl -sk -X POST https://localhost/svc/governance/policies \
+curl -sk -X POST https://localhost/svc/governance/governance/policies \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Key Destruction Approval","triggerActions":["audit.key.destroy","audit.key.export"],"minApprovers":2,"approverGroups":["admin","security-team"],"timeoutHours":24,"emergencyBypassAllowed":false}'
 ```
@@ -1319,43 +1134,7 @@ Response:
 
 ---
 
-### GET/PATCH/DELETE /svc/governance/policies/{id}
-
----
-
-### GET /svc/governance/approvals
-
-Query: `status` (pending/approved/rejected/expired), `pageSize`, `pageToken`
-
----
-
-### GET /svc/governance/approvals/{id}
-
-ApprovalRequest: id, status, requestedBy, requestedAt, operation (type, resourceId, resourceType, parameters), policyId, approvals[], rejections[], resolvedAt, expiresAt
-
----
-
-### POST /svc/governance/approvals/{id}/approve
-
-Body: `comment` (optional). Proceeds automatically if minApprovers threshold met.
-
-```bash
-curl -sk -X POST https://localhost/svc/governance/approvals/req-01ARZ3/approve \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"comment":"Approved — matches INC-2025-042 remediation plan"}'
-```
-
----
-
-### POST /svc/governance/approvals/{id}/reject
-
-Body: `reason` (required). Response: updated ApprovalRequest with `status: rejected`.
-
----
-
-### POST /svc/governance/approvals/{id}/bypass
-
-Requires breakglass permission. Body: `justification` (required). Emits high-severity audit event.
+### DELETE /svc/governance/governance/policies/{id}
 
 ---
 
@@ -1382,13 +1161,13 @@ used; packages from it (`key_derivation` v1/v2) are refused.
 
 ---
 
-### GET /svc/governance/system/state
+### GET /svc/governance/governance/system/state
 
 Response: `status`, `services` (map of service → up/down), `pendingApprovals`, `lastBackupAt`, `clusterNodes`, `healthyNodes`, `checkedAt`
 
 ---
 
-### GET /svc/governance/system/fips-mode
+### GET /svc/governance/governance/system/fips-mode
 
 Root-tenant administrators only (`tenant_id=root`). Response `status`:
 - `desired`: `{mode, previous, reason, requested_by, requested_at}`, or `null` if never set
@@ -1396,7 +1175,7 @@ Root-tenant administrators only (`tenant_id=root`). Response `status`:
 - `services`: `[{service, instance, mode, module_version, validated, started_at, updated_at}]`
 - `converged`, `pending`
 
-### GET /svc/governance/system/fips-mode/impact?target=on|only|off
+### GET /svc/governance/governance/system/fips-mode/impact?target=on|only|off
 
 Root admin. Response `impact`:
 - `from`, `to`, `downgrade`
@@ -1404,7 +1183,7 @@ Root admin. Response `impact`:
 - `notes`
 - `restarts`, `estimated_seconds`
 
-### PUT /svc/governance/system/fips-mode
+### PUT /svc/governance/governance/system/fips-mode
 
 Root admin with write rights. Body: `mode`, `confirm` (must repeat `mode`),
 `reason`. Response: `impact`.
@@ -1414,8 +1193,8 @@ Services apply the change by a staggered graceful restart.
 Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
-- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`), `audit.governance.link_refused` (approval page with an invalid or used token)
-- `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
+- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
+- `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
 - then `audit.governance.fips_mode_applied` for each service start
@@ -1431,12 +1210,12 @@ Framework-oriented compliance scoring, control assessments, delta tracking.
 
 ---
 
-### GET /svc/compliance/frameworks
+### GET /svc/compliance/compliance/frameworks
 
 Response: Framework[] — id, name, description, controlCount, lastAssessedAt, score, passCount, failCount
 
 ```bash
-curl -sk https://localhost/svc/compliance/frameworks \
+curl -sk https://localhost/svc/compliance/compliance/frameworks \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1444,55 +1223,13 @@ Supported frameworks: FIPS-140-3, PCI-DSS-v4, SOC2, ISO-27001, NIST-CSF-2, HIPAA
 
 ---
 
-### GET /svc/compliance/frameworks/{id} / GET /svc/compliance/frameworks/{id}/controls
+### GET /svc/compliance/compliance/frameworks/{id}/controls
 
 Framework detail with controls: id, title, description, status (pass/fail/not_applicable), evidence, remediationSteps
 
 ---
 
-### POST /svc/compliance/assessments
-
-Body: `frameworkId`, `scope` (tenant/full), `notes`, `recompute` (boolean). Response 202: assessmentId, status.
-
----
-
-### GET /svc/compliance/assessments
-
-Query: `frameworkId`, `status`, `pageSize`, `pageToken`. Response: paginated Assessment[].
-
----
-
-### GET /svc/compliance/assessments/{id}
-
-Assessment: id, frameworkId, status, score, passCount, failCount, controls[], startedAt, completedAt, notes
-
----
-
-### GET /svc/compliance/assessments/{id}/controls
-
-ControlResult[]: id, title, status, evidence, remediationSteps, lastCheckedAt
-
----
-
-### GET /svc/compliance/assessments/{id}/score
-
-Response: `{"assessmentId": "...", "frameworkId": "...", "score": 87.5, "passCount": 56, "failCount": 8}`
-
----
-
-### POST /svc/compliance/assessments/{id}/export
-
-Body: `format` (pdf/json/csv). Response 202: `downloadUrl`, `expiresAt`
-
----
-
-### POST /svc/compliance/assessments/{id}/refresh
-
-Re-runs assessment. Response 202: updated status.
-
----
-
-### GET /svc/compliance/assessment/delta
+### GET /svc/compliance/compliance/assessment/delta
 
 Compares latest vs previous assessment.
 
@@ -1500,13 +1237,13 @@ Response: `addedFindings`, `resolvedFindings`, `recoveredDomains[]`, `regressedD
 
 ---
 
-### GET /svc/compliance/assessment/history
+### GET /svc/compliance/compliance/assessment/history
 
 Query: `frameworkId`, `startTime`, `endTime`, `granularity` (day/week/month). Response: trend data points.
 
 ---
 
-### POST /svc/compliance/assessment/run
+### POST /svc/compliance/compliance/assessment/run
 
 Body: `frameworkId`, `templateId`, `scope`, `recompute`. Response 202: assessment job.
 
@@ -1518,118 +1255,46 @@ Risk findings, risk drivers, blast radius, remediation actions, drift detection.
 
 ---
 
-### GET /svc/posture/findings
+### GET /svc/posture/posture/findings
 
 Query: `severity`, `findingType`, `status`, `resourceType`, `resourceId`, `pageSize`, `pageToken`
 
 Finding: id, severity, findingType, title, description, affectedResourceType, affectedResourceId, remediationSteps[], status, riskDrivers, blastRadius, owner, dueDate, createdAt
 
 ```bash
-curl -sk "https://localhost/svc/posture/findings?severity=critical&status=open" \
+curl -sk "https://localhost/svc/posture/posture/findings?severity=critical&status=open" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
 ---
 
-### GET /svc/posture/findings/{id}
-
-Full finding with riskDrivers and blastRadius.
-
----
-
-### PATCH /svc/posture/findings/{id}
-
-Update: `status`, `owner`, `dueDate`
-
----
-
-### POST /svc/posture/findings/{id}/acknowledge
-
-Body: `comment`. Response: updated Finding with `status: acknowledged`.
-
----
-
-### POST /svc/posture/findings/{id}/resolve
-
-Body: `resolutionNote` (required). Response: updated Finding with `status: resolved`.
-
----
-
-### POST /svc/posture/findings/{id}/suppress
-
-Body: `reason`, `expiresAt`. Response: updated Finding with `status: suppressed`.
-
----
-
-### GET /svc/posture/score
-
-Response: `score`, `riskLevel`, `criticalFindings`, `highFindings`, `mediumFindings`, `lowFindings`, `calculatedAt`
-
----
-
-### GET /svc/posture/score/history
-
-Query: `startTime`, `endTime`, `granularity` (hour/day/week). Response: time series.
-
----
-
-### GET /svc/posture/dashboard
+### GET /svc/posture/posture/dashboard
 
 Response: `riskDrivers[]`, `remediationCockpit`, `blastRadius`, `scenarioSimulator`, `validationBadges[]`, `slaOverview`
 
 ---
 
-### GET /svc/posture/actions
+### GET /svc/posture/posture/actions
 
 Action[]: id, findingId, title, priority, impactEstimate, rollbackHint, blastRadius, status
 
 ---
 
-### POST /svc/posture/actions/{id}/execute
+### POST /svc/posture/posture/actions/{id}/execute
 
 Executes approved remediation. Response 202: `actionId`, `status: executing`
 
 ---
 
-### POST /svc/posture/scan
+### POST /svc/posture/posture/scan
 
 Triggers full posture scan. Response 202: `scanId`, `status: running`
-
----
-
-### GET /svc/posture/rules / POST /svc/posture/rules / PATCH/DELETE /svc/posture/rules/{id}
-
-PostureRule: name, severity, findingType, condition (CEL expression), remediationTemplate, enabled
-
-```bash
-curl -sk -X POST https://localhost/svc/posture/rules \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Key Without Rotation Policy","severity":"high","findingType":"key_no_rotation","condition":"key.rotationPolicy == null && key.state == \"ACTIVE\"","remediationTemplate":"Add a rotation policy with intervalDays <= 365"}'
-```
 
 ---
 
 ## Service 8: Reporting (`/svc/reporting/`)
 
 Alert rules, alert history, report generation, scheduled delivery.
-
----
-
-### GET /svc/reporting/alert-rules / POST /svc/reporting/alert-rules
-
-AlertRule: name, conditionType (threshold/pattern/anomaly/absence), conditionConfig, severity, actions[] (email/webhook/pagerduty/opsgenie/slack), throttleMinutes, enabled
-
-```bash
-curl -sk -X POST https://localhost/svc/reporting/alert-rules \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Mass Decrypt Alert","conditionType":"threshold","conditionConfig":{"metric":"decrypt_operations","window":"5m","threshold":1000},"severity":"high","actions":[{"type":"slack","config":{"webhookUrl":"https://hooks.slack.com/services/..."}}]}'
-```
-
----
-
-### GET/PATCH/DELETE /svc/reporting/alert-rules/{id} / POST /svc/reporting/alert-rules/{id}/test
-
-Test fires a test alert. Response: `{"success": true, "deliveredTo": ["slack"], "latencyMs": 245}`
 
 ---
 
@@ -1665,43 +1330,13 @@ Top actors, IPs, and services driving alerts. Response: `{"topActors": [...], "t
 
 ---
 
-### GET /svc/reporting/reports / POST /svc/reporting/reports
-
-Report: name, type (key-inventory/access-summary/compliance-trend/audit-volume/evidence_pack), params, format (pdf/csv/json), status, downloadUrl
-
-```bash
-curl -sk -X POST https://localhost/svc/reporting/reports \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Q1 Key Inventory","type":"key-inventory","params":{"startDate":"2025-01-01","endDate":"2025-03-31"},"format":"pdf"}'
-```
-
----
-
 ### GET /svc/reporting/reports/{id} / GET /svc/reporting/reports/{id}/download
-
----
-
-### GET /svc/reporting/report-templates
-
-Includes `evidence_pack` template for one-click audit export.
 
 ---
 
 ### POST /svc/reporting/reports/generate
 
 Body: `templateId` (use `evidence_pack` for full audit package), `params`, `format`
-
----
-
-### GET /svc/reporting/scheduled / POST /svc/reporting/scheduled / PATCH/DELETE /svc/reporting/scheduled/{id}
-
-ScheduledReport: reportConfig, schedule (cron), enabled, lastRunAt, nextRunAt. Reports are generated into the report jobs list; reporting delivers nothing by email, S3 or webhook (1.27.0-beta).
-
-```bash
-curl -sk -X POST https://localhost/svc/reporting/scheduled \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"reportConfig":{"name":"Weekly Audit Summary","type":"audit-volume","format":"pdf"},"schedule":"0 8 * * MON","enabled":true}'
-```
 
 ---
 
@@ -1737,26 +1372,6 @@ Updates workload identity settings. Body: same fields as GET response (excluding
 
 ---
 
-### POST /svc/workload/workload-identity/svid/x509
-
-Issues an X.509 SVID for a workload.
-
-**Request Body**: `spiffeId` (string), `attestorId` (string), `attestationEvidence` (object), `ttlSeconds` (int)
-
-**Response 200**: `svid` (PEM certificate), `privateKey` (PEM), `bundle` (trust bundle PEM), `spiffeId`, `expiresAt`
-
----
-
-### POST /svc/workload/workload-identity/svid/jwt
-
-Issues a JWT-SVID.
-
-**Request Body**: `spiffeId`, `audiences[]`, `attestorId`, `attestationEvidence`, `ttlSeconds`
-
-**Response 200**: `token` (JWT), `spiffeId`, `expiresAt`
-
----
-
 ### POST /svc/workload/workload-identity/token/exchange
 
 Exchanges an SVID or OIDC token for a KMS bearer token.
@@ -1779,37 +1394,13 @@ curl -sk -X POST https://localhost/svc/workload/workload-identity/token/exchange
 
 ---
 
-### GET /svc/workload/workload-identity/trust-bundles
-
-Returns trust bundles for the tenant's trust domain.
-
-**Response 200**: `{"trustDomain": "spiffe://acme.example", "x509Authorities": ["PEM..."], "jwtAuthorities": [...]}`
-
----
-
 ### GET /svc/workload/workload-identity/registrations / POST /svc/workload/workload-identity/registrations
 
 Registration: spiffeId, attestorId, selectors[], ttlSeconds, allowedOperations[], parentId
 
 ---
 
-### GET/PATCH/DELETE /svc/workload/workload-identity/registrations/{id}
-
----
-
-### GET /svc/workload/workload-identity/attestors / POST /svc/workload/workload-identity/attestors
-
-Attestor: name, type (aws-iid/gcp-iit/azure-msi/kubernetes/tpm/oidc), config, enabled
-
----
-
-### GET/PATCH/DELETE /svc/workload/workload-identity/attestors/{id}
-
----
-
-### GET /svc/workload/workload-identity/policies / POST /svc/workload/workload-identity/policies
-
-Policy: name, spiffeIdPattern (glob), allowedOperations[], keyConstraints, ttlSeconds
+### DELETE /svc/workload/workload-identity/registrations/{id}
 
 ---
 
@@ -1849,42 +1440,6 @@ curl -sk "https://localhost/svc/confidential/confidential/policy?tenant_id=root"
 ### PUT /svc/confidential/confidential/policy
 
 Updates the confidential compute policy. Body: same fields as GET response.
-
----
-
-### POST /svc/confidential/confidential/attest/key-release
-
-Evaluates attestation evidence against the tenant policy and records a verdict (`allow` / `review` / `deny`). Despite the route name it releases no key.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| keyId | string | Yes | Key to release |
-| operation | string | Yes | decrypt / sign / unwrap |
-| attestationProvider | string | Yes | Provider type |
-| attestationDocument | string | Yes | Base64-encoded attestation document |
-| nonce | string | Conditional | Freshness nonce (required if policy.requireNonce) |
-| justification | string | No | Access justification code |
-
-**Response 200**: If allowed, includes `token` (short-lived token bound to attested context) or direct operation result.
-
-```bash
-curl -sk -X POST https://localhost/svc/confidential/confidential/attest/key-release \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","operation":"decrypt","attestationProvider":"aws-nitro","attestationDocument":"base64_document","nonce":"random-nonce-123"}'
-```
-
-Response:
-```json
-{
-  "decision": "allow",
-  "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "token": "attested_ephemeral_token",
-  "tokenExpiresAt": "2025-03-15T14:32:00Z",
-  "measurementVerified": true,
-  "provider": "aws-nitro"
-}
-```
 
 ---
 
@@ -1959,20 +1514,6 @@ Returns the PQC inventory — all crypto assets classified by algorithm family.
 
 ---
 
-### GET /svc/pqc/pqc/inventory/{id}
-
-Single inventory item with full algorithm detail.
-
----
-
-### GET /svc/pqc/pqc/algorithms
-
-Lists all supported algorithms with PQC classification.
-
-**Response 200**: `Algorithm[]` — name, family, keySize, pqcReady, deprecated, nistStatus, recommendedReplacement
-
----
-
 ### GET /svc/pqc/pqc/readiness
 
 Returns PQC readiness metrics for the tenant.
@@ -1991,16 +1532,6 @@ Returns PQC readiness metrics for the tenant.
   "daysToDeadline": 1752
 }
 ```
-
----
-
-### POST /svc/pqc/pqc/migration/plan
-
-Creates a PQC migration plan.
-
-**Request Body**: `scope` (full/keys/certs/interfaces), `targetMode` (hybrid/pqc-only), `targetDate`
-
-**Response 201**: Migration plan — id, status, totalItems, itemsToMigrate, estimatedEffort, phases[], createdAt
 
 ---
 
@@ -2024,7 +1555,7 @@ keys the plan created; rotations are reported as not reversible (plan status
 
 ---
 
-### GET /svc/pqc/pqc/migration/plans / GET /svc/pqc/pqc/migration/plan/{id}
+### GET /svc/pqc/pqc/migration/plans
 
 List or get migration plans.
 
@@ -2035,18 +1566,6 @@ List or get migration plans.
 Returns the current migration status report.
 
 **Response 200**: `{"migratedCount": 8, "inProgressCount": 3, "remainingCount": 31, "lastUpdatedAt": "..."}`
-
----
-
-### POST /svc/pqc/pqc/assess
-
-Triggers a full PQC readiness assessment. Response 202: `assessmentId`, `status`.
-
----
-
-### GET /svc/pqc/pqc/findings
-
-Returns PQC-specific posture findings. Query: `severity`, `algorithmFamily`, `pageSize`, `pageToken`.
 
 ---
 
@@ -2168,16 +1687,6 @@ Audit: `audit.dataprotect.kdf_vault_reprotected`.
 
 ---
 
-### GET /svc/dataprotect/schemes / POST /svc/dataprotect/schemes
-
-Tokenization scheme: name, format (preserve-format/random/hash), algorithm, keyId, preservePrefix, preserveSuffix, charSet, length
-
----
-
-### GET/PATCH/DELETE /svc/dataprotect/schemes/{id}
-
----
-
 ### POST /svc/dataprotect/tokenize
 
 Tokenizes a single value.
@@ -2227,26 +1736,6 @@ Detokenizes multiple tokens. Body: `items[]`. Response: `results[]`.
 
 ---
 
-### GET /svc/dataprotect/vault/search
-
-Searches the token vault.
-
-**Query Parameters**: `schemeId`, `prefix`, `tokenId`, `pageSize`, `pageToken`
-
-**Response 200**: Paginated token index records (no values returned — only metadata)
-
----
-
-### GET /svc/dataprotect/masking/policies / POST /svc/dataprotect/masking/policies
-
-Masking policy: name, rules[] (field, maskType (full/partial/hash/redact), pattern, replacement)
-
----
-
-### GET/PATCH/DELETE /svc/dataprotect/masking/policies/{id}
-
----
-
 ### POST /svc/dataprotect/mask
 
 Applies a masking policy to a data object.
@@ -2257,82 +1746,13 @@ Applies a masking policy to a data object.
 
 ---
 
-### POST /svc/dataprotect/mask/batch
-
-Body: `items[]` — each: data, policyId. Response: `results[]`.
-
----
-
-### POST /svc/dataprotect/encrypt/field
-
-Encrypts individual fields within a data structure.
-
-**Request Body**: `data` (object), `keyId` (string), `fields[]` (field paths to encrypt), `aad` (optional)
-
-**Response 200**: `data` (object with encrypted field values), `keyId`, `keyVersion`
-
----
-
-### POST /svc/dataprotect/decrypt/field
-
-**Request Body**: `data` (object with encrypted fields), `keyId` (string), `fields[]`, `aad`
-
-**Response 200**: `data` (object with decrypted field values)
-
----
-
-### POST /svc/dataprotect/reencrypt/field
-
-Re-encrypts fields under a new key without exposing plaintext.
-
-**Request Body**: `data`, `currentKeyId`, `targetKeyId`, `fields[]`
-
-**Response 200**: `data` (re-encrypted), `targetKeyId`, `targetKeyVersion`
-
----
-
 ## Service 14: Payment (`/svc/payment/`)
 
 Payment crypto: TR-31 key blocks, PIN operations, ISO 20022 message signing.
 
 ---
 
-### POST /svc/payment/tr31/wrap
-
-Wraps a payment key in a TR-31 key block.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| keyId | string | Yes | Key to wrap (the DEK or PIN key) |
-| kbpkId | string | Yes | Key Block Protection Key ID |
-| keyUsage | string | Yes | TR-31 key usage code (e.g. P0, D0, M3) |
-| algorithm | string | Yes | TR-31 algorithm code (A, D, R, T) |
-| modeOfUse | string | Yes | TR-31 mode of use (E, D, B, C, G, S, V, N, X) |
-| exportability | string | No | E (exportable), S (sensitive), N (non-exportable) |
-| optionalBlocks | object[] | No | Optional block headers |
-
-**Response 200**: `keyBlock` (TR-31 formatted string), `headerVersion`, `keyUsage`, `algorithm`, `modeOfUse`
-
-```bash
-curl -sk -X POST https://localhost/svc/payment/tr31/wrap \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","kbpkId":"kbpk-key-id","keyUsage":"P0","algorithm":"A","modeOfUse":"E"}'
-```
-
----
-
-### POST /svc/payment/tr31/unwrap
-
-Unwraps a TR-31 key block.
-
-**Request Body**: `keyBlock` (string), `kbpkId` (string), `storeAs` (object: name, tags — if storing the unwrapped key)
-
-**Response 200**: `keyId` (newly stored key) or `keyMaterial` (base64, if not storing)
-
----
-
-### POST /svc/payment/tr31/translate
+### POST /svc/payment/payment/tr31/translate
 
 Translates a TR-31 key block from one KBPK to another (for inter-system key exchange).
 
@@ -2342,17 +1762,7 @@ Translates a TR-31 key block from one KBPK to another (for inter-system key exch
 
 ---
 
-### POST /svc/payment/pin/generate-block
-
-Generates a PIN block in the specified format.
-
-**Request Body**: `pin` (string, 4–12 digits), `pan` (string, 12–19 digits), `format` (ISO-0/ISO-1/ISO-2/ISO-3/ISO-4), `encryptionKeyId` (PIN encryption key)
-
-**Response 200**: `pinBlock` (hex), `format`, `keyId`, `keyVersion`
-
----
-
-### POST /svc/payment/pin/translate
+### POST /svc/payment/payment/pin/translate
 
 Translates a PIN block from one format or key to another.
 
@@ -2362,37 +1772,7 @@ Translates a PIN block from one format or key to another.
 
 ---
 
-### POST /svc/payment/pin/verify/pvv
-
-Verifies a PIN using PVV (PIN Verification Value) method.
-
-**Request Body**: `pinBlock` (hex), `format`, `encryptionKeyId`, `pvv` (hex), `pvkIndex` (int), `pan`
-
-**Response 200**: `valid` (boolean)
-
----
-
-### POST /svc/payment/pin/verify/offset
-
-Verifies a PIN using PIN Offset method.
-
-**Request Body**: `pinBlock` (hex), `format`, `encryptionKeyId`, `offset` (string), `pan`, `pvkId`
-
-**Response 200**: `valid` (boolean)
-
----
-
-### POST /svc/payment/pin/generate
-
-Generates a random PIN.
-
-**Request Body**: `length` (int, 4–12), `pan`, `encryptionKeyId`, `format`
-
-**Response 200**: `pinBlock` (hex), `pvv` (hex, optional), `offset` (string, optional), `format`
-
----
-
-### POST /svc/payment/iso20022/sign
+### POST /svc/payment/payment/iso20022/sign
 
 Signs an ISO 20022 XML or JSON message.
 
@@ -2402,7 +1782,7 @@ Signs an ISO 20022 XML or JSON message.
 
 ---
 
-### POST /svc/payment/iso20022/verify
+### POST /svc/payment/payment/iso20022/verify
 
 Verifies a signed ISO 20022 message.
 
@@ -2518,165 +1898,51 @@ BYOK (Bring Your Own Key) for AWS KMS, Azure Key Vault, GCP KMS. Sync, rotation,
 
 ---
 
-### GET /svc/cloud/byok/providers / POST /svc/cloud/byok/providers
-
-BYOK provider: name, type (aws/azure/gcp), credentials (type-specific), region, endpoint, enabled
-
-```bash
-curl -sk -X POST https://localhost/svc/cloud/byok/providers \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"AWS Primary","type":"aws","credentials":{"accessKeyId":"AKIA...","secretAccessKey":"secret","region":"us-east-1"},"enabled":true}'
-```
-
----
-
-### GET/PATCH/DELETE /svc/cloud/byok/providers/{id}
-
----
-
-### GET /svc/cloud/byok/keys / POST /svc/cloud/byok/keys
-
-BYOK key: name, providerId, keyId (KMS key ID), vectaKeyId (backing Vecta key), syncInterval, enabled, lastSyncAt, state
-
----
-
-### GET/DELETE /svc/cloud/byok/keys/{id}
-
----
-
-### POST /svc/cloud/byok/keys/{id}/sync
-
-Pushes current key material to the cloud provider. No body. Response: `{"syncedAt": "...", "cloudKeyVersion": "v2"}`
-
----
-
-### POST /svc/cloud/byok/keys/{id}/rotate
-
-Rotates the key in Vecta and syncs the new version to the cloud provider.
-
-No body. Response: `{"keyId": "...", "newVersion": 2, "syncedAt": "..."}`
-
----
-
-### POST /svc/cloud/byok/keys/{id}/revoke
-
-Revokes cloud provider access to the key material.
-
-**Request Body**: `reason` (string). Response: `{"revoked": true, "revokedAt": "..."}`
-
----
-
 ## Service 17: HYOK (`/svc/hyok/`)
 
-Hold Your Own Key proxy: Microsoft DKE (Double Key Encryption), Google CSE (Client-Side Encryption).
+Hold Your Own Key proxy for Microsoft DKE, Salesforce, Google EKM, Alibaba,
+ServiceNow and generic callers. Every route is in the route index below.
 
----
+### Microsoft DKE (1.28.0-beta)
 
-### GET /svc/hyok/policies / POST /svc/hyok/policies
-
-HYOK policy: name, keyId, allowedCallers[], claimsRequired (object), durationSeconds, auditAll
-
----
-
-### GET/PATCH/DELETE /svc/hyok/policies/{id}
-
----
-
-### GET /svc/hyok/dke/{policyId}
-
-DKE public key endpoint. Returns the public key for the specified policy (Microsoft DKE protocol).
-
-**Response 200**: `{"publicKey": "PEM...", "keyId": "...", "algorithm": "RSA-4096"}`
-
----
-
-### POST /svc/hyok/dke/{policyId}/decrypt
-
-DKE decrypt endpoint. Decrypts ciphertext under the policy key.
-
-**Request Body**: `value` (base64 ciphertext), `wrappedKey` (base64), `alg` (string)
-
-**Response 200**: `value` (base64 plaintext)
-
----
-
-### POST /svc/hyok/google/wrap
-
-Google CSE key wrapping. Wraps a data encryption key for Google Workspace.
-
-**Request Body**: `authentication` (JWT), `authorization` (JWT), `key` (base64 DEK), `reason` (string)
-
-**Response 200**: `wrappedKey` (base64), `keyUri` (string)
-
----
-
-### POST /svc/hyok/google/unwrap
-
-Google CSE key unwrapping.
-
-**Request Body**: `authentication`, `authorization`, `wrappedKey`, `reason`
-
-**Response 200**: `key` (base64 DEK)
-
----
-
-### POST /svc/hyok/google/status
-
-Google CSE status check. Returns service health for CSE eligibility.
-
-**Response 200**: `{"ok": true, "message": "KMS is available"}`
-
----
-
-### POST /svc/hyok/google/privilegedpolicyunwrap
-
-Privileged unwrap for admin override scenarios.
-
-**Request Body**: `authentication`, `authorization`, `wrappedKey`, `reason`, `resourceName`
-
-**Response 200**: `key` (base64 DEK)
+- `GET /svc/hyok/api/v1/keys/{id}` returns
+  `{"key": {"kty": "RSA", "n", "e" (number), "alg", "kid"}, "cache": {"exp"}}`.
+  `kid` is the key URL the caller used (including `/svc/hyok`) plus
+  `/<current version>`. Without a token it is served only on the host an
+  enabled DKE endpoint names in `key_uri_hostname`.
+- `POST /svc/hyok/api/v1/keys/{id}/{version}/decrypt` takes
+  `{"alg": "RSA-OAEP-256", "value": "<base64>"}` and returns
+  `{"value": "<base64>"}`. A non-current `version` gets
+  `409 key_version_not_current`. The old `POST /api/v1/keys/{id}/decrypt` is
+  removed.
+- **Entra ID tokens**: verified with `pkg/oidc` against
+  `login.microsoftonline.com/{tid}/discovery/v2.0/keys`. The issuer must be in
+  the endpoint's `valid_issuers`, the audience in `jwt_audiences` (required),
+  `tid` must match the issuer, and the user must be in `authorized_emails`
+  (`upn`/`preferred_username`; never the mutable `email` claim) or hold one of `authorized_roles`
+  (`roles` claim). At least one of the two lists is required. The tenant is
+  `tenant_id` when given, else the only tenant whose DKE endpoint trusts the
+  issuer. For Entra callers `authorized_tenants` lists Entra tenant IDs.
+- Endpoint metadata (`PUT /svc/hyok/hyok/v1/endpoints/dke`, `metadata_json`):
+  `valid_issuers`, `jwt_audiences`, `authorized_emails`, `authorized_roles`,
+  `authorized_tenants`, `key_uri_hostname`, `allowed_algorithms`.
+- Refusals: `audit.hyok.dke_refused` (`reason`, `result: refused`, `status`).
 
 ---
 
 ## Service 18: EKM (`/svc/ekm/`)
 
-External Key Manager for database TDE (Transparent Data Encryption) and BitLocker.
+External Key Manager for database TDE (Transparent Data Encryption), BitLocker,
+Google CSE (KACLS), Azure EKM and the Java SDK.
 
----
-
-### GET /svc/ekm/providers / POST /svc/ekm/providers
-
-EKM provider: name, type (mysql/mssql/oracle/postgresql/bitlocker), config, enabled
-
----
-
-### GET/PATCH/DELETE /svc/ekm/providers/{id}
-
----
-
-### GET /svc/ekm/keys / POST /svc/ekm/keys
-
-EKM key binding: name, providerId, vectaKeyId, externalKeyId, algorithm, purpose, state
-
-```bash
-curl -sk -X POST https://localhost/svc/ekm/keys \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"sql-tde-key","providerId":"prov-mssql-01","vectaKeyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","algorithm":"AES-256","purpose":"encrypt"}'
-```
-
----
-
-### GET/DELETE /svc/ekm/keys/{id}
-
----
-
-### GET /svc/ekm/bitlocker/protectors / POST /svc/ekm/bitlocker/protectors
-
-BitLocker key protector: name, keyId, driveIdentifier, protectorType (tpm/password/recovery-key/ekm), enabled
-
----
-
-### GET/DELETE /svc/ekm/bitlocker/protectors/{id}
+- **Google CSE configs** (`/svc/ekm/ekm/google-cse/configs`) carry
+  `authentication_client_ids` (1.28.0-beta): required on create, settable with
+  `PUT .../configs/{id}`. The KACLS authentication token's `aud` must be one
+  of them. A config without any refuses every KACLS call. Creating a CSE key
+  needs the config's `kacls_endpoint`.
+- **Java SDK**: `GET /svc/ekm/ekm/sdk/download?provider=jca` returns the
+  provider source from `services/jca-provider` (`Cipher.VectaKeyWrap` over
+  `POST /svc/ekm/ekm/tde/keys/{id}/wrap` and `.../unwrap`).
 
 ---
 
@@ -2686,51 +1952,29 @@ KMIP protocol management for KMIP-compliant clients and legacy HSM integrations.
 
 ---
 
-### GET /svc/kmip/profiles / POST /svc/kmip/profiles
+### GET /svc/kmip/kmip/profiles / POST /svc/kmip/kmip/profiles
 
 KMIP profile: name, kmipVersion (1.1/1.2/2.0), allowedOperations[], requireMtls, allowedAlgorithms[], description
 
 ---
 
-### GET/PATCH/DELETE /svc/kmip/profiles/{id}
+### DELETE /svc/kmip/kmip/profiles/{id}
 
 ---
 
-### GET /svc/kmip/objects
-
-Lists KMIP-managed objects.
-
-**Query Parameters**: `objectType`, `state`, `profileId`, `pageSize`, `pageToken`
-
-**Response 200**: Paginated KMIP object records — id, objectType (SymmetricKey/PublicKey/PrivateKey/Certificate), state, algorithm, profileId, createdAt
-
----
-
-### GET /svc/kmip/objects/{id}
-
-Returns a KMIP object record.
-
----
-
-### DELETE /svc/kmip/objects/{id}
-
-Destroys a KMIP object.
-
----
-
-### GET /svc/kmip/clients / POST /svc/kmip/clients
+### GET /svc/kmip/kmip/clients / POST /svc/kmip/kmip/clients
 
 KMIP client: name, profileId, certificate (PEM), allowedIps[], enabled
 
 ```bash
-curl -sk -X POST https://localhost/svc/kmip/clients \
+curl -sk -X POST https://localhost/svc/kmip/kmip/clients \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"NetApp StorageGrid","profileId":"kmip-profile-01","certificate":"-----BEGIN CERTIFICATE-----\n...","allowedIps":["10.0.10.0/24"]}'
 ```
 
 ---
 
-### GET/PATCH/DELETE /svc/kmip/clients/{id}
+### GET/DELETE /svc/kmip/kmip/clients/{id}
 
 ---
 
@@ -2822,189 +2066,19 @@ Lists signing records.
 
 ---
 
-## Service 21: MPC (`/svc/mpc/`)
-
-Multi-party computation groups, FROST threshold signing, DKG ceremonies.
-
----
-
-### GET /svc/mpc/mpc/overview
-
-Dashboard overview for all MPC state.
-
-**Response 200**: `activeGroups`, `activeKeys`, `pendingCeremonies`, `failedCeremonies`, `participantCount`, `policyCount`
-
----
-
-### GET /svc/mpc/mpc/participants / POST participant configuration
-
-Lists registered MPC participants: id, name, endpoint, publicKey, status, groupMemberships[]
-
----
-
-### GET /svc/mpc/mpc/policies
-
-Lists threshold policies: id, name, groupId, threshold (int), totalParticipants (int), allowedOperations[]
-
----
-
-### GET /svc/mpc/mpc/keys
-
-Lists MPC-backed keys: id, name, groupId, threshold, algorithm, state, createdAt
-
----
-
-### GET /svc/mpc/mpc/groups / POST /svc/mpc/mpc/groups
-
-MPC group: name, participants[] (ids), threshold, algorithm, policy
-
-```bash
-curl -sk -X POST https://localhost/svc/mpc/mpc/groups \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"root-ca-signers","participants":["part-alice","part-bob","part-carol"],"threshold":2,"algorithm":"Ed25519"}'
-```
-
----
-
-### GET /svc/mpc/mpc/groups/{id}
-
----
-
-### DELETE /svc/mpc/mpc/groups/{id}
-
----
-
-### GET /svc/mpc/mpc/groups/{id}/status
-
-Group health: participantsOnline, lastActivityAt, pendingCeremonies[]
-
----
-
-### POST /svc/mpc/mpc/dkg/initiate
-
-Initiates a Distributed Key Generation ceremony.
-
-**Request Body**: `groupId`, `algorithm`, `keyName`, `purpose`
-
-**Response 202**: `ceremonyId`, `status: initiated`, `roundsRequired`
-
----
-
-### POST /svc/mpc/mpc/sign/initiate
-
-Initiates a threshold signing ceremony.
-
-**Request Body**: `keyId`, `message` (base64), `messageType` (raw/digest), `algorithm`
-
-**Response 202**: `ceremonyId`, `status: awaiting_contributions`
-
----
-
-### POST /svc/mpc/mpc/sign/{id}/contribute
-
-Submit a participant's signing contribution.
-
-**Request Body**: `participantId`, `contribution` (base64 partial signature share)
-
-**Response 200**: `status`, `contributionsReceived`, `contributionsRequired`
-
----
-
-### GET /svc/mpc/mpc/sign/{id}/result
-
-Retrieve completed threshold signing result.
-
-**Response 200**: `ceremonyId`, `signature` (base64), `status`, `completedAt`
-
----
-
-### GET /svc/mpc/mpc/ceremonies
-
-Lists all ceremonies. Query: `status`, `groupId`, `type` (dkg/sign/reshare), `pageSize`, `pageToken`
-
----
-
-### GET /svc/mpc/mpc/ceremonies/{id}
-
-Ceremony detail: id, type, groupId, status, participants[], contributions[], result, startedAt, completedAt
-
----
-
-### POST /svc/mpc/mpc/ceremonies/{id}/participate
-
-Alternative contribution endpoint for ceremony participation.
-
----
-
-### POST /svc/mpc/mpc/groups/{id}/reshare
-
-Initiates a resharing ceremony to update the participant set or threshold without changing the key.
-
-**Request Body**: `newParticipants[]`, `newThreshold`, `reason`
-
-**Response 202**: `ceremonyId`, `status: resharing`
-
----
-
 ## Service 22: Cluster (`/svc/cluster/`)
 
 Cluster node management, HSM registration, replication, leader election.
 
 ---
 
-### GET /svc/cluster/nodes / POST /svc/cluster/nodes
+### GET /svc/cluster/cluster/nodes / POST /svc/cluster/cluster/nodes
 
 Node: id, address, role (leader/follower), state (healthy/degraded/offline), version, joinedAt
 
 ---
 
-### GET /svc/cluster/status
-
-Cluster-wide status: `leader`, `nodes[]`, `quorum`, `replicationLag`, `healthy`
-
----
-
-### GET /svc/cluster/replication
-
-Replication status per follower: `nodeId`, `address`, `replicationLag`, `lastAppliedAt`, `state`
-
----
-
-### POST /svc/cluster/leader/transfer
-
-Transfers leadership to a specified node.
-
-**Request Body**: `targetNodeId` (string)
-
-**Response 200**: `{"newLeader": "node-02", "transferredAt": "..."}`
-
----
-
-### GET /svc/cluster/snapshots / POST /svc/cluster/snapshots
-
-Cluster state snapshots for backup and disaster recovery. Create triggers an immediate snapshot.
-
----
-
-### GET /svc/cluster/hsm / POST /svc/cluster/hsm
-
-HSM registration: name, type (thales/entrust/aws-cloudhsm/pkcs11/softhsm), config, partitionCount, enabled
-
-```bash
-curl -sk -X POST https://localhost/svc/cluster/hsm \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Thales Luna Network HSM","type":"thales","config":{"host":"hsm.acme.example","partition":"kms-partition","pin":"hsm-partition-pin"},"enabled":true}'
-```
-
----
-
-### GET/PATCH/DELETE /svc/cluster/hsm/{id}
-
----
-
-### POST /svc/cluster/hsm/{id}/test
-
-Tests HSM connectivity. Response: `{"connected": true, "latencyMs": 12, "firmwareVersion": "7.4.0"}`
+### GET /svc/cluster/hsm/{id}
 
 ---
 
@@ -3103,132 +2177,6 @@ forwarding.
 Audit (member): `audit.<service>.cluster_write_forwarded` and
 `audit.<service>.cluster_write_refused`.
 
-### POST /cluster/forward/{service}/{path...} (node-to-node, primary)
-
-A member's forwarded write. It's public in the JWT sense and authenticated by
-the member's forwarding credential, over TLS that the member pins.
-
-Headers:
-- `X-Vecta-Cluster-Node`: member node id;
-- `X-Vecta-Cluster-Credential`: the 32-byte credential issued at join (the
-  primary stores only its SHA-256, compared in constant time; revoked when the
-  node is removed);
-- `X-Vecta-Forward-Claims`: base64url JSON of the caller's claims, verified
-  on the member.
-
-The primary refuses a write the member should have run locally, or an
-unknown service, with `403 not_forwardable`. It asks auth to mint a 5-minute
-token for the caller (`POST /auth/cluster/mint`) and proxies to the service,
-adding `X-Vecta-Forwarded-By: <member>`. The service applies its own
-authorization and audit as for any request.
-
-Errors: `401 member_unauthorized`, `400 bad_claims`, `403 identity_refused`
-(for example, the user must change their password), `503 minter_unavailable`,
-`502 service_unreachable`.
-
-Audit: `audit.cluster.write_forwarded`, `audit.cluster.forward_refused`.
-
----
-
-## Service 23: QKD (`/svc/qkd/`)
-
-Quantum Key Distribution: ETSI GS QKD 014 compatible links for quantum-secure key exchange.
-
----
-
-### GET /svc/qkd/links / POST /svc/qkd/links
-
-QKD link: name, remoteKmsEndpoint, etsiApiUrl, credentials, keyRate (keys/sec), keyLength (bits), enabled, state
-
-```bash
-curl -sk -X POST https://localhost/svc/qkd/links \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"QKD-Link-DataCenter-A","remoteKmsEndpoint":"https://kms-b.acme.example","etsiApiUrl":"https://qkd-a.acme.example:9090","keyLength":256,"enabled":true}'
-```
-
----
-
-### GET/PATCH/DELETE /svc/qkd/links/{id}
-
----
-
-### GET /svc/qkd/links/{id}/keys
-
-Fetches available quantum keys from the QKD link.
-
-**Query Parameters**: `count` (int, 1–10), `keyLength` (bits)
-
-**Response 200**: `{"keys": [{"keyId": "qkd-key-01", "keyMaterial": "base64"}], "linkId": "..."}`
-
----
-
-### GET /svc/qkd/links/{id}/status
-
-Link health: `state` (up/degraded/down), `keyRate`, `qberRate` (quantum bit error rate), `availableKeys`, `lastKeyAt`
-
----
-
-### POST /svc/qkd/links/{id}/test
-
-Tests QKD link connectivity and key delivery. Response: `{"connected": true, "keyDelivered": true, "qber": 0.02}`
-
----
-
-## Service 24: QRNG (`/svc/qrng/`)
-
-Quantum random number generation from hardware quantum sources.
-
----
-
-### GET /svc/qrng/sources / POST /svc/qrng/sources
-
-QRNG source: name, type (photonic/vacuum-fluctuation/nuclear/api), endpoint, credentials, enabled, state
-
----
-
-### GET/PATCH/DELETE /svc/qrng/sources/{id}
-
----
-
-### GET /svc/qrng/sources/{id}/health
-
-Source health: `state` (up/degraded/down), `entropyRate` (bits/sec), `lastGeneratedAt`, `qualityScore`
-
----
-
-### POST /svc/qrng/generate
-
-Generates quantum random bytes.
-
-**Request Body**: `size` (int, 1–65536), `encoding` (base64/hex), `sourceId` (optional, uses default if omitted)
-
-**Response 200**: `random` (string), `sourceId`, `size`, `sourceType`, `generatedAt`
-
-```bash
-curl -sk -X POST https://localhost/svc/qrng/generate \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"size":64,"encoding":"hex"}'
-```
-
-Response:
-```json
-{
-  "random": "a3f7e2b1c9d4f8a2e6b3c7d1f5a9e3b7c2d6f1a4e8b2c5d9f3a7e1b4c8d2f6a9",
-  "sourceId": "qrng-source-01",
-  "size": 64,
-  "sourceType": "photonic",
-  "generatedAt": "2025-03-15T14:22:00Z"
-}
-```
-
----
-
-### GET /svc/qrng/stats
-
-Aggregate QRNG statistics: `totalGenerated` (bytes), `sourcesOnline`, `averageEntropyRate`, `lastGeneratedAt`
-
----
-
 ## Service 25: Secrets (`/svc/secrets/`)
 
 Hierarchical secret vault with versioning, rollback, and path-based policy.
@@ -3315,11 +2263,6 @@ Retrieves the current version of a secret.
 
 **Response 200**: `{"path": "...", "value": {...}, "version": 3, "metadata": {...}, "createdAt": "...", "updatedAt": "..."}`
 
-```bash
-curl -sk "https://localhost/svc/secrets/secrets/services/database/credentials" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
-```
-
 Response:
 ```json
 {
@@ -3352,14 +2295,6 @@ Soft-deletes the current version. All versions remain accessible.
 
 ---
 
-### POST /svc/secrets/secrets/{path}/destroy/{version}
-
-Permanently destroys a specific secret version. Irreversible.
-
-**Response**: 204 No Content
-
----
-
 ### GET /svc/secrets/secrets/{path}/versions
 
 Lists all versions of a secret (no values).
@@ -3368,37 +2303,11 @@ Lists all versions of a secret (no values).
 
 ---
 
-### GET /svc/secrets/secrets/{path}/versions/{version}
-
-Retrieves a specific secret version including its value.
-
----
-
-### POST /svc/secrets/secrets/{path}/rollback/{version}
-
-Rolls back the secret to a previous version by creating a new version with the old value.
-
-**Response 200**: `{"path": "...", "newVersion": 4, "rolledBackFrom": 3, "rolledBackTo": 2}`
-
----
-
-### GET /svc/secrets/policy/{path}
+### GET /svc/secrets/secrets/policy/{path}
 
 Returns the access policy for a path (and all sub-paths).
 
 **Response 200**: Policy object with `grants[]` — subject, subjectType, operations[], pathPattern
-
----
-
-### PUT /svc/secrets/policy/{path}
-
-Sets the access policy for a path.
-
-```bash
-curl -sk -X PUT https://localhost/svc/secrets/policy/services/database \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"grants":[{"subject":"service-account-api","subjectType":"client","operations":["read"],"pathPattern":"services/database/*"}]}'
-```
 
 ---
 
@@ -3427,9 +2336,9 @@ Software BOM, Cryptographic BOM, vulnerability correlation, offline advisory man
 
 ---
 
-### GET /svc/sbom/sbom/inventory
+### GET /svc/sbom/sbom/latest
 
-Returns the latest SBOM snapshot inventory.
+Returns the latest SBOM snapshot.
 
 **Response 200**: `snapshotId`, `createdAt`, `componentCount`, `components[]` (name, version, ecosystem, purl, license)
 
@@ -3448,12 +2357,6 @@ curl -sk -X POST https://localhost/svc/sbom/sbom/generate \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"trigger":"manual"}'
 ```
-
----
-
-### GET /svc/sbom/sbom/ingest/{id}/status
-
-Returns status of a SBOM ingest job.
 
 ---
 
@@ -3482,9 +2385,9 @@ Returns merged vulnerability findings from OSV online, Trivy, and manual advisor
 
 ---
 
-### GET /svc/sbom/sbom/findings / GET /svc/sbom/sbom/findings/{id}
+### GET /svc/sbom/sbom/vulnerabilities
 
-Enriched finding objects linking vulnerabilities to specific components.
+Vulnerabilities matched to the components of the latest snapshot.
 
 ---
 
@@ -3568,196 +2471,6 @@ Returns PQC readiness metrics from the latest CBOM.
 `GET /ai-gateway/v1/health` returns the checks it ran: `database` (a
 round trip), and `dlp` / `guardrails` (the detectors run on a known input).
 It answers `503` with `status: degraded` when any check fails.
-
----
-
-## Service 27: AI (`/svc/ai/`)
-
-AI-powered guidance: natural-language queries, incident analysis, posture recommendations, policy explanation. Provider-backed with governance-aware context assembly and redaction before prompt delivery.
-
----
-
-### GET /svc/ai/ai/config
-
-Returns the saved AI configuration for the tenant.
-
-**Query Parameters**: `tenant_id` (required)
-
-**Response 200**:
-```json
-{
-  "config": {
-    "tenantId": "root",
-    "backend": "claude",
-    "endpoint": "https://api.anthropic.com/v1/messages",
-    "model": "claude-sonnet-4-6",
-    "apiKeySecret": "ai-provider-token",
-    "providerAuth": {"required": true, "type": "bearer"},
-    "mcp": {"enabled": false, "endpoint": ""},
-    "maxContextTokens": 8000,
-    "temperature": 0.3,
-    "contextSources": {
-      "keys": {"enabled": true, "limit": 25, "fields": ["id", "name", "algorithm", "status"]},
-      "policies": {"enabled": true, "all": false, "limit": 20},
-      "audit": {"enabled": true, "lastHours": 24, "limit": 100},
-      "posture": {"enabled": true, "current": true},
-      "alerts": {"enabled": true, "unresolved": true, "limit": 50}
-    },
-    "redactionFields": ["encrypted_material", "wrapped_dek", "pwd_hash", "api_key", "passphrase"],
-    "updatedAt": "2026-03-11T09:30:00Z"
-  }
-}
-```
-
-```bash
-curl -sk "https://localhost/svc/ai/ai/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
-```
-
----
-
-### PUT /svc/ai/ai/config
-
-Updates the tenant AI configuration.
-
-**Request Body**: backend, endpoint, model, apiKeySecret, providerAuth (required, type), mcp (enabled, endpoint), maxContextTokens, temperature, contextSources, redactionFields
-
-Validation: `backend` must be supported; managed providers require `providerAuth.required: true`; if `mcp.enabled: true`, `mcp.endpoint` must be set.
-
-```bash
-curl -sk -X PUT "https://localhost/svc/ai/ai/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"backend":"claude","endpoint":"https://api.anthropic.com/v1/messages","model":"claude-sonnet-4-6","apiKeySecret":"my-api-key-secret","providerAuth":{"required":true,"type":"bearer"},"maxContextTokens":8000,"temperature":0.3}'
-```
-
----
-
-### POST /svc/ai/ai/query
-
-Submits a natural-language assistant request. Context is assembled from enabled sources, redacted, then sent to the configured provider.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| tenantId | string | Yes | Tenant context |
-| query | string | Yes | Natural-language question or task |
-| includeContext | boolean | No | Whether to assemble and include KMS context |
-
-**Response 200**:
-```json
-{
-  "result": {
-    "action": "query",
-    "tenantId": "root",
-    "answer": "There are 3 unresolved alerts. Start with the posture risk spike and the pending approval backlog.",
-    "backend": "claude",
-    "model": "claude-sonnet-4-6",
-    "redactionsApplied": 4,
-    "contextSummary": {
-      "keys": 12,
-      "policies": 6,
-      "auditEvents": 45,
-      "alerts": 3
-    },
-    "warnings": [],
-    "generatedAt": "2026-03-15T09:40:00Z"
-  }
-}
-```
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/query \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"tenantId":"root","query":"Analyze recent unresolved alerts and recommend actions","includeContext":true}'
-```
-
----
-
-### POST /svc/ai/ai/analyze/incident
-
-Produces an AI explanation for a security or governance event.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| tenantId | string | Yes | Tenant context |
-| incidentId | string | Yes | Incident identifier |
-| title | string | Yes | Incident title |
-| description | string | Yes | Incident description |
-| details | object | No | Additional structured details |
-
-**Response 200**: `result.answer` (AI analysis and recommendations), `result.backend`, `result.redactionsApplied`
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/analyze/incident \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"tenantId":"root","incidentId":"inc-001","title":"Unauthorized key export attempt","description":"A privileged user attempted an export against a production key.","details":{"keyId":"key_123","actor":"ops-admin","approvalStatus":"missing"}}'
-```
-
----
-
-### POST /svc/ai/ai/recommend/posture
-
-Builds posture guidance for the requested focus area.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| tenantId | string | Yes | Tenant context |
-| focus | string | Yes | Focus area: key-rotation / mfa-enforcement / pqc-migration / backup-discipline / access-review |
-
-**Response 200**: `result.answer` (prioritized recommendations), `result.warnings` (if provider unavailable, falls back to deterministic guidance)
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/recommend/posture \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"tenantId":"root","focus":"key-rotation"}'
-```
-
----
-
-### POST /svc/ai/ai/recommend/pqc
-
-Provides PQC migration recommendations based on the tenant's current inventory.
-
-**Request Body**: `tenantId`, `targetMode` (hybrid/pqc-only), `prioritize` (certificates/keys/interfaces)
-
-**Response 200**: `result.answer` (migration steps and prioritization), `result.contextSummary`
-
----
-
-### POST /svc/ai/ai/explain/policy
-
-Explains a KMS policy in plain language.
-
-**Request Body**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| tenantId | string | Yes | Tenant context |
-| policyId | string | Conditional | ID of policy to explain (mutually exclusive with inline policy) |
-| policy | object | Conditional | Inline policy object to explain |
-
-```bash
-curl -sk -X POST https://localhost/svc/ai/ai/explain/policy \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"tenantId":"root","policyId":"policy-rotate-90d"}'
-```
-
----
-
-### GET /svc/ai/ai/anomalies
-
-Lists AI-detected anomalies in key usage, access patterns, or audit events.
-
-**Query Parameters**: `severity`, `resolved`, `startTime`, `endTime`, `pageSize`, `pageToken`
-
-**Response 200**: Paginated anomaly records — id, severity, description, affectedResource, detectedAt, resolved, resolutionNote
-
----
-
-### GET /svc/ai/ai/anomalies/{id}
-
-Returns a single anomaly with full AI analysis and recommended actions.
 
 ---
 
@@ -3957,28 +2670,6 @@ curl -sk -X POST "https://localhost/svc/keycore/keys/$KEY_ID/encrypt" \
 openssl req -new -newkey rsa:2048 -nodes -keyout server.key \
   -subj "/CN=api.acme.example/O=Acme Corp" -out server.csr
 
-# 2. Issue from KMS CA
-curl -sk -X POST https://localhost/svc/certs/cas/issuing-ca-id/issue \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d "{\"csr\":\"$(base64 -w0 server.csr)\",\"profileId\":\"tls-server\",\"san\":{\"dnsNames\":[\"api.acme.example\"]}}"
-```
-
-### Run a compliance assessment
-
-```bash
-# 1. Trigger assessment
-ASMT_ID=$(curl -sk -X POST https://localhost/svc/compliance/assessments \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"frameworkId":"pci-dss-v4","scope":"tenant"}' | jq -r '.assessmentId')
-
-# 2. Poll until complete
-curl -sk "https://localhost/svc/compliance/assessments/$ASMT_ID" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
-
-# 3. Export report
-curl -sk -X POST "https://localhost/svc/compliance/assessments/$ASMT_ID/export" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"format":"pdf"}'
 ```
 
 ### Provision a workload key via Autokey
@@ -3989,3 +2680,1002 @@ curl -sk -X POST https://localhost/svc/autokey/autokey/requests \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"resourceType":"s3-bucket","resourceId":"my-app-data-bucket","service":"data-pipeline","justification":"production encryption for GDPR scope data"}'
 ```
+
+## Appendix: Route index (generated)
+
+<!-- route-index:start (generated by scripts/check-doc-routes.py --write-index) -->
+
+Every route each service registers, as reached through the edge. Generated
+from the code; do not edit by hand.
+
+### ai-gateway (`/svc/ai-gateway/`)
+
+- `GET /svc/ai-gateway/ai-gateway/v1/access-rules`
+- `POST /svc/ai-gateway/ai-gateway/v1/access-rules`
+- `DELETE /svc/ai-gateway/ai-gateway/v1/access-rules/{id}`
+- `GET /svc/ai-gateway/ai-gateway/v1/audit`
+- `GET /svc/ai-gateway/ai-gateway/v1/audit/stats`
+- `GET /svc/ai-gateway/ai-gateway/v1/audit/{id}`
+- `GET /svc/ai-gateway/ai-gateway/v1/budgets`
+- `POST /svc/ai-gateway/ai-gateway/v1/budgets`
+- `GET /svc/ai-gateway/ai-gateway/v1/budgets/usage`
+- `PUT /svc/ai-gateway/ai-gateway/v1/budgets/{id}`
+- `POST /svc/ai-gateway/ai-gateway/v1/chat/completions`
+- `POST /svc/ai-gateway/ai-gateway/v1/completions`
+- `POST /svc/ai-gateway/ai-gateway/v1/embeddings`
+- `POST /svc/ai-gateway/ai-gateway/v1/evaluate`
+- `GET /svc/ai-gateway/ai-gateway/v1/guardrails`
+- `POST /svc/ai-gateway/ai-gateway/v1/guardrails`
+- `DELETE /svc/ai-gateway/ai-gateway/v1/guardrails/{id}`
+- `GET /svc/ai-gateway/ai-gateway/v1/health`
+- `GET /svc/ai-gateway/ai-gateway/v1/metrics`
+- `GET /svc/ai-gateway/ai-gateway/v1/models`
+- `POST /svc/ai-gateway/ai-gateway/v1/models`
+- `DELETE /svc/ai-gateway/ai-gateway/v1/models/{id}`
+- `PUT /svc/ai-gateway/ai-gateway/v1/models/{id}`
+- `POST /svc/ai-gateway/ai-gateway/v1/models/{id}/test`
+- `GET /svc/ai-gateway/ai-gateway/v1/policies`
+- `POST /svc/ai-gateway/ai-gateway/v1/policies`
+- `DELETE /svc/ai-gateway/ai-gateway/v1/policies/{id}`
+- `GET /svc/ai-gateway/ai-gateway/v1/policies/{id}`
+- `PUT /svc/ai-gateway/ai-gateway/v1/policies/{id}`
+- `POST /svc/ai-gateway/ai-gateway/v1/redact`
+- `POST /svc/ai-gateway/ai-gateway/v1/scan`
+
+### audit (`/svc/audit/`)
+
+- `GET /svc/audit/alerts`
+- `GET /svc/audit/alerts/channels`
+- `PUT /svc/audit/alerts/channels`
+- `POST /svc/audit/alerts/channels/test`
+- `GET /svc/audit/alerts/rules`
+- `POST /svc/audit/alerts/rules`
+- `DELETE /svc/audit/alerts/rules/{id}`
+- `PUT /svc/audit/alerts/rules/{id}`
+- `GET /svc/audit/alerts/stats`
+- `GET /svc/audit/alerts/stream`
+- `POST /svc/audit/alerts/test-rule`
+- `GET /svc/audit/alerts/{id}`
+- `PUT /svc/audit/alerts/{id}/{action}`
+- `GET /svc/audit/audit/cbom/diff`
+- `GET /svc/audit/audit/cbom/inventory`
+- `GET /svc/audit/audit/chain/verify`
+- `POST /svc/audit/audit/cluster/signing-key/export`
+- `POST /svc/audit/audit/cluster/signing-key/import`
+- `POST /svc/audit/audit/cluster/signing-key/join-key`
+- `GET /svc/audit/audit/config`
+- `GET /svc/audit/audit/correlation/{id}`
+- `GET /svc/audit/audit/events`
+- `GET /svc/audit/audit/events/{id}`
+- `GET /svc/audit/audit/events/{id}/proof`
+- `GET /svc/audit/audit/fips/boundary`
+- `POST /svc/audit/audit/merkle/build`
+- `GET /svc/audit/audit/merkle/epochs`
+- `GET /svc/audit/audit/merkle/epochs/{id}`
+- `POST /svc/audit/audit/merkle/verify`
+- `POST /svc/audit/audit/publish`
+- `POST /svc/audit/audit/search`
+- `GET /svc/audit/audit/session/{session_id}`
+- `GET /svc/audit/audit/stats`
+- `GET /svc/audit/audit/stream`
+- `GET /svc/audit/audit/timeline/{target_id}`
+- `GET /svc/audit/metrics`
+- `GET /svc/audit/ops-metrics/by-service`
+- `GET /svc/audit/ops-metrics/errors`
+- `GET /svc/audit/ops-metrics/latency`
+- `GET /svc/audit/ops-metrics/overview`
+- `POST /svc/audit/ops-metrics/record`
+- `GET /svc/audit/ops-metrics/timeseries`
+- `GET /svc/audit/webhooks`
+- `POST /svc/audit/webhooks`
+- `DELETE /svc/audit/webhooks/{id}`
+- `PATCH /svc/audit/webhooks/{id}`
+- `GET /svc/audit/webhooks/{id}/deliveries`
+- `POST /svc/audit/webhooks/{id}/test`
+
+### auth (`/svc/auth/`)
+
+- `POST /svc/auth/auth/api-keys`
+- `DELETE /svc/auth/auth/api-keys/{id}`
+- `POST /svc/auth/auth/change-password`
+- `GET /svc/auth/auth/cli/hsm/config`
+- `PUT /svc/auth/auth/cli/hsm/config`
+- `GET /svc/auth/auth/cli/hsm/partitions`
+- `POST /svc/auth/auth/cli/session`
+- `GET /svc/auth/auth/cli/status`
+- `POST /svc/auth/auth/client-token`
+- `GET /svc/auth/auth/clients`
+- `GET /svc/auth/auth/clients/{id}`
+- `PUT /svc/auth/auth/clients/{id}`
+- `POST /svc/auth/auth/clients/{id}/revoke`
+- `POST /svc/auth/auth/clients/{id}/rotate-key`
+- `POST /svc/auth/auth/cluster/mint`
+- `GET /svc/auth/auth/groups/roles`
+- `DELETE /svc/auth/auth/groups/{id}/role`
+- `PUT /svc/auth/auth/groups/{id}/role`
+- `POST /svc/auth/auth/identity/import/users`
+- `GET /svc/auth/auth/identity/providers`
+- `GET /svc/auth/auth/identity/providers/{provider}`
+- `PUT /svc/auth/auth/identity/providers/{provider}`
+- `GET /svc/auth/auth/identity/providers/{provider}/groups`
+- `GET /svc/auth/auth/identity/providers/{provider}/groups/{id}/members`
+- `POST /svc/auth/auth/identity/providers/{provider}/test`
+- `GET /svc/auth/auth/identity/providers/{provider}/users`
+- `POST /svc/auth/auth/login`
+- `POST /svc/auth/auth/logout`
+- `GET /svc/auth/auth/me`
+- `GET /svc/auth/auth/password-policy`
+- `PUT /svc/auth/auth/password-policy`
+- `POST /svc/auth/auth/refresh`
+- `POST /svc/auth/auth/register`
+- `POST /svc/auth/auth/register/{id}/activate`
+- `GET /svc/auth/auth/register/{id}/status`
+- `GET /svc/auth/auth/rest-client-security/summary`
+- `GET /svc/auth/auth/scim/groups`
+- `GET /svc/auth/auth/scim/settings`
+- `PUT /svc/auth/auth/scim/settings`
+- `POST /svc/auth/auth/scim/settings/rotate-token`
+- `GET /svc/auth/auth/scim/summary`
+- `GET /svc/auth/auth/scim/users`
+- `GET /svc/auth/auth/security-policy`
+- `PUT /svc/auth/auth/security-policy`
+- `GET /svc/auth/auth/sso/providers`
+- `GET /svc/auth/auth/sso/saml/metadata`
+- `GET /svc/auth/auth/sso/{provider}/callback`
+- `POST /svc/auth/auth/sso/{provider}/callback`
+- `GET /svc/auth/auth/sso/{provider}/login`
+- `GET /svc/auth/auth/system-health`
+- `POST /svc/auth/auth/system-health/restart`
+- `GET /svc/auth/auth/users`
+- `POST /svc/auth/auth/users`
+- `POST /svc/auth/auth/users/{id}/reset-password`
+- `PUT /svc/auth/auth/users/{id}/role`
+- `PUT /svc/auth/auth/users/{id}/status`
+- `POST /svc/auth/auth/workload-token`
+- `GET /svc/auth/scim/v2/Groups`
+- `POST /svc/auth/scim/v2/Groups`
+- `DELETE /svc/auth/scim/v2/Groups/{id}`
+- `GET /svc/auth/scim/v2/Groups/{id}`
+- `PATCH /svc/auth/scim/v2/Groups/{id}`
+- `PUT /svc/auth/scim/v2/Groups/{id}`
+- `GET /svc/auth/scim/v2/ResourceTypes`
+- `GET /svc/auth/scim/v2/Schemas`
+- `GET /svc/auth/scim/v2/ServiceProviderConfig`
+- `GET /svc/auth/scim/v2/Users`
+- `POST /svc/auth/scim/v2/Users`
+- `DELETE /svc/auth/scim/v2/Users/{id}`
+- `GET /svc/auth/scim/v2/Users/{id}`
+- `PATCH /svc/auth/scim/v2/Users/{id}`
+- `PUT /svc/auth/scim/v2/Users/{id}`
+- `GET /svc/auth/tenants`
+- `POST /svc/auth/tenants`
+- `DELETE /svc/auth/tenants/{id}`
+- `GET /svc/auth/tenants/{id}`
+- `PUT /svc/auth/tenants/{id}`
+- `GET /svc/auth/tenants/{id}/delete-readiness`
+- `POST /svc/auth/tenants/{id}/disable`
+- `POST /svc/auth/tenants/{id}/roles`
+- `DELETE /svc/auth/tenants/{id}/roles/{name}`
+- `PUT /svc/auth/tenants/{id}/roles/{name}`
+
+### autokey (`/svc/autokey/`)
+
+- `GET /svc/autokey/autokey/handles`
+- `GET /svc/autokey/autokey/requests`
+- `POST /svc/autokey/autokey/requests`
+- `GET /svc/autokey/autokey/requests/{id}`
+- `GET /svc/autokey/autokey/service-policies`
+- `POST /svc/autokey/autokey/service-policies`
+- `DELETE /svc/autokey/autokey/service-policies/{service}`
+- `PUT /svc/autokey/autokey/service-policies/{service}`
+- `GET /svc/autokey/autokey/settings`
+- `PUT /svc/autokey/autokey/settings`
+- `GET /svc/autokey/autokey/summary`
+- `GET /svc/autokey/autokey/templates`
+- `POST /svc/autokey/autokey/templates`
+- `DELETE /svc/autokey/autokey/templates/{id}`
+- `PUT /svc/autokey/autokey/templates/{id}`
+
+### backup (`/svc/backup/`)
+
+- `GET /svc/backup/backup/metrics`
+- `GET /svc/backup/backup/policies`
+- `POST /svc/backup/backup/policies`
+- `DELETE /svc/backup/backup/policies/{id}`
+- `PATCH /svc/backup/backup/policies/{id}`
+- `POST /svc/backup/backup/policies/{id}/trigger`
+- `GET /svc/backup/backup/restore-points`
+- `POST /svc/backup/backup/restore-points/{id}/restore`
+- `GET /svc/backup/backup/runs`
+- `GET /svc/backup/backup/runs/{id}`
+- `GET /svc/backup/healthz`
+
+### certs (`/svc/certs/`)
+
+- `GET /svc/certs/acme/cert/{id}`
+- `GET /svc/certs/acme/challenge/{id}`
+- `POST /svc/certs/acme/challenge/{id}`
+- `GET /svc/certs/acme/directory`
+- `POST /svc/certs/acme/finalize/{id}`
+- `POST /svc/certs/acme/new-account`
+- `POST /svc/certs/acme/new-nonce`
+- `POST /svc/certs/acme/new-order`
+- `GET /svc/certs/acme/renewal-info/{id}`
+- `GET /svc/certs/certs`
+- `POST /svc/certs/certs`
+- `GET /svc/certs/certs/alert-policy`
+- `PUT /svc/certs/certs/alert-policy`
+- `GET /svc/certs/certs/ca`
+- `POST /svc/certs/certs/ca`
+- `DELETE /svc/certs/certs/ca/{id}`
+- `GET /svc/certs/certs/clm/policy`
+- `PUT /svc/certs/certs/clm/policy`
+- `GET /svc/certs/certs/clm/status`
+- `GET /svc/certs/certs/crl`
+- `GET /svc/certs/certs/download/{id}`
+- `GET /svc/certs/certs/internal-mtls`
+- `POST /svc/certs/certs/internal-mtls/rotate-all`
+- `PUT /svc/certs/certs/internal-mtls/{identity}/policy`
+- `POST /svc/certs/certs/internal-mtls/{identity}/rotate`
+- `GET /svc/certs/certs/inventory`
+- `POST /svc/certs/certs/merkle/build`
+- `GET /svc/certs/certs/merkle/epochs`
+- `GET /svc/certs/certs/merkle/epochs/{id}`
+- `GET /svc/certs/certs/merkle/proof/{id}`
+- `POST /svc/certs/certs/merkle/verify`
+- `GET /svc/certs/certs/ocsp`
+- `POST /svc/certs/certs/ocsp`
+- `GET /svc/certs/certs/profiles`
+- `POST /svc/certs/certs/profiles`
+- `GET /svc/certs/certs/profiles/{id}`
+- `GET /svc/certs/certs/protocols`
+- `GET /svc/certs/certs/protocols/schema`
+- `PUT /svc/certs/certs/protocols/{protocol}`
+- `GET /svc/certs/certs/renewal-intelligence`
+- `POST /svc/certs/certs/renewal-intelligence/refresh`
+- `GET /svc/certs/certs/renewal-intelligence/{id}`
+- `GET /svc/certs/certs/security/status`
+- `POST /svc/certs/certs/sign-csr`
+- `GET /svc/certs/certs/star/subscriptions`
+- `POST /svc/certs/certs/star/subscriptions`
+- `DELETE /svc/certs/certs/star/subscriptions/{id}`
+- `POST /svc/certs/certs/star/subscriptions/{id}/refresh`
+- `GET /svc/certs/certs/star/summary`
+- `POST /svc/certs/certs/upload-3p`
+- `DELETE /svc/certs/certs/{id}`
+- `GET /svc/certs/certs/{id}`
+- `POST /svc/certs/certs/{id}/renew`
+- `POST /svc/certs/certs/{id}/revoke`
+- `POST /svc/certs/cmpv2`
+- `POST /svc/certs/cmpv2/confirm`
+- `GET /svc/certs/est/.well-known/est/cacerts`
+- `GET /svc/certs/est/.well-known/est/csrattrs`
+- `POST /svc/certs/est/.well-known/est/serverkeygen`
+- `POST /svc/certs/est/.well-known/est/simpleenroll`
+- `POST /svc/certs/est/.well-known/est/simplereenroll`
+- `GET /svc/certs/scep/pkiclient.exe`
+- `POST /svc/certs/scep/pkiclient.exe`
+
+### cloud (`/svc/cloud/`)
+
+- `GET /svc/cloud/cloud/accounts`
+- `POST /svc/cloud/cloud/accounts`
+- `DELETE /svc/cloud/cloud/accounts/{id}`
+- `GET /svc/cloud/cloud/bindings`
+- `GET /svc/cloud/cloud/bindings/{id}`
+- `POST /svc/cloud/cloud/bindings/{id}/rotate`
+- `POST /svc/cloud/cloud/import`
+- `GET /svc/cloud/cloud/inventory`
+- `GET /svc/cloud/cloud/region-mappings`
+- `POST /svc/cloud/cloud/region-mappings`
+- `POST /svc/cloud/cloud/sync`
+
+### cluster-manager (`/svc/cluster/`)
+
+- `ANY /svc/cluster/cluster/forward/{svc}/{rest...}`
+- `POST /svc/cluster/cluster/join/complete`
+- `POST /svc/cluster/cluster/join/connect`
+- `POST /svc/cluster/cluster/join/exchange`
+- `POST /svc/cluster/cluster/join/request`
+- `GET /svc/cluster/cluster/logs`
+- `GET /svc/cluster/cluster/members`
+- `GET /svc/cluster/cluster/nodes`
+- `POST /svc/cluster/cluster/nodes`
+- `DELETE /svc/cluster/cluster/nodes/{id}`
+- `POST /svc/cluster/cluster/nodes/{id}/heartbeat`
+- `POST /svc/cluster/cluster/nodes/{id}/role`
+- `GET /svc/cluster/cluster/overview`
+- `GET /svc/cluster/cluster/profiles`
+- `POST /svc/cluster/cluster/profiles`
+- `DELETE /svc/cluster/cluster/profiles/{id}`
+- `GET /svc/cluster/cluster/replication/status`
+- `POST /svc/cluster/cluster/sync/ack`
+- `GET /svc/cluster/cluster/sync/checkpoint`
+- `GET /svc/cluster/cluster/sync/events`
+- `POST /svc/cluster/cluster/sync/events`
+- `GET /svc/cluster/healthz`
+
+### compliance (`/svc/compliance/`)
+
+- `GET /svc/compliance/compliance/assessment`
+- `GET /svc/compliance/compliance/assessment/delta`
+- `GET /svc/compliance/compliance/assessment/history`
+- `POST /svc/compliance/compliance/assessment/run`
+- `GET /svc/compliance/compliance/assessment/schedule`
+- `PUT /svc/compliance/compliance/assessment/schedule`
+- `GET /svc/compliance/compliance/audit/anomalies`
+- `GET /svc/compliance/compliance/audit/correlations`
+- `GET /svc/compliance/compliance/cbom`
+- `GET /svc/compliance/compliance/cbom/diff`
+- `GET /svc/compliance/compliance/cbom/export`
+- `GET /svc/compliance/compliance/cbom/pqc-readiness`
+- `GET /svc/compliance/compliance/cbom/summary`
+- `GET /svc/compliance/compliance/evidence/export`
+- `GET /svc/compliance/compliance/frameworks`
+- `GET /svc/compliance/compliance/frameworks/{id}/controls`
+- `GET /svc/compliance/compliance/frameworks/{id}/gaps`
+- `GET /svc/compliance/compliance/keys/expired`
+- `GET /svc/compliance/compliance/keys/hygiene`
+- `GET /svc/compliance/compliance/keys/orphaned`
+- `GET /svc/compliance/compliance/playbooks`
+- `POST /svc/compliance/compliance/playbooks`
+- `GET /svc/compliance/compliance/playbooks/summary`
+- `DELETE /svc/compliance/compliance/playbooks/{id}`
+- `GET /svc/compliance/compliance/playbooks/{id}`
+- `PUT /svc/compliance/compliance/playbooks/{id}`
+- `POST /svc/compliance/compliance/playbooks/{id}/run`
+- `GET /svc/compliance/compliance/playbooks/{id}/runs`
+- `GET /svc/compliance/compliance/posture`
+- `GET /svc/compliance/compliance/posture/breakdown`
+- `GET /svc/compliance/compliance/posture/history`
+- `GET /svc/compliance/compliance/risk/keys`
+- `GET /svc/compliance/compliance/risk/remediation`
+- `GET /svc/compliance/compliance/risk/summary`
+- `GET /svc/compliance/compliance/sbom`
+- `GET /svc/compliance/compliance/sbom/services`
+- `GET /svc/compliance/compliance/sbom/services/{name}`
+- `GET /svc/compliance/compliance/sbom/vulnerabilities`
+- `GET /svc/compliance/compliance/templates`
+- `POST /svc/compliance/compliance/templates`
+- `DELETE /svc/compliance/compliance/templates/{id}`
+- `GET /svc/compliance/compliance/templates/{id}`
+
+### confidential (`/svc/confidential/`)
+
+- `POST /svc/confidential/confidential/evaluate`
+- `GET /svc/confidential/confidential/policy`
+- `PUT /svc/confidential/confidential/policy`
+- `GET /svc/confidential/confidential/releases`
+- `GET /svc/confidential/confidential/releases/{id}`
+- `GET /svc/confidential/confidential/summary`
+
+### dataprotect (`/svc/dataprotect/`)
+
+- `POST /svc/dataprotect/app/decrypt-fields`
+- `POST /svc/dataprotect/app/encrypt-fields`
+- `POST /svc/dataprotect/app/envelope-decrypt`
+- `POST /svc/dataprotect/app/envelope-encrypt`
+- `POST /svc/dataprotect/app/searchable-decrypt`
+- `POST /svc/dataprotect/app/searchable-encrypt`
+- `GET /svc/dataprotect/audit-log`
+- `POST /svc/dataprotect/detokenize`
+- `POST /svc/dataprotect/detokenize/batch`
+- `GET /svc/dataprotect/field-encryption/leases`
+- `POST /svc/dataprotect/field-encryption/leases`
+- `POST /svc/dataprotect/field-encryption/leases/{id}/renew`
+- `POST /svc/dataprotect/field-encryption/leases/{id}/revoke`
+- `POST /svc/dataprotect/field-encryption/receipts`
+- `POST /svc/dataprotect/field-encryption/register/complete`
+- `POST /svc/dataprotect/field-encryption/register/init`
+- `GET /svc/dataprotect/field-encryption/sdk/download`
+- `GET /svc/dataprotect/field-encryption/wrappers`
+- `GET /svc/dataprotect/field-protection/profiles`
+- `POST /svc/dataprotect/field-protection/profiles`
+- `DELETE /svc/dataprotect/field-protection/profiles/{id}`
+- `PUT /svc/dataprotect/field-protection/profiles/{id}`
+- `GET /svc/dataprotect/field-protection/resolve`
+- `POST /svc/dataprotect/fpe/decrypt`
+- `POST /svc/dataprotect/fpe/encrypt`
+- `GET /svc/dataprotect/kdf/keys`
+- `POST /svc/dataprotect/kdf/keys/{key_id}/abort`
+- `POST /svc/dataprotect/kdf/keys/{key_id}/complete`
+- `POST /svc/dataprotect/kdf/keys/{key_id}/reprotect-vault`
+- `POST /svc/dataprotect/kdf/keys/{key_id}/start-migration`
+- `POST /svc/dataprotect/mask`
+- `POST /svc/dataprotect/mask/preview`
+- `GET /svc/dataprotect/masking-policies`
+- `POST /svc/dataprotect/masking-policies`
+- `DELETE /svc/dataprotect/masking-policies/{id}`
+- `PUT /svc/dataprotect/masking-policies/{id}`
+- `GET /svc/dataprotect/policy`
+- `PUT /svc/dataprotect/policy`
+- `POST /svc/dataprotect/redact`
+- `POST /svc/dataprotect/redact/detect`
+- `GET /svc/dataprotect/redaction-policies`
+- `POST /svc/dataprotect/redaction-policies`
+- `GET /svc/dataprotect/stats`
+- `GET /svc/dataprotect/token-vaults`
+- `POST /svc/dataprotect/token-vaults`
+- `GET /svc/dataprotect/token-vaults/external-schema`
+- `DELETE /svc/dataprotect/token-vaults/{id}`
+- `GET /svc/dataprotect/token-vaults/{id}`
+- `POST /svc/dataprotect/tokenize`
+- `POST /svc/dataprotect/tokenize/batch`
+
+### discovery (`/svc/discovery/`)
+
+- `GET /svc/discovery/discovery/assets`
+- `GET /svc/discovery/discovery/assets/{id}`
+- `PUT /svc/discovery/discovery/assets/{id}/classify`
+- `GET /svc/discovery/discovery/crypto/assets`
+- `GET /svc/discovery/discovery/data-inventory`
+- `GET /svc/discovery/discovery/lineage/access-patterns/{key_id}`
+- `GET /svc/discovery/discovery/lineage/chain-of-custody/{key_id}`
+- `GET /svc/discovery/discovery/lineage/data-flow/{key_id}`
+- `GET /svc/discovery/discovery/lineage/dependencies/{key_id}`
+- `GET /svc/discovery/discovery/lineage/graph`
+- `GET /svc/discovery/discovery/lineage/impact/{key_id}`
+- `GET /svc/discovery/discovery/lineage/key/{key_id}`
+- `GET /svc/discovery/discovery/lineage/provenance/{key_id}`
+- `POST /svc/discovery/discovery/lineage/record`
+- `GET /svc/discovery/discovery/lineage/risk-heatmap`
+- `POST /svc/discovery/discovery/lineage/search`
+- `GET /svc/discovery/discovery/lineage/stats`
+- `POST /svc/discovery/discovery/lineage/tamper-check/{key_id}`
+- `GET /svc/discovery/discovery/lineage/timeline/{key_id}`
+- `GET /svc/discovery/discovery/pii/patterns`
+- `POST /svc/discovery/discovery/pii/scan`
+- `GET /svc/discovery/discovery/posture`
+- `POST /svc/discovery/discovery/scan`
+- `GET /svc/discovery/discovery/scans`
+- `GET /svc/discovery/discovery/scans/{id}`
+- `GET /svc/discovery/discovery/summary`
+
+### ekm (`/svc/ekm/`)
+
+- `GET /svc/ekm/ekm/agents`
+- `POST /svc/ekm/ekm/agents/register`
+- `DELETE /svc/ekm/ekm/agents/{id}`
+- `GET /svc/ekm/ekm/agents/{id}/deploy`
+- `GET /svc/ekm/ekm/agents/{id}/health`
+- `POST /svc/ekm/ekm/agents/{id}/heartbeat`
+- `GET /svc/ekm/ekm/agents/{id}/logs`
+- `POST /svc/ekm/ekm/agents/{id}/rotate`
+- `GET /svc/ekm/ekm/agents/{id}/status`
+- `POST /svc/ekm/ekm/agents/{id}/validate-deploy`
+- `GET /svc/ekm/ekm/azure/configs`
+- `POST /svc/ekm/ekm/azure/configs`
+- `DELETE /svc/ekm/ekm/azure/configs/{id}`
+- `GET /svc/ekm/ekm/azure/configs/{id}`
+- `PUT /svc/ekm/ekm/azure/configs/{id}`
+- `POST /svc/ekm/ekm/azure/configs/{id}/sync`
+- `POST /svc/ekm/ekm/azure/configs/{id}/test`
+- `GET /svc/ekm/ekm/azure/mappings`
+- `POST /svc/ekm/ekm/azure/mappings`
+- `DELETE /svc/ekm/ekm/azure/mappings/{id}`
+- `POST /svc/ekm/ekm/azure/mappings/{id}/import`
+- `POST /svc/ekm/ekm/azure/mappings/{id}/rotate`
+- `POST /svc/ekm/ekm/azure/mappings/{id}/unwrap`
+- `POST /svc/ekm/ekm/azure/mappings/{id}/wrap`
+- `GET /svc/ekm/ekm/bitlocker/clients`
+- `POST /svc/ekm/ekm/bitlocker/clients/register`
+- `DELETE /svc/ekm/ekm/bitlocker/clients/{id}`
+- `GET /svc/ekm/ekm/bitlocker/clients/{id}`
+- `GET /svc/ekm/ekm/bitlocker/clients/{id}/delete-preview`
+- `GET /svc/ekm/ekm/bitlocker/clients/{id}/deploy`
+- `POST /svc/ekm/ekm/bitlocker/clients/{id}/heartbeat`
+- `GET /svc/ekm/ekm/bitlocker/clients/{id}/jobs`
+- `POST /svc/ekm/ekm/bitlocker/clients/{id}/jobs/next`
+- `POST /svc/ekm/ekm/bitlocker/clients/{id}/jobs/{job_id}/result`
+- `POST /svc/ekm/ekm/bitlocker/clients/{id}/operations`
+- `POST /svc/ekm/ekm/bitlocker/network/scan`
+- `GET /svc/ekm/ekm/bitlocker/recovery`
+- `GET /svc/ekm/ekm/databases`
+- `POST /svc/ekm/ekm/databases`
+- `GET /svc/ekm/ekm/databases/{id}`
+- `POST /svc/ekm/ekm/databases/{id}/revoke-tde`
+- `GET /svc/ekm/ekm/google-cse/configs`
+- `POST /svc/ekm/ekm/google-cse/configs`
+- `DELETE /svc/ekm/ekm/google-cse/configs/{id}`
+- `GET /svc/ekm/ekm/google-cse/configs/{id}`
+- `PUT /svc/ekm/ekm/google-cse/configs/{id}`
+- `GET /svc/ekm/ekm/google-cse/keys`
+- `POST /svc/ekm/ekm/google-cse/keys`
+- `DELETE /svc/ekm/ekm/google-cse/keys/{id}`
+- `POST /svc/ekm/ekm/kacls/privilegedunwrap`
+- `GET /svc/ekm/ekm/kacls/status`
+- `POST /svc/ekm/ekm/kacls/unwrap`
+- `POST /svc/ekm/ekm/kacls/wrap`
+- `GET /svc/ekm/ekm/sdk/download`
+- `GET /svc/ekm/ekm/sdk/overview`
+- `POST /svc/ekm/ekm/tde/keys`
+- `GET /svc/ekm/ekm/tde/keys/{id}/public`
+- `POST /svc/ekm/ekm/tde/keys/{id}/revoke`
+- `POST /svc/ekm/ekm/tde/keys/{id}/rotate`
+- `POST /svc/ekm/ekm/tde/keys/{id}/unwrap`
+- `POST /svc/ekm/ekm/tde/keys/{id}/wrap`
+
+### governance (`/svc/governance/`)
+
+- `GET /svc/governance/governance/approve/{id}`
+- `POST /svc/governance/governance/approve/{id}`
+- `GET /svc/governance/governance/backups`
+- `POST /svc/governance/governance/backups`
+- `POST /svc/governance/governance/backups/restore`
+- `POST /svc/governance/governance/backups/verify`
+- `DELETE /svc/governance/governance/backups/{id}`
+- `GET /svc/governance/governance/backups/{id}`
+- `GET /svc/governance/governance/backups/{id}/artifact`
+- `GET /svc/governance/governance/backups/{id}/key`
+- `POST /svc/governance/governance/key-approval`
+- `GET /svc/governance/governance/key-approval/{id}/status`
+- `GET /svc/governance/governance/policies`
+- `POST /svc/governance/governance/policies`
+- `DELETE /svc/governance/governance/policies/{id}`
+- `PUT /svc/governance/governance/policies/{id}`
+- `GET /svc/governance/governance/requests`
+- `POST /svc/governance/governance/requests`
+- `GET /svc/governance/governance/requests/pending`
+- `GET /svc/governance/governance/requests/pending/count`
+- `GET /svc/governance/governance/requests/{id}`
+- `POST /svc/governance/governance/requests/{id}/cancel`
+- `GET /svc/governance/governance/settings`
+- `PUT /svc/governance/governance/settings`
+- `POST /svc/governance/governance/settings/smtp/test`
+- `POST /svc/governance/governance/settings/webhook/test`
+- `GET /svc/governance/governance/system/fips-mode`
+- `PUT /svc/governance/governance/system/fips-mode`
+- `GET /svc/governance/governance/system/fips-mode/impact`
+- `GET /svc/governance/governance/system/integrity`
+- `PUT /svc/governance/governance/system/posture-controls`
+- `POST /svc/governance/governance/system/snmp/test`
+- `GET /svc/governance/governance/system/state`
+- `PUT /svc/governance/governance/system/state`
+
+### hyok (`/svc/hyok/`)
+
+- `GET /svc/hyok/api/v1/keys/{id}`
+- `POST /svc/hyok/api/v1/keys/{id}/{version}/decrypt`
+- `POST /svc/hyok/hyok/alibaba/v1/keys/{id}/decrypt`
+- `POST /svc/hyok/hyok/alibaba/v1/keys/{id}/encrypt`
+- `POST /svc/hyok/hyok/dke/v1/keys/{id}/decrypt`
+- `GET /svc/hyok/hyok/dke/v1/keys/{id}/publickey`
+- `POST /svc/hyok/hyok/generic/v1/keys/{id}/decrypt`
+- `POST /svc/hyok/hyok/generic/v1/keys/{id}/encrypt`
+- `POST /svc/hyok/hyok/generic/v1/keys/{id}/unwrap`
+- `POST /svc/hyok/hyok/generic/v1/keys/{id}/wrap`
+- `POST /svc/hyok/hyok/google/v1/keys/{id}/unwrap`
+- `POST /svc/hyok/hyok/google/v1/keys/{id}/wrap`
+- `POST /svc/hyok/hyok/salesforce/v1/keys/{id}/unwrap`
+- `POST /svc/hyok/hyok/salesforce/v1/keys/{id}/wrap`
+- `POST /svc/hyok/hyok/servicenow/v1/keys/{id}/unwrap`
+- `POST /svc/hyok/hyok/servicenow/v1/keys/{id}/wrap`
+- `GET /svc/hyok/hyok/v1/endpoints`
+- `DELETE /svc/hyok/hyok/v1/endpoints/{protocol}`
+- `PUT /svc/hyok/hyok/v1/endpoints/{protocol}`
+- `GET /svc/hyok/hyok/v1/health`
+- `GET /svc/hyok/hyok/v1/requests`
+
+### keyaccess (`/svc/keyaccess/`)
+
+- `GET /svc/keyaccess/key-access/codes`
+- `POST /svc/keyaccess/key-access/codes`
+- `DELETE /svc/keyaccess/key-access/codes/{id}`
+- `PUT /svc/keyaccess/key-access/codes/{id}`
+- `GET /svc/keyaccess/key-access/decisions`
+- `POST /svc/keyaccess/key-access/evaluate`
+- `GET /svc/keyaccess/key-access/settings`
+- `PUT /svc/keyaccess/key-access/settings`
+- `GET /svc/keyaccess/key-access/summary`
+
+### keycore (`/svc/keycore/`)
+
+- `GET /svc/keycore/access/groups`
+- `POST /svc/keycore/access/groups`
+- `DELETE /svc/keycore/access/groups/{id}`
+- `PUT /svc/keycore/access/groups/{id}/members`
+- `GET /svc/keycore/access/interface-policies`
+- `POST /svc/keycore/access/interface-policies`
+- `DELETE /svc/keycore/access/interface-policies/{id}`
+- `GET /svc/keycore/access/interface-ports`
+- `POST /svc/keycore/access/interface-ports`
+- `DELETE /svc/keycore/access/interface-ports/{name}`
+- `GET /svc/keycore/access/interface-tls-config`
+- `PUT /svc/keycore/access/interface-tls-config`
+- `GET /svc/keycore/access/settings`
+- `PUT /svc/keycore/access/settings`
+- `GET /svc/keycore/agility/algorithms`
+- `GET /svc/keycore/agility/keys-by-algorithm`
+- `GET /svc/keycore/agility/migration-plans`
+- `POST /svc/keycore/agility/migration-plans`
+- `PATCH /svc/keycore/agility/migration-plans/{id}`
+- `GET /svc/keycore/agility/score`
+- `GET /svc/keycore/analytics/algorithms`
+- `GET /svc/keycore/analytics/hotspots`
+- `POST /svc/keycore/analytics/metrics`
+- `GET /svc/keycore/analytics/trends`
+- `GET /svc/keycore/analytics/usage`
+- `GET /svc/keycore/attestation/public-key`
+- `GET /svc/keycore/canary`
+- `POST /svc/keycore/canary`
+- `POST /svc/keycore/canary/`
+- `GET /svc/keycore/canary/keys`
+- `POST /svc/keycore/canary/keys`
+- `GET /svc/keycore/canary/summary`
+- `DELETE /svc/keycore/canary/{id}`
+- `GET /svc/keycore/canary/{id}`
+- `POST /svc/keycore/canary/{id}/trip`
+- `GET /svc/keycore/canary/{id}/trips`
+- `GET /svc/keycore/ceremony`
+- `POST /svc/keycore/ceremony`
+- `GET /svc/keycore/ceremony/guardians`
+- `POST /svc/keycore/ceremony/guardians`
+- `DELETE /svc/keycore/ceremony/guardians/{id}`
+- `GET /svc/keycore/ceremony/{id}`
+- `POST /svc/keycore/ceremony/{id}/abort`
+- `POST /svc/keycore/ceremony/{id}/complete`
+- `POST /svc/keycore/ceremony/{id}/shares`
+- `POST /svc/keycore/cluster/mek/export`
+- `POST /svc/keycore/cluster/mek/import`
+- `POST /svc/keycore/cluster/mek/join-key`
+- `POST /svc/keycore/compromise/advisories/ingest`
+- `GET /svc/keycore/compromise/events`
+- `POST /svc/keycore/compromise/events`
+- `POST /svc/keycore/compromise/events/{id}/status`
+- `POST /svc/keycore/credential-bindings/resolve`
+- `DELETE /svc/keycore/credential-bindings/{binding_id}`
+- `POST /svc/keycore/crypto/hash`
+- `POST /svc/keycore/crypto/random`
+- `POST /svc/keycore/enterprise/advanced-encryption/modes`
+- `POST /svc/keycore/enterprise/advanced-encryption/search-token`
+- `POST /svc/keycore/enterprise/anomaly/scan`
+- `GET /svc/keycore/enterprise/audit-chain/anchors`
+- `POST /svc/keycore/enterprise/audit-chain/anchors`
+- `POST /svc/keycore/enterprise/binding/policies`
+- `GET /svc/keycore/enterprise/compliance/dashboard`
+- `GET /svc/keycore/enterprise/controls`
+- `POST /svc/keycore/enterprise/controls`
+- `GET /svc/keycore/enterprise/controls/{category}/{id}`
+- `GET /svc/keycore/enterprise/cost/optimization`
+- `GET /svc/keycore/enterprise/dspm/events`
+- `GET /svc/keycore/enterprise/dspm/findings`
+- `POST /svc/keycore/enterprise/dspm/findings`
+- `POST /svc/keycore/enterprise/edge/agents`
+- `POST /svc/keycore/enterprise/edge/leases`
+- `POST /svc/keycore/enterprise/edge/receipts`
+- `POST /svc/keycore/enterprise/federation/failovers`
+- `POST /svc/keycore/enterprise/federation/mappings`
+- `POST /svc/keycore/enterprise/federation/providers`
+- `POST /svc/keycore/enterprise/kdf/derive`
+- `POST /svc/keycore/enterprise/metadata/profiles`
+- `POST /svc/keycore/enterprise/orchestration/runs`
+- `POST /svc/keycore/enterprise/orchestration/workflows`
+- `POST /svc/keycore/enterprise/sharing/grants`
+- `GET /svc/keycore/enterprise/summary`
+- `POST /svc/keycore/enterprise/threat/signals`
+- `POST /svc/keycore/enterprise/verification/fingerprint`
+- `GET /svc/keycore/fips/rng-health`
+- `POST /svc/keycore/fips/self-test`
+- `GET /svc/keycore/health/summary`
+- `GET /svc/keycore/hsm/objects`
+- `GET /svc/keycore/hsm/settings`
+- `PUT /svc/keycore/hsm/settings`
+- `GET /svc/keycore/inventory/dependencies`
+- `POST /svc/keycore/inventory/dependencies`
+- `GET /svc/keycore/inventory/duplicates`
+- `GET /svc/keycore/inventory/keys`
+- `GET /svc/keycore/inventory/orphans`
+- `POST /svc/keycore/inventory/sync`
+- `GET /svc/keycore/keys`
+- `POST /svc/keycore/keys`
+- `POST /svc/keycore/keys/bulk-delete`
+- `POST /svc/keycore/keys/bulk-import`
+- `POST /svc/keycore/keys/bulk-rotate`
+- `GET /svc/keycore/keys/due-for-lifecycle`
+- `POST /svc/keycore/keys/form`
+- `POST /svc/keycore/keys/import`
+- `GET /svc/keycore/keys/{id}`
+- `PUT /svc/keycore/keys/{id}`
+- `GET /svc/keycore/keys/{id}/access-policy`
+- `PUT /svc/keycore/keys/{id}/access-policy`
+- `POST /svc/keycore/keys/{id}/activate`
+- `GET /svc/keycore/keys/{id}/approval`
+- `PUT /svc/keycore/keys/{id}/approval`
+- `POST /svc/keycore/keys/{id}/archive`
+- `POST /svc/keycore/keys/{id}/attest`
+- `GET /svc/keycore/keys/{id}/credential-bindings`
+- `POST /svc/keycore/keys/{id}/credential-bindings`
+- `POST /svc/keycore/keys/{id}/deactivate`
+- `POST /svc/keycore/keys/{id}/decrypt`
+- `POST /svc/keycore/keys/{id}/derive`
+- `POST /svc/keycore/keys/{id}/destroy`
+- `POST /svc/keycore/keys/{id}/disable`
+- `POST /svc/keycore/keys/{id}/encrypt`
+- `POST /svc/keycore/keys/{id}/export`
+- `PUT /svc/keycore/keys/{id}/export-policy`
+- `POST /svc/keycore/keys/{id}/generate-data-key`
+- `GET /svc/keycore/keys/{id}/health`
+- `POST /svc/keycore/keys/{id}/health/recalculate`
+- `GET /svc/keycore/keys/{id}/hsm`
+- `GET /svc/keycore/keys/{id}/iv-log`
+- `GET /svc/keycore/keys/{id}/iv-log/{ref}`
+- `PUT /svc/keycore/keys/{id}/iv-mode`
+- `GET /svc/keycore/keys/{id}/kcv`
+- `POST /svc/keycore/keys/{id}/kem/decapsulate`
+- `POST /svc/keycore/keys/{id}/kem/encapsulate`
+- `POST /svc/keycore/keys/{id}/mac`
+- `POST /svc/keycore/keys/{id}/rotate`
+- `GET /svc/keycore/keys/{id}/rotation-metrics`
+- `POST /svc/keycore/keys/{id}/rotation-metrics`
+- `POST /svc/keycore/keys/{id}/service-derive`
+- `POST /svc/keycore/keys/{id}/sign`
+- `POST /svc/keycore/keys/{id}/unwrap`
+- `GET /svc/keycore/keys/{id}/usage`
+- `PUT /svc/keycore/keys/{id}/usage/limit`
+- `POST /svc/keycore/keys/{id}/usage/meter`
+- `POST /svc/keycore/keys/{id}/usage/reset`
+- `POST /svc/keycore/keys/{id}/verify`
+- `POST /svc/keycore/keys/{id}/verify-material`
+- `GET /svc/keycore/keys/{id}/versions`
+- `DELETE /svc/keycore/keys/{id}/versions/{ver}`
+- `GET /svc/keycore/keys/{id}/versions/{ver}`
+- `POST /svc/keycore/keys/{id}/versions/{ver}/activate`
+- `POST /svc/keycore/keys/{id}/versions/{ver}/deactivate`
+- `POST /svc/keycore/keys/{id}/wrap`
+- `POST /svc/keycore/keys/{id}/zeroize-verify`
+- `GET /svc/keycore/rotation/analytics`
+- `GET /svc/keycore/rotation/analytics/overdue`
+- `GET /svc/keycore/rotation/policies`
+- `POST /svc/keycore/rotation/policies`
+- `DELETE /svc/keycore/rotation/policies/{id}`
+- `PATCH /svc/keycore/rotation/policies/{id}`
+- `POST /svc/keycore/rotation/policies/{id}/trigger`
+- `GET /svc/keycore/rotation/runs`
+- `GET /svc/keycore/rotation/upcoming`
+- `GET /svc/keycore/scheduling/jobs`
+- `POST /svc/keycore/scheduling/jobs`
+- `DELETE /svc/keycore/scheduling/jobs/{id}`
+- `PATCH /svc/keycore/scheduling/jobs/{id}`
+- `POST /svc/keycore/system-keys/ensure`
+- `GET /svc/keycore/tags`
+- `POST /svc/keycore/tags`
+- `DELETE /svc/keycore/tags/{name}`
+- `POST /svc/keycore/tenants/onboard`
+- `GET /svc/keycore/threat/dashboard`
+- `GET /svc/keycore/threat/signals`
+- `POST /svc/keycore/threat/signals/{id}/ack`
+
+### kmip (`/svc/kmip/`)
+
+- `GET /svc/kmip/kmip/capabilities`
+- `GET /svc/kmip/kmip/clients`
+- `POST /svc/kmip/kmip/clients`
+- `GET /svc/kmip/kmip/clients/decommission-candidates`
+- `DELETE /svc/kmip/kmip/clients/{id}`
+- `GET /svc/kmip/kmip/clients/{id}`
+- `POST /svc/kmip/kmip/clients/{id}/decommission`
+- `GET /svc/kmip/kmip/interop/targets`
+- `POST /svc/kmip/kmip/interop/targets`
+- `DELETE /svc/kmip/kmip/interop/targets/{id}`
+- `POST /svc/kmip/kmip/interop/targets/{id}/validate`
+- `GET /svc/kmip/kmip/profiles`
+- `POST /svc/kmip/kmip/profiles`
+- `DELETE /svc/kmip/kmip/profiles/{id}`
+
+### payment (`/svc/payment/`)
+
+- `POST /svc/payment/payment/ap2/evaluate`
+- `GET /svc/payment/payment/ap2/profile`
+- `PUT /svc/payment/payment/ap2/profile`
+- `POST /svc/payment/payment/crypto`
+- `GET /svc/payment/payment/crypto/operations`
+- `GET /svc/payment/payment/injection/jobs`
+- `POST /svc/payment/payment/injection/jobs`
+- `POST /svc/payment/payment/injection/jobs/{id}/ack`
+- `GET /svc/payment/payment/injection/terminals`
+- `POST /svc/payment/payment/injection/terminals`
+- `POST /svc/payment/payment/injection/terminals/{id}/challenge`
+- `GET /svc/payment/payment/injection/terminals/{id}/jobs/next`
+- `POST /svc/payment/payment/injection/terminals/{id}/verify`
+- `POST /svc/payment/payment/iso20022/decrypt`
+- `POST /svc/payment/payment/iso20022/encrypt`
+- `POST /svc/payment/payment/iso20022/lau/generate`
+- `POST /svc/payment/payment/iso20022/lau/verify`
+- `POST /svc/payment/payment/iso20022/sign`
+- `POST /svc/payment/payment/iso20022/verify`
+- `GET /svc/payment/payment/keys`
+- `POST /svc/payment/payment/keys`
+- `GET /svc/payment/payment/keys/{id}`
+- `PUT /svc/payment/payment/keys/{id}`
+- `POST /svc/payment/payment/keys/{id}/rotate`
+- `POST /svc/payment/payment/mac/cmac`
+- `POST /svc/payment/payment/mac/iso9797`
+- `POST /svc/payment/payment/mac/retail`
+- `POST /svc/payment/payment/mac/verify`
+- `POST /svc/payment/payment/pin/cvv/compute`
+- `POST /svc/payment/payment/pin/cvv/verify`
+- `POST /svc/payment/payment/pin/offset/generate`
+- `POST /svc/payment/payment/pin/offset/verify`
+- `POST /svc/payment/payment/pin/pvv/generate`
+- `POST /svc/payment/payment/pin/pvv/verify`
+- `POST /svc/payment/payment/pin/translate`
+- `GET /svc/payment/payment/policy`
+- `PUT /svc/payment/payment/policy`
+- `POST /svc/payment/payment/tr31/create`
+- `GET /svc/payment/payment/tr31/key-usages`
+- `POST /svc/payment/payment/tr31/parse`
+- `POST /svc/payment/payment/tr31/translate`
+- `POST /svc/payment/payment/tr31/validate`
+
+### policy (`/svc/policy/`)
+
+- `GET /svc/policy/policies`
+- `POST /svc/policy/policies`
+- `POST /svc/policy/policies/dry-run`
+- `POST /svc/policy/policies/lint`
+- `DELETE /svc/policy/policies/{id}`
+- `GET /svc/policy/policies/{id}`
+- `PUT /svc/policy/policies/{id}`
+- `GET /svc/policy/policies/{id}/versions`
+- `GET /svc/policy/policies/{id}/versions/{version}`
+- `POST /svc/policy/policy/evaluate`
+- `GET /svc/policy/policy/quota/{tenant_id}`
+- `PUT /svc/policy/policy/quota/{tenant_id}`
+
+### posture (`/svc/posture/`)
+
+- `GET /svc/posture/leaks/findings`
+- `PATCH /svc/posture/leaks/findings/{id}`
+- `GET /svc/posture/leaks/jobs`
+- `GET /svc/posture/leaks/targets`
+- `POST /svc/posture/leaks/targets`
+- `DELETE /svc/posture/leaks/targets/{id}`
+- `POST /svc/posture/leaks/targets/{id}/scan`
+- `GET /svc/posture/posture/actions`
+- `POST /svc/posture/posture/actions/{id}/execute`
+- `GET /svc/posture/posture/dashboard`
+- `POST /svc/posture/posture/events`
+- `POST /svc/posture/posture/events/batch`
+- `GET /svc/posture/posture/findings`
+- `PUT /svc/posture/posture/findings/{id}/status`
+- `GET /svc/posture/posture/health`
+- `POST /svc/posture/posture/ingest/audit`
+- `GET /svc/posture/posture/risk`
+- `GET /svc/posture/posture/risk/history`
+- `POST /svc/posture/posture/scan`
+
+### pqc (`/svc/pqc/`)
+
+- `GET /svc/pqc/pqc/cbom/export`
+- `GET /svc/pqc/pqc/inventory`
+- `GET /svc/pqc/pqc/migration/plans`
+- `POST /svc/pqc/pqc/migration/plans`
+- `GET /svc/pqc/pqc/migration/plans/{id}`
+- `POST /svc/pqc/pqc/migration/plans/{id}/execute`
+- `POST /svc/pqc/pqc/migration/plans/{id}/rollback`
+- `GET /svc/pqc/pqc/migration/plans/{id}/runs`
+- `GET /svc/pqc/pqc/migration/report`
+- `GET /svc/pqc/pqc/policy`
+- `PUT /svc/pqc/pqc/policy`
+- `GET /svc/pqc/pqc/readiness`
+- `POST /svc/pqc/pqc/scan`
+- `GET /svc/pqc/pqc/scans`
+- `GET /svc/pqc/pqc/scans/{id}`
+- `GET /svc/pqc/pqc/timeline`
+
+### reporting (`/svc/reporting/`)
+
+- `GET /svc/reporting/alerts`
+- `PUT /svc/reporting/alerts/`
+- `POST /svc/reporting/alerts/bulk/acknowledge`
+- `POST /svc/reporting/alerts/bulk/resolve`
+- `GET /svc/reporting/alerts/channels`
+- `PUT /svc/reporting/alerts/channels`
+- `GET /svc/reporting/alerts/feed`
+- `GET /svc/reporting/alerts/rules`
+- `POST /svc/reporting/alerts/rules`
+- `DELETE /svc/reporting/alerts/rules/{id}`
+- `PUT /svc/reporting/alerts/rules/{id}`
+- `GET /svc/reporting/alerts/severity-config`
+- `PUT /svc/reporting/alerts/severity-config`
+- `GET /svc/reporting/alerts/stats`
+- `GET /svc/reporting/alerts/stats/mttd`
+- `GET /svc/reporting/alerts/stats/mttr`
+- `GET /svc/reporting/alerts/stats/top-sources`
+- `GET /svc/reporting/alerts/unread`
+- `GET /svc/reporting/alerts/{id}`
+- `GET /svc/reporting/incidents`
+- `GET /svc/reporting/incidents/{id}`
+- `PUT /svc/reporting/incidents/{id}/assign`
+- `PUT /svc/reporting/incidents/{id}/status`
+- `POST /svc/reporting/reports/generate`
+- `GET /svc/reporting/reports/jobs`
+- `DELETE /svc/reporting/reports/jobs/{id}`
+- `GET /svc/reporting/reports/jobs/{id}`
+- `GET /svc/reporting/reports/jobs/{id}/download`
+- `GET /svc/reporting/reports/scheduled`
+- `POST /svc/reporting/reports/scheduled`
+- `GET /svc/reporting/reports/templates`
+- `GET /svc/reporting/telemetry/errors`
+- `POST /svc/reporting/telemetry/errors`
+
+### sbom (`/svc/sbom/`)
+
+- `GET /svc/sbom/cbom/diff`
+- `POST /svc/sbom/cbom/generate`
+- `GET /svc/sbom/cbom/history`
+- `GET /svc/sbom/cbom/latest`
+- `GET /svc/sbom/cbom/pqc-readiness`
+- `GET /svc/sbom/cbom/summary`
+- `GET /svc/sbom/cbom/{id}`
+- `GET /svc/sbom/cbom/{id}/export`
+- `GET /svc/sbom/sbom/advisories`
+- `POST /svc/sbom/sbom/advisories`
+- `DELETE /svc/sbom/sbom/advisories/{id}`
+- `GET /svc/sbom/sbom/diff`
+- `POST /svc/sbom/sbom/generate`
+- `GET /svc/sbom/sbom/history`
+- `GET /svc/sbom/sbom/latest`
+- `GET /svc/sbom/sbom/vulnerabilities`
+- `GET /svc/sbom/sbom/{id}`
+- `GET /svc/sbom/sbom/{id}/export`
+
+### secrets (`/svc/secrets/`)
+
+- `GET /svc/secrets/secrets`
+- `POST /svc/secrets/secrets`
+- `POST /svc/secrets/secrets/generate/keypair`
+- `POST /svc/secrets/secrets/generate/ssh_key`
+- `GET /svc/secrets/secrets/stats`
+- `DELETE /svc/secrets/secrets/{id}`
+- `GET /svc/secrets/secrets/{id}`
+- `PUT /svc/secrets/secrets/{id}`
+- `GET /svc/secrets/secrets/{id}/audit`
+- `POST /svc/secrets/secrets/{id}/rotate`
+- `GET /svc/secrets/secrets/{id}/value`
+- `GET /svc/secrets/secrets/{id}/versions`
+- `POST /svc/secrets/v1/auth/token/lookup-self`
+- `GET /svc/secrets/v1/sys/health`
+- `GET /svc/secrets/v1/sys/seal-status`
+- `DELETE /svc/secrets/v1/{mount}/data/{path...}`
+- `GET /svc/secrets/v1/{mount}/data/{path...}`
+- `POST /svc/secrets/v1/{mount}/data/{path...}`
+- `GET /svc/secrets/v1/{mount}/metadata/{path...}`
+- `DELETE /svc/secrets/v1/{mount}/{path...}`
+- `GET /svc/secrets/v1/{mount}/{path...}`
+- `POST /svc/secrets/v1/{mount}/{path...}`
+
+### signing (`/svc/signing/`)
+
+- `POST /svc/signing/signing/blob`
+- `POST /svc/signing/signing/git`
+- `GET /svc/signing/signing/profiles`
+- `POST /svc/signing/signing/profiles`
+- `DELETE /svc/signing/signing/profiles/{id}`
+- `PUT /svc/signing/signing/profiles/{id}`
+- `GET /svc/signing/signing/records`
+- `GET /svc/signing/signing/settings`
+- `PUT /svc/signing/signing/settings`
+- `GET /svc/signing/signing/summary`
+- `POST /svc/signing/signing/verify`
+
+### workload (`/svc/workload/`)
+
+- `GET /svc/workload/workload-identity/federation`
+- `POST /svc/workload/workload-identity/federation`
+- `DELETE /svc/workload/workload-identity/federation/{id}`
+- `PUT /svc/workload/workload-identity/federation/{id}`
+- `GET /svc/workload/workload-identity/graph`
+- `GET /svc/workload/workload-identity/issuances`
+- `POST /svc/workload/workload-identity/issue`
+- `GET /svc/workload/workload-identity/registrations`
+- `POST /svc/workload/workload-identity/registrations`
+- `DELETE /svc/workload/workload-identity/registrations/{id}`
+- `PUT /svc/workload/workload-identity/registrations/{id}`
+- `GET /svc/workload/workload-identity/settings`
+- `PUT /svc/workload/workload-identity/settings`
+- `GET /svc/workload/workload-identity/summary`
+- `POST /svc/workload/workload-identity/token/exchange`
+- `GET /svc/workload/workload-identity/usage`
+
+<!-- route-index:end -->

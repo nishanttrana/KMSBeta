@@ -149,29 +149,6 @@ aws kms import-key-material \
 
 **Step 6 — Register BYOK sync config in Vecta**
 
-```bash
-curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "prod-aws-s3-byok",
-    "provider": "aws",
-    "region": "us-east-1",
-    "account_id": "123456789012",
-    "key_arn": "arn:aws:kms:us-east-1:123456789012:key/mrk-abc123...",
-    "vecta_key_id": "VECTA_KEY_ID",
-    "config_json": {
-      "wrapping_algorithm": "RSAES_OAEP_SHA_256",
-      "wrapping_key_spec": "RSA_2048",
-      "expiration_model": "KEY_MATERIAL_EXPIRES",
-      "valid_to": "2027-03-22T00:00:00Z"
-    },
-    "credentials_ref": "aws-prod-creds",
-    "auto_rotate": true,
-    "rotate_before_expiry_days": 30
-  }'
-```
-
 **Step 7 — Enable the CMK and verify**
 
 ```bash
@@ -235,7 +212,7 @@ When the BYOK key approaches its expiry date (or you rotate per policy):
 
 ```bash
 # Trigger rotation sync (Vecta rotates the Vecta key and re-imports to AWS)
-curl -X POST "https://localhost/svc/cloud/byok/sync?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/cloud/sync?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -297,39 +274,7 @@ az keyvault key download \
 
 **Step 3 — Register Azure BYOK config in Vecta**
 
-```bash
-curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "prod-azure-kv-byok",
-    "provider": "azure",
-    "azure_vault_url": "https://acme-prod-kv.vault.azure.net",
-    "azure_key_name": "payments-cmk",
-    "vecta_key_id": "VECTA_KEY_ID",
-    "config_json": {
-      "kek_kid": "https://acme-prod-kv.vault.azure.net/keys/vecta-byok-kek/version",
-      "kek_public_key_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----",
-      "wrapping_algorithm": "CKM_RSA_AES_KEY_WRAP",
-      "target_key_type": "RSA-HSM",
-      "target_key_size": 2048
-    },
-    "credentials_ref": "azure-prod-creds"
-  }'
-```
-
 **Step 4 — Generate wrapped key material in Vecta**
-
-```bash
-curl -X POST "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/wrap?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "target_format": "azure_byok_v1",
-    "kek_public_key_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-  }'
-# Returns: {"byok_blob": "base64-encoded-byok-blob", "key_release_policy": "..."}
-```
 
 **Step 5 — Import to Azure Key Vault**
 
@@ -416,29 +361,9 @@ gcloud kms import-jobs describe vecta-byok-job-001 \
 **Step 3 — Wrap and import via Vecta**
 
 ```bash
-# Register GCP BYOK config
-curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "prod-gcp-kms-byok",
-    "provider": "gcp",
-    "project_id": "acme-prod",
-    "location": "us-east1",
-    "keyring": "vecta-managed",
-    "key_name": "payments-cmk",
-    "vecta_key_id": "VECTA_KEY_ID",
-    "config_json": {
-      "import_job_name": "vecta-byok-job-001",
-      "import_method": "rsa-oaep-4096-sha256-aes-256",
-      "protection_level": "HSM",
-      "wrapping_key_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-    },
-    "credentials_ref": "gcp-prod-creds"
-  }'
 
 # Trigger Vecta to wrap and import
-curl -X POST "https://localhost/svc/cloud/byok/sync?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/cloud/sync?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"config_id": "GCP_BYOK_CONFIG_ID"}'
 ```
@@ -494,18 +419,6 @@ Key rotation in BYOK contexts has two distinct meanings:
 1. **Vecta key rotation** — A new key version is created in Vecta. The old key material is superseded. New key material must be imported to the cloud provider.
 2. **Cloud CMK version rotation** — The cloud provider creates a new CMK version. Data previously encrypted under the old version remains decryptable (cloud providers maintain multiple versions). New data uses the new version.
 
-```bash
-# Trigger BYOK rotation (Vecta generates new key material, imports to cloud)
-curl -X POST "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/rotate?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reason": "annual_rotation",
-    "revoke_old_version": false,
-    "old_version_expiry_days": 90
-  }'
-```
-
 After rotation:
 - AWS: old key material remains importable via key version. Data keys encrypted with old CMK version continue working until you explicitly delete the old key version.
 - Azure: old key version kept accessible for decryption. New operations use new version.
@@ -516,9 +429,6 @@ After rotation:
 Destroying the Vecta key does not automatically destroy the cloud CMK. Both must be destroyed explicitly:
 
 ```bash
-# Step 1: Schedule Vecta key deletion
-curl -X DELETE "https://localhost/svc/keycore/keys/{VECTA_KEY_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
 
 # Step 2: Delete cloud CMK (varies by provider)
 # AWS:
@@ -540,16 +450,6 @@ gcloud kms keys versions destroy 1 \
 ---
 
 ### 1.7 BYOK Monitoring and Alerts
-
-```bash
-# List all BYOK configs
-curl "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get sync status for a config
-curl "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/status?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-```
 
 **Response:**
 
@@ -641,127 +541,80 @@ Encryption:
 
 Decryption (when a user opens the document):
 1. M365 unwraps M-CEK using Microsoft's key
-2. Calls your DKE endpoint → POST /svc/hyok/proxy/decrypt
-   - Body: D-CEK (wrapped CEK), user identity JWT
+2. Calls the key's kid + "/decrypt" → POST /svc/hyok/api/v1/keys/{key}/{version}/decrypt
+   - Body: {"alg": "RSA-OAEP-256", "value": <wrapped CEK, base64>}; Authorization: the user's Entra ID token
 3. Your endpoint validates the user's identity and decrypts D-CEK → CEK
 4. M365 uses CEK to decrypt the document content
 ```
 
 #### Vecta DKE Endpoints
 
-| Method | Path | Description |
+The DKE key URL you put in the sensitivity label is
+`https://<kms-host>/svc/hyok/api/v1/keys/<keycore key id>`.
+
+| Method | Path | Auth |
 |---|---|---|
-| `GET` | `/svc/hyok/proxy/keys/{keyId}/publickey` | Returns DKE public key (RSA PEM). Microsoft calls this at encryption time. |
-| `POST` | `/svc/hyok/proxy/decrypt` | Decrypts a wrapped CEK. Microsoft calls this at document open time. |
+| `GET` | `/svc/hyok/api/v1/keys/{id}` | none, only on the endpoint's `key_uri_hostname` (Office fetches it anonymously) |
+| `POST` | `/svc/hyok/api/v1/keys/{id}/{version}/decrypt` | the user's Entra ID token (or a Vecta token) |
 
 #### DKE Public Key Endpoint
 
-```bash
-# Microsoft calls this at encryption time to get your DKE public key
-curl "https://localhost/svc/hyok/proxy/keys/{KEY_ID}/publickey"
-```
-
-**Response (Microsoft-compatible format):**
+**Response (the format Office reads):**
 
 ```json
 {
   "key": {
     "kty": "RSA",
-    "n": "modulus-base64url...",
-    "e": "AQAB",
-    "alg": "RS256",
-    "kid": "{KEY_ID}"
-  }
+    "n": "<modulus, base64url>",
+    "e": 65537,
+    "alg": "RSA-OAEP-256",
+    "kid": "<the key URL>/<version>"
+  },
+  "cache": {"exp": "<RFC 3339, 24 h ahead>"}
 }
 ```
+
+Office posts decrypt requests to `kid` + `/decrypt`.
 
 #### DKE Decrypt Endpoint
 
-```bash
-# Microsoft calls this when a user opens a DKE-protected document
-curl -X POST "https://localhost/svc/hyok/proxy/decrypt" \
-  -H "Authorization: Bearer {USER_JWT_FROM_MICROSOFT}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "key_id": "{KEY_ID}",
-    "encrypted_data": "base64-encoded-wrapped-CEK",
-    "algorithm": "RS256",
-    "tenant_id": "azure-tenant-id",
-    "user_oid": "azure-user-object-id"
-  }'
-```
+**Request:** `{"alg": "RSA-OAEP-256", "value": "<wrapped CEK, base64>"}`
+**Response:** `{"value": "<CEK, base64>"}`
 
-**Response:**
-
-```json
-{
-  "decrypted_data": "base64-encoded-CEK",
-  "key_id": "{KEY_ID}"
-}
-```
+Only the key's current version decrypts; a `kid` naming another version gets
+`409 key_version_not_current`. Every refusal is audited as
+`audit.hyok.dke_refused`.
 
 #### DKE Azure AD Configuration
 
-In **Microsoft Purview** (formerly Azure Information Protection):
-
 ```
-1. Azure Portal → Azure Active Directory → App Registrations
-   Create app registration for Vecta DKE:
-   - Name: Vecta DKE Service
-   - Redirect URI: https://kms.internal.acme.com/svc/hyok/proxy/callback
-   - API Permissions: Microsoft Information Protection → DelegatedPermissions
-
-2. Microsoft Purview → Sensitivity Labels → Create Label
-   - Assign label to DKE encryption
-   - DKE key URL: https://kms.internal.acme.com/svc/hyok/proxy/keys/{KEY_ID}
-   - Template ID: (from DKE configuration)
-
-3. Microsoft 365 Admin Center → Compliance → Information Protection
-   - Publish label policy
-   - Assign to security-classified document library
+1. Entra admin center → App registrations → New registration ("Vecta DKE").
+   Expose an API: its Application ID URI (e.g. api://dke.acme.com) is the
+   token audience; put it in the endpoint's jwt_audiences.
+   Optionally define an app role (e.g. DKE.Decrypt) and assign it to users.
+2. Microsoft Purview → Information protection → Sensitivity labels:
+   create a label with Double Key Encryption and the DKE key URL above.
+3. Publish the label policy to the users who need it.
 ```
 
 #### DKE Vecta Configuration
 
 ```bash
-# Create DKE key (RSA-4096 for DKE, per Microsoft requirements)
+# RSA key for DKE
 curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "m365-dke-key",
-    "algorithm": "RSA-4096",
-    "purpose": "encrypt_decrypt",
-    "key_backend": "hsm",
-    "tags": {"use": "dke", "provider": "microsoft"}
-  }'
+  -d '{"name": "m365-dke-key", "algorithm": "RSA-4096", "purpose": "encrypt_decrypt"}'
 
-# Create HYOK policy for DKE
-curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
+# DKE endpoint: which Entra tokens and users are accepted
+curl -X PUT "https://localhost/svc/hyok/hyok/v1/endpoints/dke?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "m365-dke-policy",
-    "provider": "microsoft_dke",
-    "key_id": "DKE_KEY_ID",
-    "allowed_callers": [
-      "user:alice@acme.com",
-      "user:bob@acme.com",
-      "group:finance-team@acme.com"
-    ],
-    "allowed_tenants": ["azure-tenant-id-here"],
-    "time_restrictions": {
-      "start_time": "06:00",
-      "end_time": "22:00",
-      "days_of_week": ["Mon", "Tue", "Wed", "Thu", "Fri"],
-      "timezone": "America/New_York"
-    },
-    "require_justification": false,
-    "governance_policy_id": null,
-    "audit_all_operations": true
-  }'
+  -d '{"enabled": true, "auth_mode": "jwt", "metadata_json": "{\"valid_issuers\":[\"https://login.microsoftonline.com/<entra-tenant-id>/v2.0\"],\"jwt_audiences\":[\"api://dke.acme.com\"],\"authorized_roles\":[\"DKE.Decrypt\"],\"key_uri_hostname\":\"kms.acme.com\"}"}'
 ```
 
----
+The same fields are in the dashboard under HYOK → DKE. An Entra token is
+accepted only when its issuer is in `valid_issuers`, its audience in
+`jwt_audiences`, and the user is in `authorized_emails` or holds one of
+`authorized_roles`.
 
 ### 2.4 Google Client-Side Encryption (CSE)
 
@@ -790,44 +643,26 @@ Download (Decryption):
 
 #### Vecta Google CSE Endpoints
 
-| Method | Path | Description |
+Google calls the KACLS endpoints on the ekm service:
+
+| Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/svc/hyok/proxy/google-cse/wrap` | Wrap a DEK. Called at upload/encryption time. |
-| `POST` | `/svc/hyok/proxy/google-cse/unwrap` | Unwrap a DEK. Called at download/decryption time. |
-| `GET` | `/svc/hyok/proxy/google-cse/status` | Health check endpoint (required by Google). |
+| `GET` | `/svc/ekm/ekm/kacls/status` | KACLS status |
+| `POST` | `/svc/ekm/ekm/kacls/wrap` | Wrap a DEK |
+| `POST` | `/svc/ekm/ekm/kacls/unwrap` | Unwrap a DEK |
+| `POST` | `/svc/ekm/ekm/kacls/privilegedunwrap` | Privileged unwrap (admin/legal) |
 
-```bash
-# Google CSE wrap (called at encryption time)
-curl -X POST "https://localhost/svc/hyok/proxy/google-cse/wrap" \
-  -H "Authorization: Bearer {GOOGLE_USER_JWT}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "authentication": "{GOOGLE_IDENTITY_TOKEN}",
-    "authorization": "{GOOGLE_RESOURCE_TOKEN}",
-    "key": "base64-encoded-plaintext-DEKS",
-    "reason": "drive_upload"
-  }'
-# Returns: {"wrappedKey": "base64-encoded-wrapped-DEKS"}
-
-# Google CSE unwrap (called at decryption time)
-curl -X POST "https://localhost/svc/hyok/proxy/google-cse/unwrap" \
-  -H "Authorization: Bearer {GOOGLE_USER_JWT}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "authentication": "{GOOGLE_IDENTITY_TOKEN}",
-    "authorization": "{GOOGLE_RESOURCE_TOKEN}",
-    "wrappedKey": "base64-encoded-wrapped-DEKS",
-    "reason": "drive_download"
-  }'
-# Returns: {"key": "base64-encoded-plaintext-DEKS"}
-```
+The authorization token must be signed by a Google CSE token issuer for
+audience `cse-authorization`. The authentication token must be a Google ID
+token whose audience is one of the config's `authentication_client_ids`
+(the OAuth client ID of your CSE identity provider) and whose hosted domain
+is in `allowed_domains`. Configs are managed at `/svc/ekm/ekm/google-cse/configs`.
 
 #### Google Workspace Admin Setup
 
 ```
 1. Google Admin Console → Apps → Google Workspace → Drive and Docs → Client-side encryption
 2. Configure key access control list service:
-   - Key Access Control List (KACL) URL: https://kms.internal.acme.com/svc/hyok/proxy/google-cse
    - Issuer: accounts.google.com
 3. Enable CSE for specific organizational units
 4. Configure CSE labels for document classification
@@ -837,131 +672,11 @@ curl -X POST "https://localhost/svc/hyok/proxy/google-cse/unwrap" \
 
 ### 2.5 HYOK Policies
 
-HYOK policies define who can request key operations, when, and under what conditions.
-
-#### Policy Fields
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Policy identifier |
-| `provider` | string | `microsoft_dke`, `google_cse`, `custom` |
-| `key_id` | string | Vecta key this policy governs |
-| `allowed_callers` | array | User, group, or service identifiers permitted to call |
-| `allowed_tenants` | array | Cloud provider tenant IDs allowed |
-| `time_restrictions` | object | Business hours, days of week, timezone |
-| `require_justification` | boolean | Require free-text justification field |
-| `require_ticket` | boolean | Require a ticket ID in the request |
-| `governance_policy_id` | string | Link to a governance workflow for approval |
-| `max_decrypt_per_hour` | integer | Rate limit on decrypt operations |
-| `emergency_override` | object | Break-glass procedure for emergency access |
-
-#### Policy Examples
-
-```bash
-# Standard business-hours DKE policy
-curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "finance-dke-business-hours",
-    "provider": "microsoft_dke",
-    "key_id": "DKE_KEY_ID",
-    "allowed_callers": [
-      "user:cfo@acme.com",
-      "user:finance-manager@acme.com",
-      "group:finance-analysts@acme.com"
-    ],
-    "allowed_tenants": ["72f988bf-86f1-41af-91ab-2d7cd011db47"],
-    "time_restrictions": {
-      "start_time": "08:00",
-      "end_time": "18:00",
-      "days_of_week": ["Mon", "Tue", "Wed", "Thu", "Fri"],
-      "timezone": "America/New_York"
-    },
-    "require_justification": false,
-    "max_decrypt_per_hour": 100,
-    "audit_all_operations": true
-  }'
-
-# Sensitive data policy with justification and ticket requirement
-curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "classified-docs-policy",
-    "provider": "microsoft_dke",
-    "key_id": "CLASSIFIED_DKE_KEY_ID",
-    "allowed_callers": [
-      "user:security-officer@acme.com"
-    ],
-    "time_restrictions": {
-      "start_time": "09:00",
-      "end_time": "17:00",
-      "days_of_week": ["Mon", "Tue", "Wed", "Thu", "Fri"],
-      "timezone": "America/Chicago"
-    },
-    "require_justification": true,
-    "require_ticket": true,
-    "ticket_validation": {
-      "system": "jira",
-      "url": "https://jira.acme.com",
-      "required_status": "In Progress"
-    },
-    "max_decrypt_per_hour": 10,
-    "emergency_override": {
-      "allowed_approvers": ["ciso@acme.com", "cto@acme.com"],
-      "require_two_approvers": true,
-      "max_duration_hours": 4
-    }
-  }'
-```
-
-#### Policy Enforcement Log
-
-Every HYOK operation generates a structured audit log entry:
-
-```json
-{
-  "timestamp": "2026-03-22T14:30:00Z",
-  "event": "hyok.decrypt",
-  "policy_id": "finance-dke-business-hours",
-  "key_id": "DKE_KEY_ID",
-  "caller_identity": "user:alice@acme.com",
-  "caller_tenant": "72f988bf-86f1-41af-91ab-2d7cd011db47",
-  "operation": "decrypt",
-  "policy_decision": "allow",
-  "time_restriction_check": "pass",
-  "caller_check": "pass",
-  "duration_ms": 12,
-  "ip_address": "20.190.133.0",
-  "request_id": "req_abc123"
-}
-```
-
----
-
-### 2.6 HYOK Proxy Configuration
-
-```bash
-# Configure HYOK proxy settings
-curl -X PUT "https://localhost/svc/hyok/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jwt_issuers": {
-      "microsoft": "https://login.microsoftonline.com/{tenant}/v2.0",
-      "google": "https://accounts.google.com"
-    },
-    "jwt_audiences": ["https://kms.internal.acme.com"],
-    "mtls_ca_cert_pem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-    "log_request_bodies": false,
-    "rate_limit_per_caller": 1000,
-    "cache_jwks": true,
-    "jwks_cache_ttl_seconds": 3600
-  }'
-```
-
----
+There is no separate HYOK policy object. A protocol endpoint
+(`PUT /svc/hyok/hyok/v1/endpoints/{protocol}`) links a `policy_id` evaluated
+by the policy service, can require governance approval
+(`governance_required`), and for DKE carries the identity rules above. Every
+request is logged (`GET /svc/hyok/hyok/v1/requests`) and audited.
 
 ## 3. EKM (External Key Manager)
 
@@ -1052,29 +767,6 @@ sudo systemctl enable --now vecta-ekm-agent
 sudo systemctl status vecta-ekm-agent
 ```
 
-#### Register Agent Integration
-
-```bash
-curl -X POST "https://localhost/svc/ekm/integrations?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "prod-mssql-01",
-    "type": "mssql_tde",
-    "hostname": "sqlserver01.internal.acme.com",
-    "key_id": "AES-256-MASTER-KEY-ID",
-    "agent_token": "auto-generated-or-specify",
-    "config_json": {
-      "database_names": ["PaymentsDB", "CustomersDB", "OrdersDB"],
-      "encryption_algorithm": "AES_256"
-    },
-    "alert_on_heartbeat_miss": true,
-    "heartbeat_timeout_seconds": 90
-  }'
-```
-
----
-
 ### 3.3 Which databases can keep their TDE key in Vecta
 
 Vecta holds a TDE master key only through its KMIP server (TTLV over mTLS,
@@ -1097,126 +789,22 @@ These earlier sections described a `vecta-ekm.dll` SQL Server provider and a
 
 ### 3.4 BitLocker Endpoint Encryption
 
-Vecta EKM manages BitLocker recovery keys for Windows endpoints, providing centralized control and compliance reporting for full-disk encryption.
+The EKM agent on a Windows host (`services/ekm-agent`) registers as a
+BitLocker client, sends heartbeats with the host's BitLocker state, and runs
+jobs the KMS queues for it; recovery material it reports is stored under the
+ekm master key.
 
-#### How BitLocker EKM Works
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/svc/ekm/ekm/bitlocker/clients/register` | Register a Windows host |
+| `GET` | `/svc/ekm/ekm/bitlocker/clients` | Hosts and their reported BitLocker state |
+| `GET` | `/svc/ekm/ekm/bitlocker/clients/{id}/deploy` | Agent deployment package for a host |
+| `POST` | `/svc/ekm/ekm/bitlocker/clients/{id}/operations` | Queue an operation (for example enable or rotate) |
+| `GET` | `/svc/ekm/ekm/bitlocker/clients/{id}/jobs` | Jobs and their results |
+| `GET` | `/svc/ekm/ekm/bitlocker/recovery` | Recovery keys (audited on every read) |
 
-1. EKM agent installed on Windows hosts reports BitLocker status to Vecta.
-2. Recovery keys are escrowed to Vecta on encryption enablement.
-3. IT/Security can retrieve recovery keys from Vecta (with full audit log).
-4. Compliance dashboard shows encryption status per endpoint.
-
-#### Enabling BitLocker with Recovery Key Escrow
-
-```powershell
-# On Windows endpoint (via Intune policy or GPO or manual)
-
-# Enable BitLocker on C: drive
-$BLStatus = Get-BitLockerVolume -MountPoint "C:"
-
-if ($BLStatus.ProtectionStatus -ne "On") {
-    Enable-BitLocker -MountPoint "C:" `
-        -EncryptionMethod XtsAes256 `
-        -RecoveryPasswordProtector `
-        -UsedSpaceOnly
-
-    $RecoveryKey = (Get-BitLockerVolume -MountPoint "C:").KeyProtector |
-                   Where-Object {$_.KeyProtectorType -eq "RecoveryPassword"}
-
-    # Escrow to Vecta via EKM Agent
-    $EscrowBody = @{
-        endpoint_id     = $env:COMPUTERNAME
-        volume          = "C:"
-        recovery_key_id = $RecoveryKey.KeyProtectorId
-        # NOTE: Recovery key itself is transmitted over mTLS to Vecta
-    } | ConvertTo-Json
-
-    Invoke-RestMethod -Uri "http://localhost:8080/ekm/bitlocker/escrow" `
-        -Method POST `
-        -ContentType "application/json" `
-        -Body $EscrowBody
-}
-```
-
-#### Retrieving a Recovery Key
-
-```bash
-# List endpoints and their BitLocker status
-curl "https://localhost/svc/ekm/bitlocker/endpoints?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get endpoint details
-curl "https://localhost/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Response:**
-
-```json
-{
-  "endpoint_id": "ep_01HXYZ...",
-  "hostname": "laptop-alice-001",
-  "os_version": "Windows 11 23H2",
-  "last_seen": "2026-03-22T09:55:00Z",
-  "bitlocker_status": "encrypted",
-  "volumes": [
-    {
-      "mount_point": "C:",
-      "encryption_method": "XtsAes256",
-      "protection_status": "On",
-      "key_protectors": ["RecoveryPassword", "TPM"]
-    }
-  ]
-}
-```
-
-```bash
-# Retrieve recovery key (requires elevated RBAC role: ekm:bitlocker:recover)
-curl -X POST "https://localhost/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}/recovery-key?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "volume": "C:",
-    "reason": "User locked out after 10 failed PIN attempts",
-    "ticket": "HD-12345"
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "recovery_key_id": "{GUID}",
-  "recovery_key": "123456-789012-345678-901234-567890-123456-789012-345678",
-  "volume": "C:",
-  "retrieved_by": "helpdesk-agent@acme.com",
-  "retrieved_at": "2026-03-22T14:30:00Z",
-  "audit_entry_id": "audit_01HXYZ..."
-}
-```
-
-#### BitLocker Compliance Report
-
-```bash
-# Get encryption compliance summary
-curl "https://localhost/svc/ekm/bitlocker/compliance?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Response:**
-
-```json
-{
-  "total_endpoints": 1247,
-  "encrypted": 1201,
-  "partially_encrypted": 12,
-  "not_encrypted": 34,
-  "compliance_percent": 96.3,
-  "last_checked": "2026-03-22T10:00:00Z",
-  "not_seen_7d": 8,
-  "not_seen_30d": 3
-}
-```
+The agent itself calls `.../clients/{id}/heartbeat`, `.../jobs/next` and
+`.../jobs/{job_id}/result` over TLS with its agent credential.
 
 ---
 
@@ -1289,31 +877,12 @@ Pre-Active → Active → Deactivated → Compromised → Destroyed
 
 ### 4.3 KMIP Connection Setup
 
-#### Server Configuration
-
-```bash
-# Configure KMIP server settings
-curl -X PUT "https://localhost/svc/kmip/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "port": 5696,
-    "tls_version": "TLS1_3",
-    "require_client_cert": true,
-    "ca_cert_pem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-    "session_timeout_seconds": 300,
-    "max_connections": 500,
-    "supported_algorithms": ["AES-128", "AES-256", "RSA-2048", "RSA-4096", "EC-P256", "EC-P384"],
-    "default_key_format": "Raw"
-  }'
-```
-
 #### Create KMIP Client Profile
 
 A client profile defines which operations a specific KMIP client is authorized to perform and which key groups it can access.
 
 ```bash
-curl -X POST "https://localhost/svc/kmip/profiles?tenant_id=root" \
+curl -X POST "https://localhost/svc/kmip/kmip/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1471,37 +1040,11 @@ cryptocfg --export kmip
 While KMIP clients communicate over the KMIP binary protocol, Vecta also exposes a REST interface for managing KMIP objects.
 
 ```bash
-# List KMIP-managed objects
-curl "https://localhost/svc/kmip/objects?tenant_id=root&group=storage-keys" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get KMIP object
-curl "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Activate a Pre-Active key (transitions to Active state)
-curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/activate?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Revoke (deactivate or mark compromised)
-curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/revoke?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "revocation_reason": "KeyCompromise",
-    "compromise_date": "2026-03-21T00:00:00Z"
-  }'
-
-# Destroy
-curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/destroy?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
 
 # List KMIP client profiles
-curl "https://localhost/svc/kmip/profiles?tenant_id=root" \
+curl "https://localhost/svc/kmip/kmip/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Get KMIP server status
-curl "https://localhost/svc/kmip/status?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 4.6 mTLS Setup for KMIP Clients
@@ -1538,7 +1081,7 @@ echo "$CERT_PEM" > "${CLIENT_NAME}-client.pem"
 echo "$KEY_PEM"  > "${CLIENT_NAME}-client.key"
 
 # Step 2: Create KMIP profile
-curl -X POST "https://localhost/svc/kmip/profiles?tenant_id=${TENANT}" \
+curl -X POST "https://localhost/svc/kmip/kmip/profiles?tenant_id=${TENANT}" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"name\": \"${CLIENT_NAME}\",
@@ -1546,11 +1089,6 @@ curl -X POST "https://localhost/svc/kmip/profiles?tenant_id=${TENANT}" \
     \"allowed_operations\": [\"create\", \"get\", \"destroy\", \"activate\", \"locate\"],
     \"object_groups\": [\"storage-keys\"]
   }"
-
-# Step 3: Download CA chain
-curl "https://localhost/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=${TENANT}" \
-  -H "Authorization: Bearer $TOKEN" \
-  -o vecta-ca-chain.pem
 
 echo "Client cert: ${CLIENT_NAME}-client.pem"
 echo "Client key:  ${CLIENT_NAME}-client.key"
@@ -1572,8 +1110,8 @@ Artifact signing addresses this by providing:
 |---|---|
 | **Integrity** | Signature is invalid if artifact is modified after signing |
 | **Attribution** | Signature is tied to a specific key / identity (the signer) |
-| **Non-repudiation** | Signer cannot deny having signed; transparency log records the event |
-| **Timeliness** | Transparency log entry timestamps prove when signing occurred |
+| **Non-repudiation** | Signer cannot deny having signed; the KMS keeps a signing record |
+| **Timeliness** | The signing record carries the time and a per-tenant sequence number |
 | **Verifiability** | Any party with the public key can verify, without trusting the signer |
 
 ### 5.2 Supported Artifact Types
@@ -1586,390 +1124,50 @@ Artifact signing addresses this by providing:
 | `container` | OCI container image (cosign-compatible) | `cosign verify` |
 | `sbom` | Software Bill of Materials (SPDX, CycloneDX) | Vecta verify API |
 
-### 5.3 Signing Policies
+### 5.3 Signing Profiles
 
-A signing policy governs which keys, subjects, and artifact types are permitted.
+A signing profile (`/svc/signing/signing/profiles`) fixes the artifact type,
+the keycore signing key and algorithm, who may sign (`identity_mode`: allowed
+workload patterns, OIDC issuers and subject patterns, repositories) and a
+content `policy` (`required_branch_patterns`, `required_artifact_tags`,
+`allowed_digests`, CI-only signing).
 
-```bash
-# Create a signing policy for container images
-curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "production-container-signing",
-    "artifact_type": "container",
-    "key_id": "ED25519-SIGNING-KEY-ID",
-    "allowed_subjects": [
-      "ci-pipeline@acme.com",
-      "workload:build-service",
-      "service-account:github-actions"
-    ],
-    "branch_policy": {
-      "allowed_branches": ["main", "release/*"],
-      "require_protected_branch": true
-    },
-    "expiry_days": 365,
-    "allowed_registries": [
-      "registry.acme.com",
-      "ghcr.io/acme"
-    ],
-    "metadata_schema": {
-      "required_fields": ["image", "registry", "git_sha", "pipeline_url"]
-    }
-  }'
-```
+### 5.4 Signing an Artifact
 
 ```bash
-# Signing policy for release binaries (code signing)
-curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "release-binary-signing",
-    "artifact_type": "artifact",
-    "key_id": "EC-P384-SIGNING-KEY-ID",
-    "allowed_subjects": ["release-pipeline@acme.com"],
-    "branch_policy": {
-      "allowed_branches": ["main"],
-      "require_protected_branch": true,
-      "require_tag": true,
-      "tag_pattern": "v[0-9]+\\.[0-9]+\\.[0-9]+"
-    },
-    "max_sign_per_day": 50
-  }'
+# Sign a container image by digest (also: artifact_type "artifact", "sbom", ...)
+curl -X POST "https://kms.acme.com/svc/signing/signing/blob?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"profile_id\": \"$PROFILE_ID\", \"artifact_type\": \"container\",
+       \"artifact_name\": \"payments/payment-service\",
+       \"oci_reference\": \"registry.acme.com/payments/payment-service@$DIGEST\",
+       \"digest_sha256\": \"${DIGEST#sha256:}\"}"
+# Returns {"record": {id, signature, key_id, signing_algorithm, digest_sha256,
+#          transparency_entry_id, transparency_index, ...}, "envelope": {...}}
 ```
 
-### 5.4 Signing a Container Image
+Git commits and tags are signed with `POST /svc/signing/signing/git`
+(`repository`, `commit_sha`, and the payload).
 
-#### Full CI/CD Pipeline Integration
+### 5.5 Verifying
 
 ```bash
-# Signing script — runs in CI (GitHub Actions / GitLab CI / Jenkins)
-
-set -euo pipefail
-
-IMAGE="registry.acme.com/payments/payment-service"
-TAG="${CI_COMMIT_TAG:-${CI_COMMIT_SHA:0:8}}"
-FULL_IMAGE="${IMAGE}:${TAG}"
-
-# Build and push image
-docker build -t "${FULL_IMAGE}" .
-docker push "${FULL_IMAGE}"
-
-# Get image digest (use digest for signing, not tag — tags are mutable)
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${FULL_IMAGE}" | awk -F@ '{print $2}')
-echo "Image digest: ${IMAGE_DIGEST}"
-
-# Sign the image
-SIGN_RESPONSE=$(curl -s -X POST "http://kms.internal.acme.com/svc/signing/sign?tenant_id=root" \
-  -H "Authorization: Bearer ${CI_VECTA_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"artifact_hash\": \"${IMAGE_DIGEST}\",
-    \"artifact_type\": \"container\",
-    \"policy_id\": \"${CONTAINER_SIGNING_POLICY_ID}\",
-    \"metadata\": {
-      \"image\": \"${FULL_IMAGE}\",
-      \"registry\": \"registry.acme.com\",
-      \"git_sha\": \"${CI_COMMIT_SHA}\",
-      \"git_ref\": \"${CI_COMMIT_REF_NAME}\",
-      \"pipeline_url\": \"${CI_PIPELINE_URL}\",
-      \"builder\": \"${GITLAB_USER_LOGIN:-ci-pipeline}\"
-    }
-  }")
-
-SIGNATURE=$(echo "${SIGN_RESPONSE}" | jq -r '.signature')
-TRANSPARENCY_LOG_ID=$(echo "${SIGN_RESPONSE}" | jq -r '.transparency_log_id')
-
-echo "Signature: ${SIGNATURE}"
-echo "Transparency log entry: ${TRANSPARENCY_LOG_ID}"
-
-# Attach signature as OCI artifact (cosign-compatible)
-cosign attach signature \
-  --signature "${SIGNATURE}" \
-  --payload "${IMAGE_DIGEST}" \
-  "${IMAGE}@${IMAGE_DIGEST}"
-
-echo "Container image signed and pushed: ${FULL_IMAGE}"
+curl -X POST "https://kms.acme.com/svc/signing/signing/verify?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"record_id\": \"$RECORD_ID\", \"digest_sha256\": \"$SHA256\"}"
+# Returns {"valid", "signature_valid", "digest_checked", "digest_match", "verified_at", ...}
 ```
 
-#### Verifying a Container Image in Deployment
+Verification checks the stored signature with keycore and, when a digest or
+payload is given, that it matches what was signed.
 
-```bash
-# Verification script — runs before deploying
+### 5.6 Signing Records
 
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${TAG}" | awk -F@ '{print $2}')
-
-VERIFY_RESPONSE=$(curl -s -X POST "http://kms.internal.acme.com/svc/signing/verify?tenant_id=root" \
-  -H "Authorization: Bearer ${DEPLOY_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"artifact_hash\": \"${IMAGE_DIGEST}\",
-    \"artifact_type\": \"container\",
-    \"policy_id\": \"${CONTAINER_SIGNING_POLICY_ID}\"
-  }")
-
-VALID=$(echo "${VERIFY_RESPONSE}" | jq -r '.valid')
-SIGNER=$(echo "${VERIFY_RESPONSE}" | jq -r '.signer_identity')
-SIGNED_AT=$(echo "${VERIFY_RESPONSE}" | jq -r '.signed_at')
-
-if [ "${VALID}" != "true" ]; then
-  echo "ERROR: Image signature verification FAILED for ${IMAGE_DIGEST}"
-  echo "Response: ${VERIFY_RESPONSE}"
-  exit 1
-fi
-
-echo "Image verified: signed by ${SIGNER} at ${SIGNED_AT}"
-```
-
-#### Kubernetes Admission Controller Integration
-
-Deploy a Vecta signature verification webhook to enforce that only signed images run in Kubernetes:
-
-```yaml
-# Admission webhook configuration
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  name: vecta-signature-verifier
-webhooks:
-- name: verify-image-signature.vecta.io
-  rules:
-  - apiGroups: [""]
-    apiVersions: ["v1"]
-    resources: ["pods"]
-    operations: ["CREATE", "UPDATE"]
-  clientConfig:
-    service:
-      name: vecta-webhook
-      namespace: kube-system
-      path: "/verify-image"
-    caBundle: "BASE64_ENCODED_CA_CERT"
-  admissionReviewVersions: ["v1"]
-  sideEffects: None
-  failurePolicy: Fail
-  namespaceSelector:
-    matchLabels:
-      vecta-signing-enforced: "true"
-```
-
-```yaml
-# Vecta webhook deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: vecta-webhook
-  namespace: kube-system
-spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-      - name: vecta-webhook
-        image: registry.acme.com/vecta/signature-webhook:latest
-        env:
-        - name: VECTA_KMS_URL
-          value: "https://kms.internal.acme.com"
-        - name: SIGNING_POLICY_ID
-          value: "production-container-signing"
-        - name: VECTA_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: vecta-webhook-token
-              key: token
-        ports:
-        - containerPort: 8443
-```
-
----
-
-### 5.5 Git Commit Signing
-
-#### SSH Key-Based Git Signing (Git 2.34+)
-
-```bash
-# Get the Ed25519 public key from Vecta
-curl "https://localhost/svc/keycore/keys/{KEY_ID}/public?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -o vecta-signing.pub
-
-# Configure Git to use SSH signing with Vecta key
-git config --global gpg.format ssh
-git config --global user.signingkey "$(cat vecta-signing.pub)"
-
-# Create allowed signers file
-echo "alice@acme.com $(cat vecta-signing.pub)" >> ~/.ssh/allowed_signers
-git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers
-
-# Sign commits (use -S flag, or set globally)
-git config --global commit.gpgsign true
-git commit -m "feat: add payment processor integration"
-
-# Verify a commit
-git verify-commit HEAD
-
-# Verify all commits in a range
-git log --show-signature --oneline main..HEAD
-```
-
-#### GPG-Compatible Signing
-
-```bash
-# Create GPG-compatible signing certificate from Vecta
-# (Ed25519 key exported in OpenPGP format)
-curl -X POST "https://localhost/svc/signing/git-signing-key?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "key_id": "ED25519_KEY_ID",
-    "uid": "Alice Smith <alice@acme.com>",
-    "key_type": "openpgp"
-  }' \
-  -o alice-signing.gpg
-
-# Import to GPG keyring
-gpg --import alice-signing.gpg
-
-# Configure Git to use GPG
-git config --global gpg.program gpg
-git config --global user.signingkey $(gpg --list-secret-keys --keyid-format=long | grep sec | awk '{print $2}' | cut -d/ -f2)
-
-# Sign commits
-git config --global commit.gpgsign true
-```
-
-#### Uploading Signing Key to GitHub / GitLab
-
-```bash
-# GitHub: Settings → SSH and GPG keys → New SSH key (for SSH signing)
-# or Settings → SSH and GPG keys → New GPG key (for GPG signing)
-
-# GitLab: User Settings → GPG Keys → Add key
-# or User Settings → SSH Keys → Add key (with "Signing" usage type)
-
-# You can also use the GitHub API:
-PUBKEY=$(cat vecta-signing.pub)
-curl -X POST "https://api.github.com/user/ssh_signing_keys" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -d "{\"title\": \"Vecta KMS Signing Key\", \"key\": \"${PUBKEY}\"}"
-```
-
----
-
-### 5.6 Artifact and SBOM Signing
-
-```bash
-# Sign a release binary
-BINARY="myapp-v2.1.0-linux-amd64"
-SHA256=$(sha256sum "${BINARY}" | awk '{print $1}')
-
-curl -X POST "https://localhost/svc/signing/sign?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d "{
-    \"artifact_hash\": \"sha256:${SHA256}\",
-    \"artifact_type\": \"artifact\",
-    \"policy_id\": \"RELEASE_SIGNING_POLICY_ID\",
-    \"metadata\": {
-      \"filename\": \"${BINARY}\",
-      \"version\": \"v2.1.0\",
-      \"os\": \"linux\",
-      \"arch\": \"amd64\"
-    }
-  }" | tee "${BINARY}.sig.json" | jq .
-
-# Sign an SBOM (CycloneDX JSON)
-SBOM="myapp-v2.1.0.sbom.json"
-SBOM_SHA256=$(sha256sum "${SBOM}" | awk '{print $1}')
-
-curl -X POST "https://localhost/svc/signing/sign?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d "{
-    \"artifact_hash\": \"sha256:${SBOM_SHA256}\",
-    \"artifact_type\": \"sbom\",
-    \"policy_id\": \"RELEASE_SIGNING_POLICY_ID\",
-    \"metadata\": {
-      \"sbom_format\": \"CycloneDX\",
-      \"sbom_version\": \"1.5\",
-      \"component\": \"myapp\",
-      \"version\": \"v2.1.0\"
-    }
-  }"
-
-# Verify binary
-VERIFY_SHA256=$(sha256sum "${BINARY}" | awk '{print $1}')
-SIGNATURE=$(cat "${BINARY}.sig.json" | jq -r '.signature')
-
-curl -X POST "https://localhost/svc/signing/verify?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d "{
-    \"artifact_hash\": \"sha256:${VERIFY_SHA256}\",
-    \"signature\": \"${SIGNATURE}\",
-    \"policy_id\": \"RELEASE_SIGNING_POLICY_ID\"
-  }"
-```
-
----
-
-### 5.7 Transparency Log
-
-Every signing event is appended to an append-only transparency log. Each entry includes a sequence number, timestamps, and a Merkle inclusion proof tying it to the log's root.
-
-```bash
-# Browse transparency log
-curl "https://localhost/svc/signing/transparency?tenant_id=root&page=1&per_page=50" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get a specific log entry
-curl "https://localhost/svc/signing/transparency/{LOG_ENTRY_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Search by artifact hash
-curl "https://localhost/svc/signing/transparency?tenant_id=root&artifact_hash=sha256:abc123..." \
-  -H "Authorization: Bearer $TOKEN"
-
-# Search by signer identity
-curl "https://localhost/svc/signing/transparency?tenant_id=root&signer=ci-pipeline@acme.com" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-**Transparency log entry structure:**
-
-```json
-{
-  "id": "tlog_01HXYZ...",
-  "sequence_number": 10042,
-  "artifact_hash": "sha256:abc123...",
-  "artifact_type": "container",
-  "signer_identity": "ci-pipeline@acme.com",
-  "signing_key_id": "ED25519_KEY_ID",
-  "policy_id": "production-container-signing",
-  "metadata": {
-    "image": "registry.acme.com/payments/payment-service:v1.2.3",
-    "git_sha": "a1b2c3d4"
-  },
-  "signature": "base64-encoded-signature",
-  "signed_at": "2026-03-22T10:00:00Z",
-  "merkle_proof": {
-    "leaf_hash": "3f4a5b...",
-    "leaf_index": 10042,
-    "siblings": ["hash1", "hash2", "hash3"],
-    "root": "abc123..."
-  }
-}
-```
-
-#### Rekor-Compatible API
-
-The Vecta transparency log exposes a Rekor-compatible API so existing Sigstore tooling works with it.
-
-```bash
-# rekor-cli pointing to Vecta
-rekor-cli --rekor_server https://kms.internal.acme.com/svc/signing/rekor \
-  search --sha sha256:abc123...
-
-rekor-cli --rekor_server https://kms.internal.acme.com/svc/signing/rekor \
-  get --uuid tlog_01HXYZ...
-```
-
----
+Every signature is stored as a record (`GET /svc/signing/signing/records`)
+with a per-tenant sequence number (`transparency_index`) and a hash over the
+payload and signature (`transparency_hash`). This is an append-only record in
+the KMS, not a public transparency log: there is no Merkle tree, inclusion
+proof or Rekor-compatible API.
 
 ### 5.8 Security Considerations for Signing
 
@@ -1977,11 +1175,10 @@ rekor-cli --rekor_server https://kms.internal.acme.com/svc/signing/rekor \
 |---|---|
 | Key algorithm | EC-P384 or Ed25519 minimum; no RSA < 3072 for new signing keys |
 | Key storage | HSM backend for all production signing keys |
-| `allowed_subjects` | Restrict strictly — only CI service accounts, not developer accounts |
+| Profile identities | Restrict `allowed_subject_patterns` / workload patterns to CI identities, not developer accounts |
 | Branch policies | Require protected branches for production signing |
-| Transparency log | Require for all production signing; do not allow bypass |
 | Key rotation | Rotate signing keys annually; re-sign any long-lived artifacts |
-| Verification | Always verify before deploying; use admission controller for K8s |
+| Verification | Verify (`/svc/signing/signing/verify`) in the deploy pipeline before an image runs |
 | SBOM signing | Sign SBOMs alongside binaries for full provenance chain |
 
 ---
@@ -2057,31 +1254,29 @@ SQL Server and Oracle cannot use Vecta for their TDE keys (Section 3.3).
 
 ### Use Case 5 — Container Signing in CI/CD Pipeline
 
-**Scenario:** GitLab CI pipeline builds container images and signs them. Kubernetes admission controller rejects any unsigned image.
+**Scenario:** GitLab CI pipeline builds container images and signs them; the deploy job refuses an image whose signature does not verify.
 
-**Architecture:** GitLab CI → sign image → Vecta transparency log → K8s admission controller → verify before deploy
+**Architecture:** GitLab CI → sign image (signing record) → deploy job verifies → deploy
 
 **Steps:**
 1. Create an Ed25519 signing key in the KMS (for a key that never leaves your HSM, create an ECDSA P-256 key with **Create in HSM**)
-2. Create container signing policy with `allowed_subjects = gitlab-ci@acme.com`
-3. Add signing step to `.gitlab-ci.yml` (Section 5.4)
-4. Deploy Vecta webhook admission controller in K8s cluster
-5. Enable webhook for `production` and `staging` namespaces
-6. Test: deploy signed image succeeds; deploy unsigned image rejected with "signature verification failed"
+2. Create a container signing profile limited to the GitLab CI identity (Section 5.3)
+3. Add the signing call to `.gitlab-ci.yml` (Section 5.4)
+4. Add a verify call to the deploy job and stop on `"valid": false` (Section 5.5)
+5. Test: a signed image deploys; an unsigned or altered one stops the job
 
 ---
 
 ### Use Case 6 — Git Commit Signing for Source Integrity
 
-**Scenario:** Security policy requires all commits to `main` branch to be signed. Developers sign using Vecta-managed Ed25519 keys.
+**Scenario:** Every commit merged to `main` gets a KMS-held signature and a signing record, so a release can prove which commits CI accepted.
 
 **Steps:**
-1. Issue an Ed25519 signing key in Vecta for each developer
-2. Export public key from Vecta
-3. Developer configures Git with the Vecta signing key (Section 5.5)
-4. Upload public key to GitHub/GitLab as signing key
-5. Configure branch protection on `main`: require signed commits
-6. CI pipeline verifies all commits in a PR are signed before merge
+1. Create a signing key in Vecta and a `git` signing profile limited to the CI identity and `required_branch_patterns: ["refs/heads/main"]` (Section 5.3)
+2. In the merge pipeline, sign each commit with `POST /svc/signing/signing/git` (`repository`, `commit_sha`)
+3. Before a release, verify the commits' records with `POST /svc/signing/signing/verify`
+
+Vecta does not act as a local `git commit -S` signing program; developers' own commit signatures stay with their Git hosting.
 
 ---
 
@@ -2091,79 +1286,25 @@ SQL Server and Oracle cannot use Vecta for their TDE keys (Section 3.3).
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/svc/cloud/byok/configs` | Create BYOK configuration |
-| `GET` | `/svc/cloud/byok/configs` | List BYOK configurations |
-| `GET` | `/svc/cloud/byok/configs/{id}` | Get BYOK configuration |
-| `PUT` | `/svc/cloud/byok/configs/{id}` | Update BYOK configuration |
-| `DELETE` | `/svc/cloud/byok/configs/{id}` | Delete BYOK configuration |
-| `GET` | `/svc/cloud/byok/configs/{id}/status` | Get sync status |
-| `POST` | `/svc/cloud/byok/configs/{id}/wrap` | Generate wrapped key material |
-| `POST` | `/svc/cloud/byok/sync` | Trigger BYOK sync |
-| `POST` | `/svc/cloud/byok/configs/{id}/rotate` | Rotate BYOK key |
+| `POST` | `/svc/cloud/cloud/sync` | Trigger BYOK sync |
 
 ### HYOK Endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/svc/hyok/policies` | Create HYOK policy |
-| `GET` | `/svc/hyok/policies` | List HYOK policies |
-| `GET` | `/svc/hyok/policies/{id}` | Get HYOK policy |
-| `PUT` | `/svc/hyok/policies/{id}` | Update HYOK policy |
-| `DELETE` | `/svc/hyok/policies/{id}` | Delete HYOK policy |
-| `GET` | `/svc/hyok/proxy/keys/{keyId}/publickey` | DKE public key endpoint |
-| `POST` | `/svc/hyok/proxy/decrypt` | DKE decrypt endpoint |
-| `POST` | `/svc/hyok/proxy/google-cse/wrap` | Google CSE wrap |
-| `POST` | `/svc/hyok/proxy/google-cse/unwrap` | Google CSE unwrap |
-| `GET` | `/svc/hyok/proxy/google-cse/status` | Google CSE health |
-| `PUT` | `/svc/hyok/config` | Update HYOK proxy configuration |
-| `GET` | `/svc/hyok/audit` | Browse HYOK audit log |
-
 ### EKM Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/svc/ekm/integrations` | Register EKM integration |
-| `GET` | `/svc/ekm/integrations` | List EKM integrations |
-| `GET` | `/svc/ekm/integrations/{id}` | Get EKM integration |
-| `PUT` | `/svc/ekm/integrations/{id}` | Update EKM integration |
-| `DELETE` | `/svc/ekm/integrations/{id}` | Delete EKM integration |
-| `GET` | `/svc/ekm/integrations/{id}/status` | Agent heartbeat status |
-| `GET` | `/svc/ekm/bitlocker/endpoints` | List BitLocker endpoints |
-| `GET` | `/svc/ekm/bitlocker/endpoints/{id}` | Get endpoint details |
-| `POST` | `/svc/ekm/bitlocker/endpoints/{id}/recovery-key` | Retrieve recovery key |
-| `GET` | `/svc/ekm/bitlocker/compliance` | Compliance report |
 
 ### KMIP Endpoints
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/svc/kmip/profiles` | Create KMIP client profile |
-| `GET` | `/svc/kmip/profiles` | List KMIP client profiles |
-| `GET` | `/svc/kmip/profiles/{id}` | Get KMIP client profile |
-| `PUT` | `/svc/kmip/profiles/{id}` | Update KMIP client profile |
-| `DELETE` | `/svc/kmip/profiles/{id}` | Delete KMIP client profile |
-| `GET` | `/svc/kmip/objects` | List KMIP-managed objects |
-| `GET` | `/svc/kmip/objects/{id}` | Get KMIP object |
-| `POST` | `/svc/kmip/objects/{id}/activate` | Activate KMIP object |
-| `POST` | `/svc/kmip/objects/{id}/revoke` | Revoke KMIP object |
-| `POST` | `/svc/kmip/objects/{id}/destroy` | Destroy KMIP object |
-| `GET` | `/svc/kmip/status` | KMIP server status |
-| `PUT` | `/svc/kmip/config` | Update KMIP configuration |
+| `POST` | `/svc/kmip/kmip/profiles` | Create KMIP client profile |
+| `GET` | `/svc/kmip/kmip/profiles` | List KMIP client profiles |
+| `DELETE` | `/svc/kmip/kmip/profiles/{id}` | Delete KMIP client profile |
 
 ### Artifact Signing Endpoints
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/svc/signing/policies` | Create signing policy |
-| `GET` | `/svc/signing/policies` | List signing policies |
-| `GET` | `/svc/signing/policies/{id}` | Get signing policy |
-| `PUT` | `/svc/signing/policies/{id}` | Update signing policy |
-| `DELETE` | `/svc/signing/policies/{id}` | Delete signing policy |
-| `POST` | `/svc/signing/sign` | Sign an artifact |
-| `POST` | `/svc/signing/verify` | Verify a signature |
-| `GET` | `/svc/signing/transparency` | Browse transparency log |
-| `GET` | `/svc/signing/transparency/{id}` | Get log entry |
-| `POST` | `/svc/signing/git-signing-key` | Export Git signing key |
+| `POST` | `/svc/signing/signing/verify` | Verify a signature |
 
 ### Common Query Parameters
 
@@ -2188,7 +1329,7 @@ Authorization: Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 Tokens are obtained via:
 
 ```bash
-curl -X POST "https://localhost/svc/auth/token" \
+curl -X POST "https://localhost/svc/auth/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": "your-client-id",

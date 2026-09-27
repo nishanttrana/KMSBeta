@@ -10450,62 +10450,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "governance-get-governance-system-fde-recovery-shares",
-    "group": "Governance (governance)",
-    "title": "GET /governance/system/fde/recovery-shares",
-    "service": "governance",
-    "method": "GET",
-    "pathTemplate": "/governance/system/fde/recovery-shares?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "GET /svc/governance/governance/system/fde/recovery-shares?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "governance-get-governance-system-fde-status",
-    "group": "Governance (governance)",
-    "title": "GET /governance/system/fde/status",
-    "service": "governance",
-    "method": "GET",
-    "pathTemplate": "/governance/system/fde/status?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "GET /svc/governance/governance/system/fde/status?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "governance-get-governance-system-fips-mode",
     "group": "Governance (governance)",
     "title": "GET /governance/system/fips-mode",
@@ -10898,118 +10842,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "governance-post-governance-system-fde-integrity-check",
-    "group": "Governance (governance)",
-    "title": "POST /governance/system/fde/integrity-check",
-    "service": "governance",
-    "method": "POST",
-    "pathTemplate": "/governance/system/fde/integrity-check?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "POST /svc/governance/governance/system/fde/integrity-check?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "governance-post-governance-system-fde-rotate-key",
-    "group": "Governance (governance)",
-    "title": "POST /governance/system/fde/rotate-key",
-    "service": "governance",
-    "method": "POST",
-    "pathTemplate": "/governance/system/fde/rotate-key?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "POST /svc/governance/governance/system/fde/rotate-key?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "governance-post-governance-system-fde-test-recovery",
-    "group": "Governance (governance)",
-    "title": "POST /governance/system/fde/test-recovery",
-    "service": "governance",
-    "method": "POST",
-    "pathTemplate": "/governance/system/fde/test-recovery?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "POST /svc/governance/governance/system/fde/test-recovery?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "governance-post-governance-system-network-apply",
-    "group": "Governance (governance)",
-    "title": "POST /governance/system/network/apply",
-    "service": "governance",
-    "method": "POST",
-    "pathTemplate": "/governance/system/network/apply?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Governance service.",
-    "requestExample": "POST /svc/governance/governance/system/network/apply?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "governance-post-governance-system-snmp-test",
     "group": "Governance (governance)",
     "title": "POST /governance/system/snmp/test",
@@ -11346,15 +11178,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "hyok-post-api-v1-keys-id-decrypt",
+    "id": "hyok-post-api-v1-keys-id-version-decrypt",
     "group": "HYOK (hyok)",
-    "title": "POST /api/v1/keys/{id}/decrypt",
+    "title": "POST /api/v1/keys/{id}/{version}/decrypt",
     "service": "hyok",
     "method": "POST",
-    "pathTemplate": "/api/v1/keys/{id}/decrypt?tenant_id={{tenant_id}}",
+    "pathTemplate": "/api/v1/keys/{id}/{version}/decrypt?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from HYOK service.",
-    "requestExample": "POST /svc/hyok/api/v1/keys/{id}/decrypt?tenant_id={{tenant_id}}",
+    "requestExample": "POST /svc/hyok/api/v1/keys/{id}/{version}/decrypt?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

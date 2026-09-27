@@ -128,24 +128,30 @@ func TestServiceMicrosoftDKEAdapter(t *testing.T) {
 	ctx := context.Background()
 	keycore.Seed("tenant-ms", "rsa-1", "RSA-2048")
 
-	keyDoc, err := svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"})
+	id := AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"}
+	keyDoc, err := svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1", "localhost", "https://dke.test/svc/hyok/api/v1/keys/rsa-1", id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if keyDoc.KTY != "RSA" || keyDoc.N == "" || keyDoc.E == "" {
+	// The DKE key document Office reads: key + cache, numeric e, and a kid
+	// that is the key URL plus the current version.
+	if keyDoc.Key.KTY != "RSA" || keyDoc.Key.N == "" || keyDoc.Key.E != 65537 || keyDoc.Key.Alg != "RSA-OAEP-256" ||
+		keyDoc.Key.KID != "https://dke.test/svc/hyok/api/v1/keys/rsa-1/1" || keyDoc.Cache.Exp == "" {
 		t.Fatalf("unexpected key doc %+v", keyDoc)
 	}
 
-	resp, err := svc.ProcessMicrosoftDKEDecrypt(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1/decrypt", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"}, MicrosoftDKEDecryptRequest{
-		Alg:   "RSA-OAEP-256",
-		KID:   "rsa-1",
-		Value: base64.RawURLEncoding.EncodeToString([]byte("wrap:aGVsbG8=")),
-	})
+	req := MicrosoftDKEDecryptRequest{Alg: "RSA-OAEP-256", Value: base64.StdEncoding.EncodeToString([]byte("wrap:aGVsbG8="))}
+	resp, err := svc.ProcessMicrosoftDKEDecrypt(ctx, "tenant-ms", "rsa-1", "1", "/api/v1/keys/rsa-1/1/decrypt", "localhost", id, req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Value != "aGVsbG8" {
+	if resp.Value != "aGVsbG8=" {
 		t.Fatalf("unexpected decrypt response %+v", resp)
+	}
+	// A kid naming another version is refused, not decrypted with the
+	// current key.
+	if _, err := svc.ProcessMicrosoftDKEDecrypt(ctx, "tenant-ms", "rsa-1", "2", "/api/v1/keys/rsa-1/2/decrypt", "localhost", id, req); err == nil {
+		t.Fatal("decrypt under a non-current version accepted")
 	}
 }
 
@@ -163,7 +169,7 @@ func TestServiceMicrosoftDKEAdapterMetadataHostEnforcement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-2", "/api/v1/keys/rsa-2", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"})
+	_, err = svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-2", "/api/v1/keys/rsa-2", "localhost", "https://localhost/api/v1/keys/rsa-2", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"})
 	if err == nil {
 		t.Fatalf("expected host validation error")
 	}

@@ -268,31 +268,11 @@ curl "https://localhost/svc/certs/certs/ca?tenant_id=root" \
 curl "https://localhost/svc/certs/certs/ca/{CA_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Get CA certificate chain (PEM bundle)
-curl "https://localhost/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get CA certificate in DER format
-curl "https://localhost/svc/certs/certs/ca/{CA_ID}/certificate?format=der&tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -o ca-cert.der
 ```
 
 ### 2.7 CA Rotation
 
 When an issuing CA approaches expiry, create a new issuing CA from the same intermediate CA. Existing certificates remain valid until their own expiry. New certificates are issued from the new issuing CA.
-
-```bash
-# Rotate issuing CA (creates new CA, retires old one)
-curl -X POST "https://localhost/svc/certs/certs/ca/{OLD_CA_ID}/rotate?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_validity_days": 730,
-    "transition_period_days": 30,
-    "auto_reissue_leaves": false
-  }'
-```
 
 ---
 
@@ -412,15 +392,6 @@ curl "https://localhost/svc/certs/certs/profiles?tenant_id=root" \
 curl "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Update profile
-curl -X PUT "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"default_validity_days": 60}'
-
-# Delete profile
-curl -X DELETE "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 3.5 SAN Types
@@ -579,16 +550,10 @@ curl "https://localhost/svc/certs/certs/{CERT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Download certificate in DER format
-curl "https://localhost/svc/certs/certs/{CERT_ID}/download?format=der&tenant_id=root" \
+curl "https://localhost/svc/certs/certs/download/{CERT_ID}?format=der&tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o certificate.der
 
-# Download PKCS#12 bundle (cert + key + chain)
-curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"password": "your-p12-password"}' \
-  -o bundle.p12
 ```
 
 ### 4.4 Renewing Certificates
@@ -659,19 +624,6 @@ Vecta runs an expiry scanner on a configurable schedule. When a certificate cros
 2. **ARI window updated** — the renewal information window shrinks, urging ACME clients to renew sooner.
 3. **STAR subscriptions auto-renew** — no human intervention required for STAR-enrolled certificates.
 4. **Manual certificates** — require operator action or integration with the renew API.
-
-```bash
-# Configure expiry alert policy
-curl -X PUT "https://localhost/svc/certs/certs/expiry-policy?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "warning_days": 30,
-    "critical_days": 7,
-    "notification_channels": ["slack-security", "pagerduty-oncall"],
-    "auto_renew_acme": true
-  }'
-```
 
 ---
 
@@ -770,8 +722,6 @@ Vecta implements five standard certificate enrollment protocols. Each protocol t
 
 ACME is the protocol behind Let's Encrypt. Vecta's ACME server is fully RFC 8555 compliant and supports HTTP-01 and DNS-01 challenge types. Any client that works with Let's Encrypt works with Vecta with only a configuration change (base URL).
 
-**ACME base URL:** `https://{host}/svc/certs/acme/`
-
 **Directory endpoint:** `GET /svc/certs/acme/directory`
 
 ```json
@@ -779,9 +729,6 @@ ACME is the protocol behind Let's Encrypt. Vecta's ACME server is fully RFC 8555
   "newNonce":   "https://kms.acme.com/svc/certs/acme/new-nonce",
   "newAccount": "https://kms.acme.com/svc/certs/acme/new-account",
   "newOrder":   "https://kms.acme.com/svc/certs/acme/new-order",
-  "revokeCert": "https://kms.acme.com/svc/certs/acme/revoke-cert",
-  "keyChange":  "https://kms.acme.com/svc/certs/acme/key-change",
-  "renewalInfo":"https://kms.acme.com/svc/certs/acme/renewal-info",
   "meta": {
     "termsOfService": "https://kms.acme.com/acme-tos",
     "website": "https://kms.acme.com",
@@ -816,10 +763,6 @@ curl -X POST "https://localhost/svc/certs/acme/new-order" \
   }'
 # Response: order object with authorizations[] URLs and finalize URL
 
-# Step 4 — Get authorization and challenge
-curl "https://localhost/svc/certs/acme/authz/{authzId}"
-# Response: challenges[] — pick http-01 or dns-01
-
 # Step 5a — Complete HTTP-01 challenge
 # Provision: GET http://app.acme.com/.well-known/acme-challenge/{token}
 # Returns: {token}.{account_key_thumbprint}
@@ -839,8 +782,6 @@ curl -X POST "https://localhost/svc/certs/acme/challenge/{challengeId}" \
     "key_authorization": "{token}.{thumbprint}"
   }'
 
-# Step 6 — Poll authorization until valid
-curl "https://localhost/svc/certs/acme/authz/{authzId}"
 # Wait until status = "valid"
 
 # Step 7 — Finalize with CSR
@@ -1052,7 +993,7 @@ SCEP is the legacy enrollment protocol, widely supported by MDM systems, Cisco n
 #### SCEP Capabilities
 
 ```
-GET /svc/certs/scep?operation=GetCACaps
+GET /svc/certs/scep/pkiclient.exe?operation=GetCACaps
 ```
 
 Response (plain text, one capability per line):
@@ -1069,7 +1010,7 @@ GetNextCACert
 
 ```bash
 # Step 1 — Get CA certificate
-curl "https://localhost/svc/certs/scep?operation=GetCACert&message=CAIdentifier" \
+curl "https://localhost/svc/certs/scep/pkiclient.exe?operation=GetCACert&message=CAIdentifier" \
   -o ca.der
 
 # Step 2 — Generate key and CSR
@@ -1089,38 +1030,24 @@ openssl req -new -key device.key \
 In Intune, configure a SCEP Certificate Profile:
 
 1. **Certificate type:** PKCS #10
-2. **SCEP Server URL:** `https://kms.internal.acme.com/svc/certs/scep`
+2. **SCEP Server URL:** `https://kms.internal.acme.com/svc/certs/scep/pkiclient.exe`
 3. **Challenge type:** Static (configure challenge password in Vecta) or Dynamic (Intune NDES connector)
 4. **Certificate validity period:** 1 year
 5. **Key size:** 2048 (RSA) or ECC 256
-
-```bash
-# Create SCEP challenge password in Vecta
-curl -X POST "https://localhost/svc/certs/scep/challenges?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "password": "static-challenge-password-here",
-    "description": "Intune MDM enrollment",
-    "ca_id": "ISSUING_CA_ID",
-    "profile_id": "client-mtls-365d",
-    "expires_at": "2027-03-22T00:00:00Z"
-  }'
-```
 
 #### Cisco ISE Integration
 
 ```
 ! On Cisco ISE, add Vecta as SCEP RA
 Administration > System > Certificates > SCEP RA Profiles
-URL: https://kms.internal.acme.com/svc/certs/scep
+URL: https://kms.internal.acme.com/svc/certs/scep/pkiclient.exe
 ```
 
 #### Jamf Pro Integration
 
 In Jamf Pro, configure a SCEP payload in a Configuration Profile:
 
-1. **URL:** `https://kms.internal.acme.com/svc/certs/scep`
+1. **URL:** `https://kms.internal.acme.com/svc/certs/scep/pkiclient.exe`
 2. **Name:** `Vecta Internal PKI`
 3. **Subject:** `CN=$SERIALNUMBER, O=Acme Corp`
 4. **Challenge:** Configure challenge in Vecta, enter here
@@ -1151,7 +1078,7 @@ CMPv2 is the most capable PKI enrollment protocol, supporting the full certifica
 
 ```bash
 # CMP over HTTP (RFC 6712)
-# Endpoint: POST /svc/certs/cmp
+# Endpoint: POST /svc/certs/cmpv2
 # Content-Type: application/pkixcmp
 # Body: DER-encoded PKIMessage
 
@@ -1265,7 +1192,6 @@ curl -X POST "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=roo
   "id": "star_01HXYZ...",
   "name": "payment-service-star",
   "status": "active",
-  "current_cert_url": "https://kms.internal.acme.com/svc/certs/certs/star/subscriptions/star_01HXYZ.../current",
   "current_cert_expires_at": "2026-03-24T10:00:00Z",
   "next_renewal_at": "2026-03-24T08:00:00Z",
   "created_at": "2026-03-22T10:00:00Z"
@@ -1273,9 +1199,6 @@ curl -X POST "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=roo
 ```
 
 ```bash
-# Fetch current certificate (always the latest valid cert)
-curl "https://localhost/svc/certs/certs/star/subscriptions/{STAR_ID}/current?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
 
 # List all STAR subscriptions
 curl "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=root" \
@@ -1326,9 +1249,6 @@ initContainers:
   - sh
   - -c
   - |
-    curl -H "Authorization: Bearer $VECTA_TOKEN" \
-      "https://kms.internal.acme.com/svc/certs/certs/star/subscriptions/${STAR_ID}/current" \
-      -o /certs/tls.pem
   volumeMounts:
   - name: certs
     mountPath: /certs
@@ -1339,7 +1259,6 @@ initContainers:
 ```python
 import requests, time, threading
 
-STAR_URL = "https://kms.internal.acme.com/svc/certs/certs/star/subscriptions/{star_id}/current"
 HEADERS = {"Authorization": f"Bearer {VECTA_TOKEN}"}
 
 def refresh_cert():
@@ -1418,18 +1337,9 @@ curl "https://localhost/svc/certs/acme/renewal-info/{CERT_ID}?tenant_id=root" \
 
 ```bash
 # Get ARI for all certs approaching expiry
-curl "https://localhost/svc/certs/certs/renewal-info?tenant_id=root&risk_level=high,critical" \
+curl "https://localhost/svc/certs/certs/renewal-intelligence?tenant_id=root&risk_level=high,critical" \
   -H "Authorization: Bearer $TOKEN"
 
-# Update ARI config
-curl -X PUT "https://localhost/svc/certs/certs/ari/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "mass_renewal_spread_days": 7,
-    "max_daily_renewal_budget": 5000,
-    "emergency_rotation_enabled": true
-  }'
 ```
 
 ### 8.6 Mass Renewal Buckets
@@ -1612,34 +1522,9 @@ curl "https://localhost/svc/certs/certs/crl?ca_id={CA_ID}&format=der&tenant_id=r
   -H "Authorization: Bearer $TOKEN" \
   -o ca.der.crl
 
-# Force CRL refresh (re-sign with updated timestamp)
-curl -X POST "https://localhost/svc/certs/certs/crl/refresh?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"ca_id": "{CA_ID}"}'
 ```
 
 **CRL Configuration per CA:**
-
-```bash
-curl -X PUT "https://localhost/svc/certs/certs/ca/{CA_ID}/crl-config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "crl_validity_hours": 24,
-    "crl_overlap_hours": 4,
-    "distribution_points": [
-      "http://crl.internal.acme.com/issuing-tls.crl",
-      "ldap://ldap.internal.acme.com/cn=Issuing TLS CA,dc=acme,dc=com?certificateRevocationList"
-    ],
-    "publish_to_s3": {
-      "enabled": true,
-      "bucket": "acme-pki-crls",
-      "key_prefix": "crls/",
-      "region": "us-east-1"
-    }
-  }'
-```
 
 #### Serving CRLs Publicly
 
@@ -1656,11 +1541,6 @@ OCSP provides real-time certificate status. Instead of downloading an entire CRL
 **OCSP endpoint:** `GET` or `POST` `/svc/certs/certs/ocsp`
 
 ```bash
-# GET-based OCSP request (base64url-encoded)
-# In practice, clients do this automatically; this shows the mechanics:
-OCSP_REQUEST=$(openssl ocsp -issuer issuing-ca.pem -cert server.pem -reqout - 2>/dev/null | base64 | tr -d '\n' | tr '+/' '-_' | tr -d '=')
-curl "https://localhost/svc/certs/certs/ocsp/${OCSP_REQUEST}" -o ocsp-response.der
-
 # POST-based OCSP request
 openssl ocsp \
   -issuer issuing-ca.pem \
@@ -1698,20 +1578,6 @@ openssl s_client -connect api.internal.acme.com:443 -status 2>/dev/null | grep -
 #### OCSP Response Caching
 
 Vecta pre-computes OCSP responses for all active certificates and caches them. Response validity period defaults to 24 hours. This means even if the Vecta API is momentarily unreachable, cached responses are served from an edge cache.
-
-```bash
-# Configure OCSP cache settings
-curl -X PUT "https://localhost/svc/certs/certs/ocsp/config?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "response_validity_hours": 24,
-    "next_update_offset_hours": 20,
-    "pre_sign_on_issuance": true,
-    "cache_backend": "redis",
-    "cache_ttl_seconds": 86400
-  }'
-```
 
 ---
 
@@ -1795,7 +1661,7 @@ curl "https://localhost/svc/certs/certs/security/status?tenant_id=root" \
 
 ```bash
 # Configure expiry alert thresholds
-curl -X PUT "https://localhost/svc/certs/certs/security/alert-policy?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/alert-policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1986,10 +1852,6 @@ echo "Device ${DEVICE_SERIAL} enrolled successfully"
 # Sign artifact
 ARTIFACT_HASH=$(sha256sum myapp.tar.gz | awk '{print $1}')
 
-SIGN_RESPONSE=$(curl -X POST "http://kms.internal.acme.com/svc/signing/sign?tenant_id=root" \
-  -H "Authorization: Bearer $CI_VECTA_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
     \"artifact_hash\": \"sha256:${ARTIFACT_HASH}\",
     \"artifact_type\": \"artifact\",
     \"policy_id\": \"prod-signing-policy\",
@@ -2007,7 +1869,7 @@ echo "$SIGNATURE" > myapp.tar.gz.sig
 DEPLOY_ARTIFACT_HASH=$(sha256sum myapp.tar.gz | awk '{print $1}')
 SIGNATURE=$(cat myapp.tar.gz.sig)
 
-VERIFY_RESULT=$(curl -X POST "http://kms.internal.acme.com/svc/signing/verify?tenant_id=root" \
+VERIFY_RESULT=$(curl -X POST "https://kms.internal.acme.com/svc/signing/signing/verify?tenant_id=root" \
   -H "Authorization: Bearer $DEPLOY_TOKEN" \
   -d "{\"artifact_hash\": \"sha256:${DEPLOY_ARTIFACT_HASH}\", \"signature\": \"${SIGNATURE}\", \"policy_id\": \"prod-signing-policy\"}")
 
@@ -2044,12 +1906,6 @@ curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
     "algorithm": "RSA-2048"
   }'
 
-# Export as PKCS#12 for import into email client
-curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"password": "alice-temp-password"}' \
-  -o alice-smime.p12
-
 # User imports alice-smime.p12 into Outlook / Apple Mail / Thunderbird
 ```
 
@@ -2062,7 +1918,7 @@ curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root"
 ```
 ! Cisco IOS-XE configuration for SCEP enrollment
 crypto pki trustpoint VECTA-INTERNAL
-  enrollment url http://kms.internal.acme.com/svc/certs/scep
+  enrollment url https://kms.internal.acme.com/svc/certs/scep/pkiclient.exe
   subject-name CN=switch-01.network.acme.com, O=Acme Corp
   rsakeypair VECTA-KEY 2048
   revocation-check crl
@@ -2167,12 +2023,7 @@ Every operation generates an audit log entry:
 |---|---|---|
 | `POST` | `/svc/certs/certs/ca` | Create CA |
 | `GET` | `/svc/certs/certs/ca` | List CAs |
-| `GET` | `/svc/certs/certs/ca/{id}` | Get CA |
-| `PUT` | `/svc/certs/certs/ca/{id}` | Update CA metadata |
 | `DELETE` | `/svc/certs/certs/ca/{id}` | Deactivate CA |
-| `GET` | `/svc/certs/certs/ca/{id}/chain` | Get CA chain (PEM) |
-| `GET` | `/svc/certs/certs/ca/{id}/certificate` | Get CA cert (PEM or DER) |
-| `POST` | `/svc/certs/certs/ca/{id}/rotate` | Rotate issuing CA |
 
 ### Certificate Endpoints
 
@@ -2182,7 +2033,6 @@ Every operation generates an audit log entry:
 | `GET` | `/svc/certs/certs` | List certificates |
 | `GET` | `/svc/certs/certs/{id}` | Get certificate |
 | `GET` | `/svc/certs/certs/{id}/download` | Download cert (PEM/DER) |
-| `POST` | `/svc/certs/certs/{id}/pkcs12` | Download PKCS#12 bundle |
 | `POST` | `/svc/certs/certs/{id}/renew` | Renew certificate |
 | `POST` | `/svc/certs/certs/{id}/revoke` | Revoke certificate |
 | `POST` | `/svc/certs/certs/sign-csr` | Sign external CSR |
@@ -2194,8 +2044,6 @@ Every operation generates an audit log entry:
 | `POST` | `/svc/certs/certs/profiles` | Create profile |
 | `GET` | `/svc/certs/certs/profiles` | List profiles |
 | `GET` | `/svc/certs/certs/profiles/{id}` | Get profile |
-| `PUT` | `/svc/certs/certs/profiles/{id}` | Update profile |
-| `DELETE` | `/svc/certs/certs/profiles/{id}` | Delete profile |
 
 ### ACME Endpoints
 
@@ -2205,12 +2053,10 @@ Every operation generates an audit log entry:
 | `HEAD` | `/svc/certs/acme/new-nonce` | Get nonce |
 | `POST` | `/svc/certs/acme/new-account` | Create ACME account |
 | `POST` | `/svc/certs/acme/new-order` | Create order |
-| `GET` | `/svc/certs/acme/authz/{id}` | Get authorization |
 | `GET` | `/svc/certs/acme/challenge/{id}` | Get challenge |
 | `POST` | `/svc/certs/acme/challenge/{id}` | Complete challenge |
 | `POST` | `/svc/certs/acme/finalize/{orderId}` | Finalize order |
 | `GET` | `/svc/certs/acme/cert/{certId}` | Download certificate |
-| `POST` | `/svc/certs/acme/revoke-cert` | Revoke certificate |
 | `GET` | `/svc/certs/acme/renewal-info/{certId}` | Get ARI |
 
 ### EST Endpoints
@@ -2227,9 +2073,8 @@ Every operation generates an audit log entry:
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/svc/certs/scep?operation=GetCACert` | Get CA cert |
-| `GET` | `/svc/certs/scep?operation=GetCACaps` | Get capabilities |
-| `POST` | `/svc/certs/scep?operation=PKIOperation` | PKI operation |
+| `GET` | `/svc/certs/scep/pkiclient.exe?operation=GetCACert` | Get CA cert |
+| `GET` | `/svc/certs/scep/pkiclient.exe?operation=GetCACaps` | Get capabilities |
 
 ### STAR Endpoints
 
@@ -2237,8 +2082,6 @@ Every operation generates an audit log entry:
 |---|---|---|
 | `POST` | `/svc/certs/certs/star/subscriptions` | Create subscription |
 | `GET` | `/svc/certs/certs/star/subscriptions` | List subscriptions |
-| `GET` | `/svc/certs/certs/star/subscriptions/{id}` | Get subscription |
-| `GET` | `/svc/certs/certs/star/subscriptions/{id}/current` | Current cert |
 | `DELETE` | `/svc/certs/certs/star/subscriptions/{id}` | Cancel subscription |
 
 ### CRL and OCSP Endpoints
@@ -2246,7 +2089,6 @@ Every operation generates an audit log entry:
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/svc/certs/certs/crl` | Download CRL |
-| `POST` | `/svc/certs/certs/crl/refresh` | Force CRL refresh |
 | `GET` | `/svc/certs/certs/ocsp` | OCSP request (GET) |
 | `POST` | `/svc/certs/certs/ocsp` | OCSP request (POST) |
 
@@ -2264,8 +2106,8 @@ Every operation generates an audit log entry:
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/svc/certs/certs/security/status` | Security scan results |
-| `PUT` | `/svc/certs/certs/security/alert-policy` | Configure alert policy |
-| `GET` | `/svc/certs/certs/renewal-info` | Bulk ARI for expiring certs |
+| `PUT` | `/svc/certs/certs/alert-policy` | Configure alert policy |
+| `GET` | `/svc/certs/certs/renewal-intelligence` | Bulk ARI for expiring certs |
 
 ---
 

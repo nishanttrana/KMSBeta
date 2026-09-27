@@ -79,7 +79,7 @@ SET azure_tenant_id = $1,
     auth_mode = $10,
     status = $11,
     key_mappings = $12,
-    last_sync_at = CASE WHEN $13::TEXT = '' THEN last_sync_at ELSE $13 END
+    last_sync_at = COALESCE($13, last_sync_at)
 WHERE tenant_id = $14 AND id = $15
 `, cfg.AzureTenantID, cfg.SubscriptionID, cfg.ResourceGroup,
 		cfg.VaultName, cfg.VaultURL, cfg.ManagedHSMName, cfg.ManagedHSMURL,

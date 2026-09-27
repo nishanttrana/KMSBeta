@@ -791,7 +791,7 @@ func (h *Handler) handleApprovalVote(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := h.svc.Vote(r.Context(), input)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "vote_failed", err.Error(), reqID, input.TenantID)
+		h.refuseApproval(w, r, reqID, input.TenantID, http.StatusBadRequest, "vote_failed", "vote_refused", err.Error())
 		return
 	}
 	if strings.Contains(strings.ToLower(r.Header.Get("Content-Type")), "application/x-www-form-urlencoded") {

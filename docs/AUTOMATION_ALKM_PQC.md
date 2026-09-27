@@ -33,7 +33,7 @@ configure, observe, or extend the new controllers.
 | Stateful HBS tracker | `keycore` | XMSS/LMS key creation |
 | Composite signatures | `keycore` | `signing-pqc-hybrid` template |
 | PQC HSM attestation | `keycore` | recorded at key creation |
-| Migration planner | `keycore` | `POST /pqc/migration/plan` (when handler is wired) |
+| Migration planner | `pqc` | `POST /svc/pqc/pqc/migration/plans` |
 | Service heartbeats | every service | `pkg/heartbeat` publisher at boot |
 | Watchdog SLO probe | `watchdog` | subscribes to `health.*.heartbeat` |
 | Playbook engine | `watchdog` | fires per-service playbook on SLO breach |

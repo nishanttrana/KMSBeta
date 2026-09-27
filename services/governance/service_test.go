@@ -85,8 +85,13 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,
 			email TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'active'
 		);`,
+		`CREATE TABLE auth_group_role_bindings (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, role_name TEXT NOT NULL);`,
+		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL);`,
+		`CREATE TABLE auth_scim_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL);`,
+		`CREATE TABLE auth_scim_settings (tenant_id TEXT PRIMARY KEY, group_role_mappings_enabled INTEGER NOT NULL DEFAULT 1);`,
 		`CREATE TABLE approval_policies (
 			id TEXT PRIMARY KEY,
 			tenant_id TEXT NOT NULL,

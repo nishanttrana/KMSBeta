@@ -44,7 +44,7 @@ export const ClientSDKTab = ({ session, onToast }: any) => {
         <B c="blue">{String(provider?.status || "available")}</B>
       </div>
       <div style={{ fontSize: 11, color: C.dim, marginBottom: 8 }}>
-        Source for the JCA provider (services/jca-provider). Build with Maven and register com.vecta.kms.VectaKMSProvider.
+        Source for the JCA provider (services/jca-provider): Cipher VectaKeyWrap wraps and unwraps keys under a Vecta KMS key. Build with Maven, register com.vecta.kms.VectaKMSProvider, and run on an OpenJDK build.
         {provider?.size_label ? ` Download size ${provider.size_label}.` : ""}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>

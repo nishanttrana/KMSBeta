@@ -267,14 +267,14 @@ The password policy governs what constitutes an acceptable password when users s
 ```bash
 TOKEN="eyJhbGci..."
 
-curl -sk https://localhost/svc/auth/auth/policy/password?tenant_id=root \
+curl -sk https://localhost/svc/auth/auth/password-policy?tenant_id=root \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
 **Example: Update the password policy**
 
 ```bash
-curl -sk -X PUT https://localhost/svc/auth/auth/policy/password \
+curl -sk -X PUT https://localhost/svc/auth/auth/password-policy \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -307,7 +307,7 @@ The security policy controls account lockout behavior and idle session terminati
 **Example: Configure security policy**
 
 ```bash
-curl -sk -X PUT https://localhost/svc/auth/auth/policy/security \
+curl -sk -X PUT https://localhost/svc/auth/auth/security-policy \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -537,10 +537,10 @@ curl -sk -X POST "https://localhost/svc/auth/auth/users/${USER_ID}/reset-passwor
 
 **Incident response password reset flow:**
 
-1. Lock the account immediately: `PUT /users/{id}/status` → `{"status": "locked"}`
+1. Lock the account immediately: `PUT /svc/auth/auth/users/{id}/status` → `{"status": "locked"}`
 2. Investigate the audit log for the account's recent activity.
-3. When satisfied the account is safe, reset the password: `POST /users/{id}/reset-password`
-4. Restore account to active: `PUT /users/{id}/status` → `{"status": "active"}`
+3. When satisfied the account is safe, reset the password: `POST /svc/auth/auth/users/{id}/reset-password`
+4. Restore account to active: `PUT /svc/auth/auth/users/{id}/status` → `{"status": "active"}`
 5. Communicate the temporary password to the user securely.
 6. Confirm the user completes the forced password change on next login.
 
@@ -2001,7 +2001,7 @@ Use this checklist immediately after installation before onboarding any users or
 | FIPS mode blocks key creation | Requested algorithm is non-FIPS | Use AES-GCM-256, ECDSA P-384, or RSA-4096 |
 | Tenant delete readiness fails | Active sessions or service links | Revoke clients; terminate sessions; re-run readiness check |
 | Client API key stops working after rotation | Old key presented | Update application secret store with new key from rotate-key response |
-| IdP SSO login fails | Incorrect redirect URI or certificate mismatch | Test provider config via POST /identity/providers/{provider}/test |
+| IdP SSO login fails | Incorrect redirect URI or certificate mismatch | Test provider config via `POST /svc/auth/auth/identity/providers/{provider}/test` |
 | Alert badge not updating | Network connectivity to dashboard | Hard-refresh the browser; check REST interface health |
 | Audit log shows unexpected actions | Compromised account or client | Lock account; revoke client; investigate audit trail |
 

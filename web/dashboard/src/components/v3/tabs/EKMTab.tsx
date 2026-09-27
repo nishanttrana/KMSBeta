@@ -43,6 +43,7 @@ import {
   listGoogleCSEConfigs,
   createGoogleCSEConfig,
   deleteGoogleCSEConfig,
+  updateGoogleCSEConfig,
   listGoogleCSEKeys,
   createGoogleCSEKey,
   deleteGoogleCSEKey
@@ -54,6 +55,7 @@ import { KMIPTab } from "./KMIPTab";
 /* ── Setup guide per DB engine ──
    Vecta holds a TDE master key only through its KMIP server (mTLS, port 5696).
    Engines without a KMIP key manager have no Vecta integration and say so. */
+const splitList=(v:string)=>v.split(",").map(x=>x.trim()).filter(Boolean);
 const KMIP_PREREQ = "1. Register a KMIP client in the KMIP tab: it issues the client certificate and key. Trust the Vecta internal CA; connect to <kms-host>:5696.";
 const NOT_SUPPORTED_NOTE = "The EKM agent still reports this database's TDE state; register it with Deploy Agent to monitor it.";
 const SETUP_GUIDES: Record<string, { title: string; steps: string[] }> = {
@@ -195,7 +197,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const [googleCSELoading,setGoogleCSELoading]=useState(false);
   const [googleCSEConfigForm,setGoogleCSEConfigForm]=useState({
     google_workspace_customer_id:"", service_account_email:"", service_account_key_json:"",
-    allowed_domains:"", kacls_endpoint:""
+    allowed_domains:"", authentication_client_ids:"", kacls_endpoint:""
   });
   const [googleCSEKeyForm,setGoogleCSEKeyForm]=useState({ config_id:"", key_name:"", vecta_key_id:"", purpose:"drive" });
   const [googleCSEOpLoading,setGoogleCSEOpLoading]=useState("");
@@ -1123,8 +1125,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <FG label="Allowed Domains (comma-separated)"><Inp value={googleCSEConfigForm.allowed_domains} onChange={e=>setGoogleCSEConfigForm(p=>({...p,allowed_domains:e.target.value}))} placeholder="company.com, subsidiary.com"/></FG>
           <FG label="KACLS Endpoint URL"><Inp value={googleCSEConfigForm.kacls_endpoint} onChange={e=>setGoogleCSEConfigForm(p=>({...p,kacls_endpoint:e.target.value}))} placeholder="https://kacls.example.com/ekm/kacls"/></FG>
         </Row2>
+        <FG label="Authentication Client IDs (comma-separated)" hint="OAuth client ID(s) of the identity provider in your Workspace CSE settings. The authentication token's audience must be one of them."><Inp value={googleCSEConfigForm.authentication_client_ids} onChange={e=>setGoogleCSEConfigForm(p=>({...p,authentication_client_ids:e.target.value}))} placeholder="123456789-abc.apps.googleusercontent.com"/></FG>
         <FG label="Service Account Key JSON"><Inp value={googleCSEConfigForm.service_account_key_json} onChange={e=>setGoogleCSEConfigForm(p=>({...p,service_account_key_json:e.target.value}))} placeholder='{"type":"service_account",...}' style={{fontFamily:"monospace",fontSize:11}}/></FG>
-        <Btn disabled={googleCSELoading||!googleCSEConfigForm.google_workspace_customer_id} onClick={async()=>{
+        <Btn disabled={googleCSELoading||!googleCSEConfigForm.google_workspace_customer_id||!googleCSEConfigForm.authentication_client_ids.trim()} onClick={async()=>{
           setGoogleCSELoading(true);
           try{
             const domains=googleCSEConfigForm.allowed_domains.split(",").map(d=>d.trim()).filter(Boolean);
@@ -1133,10 +1136,11 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
               service_account_email:googleCSEConfigForm.service_account_email,
               service_account_key_json:googleCSEConfigForm.service_account_key_json,
               allowed_domains:domains,
+              authentication_client_ids:splitList(googleCSEConfigForm.authentication_client_ids),
               kacls_endpoint:googleCSEConfigForm.kacls_endpoint
             });
             onToast?.("Google CSE config created");
-            setGoogleCSEConfigForm({google_workspace_customer_id:"",service_account_email:"",service_account_key_json:"",allowed_domains:"",kacls_endpoint:""});
+            setGoogleCSEConfigForm({google_workspace_customer_id:"",service_account_email:"",service_account_key_json:"",allowed_domains:"",authentication_client_ids:"",kacls_endpoint:""});
             await refresh(true);
           }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setGoogleCSELoading(false);}
         }} style={{marginTop:8}}>{googleCSELoading?"Creating...":"Create Config"}</Btn>
@@ -1151,10 +1155,16 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
               <div>
                 <div style={{fontSize:12,fontWeight:600}}>{cfg.google_workspace_customer_id}</div>
                 <div style={{fontSize:10,color:C.textMuted}}>{cfg.service_account_email||"No service account"} &middot; {(cfg.allowed_domains||[]).join(", ")}</div>
+                <div style={{fontSize:10,color:(cfg.authentication_client_ids||[]).length?C.textMuted:C.red}}>Client IDs: {(cfg.authentication_client_ids||[]).join(", ")||"None: every authentication token is refused until set"}</div>
                 <div style={{fontSize:10,color:C.textMuted}}>KACLS: {cfg.kacls_endpoint||"Not configured"} &middot; Keys: {cfg.key_count||0} &middot; Status: <span style={{color:cfg.status==="active"?C.green||"#4ade80":C.red}}>{cfg.status}</span></div>
                 {cfg.last_activity_at&&(<div style={{fontSize:10,color:C.textMuted}}>Last activity: {formatAgo(cfg.last_activity_at)}</div>)}
               </div>
               <div style={{display:"flex",gap:4}}>
+                <Btn onClick={async()=>{
+                  const v=await promptDialog.prompt({title:"Authentication Client IDs",message:"OAuth client ID(s) of your CSE identity provider, comma-separated.",defaultValue:(cfg.authentication_client_ids||[]).join(", "),confirmLabel:"Save",validate:(x:string)=>splitList(x).length?"":"Enter at least one client ID."});
+                  if(v===null) return;
+                  try{await updateGoogleCSEConfig(session,cfg.id,{authentication_client_ids:splitList(v)});onToast?.("Client IDs saved");await refresh(true);}catch(e){onToast?.(`Save failed: ${errMsg(e)}`);}
+                }} style={{fontSize:10,padding:"3px 6px"}}>Client IDs</Btn>
                 <Btn onClick={async()=>{
                   if(!confirm("Delete this Google CSE config?")) return;
                   try{await deleteGoogleCSEConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}

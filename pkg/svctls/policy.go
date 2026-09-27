@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -248,7 +247,7 @@ func restartSelf(mode string) {
 		// Forced: no drain. The supervisor's restart policy brings it back.
 		os.Exit(75)
 	}
-	_ = syscall.Kill(os.Getpid(), syscall.SIGTERM)
+	stopGracefully()
 }
 
 func contains(list []string, v string) bool {

@@ -5,6 +5,71 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A JCA provider is proven only by a JCA consumer (jca-provider)
+- **What happened:** the Java provider registered AES-GCM, two signature
+  algorithms and a key store. None could work: it called ekm routes that do
+  not exist, its cipher dropped data passed to `update()`, its cache was
+  never filled, and it could not load on Oracle JDK at all ("JCE cannot
+  authenticate the provider"). The SDK download shipped a different,
+  hand-written Java client embedded in Go strings.
+- **Why it slipped through:** no test ever called `Cipher.getInstance` on it.
+  The code compiled and looked like a provider, and the SDK zip was built from
+  strings, so nothing tied it to the source in the repo.
+- **Rule:** a client SDK has a test that uses it the way a customer does,
+  through the platform API (`javax.crypto.Cipher`), against the real server
+  API. Ship the source by embedding it, never by retyping it. A `Cipher`
+  provider on Oracle JDK needs an Oracle-signed jar, so test on OpenJDK.
+
+### "Implements protocol X" needs the protocol's reference, not our guess (DKE)
+- **What happened:** the Microsoft DKE adapter returned a flat JWK with the
+  key ID as `kid` and decrypted at `/keys/{id}/decrypt` in base64url. Office
+  expects `{"key", "cache"}`, a `kid` URL it posts `/decrypt` to, standard
+  base64, and an anonymous public-key fetch. Adding Entra tokens alone would
+  still have left DKE unusable.
+- **Why it slipped through:** the tests checked our own idea of the format.
+  Nobody compared it with Microsoft's reference service or ran an Office
+  client.
+- **Rule:** for a vendor protocol, check the wire format against the vendor's
+  reference implementation or spec, and pin it in a test (field names, types,
+  encodings, URL shape).
+
+### SQLite accepts SQL that Postgres rejects on every call (ekm)
+- **What happened:** `last_activity_at = CASE WHEN $8::TEXT = '' THEN
+  last_activity_at ELSE $8 END` fails on Postgres (`CASE types text and
+  timestamp`), so updating a Google CSE or Azure EKM config never worked in
+  production. The CSE key count update swallowed the error (`_ =`).
+- **Why it slipped through:** the only tests ran on SQLite, which does not
+  type-check a CASE, and the caller ignored the error.
+- **Rule:** a new or changed SQL statement is run once against Postgres
+  (the migrations plus the statement) before it ships. Do not discard a
+  store error.
+
+### Docs drifted into describing services that do not exist
+- **What happened:** API_REFERENCE.md documented 151 endpoints no service
+  registers, including whole MPC, QKD, QRNG and AI services, some with full
+  request and response bodies. Other guides did the same.
+- **Why it slipped through:** nothing compared the docs with the routers, and
+  the prose read as authoritative.
+- **Rule:** `scripts/check-doc-routes.py` (in `make conformance`) fails on a
+  documented route that is not registered. When a feature is cut, cut its
+  docs in the same change.
+
+### "Last event" is not an assertion when work continues in the background (posture)
+- **What happened:** a test asserted `rec.Last()` was `leak_scan_started`, but
+  the scan runs in a goroutine and sometimes emitted `leak_scan_completed`
+  first, failing `make test-fips-modes` intermittently.
+- **Rule:** when anything runs asynchronously after the request, assert that
+  the event is among those recorded, not that it is the last one.
+
+### A stored policy field must be read where the decision is made (governance)
+- **What happened:** `approver_roles` was stored and shown for months, but
+  approvers came only from `approver_users`. The dashboard also dropped the
+  field on save, so the roles an API client set were silently wiped.
+- **Why it slipped through:** tests set the field but never gave a role to a
+  user who was not otherwise listed.
+- **Rule:** for every policy field, a test shows the field changes the
+  decision: a user allowed only by it gets in, and one without it is refused.
+
 ### Behind Envoy, the TLS peer is Envoy (hyok, EKM)
 - **What happened:** hyok and EKM read `r.TLS.PeerCertificates[0]` as the
   customer's client certificate. Every request arrives through Envoy over

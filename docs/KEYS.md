@@ -217,16 +217,6 @@ curl -X POST \
   "https://localhost/svc/keycore/keys/{KEY_ID}/deactivate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
-# Mark key as Compromised (triggers governance alert)
-curl -X POST \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reason": "Key material found in leaked repository",
-    "incident_id": "INC-2026-0042"
-  }'
-
 # Destroy a key
 curl -X POST \
   "https://localhost/svc/keycore/keys/{KEY_ID}/destroy?tenant_id=acme-corp" \
@@ -522,33 +512,18 @@ You may need to import key material into Vecta KMS when:
 
 ### 6.3 Wrapping the Key Before Import (Required)
 
-Key material **must be wrapped (encrypted) before sending** to the import API. This prevents exposure in transit (even though TLS is used — defense in depth).
+`POST /svc/keycore/keys/import` takes the key material in `material`
+(base64) with `import_method` `raw`, `pem`, `jwk`, `tr31` or `pkcs12`
+(`import_password` for PKCS#12), plus the usual create fields (`name`,
+`algorithm`, `purpose`, `labels`) and an optional `expected_kcv`.
 
-Import wrapping process:
+To keep the material encrypted end to end, wrap it first under a key that is
+already in Vecta KMS (for example by encrypting it with
+`POST /svc/keycore/keys/{wrap_key_id}/encrypt` from a trusted host) and send
+the ciphertext with `wrapping_key_id` and `material_iv`; keycore decrypts it
+inside the KMS.
 
 ```bash
-# Step 1: Get the import wrapping public key from Vecta KMS
-curl "https://localhost/svc/keycore/keys/import-wrapping-key?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Response:
-{
-  "wrapping_key_id": "wk_01J3XVQB5M9N4KPFGHWCZ8D",
-  "wrapping_algorithm": "RSA-OAEP-SHA256",
-  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhki...\n-----END PUBLIC KEY-----",
-  "expires_at": "2026-03-22T15:00:00Z"
-}
-
-# Step 2: Wrap your key material using the wrapping public key (offline)
-# Example using openssl:
-echo -n "your-32-byte-aes-key-hex" | xxd -r -p > /tmp/plainkey.bin
-openssl rsautl -encrypt -oaep \
-  -pubin -inkey /tmp/wrapping_public.pem \
-  -in /tmp/plainkey.bin \
-  -out /tmp/wrapped_key.bin
-WRAPPED_KEY_B64=$(base64 -w0 /tmp/wrapped_key.bin)
-
-# Step 3: Submit the import request
 curl -X POST "https://localhost/svc/keycore/keys/import?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -556,10 +531,10 @@ curl -X POST "https://localhost/svc/keycore/keys/import?tenant_id=acme-corp" \
     \"name\": \"imported-legacy-dek\",
     \"algorithm\": \"AES-256\",
     \"purpose\": \"encrypt\",
-    \"import_format\": \"raw\",
-    \"wrapped_key_material_b64\": \"$WRAPPED_KEY_B64\",
-    \"wrapping_key_id\": \"wk_01J3XVQB5M9N4KPFGHWCZ8D\",
-    \"wrapping_algorithm\": \"RSA-OAEP-SHA256\",
+    \"import_method\": \"raw\",
+    \"material\": \"$WRAPPED_KEY_B64\",
+    \"wrapping_key_id\": \"$WRAP_KEY_ID\",
+    \"material_iv\": \"$WRAP_IV_B64\",
     \"labels\": {\"source\": \"legacy-app\", \"env\": \"production\"}
   }"
 ```
@@ -1077,7 +1052,7 @@ Vecta KMS provides a hash computation API backed by its HSM or software crypto l
 ```bash
 # SHA-256
 curl -X POST \
-  "https://localhost/svc/keycore/hash?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/crypto/hash?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1115,7 +1090,7 @@ Vecta KMS provides cryptographically strong random byte generation from multiple
 
 ```bash
 curl -X POST \
-  "https://localhost/svc/keycore/random?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/crypto/random?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1271,18 +1246,6 @@ Grant:
 ### 9.3 Adding Grants — Via API
 
 ```bash
-# Add a grant
-curl -X POST \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subject": "svc-analytics",
-    "subject_type": "user",
-    "operations": ["encrypt"],
-    "expires_at": "2027-01-01T00:00:00Z",
-    "justification": "Read-only analytics pipeline — encrypt only for field masking"
-  }'
 
 # Response:
 {
@@ -1293,18 +1256,6 @@ curl -X POST \
   "created_at": "2026-03-22T14:00:00Z",
   "created_by": "admin"
 }
-```
-
-```bash
-# List grants on a key
-curl \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Delete a grant
-curl -X DELETE \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants/{GRANT_ID}?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 9.4 Deny-by-Default
@@ -1359,18 +1310,6 @@ curl -X PATCH \
 
 Interface policies restrict which **network interface or protocol** a principal can use to access a key. This prevents, for example, a KMIP client from accessing a key that should only be reachable via REST.
 
-```bash
-curl -X POST \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/interface-policies?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "interface": "kmip",
-    "allowed_subjects": ["kmip-client-storage-array-1", "kmip-client-backup-system"],
-    "denied_subjects": []
-  }'
-```
-
 **Supported interfaces:**
 
 | Interface | Description |
@@ -1390,17 +1329,6 @@ curl -X POST \
 Tags are **simple string labels** for grouping and filtering keys. Max 50 per key, max 63 characters each.
 
 ```bash
-# Add tags to a key
-curl -X POST \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/tags?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"tags": ["pci-scope", "critical", "hsm-backed", "quarterly-rotation"]}'
-
-# Remove a tag
-curl -X DELETE \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/tags/pci-scope?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN"
 
 # Filter keys by tag
 curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&tag=pci-scope" \
@@ -1412,21 +1340,6 @@ curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&tag=pci-scope" \
 Labels are **key-value metadata** for rich filtering, automation, and policy integration. Max 100 per key. Keys: lowercase alphanumeric + hyphens, max 63 chars. Values: max 255 chars.
 
 ```bash
-# Update labels (merge, not replace)
-curl -X PATCH \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/labels?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "labels": {
-      "env": "production",
-      "team": "platform",
-      "data-class": "restricted",
-      "rotation-schedule": "quarterly",
-      "app": "api-gateway",
-      "cost-center": "eng-security"
-    }
-  }'
 
 # Filter keys by label
 curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&label=env%3Dproduction&label=team%3Dplatform" \
@@ -1674,15 +1587,9 @@ Key names appear in audit logs, reports, and dashboards visible to admins. A key
 If you suspect a key has been compromised:
 
 ```bash
-# Step 1: Immediately mark as Compromised (blocks new encrypt/sign operations)
-curl -X POST \
-  "https://localhost/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "Key material found in leaked repo", "incident_id": "INC-2026-0042"}'
 
 # Step 2: Identify all data encrypted under this key
-curl "https://localhost/svc/audit/events?tenant_id=acme-corp&key_id={KEY_ID}&event_type=key.encrypt" \
+curl "https://localhost/svc/audit/audit/events?tenant_id=acme-corp&key_id={KEY_ID}&event_type=key.encrypt" \
   -H "Authorization: Bearer $TOKEN"
 
 # Step 3: Generate a new replacement key
@@ -1734,7 +1641,7 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=payments-tenant" \
 
 # Step 2: Application creates a random DEK for each payment record (or per customer)
 # DEK generated by application (or via Vecta random bytes)
-curl -X POST "https://localhost/svc/keycore/random?tenant_id=payments-tenant" \
+curl -X POST "https://localhost/svc/keycore/crypto/random?tenant_id=payments-tenant" \
   -H "Authorization: Bearer $APP_TOKEN" \
   -d '{"length": 32}' | jq -r '.random_b64'
 # → DEK_MATERIAL_B64 (32 bytes AES-256 key)
@@ -1820,20 +1727,6 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=payment-prod" \
     "tags": ["pci-scope", "lmk"]
   }'
 
-# Step 2: Import PEK from HSM ceremony (wrapped under LMK)
-curl -X POST "https://localhost/svc/payment/key-blocks?tenant_id=payment-prod" \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "block_format": "TR-31",
-    "key_usage": "P0",
-    "algorithm": "AES-256",
-    "mode_of_use": "E",
-    "key_version_number": "00",
-    "exportability": "S",
-    "kbpk_id": "key_LMK_01J...",
-    "key_material_b64": "<wrapped-pek-from-ceremony>"
-  }'
 ```
 
 ---
@@ -1866,14 +1759,6 @@ curl -X POST "https://localhost/svc/keycore/keys?tenant_id=pki" \
   }'
 # Returns: public_key_pem for use in CSR
 
-# Step 2: Pass public_key_pem to certs service to create CSR
-curl -X POST "https://localhost/svc/certs/signing-requests?tenant_id=pki" \
-  -H "Authorization: Bearer $PKI_ADMIN_TOKEN" \
-  -d '{
-    "key_id": "key_CA_01J...",
-    "subject": "CN=Vecta Intermediate CA 2026,O=Acme Corp,C=US",
-    "key_usages": ["cert_sign", "crl_sign"]
-  }'
 ```
 
 ---
@@ -2012,10 +1897,6 @@ curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/sign?tenant_id=pl
   -d "{\"data_b64\": \"$IMAGE_DIGEST_B64\", \"algorithm\": \"Ed25519\", \"prehashed\": true}"
 # → signature_b64
 
-# Step 3: Submit to signing service / transparency log
-curl -X POST "https://localhost/svc/signing/entries?tenant_id=platform" \
-  -H "Authorization: Bearer $CICD_TOKEN" \
-  -d "{
     \"artifact_digest_b64\": \"$IMAGE_DIGEST_B64\",
     \"signature_b64\": \"$SIGNATURE_B64\",
     \"key_id\": \"$SIGN_KEY_ID\",
@@ -2104,33 +1985,21 @@ See Section 5.3 for full field reference. Returns HTTP 201 on success.
 #### Update Key (Metadata Only)
 
 ```
-PATCH /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
+PUT /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
 ```
 
-Updatable fields: `name`, `labels`, `tags`, `ops_limit`, `ops_limit_window`, `ops_total`, `export_allowed`, `expires_at`, `destroy_date`.
-
-```bash
-curl -X PATCH "https://localhost/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "labels": {"env": "production", "rotated-on": "2026-03-22"},
-    "ops_limit": 500000
-  }'
-```
-
-#### Delete Key (Soft Delete — moves to Destroyed)
-
-```
-DELETE /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
-```
+Updatable fields: `name`, `purpose`, `owner`, `cloud`, `region`, `compliance`, `tags`, `labels`, `iv_mode`. Usage limits have their own route (`PUT /svc/keycore/keys/{key_id}/usage/limit`).
 
 ```bash
-curl -X DELETE "https://localhost/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
+curl -X PUT "https://localhost/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"confirm_name": "my-key-name"}'
+  -d '{"labels": {"env": "production", "rotated-on": "2026-03-22"}}'
 ```
+
+#### Delete Key
+
+There is no `DELETE` on a key: destroy it with `POST /svc/keycore/keys/{key_id}/destroy` (Section 16.2).
 
 ### 16.2 Lifecycle Endpoints
 
@@ -2141,16 +2010,8 @@ POST /svc/keycore/keys/{key_id}/activate?tenant_id={tenant_id}
 # Deactivate
 POST /svc/keycore/keys/{key_id}/deactivate?tenant_id={tenant_id}
 
-# Suspend
-POST /svc/keycore/keys/{key_id}/suspend?tenant_id={tenant_id}
-Body: {"reason": "string"}
-
-# Reinstate (Suspended → Active)
-POST /svc/keycore/keys/{key_id}/reinstate?tenant_id={tenant_id}
-
-# Compromise
-POST /svc/keycore/keys/{key_id}/compromise?tenant_id={tenant_id}
-Body: {"reason": "string", "incident_id": "string (optional)"}
+# Disable
+POST /svc/keycore/keys/{key_id}/disable?tenant_id={tenant_id}
 
 # Destroy
 POST /svc/keycore/keys/{key_id}/destroy?tenant_id={tenant_id}
@@ -2201,23 +2062,20 @@ POST /svc/keycore/keys/{key_id}/kem/decapsulate?tenant_id={tenant_id}
 Body: {"encapsulated_key_b64": "...", "algorithm": "ML-KEM-768"}
 
 # Hash
-POST /svc/keycore/hash?tenant_id={tenant_id}
-Body: {"data_b64": "...", "algorithm": "SHA-256|SHA-384|SHA-512|SHA3-256|SHA3-384|SHA3-512|BLAKE2b-256|BLAKE2b-512"}
+POST /svc/keycore/crypto/hash?tenant_id={tenant_id}
+Body: {"input": "<base64>", "algorithm": "SHA-256"}
 
 # Random Bytes
-POST /svc/keycore/random?tenant_id={tenant_id}
-Body: {"length": 32, "source": "software|hsm|qrng"}
+POST /svc/keycore/crypto/random?tenant_id={tenant_id}
+Body: {"length": 32, "source": "kms-csprng|hsm-trng"}
 
 # Export
 POST /svc/keycore/keys/{key_id}/export?tenant_id={tenant_id}
 Body: {"format": "raw|pkcs8|spki|jwk", "wrapping_key_id": "...(opt)", "wrap_algorithm": "...(opt)"}
 
-# Import (get wrapping key)
-GET /svc/keycore/keys/import-wrapping-key?tenant_id={tenant_id}
-
 # Import (submit)
 POST /svc/keycore/keys/import?tenant_id={tenant_id}
-Body: {"name": "...", "algorithm": "...", "purpose": "...", "import_format": "raw|pkcs8|spki|jwk", "wrapped_key_material_b64": "...", "wrapping_key_id": "...", "wrapping_algorithm": "..."}
+Body: {"name": "...", "algorithm": "...", "purpose": "...", "import_method": "raw|pem|jwk|tr31|pkcs12", "material": "<base64>", "wrapping_key_id": "...(opt)", "material_iv": "...(with wrapping_key_id)"}
 ```
 
 ### 16.4 Key Version Endpoints
@@ -2229,87 +2087,34 @@ GET /svc/keycore/keys/{key_id}/versions?tenant_id={tenant_id}
 # Get specific version metadata
 GET /svc/keycore/keys/{key_id}/versions/{version}?tenant_id={tenant_id}
 
-# Destroy a specific old version
-POST /svc/keycore/keys/{key_id}/versions/{version}/destroy?tenant_id={tenant_id}
-Body: {"reason": "string"}
+# Delete a specific old version
+DELETE /svc/keycore/keys/{key_id}/versions/{version}?tenant_id={tenant_id}
 ```
 
 ### 16.5 Access Policy Endpoints
 
 ```bash
-# Get access policy
+# Get the key's access policy (its grants)
 GET /svc/keycore/keys/{key_id}/access-policy?tenant_id={tenant_id}
-
-# Update access policy settings
-PATCH /svc/keycore/keys/{key_id}/access-policy?tenant_id={tenant_id}
-Body: {"deny_by_default": bool, "require_approval_for_policy_change": bool, ...}
-
-# List grants
-GET /svc/keycore/keys/{key_id}/access-policy/grants?tenant_id={tenant_id}
-
-# Add grant
-POST /svc/keycore/keys/{key_id}/access-policy/grants?tenant_id={tenant_id}
-Body: {"subject": "...", "subject_type": "user|group", "operations": [...], "expires_at": "...", "not_before": "...", "justification": "...", "ticket_id": "..."}
-
-# Update grant
-PATCH /svc/keycore/keys/{key_id}/access-policy/grants/{grant_id}?tenant_id={tenant_id}
-Body: {"operations": [...], "expires_at": "...", "justification": "..."}
-
-# Delete grant
-DELETE /svc/keycore/keys/{key_id}/access-policy/grants/{grant_id}?tenant_id={tenant_id}
-
-# List interface policies
-GET /svc/keycore/keys/{key_id}/access-policy/interface-policies?tenant_id={tenant_id}
-
-# Set interface policy
-POST /svc/keycore/keys/{key_id}/access-policy/interface-policies?tenant_id={tenant_id}
-Body: {"interface": "rest|kmip|hyok|payment|ekm", "allowed_subjects": [...], "denied_subjects": [...]}
-
-# Delete interface policy
-DELETE /svc/keycore/keys/{key_id}/access-policy/interface-policies/{interface}?tenant_id={tenant_id}
+# Replace the key's grants
+PUT /svc/keycore/keys/{key_id}/access-policy?tenant_id={tenant_id}
+Body: {"grants": [ ... ]}
 ```
 
-### 16.6 Tag Management Endpoints
+Access groups and interface policies are tenant-wide:
+`/svc/keycore/access/groups` and `/svc/keycore/access/interface-policies`.
 
-```bash
-# Get tags
-GET /svc/keycore/keys/{key_id}/tags?tenant_id={tenant_id}
+### 16.6 Tags and Labels
 
-# Add tags
-POST /svc/keycore/keys/{key_id}/tags?tenant_id={tenant_id}
-Body: {"tags": ["tag1", "tag2"]}
+A key's `tags` and `labels` are set with `PUT /svc/keycore/keys/{key_id}`
+(Section 16.1). The tenant's tag catalogue is `GET/POST /svc/keycore/tags`
+and `DELETE /svc/keycore/tags/{name}`.
 
-# Remove a tag
-DELETE /svc/keycore/keys/{key_id}/tags/{tag}?tenant_id={tenant_id}
-
-# Replace all tags
-PUT /svc/keycore/keys/{key_id}/tags?tenant_id={tenant_id}
-Body: {"tags": ["tag1", "tag2", "tag3"]}
-```
-
-### 16.7 Label Management Endpoints
-
-```bash
-# Get labels
-GET /svc/keycore/keys/{key_id}/labels?tenant_id={tenant_id}
-
-# Merge labels (add/update without removing existing)
-PATCH /svc/keycore/keys/{key_id}/labels?tenant_id={tenant_id}
-Body: {"labels": {"key": "value"}}
-
-# Replace all labels
-PUT /svc/keycore/keys/{key_id}/labels?tenant_id={tenant_id}
-Body: {"labels": {"key": "value"}}
-
-# Delete a label
-DELETE /svc/keycore/keys/{key_id}/labels/{label_key}?tenant_id={tenant_id}
-```
-
-### 16.8 Audit Endpoint for Keys
+### 16.7 Audit Endpoint for Keys
 
 ```bash
 # Get audit events for a specific key
-GET /svc/audit/events?tenant_id={tenant_id}&key_id={key_id}
+GET /svc/audit/audit/events?tenant_id={tenant_id}&key_id={key_id}
 
 Query parameters:
   event_type: key.encrypt|key.decrypt|key.sign|key.verify|key.rotate|key.activate|key.deactivate|key.compromise|key.destroy|key.policy_change

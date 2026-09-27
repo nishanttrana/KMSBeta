@@ -1617,13 +1617,11 @@ const SectionApiEkmSdk = () => (
     <div style={S.h1}>API: Java SDK (JCA provider)</div>
     <P>Vecta ships one client SDK: the Java JCA provider, as source (services/jca-provider). There is no PKCS#11 module; reach keys through the REST API, the KMIP server (port 5696, mTLS) or this provider.</P>
 
-    <H3>Registered Services</H3>
-    <P>Cipher: AES/GCM/NoPadding — local cache if the key is exportable, else in the KMS</P>
-    <P>Signature: SHA256withRSA, SHA256withECDSA — in the KMS</P>
-    <P>KeyStore: VectaKMS — enumerate and load keys from the KMS</P>
+    <H3>Registered Service</H3>
+    <P>Cipher: VectaKeyWrap — WRAP_MODE / UNWRAP_MODE only. Wraps and unwraps a key under a Vecta KMS TDE key through the ekm API; the Vecta key never leaves the KMS. There is no local cipher, signature or key store.</P>
 
     <H3>Setup</H3>
-    <P>Build with mvn package, then Security.addProvider(new com.vecta.kms.VectaKMSProvider()) or add it to java.security.</P>
+    <P>Build with mvn package, then Security.addProvider(new com.vecta.kms.VectaKMSProvider()) and Cipher.getInstance("VectaKeyWrap", "VectaKMS") with a new VectaKMSKey(keyId). Keep cipher.getIV() with the wrapped key and pass it back as an IvParameterSpec to unwrap. Runs on OpenJDK builds; Oracle JDK needs an Oracle-signed JCE jar.</P>
 
     <Collapse title="SDK Endpoints" defaultOpen>
       <EndpointTable rows={[
@@ -1633,10 +1631,7 @@ const SectionApiEkmSdk = () => (
     </Collapse>
 
     <H2>Authentication</H2>
-    <P>Configure via environment variables: VECTA_BASE_URL, VECTA_TENANT_ID, VECTA_AUTH_TOKEN, VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA, VECTA_API_KEY, VECTA_JWT_ENDPOINT.</P>
-
-    <H2>Key Caching</H2>
-    <P>Set VECTA_KEY_CACHE_TTL (seconds) to cache exportable keys in process memory; non-exportable keys always go to the KMS. 0 disables caching.</P>
+    <P>Configure via environment variables: VECTA_BASE_URL (https only, e.g. https://kms.example.com/svc/ekm), VECTA_TENANT_ID, VECTA_AUTH_TOKEN (a Vecta access token, sent only in the Authorization header) and optionally VECTA_CA_CERT (PEM of the CA that issued the edge certificate). TLS 1.3 only.</P>
   </div>
 );
 
@@ -2403,7 +2398,7 @@ const SectionUIDataprotect = () => (
     <H3>Payment Policy</H3>
     <P>Configure the KMS-wide payment guardrails for REST and payment interfaces. This policy is split into <IC>Traditional Payment</IC> for TR-31, KBPK, PIN, CVV, MAC, Payment TCP, rotation, and runtime handling, and <IC>Modern Payment</IC> for ISO 20022 and AP2 trust configuration.</P>
     <H3>PKCS#11 / JCA</H3>
-    <P>View SDK provider registrations and client telemetry. Monitor PKCS#11 and JCA provider usage, connection health, and operation statistics.</P>
+    <P>Download the Java JCA provider source (Cipher VectaKeyWrap: key wrapping under a Vecta KMS key). Vecta ships no PKCS#11 module and reports no SDK usage telemetry.</P>
   </div>
 );
 

@@ -84,6 +84,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
   const [policyRequired, setPolicyRequired] = useState("2");
   const [policyTotal, setPolicyTotal] = useState("3");
   const [policyApprovers, setPolicyApprovers] = useState("");
+  const [policyRoles, setPolicyRoles] = useState("");
   const [policyTimeout, setPolicyTimeout] = useState("48");
   const [policyChannels, setPolicyChannels] = useState<string[]>(["dashboard"]);
   const [policySaving, setPolicySaving] = useState(false);
@@ -216,6 +217,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
         required_approvals: Number(policyRequired) || 2,
         total_approvers: Number(policyTotal) || 3,
         approver_users: policyApprovers.split(",").map((s) => s.trim()).filter(Boolean),
+        approver_roles: policyRoles.split(",").map((s) => s.trim()).filter(Boolean),
         timeout_hours: Number(policyTimeout) || 48,
         notification_channels: policyChannels,
         status: "active",
@@ -243,6 +245,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
     setPolicyRequired(String(p?.required_approvals || 2));
     setPolicyTotal(String(p?.total_approvers || 3));
     setPolicyApprovers((p?.approver_users || []).join(", "));
+    setPolicyRoles((p?.approver_roles || []).join(", "));
     setPolicyTimeout(String(p?.timeout_hours || 48));
     setPolicyChannels(p?.notification_channels || ["dashboard"]);
     setPolicyModal(true);
@@ -524,6 +527,9 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       </Row2>
       <FG label="Approver Emails" hint="Comma-separated email addresses">
         <Inp value={policyApprovers} onChange={(e) => setPolicyApprovers(e.target.value)} placeholder="alice@corp.com, bob@corp.com, carol@corp.com" />
+      </FG>
+      <FG label="Approver Roles" hint="Comma-separated roles. Every active user holding one, directly or through a group, becomes an approver when a request opens; the requester never votes on their own request.">
+        <Inp value={policyRoles} onChange={(e) => setPolicyRoles(e.target.value)} placeholder="security-officer, admin" />
       </FG>
       <FG label="Notification Channels">
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>

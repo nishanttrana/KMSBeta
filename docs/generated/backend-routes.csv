@@ -503,7 +503,7 @@ governance,POST,/governance/approve/{id},/governance/approve/{param},h.handleApp
 governance,POST,/governance/key-approval,/governance/key-approval,h.handleCreateKeyApproval,mux,,,,services/governance/handler.go,89,governance|POST|/governance/key-approval
 governance,GET,/governance/key-approval/{id}/status,/governance/key-approval/{param}/status,h.handleGetKeyApprovalStatus,mux,,,,services/governance/handler.go,90,governance|GET|/governance/key-approval/{param}/status
 hyok,GET,/api/v1/keys/{id},/api/v1/keys/{param},h.handleMicrosoftDKEGetKey,mux,,,,services/hyok/handler.go,35,hyok|GET|/api/v1/keys/{param}
-hyok,POST,/api/v1/keys/{id}/decrypt,/api/v1/keys/{param}/decrypt,h.handleMicrosoftDKEDecrypt,mux,,,,services/hyok/handler.go,36,hyok|POST|/api/v1/keys/{param}/decrypt
+hyok,POST,/api/v1/keys/{id}/{version}/decrypt,/api/v1/keys/{param}/{param}/decrypt,h.handleMicrosoftDKEDecrypt,mux,,,,services/hyok/handler.go,36,hyok|POST|/api/v1/keys/{param}/{param}/decrypt
 hyok,POST,/hyok/dke/v1/keys/{id}/decrypt,/hyok/dke/v1/keys/{param}/decrypt,h.handleDKEDecrypt,mux,,,,services/hyok/handler.go,37,hyok|POST|/hyok/dke/v1/keys/{param}/decrypt
 hyok,GET,/hyok/dke/v1/keys/{id}/publickey,/hyok/dke/v1/keys/{param}/publickey,h.handleDKEPublicKey,mux,,,,services/hyok/handler.go,38,hyok|GET|/hyok/dke/v1/keys/{param}/publickey
 hyok,POST,/hyok/salesforce/v1/keys/{id}/wrap,/hyok/salesforce/v1/keys/{param}/wrap,h.handleSalesforceWrap,mux,,,,services/hyok/handler.go,39,hyok|POST|/hyok/salesforce/v1/keys/{param}/wrap

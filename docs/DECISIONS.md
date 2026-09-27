@@ -7,6 +7,48 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Closing the 1.27 open items (1.28.0-beta)
+
+**Microsoft DKE.** Entra ID tokens are verified with `pkg/oidc` against the
+Entra tenant's key set, which is derived from the issuer's tenant ID on
+`login.microsoftonline.com` (never from a URL in the token). The issuer has to
+be listed in the endpoint's `valid_issuers`, and audience and authorized users
+are required, not optional. An Entra token without them would admit anyone
+the tenant can mint a token for. The Vecta tenant is found from the
+endpoint that trusts the issuer, because Office calls the key URL as
+configured in the label and sends no Vecta tenant. Several tenants
+trusting one issuer is refused, not guessed. The wire format follows
+Microsoft's reference service. The public key is anonymous only on the
+configured DKE host. *Rejected:* discovering keys through the token's `iss`
+URL (an unverified value would choose the key server); decrypting a
+non-current version with the current key (a wrong key, not a real
+decrypt).
+
+**Google CSE authentication audience.** Explicit
+`authentication_client_ids` per config; existing configs fail closed until
+set. *Rejected:* accepting any Google ID token for the domain, which is
+what the missing check allowed.
+
+**Governance approver roles.** Roles are expanded to users when the request
+opens and stored as its approvers (tokens), consistent with "approvers are
+fixed by the request". *Rejected:* checking the voter's role at vote time,
+because email-link votes carry no token claims and a later role change would
+shift a running quorum.
+
+**JCA provider.** Offer only what the KMS API does: key wrapping under a TDE
+key (`Cipher.VectaKeyWrap`). *Rejected:* keeping AES-GCM, Signature and
+KeyStore by adding server routes to match. They were never real, and a
+remote `AES/GCM/NoPadding` that cannot honour caller IVs is a mislabel. The
+SDK zip embeds the source (`go:embed`) so it cannot drift. The provider runs
+on OpenJDK; Oracle JDK needs an Oracle JCE signing certificate.
+
+**Docs.** A route-existence check in conformance instead of hand review:
+`scripts/check-doc-routes.py` reads the routers and Envoy prefixes. A plain
+word matches a route parameter only when no sibling route has a literal
+there. Invented sections are removed, not marked.
+
+---
+
 ## 2026-09-27 — Second fake sweep: identity only from verified credentials; remove what cannot load
 
 **Context.** The second sweep (1.27.0-beta) found services that took identity

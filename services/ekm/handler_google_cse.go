@@ -77,6 +77,11 @@ func (h *Handler) handleCreateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "allowed_domains is required (at least one domain)"), reqID, tenantID)
 		return
 	}
+	req.AuthenticationClientIDs = cleanStrings(req.AuthenticationClientIDs)
+	if len(req.AuthenticationClientIDs) == 0 {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "authentication_client_ids is required (the OAuth client ID of your CSE identity provider)"), reqID, tenantID)
+		return
+	}
 
 	cfg := GoogleCSEConfig{
 		ID:                        newID("gcse"),
@@ -85,6 +90,7 @@ func (h *Handler) handleCreateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 		ServiceAccountEmail:       strings.TrimSpace(req.ServiceAccountEmail),
 		ServiceAccountKeyJSON:     strings.TrimSpace(req.ServiceAccountKeyJSON),
 		AllowedDomains:            req.AllowedDomains,
+		AuthenticationClientIDs:   req.AuthenticationClientIDs,
 		KACLSEndpoint:             strings.TrimSpace(req.KACLSEndpoint),
 		Status:                    "active",
 		KeyCount:                  0,
@@ -163,6 +169,9 @@ func (h *Handler) handleUpdateGoogleCSEConfig(w http.ResponseWriter, r *http.Req
 	if len(req.AllowedDomains) > 0 {
 		existing.AllowedDomains = req.AllowedDomains
 	}
+	if ids := cleanStrings(req.AuthenticationClientIDs); len(ids) > 0 {
+		existing.AuthenticationClientIDs = ids
+	}
 	existing.KACLSEndpoint = coalesceStr(strings.TrimSpace(req.KACLSEndpoint), existing.KACLSEndpoint)
 
 	if err := h.svc.store.UpdateGoogleCSEConfig(r.Context(), existing); err != nil {
@@ -233,10 +242,12 @@ func (h *Handler) handleCreateGoogleCSEKey(w http.ResponseWriter, r *http.Reques
 
 	keyID := newID("gkey")
 
-	// Build the Google Key URI that Google will use to reference this key
+	// The key URI Google calls is under this deployment's own KACLS
+	// endpoint; there is no placeholder host to fall back to.
 	kaclsEndpoint := strings.TrimRight(cfg.KACLSEndpoint, "/")
 	if kaclsEndpoint == "" {
-		kaclsEndpoint = "https://kacls.vecta-kms.example.com/ekm/kacls"
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "the CSE config has no kacls_endpoint; set the public URL Google calls first"), reqID, tenantID)
+		return
 	}
 	googleKeyURI := fmt.Sprintf("%s/keys/%s", kaclsEndpoint, keyID)
 
@@ -511,7 +522,7 @@ func (h *Handler) resolveKACLSContext(r *http.Request, authenticationToken, auth
 
 	for _, cfg := range configs {
 		// Validate authentication JWT against this config's allowed domains
-		authnClaims, validateErr := googleCSEProvider.ValidateGoogleJWT(authenticationToken, cfg.AllowedDomains)
+		authnClaims, validateErr := googleCSEProvider.ValidateGoogleJWT(authenticationToken, cfg.AllowedDomains, cfg.AuthenticationClientIDs)
 		if validateErr != nil {
 			continue
 		}
@@ -553,7 +564,7 @@ func (h *Handler) resolveKACLSContextPrivileged(r *http.Request, authenticationT
 	}
 
 	for _, cfg := range configs {
-		authnClaims, validateErr := googleCSEProvider.ValidateGoogleJWT(authenticationToken, cfg.AllowedDomains)
+		authnClaims, validateErr := googleCSEProvider.ValidateGoogleJWT(authenticationToken, cfg.AllowedDomains, cfg.AuthenticationClientIDs)
 		if validateErr != nil {
 			continue
 		}

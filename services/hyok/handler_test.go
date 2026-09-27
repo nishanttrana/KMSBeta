@@ -110,24 +110,38 @@ func TestHandlerMicrosoftDKEAdapterFlow(t *testing.T) {
 	if getRR.Code != http.StatusOK {
 		t.Fatalf("get key status=%d body=%s", getRR.Code, getRR.Body.String())
 	}
-	if !strings.Contains(getRR.Body.String(), "\"kty\":\"RSA\"") || !strings.Contains(getRR.Body.String(), "\"n\"") {
+	var keyDoc struct {
+		Key   struct{ Kty, N, Kid string }
+		Cache struct{ Exp string }
+	}
+	if err := json.Unmarshal(getRR.Body.Bytes(), &keyDoc); err != nil || keyDoc.Key.Kty != "RSA" || keyDoc.Key.N == "" || keyDoc.Cache.Exp == "" {
 		t.Fatalf("unexpected key response body=%s", getRR.Body.String())
+	}
+	// Office posts to kid + "/decrypt"; Envoy's /svc/hyok prefix is kept in
+	// the kid so the call comes back through the edge.
+	envoyReq := httptest.NewRequest(http.MethodGet, "/api/v1/keys/rsa-1?tenant_id=tenant-ms", nil)
+	envoyReq.Host = "kms.test"
+	envoyReq.Header.Set("X-Envoy-Original-Path", "/svc/hyok/api/v1/keys/rsa-1?tenant_id=tenant-ms")
+	if got := dkeKeyURL(envoyReq); got != "https://kms.test/svc/hyok/api/v1/keys/rsa-1" {
+		t.Fatalf("key URL %q", got)
+	}
+	if !strings.HasSuffix(keyDoc.Key.Kid, "/api/v1/keys/rsa-1/1") {
+		t.Fatalf("kid %q is not the key URL plus version", keyDoc.Key.Kid)
 	}
 
 	ciphertextRaw := []byte("wrap:aGVsbG8=")
 	decryptBody, _ := json.Marshal(map[string]string{
 		"alg":   "RSA-OAEP-256",
-		"kid":   "rsa-1",
-		"value": base64.RawURLEncoding.EncodeToString(ciphertextRaw),
+		"value": base64.StdEncoding.EncodeToString(ciphertextRaw),
 	})
-	decReq := httptest.NewRequest(http.MethodPost, "/api/v1/keys/rsa-1/decrypt?tenant_id=tenant-ms", bytes.NewReader(decryptBody))
+	decReq := httptest.NewRequest(http.MethodPost, "/api/v1/keys/rsa-1/1/decrypt?tenant_id=tenant-ms", bytes.NewReader(decryptBody))
 	decReq.Header.Set("Authorization", "Bearer jwt:tenant-ms:operator")
 	decRR := httptest.NewRecorder()
 	h.ServeHTTP(decRR, decReq)
 	if decRR.Code != http.StatusOK {
 		t.Fatalf("decrypt status=%d body=%s", decRR.Code, decRR.Body.String())
 	}
-	if !strings.Contains(decRR.Body.String(), "\"value\":\"aGVsbG8\"") {
+	if !strings.Contains(decRR.Body.String(), "\"value\":\"aGVsbG8=\"") {
 		t.Fatalf("unexpected decrypt response body=%s", decRR.Body.String())
 	}
 }

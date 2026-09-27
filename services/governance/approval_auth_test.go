@@ -155,3 +155,86 @@ func TestApprovalPageNeedsAValidToken(t *testing.T) {
 	}
 	lastRefusal(t, pub, "audit.governance.link_refused")
 }
+
+// A policy's approver roles decide who may vote: every active user of the
+// tenant holding the role, directly or through a group binding, becomes an
+// approver when the request opens. Anyone else (and the requester, even when
+// they hold the role) is refused, and the refusal is audited.
+func TestApproverRolesDecideWhoMayVote(t *testing.T) {
+	h, svc, pub, _ := approvalHarness(t)
+	db := store(svc).db.SQL()
+	for _, q := range []string{
+		`UPDATE auth_users SET role='security-officer' WHERE id IN ('u-alice','u-bob')`,
+		`UPDATE auth_users SET role='operator' WHERE id='u-carol'`,
+		`INSERT INTO auth_users (id, tenant_id, email, role, status) VALUES ('u-gone','t1','gone@t1.test','security-officer','disabled')`,
+		`INSERT INTO auth_users (id, tenant_id, email, role) VALUES ('u-t2','t2','t2@t2.test','security-officer')`,
+		`INSERT INTO auth_group_role_bindings (tenant_id, group_id, role_name) VALUES ('t1','g-sec','Security-Officer')`,
+		`INSERT INTO key_access_group_members (tenant_id, group_id, user_id) VALUES ('t1','g-sec','u-admin')`,
+	} {
+		if _, err := db.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p, err := svc.CreatePolicy(context.Background(), ApprovalPolicy{
+		TenantID: "t1", Name: "role-approval", Scope: "key_operation", TriggerActions: []string{"key.destroy"},
+		QuorumMode: "and", RequiredApprovals: 1, TotalApprovers: 1, ApproverRoles: []string{"security-officer"}, Status: "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := call(h, "alice", http.MethodPost, "/governance/requests", `{"tenant_id":"t1","policy_id":"`+p.ID+`","action":"key.destroy","target_type":"key","target_id":"k9"}`)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("create request: %d %s", rr.Code, rr.Body.String())
+	}
+	var created struct{ Request ApprovalRequest }
+	_ = json.Unmarshal(rr.Body.Bytes(), &created)
+	req := created.Request
+	approvers, err := store(svc).RequestApprovers(context.Background(), req.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(approvers, ",") != "admin@t1.test,bob@t1.test" && strings.Join(approvers, ",") != "bob@t1.test,admin@t1.test" {
+		t.Fatalf("role holders (minus requester, disabled and other-tenant users) not the approvers: %v", approvers)
+	}
+	if req.RequiredApprovals != 2 {
+		t.Fatalf("all-approvers quorum counts the requester or misses a role holder: %d", req.RequiredApprovals)
+	}
+	vote := func(tok string) *httptest.ResponseRecorder {
+		return call(h, tok, http.MethodPost, "/governance/approve/"+req.ID+"?tenant_id=t1", `{"vote":"approved"}`)
+	}
+	if rr := vote("carol"); rr.Code == http.StatusOK {
+		t.Fatalf("user without the approver role voted: %s", rr.Body.String())
+	}
+	if data := lastRefusal(t, pub, "audit.governance.approval_refused"); data["reason"] != "vote_refused" {
+		t.Fatalf("vote refusal not audited as vote_refused: %+v", data)
+	}
+	if rr := vote("alice"); rr.Code == http.StatusOK {
+		t.Fatal("requester holding the role voted on their own request")
+	}
+	for _, tok := range []string{"bob", "admin"} {
+		if rr := vote(tok); rr.Code != http.StatusOK {
+			t.Fatalf("role holder %s refused: %d %s", tok, rr.Code, rr.Body.String())
+		}
+	}
+	if details, _ := svc.GetApprovalRequest(context.Background(), "t1", req.ID); details.Request.Status != "approved" {
+		t.Fatalf("role holders did not reach quorum: %s", details.Request.Status)
+	}
+}
+
+// A policy whose roles no user holds opens no request nobody could approve.
+func TestApproverRoleWithNoHoldersRefusesRequest(t *testing.T) {
+	_, svc, _, _ := approvalHarness(t)
+	if _, err := svc.CreatePolicy(context.Background(), ApprovalPolicy{
+		TenantID: "t1", Name: "empty-role", Scope: "key_operation", TriggerActions: []string{"key.destroy"},
+		RequiredApprovals: 1, TotalApprovers: 1, ApproverRoles: []string{"nobody-has-this"}, Status: "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.CreateApprovalRequest(context.Background(), CreateApprovalRequestInput{
+		TenantID: "t1", Action: "key.destroy", TargetType: "key", TargetID: "k1", RequesterID: "u-alice",
+	}); err == nil {
+		t.Fatal("request opened with no one able to approve it")
+	}
+}
+
+func store(svc *Service) *SQLStore { return svc.store.(*SQLStore) }

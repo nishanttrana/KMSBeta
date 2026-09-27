@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-27T08:51:21Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T09:45:06Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -291,85 +291,86 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 50 | devsecops | button | {copied ? : } | handleCopy |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 641 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 806 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 704 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 705 | ekm | Btn | Deploy Agent | openDeploy |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 706 | ekm | Btn | Register Database | openDbRegister |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 707 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 708 | ekm | Btn | refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 769 | ekm | Btn | runRotate(agent)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 770 | ekm | Btn | openLogs(agent)} style={ }>Logs |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 771 | ekm | Btn | openHealthDetail(agent)} style={ }>Health |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 798 | ekm | Btn | } disabled= style={ }>Rotate |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 799 | ekm | Btn | } style={ }>Logs |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 837 | ekm | Btn | openHealthDetail(agent)} style={ }>Full Health |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 838 | ekm | Btn | runDelete(agent)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 868 | ekm | Btn | setExpandedTdeGuide(prev=>( ))} style={ }>Guide |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 869 | ekm | Btn | runRevokeTDE(db)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 888 | ekm | Btn | loadAgentKeyAccessLogs(expandedAgent)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 926 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 927 | ekm | Btn | Register Client | openBitLockerDeploy |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 928 | ekm | Btn | Network Scan | openBitLockerScan |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 929 | ekm | Btn | refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 953 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 954 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 955 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 976 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 977 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 978 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1005 | ekm | Btn | setModal("azure-add-config")}>+ Add Azure Vault |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1006 | ekm | Btn | setModal("azure-add-mapping")}>+ Add Key Mapping |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1007 | ekm | Btn | refresh(true)} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1028 | ekm | Btn | { setAzureTestResults(prev=>({...prev,[cfg.id]: })); try{ const res=await tes... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1036 | ekm | Btn | { setAzureSyncing(cfg.id); try{ const res=await syncAzureKeys(session,cfg.id)... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1044 | ekm | Btn | { if(!confirm("Delete this Azure vault configuration?")) return; try catch(e)... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1079 | ekm | Btn | { setAzureOpLoading(`import-$ `); try{const res=await importKeyToAzure(sessio... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1083 | ekm | Btn | { setAzureOpLoading(`rotate-$ `); try{const res=await rotateAzureKey(session,... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1087 | ekm | Btn | {setModal("azure-wrap");setAzureMappingForm(prev=>( ));}} style={ }>Wrap |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1088 | ekm | Btn | {setModal("azure-unwrap");setAzureMappingForm(prev=>( ));}} style={ }>Unwrap |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1089 | ekm | Btn | { if(!confirm("Delete this key mapping?")) return; try catch(e){onToast?.(`De... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1127 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1158 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1187 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1215 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1249 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1327 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1328 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1358 | ekm | Btn | (icon or dynamic label) | submitDeploy} disabled={deploying |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1359 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1374 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1389 | ekm | Btn | { const agentId=String(deployPackage?.agent_id\|\|"").trim(); if(!agentId) setV... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1442 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1443 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1450 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1468 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1469 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1486 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1502 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1503 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1545 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1576 | ekm | Btn | { setAzureLoading(true); try{ await createAzureEKMConfig(session,azureConfigF... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1586 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1605 | ekm | Btn | { setAzureLoading(true); try{ await createAzureKeyMapping(session,azureMappin... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1615 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1623 | ekm | Btn | { setAzureLoading(true); try{ const res=await wrapAzureKey(session,azureMappi... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1631 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1643 | ekm | Btn | { setAzureLoading(true); try{ const res=await unwrapAzureKey(session,azureMap... |  |
-| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1651 | ekm | Btn | setModal(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 312 | approvals | Btn | openPolicyModal()}>Create Policy |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 313 | approvals | Btn | Configure | openSettingsModal |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 314 | approvals | Btn | void refresh()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 379 | approvals | Btn | void doVote(r, "approved")}> {voteBusy === `$ :approved` ? "..." : "Approve"} |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 382 | approvals | Btn | void doVote(r, "denied")}> {voteBusy === `$ :denied` ? "..." : "Deny"} |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 429 | approvals | Btn | openPolicyModal()}>Create Policy |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 447 | approvals | Btn | openPolicyModal(p)}>Edit |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 459 | approvals | Btn | Configure | openSettingsModal |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 537 | approvals | Btn | setPolicyModal(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 538 | approvals | Btn | (icon or dynamic label) | savePolicy} disabled={policySaving \|\| !policyName.trim() |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 586 | approvals | Btn | { if (!smtpTestTo.trim()) try catch (e: any) { onToast?.(`SMTP test failed: $... |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 596 | approvals | Btn | { try catch (e: any) { onToast?.(`Slack test failed: $ `); } }}>Test |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 606 | approvals | Btn | { try catch (e: any) { onToast?.(`Teams test failed: $ `); } }}>Test |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 614 | approvals | Btn | setSettingsModal(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 615 | approvals | Btn | (icon or dynamic label) | saveSettings} disabled={settingsSaving |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 706 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 707 | ekm | Btn | Deploy Agent | openDeploy |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 708 | ekm | Btn | Register Database | openDbRegister |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 709 | ekm | Btn | setModal("setup-guide")}>Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 710 | ekm | Btn | refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 771 | ekm | Btn | runRotate(agent)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 772 | ekm | Btn | openLogs(agent)} style={ }>Logs |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 773 | ekm | Btn | openHealthDetail(agent)} style={ }>Health |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 800 | ekm | Btn | } disabled= style={ }>Rotate |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 801 | ekm | Btn | } style={ }>Logs |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 839 | ekm | Btn | openHealthDetail(agent)} style={ }>Full Health |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 840 | ekm | Btn | runDelete(agent)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 870 | ekm | Btn | setExpandedTdeGuide(prev=>( ))} style={ }>Guide |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 871 | ekm | Btn | runRevokeTDE(db)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 890 | ekm | Btn | loadAgentKeyAccessLogs(expandedAgent)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 928 | ekm | Btn | setBitLockerView(bitLockerView==="cards"?"list":"cards")} style={ }>{bitLocke... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 929 | ekm | Btn | Register Client | openBitLockerDeploy |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 930 | ekm | Btn | Network Scan | openBitLockerScan |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 931 | ekm | Btn | refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 955 | ekm | Btn | runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 956 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 957 | ekm | Btn | openBitLockerDelete(client)} style={ }>Delete |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 978 | ekm | Btn | openBitLockerActivity(client)} style={ }>Activity |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 979 | ekm | Btn | openBitLockerOptions(client)} style={ }>Ops |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 980 | ekm | Btn | openBitLockerDelete(client)} style={ }>Del |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1007 | ekm | Btn | setModal("azure-add-config")}>+ Add Azure Vault |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1008 | ekm | Btn | setModal("azure-add-mapping")}>+ Add Key Mapping |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1009 | ekm | Btn | refresh(true)} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1030 | ekm | Btn | { setAzureTestResults(prev=>({...prev,[cfg.id]: })); try{ const res=await tes... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1038 | ekm | Btn | { setAzureSyncing(cfg.id); try{ const res=await syncAzureKeys(session,cfg.id)... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1046 | ekm | Btn | { if(!confirm("Delete this Azure vault configuration?")) return; try catch(e)... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1081 | ekm | Btn | { setAzureOpLoading(`import-$ `); try{const res=await importKeyToAzure(sessio... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1085 | ekm | Btn | { setAzureOpLoading(`rotate-$ `); try{const res=await rotateAzureKey(session,... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1089 | ekm | Btn | {setModal("azure-wrap");setAzureMappingForm(prev=>( ));}} style={ }>Wrap |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1090 | ekm | Btn | {setModal("azure-unwrap");setAzureMappingForm(prev=>( ));}} style={ }>Unwrap |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1091 | ekm | Btn | { if(!confirm("Delete this key mapping?")) return; try catch(e){onToast?.(`De... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1130 | ekm | Btn | { setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1163 | ekm | Btn | { const v=await promptDialog.prompt( ); if(v===null) return; try{await update... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1168 | ekm | Btn | { if(!confirm("Delete this Google CSE config?")) return; try catch(e){onToast... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1197 | ekm | Btn | { setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1225 | ekm | Btn | { if(!confirm("Delete this CSE key?")) return; try catch(e){onToast?.(`Delete... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1259 | ekm | Btn | setGuideEngine(eng)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1337 | ekm | Btn | (icon or dynamic label) | submitDbRegister} disabled={dbRegistering |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1338 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1368 | ekm | Btn | (icon or dynamic label) | submitDeploy} disabled={deploying |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1369 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1384 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1399 | ekm | Btn | { const agentId=String(deployPackage?.agent_id\|\|"").trim(); if(!agentId) setV... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1452 | ekm | Btn | (icon or dynamic label) | submitBitLockerDeploy} disabled={bitLockerDeploying |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1453 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1460 | ekm | Btn | downloadText(file.path,file.content)} style={ }>Download |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1478 | ekm | Btn | (icon or dynamic label) | submitBitLockerDelete} disabled={bitLockerDeleteSubmitting\|\|!bitLockerDeleteConfirmBackup |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1479 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1496 | ekm | Btn | (icon or dynamic label) | runBitLockerScan} disabled={bitLockerScanRunning |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1512 | ekm | Btn | (icon or dynamic label) | onboardScannedBitLocker} disabled={bitLockerOnboarding |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1513 | ekm | Btn | {const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1555 | ekm | Btn | } disabled={bitLockerOpClientID===`$ :$ `} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1586 | ekm | Btn | { setAzureLoading(true); try{ await createAzureEKMConfig(session,azureConfigF... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1596 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1615 | ekm | Btn | { setAzureLoading(true); try{ await createAzureKeyMapping(session,azureMappin... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1625 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1633 | ekm | Btn | { setAzureLoading(true); try{ const res=await wrapAzureKey(session,azureMappi... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1641 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1653 | ekm | Btn | { setAzureLoading(true); try{ const res=await unwrapAzureKey(session,azureMap... |  |
+| web/dashboard/src/components/v3/tabs/EKMTab.tsx | 1661 | ekm | Btn | setModal(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 315 | approvals | Btn | openPolicyModal()}>Create Policy |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 316 | approvals | Btn | Configure | openSettingsModal |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 317 | approvals | Btn | void refresh()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 382 | approvals | Btn | void doVote(r, "approved")}> {voteBusy === `$ :approved` ? "..." : "Approve"} |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 385 | approvals | Btn | void doVote(r, "denied")}> {voteBusy === `$ :denied` ? "..." : "Deny"} |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 432 | approvals | Btn | openPolicyModal()}>Create Policy |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 450 | approvals | Btn | openPolicyModal(p)}>Edit |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 462 | approvals | Btn | Configure | openSettingsModal |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 543 | approvals | Btn | setPolicyModal(false)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 544 | approvals | Btn | (icon or dynamic label) | savePolicy} disabled={policySaving \|\| !policyName.trim() |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 592 | approvals | Btn | { if (!smtpTestTo.trim()) try catch (e: any) { onToast?.(`SMTP test failed: $... |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 602 | approvals | Btn | { try catch (e: any) { onToast?.(`Slack test failed: $ `); } }}>Test |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 612 | approvals | Btn | { try catch (e: any) { onToast?.(`Teams test failed: $ `); } }}>Test |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 620 | approvals | Btn | setSettingsModal(false)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | 621 | approvals | Btn | (icon or dynamic label) | saveSettings} disabled={settingsSaving |
 | web/dashboard/src/components/v3/tabs/HSMTab.tsx | 272 | hsm | Btn | void refreshCLIHints()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/HSMTab.tsx | 316 | hsm | Btn | void openSSHSession()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/HSMTab.tsx | 352 | hsm | Btn | void loadProviderConfig()} disabled= > |  |
@@ -380,18 +381,18 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/HSMTab.tsx | 554 | hsm | Btn | { onToast?.(`HSM key generation requested: $ label="$ " partition="$ " [extra... |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 166 | - | Btn | void executeTest()} disabled= style={ }> {executing ? "Executing..." : `Execu... |  |
 | web/dashboard/src/components/v3/tabs/HYOKLiveTestPane.tsx | 173 | - | button | copyToClipboard(testOutput)} style={ } title="Copy output"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 402 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 403 | hyok | Btn | }> Endpoint URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 404 | hyok | Btn | }> Setup Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 441 | hyok | Btn | openConfig(protocol)}>Configure |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 442 | hyok | Btn | }>URLs |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 443 | hyok | Btn | }>Guide |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 444 | hyok | Btn | void runDelete(protocol)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 580 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 581 | hyok | Btn | void submitConfig()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 606 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 613 | hyok | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 655 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 412 | hyok | Btn | void refresh(false)} disabled= > Refresh |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 413 | hyok | Btn | }> Endpoint URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 414 | hyok | Btn | }> Setup Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 451 | hyok | Btn | openConfig(protocol)}>Configure |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 452 | hyok | Btn | }>URLs |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 453 | hyok | Btn | }>Guide |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 454 | hyok | Btn | void runDelete(protocol)}>Reset |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 598 | hyok | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 599 | hyok | Btn | void submitConfig()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 624 | hyok | button | copyToClipboard(url.path)} style={ } title="Copy URL path"> |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 631 | hyok | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/HYOKTab.tsx | 673 | hyok | Btn | setModal(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/HealthTab.tsx | 63 | health | button | Refresh | load |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 558 | - | Btn | setCapsExpanded(p=>!p)}> |  |
 | web/dashboard/src/components/v3/tabs/KMIPTab.tsx | 636 | - | Btn | downloadText(`$ .crt.pem`,issuedBundle.cert)}>Download Cert |  |

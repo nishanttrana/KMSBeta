@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,8 +82,9 @@ func TestKACLSAuthorizationTokenMustBeGoogleSigned(t *testing.T) {
 	}
 }
 
-// The authentication token needs an expiry and a hosted domain the config
-// allows; a config with no allowed domains admits nobody.
+// The authentication token needs an expiry, an audience that is one of the
+// config's OAuth client IDs, and a hosted domain the config allows; a config
+// with no client IDs or no allowed domains admits nobody.
 func TestGoogleAuthenticationTokenIsStrict(t *testing.T) {
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	p := NewGoogleCSEProvider(nil)
@@ -90,26 +93,84 @@ func TestGoogleAuthenticationTokenIsStrict(t *testing.T) {
 	now := time.Now()
 	tok := func(c jwt.MapClaims) string { return signRS256(t, key, "k", c) }
 	base := func() jwt.MapClaims {
-		return jwt.MapClaims{"iss": "https://accounts.google.com", "email": "alice@corp.test", "hd": "corp.test", "iat": now.Unix(), "exp": now.Add(time.Minute).Unix()}
+		return jwt.MapClaims{"iss": "https://accounts.google.com", "aud": "cse-client.apps.googleusercontent.com", "email": "alice@corp.test", "hd": "corp.test", "iat": now.Unix(), "exp": now.Add(time.Minute).Unix()}
 	}
-	if _, err := p.ValidateGoogleJWT(tok(base()), []string{"corp.test"}); err != nil {
+	clients := []string{"cse-client.apps.googleusercontent.com"}
+	if _, err := p.ValidateGoogleJWT(tok(base()), []string{"corp.test"}, clients); err != nil {
 		t.Fatalf("valid authentication token refused: %v", err)
+	}
+	listAud := base()
+	listAud["aud"] = []string{"other-app", "cse-client.apps.googleusercontent.com"}
+	if _, err := p.ValidateGoogleJWT(tok(listAud), []string{"corp.test"}, clients); err != nil {
+		t.Fatalf("authentication token with a list audience refused: %v", err)
 	}
 	noExp := base()
 	delete(noExp, "exp")
 	noHD := base()
 	delete(noHD, "hd")
+	otherApp := base()
+	otherApp["aud"] = "some-other-app.apps.googleusercontent.com"
+	noAud := base()
+	delete(noAud, "aud")
 	for name, c := range map[string]struct {
 		claims  jwt.MapClaims
 		domains []string
+		clients []string
 	}{
-		"no expiry":          {noExp, []string{"corp.test"}},
-		"consumer account":   {noHD, []string{"corp.test"}},
-		"other domain":       {base(), []string{"elsewhere.test"}},
-		"no allowed domains": {base(), nil},
+		"no expiry":          {noExp, []string{"corp.test"}, clients},
+		"consumer account":   {noHD, []string{"corp.test"}, clients},
+		"other domain":       {base(), []string{"elsewhere.test"}, clients},
+		"no allowed domains": {base(), nil, clients},
+		"other application":  {otherApp, []string{"corp.test"}, clients},
+		"no audience":        {noAud, []string{"corp.test"}, clients},
+		"no client IDs":      {base(), []string{"corp.test"}, nil},
 	} {
-		if _, err := p.ValidateGoogleJWT(tok(c.claims), c.domains); err == nil {
+		if _, err := p.ValidateGoogleJWT(tok(c.claims), c.domains, c.clients); err == nil {
 			t.Errorf("%s: authentication token accepted", name)
 		}
+	}
+}
+
+// The configured client IDs are stored and read back; a config cannot be
+// created without one, so no config admits authentication tokens minted for
+// some other application.
+func TestGoogleCSEConfigKeepsAuthenticationClientIDs(t *testing.T) {
+	svc, store, _, _ := newEKMService(t)
+	migration, err := os.ReadFile("migrations/004_google_cse.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{string(migration), `ALTER TABLE ekm_google_cse_configs ADD COLUMN authentication_client_ids TEXT NOT NULL DEFAULT '[]'`} {
+		if _, err := store.db.SQL().Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx := context.Background()
+	cfg := GoogleCSEConfig{ID: "gcse1", TenantID: "t1", GoogleWorkspaceCustomerID: "C1", AllowedDomains: []string{"corp.test"},
+		AuthenticationClientIDs: []string{" cse-client.apps.googleusercontent.com ", ""}, Status: "active"}
+	if err := store.CreateGoogleCSEConfig(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.GetGoogleCSEConfig(ctx, "t1", "gcse1")
+	if err != nil || len(got.AuthenticationClientIDs) != 1 || got.AuthenticationClientIDs[0] != "cse-client.apps.googleusercontent.com" {
+		t.Fatalf("client IDs not stored: %+v %v", got.AuthenticationClientIDs, err)
+	}
+	got.AuthenticationClientIDs = []string{"a", "b"}
+	if err := store.UpdateGoogleCSEConfig(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ = store.GetGoogleCSEConfig(ctx, "t1", "gcse1"); len(got.AuthenticationClientIDs) != 2 {
+		t.Fatalf("client IDs not updated: %+v", got.AuthenticationClientIDs)
+	}
+
+	h := NewHandler(svc)
+	h.SetJWTParser(testEKMJWT)
+	req := httptest.NewRequest(http.MethodPost, "/ekm/google-cse/configs?tenant_id=t1",
+		strings.NewReader(`{"tenant_id":"t1","google_workspace_customer_id":"C2","allowed_domains":["corp.test"]}`))
+	req.Header.Set("Authorization", "Bearer jwt:t1:admin")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "authentication_client_ids") {
+		t.Fatalf("config without client IDs accepted: %d %s", rr.Code, rr.Body.String())
 	}
 }

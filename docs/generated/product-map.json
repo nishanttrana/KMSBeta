@@ -7566,10 +7566,10 @@
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEDecrypt",
       "line": 36,
-      "match_key": "hyok|POST|/api/v1/keys/{param}/decrypt",
+      "match_key": "hyok|POST|/api/v1/keys/{param}/{param}/decrypt",
       "method": "POST",
-      "normalized_path": "/api/v1/keys/{param}/decrypt",
-      "path": "/api/v1/keys/{id}/decrypt",
+      "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
+      "path": "/api/v1/keys/{id}/{version}/decrypt",
       "permission": "",
       "registration": "mux",
       "resource": "",
@@ -16671,21 +16671,6 @@
       "action": "",
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
-      "handler": "h.handleUpdateGoogleCSEConfig",
-      "line": 114,
-      "match_key": "ekm|PUT|/ekm/google-cse/configs/{param}",
-      "method": "PUT",
-      "normalized_path": "/ekm/google-cse/configs/{param}",
-      "path": "/ekm/google-cse/configs/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "ekm"
-    },
-    {
-      "action": "",
-      "code_scope": "ekm",
-      "file": "services/ekm/handler.go",
       "handler": "h.handleListGoogleCSEKeys",
       "line": 117,
       "match_key": "ekm|GET|/ekm/google-cse/keys",
@@ -16943,10 +16928,10 @@
       "file": "services/hyok/handler.go",
       "handler": "h.handleMicrosoftDKEDecrypt",
       "line": 36,
-      "match_key": "hyok|POST|/api/v1/keys/{param}/decrypt",
+      "match_key": "hyok|POST|/api/v1/keys/{param}/{param}/decrypt",
       "method": "POST",
-      "normalized_path": "/api/v1/keys/{param}/decrypt",
-      "path": "/api/v1/keys/{id}/decrypt",
+      "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
+      "path": "/api/v1/keys/{id}/{version}/decrypt",
       "permission": "",
       "registration": "mux",
       "resource": "",
@@ -22649,7 +22634,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setDbView(dbView===\"cards\"?\"list\":\"cards\")} style={ }>{dbView===\"cards\"? : }",
-      "line": 704,
+      "line": 706,
       "tabs": [
         "ekm"
       ],
@@ -22659,7 +22644,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openDeploy",
       "label": "Deploy Agent",
-      "line": 705,
+      "line": 707,
       "tabs": [
         "ekm"
       ],
@@ -22669,26 +22654,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "openDbRegister",
       "label": "Register Database",
-      "line": 706,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(\"setup-guide\")}>Setup Guide",
-      "line": 707,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "refresh(false)} disabled= >",
       "line": 708,
       "tabs": [
         "ekm"
@@ -22698,128 +22663,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "runRotate(agent)} disabled= style={ }>",
-      "line": 769,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openLogs(agent)} style={ }>Logs",
-      "line": 770,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openHealthDetail(agent)} style={ }>Health",
-      "line": 771,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "} disabled= style={ }>Rotate",
-      "line": 798,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "} style={ }>Logs",
-      "line": 799,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openHealthDetail(agent)} style={ }>Full Health",
-      "line": 837,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "runDelete(agent)} disabled= style={ }>",
-      "line": 838,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
-      "line": 868,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "runRevokeTDE(db)} disabled= style={ }>",
-      "line": 869,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "loadAgentKeyAccessLogs(expandedAgent)} disabled= style={ }>",
-      "line": 888,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
-      "line": 926,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "openBitLockerDeploy",
-      "label": "Register Client",
-      "line": 927,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "openBitLockerScan",
-      "label": "Network Scan",
-      "line": 928,
+      "label": "setModal(\"setup-guide\")}>Setup Guide",
+      "line": 709,
       "tabs": [
         "ekm"
       ],
@@ -22829,7 +22674,147 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "refresh(false)} disabled= >",
+      "line": 710,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "runRotate(agent)} disabled= style={ }>",
+      "line": 771,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openLogs(agent)} style={ }>Logs",
+      "line": 772,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openHealthDetail(agent)} style={ }>Health",
+      "line": 773,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "} disabled= style={ }>Rotate",
+      "line": 800,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "} style={ }>Logs",
+      "line": 801,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openHealthDetail(agent)} style={ }>Full Health",
+      "line": 839,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "runDelete(agent)} disabled= style={ }>",
+      "line": 840,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "setExpandedTdeGuide(prev=>( ))} style={ }>Guide",
+      "line": 870,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "runRevokeTDE(db)} disabled= style={ }>",
+      "line": 871,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "loadAgentKeyAccessLogs(expandedAgent)} disabled= style={ }>",
+      "line": 890,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "setBitLockerView(bitLockerView===\"cards\"?\"list\":\"cards\")} style={ }>{bitLocke...",
+      "line": 928,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "openBitLockerDeploy",
+      "label": "Register Client",
       "line": 929,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "openBitLockerScan",
+      "label": "Network Scan",
+      "line": 930,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "refresh(false)} disabled= >",
+      "line": 931,
       "tabs": [
         "ekm"
       ],
@@ -22839,26 +22824,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`$ :$ `} st...",
-      "line": 953,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 954,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Delete",
       "line": 955,
       "tabs": [
         "ekm"
@@ -22869,7 +22834,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "openBitLockerActivity(client)} style={ }>Activity",
-      "line": 976,
+      "line": 956,
       "tabs": [
         "ekm"
       ],
@@ -22878,8 +22843,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerOptions(client)} style={ }>Ops",
-      "line": 977,
+      "label": "openBitLockerDelete(client)} style={ }>Delete",
+      "line": 957,
       "tabs": [
         "ekm"
       ],
@@ -22888,7 +22853,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "label": "openBitLockerActivity(client)} style={ }>Activity",
       "line": 978,
       "tabs": [
         "ekm"
@@ -22898,27 +22863,27 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "openBitLockerOptions(client)} style={ }>Ops",
+      "line": 979,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "openBitLockerDelete(client)} style={ }>Del",
+      "line": 980,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "setModal(\"azure-add-config\")}>+ Add Azure Vault",
-      "line": 1005,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(\"azure-add-mapping\")}>+ Add Key Mapping",
-      "line": 1006,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "refresh(true)} disabled= > Refresh",
       "line": 1007,
       "tabs": [
         "ekm"
@@ -22928,8 +22893,28 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "setModal(\"azure-add-mapping\")}>+ Add Key Mapping",
+      "line": 1008,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "refresh(true)} disabled= > Refresh",
+      "line": 1009,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "{ setAzureTestResults(prev=>({...prev,[cfg.id]: })); try{ const res=await tes...",
-      "line": 1028,
+      "line": 1030,
       "tabs": [
         "ekm"
       ],
@@ -22939,7 +22924,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureSyncing(cfg.id); try{ const res=await syncAzureKeys(session,cfg.id)...",
-      "line": 1036,
+      "line": 1038,
       "tabs": [
         "ekm"
       ],
@@ -22949,7 +22934,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Azure vault configuration?\")) return; try catch(e)...",
-      "line": 1044,
+      "line": 1046,
       "tabs": [
         "ekm"
       ],
@@ -22959,7 +22944,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureOpLoading(`import-$ `); try{const res=await importKeyToAzure(sessio...",
-      "line": 1079,
+      "line": 1081,
       "tabs": [
         "ekm"
       ],
@@ -22969,7 +22954,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureOpLoading(`rotate-$ `); try{const res=await rotateAzureKey(session,...",
-      "line": 1083,
+      "line": 1085,
       "tabs": [
         "ekm"
       ],
@@ -22979,26 +22964,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{setModal(\"azure-wrap\");setAzureMappingForm(prev=>( ));}} style={ }>Wrap",
-      "line": 1087,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "{setModal(\"azure-unwrap\");setAzureMappingForm(prev=>( ));}} style={ }>Unwrap",
-      "line": 1088,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "{ if(!confirm(\"Delete this key mapping?\")) return; try catch(e){onToast?.(`De...",
       "line": 1089,
       "tabs": [
         "ekm"
@@ -23008,8 +22973,38 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "{setModal(\"azure-unwrap\");setAzureMappingForm(prev=>( ));}} style={ }>Unwrap",
+      "line": 1090,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "{ if(!confirm(\"Delete this key mapping?\")) return; try catch(e){onToast?.(`De...",
+      "line": 1091,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ const domains=googleCSEConfigForm.allowed_d...",
-      "line": 1127,
+      "line": 1130,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
+      "label": "{ const v=await promptDialog.prompt( ); if(v===null) return; try{await update...",
+      "line": 1163,
       "tabs": [
         "ekm"
       ],
@@ -23019,7 +23014,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this Google CSE config?\")) return; try catch(e){onToast...",
-      "line": 1158,
+      "line": 1168,
       "tabs": [
         "ekm"
       ],
@@ -23029,7 +23024,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setGoogleCSELoading(true); try{ await createGoogleCSEKey(session, ); onToas...",
-      "line": 1187,
+      "line": 1197,
       "tabs": [
         "ekm"
       ],
@@ -23039,7 +23034,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ if(!confirm(\"Delete this CSE key?\")) return; try catch(e){onToast?.(`Delete...",
-      "line": 1215,
+      "line": 1225,
       "tabs": [
         "ekm"
       ],
@@ -23049,7 +23044,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setGuideEngine(eng)} style={ }>",
-      "line": 1249,
+      "line": 1259,
       "tabs": [
         "ekm"
       ],
@@ -23059,7 +23054,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDbRegister} disabled={dbRegistering",
       "label": "(icon or dynamic label)",
-      "line": 1327,
+      "line": 1337,
       "tabs": [
         "ekm"
       ],
@@ -23069,7 +23064,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1328,
+      "line": 1338,
       "tabs": [
         "ekm"
       ],
@@ -23079,7 +23074,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitDeploy} disabled={deploying",
       "label": "(icon or dynamic label)",
-      "line": 1358,
+      "line": 1368,
       "tabs": [
         "ekm"
       ],
@@ -23089,7 +23084,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1359,
+      "line": 1369,
       "tabs": [
         "ekm"
       ],
@@ -23099,7 +23094,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 1374,
+      "line": 1384,
       "tabs": [
         "ekm"
       ],
@@ -23109,7 +23104,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ const agentId=String(deployPackage?.agent_id||\"\").trim(); if(!agentId) setV...",
-      "line": 1389,
+      "line": 1399,
       "tabs": [
         "ekm"
       ],
@@ -23119,7 +23114,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDeploy} disabled={bitLockerDeploying",
       "label": "(icon or dynamic label)",
-      "line": 1442,
+      "line": 1452,
       "tabs": [
         "ekm"
       ],
@@ -23129,7 +23124,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1443,
+      "line": 1453,
       "tabs": [
         "ekm"
       ],
@@ -23139,7 +23134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "downloadText(file.path,file.content)} style={ }>Download",
-      "line": 1450,
+      "line": 1460,
       "tabs": [
         "ekm"
       ],
@@ -23149,7 +23144,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup",
       "label": "(icon or dynamic label)",
-      "line": 1468,
+      "line": 1478,
       "tabs": [
         "ekm"
       ],
@@ -23159,7 +23154,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1469,
+      "line": 1479,
       "tabs": [
         "ekm"
       ],
@@ -23169,7 +23164,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "runBitLockerScan} disabled={bitLockerScanRunning",
       "label": "(icon or dynamic label)",
-      "line": 1486,
+      "line": 1496,
       "tabs": [
         "ekm"
       ],
@@ -23179,7 +23174,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "onboardScannedBitLocker} disabled={bitLockerOnboarding",
       "label": "(icon or dynamic label)",
-      "line": 1502,
+      "line": 1512,
       "tabs": [
         "ekm"
       ],
@@ -23189,7 +23184,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{const all= ;bitLockerScanCandidates.forEach(r=> );setBitLockerScanSelected(a...",
-      "line": 1503,
+      "line": 1513,
       "tabs": [
         "ekm"
       ],
@@ -23199,7 +23194,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "} disabled={bitLockerOpClientID===`$ :$ `} style={ }>",
-      "line": 1545,
+      "line": 1555,
       "tabs": [
         "ekm"
       ],
@@ -23209,16 +23204,6 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ await createAzureEKMConfig(session,azureConfigF...",
-      "line": 1576,
-      "tabs": [
-        "ekm"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
-      "handler": "",
-      "label": "setModal(null)}>Cancel",
       "line": 1586,
       "tabs": [
         "ekm"
@@ -23228,8 +23213,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "{ setAzureLoading(true); try{ await createAzureKeyMapping(session,azureMappin...",
-      "line": 1605,
+      "label": "setModal(null)}>Cancel",
+      "line": 1596,
       "tabs": [
         "ekm"
       ],
@@ -23238,7 +23223,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
-      "label": "setModal(null)}>Cancel",
+      "label": "{ setAzureLoading(true); try{ await createAzureKeyMapping(session,azureMappin...",
       "line": 1615,
       "tabs": [
         "ekm"
@@ -23248,8 +23233,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
+      "label": "setModal(null)}>Cancel",
+      "line": 1625,
+      "tabs": [
+        "ekm"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
+      "handler": "",
       "label": "{ setAzureLoading(true); try{ const res=await wrapAzureKey(session,azureMappi...",
-      "line": 1623,
+      "line": 1633,
       "tabs": [
         "ekm"
       ],
@@ -23259,7 +23254,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1631,
+      "line": 1641,
       "tabs": [
         "ekm"
       ],
@@ -23269,7 +23264,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "{ setAzureLoading(true); try{ const res=await unwrapAzureKey(session,azureMap...",
-      "line": 1643,
+      "line": 1653,
       "tabs": [
         "ekm"
       ],
@@ -23279,7 +23274,7 @@
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 1651,
+      "line": 1661,
       "tabs": [
         "ekm"
       ],
@@ -23289,7 +23284,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "openPolicyModal()}>Create Policy",
-      "line": 312,
+      "line": 315,
       "tabs": [
         "approvals"
       ],
@@ -23299,7 +23294,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "openSettingsModal",
       "label": "Configure",
-      "line": 313,
+      "line": 316,
       "tabs": [
         "approvals"
       ],
@@ -23309,7 +23304,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= >",
-      "line": 314,
+      "line": 317,
       "tabs": [
         "approvals"
       ],
@@ -23319,16 +23314,6 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "void doVote(r, \"approved\")}> {voteBusy === `$ :approved` ? \"...\" : \"Approve\"}",
-      "line": 379,
-      "tabs": [
-        "approvals"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
-      "handler": "",
-      "label": "void doVote(r, \"denied\")}> {voteBusy === `$ :denied` ? \"...\" : \"Deny\"}",
       "line": 382,
       "tabs": [
         "approvals"
@@ -23338,8 +23323,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
+      "label": "void doVote(r, \"denied\")}> {voteBusy === `$ :denied` ? \"...\" : \"Deny\"}",
+      "line": 385,
+      "tabs": [
+        "approvals"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
+      "handler": "",
       "label": "openPolicyModal()}>Create Policy",
-      "line": 429,
+      "line": 432,
       "tabs": [
         "approvals"
       ],
@@ -23349,7 +23344,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "openPolicyModal(p)}>Edit",
-      "line": 447,
+      "line": 450,
       "tabs": [
         "approvals"
       ],
@@ -23359,7 +23354,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "openSettingsModal",
       "label": "Configure",
-      "line": 459,
+      "line": 462,
       "tabs": [
         "approvals"
       ],
@@ -23369,7 +23364,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "setPolicyModal(false)}>Cancel",
-      "line": 537,
+      "line": 543,
       "tabs": [
         "approvals"
       ],
@@ -23379,7 +23374,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "savePolicy} disabled={policySaving || !policyName.trim()",
       "label": "(icon or dynamic label)",
-      "line": 538,
+      "line": 544,
       "tabs": [
         "approvals"
       ],
@@ -23389,7 +23384,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "{ if (!smtpTestTo.trim()) try catch (e: any) { onToast?.(`SMTP test failed: $...",
-      "line": 586,
+      "line": 592,
       "tabs": [
         "approvals"
       ],
@@ -23399,7 +23394,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "{ try catch (e: any) { onToast?.(`Slack test failed: $ `); } }}>Test",
-      "line": 596,
+      "line": 602,
       "tabs": [
         "approvals"
       ],
@@ -23409,7 +23404,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "{ try catch (e: any) { onToast?.(`Teams test failed: $ `); } }}>Test",
-      "line": 606,
+      "line": 612,
       "tabs": [
         "approvals"
       ],
@@ -23419,7 +23414,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "",
       "label": "setSettingsModal(false)}>Cancel",
-      "line": 614,
+      "line": 620,
       "tabs": [
         "approvals"
       ],
@@ -23429,7 +23424,7 @@
       "file": "web/dashboard/src/components/v3/tabs/GovernanceTab.tsx",
       "handler": "saveSettings} disabled={settingsSaving",
       "label": "(icon or dynamic label)",
-      "line": 615,
+      "line": 621,
       "tabs": [
         "approvals"
       ],
@@ -23535,7 +23530,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= > Refresh",
-      "line": 402,
+      "line": 412,
       "tabs": [
         "hyok"
       ],
@@ -23545,7 +23540,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Endpoint URLs",
-      "line": 403,
+      "line": 413,
       "tabs": [
         "hyok"
       ],
@@ -23555,7 +23550,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}> Setup Guide",
-      "line": 404,
+      "line": 414,
       "tabs": [
         "hyok"
       ],
@@ -23565,7 +23560,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "openConfig(protocol)}>Configure",
-      "line": 441,
+      "line": 451,
       "tabs": [
         "hyok"
       ],
@@ -23575,7 +23570,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}>URLs",
-      "line": 442,
+      "line": 452,
       "tabs": [
         "hyok"
       ],
@@ -23585,7 +23580,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "}>Guide",
-      "line": 443,
+      "line": 453,
       "tabs": [
         "hyok"
       ],
@@ -23595,7 +23590,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void runDelete(protocol)}>Reset",
-      "line": 444,
+      "line": 454,
       "tabs": [
         "hyok"
       ],
@@ -23605,7 +23600,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 580,
+      "line": 598,
       "tabs": [
         "hyok"
       ],
@@ -23615,7 +23610,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "void submitConfig()} disabled= >",
-      "line": 581,
+      "line": 599,
       "tabs": [
         "hyok"
       ],
@@ -23625,7 +23620,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "copyToClipboard(url.path)} style={ } title=\"Copy URL path\">",
-      "line": 606,
+      "line": 624,
       "tabs": [
         "hyok"
       ],
@@ -23635,7 +23630,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 613,
+      "line": 631,
       "tabs": [
         "hyok"
       ],
@@ -23645,7 +23640,7 @@
       "file": "web/dashboard/src/components/v3/tabs/HYOKTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Close",
-      "line": 655,
+      "line": 673,
       "tabs": [
         "hyok"
       ],
@@ -31616,7 +31611,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 874,
+      "line": 875,
       "match_key": "ekm|GET|/ekm/google-cse/configs",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/configs",
@@ -31629,7 +31624,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 887,
+      "line": 889,
       "match_key": "ekm|POST|/ekm/google-cse/configs",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/configs",
@@ -31642,7 +31637,20 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 897,
+      "line": 904,
+      "match_key": "ekm|PUT|/ekm/google-cse/configs/{param}",
+      "method": "PUT",
+      "normalized_path": "/ekm/google-cse/configs/{param}",
+      "path": "/ekm/google-cse/configs/{param}?tenant_id={param}",
+      "service": "ekm",
+      "service_key": "ekm",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+      "file": "web/dashboard/src/lib/ekm.ts",
+      "line": 914,
       "match_key": "ekm|DELETE|/ekm/google-cse/configs/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -31655,7 +31663,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 917,
+      "line": 934,
       "match_key": "ekm|POST|/ekm/google-cse/keys",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/keys",
@@ -31668,7 +31676,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 927,
+      "line": 944,
       "match_key": "ekm|DELETE|/ekm/google-cse/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/keys/{param}",
@@ -31681,7 +31689,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 936,
+      "line": 953,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/revoke",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/revoke",
@@ -31694,7 +31702,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 950,
+      "line": 967,
       "match_key": "ekm|POST|/ekm/databases/{param}/revoke-tde",
       "method": "POST",
       "normalized_path": "/ekm/databases/{param}/revoke-tde",
@@ -31707,7 +31715,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 964,
+      "line": 981,
       "match_key": "ekm|GET|/ekm/agents/{param}/validate-deploy",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/validate-deploy",
@@ -31720,7 +31728,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"tfe\", `/tfe/file-encrypt/download?${qs.toString()}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 1011,
+      "line": 1028,
       "match_key": "tfe|GET|/tfe/file-encrypt/download",
       "method": "GET",
       "normalized_path": "/tfe/file-encrypt/download",
@@ -35292,7 +35300,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-27T08:51:21Z",
+  "generated_at": "2026-09-27T09:45:06Z",
   "navigation": [
     {
       "group": "Overview",
@@ -62619,7 +62627,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 936,
+          "line": 953,
           "source": "serviceRequest"
         }
       ],
@@ -62941,7 +62949,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 950,
+          "line": 967,
           "source": "serviceRequest"
         }
       ],
@@ -63735,7 +63743,7 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 887,
+          "line": 889,
           "source": "serviceRequest"
         }
       ],
@@ -63751,6 +63759,7 @@
         "newServiceError",
         "Error",
         "tenantFromRequest",
+        "cleanStrings",
         "newID",
         "CreateGoogleCSEConfig",
         "publishAuditEvent",
@@ -63783,7 +63792,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 874,
+          "line": 875,
           "source": "serviceRequest"
         }
       ],
@@ -63799,7 +63808,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 105,
+      "handler_line": 111,
       "handler_name": "handleListGoogleCSEConfigs",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -63833,7 +63842,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 123,
+      "handler_line": 129,
       "handler_name": "handleGetGoogleCSEConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -63854,7 +63863,14 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+          "file": "web/dashboard/src/lib/ekm.ts",
+          "line": 904,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.handleUpdateGoogleCSEConfig",
       "handler_external_package_calls": [
         "strings.TrimSpace"
@@ -63869,13 +63885,14 @@
         "tenantFromRequest",
         "GetGoogleCSEConfig",
         "coalesceStr",
+        "cleanStrings",
         "UpdateGoogleCSEConfig",
         "publishAuditEvent",
         "maskSecret",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 139,
+      "handler_line": 145,
       "handler_name": "handleUpdateGoogleCSEConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -63901,7 +63918,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 897,
+          "line": 914,
           "source": "serviceRequest"
         }
       ],
@@ -63917,7 +63934,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 179,
+      "handler_line": 188,
       "handler_name": "handleDeleteGoogleCSEConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -63942,16 +63959,20 @@
         {
           "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 917,
+          "line": 934,
           "source": "serviceRequest"
         }
       ],
       "handler": "h.handleCreateGoogleCSEKey",
       "handler_external_package_calls": [
+        "encoding/json.NewEncoder",
         "fmt.Sprintf",
+        "fmt.Errorf",
+        "log.Printf",
         "strings.TrimSpace",
         "strings.ToLower",
-        "strings.TrimRight"
+        "strings.TrimRight",
+        "strings.EqualFold"
       ],
       "handler_file": "services/ekm/handler_google_cse.go",
       "handler_helper_calls": [
@@ -63966,17 +63987,42 @@
         "CreateGoogleCSEKey",
         "UpdateGoogleCSEConfig",
         "publishAuditEvent",
-        "writeJSON"
+        "writeJSON",
+        "handleListGoogleCSEKeys",
+        "ListGoogleCSEKeys",
+        "handleDeleteGoogleCSEKey",
+        "DeleteGoogleCSEKey",
+        "handleKACLSStatus",
+        "handleKACLSWrap",
+        "decodeKACLSJSON",
+        "writeKACLSError",
+        "resolveKACLSContext",
+        "WrapDEK",
+        "IncrementGoogleCSEKeyUsage",
+        "handleKACLSUnwrap",
+        "UnwrapDEK",
+        "handleKACLSPrivilegedUnwrap",
+        "ValidatePrivilegedAccess",
+        "resolveKACLSContextPrivileged",
+        "verifyKACLSAuthorization",
+        "ListGoogleCSEConfigs",
+        "ValidateGoogleJWT",
+        "GetGoogleCSEKeyByURI"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 196,
+      "handler_line": 205,
       "handler_name": "handleCreateGoogleCSEKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
       "handler_store_calls": [
         "GetGoogleCSEConfig",
         "CreateGoogleCSEKey",
-        "UpdateGoogleCSEConfig"
+        "UpdateGoogleCSEConfig",
+        "ListGoogleCSEKeys",
+        "DeleteGoogleCSEKey",
+        "IncrementGoogleCSEKeyUsage",
+        "ListGoogleCSEConfigs",
+        "GetGoogleCSEKeyByURI"
       ],
       "method": "POST",
       "normalized_path": "/ekm/google-cse/keys",
@@ -64006,7 +64052,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 267,
+      "handler_line": 278,
       "handler_name": "handleListGoogleCSEKeys",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64031,7 +64077,7 @@
         {
           "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/ekm.ts",
-          "line": 927,
+          "line": 944,
           "source": "serviceRequest"
         }
       ],
@@ -64047,7 +64093,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 283,
+      "handler_line": 294,
       "handler_name": "handleDeleteGoogleCSEKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64076,7 +64122,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 303,
+      "handler_line": 314,
       "handler_name": "handleKACLSStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64114,7 +64160,7 @@
         "publishAuditEvent"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 312,
+      "handler_line": 323,
       "handler_name": "handleKACLSWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64154,7 +64200,7 @@
         "publishAuditEvent"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 373,
+      "handler_line": 384,
       "handler_name": "handleKACLSUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64195,7 +64241,7 @@
         "publishAuditEvent"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 432,
+      "handler_line": 443,
       "handler_name": "handleKACLSPrivilegedUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -64261,7 +64307,7 @@
             "normalizeGovernanceSettings"
           ],
           "internal_package_calls": [],
-          "line": 503,
+          "line": 507,
           "name": "GetSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -64333,7 +64379,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 515,
+          "line": 519,
           "name": "UpdateSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -64407,7 +64453,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 546,
+          "line": 550,
           "name": "TestSMTP",
           "receiver_calls": [],
           "store_calls": []
@@ -64876,7 +64922,7 @@
             "GetSystemState"
           ],
           "internal_package_calls": [],
-          "line": 587,
+          "line": 591,
           "name": "UpdateSystemState",
           "receiver_calls": [],
           "store_calls": [
@@ -64954,7 +65000,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 634,
+          "line": 638,
           "name": "ApplyPostureControls",
           "receiver_calls": [],
           "store_calls": []
@@ -64975,7 +65021,7 @@
             "ProbeTarget"
           ],
           "internal_package_calls": [],
-          "line": 738,
+          "line": 742,
           "name": "SystemIntegrity",
           "receiver_calls": [
             "s.snmp.ProbeTarget"
@@ -64994,7 +65040,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 796,
+          "line": 800,
           "name": "TestSNMP",
           "receiver_calls": [],
           "store_calls": []
@@ -65069,7 +65115,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 347,
+          "line": 351,
           "name": "ListApprovalRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -65083,7 +65129,7 @@
             "ListApprovalVotes"
           ],
           "internal_package_calls": [],
-          "line": 335,
+          "line": 339,
           "name": "GetApprovalRequest",
           "receiver_calls": [],
           "store_calls": [
@@ -65106,6 +65152,7 @@
             "FindPolicyForAction",
             "GetSettings",
             "clamp",
+            "RoleHolderEmails",
             "resolveApprovers",
             "effectiveRequiredApprovals",
             "newID",
@@ -65124,6 +65171,7 @@
           "receiver_calls": [],
           "store_calls": [
             "FindPolicyForAction",
+            "RoleHolderEmails",
             "CreateApprovalRequest",
             "GetApprovalRequest"
           ]
@@ -65135,7 +65183,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 351,
+          "line": 355,
           "name": "CancelApprovalRequest",
           "receiver_calls": [],
           "store_calls": [
@@ -65147,7 +65195,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 459,
+          "line": 463,
           "name": "ListPendingByApprover",
           "receiver_calls": [],
           "store_calls": [
@@ -65172,6 +65220,7 @@
         "GetApprovalRequest",
         "ListApprovalVotes",
         "FindPolicyForAction",
+        "RoleHolderEmails",
         "CreateApprovalRequest",
         "CancelApprovalRequest",
         "ListPendingByApprover"
@@ -65608,7 +65657,7 @@
             "normalizeSystemState"
           ],
           "internal_package_calls": [],
-          "line": 579,
+          "line": 583,
           "name": "GetSystemState",
           "receiver_calls": [],
           "store_calls": [
@@ -65684,7 +65733,7 @@
             "GetSystemState"
           ],
           "internal_package_calls": [],
-          "line": 587,
+          "line": 591,
           "name": "UpdateSystemState",
           "receiver_calls": [],
           "store_calls": [
@@ -65962,7 +66011,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 634,
+          "line": 638,
           "name": "ApplyPostureControls",
           "receiver_calls": [],
           "store_calls": []
@@ -66028,7 +66077,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 796,
+          "line": 800,
           "name": "TestSNMP",
           "receiver_calls": [],
           "store_calls": []
@@ -66094,7 +66143,7 @@
             "ProbeTarget"
           ],
           "internal_package_calls": [],
-          "line": 738,
+          "line": 742,
           "name": "SystemIntegrity",
           "receiver_calls": [
             "s.snmp.ProbeTarget"
@@ -66412,7 +66461,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 347,
+          "line": 351,
           "name": "ListApprovalRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -66470,6 +66519,7 @@
         "FindPolicyForAction",
         "GetSettings",
         "clamp",
+        "RoleHolderEmails",
         "resolveApprovers",
         "effectiveRequiredApprovals",
         "newID",
@@ -66499,6 +66549,7 @@
             "FindPolicyForAction",
             "GetSettings",
             "clamp",
+            "RoleHolderEmails",
             "resolveApprovers",
             "effectiveRequiredApprovals",
             "newID",
@@ -66517,6 +66568,7 @@
           "receiver_calls": [],
           "store_calls": [
             "FindPolicyForAction",
+            "RoleHolderEmails",
             "CreateApprovalRequest",
             "GetApprovalRequest"
           ]
@@ -66525,6 +66577,7 @@
       "service_receiver_calls": [],
       "service_store_calls": [
         "FindPolicyForAction",
+        "RoleHolderEmails",
         "CreateApprovalRequest",
         "GetApprovalRequest"
       ]
@@ -66578,7 +66631,7 @@
             "ListApprovalVotes"
           ],
           "internal_package_calls": [],
-          "line": 335,
+          "line": 339,
           "name": "GetApprovalRequest",
           "receiver_calls": [],
           "store_calls": [
@@ -66638,7 +66691,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 351,
+          "line": 355,
           "name": "CancelApprovalRequest",
           "receiver_calls": [],
           "store_calls": [
@@ -66691,7 +66744,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 459,
+          "line": 463,
           "name": "ListPendingByApprover",
           "receiver_calls": [],
           "store_calls": [
@@ -66703,7 +66756,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 463,
+          "line": 467,
           "name": "CountPendingByApprover",
           "receiver_calls": [],
           "store_calls": [
@@ -66747,6 +66800,7 @@
         "decodeJSON",
         "firstNonEmpty",
         "Vote",
+        "refuseApproval",
         "htmlEscape",
         "handleCreateKeyApproval",
         "CreateKeyApproval",
@@ -66813,7 +66867,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 463,
+          "line": 467,
           "name": "CountPendingByApprover",
           "receiver_calls": [],
           "store_calls": [
@@ -66832,7 +66886,7 @@
             "buildApprovalPage"
           ],
           "internal_package_calls": [],
-          "line": 1030,
+          "line": 1034,
           "name": "ApprovalPageHTML",
           "receiver_calls": [],
           "store_calls": [
@@ -66862,7 +66916,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 359,
+          "line": 363,
           "name": "Vote",
           "receiver_calls": [
             "s.callback.Execute"
@@ -66884,7 +66938,7 @@
             "CreateApprovalRequest"
           ],
           "internal_package_calls": [],
-          "line": 467,
+          "line": 471,
           "name": "CreateKeyApproval",
           "receiver_calls": [],
           "store_calls": []
@@ -66898,7 +66952,7 @@
             "GetApprovalRequest"
           ],
           "internal_package_calls": [],
-          "line": 484,
+          "line": 488,
           "name": "GetKeyApprovalStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -66910,7 +66964,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1049,
+          "line": 1053,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -66978,7 +67032,7 @@
             "buildApprovalPage"
           ],
           "internal_package_calls": [],
-          "line": 1030,
+          "line": 1034,
           "name": "ApprovalPageHTML",
           "receiver_calls": [],
           "store_calls": [
@@ -67017,6 +67071,7 @@
         "approvalCaller",
         "approverEmail",
         "Vote",
+        "refuseApproval",
         "htmlEscape",
         "writeJSON"
       ],
@@ -67077,7 +67132,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 359,
+          "line": 363,
           "name": "Vote",
           "receiver_calls": [
             "s.callback.Execute"
@@ -67152,7 +67207,7 @@
             "CreateApprovalRequest"
           ],
           "internal_package_calls": [],
-          "line": 467,
+          "line": 471,
           "name": "CreateKeyApproval",
           "receiver_calls": [],
           "store_calls": []
@@ -67207,7 +67262,7 @@
             "GetApprovalRequest"
           ],
           "internal_package_calls": [],
-          "line": 484,
+          "line": 488,
           "name": "GetKeyApprovalStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -67227,9 +67282,10 @@
       "handler_file": "services/hyok/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "authenticateAndTenant",
+        "dkeCaller",
         "GetMicrosoftDKEKey",
-        "writeServiceError",
+        "dkeKeyURL",
+        "refuseDKE",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
@@ -67247,7 +67303,10 @@
       "route_line": 35,
       "service": "hyok",
       "service_external_package_calls": [
-        "strings.TrimSpace"
+        "strconv.Itoa",
+        "strings.TrimSpace",
+        "strings.TrimRight",
+        "time.Now"
       ],
       "service_helper_calls": [
         "newServiceError",
@@ -67265,6 +67324,7 @@
         "publishAudit",
         "GetKey",
         "firstString",
+        "extractInt",
         "inferDKEAlg",
         "mustJSON"
       ],
@@ -67275,7 +67335,10 @@
       "service_method_details": [
         {
           "external_package_calls": [
-            "strings.TrimSpace"
+            "strconv.Itoa",
+            "strings.TrimSpace",
+            "strings.TrimRight",
+            "time.Now"
           ],
           "file": "services/hyok/service.go",
           "helper_calls": [
@@ -67294,6 +67357,7 @@
             "publishAudit",
             "GetKey",
             "firstString",
+            "extractInt",
             "inferDKEAlg",
             "mustJSON"
           ],
@@ -67301,7 +67365,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 604,
+          "line": 611,
           "name": "GetMicrosoftDKEKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -67327,16 +67391,16 @@
       "handler_file": "services/hyok/handler.go",
       "handler_helper_calls": [
         "requestID",
-        "authenticateAndTenant",
+        "dkeCaller",
         "decodeJSONLenient",
         "writeErr",
         "Error",
         "ProcessMicrosoftDKEDecrypt",
-        "writeServiceError",
+        "refuseDKE",
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 82,
+      "handler_line": 74,
       "handler_name": "handleMicrosoftDKEDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67344,14 +67408,15 @@
       ],
       "handler_store_calls": [],
       "method": "POST",
-      "normalized_path": "/api/v1/keys/{param}/decrypt",
-      "path": "/api/v1/keys/{id}/decrypt",
+      "normalized_path": "/api/v1/keys/{param}/{param}/decrypt",
+      "path": "/api/v1/keys/{id}/{version}/decrypt",
       "route_file": "services/hyok/handler.go",
       "route_line": 36,
       "service": "hyok",
       "service_external_package_calls": [
+        "strconv.Itoa",
         "strings.TrimSpace",
-        "strings.EqualFold"
+        "strings.TrimRight"
       ],
       "service_helper_calls": [
         "newServiceError",
@@ -67362,14 +67427,18 @@
         "validateDKEIdentity",
         "normalizeHost",
         "validateDKEAlg",
-        "ProcessCrypto"
+        "GetKey",
+        "extractInt",
+        "ProcessCrypto",
+        "dkeRequesterEmail"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
+            "strconv.Itoa",
             "strings.TrimSpace",
-            "strings.EqualFold"
+            "strings.TrimRight"
           ],
           "file": "services/hyok/service.go",
           "helper_calls": [
@@ -67381,16 +67450,23 @@
             "validateDKEIdentity",
             "normalizeHost",
             "validateDKEAlg",
-            "ProcessCrypto"
+            "GetKey",
+            "extractInt",
+            "ProcessCrypto",
+            "dkeRequesterEmail"
           ],
           "internal_package_calls": [],
-          "line": 704,
+          "line": 721,
           "name": "ProcessMicrosoftDKEDecrypt",
-          "receiver_calls": [],
+          "receiver_calls": [
+            "s.keycore.GetKey"
+          ],
           "store_calls": []
         }
       ],
-      "service_receiver_calls": [],
+      "service_receiver_calls": [
+        "s.keycore.GetKey"
+      ],
       "service_store_calls": []
     },
     {
@@ -67402,7 +67478,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 101,
+      "handler_line": 93,
       "handler_name": "handleDKEDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67440,7 +67516,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 176,
+      "handler_line": 168,
       "handler_name": "handleDKEPublicKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67500,7 +67576,7 @@
             "mustJSON"
           ],
           "internal_package_calls": [],
-          "line": 520,
+          "line": 521,
           "name": "GetDKEPublicKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -67528,7 +67604,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 105,
+      "handler_line": 97,
       "handler_name": "handleSalesforceWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67555,7 +67631,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 109,
+      "handler_line": 101,
       "handler_name": "handleSalesforceUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67582,7 +67658,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 105,
       "handler_name": "handleGoogleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67609,7 +67685,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 117,
+      "handler_line": 109,
       "handler_name": "handleGoogleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67636,7 +67712,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 121,
+      "handler_line": 113,
       "handler_name": "handleGenericEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67663,7 +67739,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 125,
+      "handler_line": 117,
       "handler_name": "handleGenericDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67690,7 +67766,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 129,
+      "handler_line": 121,
       "handler_name": "handleGenericWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67717,7 +67793,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 133,
+      "handler_line": 125,
       "handler_name": "handleGenericUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67744,7 +67820,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 137,
+      "handler_line": 129,
       "handler_name": "handleServiceNowWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67771,7 +67847,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 141,
+      "handler_line": 133,
       "handler_name": "handleServiceNowUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67798,7 +67874,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 145,
+      "handler_line": 137,
       "handler_name": "handleAlibabaEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67825,7 +67901,7 @@
         "handleCrypto"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 149,
+      "handler_line": 141,
       "handler_name": "handleAlibabaDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -67866,7 +67942,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 190,
+      "handler_line": 182,
       "handler_name": "handleListEndpoints",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67898,7 +67974,7 @@
             "defaultEndpointConfig"
           ],
           "internal_package_calls": [],
-          "line": 80,
+          "line": 81,
           "name": "ListEndpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -67936,7 +68012,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 204,
+      "handler_line": 196,
       "handler_name": "handleConfigureEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67956,10 +68032,12 @@
         "errors.Is",
         "fmt.Errorf",
         "net.SplitHostPort",
+        "strconv.Itoa",
         "strings.TrimSpace",
         "strings.ToLower",
         "strings.Contains",
         "strings.EqualFold",
+        "strings.TrimRight",
         "strings.ToUpper",
         "strings.HasPrefix",
         "strings.Split",
@@ -68012,10 +68090,12 @@
             "errors.Is",
             "fmt.Errorf",
             "net.SplitHostPort",
+            "strconv.Itoa",
             "strings.TrimSpace",
             "strings.ToLower",
             "strings.Contains",
             "strings.EqualFold",
+            "strings.TrimRight",
             "strings.ToUpper",
             "strings.HasPrefix",
             "strings.Split",
@@ -68069,6 +68149,7 @@
             "inferDKEAlg",
             "ProcessMicrosoftDKEDecrypt",
             "validateDKEAlg",
+            "dkeRequesterEmail",
             "composePolicyOperation",
             "Encrypt",
             "Decrypt",
@@ -68083,7 +68164,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 47,
+          "line": 48,
           "name": "ConfigureEndpoint",
           "receiver_calls": [
             "s.keyAccess.Evaluate",
@@ -68155,7 +68236,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 248,
+      "handler_line": 240,
       "handler_name": "handleDeleteEndpoint",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68189,7 +68270,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 105,
+          "line": 106,
           "name": "DeleteEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -68226,7 +68307,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 261,
+      "handler_line": 253,
       "handler_name": "handleListRequests",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68260,7 +68341,7 @@
             "ListRequestLogs"
           ],
           "internal_package_calls": [],
-          "line": 120,
+          "line": 121,
           "name": "ListRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -68296,7 +68377,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 277,
+      "handler_line": 269,
       "handler_name": "handleHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68318,7 +68399,7 @@
           "file": "services/hyok/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 134,
+          "line": 135,
           "name": "Health",
           "receiver_calls": [],
           "store_calls": []
@@ -93823,7 +93904,7 @@
       "confidential": 6,
       "dataprotect": 29,
       "discovery": 20,
-      "ekm": 44,
+      "ekm": 45,
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
@@ -94029,12 +94110,12 @@
   "summary": {
     "backend_routes": 941,
     "backend_services": 30,
-    "button_inventory": 809,
-    "frontend_call_sites": 606,
-    "matched_frontend_call_sites": 556,
+    "button_inventory": 810,
+    "frontend_call_sites": 607,
+    "matched_frontend_call_sites": 557,
     "nav_items": 32,
     "request_flows": 941,
-    "request_flows_with_frontend": 554,
+    "request_flows_with_frontend": 555,
     "request_flows_with_internal_package_calls": 150,
     "request_flows_with_service_calls": 547,
     "request_flows_with_store_calls": 679,
@@ -94224,7 +94305,7 @@
       "support_files": []
     },
     {
-      "call_count": 45,
+      "call_count": 46,
       "component": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
       "group": "Data & integrations",
       "id": "ekm",
@@ -94559,7 +94640,7 @@
       ]
     },
     {
-      "call_count": 45,
+      "call_count": 46,
       "component": "web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx",
       "group": "UNLISTED",
       "id": "pkcs11",
@@ -94959,7 +95040,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"ekm\", `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 964,
+      "line": 981,
       "match_key": "ekm|GET|/ekm/agents/{param}/validate-deploy",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/validate-deploy",
@@ -94972,7 +95053,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"tfe\", `/tfe/file-encrypt/download?${qs.toString()}`)",
       "file": "web/dashboard/src/lib/ekm.ts",
-      "line": 1011,
+      "line": 1028,
       "match_key": "tfe|GET|/tfe/file-encrypt/download",
       "method": "GET",
       "normalized_path": "/tfe/file-encrypt/download",
@@ -110537,7 +110618,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 936,
+            "line": 953,
             "source": "serviceRequest"
           }
         ],
@@ -110682,7 +110763,7 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 950,
+            "line": 967,
             "source": "serviceRequest"
           }
         ],
@@ -111232,7 +111313,7 @@
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/configs\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 887,
+            "line": 889,
             "source": "serviceRequest"
           }
         ],
@@ -111265,13 +111346,13 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 874,
+            "line": 875,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListGoogleCSEConfigs",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 105,
+        "handlerLine": 111,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111297,7 +111378,7 @@
         "frontendSites": [],
         "handler": "handleGetGoogleCSEConfig",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 123,
+        "handlerLine": 129,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111321,11 +111402,18 @@
         "externalPackages": [
           "strings.TrimSpace"
         ],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+            "file": "web/dashboard/src/lib/ekm.ts",
+            "line": 904,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "handleUpdateGoogleCSEConfig",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 139,
-        "hasFrontend": false,
+        "handlerLine": 145,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
         "normalizedPath": "/ekm/google-cse/configs/{param}",
@@ -111341,7 +111429,8 @@
           "UpdateGoogleCSEConfig"
         ],
         "uiLabels": [
-          "API only"
+          "Enterprise KM",
+          "pkcs11"
         ]
       },
       {
@@ -111351,13 +111440,13 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 897,
+            "line": 914,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteGoogleCSEConfig",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 179,
+        "handlerLine": 188,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -111378,24 +111467,28 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 8,
         "externalPackages": [
+          "encoding/json.NewEncoder",
           "fmt.Sprintf",
+          "fmt.Errorf",
+          "log.Printf",
           "strings.TrimSpace",
           "strings.ToLower",
-          "strings.TrimRight"
+          "strings.TrimRight",
+          "strings.EqualFold"
         ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"ekm\", \"/ekm/google-cse/keys\")",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 917,
+            "line": 934,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCreateGoogleCSEKey",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 196,
+        "handlerLine": 205,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111410,7 +111503,12 @@
         "storeCalls": [
           "GetGoogleCSEConfig",
           "CreateGoogleCSEKey",
-          "UpdateGoogleCSEConfig"
+          "UpdateGoogleCSEConfig",
+          "ListGoogleCSEKeys",
+          "DeleteGoogleCSEKey",
+          "IncrementGoogleCSEKeyUsage",
+          "ListGoogleCSEConfigs",
+          "GetGoogleCSEKeyByURI"
         ],
         "uiLabels": [
           "Enterprise KM",
@@ -111425,7 +111523,7 @@
         "frontendSites": [],
         "handler": "handleListGoogleCSEKeys",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 267,
+        "handlerLine": 278,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111451,13 +111549,13 @@
           {
             "expression": "serviceRequest(\"ekm\", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/ekm.ts",
-            "line": 927,
+            "line": 944,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteGoogleCSEKey",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 283,
+        "handlerLine": 294,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -111483,7 +111581,7 @@
         "frontendSites": [],
         "handler": "handleKACLSStatus",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 303,
+        "handlerLine": 314,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111510,7 +111608,7 @@
         "frontendSites": [],
         "handler": "handleKACLSWrap",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 312,
+        "handlerLine": 323,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111539,7 +111637,7 @@
         "frontendSites": [],
         "handler": "handleKACLSUnwrap",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 373,
+        "handlerLine": 384,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111568,7 +111666,7 @@
         "frontendSites": [],
         "handler": "handleKACLSPrivilegedUnwrap",
         "handlerFile": "services/ekm/handler_google_cse.go",
-        "handlerLine": 432,
+        "handlerLine": 443,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111775,7 +111873,7 @@
         ]
       },
       {
-        "complexity": 22,
+        "complexity": 23,
         "externalPackages": [
           "errors.Is",
           "strings.ToLower",
@@ -111858,6 +111956,7 @@
           "GetApprovalRequest",
           "ListApprovalVotes",
           "FindPolicyForAction",
+          "RoleHolderEmails",
           "CreateApprovalRequest",
           "CancelApprovalRequest",
           "ListPendingByApprover"
@@ -112546,7 +112645,7 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 4,
         "externalPackages": [
           "strings.TrimSpace",
           "errors.New",
@@ -112573,6 +112672,7 @@
         ],
         "storeCalls": [
           "FindPolicyForAction",
+          "RoleHolderEmails",
           "CreateApprovalRequest",
           "GetApprovalRequest"
         ],
@@ -112871,7 +112971,10 @@
       {
         "complexity": 5,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strconv.Itoa",
+          "strings.TrimSpace",
+          "strings.TrimRight",
+          "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleMicrosoftDKEGetKey",
@@ -112904,23 +113007,26 @@
         ]
       },
       {
-        "complexity": 0,
+        "complexity": 1,
         "externalPackages": [
+          "strconv.Itoa",
           "strings.TrimSpace",
-          "strings.EqualFold"
+          "strings.TrimRight"
         ],
         "frontendSites": [],
         "handler": "handleMicrosoftDKEDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 82,
+        "handlerLine": 74,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
-        "normalizedPath": "/api/v1/keys/{param}/decrypt",
-        "path": "/api/v1/keys/{id}/decrypt",
-        "receiverCalls": [],
+        "normalizedPath": "/api/v1/keys/{param}/{param}/decrypt",
+        "path": "/api/v1/keys/{id}/{version}/decrypt",
+        "receiverCalls": [
+          "s.keycore.GetKey"
+        ],
         "risk": "medium",
-        "routeKey": "hyok|POST|/api/v1/keys/{param}/decrypt",
+        "routeKey": "hyok|POST|/api/v1/keys/{param}/{param}/decrypt",
         "sensitive": false,
         "service": "hyok",
         "serviceCalls": [
@@ -112937,7 +113043,7 @@
         "frontendSites": [],
         "handler": "handleDKEDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 101,
+        "handlerLine": 93,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -112971,7 +113077,7 @@
         ],
         "handler": "handleDKEPublicKey",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 176,
+        "handlerLine": 168,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -113001,7 +113107,7 @@
         "frontendSites": [],
         "handler": "handleSalesforceWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 105,
+        "handlerLine": 97,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113024,7 +113130,7 @@
         "frontendSites": [],
         "handler": "handleSalesforceUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 109,
+        "handlerLine": 101,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113047,7 +113153,7 @@
         "frontendSites": [],
         "handler": "handleGoogleWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 113,
+        "handlerLine": 105,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113070,7 +113176,7 @@
         "frontendSites": [],
         "handler": "handleGoogleUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 117,
+        "handlerLine": 109,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113093,7 +113199,7 @@
         "frontendSites": [],
         "handler": "handleGenericEncrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 121,
+        "handlerLine": 113,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113116,7 +113222,7 @@
         "frontendSites": [],
         "handler": "handleGenericDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 125,
+        "handlerLine": 117,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113139,7 +113245,7 @@
         "frontendSites": [],
         "handler": "handleGenericWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 129,
+        "handlerLine": 121,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113162,7 +113268,7 @@
         "frontendSites": [],
         "handler": "handleGenericUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 133,
+        "handlerLine": 125,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113185,7 +113291,7 @@
         "frontendSites": [],
         "handler": "handleServiceNowWrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 137,
+        "handlerLine": 129,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113208,7 +113314,7 @@
         "frontendSites": [],
         "handler": "handleServiceNowUnwrap",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 141,
+        "handlerLine": 133,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113231,7 +113337,7 @@
         "frontendSites": [],
         "handler": "handleAlibabaEncrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 145,
+        "handlerLine": 137,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113254,7 +113360,7 @@
         "frontendSites": [],
         "handler": "handleAlibabaDecrypt",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 149,
+        "handlerLine": 141,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113286,7 +113392,7 @@
         ],
         "handler": "handleListEndpoints",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 190,
+        "handlerLine": 182,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -113317,9 +113423,11 @@
           "errors.Is",
           "fmt.Errorf",
           "net.SplitHostPort",
+          "strconv.Itoa",
           "strings.ToLower",
           "strings.Contains",
           "strings.EqualFold",
+          "strings.TrimRight",
           "strings.ToUpper",
           "strings.HasPrefix",
           "strings.Split",
@@ -113335,7 +113443,7 @@
         ],
         "handler": "handleConfigureEndpoint",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 204,
+        "handlerLine": 196,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.ParseRSAPublicKeyAny",
@@ -113392,7 +113500,7 @@
         ],
         "handler": "handleDeleteEndpoint",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 248,
+        "handlerLine": 240,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -113429,7 +113537,7 @@
         ],
         "handler": "handleListRequests",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 261,
+        "handlerLine": 253,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -113465,7 +113573,7 @@
         ],
         "handler": "handleHealth",
         "handlerFile": "services/hyok/handler.go",
-        "handlerLine": 277,
+        "handlerLine": 269,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -127456,7 +127564,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-27T08:51:21Z",
+    "generatedAt": "2026-09-27T09:45:06Z",
     "methods": [
       "DELETE",
       "GET",
@@ -127499,7 +127607,7 @@
     ],
     "summary": {
       "flows": 941,
-      "frontendBacked": 554,
+      "frontendBacked": 555,
       "highRisk": 373,
       "services": 30
     }

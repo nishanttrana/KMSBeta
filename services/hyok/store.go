@@ -16,6 +16,7 @@ type Store interface {
 	UpsertEndpoint(ctx context.Context, endpoint EndpointConfig) error
 	GetEndpoint(ctx context.Context, tenantID string, protocol string) (EndpointConfig, error)
 	ListEndpoints(ctx context.Context, tenantID string) ([]EndpointConfig, error)
+	ListEnabledEndpointsByProtocol(ctx context.Context, protocol string) ([]EndpointConfig, error)
 	DeleteEndpoint(ctx context.Context, tenantID string, protocol string) error
 
 	CreateRequestLog(ctx context.Context, req ProxyRequestLog) error
@@ -71,6 +72,31 @@ FROM hyok_endpoints
 WHERE tenant_id = $1
 ORDER BY protocol
 `, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]EndpointConfig, 0)
+	for rows.Next() {
+		item, err := scanEndpoint(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+// ListEnabledEndpointsByProtocol lists every tenant's enabled endpoint for a
+// protocol; a Microsoft DKE call names no Vecta tenant, so its tenant is the
+// one whose endpoint trusts the caller's issuer or host.
+func (s *SQLStore) ListEnabledEndpointsByProtocol(ctx context.Context, protocol string) ([]EndpointConfig, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, protocol, enabled, auth_mode, policy_id, governance_required, metadata_json, created_at, updated_at
+FROM hyok_endpoints
+WHERE protocol = $1 AND enabled = TRUE
+ORDER BY tenant_id
+`, protocol)
 	if err != nil {
 		return nil, err
 	}

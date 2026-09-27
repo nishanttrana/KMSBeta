@@ -63,8 +63,14 @@ func TestLeakScanFindsSecretsAndResolverIsTheCaller(t *testing.T) {
 	if rr, _ := leakCall(t, h, http.MethodPost, "/leaks/targets/"+tid+"/scan", string(body)); rr.Code != http.StatusAccepted {
 		t.Fatalf("scan: %d %s", rr.Code, rr.Body)
 	}
-	if e := rec.Last(t); e.Action != "leak_scan_started" || e.Event.Result != "success" {
-		t.Fatalf("scan event %+v", e)
+	// The scan runs in the background and may already have emitted
+	// leak_scan_completed, so look for the start event rather than the last.
+	started := false
+	for _, e := range rec.Events() {
+		started = started || (e.Action == "leak_scan_started" && e.Event.Result == "success")
+	}
+	if !started {
+		t.Fatalf("no successful leak_scan_started event: %+v", rec.Events())
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

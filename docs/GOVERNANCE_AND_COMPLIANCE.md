@@ -610,7 +610,7 @@ Rather than polling, configure a push webhook to receive events in real time:
 
 ```bash
 # Configure audit webhook (receives events within ~1 second of occurrence)
-curl -X PUT "https://localhost/svc/audit/audit/webhook?tenant_id=root" \
+curl -X POST "https://localhost/svc/audit/webhooks?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -895,7 +895,7 @@ curl -X PUT "https://localhost/svc/governance/governance/settings?tenant_id=root
   }'
 
 # Test email channel
-curl -X POST "https://localhost/svc/governance/governance/settings/test?tenant_id=root&channel=email" \
+curl -X POST "https://localhost/svc/governance/governance/settings/smtp/test?tenant_id=root&channel=email" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -985,21 +985,6 @@ curl -X POST "https://localhost/svc/governance/governance/backups/restore" \
   }"
 ```
 
-#### Backup Rotation Policy
-
-```bash
-# Set backup retention: keep last 30 daily backups, last 12 monthly
-curl -X PUT "https://localhost/svc/governance/governance/backups/retention?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "max_backups": 30,
-    "max_age_days": 365,
-    "monthly_retention_months": 12
-  }'
-```
-
----
-
 ### 2.6 System State Management
 
 The governance service also manages platform-wide configuration that affects security posture:
@@ -1010,21 +995,9 @@ curl "https://localhost/svc/governance/governance/system/state?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Toggle FIPS mode (requires governance approval if a FIPS policy exists)
-curl -X PUT "https://localhost/svc/governance/governance/system/fips?tenant_id=root" \
+curl -X PUT "https://localhost/svc/governance/governance/system/fips-mode?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"fips_enabled": true}'
-
-# Update network bind configuration
-curl -X PUT "https://localhost/svc/governance/governance/system/network?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "api_bind": "0.0.0.0:8443",
-    "tls_enabled": true,
-    "tls_cert_path": "/etc/vecta/tls/server.crt",
-    "tls_key_path": "/etc/vecta/tls/server.key",
-    "mtls_required": true,
-    "client_ca_path": "/etc/vecta/tls/client-ca.crt"
-  }'
 
 # Get audit log of all system state changes
 curl "https://localhost/svc/audit/audit/events?tenant_id=root&service=governance&action=governance.fips.enabled" \
@@ -1217,35 +1190,24 @@ The compliance assessment engine scans the current state of the KMS and produces
 
 ```bash
 # Run immediate assessment against custom template
-curl -X POST "https://localhost/svc/compliance/compliance/assess?tenant_id=root" \
+curl -X POST "https://localhost/svc/compliance/compliance/assessment/run?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"template_id": "custom-template-uuid"}'
 
 # Run against built-in baseline
-curl -X POST "https://localhost/svc/compliance/compliance/assess?tenant_id=root" \
+curl -X POST "https://localhost/svc/compliance/compliance/assessment/run?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"template_id": "baseline"}'
 
 # Get list of assessments (most recent first)
-curl "https://localhost/svc/compliance/compliance/assessments?tenant_id=root&limit=10" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get a specific assessment report (full JSON)
-curl "https://localhost/svc/compliance/compliance/assessments/ASSESSMENT_UUID?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/assessment/history?tenant_id=root&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get delta from previous scan (what improved, what regressed)
-curl "https://localhost/svc/compliance/compliance/assessments/delta?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/assessment/delta?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Get framework-specific gaps (all failing controls for PCI DSS)
-curl "https://localhost/svc/compliance/compliance/framework-gaps?tenant_id=root&framework_id=pci_dss_v4" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get findings by severity (all critical findings across all frameworks)
-curl "https://localhost/svc/compliance/compliance/findings?tenant_id=root&severity=critical" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 #### Assessment Response Structure
@@ -1334,7 +1296,7 @@ PQC Readiness is tracked rather than scored against a threshold, because the NIS
 
 ```bash
 # Get key hygiene metrics for a tenant
-curl "https://localhost/svc/compliance/compliance/hygiene?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/keys/hygiene?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1359,7 +1321,7 @@ Automated assessment scheduling ensures continuous compliance visibility without
 
 ```bash
 # Set daily assessment at 02:00 UTC
-curl -X PUT "https://localhost/svc/compliance/compliance/assessments/schedule?tenant_id=root" \
+curl -X PUT "https://localhost/svc/compliance/compliance/assessment/schedule?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1374,7 +1336,7 @@ curl -X PUT "https://localhost/svc/compliance/compliance/assessments/schedule?te
   }'
 
 # Set weekly assessment (Monday 00:00 UTC)
-curl -X PUT "https://localhost/svc/compliance/compliance/assessments/schedule?tenant_id=root" \
+curl -X PUT "https://localhost/svc/compliance/compliance/assessment/schedule?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "enabled": true,
@@ -1386,12 +1348,12 @@ curl -X PUT "https://localhost/svc/compliance/compliance/assessments/schedule?te
   }'
 
 # Disable scheduled assessment
-curl -X PUT "https://localhost/svc/compliance/compliance/assessments/schedule?tenant_id=root" \
+curl -X PUT "https://localhost/svc/compliance/compliance/assessment/schedule?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"enabled": false}'
 
 # Get current schedule
-curl "https://localhost/svc/compliance/compliance/assessments/schedule?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/assessment/schedule?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1459,7 +1421,7 @@ event.target_type == "key" && event.result == "failure" && count(events, 60) >= 
 
 ```bash
 # Create an alert rule
-curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
+curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1475,7 +1437,7 @@ curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
   }'
 
 # Create a key export outside business hours rule
-curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
+curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "After-Hours Key Export",
@@ -1488,7 +1450,7 @@ curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
   }'
 
 # Create a FIPS mode change alert
-curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
+curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "FIPS Mode Disabled",
@@ -1501,25 +1463,9 @@ curl -X POST "https://localhost/svc/alerting/rules?tenant_id=root" \
   }'
 
 # List all rules
-curl "https://localhost/svc/alerting/rules?tenant_id=root" \
+curl "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Enable/disable a rule
-curl -X PATCH "https://localhost/svc/alerting/rules/RULE_UUID?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"enabled": false}'
-
-# Test a rule against a synthetic event
-curl -X POST "https://localhost/svc/alerting/rules/RULE_UUID/test?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "synthetic_event": {
-      "action": "key.decrypt",
-      "result": "failure",
-      "actor_id": "user-uuid",
-      "source_ip": "198.51.100.42"
-    }
-  }'
 ```
 
 #### Built-In Alert Rule Templates
@@ -1549,36 +1495,6 @@ Vecta ships with the following pre-built rules that can be enabled immediately:
 
 Alert notification channels are configured separately from governance notification channels (they share the same settings store but can be configured independently per rule).
 
-```bash
-# Configure PagerDuty integration for critical alerts
-curl -X PUT "https://localhost/svc/alerting/channels/pagerduty?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "integration_key": "pd-routing-key-here",
-    "default_severity": "critical",
-    "dedup_key_template": "{{.rule_id}}-{{.actor_id}}"
-  }'
-
-# Configure Slack channel
-curl -X PUT "https://localhost/svc/alerting/channels/slack?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "webhook_url": "https://hooks.slack.com/services/...",
-    "channel": "#security-alerts",
-    "mention_on_critical": "@here"
-  }'
-
-# Configure custom webhook (e.g. ServiceNow incident creation)
-curl -X PUT "https://localhost/svc/alerting/channels/webhook?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "url": "https://servicenow.company.internal/api/now/table/incident",
-    "method": "POST",
-    "auth_header": "Authorization: Bearer SN_TOKEN",
-    "body_template": "{\"short_description\": \"KMS Alert: {{.rule_name}}\", \"description\": \"{{.description}}\", \"category\": \"Security\", \"severity\": \"{{.severity}}\"}"
-  }'
-```
-
 #### Alert Dashboard
 
 The dashboard channel provides real-time alert visibility in the Vecta UI:
@@ -1603,9 +1519,6 @@ The alert center tracks two key operational metrics:
 Both metrics are tracked per severity level and per rule, with 14-day rolling trend charts in the dashboard.
 
 ```bash
-# Get MTTD/MTTR metrics
-curl "https://localhost/svc/alerting/metrics?tenant_id=root&period_days=30" \
-  -H "Authorization: Bearer $TOKEN"
 
 # Example response:
 # {
@@ -1686,7 +1599,7 @@ curl -X POST "https://localhost/svc/reporting/reports/generate?tenant_id=root" \
 
 ```bash
 # Schedule monthly compliance summary (1st of each month at 07:00 UTC)
-curl -X POST "https://localhost/svc/reporting/reports/schedules?tenant_id=root" \
+curl -X POST "https://localhost/svc/reporting/reports/scheduled?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "Monthly Compliance Summary",
@@ -1700,7 +1613,7 @@ curl -X POST "https://localhost/svc/reporting/reports/schedules?tenant_id=root" 
   }'
 
 # Schedule weekly key inventory (every Monday)
-curl -X POST "https://localhost/svc/reporting/reports/schedules?tenant_id=root" \
+curl -X POST "https://localhost/svc/reporting/reports/scheduled?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "Weekly Key Inventory",
@@ -1749,30 +1662,6 @@ Drift detection compares the current state of each key and certificate against a
 
 ...trigger a `policy_drift` finding that requires review and explicit acknowledgement.
 
-### Remediation Workflow
-
-```bash
-# List all open posture findings
-curl "https://localhost/svc/compliance/compliance/findings?tenant_id=root&status=open" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Acknowledge a finding (with explanation)
-curl -X POST "https://localhost/svc/compliance/compliance/findings/FINDING_UUID/acknowledge?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "comment": "Legacy key kept for decrypt-only use of archived data — rotation not feasible",
-    "accepted_risk": true,
-    "review_date": "2025-01-01"
-  }'
-
-# Mark finding as resolved (after remediation)
-curl -X POST "https://localhost/svc/compliance/compliance/findings/FINDING_UUID/resolve?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"comment": "Key rotated — rotation policy now 180 days"}'
-```
-
----
-
 ## 6. SBOM / CBOM
 
 ### Software Bill of Materials (SBOM)
@@ -1785,7 +1674,7 @@ curl "https://localhost/svc/compliance/compliance/sbom?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get SBOM for a specific service
-curl "https://localhost/svc/compliance/compliance/sbom/keycore?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/sbom/services/keycore?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Export SBOM in CycloneDX format
@@ -1833,7 +1722,7 @@ The CBOM powers the PQC (Post-Quantum Cryptography) readiness score. The engine 
 
 ```bash
 # Get PQC readiness report
-curl "https://localhost/svc/compliance/compliance/pqc-readiness?tenant_id=root" \
+curl "https://localhost/svc/compliance/compliance/cbom/pqc-readiness?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1860,7 +1749,7 @@ curl "https://localhost/svc/compliance/compliance/pqc-readiness?tenant_id=root" 
 
 1. **Run compliance assessment** against the `pci_focused` template to get the current posture score and identify gaps before the auditor does:
    ```bash
-   curl -X POST "https://localhost/svc/compliance/compliance/assess?tenant_id=root" \
+   curl -X POST "https://localhost/svc/compliance/compliance/assessment/run?tenant_id=root" \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"template_id": "pci_focused"}'
    ```
@@ -1919,7 +1808,7 @@ curl "https://localhost/svc/compliance/compliance/pqc-readiness?tenant_id=root" 
 
 1. **Immediately revoke the compromised service account's tokens:**
    ```bash
-   curl -X POST "https://localhost/svc/auth/clients/COMPROMISED_CLIENT_UUID/revoke?tenant_id=root" \
+   curl -X POST "https://localhost/svc/auth/auth/clients/COMPROMISED_CLIENT_UUID/revoke?tenant_id=root" \
      -H "Authorization: Bearer $ADMIN_TOKEN"
    ```
 
@@ -1979,11 +1868,11 @@ curl "https://localhost/svc/audit/audit/events?tenant_id=root&date_from=$(date -
   -H "Authorization: Bearer $TOKEN" >> /evidence/cc6-access-events.jsonl
 
 # Daily: export anomaly alerts (CC7 — monitoring)
-curl "https://localhost/svc/alerting/alerts?tenant_id=root&date_from=$(date -d '1 day ago' -u +%Y-%m-%dT00:00:00Z)&format=json" \
+curl "https://localhost/svc/reporting/alerts?tenant_id=root&date_from=$(date -d '1 day ago' -u +%Y-%m-%dT00:00:00Z)&format=json" \
   -H "Authorization: Bearer $TOKEN" >> /evidence/cc7-alerts.json
 
 # Weekly: compliance assessment (CC9 — risk management)
-curl -X POST "https://localhost/svc/compliance/compliance/assess?tenant_id=root" \
+curl -X POST "https://localhost/svc/compliance/compliance/assessment/run?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"template_id": "soc2_focused"}' >> /evidence/weekly-assessments.json
 
@@ -2068,10 +1957,12 @@ curl "https://localhost/svc/governance/governance/backups?tenant_id=root&date_fr
 | GET | `/merkle/epochs` | List all Merkle epochs |
 | GET | `/merkle/epochs/{epoch_id}` | Get specific epoch with root |
 | POST | `/merkle/verify` | Verify a Merkle inclusion proof |
-| PUT | `/webhook` | Configure audit event push webhook |
-| DELETE | `/webhook` | Remove audit webhook |
+| GET/POST | `/svc/audit/webhooks` (no `audit/` prefix) | List or add audit event push webhooks |
+| PATCH/DELETE | `/svc/audit/webhooks/{id}` | Change or remove a webhook |
+| GET | `/svc/audit/webhooks/{id}/deliveries` | Delivery history |
+| POST | `/svc/audit/webhooks/{id}/test` | Send a test delivery |
 
-**Query parameters for GET /events:**
+**Query parameters for `GET /svc/audit/audit/events`:**
 
 ```
 tenant_id, service, action, actor_id, actor_type, target_id, target_type,

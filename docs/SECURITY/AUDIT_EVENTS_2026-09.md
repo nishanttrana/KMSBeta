@@ -252,6 +252,8 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 | `audit.auth.client_activation_refused` | Client activation without an approved governance request, or for another tenant | `TestHandlerRegisterActivateFlow` |
 | `audit.governance.approval_refused` | An approval-API call without a token, from another tenant, a policy change by a non-administrator, a vote by a service or a user with no email | `TestApprovalAPIRequiresAuthenticatedTenantCaller` |
 | `audit.governance.link_refused` | The email-link approval page opened with an invalid or used token | `TestApprovalPageNeedsAValidToken` |
+| `audit.hyok.dke_refused` | A Microsoft DKE call refused: no or invalid token, an Entra token whose issuer, audience, tenant or user the endpoint does not allow, an anonymous key fetch on another host, a non-current key version | `TestMicrosoftDKERefusesBadEntraTokens`, `TestMicrosoftDKEPublicKeyWithoutToken` |
+| `audit.governance.approval_refused` (`reason: vote_refused`) | A vote refused: not an approver of the request (including a user without the policy's approver role), the requester, a wrong challenge code | `TestApproverRolesDecideWhoMayVote` |
 | `audit.hyok.admin_refused` | HYOK endpoint administration without a valid token, cross-tenant, or by a non-administrator | `TestHYOKAdminRoutesRequireTenantAdmin` |
 | `audit.hyok.approval_refused` | A retry whose approval is not approved, is for another key, operation or payload, or was already used | `TestHYOKGovernanceApprovalReleasesOperationOnce` |
 | `audit.hyok.request_denied` (`reason: key_access_unavailable`) | The key-access service is unreachable and the proxy fails closed | `TestHYOKKeyAccessFailsClosed` |

@@ -564,9 +564,10 @@ type GoogleCSEConfig struct {
 	TenantID                  string    `json:"tenant_id"`
 	GoogleWorkspaceCustomerID string    `json:"google_workspace_customer_id"`
 	ServiceAccountEmail       string    `json:"service_account_email"`
-	ServiceAccountKeyJSON     string    `json:"service_account_key_json"` // encrypted at rest
-	AllowedDomains            []string  `json:"allowed_domains"`          // e.g., ["company.com"]
-	KACLSEndpoint             string    `json:"kacls_endpoint"`           // public URL where Google calls us
+	ServiceAccountKeyJSON     string    `json:"service_account_key_json"`  // encrypted at rest
+	AllowedDomains            []string  `json:"allowed_domains"`           // e.g., ["company.com"]
+	AuthenticationClientIDs   []string  `json:"authentication_client_ids"` // OAuth client IDs the authentication token's aud must name
+	KACLSEndpoint             string    `json:"kacls_endpoint"`            // public URL where Google calls us
 	Status                    string    `json:"status"`
 	KeyCount                  int       `json:"key_count"`
 	LastActivityAt            time.Time `json:"last_activity_at"`
@@ -630,6 +631,7 @@ type CreateGoogleCSEConfigRequest struct {
 	ServiceAccountEmail       string   `json:"service_account_email"`
 	ServiceAccountKeyJSON     string   `json:"service_account_key_json"`
 	AllowedDomains            []string `json:"allowed_domains"`
+	AuthenticationClientIDs   []string `json:"authentication_client_ids"`
 	KACLSEndpoint             string   `json:"kacls_endpoint"`
 }
 
