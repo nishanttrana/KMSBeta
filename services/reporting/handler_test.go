@@ -10,8 +10,9 @@ import (
 )
 
 func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
-	h, _, audit, _, _, _ := newReportingHandler(t)
+	hh, _, audit, _, _, _ := newReportingHandler(t)
 	tenantID := "tenant-h1"
+	h := asCaller(hh, adminOf(tenantID))
 	audit.events[tenantID] = []map[string]interface{}{
 		{"id": "e1", "action": "key.exported", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
 	}
@@ -44,7 +45,7 @@ func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
 		t.Fatalf("unread status=%d body=%s", unreadRR.Code, unreadRR.Body.String())
 	}
 
-	ackReq := httptest.NewRequest(http.MethodPut, "/alerts/"+alertID+"/acknowledge?tenant_id="+tenantID, strings.NewReader(`{"actor":"analyst"}`))
+	ackReq := httptest.NewRequest(http.MethodPut, "/alerts/"+alertID+"/acknowledge?tenant_id="+tenantID, strings.NewReader(`{"note":"triaged"}`))
 	ackReq.Header.Set("Content-Type", "application/json")
 	ackRR := httptest.NewRecorder()
 	h.ServeHTTP(ackRR, ackReq)
@@ -82,8 +83,9 @@ func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
 }
 
 func TestHandlerRulesChannelsAndReports(t *testing.T) {
-	h, _, _, compliance, posture, _ := newReportingHandler(t)
+	hh, _, _, compliance, posture, _ := newReportingHandler(t)
 	tenantID := "tenant-h2"
+	h := asCaller(hh, adminOf(tenantID))
 	compliance.posture[tenantID] = map[string]interface{}{"overall_score": "77"}
 	posture.findings[tenantID] = []map[string]interface{}{
 		{"id": "finding-1", "title": "SDK receipt gaps", "severity": "high", "status": "open"},
@@ -140,8 +142,7 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 	genReq := httptest.NewRequest(http.MethodPost, "/reports/generate", strings.NewReader(`{
 		"tenant_id":"`+tenantID+`",
 		"template_id":"evidence_pack",
-		"format":"json",
-		"requested_by":"tester"
+		"format":"json"
 	}`))
 	genReq.Header.Set("Content-Type", "application/json")
 	genRR := httptest.NewRecorder()
@@ -187,7 +188,7 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 		t.Fatalf("download report status=%d body=%s", downloadRR.Code, downloadRR.Body.String())
 	}
 
-	deleteReq := httptest.NewRequest(http.MethodDelete, "/reports/jobs/"+jobID+"?tenant_id="+tenantID+"&actor=tester", nil)
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/reports/jobs/"+jobID+"?tenant_id="+tenantID, nil)
 	deleteRR := httptest.NewRecorder()
 	h.ServeHTTP(deleteRR, deleteReq)
 	if deleteRR.Code != http.StatusOK {
@@ -224,8 +225,9 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 }
 
 func TestHandlerTelemetryEndpoints(t *testing.T) {
-	h, _, _, _, _, _ := newReportingHandler(t)
+	hh, _, _, _, _, _ := newReportingHandler(t)
 	tenantID := "tenant-telemetry-handler"
+	h := asCaller(hh, adminOf(tenantID))
 	createReq := httptest.NewRequest(http.MethodPost, "/telemetry/errors", strings.NewReader(`{
 		"tenant_id":"`+tenantID+`",
 		"source":"frontend",

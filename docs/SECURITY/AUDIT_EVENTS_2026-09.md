@@ -210,9 +210,14 @@ refusals are listed below. Handlers add their own (for example
 | `audit.<service>.<action>`, `result: refused`, `reason: tenant_conflict` | query, header and body name different tenants (403) | warning |
 | `audit.<service>.<action>`, `result: failure` | the handler returned an error (`error_code` in details) | the route's severity |
 | `audit.secrets.*` | every secrets route; see the table in `docs/API_REFERENCE.md` (Service 25) | info; `value_read` and `deleted` are warning |
+| `audit.sbom.*` | every sbom/cbom route (1.33.0-beta); list in `docs/API_REFERENCE.md` (Audit Action Subject Reference) | info; `sbom_advisory_deleted` is warning |
+| `audit.sbom.<action>`, `result: refused`, `reason: platform_tenant_required` | a tenant other than the platform tenant tries to generate the platform SBOM or save/delete an advisory (403) | warning |
+| `audit.reporting.*` | every reporting route (1.33.0-beta); the actor is the verified caller, never a body field, `actor` query or `X-Actor-ID` | info; `rule_deleted` and `report_deleted` are warning |
 
 Proven by `routetest.RefusalsAudited` for every route, and by the
-`pkg/route` and `services/secrets` tests.
+`pkg/route`, `services/secrets`, `services/sbom` and `services/reporting`
+tests (`handler_tenancy_test.go`: cross-tenant refusals audited, identity from
+the token).
 
 ## What can't be audited, and how it shows instead
 

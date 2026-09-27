@@ -92,6 +92,27 @@ const queryCbomFormat = {
 const media = (schema) => ({ "application/json": { schema } });
 const err = (description) => ({ description, content: media({ $ref: "#/components/schemas/ErrorEnvelope" }) });
 
+// kernelRoutes documents routes served by the pkg/route kernel: a verified
+// bearer token is required, the tenant is the token's (a named tenant must
+// match it; kms-* service principals act for the tenant they name), and each
+// request is audited as audit.<service>.<action>, refusals included. Every
+// listed route must be in the spec, so the two can't drift apart silently.
+function kernelRoutes(spec, service, routes) {
+  spec.security = [{ bearerAuth: [] }];
+  spec.components.securitySchemes = { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } };
+  for (const [key, [perm, action, note]] of Object.entries(routes)) {
+    const [method, route] = key.split(" ");
+    const op = spec.paths[route]?.[method.toLowerCase()];
+    if (!op) throw new Error(`${service}: ${key} is not in the spec`);
+    op.description = [op.description, `Permission \`${perm}\`. Audited as \`audit.${service}.${action}\`, refusals included (\`reason\` = \`unauthenticated\`, \`permission_denied\`, \`tenant_mismatch\`, \`tenant_conflict\`).`, note]
+      .filter(Boolean)
+      .join(" ");
+    op.responses[401] ??= err("No valid bearer token (reason `unauthenticated`).");
+    op.responses[403] ??= err("Missing permission, or a tenant other than the token's.");
+  }
+  return spec;
+}
+
 function buildSBOMComponents() {
   return {
     parameters: {
@@ -315,7 +336,7 @@ function buildSBOMComponents() {
         },
       },
       GenerateSBOMRequest: { type: "object", properties: { trigger: { type: "string" } } },
-      GenerateCBOMRequest: { type: "object", properties: { tenant_id: { type: "string" }, trigger: { type: "string" } } },
+      GenerateCBOMRequest: { type: "object", properties: { trigger: { type: "string" } } },
       SBOMSnapshotEnvelope: { type: "object", required: ["item", "request_id"], properties: { item: { $ref: "#/components/schemas/SBOMSnapshot" }, request_id: { type: "string" } } },
       SBOMSnapshotListEnvelope: { type: "object", required: ["items", "request_id"], properties: { items: { type: "array", items: { $ref: "#/components/schemas/SBOMSnapshot" } }, request_id: { type: "string" } } },
       VulnerabilityListEnvelope: { type: "object", required: ["items", "request_id"], properties: { items: { type: "array", items: { $ref: "#/components/schemas/VulnerabilityMatch" } }, request_id: { type: "string" } } },
@@ -333,6 +354,30 @@ function buildSBOMComponents() {
 }
 
 function buildSBOMSpec() {
+  const platformWrite = "The platform SBOM is shared by every tenant: only the platform tenant (or a tenant-less root token or kms-* service principal) may change it; anyone else is refused with reason `platform_tenant_required`.";
+  return kernelRoutes(sbomPaths(), "sbom", {
+    "POST /sbom/generate": ["sbom.write", "sbom_generate_requested", platformWrite],
+    "GET /sbom/latest": ["sbom.read", "sbom_latest_read"],
+    "GET /sbom/history": ["sbom.read", "sbom_history_listed"],
+    "GET /sbom/vulnerabilities": ["sbom.read", "sbom_vulnerabilities_listed"],
+    "GET /sbom/advisories": ["sbom.read", "sbom_advisories_listed"],
+    "POST /sbom/advisories": ["sbom.write", "sbom_advisory_saved", platformWrite],
+    "DELETE /sbom/advisories/{id}": ["sbom.delete", "sbom_advisory_deleted", platformWrite],
+    "GET /sbom/diff": ["sbom.read", "sbom_diff_read"],
+    "GET /sbom/{id}/export": ["sbom.read", "sbom_exported"],
+    "GET /sbom/{id}": ["sbom.read", "sbom_read"],
+    "POST /cbom/generate": ["sbom.write", "cbom_generate_requested", "The CBOM is built for the token's tenant; `tenant_id` is no longer read from the body."],
+    "GET /cbom/latest": ["sbom.read", "cbom_latest_read"],
+    "GET /cbom/history": ["sbom.read", "cbom_history_listed"],
+    "GET /cbom/summary": ["sbom.read", "cbom_summary_read"],
+    "GET /cbom/pqc-readiness": ["sbom.read", "cbom_pqc_readiness_read"],
+    "GET /cbom/diff": ["sbom.read", "cbom_diff_read"],
+    "GET /cbom/{id}/export": ["sbom.read", "cbom_exported"],
+    "GET /cbom/{id}": ["sbom.read", "cbom_read"],
+  });
+}
+
+function sbomPaths() {
   const tenantParams = [
     { $ref: "#/components/parameters/RequestIdHeader" },
     { $ref: "#/components/parameters/TenantQuery" },
@@ -1470,6 +1515,20 @@ function buildReportingComponents() {
 }
 
 function buildReportingSpec() {
+  return kernelRoutes(reportingPaths(), "reporting", {
+    "GET /reports/templates": ["reporting.read", "report_templates_listed"],
+    "POST /reports/generate": ["reporting.write", "report_requested", "The job is queued for the token's tenant and `requested_by` is the verified caller; `tenant_id` and `requested_by` are no longer read from the body (a `requested_by` field is rejected)."],
+    "GET /reports/jobs": ["reporting.read", "report_jobs_listed"],
+    "GET /reports/jobs/{id}": ["reporting.read", "report_job_read"],
+    "DELETE /reports/jobs/{id}": ["reporting.delete", "report_deleted", "The deleting actor is the verified caller; the `actor` query parameter and `X-Actor-ID` header are ignored."],
+    "GET /reports/jobs/{id}/download": ["reporting.read", "report_downloaded"],
+    "GET /alerts/stats/mttd": ["reporting.read", "mttd_stats_viewed"],
+    "GET /alerts/stats/mttr": ["reporting.read", "mttr_stats_read"],
+    "GET /alerts/stats/top-sources": ["reporting.read", "top_sources_read"],
+  });
+}
+
+function reportingPaths() {
   const tenantParams = [
     { $ref: "#/components/parameters/RequestIdHeader" },
     { $ref: "#/components/parameters/TenantQuery" },
@@ -1511,12 +1570,10 @@ function buildReportingSpec() {
             required: true,
             content: media({
               type: "object",
-              required: ["tenant_id", "template_id"],
+              required: ["template_id"],
               properties: {
-                tenant_id: { type: "string", example: "root" },
                 template_id: { type: "string", enum: ["key_generation", "key_rotation", "kms_operations", "hyok_activity", "byok_activity", "certificate_lifecycle", "compliance_audit", "posture_summary", "evidence_pack", "alert_summary", "custom"] },
                 format: { type: "string", enum: ["pdf", "csv", "json"], default: "pdf" },
-                requested_by: { type: "string" },
                 filters: objectAny,
               },
             }),
@@ -1550,6 +1607,16 @@ function buildReportingSpec() {
             400: err("Missing tenant scope."),
             404: err("Report job not found."),
             500: err("Unhandled report job retrieval failure."),
+          },
+        },
+        delete: {
+          tags: ["Reporting"],
+          operationId: "deleteReportJob",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
+          responses: {
+            200: { description: "Report job deleted.", content: media({ type: "object", required: ["deleted", "request_id"], properties: { deleted: { type: "boolean" }, request_id: { type: "string" } } }) },
+            404: err("Report job not found in the token's tenant."),
+            500: err("Unhandled report job deletion failure."),
           },
         },
       },

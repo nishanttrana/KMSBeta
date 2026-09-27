@@ -1354,6 +1354,18 @@ batch. Response `200`: `inserted`, `request_id`.
 
 Alert rules, alert history, report generation, scheduled delivery.
 
+Every route is on the `pkg/route` kernel (since 1.33.0-beta): a verified bearer
+token is required, the tenant is the token's (a `tenant_id` in the query,
+`X-Tenant-ID` or body must match it; `kms-*` service principals act for the
+tenant they name), and each request emits `audit.reporting.<action>`, refusals
+included. Permissions: `reporting.read` (lists, reads, stats, templates),
+`reporting.write` (alert operations, rules, severity config, channels,
+incidents, report generation and schedules), `reporting.delete` (rules and
+report jobs). `POST /telemetry/errors` needs only a verified token. Identity is
+the verified caller: acknowledging, resolving, requesting and deleting record
+it, and the old `actor` / `requested_by` body fields are rejected (the `actor`
+query parameter and `X-Actor-ID` header are ignored).
+
 ---
 
 ### GET /svc/reporting/alerts
@@ -1364,9 +1376,12 @@ Alert: id, ruleId, severity, triggeredAt, summary, acknowledged, acknowledgedBy,
 
 ---
 
-### GET /svc/reporting/alerts/{id} / POST /svc/reporting/alerts/{id}/acknowledge
+### GET /svc/reporting/alerts/{id} / PUT /svc/reporting/alerts/{id}/{op}
 
-Acknowledge body: `comment`. Response: updated Alert.
+`op` is `acknowledge`, `resolve`, `false-positive` or `escalate`
+(`audit.reporting.alert_updated`, `operation` in the details). Body: optional
+`note` (resolve, false-positive) or `severity` (escalate). Response:
+`{"status":"ok"}`.
 
 ---
 
@@ -1388,13 +1403,21 @@ Top actors, IPs, and services driving alerts. Response: `{"topActors": [...], "t
 
 ---
 
-### GET /svc/reporting/reports/{id} / GET /svc/reporting/reports/{id}/download
+### GET /svc/reporting/reports/jobs/{id} / GET /svc/reporting/reports/jobs/{id}/download / DELETE /svc/reporting/reports/jobs/{id}
+
+Delete records the verified caller as the actor (`audit.reporting.report_deleted`
+with `template_id`, `format`, `requested_by`).
 
 ---
 
 ### POST /svc/reporting/reports/generate
 
-Body: `templateId` (use `evidence_pack` for full audit package), `params`, `format`
+Body: `template_id` (use `evidence_pack` for full audit package), `format`,
+`filters`. The job is queued for the token's tenant with `requested_by` set to
+the verified caller; `tenant_id` and `requested_by` are no longer read from the
+body. Audited as `audit.reporting.report_requested` (a scheduled run publishes
+the same subject with `trigger: scheduled`); an evidence pack also emits
+`audit.reporting.evidence_pack_requested`.
 
 ---
 
@@ -2407,6 +2430,17 @@ status is then `completed_with_errors`, or `failed` if every source failed.
 
 Software BOM, Cryptographic BOM, vulnerability correlation, offline advisory management.
 
+Every route is on the `pkg/route` kernel (since 1.33.0-beta; before it sbom
+verified no token at all): a verified bearer token is required and each request
+emits `audit.sbom.<action>`, refusals included. Permissions: `sbom.read`,
+`sbom.write` (generate, save advisory), `sbom.delete` (delete advisory). CBOM
+routes are scoped to the token's tenant (`kms-*` service principals act for the
+tenant they name). The platform SBOM and its advisories are shared by every
+tenant, so `POST /sbom/generate`, `POST /sbom/advisories` and
+`DELETE /sbom/advisories/{id}` also require the platform tenant (or a
+tenant-less root token or service principal); anyone else is refused with
+reason `platform_tenant_required`.
+
 ---
 
 ### GET /svc/sbom/sbom/latest
@@ -2511,9 +2545,10 @@ curl -sk -X DELETE "https://localhost/svc/sbom/sbom/advisories/CVE-2026-5000?ten
 
 ### POST /svc/sbom/cbom/generate
 
-Generates a Cryptographic BOM snapshot.
+Generates a Cryptographic BOM snapshot for the token's tenant (a named
+`tenant_id` must match it).
 
-**Request Body**: `tenantId`, `trigger` (manual/scheduled)
+**Request Body**: `trigger` (optional)
 
 **Response 202**: `{"status": "accepted", "snapshot": {"id": "cbom_20260311_001", "createdAt": "..."}}`
 
@@ -2674,7 +2709,9 @@ Selected events with dedicated audit classification:
 - `audit.crypto.random` (with the source that produced the bytes; `hsm_serial` for `hsm-trng`), `audit.crypto.random_refused` (QKD/QRNG/no HSM)
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
-- `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count)
+- `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.cbom.generated`: the snapshot produced, manual or scheduled (`trigger`)
+- `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
+- `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation

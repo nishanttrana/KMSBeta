@@ -486,11 +486,7 @@ func (s *Service) MarkFalsePositive(ctx context.Context, tenantID string, id str
 }
 
 func (s *Service) EscalateAlert(ctx context.Context, tenantID string, id string, severity string) error {
-	if err := s.store.EscalateAlert(ctx, tenantID, id, severity); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.reporting.alert_escalated", tenantID, map[string]interface{}{"alert_id": id, "severity": normalizeSeverity(severity)})
-	return nil
+	return s.store.EscalateAlert(ctx, tenantID, id, severity)
 }
 
 func (s *Service) BulkAlertStatus(ctx context.Context, tenantID string, ids []string, q AlertQuery, status string, actor string, note string) (int, error) {
@@ -542,7 +538,6 @@ func (s *Service) CreateRule(ctx context.Context, tenantID string, item AlertRul
 	if err := s.store.CreateRule(ctx, item); err != nil {
 		return AlertRule{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.rule_created", tenantID, map[string]interface{}{"rule_id": item.ID, "name": item.Name})
 	return item, nil
 }
 
@@ -556,19 +551,11 @@ func (s *Service) UpdateRule(ctx context.Context, tenantID string, id string, it
 			return newServiceError(400, "bad_request", "invalid expression: "+err.Error())
 		}
 	}
-	if err := s.store.UpdateRule(ctx, item); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.reporting.rule_updated", tenantID, map[string]interface{}{"rule_id": id})
-	return nil
+	return s.store.UpdateRule(ctx, item)
 }
 
 func (s *Service) DeleteRule(ctx context.Context, tenantID string, id string) error {
-	if err := s.store.DeleteRule(ctx, tenantID, id); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.reporting.rule_deleted", tenantID, map[string]interface{}{"rule_id": id})
-	return nil
+	return s.store.DeleteRule(ctx, tenantID, id)
 }
 
 func (s *Service) GetSeverityConfig(ctx context.Context, tenantID string) (map[string]string, error) {
@@ -592,7 +579,6 @@ func (s *Service) UpdateSeverityConfig(ctx context.Context, tenantID string, upd
 			return err
 		}
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.severity_config_updated", tenantID, map[string]interface{}{"count": len(updates)})
 	return nil
 }
 
@@ -600,7 +586,9 @@ func (s *Service) ListChannels(ctx context.Context, tenantID string) ([]Notifica
 	return s.ensureDefaultChannels(ctx, tenantID)
 }
 
-func (s *Service) UpdateChannels(ctx context.Context, tenantID string, items []NotificationChannel) error {
+// UpdateChannels stores the channel settings and returns how many it
+// accepted (retired channels are skipped).
+func (s *Service) UpdateChannels(ctx context.Context, tenantID string, items []NotificationChannel) (int, error) {
 	accepted := 0
 	for _, it := range items {
 		if isRetiredChannel(it.Name) {
@@ -608,12 +596,11 @@ func (s *Service) UpdateChannels(ctx context.Context, tenantID string, items []N
 		}
 		it.TenantID = tenantID
 		if err := s.store.UpsertChannel(ctx, it); err != nil {
-			return err
+			return accepted, err
 		}
 		accepted++
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.channels_updated", tenantID, map[string]interface{}{"count": accepted})
-	return nil
+	return accepted, nil
 }
 
 func (s *Service) Templates() []ReportTemplate {
@@ -654,7 +641,9 @@ func (s *Service) GenerateReport(ctx context.Context, tenantID string, templateI
 		return ReportJob{}, err
 	}
 	go s.processReportJob(job)
-	_ = s.publishAudit(ctx, "audit.reporting.report_requested", tenantID, map[string]interface{}{"job_id": job.ID, "template_id": templateID, "format": format})
+	// A request through the API is audited by the route kernel
+	// (audit.reporting.report_requested); a scheduled run by RunDueSchedules.
+	// An evidence pack is a compliance export and gets its own event either way.
 	if normalizeTemplateID(templateID) == "evidence_pack" {
 		_ = s.publishAudit(ctx, "audit.reporting.evidence_pack_requested", tenantID, map[string]interface{}{
 			"job_id":       job.ID,
@@ -952,32 +941,26 @@ func (s *Service) ListReportJobs(ctx context.Context, tenantID string, limit int
 	return s.store.ListReportJobs(ctx, tenantID, limit, offset)
 }
 
-func (s *Service) DeleteReportJob(ctx context.Context, tenantID string, id string, actor string) error {
+// DeleteReportJob deletes a report job and returns what was deleted. The
+// route kernel audits it (audit.reporting.report_deleted) with the verified
+// caller as the actor.
+func (s *Service) DeleteReportJob(ctx context.Context, tenantID string, id string) (ReportJob, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	id = strings.TrimSpace(id)
 	if tenantID == "" {
-		return newServiceError(400, "bad_request", "tenant_id is required")
+		return ReportJob{}, newServiceError(400, "bad_request", "tenant_id is required")
 	}
 	if id == "" {
-		return newServiceError(400, "bad_request", "report job id is required")
+		return ReportJob{}, newServiceError(400, "bad_request", "report job id is required")
 	}
 	job, err := s.store.GetReportJob(ctx, tenantID, id)
 	if err != nil {
-		return err
+		return ReportJob{}, err
 	}
 	if err := s.store.DeleteReportJob(ctx, tenantID, id); err != nil {
-		return err
+		return ReportJob{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.report_deleted", tenantID, map[string]interface{}{
-		"job_id":       job.ID,
-		"template_id":  job.TemplateID,
-		"format":       job.Format,
-		"requested_by": job.RequestedBy,
-		"actor":        defaultString(actor, "system"),
-		"severity":     "info",
-		"audit_level":  "info",
-	})
-	return nil
+	return job, nil
 }
 
 // ScheduleReport schedules a report that the scheduler generates into the
@@ -1006,7 +989,6 @@ func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name stri
 	if err := s.store.CreateScheduledReport(ctx, item); err != nil {
 		return ScheduledReport{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.report_scheduled", tenantID, map[string]interface{}{"schedule_id": item.ID})
 	return item, nil
 }
 
@@ -1078,7 +1060,11 @@ func (s *Service) RunDueSchedules(ctx context.Context) error {
 		return err
 	}
 	for _, item := range items {
-		_, _ = s.GenerateReport(ctx, item.TenantID, item.TemplateID, item.Format, "scheduler", item.Filters)
+		if job, err := s.GenerateReport(ctx, item.TenantID, item.TemplateID, item.Format, "scheduler", item.Filters); err == nil {
+			_ = s.publishAudit(ctx, "audit.reporting.report_requested", item.TenantID, map[string]interface{}{
+				"job_id": job.ID, "template_id": job.TemplateID, "format": job.Format, "schedule_id": item.ID, "trigger": "scheduled",
+			})
+		}
 		now := time.Now().UTC()
 		next := nextRunTime(now, item.Schedule)
 		_ = s.store.UpdateScheduledReportRun(ctx, item.TenantID, item.ID, now, next)
@@ -1189,22 +1175,10 @@ func (s *Service) computeMTTDStats(ctx context.Context, tenantID string) (map[st
 	return out, len(items), nil
 }
 
-func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, error) {
-	out, alertCount, err := s.computeMTTDStats(ctx, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	severities := make([]string, 0, len(out))
-	for sev := range out {
-		severities = append(severities, sev)
-	}
-	sort.Strings(severities)
-	_ = s.publishAudit(ctx, "audit.reporting.mttd_stats_viewed", tenantID, map[string]interface{}{
-		"alert_count":  alertCount,
-		"bucket_count": len(out),
-		"severities":   severities,
-	})
-	return out, nil
+// MTTDStats returns mean time to detect per severity and how many alerts
+// it was computed over.
+func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, int, error) {
+	return s.computeMTTDStats(ctx, tenantID)
 }
 
 func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]interface{}, error) {

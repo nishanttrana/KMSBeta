@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"testing"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -116,7 +118,18 @@ func newSBOMService(t *testing.T) (*Service, *SQLStore, *fakeSBOMKeyCore, *fakeS
 func newSBOMHandler(t *testing.T) (*Handler, *Service, *fakeSBOMKeyCore, *fakeSBOMCerts, *fakeSBOMDiscovery, *nopSBOMPublisher) {
 	t.Helper()
 	svc, _, keycore, certs, discovery, pub := newSBOMService(t)
-	return NewHandler(svc), svc, keycore, certs, discovery, pub
+	return NewHandler(svc, nil, nil), svc, keycore, certs, discovery, pub
+}
+
+// asCaller serves h as if pkg/jwtauth had verified a token carrying claims.
+func asCaller(h http.Handler, claims *pkgauth.Claims) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
+	})
+}
+
+func adminOf(tenant string) *pkgauth.Claims {
+	return &pkgauth.Claims{UserID: "u-" + tenant, TenantID: tenant, Role: "admin", Permissions: []string{"*"}}
 }
 
 func createSBOMSchemaForTest(conn *pkgdb.DB) error {

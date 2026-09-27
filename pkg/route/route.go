@@ -288,6 +288,10 @@ func (w *capture) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+// Unwrap lets http.ResponseController reach the underlying writer (Flush for
+// server-sent events).
+func (w *capture) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
 func (rt *Router) serve(w http.ResponseWriter, r *http.Request, spec Spec, h func(*Call)) {
 	start := time.Now()
 	cw := &capture{ResponseWriter: w}

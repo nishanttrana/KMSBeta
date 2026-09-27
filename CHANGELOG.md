@@ -4,6 +4,64 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.33.0-beta] — 2026-09-27
+
+### sbom and reporting on the route kernel: tenant and identity from the token (breaking)
+- **Cross-tenant access closed.** `POST /cbom/generate` took `tenant_id`
+  from the body and `POST /reports/generate` from the body or query, with no
+  check against the caller's token, so any caller could generate a CBOM or
+  queue a report (over another tenant's alerts and posture) for any tenant.
+  Every sbom and reporting route is now registered through `pkg/route`: the
+  tenant is the verified token's, a `tenant_id` in the query, `X-Tenant-ID`
+  or body must match it (403 `tenant_mismatch`), and internal `kms-*`
+  service principals still act for the tenant they name.
+- **sbom now verifies tokens at all.** It had no JWT middleware: every route,
+  including the platform-wide advisory writes, answered unauthenticated
+  callers. It now requires a verified token (`SBOM_JWT_PUBLIC_KEY_*` or the
+  shared `JWT_PUBLIC_KEY_*`, already in compose) and refuses to start without
+  one.
+- **Identity from the token only.** `requested_by` (report generation) and
+  `actor` (alert acknowledge/resolve/false-positive, bulk acknowledge/resolve)
+  body fields are rejected with 400; the `actor` query parameter and
+  `X-Actor-ID` header on `DELETE /reports/jobs/{id}` are ignored. The
+  recorded requester, acknowledger, resolver and deleting actor is the
+  verified caller.
+- **Permissions.** `sbom.read` / `sbom.write` / `sbom.delete` and
+  `reporting.read` / `reporting.write` / `reporting.delete`. Tenant admins
+  (`*`) are unaffected; custom roles that used these screens need the new
+  grants. `POST /telemetry/errors` needs only a verified token. The
+  platform SBOM and its advisories are shared, so generating it or changing
+  advisories also requires the platform tenant (refusal reason
+  `platform_tenant_required`).
+- **Audit.** Every route emits its own `audit.sbom.<action>` /
+  `audit.reporting.<action>`, refusals included (list in
+  [docs/API_REFERENCE.md](docs/API_REFERENCE.md), Audit Action Subject
+  Reference). The reporting service no longer publishes the request events
+  itself; the kernel emits them under the same subjects (`rule_created`,
+  `report_deleted`, `mttd_stats_viewed`, ...). `audit.reporting.alert_escalated`
+  is replaced by `audit.reporting.alert_updated` with `operation`.
+  Scheduled report runs publish `audit.reporting.report_requested` with
+  `trigger: scheduled`.
+- **Alert operations** are one route, `PUT /alerts/{id}/{op}` (`op` =
+  `acknowledge`, `resolve`, `false-positive`, `escalate`), replacing the
+  `PUT /alerts/` subtree router. Paths are unchanged for clients.
+- **Alert feed streams.** `GET /alerts/feed` (SSE) could never flush:
+  neither `pkg/auditmw`'s response wrapper nor the kernel's exposed `Flush`.
+  Both now implement `Unwrap`, and the feed subscribes before sending
+  `ready`.
+- **Dashboard and OpenAPI.** The dashboard no longer sends `tenant_id`,
+  `requested_by` or `actor` in these requests. The sbom and reporting
+  OpenAPI specs declare bearer auth, list each operation's permission and
+  audit subject, drop `tenant_id`/`requested_by` from request bodies and add
+  `DELETE /reports/jobs/{id}`. `services/sbom/handler.go` and
+  `services/reporting/handler.go` leave the route-kernel burn-down list.
+- **Still open:** `GET /cbom/history` generates a first snapshot when none
+  exists (a write on a read path, including on cluster members); the
+  reporting service's background events (`alert_created`,
+  `evidence_pack_requested`, scheduled `report_requested`) and sbom's
+  `generated` / `cbom.generated` still use the legacy publisher rather than
+  `pkg/audit` `Client.Emit`.
+
 ## [1.32.0-beta] — 2026-09-27
 
 ### Posture requires a verified token on every route (breaking)
@@ -105,6 +163,7 @@ Until now confidential compute returned a verdict and released nothing
   entries.
 - README's service table listed `qkd`, `qrng`, `mpc` and `ai` services that do
   not exist; it now lists `ai-gateway`.
+
 ## [1.29.0-beta] — 2026-09-27
 
 ### OpenAPI specs describe only real services (breaking for anyone using them)

@@ -74,6 +74,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled SBOM generation failure.",
             "content": {
@@ -84,7 +104,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.write`. Audited as `audit.sbom.sbom_generate_requested`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`). The platform SBOM is shared by every tenant: only the platform tenant (or a tenant-less root token or kms-* service principal) may change it; anyone else is refused with reason `platform_tenant_required`."
       }
     },
     "/sbom/latest": {
@@ -109,6 +130,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No SBOM snapshot found.",
             "content": {
@@ -129,7 +170,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_latest_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/sbom/history": {
@@ -157,6 +199,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled SBOM history failure.",
             "content": {
@@ -167,7 +229,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_history_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/sbom/vulnerabilities": {
@@ -183,6 +246,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VulnerabilityListEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -207,7 +290,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_vulnerabilities_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/sbom/advisories": {
@@ -227,6 +311,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled advisory retrieval failure.",
             "content": {
@@ -237,7 +341,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_advisories_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       },
       "post": {
         "tags": [
@@ -275,6 +380,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled advisory persistence failure.",
             "content": {
@@ -285,7 +410,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.write`. Audited as `audit.sbom.sbom_advisory_saved`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`). The platform SBOM is shared by every tenant: only the platform tenant (or a tenant-less root token or kms-* service principal) may change it; anyone else is refused with reason `platform_tenant_required`."
       }
     },
     "/sbom/advisories/{id}": {
@@ -313,6 +439,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Manual advisory not found.",
             "content": {
@@ -333,7 +479,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.delete`. Audited as `audit.sbom.sbom_advisory_deleted`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`). The platform SBOM is shared by every tenant: only the platform tenant (or a tenant-less root token or kms-* service principal) may change it; anyone else is refused with reason `platform_tenant_required`."
       }
     },
     "/sbom/diff": {
@@ -374,6 +521,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "One or both SBOM snapshots were not found.",
             "content": {
@@ -394,7 +561,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_diff_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/sbom/{id}/export": {
@@ -438,6 +606,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "SBOM snapshot not found.",
             "content": {
@@ -458,7 +646,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_exported`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/sbom/{id}": {
@@ -486,6 +675,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "SBOM snapshot not found.",
             "content": {
@@ -506,7 +715,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.sbom_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/generate": {
@@ -576,6 +786,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled CBOM generation failure.",
             "content": {
@@ -586,7 +816,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.write`. Audited as `audit.sbom.cbom_generate_requested`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`). The CBOM is built for the token's tenant; `tenant_id` is no longer read from the body."
       }
     },
     "/cbom/latest": {
@@ -627,6 +858,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No CBOM snapshot found.",
             "content": {
@@ -647,7 +898,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_latest_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/history": {
@@ -691,6 +943,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unhandled CBOM history failure.",
             "content": {
@@ -701,7 +973,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_history_listed`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/summary": {
@@ -742,6 +1015,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No CBOM snapshot found.",
             "content": {
@@ -762,7 +1055,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_summary_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/pqc-readiness": {
@@ -803,6 +1097,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "No CBOM snapshot found.",
             "content": {
@@ -823,7 +1137,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_pqc_readiness_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/diff": {
@@ -870,6 +1185,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "One or both CBOM snapshots were not found.",
             "content": {
@@ -890,7 +1225,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_diff_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/{id}/export": {
@@ -937,6 +1273,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "CBOM snapshot not found.",
             "content": {
@@ -957,7 +1313,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_exported`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     },
     "/cbom/{id}": {
@@ -1001,6 +1358,26 @@
               }
             }
           },
+          "401": {
+            "description": "No valid bearer token (reason `unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing permission, or a tenant other than the token's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
           "404": {
             "description": "CBOM snapshot not found.",
             "content": {
@@ -1021,7 +1398,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Permission `sbom.read`. Audited as `audit.sbom.cbom_read`, refusals included (`reason` = `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`)."
       }
     }
   },
@@ -1790,9 +2168,6 @@
       "GenerateCBOMRequest": {
         "type": "object",
         "properties": {
-          "tenant_id": {
-            "type": "string"
-          },
           "trigger": {
             "type": "string"
           }
@@ -1993,6 +2368,18 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     }
-  }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }

@@ -46,12 +46,31 @@ paths:
                     $ref: "#/components/schemas/SBOMSnapshot"
                   request_id:
                     type: string
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled SBOM generation failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: "Permission `sbom.write`. Audited as
+        `audit.sbom.sbom_generate_requested`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The platform SBOM is shared by every tenant: only
+        the platform tenant (or a tenant-less root token or kms-* service
+        principal) may change it; anyone else is refused with reason
+        `platform_tenant_required`."
   /sbom/latest:
     get:
       tags:
@@ -66,6 +85,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SBOMSnapshotEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: No SBOM snapshot found.
           content:
@@ -78,6 +109,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.sbom_latest_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /sbom/history:
     get:
       tags:
@@ -93,12 +127,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SBOMSnapshotListEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled SBOM history failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as
+        `audit.sbom.sbom_history_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /sbom/vulnerabilities:
     get:
       tags:
@@ -111,6 +161,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VulnerabilityListEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: No SBOM snapshot found.
           content:
@@ -123,6 +185,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as
+        `audit.sbom.sbom_vulnerabilities_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /sbom/advisories:
     get:
       tags:
@@ -135,12 +201,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ManualAdvisoryListEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled advisory retrieval failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as
+        `audit.sbom.sbom_advisories_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
     post:
       tags:
         - SBOM Advisories
@@ -164,12 +246,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled advisory persistence failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: "Permission `sbom.write`. Audited as
+        `audit.sbom.sbom_advisory_saved`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The platform SBOM is shared by every tenant: only
+        the platform tenant (or a tenant-less root token or kms-* service
+        principal) may change it; anyone else is refused with reason
+        `platform_tenant_required`."
   /sbom/advisories/{id}:
     delete:
       tags:
@@ -185,6 +286,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Manual advisory not found.
           content:
@@ -197,6 +310,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: "Permission `sbom.delete`. Audited as
+        `audit.sbom.sbom_advisory_deleted`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The platform SBOM is shared by every tenant: only
+        the platform tenant (or a tenant-less root token or kms-* service
+        principal) may change it; anyone else is refused with reason
+        `platform_tenant_required`."
   /sbom/diff:
     get:
       tags:
@@ -219,6 +339,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: One or both SBOM snapshots were not found.
           content:
@@ -231,6 +363,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.sbom_diff_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /sbom/{id}/export:
     get:
       tags:
@@ -254,6 +389,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: SBOM snapshot not found.
           content:
@@ -266,6 +413,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.sbom_exported`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /sbom/{id}:
     get:
       tags:
@@ -281,6 +431,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SBOMSnapshotEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: SBOM snapshot not found.
           content:
@@ -293,6 +455,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.sbom_read`, refusals
+        included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /cbom/generate:
     post:
       tags:
@@ -337,12 +502,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled CBOM generation failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.write`. Audited as
+        `audit.sbom.cbom_generate_requested`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The CBOM is built for the token's tenant;
+        `tenant_id` is no longer read from the body.
   /cbom/latest:
     get:
       tags:
@@ -362,6 +544,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: No CBOM snapshot found.
           content:
@@ -374,6 +568,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.cbom_latest_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /cbom/history:
     get:
       tags:
@@ -397,12 +594,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled CBOM history failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as
+        `audit.sbom.cbom_history_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /cbom/summary:
     get:
       tags:
@@ -422,6 +635,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: No CBOM snapshot found.
           content:
@@ -434,6 +659,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.cbom_summary_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /cbom/pqc-readiness:
     get:
       tags:
@@ -453,6 +681,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: No CBOM snapshot found.
           content:
@@ -465,6 +705,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as
+        `audit.sbom.cbom_pqc_readiness_read`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /cbom/diff:
     get:
       tags:
@@ -489,6 +733,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: One or both CBOM snapshots were not found.
           content:
@@ -501,6 +757,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.cbom_diff_read`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /cbom/{id}/export:
     get:
       tags:
@@ -525,6 +784,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: CBOM snapshot not found.
           content:
@@ -537,6 +808,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.cbom_exported`,
+        refusals included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
   /cbom/{id}:
     get:
       tags:
@@ -560,6 +834,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: CBOM snapshot not found.
           content:
@@ -572,6 +858,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `sbom.read`. Audited as `audit.sbom.cbom_read`, refusals
+        included (`reason` = `unauthenticated`, `permission_denied`,
+        `tenant_mismatch`, `tenant_conflict`).
 components:
   parameters:
     RequestIdHeader:
@@ -1090,8 +1379,6 @@ components:
     GenerateCBOMRequest:
       type: object
       properties:
-        tenant_id:
-          type: string
         trigger:
           type: string
     SBOMSnapshotEnvelope:
@@ -1224,3 +1511,10 @@ components:
           $ref: "#/components/schemas/PQCReadiness"
         request_id:
           type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

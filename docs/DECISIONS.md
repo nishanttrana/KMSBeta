@@ -7,6 +7,34 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — sbom and reporting on the route kernel (1.33.0-beta)
+
+**Decision.** Both handler files are migrated whole to `pkg/route`, not
+patched with `tenantcheck.Enforce` on the three routes that lacked it. The
+tenant and actor come from the kernel; the old `requested_by` / `actor` body
+fields are rejected (400) rather than silently ignored, so a client relying
+on them learns it. A body `tenant_id` is still accepted when it matches the
+token, since the kernel verifies it.
+
+**Alert operations share one pattern,** `PUT /alerts/{id}/{op}`, audited as
+`alert_updated` with `operation`. Four literal patterns
+(`/alerts/{id}/resolve`, ...) conflict with `PUT /alerts/rules/{id}` in Go's
+mux (neither is more specific), and moving rule updates would break clients.
+
+**The platform SBOM needs the platform tenant to change.** Snapshots and
+manual advisories are shared by every tenant; a tenant admin elsewhere holds
+`sbom.write` through `*` and must not change what all tenants see. Rejected:
+a new platform-admin permission (no role grants it yet, so it would lock
+everyone out).
+
+**Request audit moves from the service to the kernel.** Where the reporting
+service published `audit.reporting.<x>` for an API request, the kernel now
+emits the same subject (with the verified actor), so consumers keep working
+and nothing is emitted twice. Events for background work (scheduled runs,
+alert ingestion, snapshot generation) stay in the service.
+
+---
+
 ## 2026-09-27 — Posture on the route kernel (1.32.0-beta)
 
 **Decision.** All posture routes are kernel routes with three permissions:
@@ -46,6 +74,9 @@ recipient flow), and the hybrid construction carries any key size.
 **Rejected.** Returning plaintext to the caller after an allow (anyone with
 the evidence could fetch the key); HPKE/X25519 (not approved in FIPS strict
 mode); letting any `kms-*` service release keys.
+
+---
+
 ## 2026-09-27 — OpenAPI specs: remove the fabricated one, check the rest (1.29.0-beta)
 
 **Decision.** The `ai` OpenAPI spec is deleted rather than rewritten as an

@@ -161,7 +161,7 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 	if got.ResultContent == "" {
 		t.Fatalf("expected report content")
 	}
-	if err := svc.DeleteReportJob(context.Background(), tenantID, got.ID, "tester"); err != nil {
+	if _, err := svc.DeleteReportJob(context.Background(), tenantID, got.ID); err != nil {
 		t.Fatalf("delete report job: %v", err)
 	}
 	if _, err := svc.GetReportJob(context.Background(), tenantID, got.ID); !errors.Is(err, errNotFound) {
@@ -201,11 +201,17 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 	if sched.ID == "" {
 		t.Fatalf("expected schedule id")
 	}
+	// Make the schedule due, then run it.
+	past := time.Now().UTC().Add(-time.Hour)
+	if err := svc.store.UpdateScheduledReportRun(context.Background(), tenantID, sched.ID, past, past); err != nil {
+		t.Fatalf("make schedule due: %v", err)
+	}
 	if err := svc.RunDueSchedules(context.Background()); err != nil {
 		t.Fatalf("run due schedules: %v", err)
 	}
-	if pub.Count("audit.reporting.report_deleted") == 0 {
-		t.Fatalf("expected report deletion audit publication")
+	// A scheduled run is audited by the scheduler (API requests by the kernel).
+	if pub.Count("audit.reporting.report_requested") == 0 {
+		t.Fatalf("expected the scheduled run to publish audit.reporting.report_requested")
 	}
 
 	evidenceJob, err := svc.GenerateReport(context.Background(), tenantID, "evidence_pack", "json", "tester", nil)

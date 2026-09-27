@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-27T13:08:42Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T13:34:46Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -8,8 +8,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 - Backend routes analyzed: `943`
 - Routes with exact frontend call sites: `555`
-- Routes whose handlers call `h.svc.*`: `549`
-- Routes with detected store calls: `680`
+- Routes whose handlers call `h.svc.*`: `551`
+- Routes with detected store calls: `682`
 - Routes with detected internal `pkg/*` calls: `151`
 
 ## How To Trace One Frontend Click
@@ -480,64 +480,64 @@ This file connects frontend requests to backend Go processing. It is static anal
 | payment\|POST\|/payment/injection/terminals/{param}/verify | POST /payment/injection/terminals/{id}/verify | handleVerifyInjectionChallenge (services/payment/handler_injection.go:67) | VerifyInjectionChallenge | GetInjectionTerminal, MarkInjectionTerminalVerified |  | pkg/crypto.Zeroize, pkg/crypto.RandomBytes | web/dashboard/src/lib/payment.ts:611 |
 | payment\|POST\|/payment/injection/jobs | POST /payment/injection/jobs | handleCreateInjectionJob (services/payment/handler_injection.go:92) | CreateInjectionJob | GetInjectionTerminal, GetPaymentKey, CreateInjectionJob, GetInjectionJob | s.keycore.GetKey | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.SealDetached, pkg/crypto.WrapKeyRSAOAEP | web/dashboard/src/lib/payment.ts:655 |
 | payment\|GET\|/payment/injection/jobs | GET /payment/injection/jobs | handleListInjectionJobs (services/payment/handler_injection.go:116) | ListInjectionJobs | ListInjectionJobsByTerminal, ListInjectionJobs |  |  | web/dashboard/src/lib/payment.ts:635 |
-| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:126) | RunScanAllTenants, LatestRisk, RunScanTenant | ListTenants, UpdateEngineState, CreateRiskSnapshot, GetLatestRiskSnapshot | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
-| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:158) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:196 |
-| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:185) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:205 |
-| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:208) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
-| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:232) | RiskHistory | ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:177 |
-| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:253) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
-| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:276) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:230 |
-| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:300) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| posture\|GET\|/leaks/targets | GET /leaks/targets | listLeakTargets (services/posture/handler_leak.go:51) |  | ListLeakTargets |  |  | web/dashboard/src/lib/leakScanner.ts:57 |
-| posture\|POST\|/leaks/targets | POST /leaks/targets | createLeakTarget (services/posture/handler_leak.go:60) |  | CreateLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:62 |
-| posture\|DELETE\|/leaks/targets/{param} | DELETE /leaks/targets/{id} | deleteLeakTarget (services/posture/handler_leak.go:91) |  | DeleteLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:67 |
-| posture\|POST\|/leaks/targets/{param}/scan | POST /leaks/targets/{id}/scan | triggerLeakScan (services/posture/handler_leak.go:107) |  | GetLeakTarget, CreateLeakScanJob |  |  | web/dashboard/src/lib/leakScanner.ts:73 |
-| posture\|GET\|/leaks/jobs | GET /leaks/jobs | listLeakJobs (services/posture/handler_leak.go:217) |  | ListLeakScanJobs |  |  | web/dashboard/src/lib/leakScanner.ts:81 |
-| posture\|GET\|/leaks/findings | GET /leaks/findings | listLeakFindings (services/posture/handler_leak.go:227) |  | ListLeakFindings |  |  | web/dashboard/src/lib/leakScanner.ts:86, web/dashboard/src/lib/securityFindings.ts:205 |
-| posture\|PATCH\|/leaks/findings/{param} | PATCH /leaks/findings/{id} | updateLeakFinding (services/posture/handler_leak.go:239) |  | UpdateLeakFinding |  |  | web/dashboard/src/lib/leakScanner.ts:91, web/dashboard/src/lib/securityFindings.ts:251 |
+| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:141) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
+| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:153) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:196 |
+| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:173) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:205 |
+| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:188) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
+| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:202) | RiskHistory | ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:177 |
+| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:215) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
+| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:234) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
+| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:252) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
+| posture\|GET\|/leaks/targets | GET /leaks/targets | listLeakTargets (services/posture/handler_leak.go:49) |  | ListLeakTargets |  |  | web/dashboard/src/lib/leakScanner.ts:57 |
+| posture\|POST\|/leaks/targets | POST /leaks/targets | createLeakTarget (services/posture/handler_leak.go:58) |  | CreateLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:62 |
+| posture\|DELETE\|/leaks/targets/{param} | DELETE /leaks/targets/{id} | deleteLeakTarget (services/posture/handler_leak.go:89) |  | DeleteLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:67 |
+| posture\|POST\|/leaks/targets/{param}/scan | POST /leaks/targets/{id}/scan | triggerLeakScan (services/posture/handler_leak.go:105) |  | GetLeakTarget, CreateLeakScanJob |  |  | web/dashboard/src/lib/leakScanner.ts:73 |
+| posture\|GET\|/leaks/jobs | GET /leaks/jobs | listLeakJobs (services/posture/handler_leak.go:215) |  | ListLeakScanJobs |  |  | web/dashboard/src/lib/leakScanner.ts:81 |
+| posture\|GET\|/leaks/findings | GET /leaks/findings | listLeakFindings (services/posture/handler_leak.go:225) |  | ListLeakFindings |  |  | web/dashboard/src/lib/leakScanner.ts:86, web/dashboard/src/lib/securityFindings.ts:205 |
+| posture\|PATCH\|/leaks/findings/{param} | PATCH /leaks/findings/{id} | updateLeakFinding (services/posture/handler_leak.go:237) |  | UpdateLeakFinding |  |  | web/dashboard/src/lib/leakScanner.ts:91, web/dashboard/src/lib/securityFindings.ts:251 |
 | pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:133 |
 | pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:138 |
 | pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:146 |
 | pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:161 |
 | pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:156 |
 | pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:151 |
-| reporting\|GET\|/alerts | GET /alerts | handleAlerts (services/reporting/handler.go:108) | ListAlerts | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:161 |
-| reporting\|GET\|/alerts/unread | GET /alerts/unread | handleAlertsUnread (services/reporting/handler.go:170) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
-| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | handleBulkAcknowledge (services/reporting/handler.go:291) |  |  |  |  | web/dashboard/src/lib/reporting.ts:265 |
-| reporting\|GET\|/alerts/rules | GET /alerts/rules | handleListRules (services/reporting/handler.go:395) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
-| reporting\|POST\|/alerts/rules | POST /alerts/rules | handleCreateRule (services/reporting/handler.go:409) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:211 |
-| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | handleUpdateRule (services/reporting/handler.go:428) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:222 |
-| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | handleDeleteRule (services/reporting/handler.go:446) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:229 |
-| reporting\|GET\|/alerts/channels | GET /alerts/channels | handleListChannels (services/reporting/handler.go:491) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
-| reporting\|GET\|/reports/templates | GET /reports/templates | handleReportTemplates (services/reporting/handler.go:523) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:307 |
-| reporting\|POST\|/reports/generate | POST /reports/generate | handleGenerateReport (services/reporting/handler.go:528) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:320 |
-| reporting\|GET\|/reports/jobs | GET /reports/jobs | handleListReportJobs (services/reporting/handler.go:568) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:349 |
-| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | handleReportJob (services/reporting/handler.go:554) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:337 |
-| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | handleReportDownload (services/reporting/handler.go:584) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:367 |
-| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | handleDeleteReportJob (services/reporting/handler.go:609) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:384 |
-| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | handleListScheduledReports (services/reporting/handler.go:623) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:390 |
-| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | handleCreateScheduledReport (services/reporting/handler.go:637) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:404 |
-| reporting\|POST\|/telemetry/errors | POST /telemetry/errors | handleCaptureErrorTelemetry (services/reporting/handler.go:664) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
-| reporting\|GET\|/alerts/stats | GET /alerts/stats | handleAlertStats (services/reporting/handler.go:739) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
-| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | handleMTTDStats (services/reporting/handler.go:767) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
-| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | handleMTTRStats (services/reporting/handler.go:753) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
-| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | handleTopSources (services/reporting/handler.go:781) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:294 |
-| sbom\|POST\|/sbom/generate | POST /sbom/generate | handleGenerateSBOM (services/sbom/handler.go:58) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | handleLatestSBOM (services/sbom/handler.go:74) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | handleSBOMHistory (services/sbom/handler.go:84) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
-| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | handleSBOMVulnerabilities (services/sbom/handler.go:116) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
-| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | handleListManualAdvisories (services/sbom/handler.go:137) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
-| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | handleSaveManualAdvisory (services/sbom/handler.go:147) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
-| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | handleDeleteManualAdvisory (services/sbom/handler.go:171) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | handleSBOMDiff (services/sbom/handler.go:180) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:248 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | handleSBOMExport (services/sbom/handler.go:104) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | handleGenerateCBOM (services/sbom/handler.go:195) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | handleLatestCBOM (services/sbom/handler.go:216) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:196 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | handleCBOMHistory (services/sbom/handler.go:230) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:201 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | handleCBOMSummary (services/sbom/handler.go:272) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:210 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | handleCBOMPQCReadiness (services/sbom/handler.go:286) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:257 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | handleCBOMDiff (services/sbom/handler.go:300) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:228 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | handleCBOMExport (services/sbom/handler.go:258) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:219 |
+| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:139) | ListAlerts | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:161 |
+| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:190) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
+| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:252) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:262 |
+| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:327) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
+| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:338) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:211 |
+| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:353) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:222 |
+| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:365) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:229 |
+| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:395) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
+| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:418) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:303 |
+| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:424) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:316 |
+| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:454) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:343 |
+| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:445) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:331 |
+| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:463) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:361 |
+| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:485) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:377 |
+| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:497) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:383 |
+| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:506) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:397 |
+| reporting\|POST\|/telemetry/errors | POST /telemetry/errors | captureErrorTelemetry (services/reporting/handler.go:529) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
+| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:596) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
+| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:614) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
+| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:605) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
+| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:625) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:290 |
+| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:96) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:114) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:124) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
+| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | sbomVulnerabilities (services/sbom/handler.go:154) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
+| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | listManualAdvisories (services/sbom/handler.go:174) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
+| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | saveManualAdvisory (services/sbom/handler.go:183) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
+| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | deleteManualAdvisory (services/sbom/handler.go:211) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:222) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:245 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:142) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:235) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:253) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:193 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:263) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:198 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:292) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:207 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:301) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:254 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:310) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:225 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:281) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:216 |
 | secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
 | secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
 | secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:161) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:145 |
@@ -1360,25 +1360,25 @@ This file connects frontend requests to backend Go processing. It is static anal
 | policy\|POST\|/policies/dry-run | POST /policies/dry-run | handleDryRunPolicy (services/policy/handler_lint.go:57) |  |  |  | pkg/tenantcheck.Enforce |  |
 | policy\|GET\|/policy/quota/{param} | GET /policy/quota/{tenant_id} | handleGetQuota (services/policy/handler_quota.go:15) |  |  |  | pkg/quota.Usage, pkg/tenantcheck.Enforce |  |
 | policy\|PUT\|/policy/quota/{param} | PUT /policy/quota/{tenant_id} | handleSetQuota (services/policy/handler_quota.go:51) |  |  |  | pkg/quota.SetBudget, pkg/tenantcheck.Enforce |  |
-| posture\|GET\|/posture/health | GET /posture/health | handleHealth (services/posture/handler.go:53) |  |  |  |  |  |
-| posture\|POST\|/posture/events | POST /posture/events | handleIngestEvent (services/posture/handler.go:60) | IngestEvents | IngestEvents |  |  |  |
-| posture\|POST\|/posture/events/batch | POST /posture/events/batch | handleIngestEventsBatch (services/posture/handler.go:81) | IngestEvents | IngestEvents |  |  |  |
-| posture\|POST\|/posture/ingest/audit | POST /posture/ingest/audit | handleIngestFromAudit (services/posture/handler.go:107) | SyncFromAudit | UpdateEngineState | s.audit.ListEvents |  |  |
-| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:126) | RunScanAllTenants, LatestRisk, RunScanTenant | ListTenants, UpdateEngineState, CreateRiskSnapshot, GetLatestRiskSnapshot | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
-| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:158) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:196 |
-| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:185) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:205 |
-| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:208) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
-| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:232) | RiskHistory | ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:177 |
-| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:253) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
-| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:276) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:230 |
-| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:300) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| posture\|GET\|/leaks/targets | GET /leaks/targets | listLeakTargets (services/posture/handler_leak.go:51) |  | ListLeakTargets |  |  | web/dashboard/src/lib/leakScanner.ts:57 |
-| posture\|POST\|/leaks/targets | POST /leaks/targets | createLeakTarget (services/posture/handler_leak.go:60) |  | CreateLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:62 |
-| posture\|DELETE\|/leaks/targets/{param} | DELETE /leaks/targets/{id} | deleteLeakTarget (services/posture/handler_leak.go:91) |  | DeleteLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:67 |
-| posture\|POST\|/leaks/targets/{param}/scan | POST /leaks/targets/{id}/scan | triggerLeakScan (services/posture/handler_leak.go:107) |  | GetLeakTarget, CreateLeakScanJob |  |  | web/dashboard/src/lib/leakScanner.ts:73 |
-| posture\|GET\|/leaks/jobs | GET /leaks/jobs | listLeakJobs (services/posture/handler_leak.go:217) |  | ListLeakScanJobs |  |  | web/dashboard/src/lib/leakScanner.ts:81 |
-| posture\|GET\|/leaks/findings | GET /leaks/findings | listLeakFindings (services/posture/handler_leak.go:227) |  | ListLeakFindings |  |  | web/dashboard/src/lib/leakScanner.ts:86, web/dashboard/src/lib/securityFindings.ts:205 |
-| posture\|PATCH\|/leaks/findings/{param} | PATCH /leaks/findings/{id} | updateLeakFinding (services/posture/handler_leak.go:239) |  | UpdateLeakFinding |  |  | web/dashboard/src/lib/leakScanner.ts:91, web/dashboard/src/lib/securityFindings.ts:251 |
+| posture\|GET\|/posture/health | GET /posture/health | handleHealth (services/posture/handler.go:86) |  |  |  |  |  |
+| posture\|POST\|/posture/events | POST /posture/events | handleIngestEvent (services/posture/handler.go:90) |  |  |  |  |  |
+| posture\|POST\|/posture/events/batch | POST /posture/events/batch | handleIngestEventsBatch (services/posture/handler.go:99) | IngestEvents, SyncFromAudit, RunScanTenant, ListFindings, UpdateFindingStatus, LatestRisk, RiskHistory, ListActions, +2 more | IngestEvents, UpdateEngineState, ListFindings, ListRiskSnapshots, UpdateFindingStatus, GetLatestRiskSnapshot, ListActions, GetAction, +1 more | s.audit.ListEvents, s.mu.Lock, s.mu.Unlock |  |  |
+| posture\|POST\|/posture/ingest/audit | POST /posture/ingest/audit | handleIngestFromAudit (services/posture/handler.go:130) | SyncFromAudit | UpdateEngineState | s.audit.ListEvents |  |  |
+| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:141) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
+| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:153) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:196 |
+| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:173) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:205 |
+| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:188) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
+| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:202) | RiskHistory | ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:177 |
+| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:215) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
+| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:234) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
+| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:252) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
+| posture\|GET\|/leaks/targets | GET /leaks/targets | listLeakTargets (services/posture/handler_leak.go:49) |  | ListLeakTargets |  |  | web/dashboard/src/lib/leakScanner.ts:57 |
+| posture\|POST\|/leaks/targets | POST /leaks/targets | createLeakTarget (services/posture/handler_leak.go:58) |  | CreateLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:62 |
+| posture\|DELETE\|/leaks/targets/{param} | DELETE /leaks/targets/{id} | deleteLeakTarget (services/posture/handler_leak.go:89) |  | DeleteLeakTarget |  |  | web/dashboard/src/lib/leakScanner.ts:67 |
+| posture\|POST\|/leaks/targets/{param}/scan | POST /leaks/targets/{id}/scan | triggerLeakScan (services/posture/handler_leak.go:105) |  | GetLeakTarget, CreateLeakScanJob |  |  | web/dashboard/src/lib/leakScanner.ts:73 |
+| posture\|GET\|/leaks/jobs | GET /leaks/jobs | listLeakJobs (services/posture/handler_leak.go:215) |  | ListLeakScanJobs |  |  | web/dashboard/src/lib/leakScanner.ts:81 |
+| posture\|GET\|/leaks/findings | GET /leaks/findings | listLeakFindings (services/posture/handler_leak.go:225) |  | ListLeakFindings |  |  | web/dashboard/src/lib/leakScanner.ts:86, web/dashboard/src/lib/securityFindings.ts:205 |
+| posture\|PATCH\|/leaks/findings/{param} | PATCH /leaks/findings/{id} | updateLeakFinding (services/posture/handler_leak.go:237) |  | UpdateLeakFinding |  |  | web/dashboard/src/lib/leakScanner.ts:91, web/dashboard/src/lib/securityFindings.ts:251 |
 | pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:133 |
 | pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:138 |
 | pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:146 |
@@ -1397,57 +1397,57 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | handleExportCBOM (services/pqc/handler.go:279) | ExportCBOM |  |  |  |  |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  |  |
 | reconciler\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
-| reporting\|GET\|/alerts | GET /alerts | handleAlerts (services/reporting/handler.go:108) | ListAlerts | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:161 |
-| reporting\|GET\|/alerts/feed | GET /alerts/feed | handleAlertsFeed (services/reporting/handler.go:133) |  |  |  |  |  |
-| reporting\|GET\|/alerts/unread | GET /alerts/unread | handleAlertsUnread (services/reporting/handler.go:170) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
-| reporting\|GET\|/alerts/{param} | GET /alerts/{id} | handleAlert (services/reporting/handler.go:184) | GetAlert |  |  |  |  |
-| reporting\|PUT\|/alerts | PUT /alerts/ | handleAlertPutRouter (services/reporting/handler.go:214) |  |  |  |  |  |
-| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | handleBulkAcknowledge (services/reporting/handler.go:291) |  |  |  |  | web/dashboard/src/lib/reporting.ts:265 |
-| reporting\|POST\|/alerts/bulk/resolve | POST /alerts/bulk/resolve | handleBulkResolve (services/reporting/handler.go:295) |  |  |  |  |  |
-| reporting\|GET\|/incidents | GET /incidents | handleIncidents (services/reporting/handler.go:326) | ListIncidents | ListIncidents |  |  |  |
-| reporting\|GET\|/incidents/{param} | GET /incidents/{id} | handleIncident (services/reporting/handler.go:340) | GetIncident | GetIncident, ListAlerts |  |  |  |
-| reporting\|PUT\|/incidents/{param}/status | PUT /incidents/{id}/status | handleIncidentStatus (services/reporting/handler.go:354) | UpdateIncidentStatus | UpdateIncidentStatus |  |  |  |
-| reporting\|PUT\|/incidents/{param}/assign | PUT /incidents/{id}/assign | handleIncidentAssign (services/reporting/handler.go:375) | AssignIncident | AssignIncident |  |  |  |
-| reporting\|GET\|/alerts/rules | GET /alerts/rules | handleListRules (services/reporting/handler.go:395) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
-| reporting\|POST\|/alerts/rules | POST /alerts/rules | handleCreateRule (services/reporting/handler.go:409) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:211 |
-| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | handleUpdateRule (services/reporting/handler.go:428) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:222 |
-| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | handleDeleteRule (services/reporting/handler.go:446) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:229 |
-| reporting\|GET\|/alerts/severity-config | GET /alerts/severity-config | handleGetSeverityConfig (services/reporting/handler.go:459) | GetSeverityConfig | ListSeverityOverrides |  |  |  |
-| reporting\|PUT\|/alerts/severity-config | PUT /alerts/severity-config | handleUpdateSeverityConfig (services/reporting/handler.go:473) | UpdateSeverityConfig | UpsertSeverityOverride |  |  |  |
-| reporting\|GET\|/alerts/channels | GET /alerts/channels | handleListChannels (services/reporting/handler.go:491) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
-| reporting\|PUT\|/alerts/channels | PUT /alerts/channels | handleUpdateChannels (services/reporting/handler.go:505) | UpdateChannels | UpsertChannel |  |  |  |
-| reporting\|GET\|/reports/templates | GET /reports/templates | handleReportTemplates (services/reporting/handler.go:523) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:307 |
-| reporting\|POST\|/reports/generate | POST /reports/generate | handleGenerateReport (services/reporting/handler.go:528) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:320 |
-| reporting\|GET\|/reports/jobs | GET /reports/jobs | handleListReportJobs (services/reporting/handler.go:568) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:349 |
-| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | handleReportJob (services/reporting/handler.go:554) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:337 |
-| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | handleReportDownload (services/reporting/handler.go:584) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:367 |
-| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | handleDeleteReportJob (services/reporting/handler.go:609) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:384 |
-| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | handleListScheduledReports (services/reporting/handler.go:623) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:390 |
-| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | handleCreateScheduledReport (services/reporting/handler.go:637) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:404 |
-| reporting\|POST\|/telemetry/errors | POST /telemetry/errors | handleCaptureErrorTelemetry (services/reporting/handler.go:664) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
-| reporting\|GET\|/telemetry/errors | GET /telemetry/errors | handleListErrorTelemetry (services/reporting/handler.go:713) | ListErrorTelemetry | ListErrorTelemetry |  |  |  |
-| reporting\|GET\|/alerts/stats | GET /alerts/stats | handleAlertStats (services/reporting/handler.go:739) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
-| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | handleMTTDStats (services/reporting/handler.go:767) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
-| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | handleMTTRStats (services/reporting/handler.go:753) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
-| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | handleTopSources (services/reporting/handler.go:781) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:294 |
-| sbom\|POST\|/sbom/generate | POST /sbom/generate | handleGenerateSBOM (services/sbom/handler.go:58) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | handleLatestSBOM (services/sbom/handler.go:74) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | handleSBOMHistory (services/sbom/handler.go:84) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
-| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | handleSBOMVulnerabilities (services/sbom/handler.go:116) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
-| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | handleListManualAdvisories (services/sbom/handler.go:137) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
-| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | handleSaveManualAdvisory (services/sbom/handler.go:147) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
-| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | handleDeleteManualAdvisory (services/sbom/handler.go:171) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | handleSBOMDiff (services/sbom/handler.go:180) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:248 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | handleSBOMExport (services/sbom/handler.go:104) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
-| sbom\|GET\|/sbom/{param} | GET /sbom/{id} | handleSBOMByID (services/sbom/handler.go:94) | GetSBOMByID | GetSBOMSnapshotByID |  |  |  |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | handleGenerateCBOM (services/sbom/handler.go:195) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | handleLatestCBOM (services/sbom/handler.go:216) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:196 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | handleCBOMHistory (services/sbom/handler.go:230) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:201 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | handleCBOMSummary (services/sbom/handler.go:272) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:210 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | handleCBOMPQCReadiness (services/sbom/handler.go:286) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:257 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | handleCBOMDiff (services/sbom/handler.go:300) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:228 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | handleCBOMExport (services/sbom/handler.go:258) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:219 |
-| sbom\|GET\|/cbom/{param} | GET /cbom/{id} | handleCBOMByID (services/sbom/handler.go:244) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
+| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:139) | ListAlerts | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:161 |
+| reporting\|GET\|/alerts/feed | GET /alerts/feed | alertsFeed (services/reporting/handler.go:162) |  |  |  |  |  |
+| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:190) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
+| reporting\|GET\|/alerts/{param} | GET /alerts/{id} | alert (services/reporting/handler.go:199) | GetAlert |  |  |  |  |
+| reporting\|PUT\|/alerts/{param}/{param} | PUT /alerts/{id}/{op} | alertOperation (services/reporting/handler.go:210) | AcknowledgeAlert, ResolveAlert, MarkFalsePositive, EscalateAlert | UpdateAlertStatus, EscalateAlert |  |  |  |
+| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:252) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:262 |
+| reporting\|POST\|/alerts/bulk/resolve | POST /alerts/bulk/resolve | bulkStatus (services/reporting/handler.go:252) | BulkAlertStatus | BulkUpdateAlertStatus |  |  |  |
+| reporting\|GET\|/incidents | GET /incidents | incidents (services/reporting/handler.go:278) | ListIncidents | ListIncidents |  |  |  |
+| reporting\|GET\|/incidents/{param} | GET /incidents/{id} | incident (services/reporting/handler.go:287) | GetIncident | GetIncident, ListAlerts |  |  |  |
+| reporting\|PUT\|/incidents/{param}/status | PUT /incidents/{id}/status | incidentStatus (services/reporting/handler.go:296) | UpdateIncidentStatus | UpdateIncidentStatus |  |  |  |
+| reporting\|PUT\|/incidents/{param}/assign | PUT /incidents/{id}/assign | incidentAssign (services/reporting/handler.go:312) | AssignIncident | AssignIncident |  |  |  |
+| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:327) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
+| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:338) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:211 |
+| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:353) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:222 |
+| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:365) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:229 |
+| reporting\|GET\|/alerts/severity-config | GET /alerts/severity-config | getSeverityConfig (services/reporting/handler.go:373) | GetSeverityConfig | ListSeverityOverrides |  |  |  |
+| reporting\|PUT\|/alerts/severity-config | PUT /alerts/severity-config | updateSeverityConfig (services/reporting/handler.go:382) | UpdateSeverityConfig | UpsertSeverityOverride |  |  |  |
+| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:395) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
+| reporting\|PUT\|/alerts/channels | PUT /alerts/channels | updateChannels (services/reporting/handler.go:404) | UpdateChannels | UpsertChannel |  |  |  |
+| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:418) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:303 |
+| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:424) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:316 |
+| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:454) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:343 |
+| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:445) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:331 |
+| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:463) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:361 |
+| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:485) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:377 |
+| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:497) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:383 |
+| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:506) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:397 |
+| reporting\|POST\|/telemetry/errors | POST /telemetry/errors | captureErrorTelemetry (services/reporting/handler.go:529) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
+| reporting\|GET\|/telemetry/errors | GET /telemetry/errors | listErrorTelemetry (services/reporting/handler.go:574) | ListErrorTelemetry | ListErrorTelemetry |  |  |  |
+| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:596) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
+| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:614) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
+| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:605) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
+| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:625) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:290 |
+| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:96) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:114) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:124) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
+| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | sbomVulnerabilities (services/sbom/handler.go:154) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
+| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | listManualAdvisories (services/sbom/handler.go:174) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
+| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | saveManualAdvisory (services/sbom/handler.go:183) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
+| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | deleteManualAdvisory (services/sbom/handler.go:211) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:222) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:245 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:142) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
+| sbom\|GET\|/sbom/{param} | GET /sbom/{id} | sbomByID (services/sbom/handler.go:133) | GetSBOMByID | GetSBOMSnapshotByID |  |  |  |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:235) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:253) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:193 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:263) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:198 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:292) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:207 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:301) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:254 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:310) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:225 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:281) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:216 |
+| sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:272) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
 | secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
 | secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
 | secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:152) | GetSecret | GetSecret |  |  |  |

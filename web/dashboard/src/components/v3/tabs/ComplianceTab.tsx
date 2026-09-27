@@ -443,7 +443,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     if (!String(reportForm?.template_id || "").trim()) { onToast?.("Select a report template."); return; }
     setReportBusy(true);
     try {
-      const created = await generateReportingReport(session, { template_id: String(reportForm.template_id || "").trim(), format: String(reportForm.format || "pdf").trim().toLowerCase(), requested_by: String(session?.username || "dashboard") });
+      const created = await generateReportingReport(session, { template_id: String(reportForm.template_id || "").trim(), format: String(reportForm.format || "pdf").trim().toLowerCase() });
       const stable = await getReportingReportJob(session, String(created?.id || ""));
       onToast?.(`Report queued: ${String(stable?.id || created?.id || "").slice(0, 12)}...`);
       await loadReporting();
@@ -457,8 +457,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     try {
       const created = await generateReportingReport(session, {
         template_id: "evidence_pack",
-        format,
-        requested_by: String(session?.username || "dashboard")
+        format
       });
       const stable = await getReportingReportJob(session, String(created?.id || ""));
       onToast?.(`Evidence pack queued: ${String(stable?.id || created?.id || "").slice(0, 12)}...`);

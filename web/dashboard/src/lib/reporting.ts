@@ -231,12 +231,10 @@ export async function deleteReportingRule(session: AuthSession, ruleID: string):
   });
 }
 
-export async function acknowledgeAlert(session: AuthSession, alertID: string, actor?: string): Promise<void> {
+// The acting user is the signed-in caller; reporting takes it from the token.
+export async function acknowledgeAlert(session: AuthSession, alertID: string): Promise<void> {
   await serviceRequest(session, "reporting", `/alerts/${encodeURIComponent(String(alertID || "").trim())}/acknowledge?${tenantQuery(session)}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      actor: String(actor || session.username || "dashboard").trim() || "dashboard"
-    })
+    method: "PUT"
   });
 }
 
@@ -247,7 +245,6 @@ export async function acknowledgeAlertsBulk(
     severity?: string;
     status?: string;
     action?: string;
-    actor?: string;
     note?: string;
   }
 ): Promise<number> {
@@ -268,7 +265,6 @@ export async function acknowledgeAlertsBulk(
       ids: Array.isArray(input?.ids)
         ? input?.ids.map((value) => String(value || "").trim()).filter(Boolean)
         : [],
-      actor: String(input?.actor || session.username || "dashboard").trim() || "dashboard",
       note: String(input?.note || "").trim()
     })
   });
@@ -313,17 +309,15 @@ export async function generateReportingReport(
   input: {
     template_id: string;
     format: string;
-    requested_by?: string;
     filters?: Record<string, unknown>;
   }
 ): Promise<ReportJob> {
-  const out = await serviceRequest<JobsResponse>(session, "reporting", "/reports/generate", {
+  // The requester is the signed-in caller; reporting takes it from the token.
+  const out = await serviceRequest<JobsResponse>(session, "reporting", `/reports/generate?${tenantQuery(session)}`, {
     method: "POST",
     body: JSON.stringify({
-      tenant_id: session.tenantId,
       template_id: String(input?.template_id || "").trim(),
       format: String(input?.format || "pdf").trim().toLowerCase(),
-      requested_by: String(input?.requested_by || session.username || "dashboard").trim() || "dashboard",
       filters: input?.filters && typeof input.filters === "object" ? input.filters : {}
     })
   });
@@ -378,10 +372,9 @@ export async function downloadReportingReport(
   };
 }
 
-export async function deleteReportingReportJob(session: AuthSession, jobID: string, actor?: string): Promise<void> {
+export async function deleteReportingReportJob(session: AuthSession, jobID: string): Promise<void> {
   const id = encodeURIComponent(String(jobID || "").trim());
-  const actorID = encodeURIComponent(String(actor || session.username || "dashboard").trim() || "dashboard");
-  await serviceRequest(session, "reporting", `/reports/jobs/${id}?${tenantQuery(session)}&actor=${actorID}`, {
+  await serviceRequest(session, "reporting", `/reports/jobs/${id}?${tenantQuery(session)}`, {
     method: "DELETE"
   });
 }
@@ -401,10 +394,9 @@ export async function createReportingScheduledReport(
     filters?: Record<string, unknown>;
   }
 ): Promise<ScheduledReport> {
-  const out = await serviceRequest<ScheduledResponse>(session, "reporting", "/reports/scheduled", {
+  const out = await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled?${tenantQuery(session)}`, {
     method: "POST",
     body: JSON.stringify({
-      tenant_id: session.tenantId,
       name: String(input?.name || "").trim() || "scheduled-report",
       template_id: String(input?.template_id || "").trim(),
       format: String(input?.format || "pdf").trim().toLowerCase(),

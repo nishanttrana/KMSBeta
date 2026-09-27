@@ -26,6 +26,8 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -68,9 +70,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.sbom.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "sbom"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -92,7 +98,9 @@ func main() {
 		Tenants:  parseList(envOr("CBOM_SCHEDULE_TENANTS", "")),
 	})
 
-	handler := NewHandler(svc)
+	// Every route needs a verified JWT: the kernel binds the tenant and the
+	// actor to it (CLAUDE.md rule 4).
+	handler := pkgjwtauth.MustWrap("SBOM", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 	httpPort := envOr("HTTP_PORT", "8180")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "sbom"))
 	go func() {

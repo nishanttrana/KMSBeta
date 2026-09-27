@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"testing"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -113,7 +115,18 @@ func newReportingService(t *testing.T) (*Service, *SQLStore, *fakeReportingAudit
 func newReportingHandler(t *testing.T) (*Handler, *Service, *fakeReportingAudit, *fakeReportingCompliance, *fakeReportingPosture, *nopReportingPublisher) {
 	t.Helper()
 	svc, _, audit, comp, posture, pub := newReportingService(t)
-	return NewHandler(svc), svc, audit, comp, posture, pub
+	return NewHandler(svc, nil, nil), svc, audit, comp, posture, pub
+}
+
+// asCaller serves h as if pkg/jwtauth had verified a token carrying claims.
+func asCaller(h http.Handler, claims *pkgauth.Claims) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
+	})
+}
+
+func adminOf(tenant string) *pkgauth.Claims {
+	return &pkgauth.Claims{UserID: "u-" + tenant, TenantID: tenant, Role: "admin", Permissions: []string{"*"}}
 }
 
 func createReportingSchemaForTest(conn *pkgdb.DB) error {

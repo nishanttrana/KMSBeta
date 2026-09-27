@@ -182,12 +182,9 @@ export async function exportSBOM(
 }
 
 export async function generateCBOM(session: AuthSession, trigger = "manual"): Promise<CBOMSnapshot> {
-  const out = await serviceRequest<GenerateResponse<CBOMSnapshot>>(session, "sbom", "/cbom/generate", {
+  const out = await serviceRequest<GenerateResponse<CBOMSnapshot>>(session, "sbom", `/cbom/generate?${tenantQuery(session)}`, {
     method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      trigger
-    })
+    body: JSON.stringify({ trigger })
   }, SBOM_GENERATE_TIMEOUT_MS);
   return out.snapshot;
 }

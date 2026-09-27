@@ -619,9 +619,9 @@ export const REST_API_CATALOG = [
     title: "Generate Report Job",
     service: "reporting",
     method: "POST",
-    pathTemplate: "/reports/generate",
+    pathTemplate: "/reports/generate?tenant_id={{tenant_id}}",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "template_id": "key-rotation-summary",\n  "format": "pdf",\n  "requested_by": "admin@bank.com",\n  "filters": {\n    "date_from": "2026-01-01",\n    "date_to": "2026-12-31"\n  }\n}',
+      '{\n  "template_id": "key-rotation-summary",\n  "format": "pdf",\n  "filters": {\n    "date_from": "2026-01-01",\n    "date_to": "2026-12-31"\n  }\n}',
     description: "Creates an asynchronous reporting job (PDF/JSON/CSV depending on template/format support).",
     requestExample: "POST /svc/reporting/reports/generate",
     responseExample: { job: { id: "rep_job_01", template_id: "key-rotation-summary", status: "queued", format: "pdf" } },

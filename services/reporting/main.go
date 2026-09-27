@@ -27,6 +27,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -69,9 +70,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.reporting.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "reporting"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, reporting event publishing disabled: %v", err)
 	}
@@ -89,7 +94,7 @@ func main() {
 	)
 	svc.StartScheduler(ctx)
 
-	handler := NewHandler(svc)
+	handler := NewHandler(svc, audit, logger)
 
 	httpPort := envOr("HTTP_PORT", "8140")
 	authedHandler := pkgjwtauth.MustWrap("REPORTING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)

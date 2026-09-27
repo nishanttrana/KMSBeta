@@ -10,7 +10,8 @@ import (
 )
 
 func TestHandlerSBOMEndpoints(t *testing.T) {
-	h, _, _, _, _, _ := newSBOMHandler(t)
+	hh, _, _, _, _, _ := newSBOMHandler(t)
+	h := asCaller(hh, adminOf("root"))
 
 	genReq := httptest.NewRequest(http.MethodPost, "/sbom/generate", strings.NewReader(`{"trigger":"test"}`))
 	genReq.Header.Set("Content-Type", "application/json")
@@ -112,8 +113,9 @@ func min(a int, b int) int {
 }
 
 func TestHandlerCBOMEndpoints(t *testing.T) {
-	h, _, keycore, certs, _, _ := newSBOMHandler(t)
+	hh, _, keycore, certs, _, _ := newSBOMHandler(t)
 	tenantID := "tenant-h"
+	h := asCaller(hh, adminOf(tenantID))
 	keycore.keys[tenantID] = []map[string]interface{}{
 		{"id": "k1", "name": "data", "algorithm": "AES-256", "status": "active"},
 	}

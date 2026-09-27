@@ -35,6 +35,10 @@ func (rc *responseCapture) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// Unwrap lets http.ResponseController reach the underlying writer (Flush for
+// server-sent events).
+func (rc *responseCapture) Unwrap() http.ResponseWriter { return rc.ResponseWriter }
+
 // Wrap returns an http.Handler that publishes an audit event for every HTTP request.
 // This acts as a safety net — no request can bypass audit logging regardless of whether
 // the individual service handler publishes its own detailed event.

@@ -342,7 +342,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     }
     setAckBusy(alertID);
     try{
-      await acknowledgeAlert(session,alertID,session.username||"dashboard");
+      await acknowledgeAlert(session,alertID);
       onToast?.("Alert acknowledged.");
       await refresh(true);
     }catch(error){
@@ -365,10 +365,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     }
     setAckAllBusy(true);
     try{
-      const updated=await acknowledgeAlertsBulk(session,{
-        ids,
-        actor:session.username||"dashboard"
-      });
+      const updated=await acknowledgeAlertsBulk(session,{ids});
       onToast?.(`Acknowledged ${updated} alert${updated===1?"":"s"}.`);
       await refresh(true);
     }catch(error){

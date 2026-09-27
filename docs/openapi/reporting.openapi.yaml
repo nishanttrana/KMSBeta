@@ -26,12 +26,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportTemplateListEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled template retrieval failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.report_templates_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /reports/generate:
     post:
       tags:
@@ -51,12 +67,8 @@ paths:
             schema:
               type: object
               required:
-                - tenant_id
                 - template_id
               properties:
-                tenant_id:
-                  type: string
-                  example: root
                 template_id:
                   type: string
                   enum:
@@ -78,8 +90,6 @@ paths:
                     - csv
                     - json
                   default: pdf
-                requested_by:
-                  type: string
                 filters: &a5
                   type: object
                   additionalProperties: true
@@ -96,12 +106,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled report generation failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.write`. Audited as
+        `audit.reporting.report_requested`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The job is queued for the token's tenant and
+        `requested_by` is the verified caller; `tenant_id` and `requested_by`
+        are no longer read from the body (a `requested_by` field is rejected).
   /reports/jobs:
     get:
       tags:
@@ -125,12 +153,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled report job listing failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.report_jobs_listed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /reports/jobs/{id}:
     get:
       tags:
@@ -154,6 +198,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Report job not found.
           content:
@@ -166,6 +222,63 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.report_job_read`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
+    delete:
+      tags:
+        - Reporting
+      operationId: deleteReportJob
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Report job deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - deleted
+                  - request_id
+                properties:
+                  deleted:
+                    type: boolean
+                  request_id:
+                    type: string
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Report job not found in the token's tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled report job deletion failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.delete`. Audited as
+        `audit.reporting.report_deleted`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`). The deleting actor is the verified caller; the
+        `actor` query parameter and `X-Actor-ID` header are ignored.
   /reports/jobs/{id}/download:
     get:
       tags:
@@ -210,6 +323,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "404":
           description: Report job not found.
           content:
@@ -228,6 +353,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.report_downloaded`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /alerts/stats/mttd:
     get:
       tags:
@@ -247,12 +376,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled MTTD retrieval failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.mttd_stats_viewed`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /alerts/stats/mttr:
     get:
       tags:
@@ -272,12 +417,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled MTTR retrieval failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.mttr_stats_read`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
   /alerts/stats/top-sources:
     get:
       tags:
@@ -297,12 +458,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: No valid bearer token (reason `unauthenticated`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Missing permission, or a tenant other than the token's.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Unhandled top-source retrieval failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+      description: Permission `reporting.read`. Audited as
+        `audit.reporting.top_sources_read`, refusals included (`reason` =
+        `unauthenticated`, `permission_denied`, `tenant_mismatch`,
+        `tenant_conflict`).
 components:
   parameters:
     RequestIdHeader:
@@ -479,3 +656,10 @@ components:
         sources: *a5
         request_id:
           type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

@@ -5,6 +5,30 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A tenant check on some handlers is not a tenant check (sbom, reporting)
+- **What happened:** reporting and sbom read handlers called
+  `mustTenant` (which runs `tenantcheck.Enforce`), but the generate handlers
+  took `tenant_id` from the body and skipped it, and the report `requested_by`
+  and delete `actor` came from the body, query or `X-Actor-ID`. Worse, sbom
+  had no JWT middleware at all, so `tenantcheck.Enforce` always saw no claims
+  and passed: its "A01 fix" comment described a check that could never fire.
+- **Why it slipped through:** the check was opt-in per handler, so every new
+  handler had to remember it, and a reviewer reading one handler saw the
+  guard. Nothing tested the service as deployed (with its middleware stack),
+  and `Enforce` returns nil when there are no claims, which looks like
+  success.
+- **Rule:** don't hand-roll tenancy. Migrate the file to `pkg/route`, where
+  an unauthenticated request is refused and the tenant is bound before the
+  handler runs, and prove it with `routetest.RefusalsAudited` plus a
+  cross-tenant test per write route. When migrating, check the service's
+  `main.go` for `jwtauth` first: the kernel refuses everything without it,
+  which is the point, but it must be wired.
+- **Also:** a response wrapper that embeds `http.ResponseWriter` hides
+  `Flush`; SSE through it silently degrades to one chunk. Wrappers implement
+  `Unwrap()` and handlers use `http.NewResponseController`. The feed test
+  must wait for a live event, not just the first chunk, or it passes
+  without the fix.
+
 ### "Optional auth so internal callers keep working" is no auth (posture)
 - **What happened:** posture's `optionalJWTMiddleware` parsed a token when
   one was sent and let every other request through, so reporting could call
@@ -54,6 +78,7 @@ Newest entries on top.
   evidence proves: the enclave's key must be inside the signed evidence, and
   the key is sealed to it. Test that a key the evidence does not name gets
   nothing (`TestReleaseRefusedWithoutBindingAllowOrKeycore`).
+
 ### A generated doc is only as true as its input (OpenAPI specs)
 - **What happened:** `docs/openapi/ai.openapi.*` documented a `/svc/ai`
   service with six operations. No such service exists; the AI service is

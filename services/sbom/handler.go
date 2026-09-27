@@ -1,126 +1,163 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
+// Handler serves the SBOM and CBOM APIs. Every route is registered through
+// the pkg/route kernel, which authenticates the caller, binds the tenant to
+// the verified token, checks the route's permission and emits one
+// audit.sbom.<action> event per request, refusals included.
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
-	h.mux = h.routes()
+// Permissions for the sbom domain.
+const (
+	permRead   = "sbom.read"
+	permWrite  = "sbom.write"  // generate snapshots, save advisories
+	permDelete = "sbom.delete" // delete advisories
+)
+
+// reasonPlatformTenant refuses a platform-wide write (the platform SBOM and
+// its advisories are shared by every tenant) from a tenant other than the
+// platform tenant.
+const reasonPlatformTenant = "platform_tenant_required"
+
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, router: route.New("sbom", audit, logger)}
+	h.routes()
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
+func (h *Handler) routes() {
+	r := h.router
+	// The platform SBOM belongs to no tenant.
+	platform := func(action, perm, resource, target string) route.Spec {
+		return route.Spec{Action: action, Permission: perm, Resource: resource, TargetParam: target, Tenancy: route.PlatformScoped}
+	}
+	r.Handle("POST /sbom/generate", platform("sbom_generate_requested", permWrite, "sbom", ""), h.generateSBOM)
+	r.Handle("GET /sbom/latest", platform("sbom_latest_read", permRead, "sbom", ""), h.latestSBOM)
+	r.Handle("GET /sbom/history", platform("sbom_history_listed", permRead, "sbom", ""), h.sbomHistory)
+	r.Handle("GET /sbom/vulnerabilities", platform("sbom_vulnerabilities_listed", permRead, "sbom", ""), h.sbomVulnerabilities)
+	r.Handle("GET /sbom/advisories", platform("sbom_advisories_listed", permRead, "sbom_advisory", ""), h.listManualAdvisories)
+	r.Handle("POST /sbom/advisories", platform("sbom_advisory_saved", permWrite, "sbom_advisory", ""), h.saveManualAdvisory)
+	delAdv := platform("sbom_advisory_deleted", permDelete, "sbom_advisory", "id")
+	delAdv.Severity = "warning"
+	r.Handle("DELETE /sbom/advisories/{id}", delAdv, h.deleteManualAdvisory)
+	r.Handle("GET /sbom/diff", platform("sbom_diff_read", permRead, "sbom", ""), h.sbomDiff)
+	r.Handle("GET /sbom/{id}/export", platform("sbom_exported", permRead, "sbom", "id"), h.sbomExport)
+	r.Handle("GET /sbom/{id}", platform("sbom_read", permRead, "sbom", "id"), h.sbomByID)
 
-	mux.HandleFunc("POST /sbom/generate", h.handleGenerateSBOM)
-	mux.HandleFunc("GET /sbom/latest", h.handleLatestSBOM)
-	mux.HandleFunc("GET /sbom/history", h.handleSBOMHistory)
-	mux.HandleFunc("GET /sbom/vulnerabilities", h.handleSBOMVulnerabilities)
-	mux.HandleFunc("GET /sbom/advisories", h.handleListManualAdvisories)
-	mux.HandleFunc("POST /sbom/advisories", h.handleSaveManualAdvisory)
-	mux.HandleFunc("DELETE /sbom/advisories/{id}", h.handleDeleteManualAdvisory)
-	mux.HandleFunc("GET /sbom/diff", h.handleSBOMDiff)
-	mux.HandleFunc("GET /sbom/{id}/export", h.handleSBOMExport)
-	mux.HandleFunc("GET /sbom/{id}", h.handleSBOMByID)
-
-	mux.HandleFunc("POST /cbom/generate", h.handleGenerateCBOM)
-	mux.HandleFunc("GET /cbom/latest", h.handleLatestCBOM)
-	mux.HandleFunc("GET /cbom/history", h.handleCBOMHistory)
-	mux.HandleFunc("GET /cbom/summary", h.handleCBOMSummary)
-	mux.HandleFunc("GET /cbom/pqc-readiness", h.handleCBOMPQCReadiness)
-	mux.HandleFunc("GET /cbom/diff", h.handleCBOMDiff)
-	mux.HandleFunc("GET /cbom/{id}/export", h.handleCBOMExport)
-	mux.HandleFunc("GET /cbom/{id}", h.handleCBOMByID)
-
-	return mux
+	cbom := func(action, perm, target string) route.Spec {
+		return route.Spec{Action: action, Permission: perm, Resource: "cbom", TargetParam: target}
+	}
+	r.Handle("POST /cbom/generate", cbom("cbom_generate_requested", permWrite, ""), h.generateCBOM)
+	r.Handle("GET /cbom/latest", cbom("cbom_latest_read", permRead, ""), h.latestCBOM)
+	r.Handle("GET /cbom/history", cbom("cbom_history_listed", permRead, ""), h.cbomHistory)
+	r.Handle("GET /cbom/summary", cbom("cbom_summary_read", permRead, ""), h.cbomSummary)
+	r.Handle("GET /cbom/pqc-readiness", cbom("cbom_pqc_readiness_read", permRead, ""), h.cbomPQCReadiness)
+	r.Handle("GET /cbom/diff", cbom("cbom_diff_read", permRead, ""), h.cbomDiff)
+	r.Handle("GET /cbom/{id}/export", cbom("cbom_exported", permRead, "id"), h.cbomExport)
+	r.Handle("GET /cbom/{id}", cbom("cbom_read", permRead, "id"), h.cbomByID)
 }
 
-type generateSBOMRequest struct {
+// platformWriter refuses a write to platform-wide SBOM state unless the
+// caller belongs to the platform tenant (or is a tenant-less root token or an
+// internal service principal). Tenant administrators elsewhere hold
+// sbom.write too, but must not change what every tenant sees.
+func platformWriter(c *route.Call) bool {
+	tenant := strings.TrimSpace(c.Claims.TenantID)
+	if tenant == "" || tenant == tenantcheck.InternalServiceTenant() || tenantcheck.IsServicePrincipal(c.Claims) {
+		return true
+	}
+	c.Refuse(http.StatusForbidden, reasonPlatformTenant, "the platform SBOM is managed from the platform tenant")
+	return false
+}
+
+type generateRequest struct {
 	Trigger string `json:"trigger"`
 }
 
-func (h *Handler) handleGenerateSBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req generateSBOMRequest
-	_ = decodeJSON(r, &req)
-	item, err := h.svc.GenerateSBOM(r.Context(), req.Trigger)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+func (h *Handler) generateSBOM(c *route.Call) {
+	if !platformWriter(c) {
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
-		"status":     "accepted",
-		"snapshot":   item,
-		"request_id": reqID,
-	})
+	var req generateRequest
+	if !decodeOptional(c, &req) {
+		return
+	}
+	item, err := h.svc.GenerateSBOM(c.R.Context(), req.Trigger)
+	if err != nil {
+		h.serviceError(c, err)
+		return
+	}
+	c.Target(item.ID)
+	c.Detail("component_count", len(item.Document.Components))
+	c.JSON(http.StatusAccepted, map[string]interface{}{"status": "accepted", "snapshot": item})
 }
 
-func (h *Handler) handleLatestSBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	item, err := h.svc.GetLatestSBOM(r.Context())
+func (h *Handler) latestSBOM(c *route.Call) {
+	item, err := h.svc.GetLatestSBOM(c.R.Context())
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.JSON(http.StatusOK, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) handleSBOMHistory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	items, err := h.svc.ListSBOMHistory(r.Context(), atoi(r.URL.Query().Get("limit")))
+func (h *Handler) sbomHistory(c *route.Call) {
+	items, err := h.svc.ListSBOMHistory(c.R.Context(), atoi(c.R.URL.Query().Get("limit")))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleSBOMByID(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	item, err := h.svc.GetSBOMByID(r.Context(), r.PathValue("id"))
+func (h *Handler) sbomByID(c *route.Call) {
+	item, err := h.svc.GetSBOMByID(c.R.Context(), c.R.PathValue("id"))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) handleSBOMExport(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	format := firstNonEmpty(r.URL.Query().Get("format"), "cyclonedx")
-	encoding := firstNonEmpty(r.URL.Query().Get("encoding"), "json")
-	out, err := h.svc.ExportSBOM(r.Context(), r.PathValue("id"), format, encoding)
+func (h *Handler) sbomExport(c *route.Call) {
+	format := firstNonEmpty(c.R.URL.Query().Get("format"), "cyclonedx")
+	encoding := firstNonEmpty(c.R.URL.Query().Get("encoding"), "json")
+	c.Detail("format", format)
+	out, err := h.svc.ExportSBOM(c.R.Context(), c.R.PathValue("id"), format, encoding)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"export": out, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"export": out})
 }
 
-func (h *Handler) handleSBOMVulnerabilities(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	items, err := h.svc.SBOMVulnerabilities(r.Context())
+func (h *Handler) sbomVulnerabilities(c *route.Call) {
+	items, err := h.svc.SBOMVulnerabilities(c.R.Context())
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
 type manualAdvisoryRequest struct {
@@ -134,24 +171,24 @@ type manualAdvisoryRequest struct {
 	Reference         string `json:"reference"`
 }
 
-func (h *Handler) handleListManualAdvisories(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	items, err := h.svc.ListManualAdvisories(r.Context())
+func (h *Handler) listManualAdvisories(c *route.Call) {
+	items, err := h.svc.ListManualAdvisories(c.R.Context())
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleSaveManualAdvisory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req manualAdvisoryRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", "invalid advisory payload", reqID, "")
+func (h *Handler) saveManualAdvisory(c *route.Call) {
+	if !platformWriter(c) {
 		return
 	}
-	item, err := h.svc.SaveManualAdvisory(r.Context(), ManualAdvisory{
+	var req manualAdvisoryRequest
+	if !c.Decode(&req) {
+		return
+	}
+	item, err := h.svc.SaveManualAdvisory(c.R.Context(), ManualAdvisory{
 		ID:                req.ID,
 		Component:         req.Component,
 		Ecosystem:         req.Ecosystem,
@@ -162,224 +199,157 @@ func (h *Handler) handleSaveManualAdvisory(w http.ResponseWriter, r *http.Reques
 		Reference:         req.Reference,
 	})
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{"item": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.Detail("component", item.Component)
+	c.Detail("advisory_severity", item.Severity)
+	c.JSON(http.StatusAccepted, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) handleDeleteManualAdvisory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	if err := h.svc.DeleteManualAdvisory(r.Context(), r.PathValue("id")); err != nil {
-		h.writeServiceError(w, err, reqID, "")
+func (h *Handler) deleteManualAdvisory(c *route.Call) {
+	if !platformWriter(c) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
+	if err := h.svc.DeleteManualAdvisory(c.R.Context(), c.R.PathValue("id")); err != nil {
+		h.serviceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
-func (h *Handler) handleSBOMDiff(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	diff, err := h.svc.DiffSBOM(r.Context(), strings.TrimSpace(r.URL.Query().Get("from")), strings.TrimSpace(r.URL.Query().Get("to")))
+func (h *Handler) sbomDiff(c *route.Call) {
+	q := c.R.URL.Query()
+	diff, err := h.svc.DiffSBOM(c.R.Context(), strings.TrimSpace(q.Get("from")), strings.TrimSpace(q.Get("to")))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"diff": diff, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"diff": diff})
 }
 
-type generateCBOMRequest struct {
-	TenantID string `json:"tenant_id"`
-	Trigger  string `json:"trigger"`
-}
-
-func (h *Handler) handleGenerateCBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req generateCBOMRequest
-	_ = decodeJSON(r, &req)
-	req.TenantID = firstNonEmpty(req.TenantID, tenantFromRequest(r))
-	if req.TenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+// generateCBOM builds a CBOM for the caller's own tenant. The tenant comes
+// from the kernel (bound to the verified token); a tenant_id in the body is
+// checked by the kernel and must match it.
+func (h *Handler) generateCBOM(c *route.Call) {
+	var req struct {
+		TenantID string `json:"tenant_id"` // verified by the kernel; c.Tenant is used
+		Trigger  string `json:"trigger"`
+	}
+	if !decodeOptional(c, &req) {
 		return
 	}
-	item, err := h.svc.GenerateCBOM(r.Context(), req.TenantID, req.Trigger)
+	item, err := h.svc.GenerateCBOM(c.R.Context(), c.Tenant, req.Trigger)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
-		"status":     "accepted",
-		"snapshot":   item,
-		"request_id": reqID,
-	})
+	c.Target(item.ID)
+	c.Detail("asset_count", item.Document.TotalAssetCount)
+	c.JSON(http.StatusAccepted, map[string]interface{}{"status": "accepted", "snapshot": item})
 }
 
-func (h *Handler) handleLatestCBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.GetLatestCBOM(r.Context(), tenantID)
+func (h *Handler) latestCBOM(c *route.Call) {
+	item, err := h.svc.GetLatestCBOM(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.JSON(http.StatusOK, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) handleCBOMHistory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.svc.ListCBOMHistory(r.Context(), tenantID, atoi(r.URL.Query().Get("limit")))
+func (h *Handler) cbomHistory(c *route.Call) {
+	items, err := h.svc.ListCBOMHistory(c.R.Context(), c.Tenant, atoi(c.R.URL.Query().Get("limit")))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleCBOMByID(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.GetCBOMByID(r.Context(), tenantID, r.PathValue("id"))
+func (h *Handler) cbomByID(c *route.Call) {
+	item, err := h.svc.GetCBOMByID(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) handleCBOMExport(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	out, err := h.svc.ExportCBOM(r.Context(), tenantID, r.PathValue("id"), firstNonEmpty(r.URL.Query().Get("format"), "cyclonedx"))
+func (h *Handler) cbomExport(c *route.Call) {
+	format := firstNonEmpty(c.R.URL.Query().Get("format"), "cyclonedx")
+	c.Detail("format", format)
+	out, err := h.svc.ExportCBOM(c.R.Context(), c.Tenant, c.R.PathValue("id"), format)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"export": out, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"export": out})
 }
 
-func (h *Handler) handleCBOMSummary(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	out, err := h.svc.CBOMSummary(r.Context(), tenantID)
+func (h *Handler) cbomSummary(c *route.Call) {
+	out, err := h.svc.CBOMSummary(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"summary": out, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"summary": out})
 }
 
-func (h *Handler) handleCBOMPQCReadiness(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	out, err := h.svc.CBOMPQCReadiness(r.Context(), tenantID)
+func (h *Handler) cbomPQCReadiness(c *route.Call) {
+	out, err := h.svc.CBOMPQCReadiness(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"pqc_readiness": out, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"pqc_readiness": out})
 }
 
-func (h *Handler) handleCBOMDiff(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	diff, err := h.svc.DiffCBOM(r.Context(), tenantID, strings.TrimSpace(r.URL.Query().Get("from")), strings.TrimSpace(r.URL.Query().Get("to")))
+func (h *Handler) cbomDiff(c *route.Call) {
+	q := c.R.URL.Query()
+	diff, err := h.svc.DiffCBOM(c.R.Context(), c.Tenant, strings.TrimSpace(q.Get("from")), strings.TrimSpace(q.Get("to")))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.serviceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"diff": diff, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"diff": diff})
 }
 
-func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
+// serviceError writes a service error; 5xx details stay out of the response.
+func (h *Handler) serviceError(c *route.Call, err error) {
 	var svcErr serviceError
 	if errors.As(err, &svcErr) {
-		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
+		c.Error(svcErr.HTTPStatus, svcErr.Code, svcErr.Message)
 		return
 	}
-	// A05: avoid leaking internal error details for 5xx responses
 	status := httpStatusForErr(err)
 	msg := err.Error()
 	if status >= 500 {
 		msg = "internal server error"
 	}
-	writeErr(w, status, "internal_error", msg, reqID, tenantID)
+	c.Error(status, "internal_error", msg)
 }
 
-func decodeJSON(r *http.Request, out interface{}) error {
-	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
+// decodeOptional decodes a JSON body that may be absent, rejecting unknown
+// fields. On a malformed body it writes a 400 and returns false.
+func decodeOptional(c *route.Call, out interface{}) bool {
+	raw, err := io.ReadAll(io.LimitReader(c.R.Body, route.MaxBody))
+	if err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", "unreadable request body")
+		return false
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return true
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(out); err != nil {
-		if errors.Is(err, io.EOF) {
-			return errors.New("request body is required")
-		}
-		return err
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return false
 	}
-	return nil
-}
-
-func requestID(r *http.Request) string {
-	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-	if id != "" {
-		return id
-	}
-	return newID("req")
-}
-
-func tenantFromRequest(r *http.Request) string {
-	return firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return ""
-	}
-	return tenantID
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeErr(w http.ResponseWriter, status int, code string, message string, requestID string, tenantID string) {
-	writeJSON(w, status, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": requestID,
-			"tenant_id":  tenantID,
-		},
-	})
+	return true
 }
 
 func atoi(v string) int {

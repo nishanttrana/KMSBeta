@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-27T13:08:42Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T13:34:46Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -10,7 +10,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Tab/component mappings: `40`
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `943` across `30` services
-- Backend routes on the `pkg/route` kernel: `88` (permission and audit action in `backend-routes.csv`)
+- Backend routes on the `pkg/route` kernel: `151` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `607`
 - Frontend call sites with exact backend route match: `557`
 - Frontend call sites needing review or dynamic/runtime confirmation: `50`
@@ -311,8 +311,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /compliance/regulatory | trackedFetch | web/dashboard/src/lib/regulatory.ts | 6 |
 | keycore | GET | /compliance/dashboard | trackedFetch | web/dashboard/src/lib/regulatory.ts | 12 |
 | keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
-| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 235 |
-| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 279 |
+| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 236 |
+| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 275 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
 Showing `50` of `50`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
