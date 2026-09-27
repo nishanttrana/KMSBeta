@@ -257,8 +257,8 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 | `audit.hyok.admin_refused` | HYOK endpoint administration without a valid token, cross-tenant, or by a non-administrator | `TestHYOKAdminRoutesRequireTenantAdmin` |
 | `audit.hyok.approval_refused` | A retry whose approval is not approved, is for another key, operation or payload, or was already used | `TestHYOKGovernanceApprovalReleasesOperationOnce` |
 | `audit.hyok.request_denied` (`reason: key_access_unavailable`) | The key-access service is unreachable and the proxy fails closed | `TestHYOKKeyAccessFailsClosed` |
-| `audit.signing.sign_refused` | A sign request refused for identity, token or policy | `TestSignArtifactPolicyGatesPostgres` (service codes); handler emits for every 4xx |
-| `audit.signing.request_refused` | A sign or verify request naming another tenant | handler `bindTenant` |
+| `audit.signing.sign_refused` | A sign request refused for identity, token or policy (4xx; `code`, `reason`, `identity_mode`, `result: refused`) | `TestSignRefusalAuditedPostgres` (disabled signing, forged OIDC token, then a valid sign that isn't counted as refused); `TestSignArtifactPolicyGatesPostgres` covers each service code |
+| `audit.signing.request_refused` | A sign or verify request naming another tenant (`reason: tenant_mismatch`, `route`) | `TestTenantMismatchRefusedAndAudited` (blob, git and verify) |
 
 | `audit.ekm.request_refused` | An EKM call without a verified token for its tenant, or a BitLocker agent call without a bitlocker-role JWT | `TestHandlerEKMRequiresVerifiedTenantToken` |
 

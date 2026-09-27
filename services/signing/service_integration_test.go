@@ -82,12 +82,35 @@ func (f keycoreForTest) Verify(_ context.Context, keyID string, req KeyCoreVerif
 type recordingPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *recordingPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *recordingPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
+	return nil
+}
+
+// details returns the details of the last event published on subject.
+func (p *recordingPublisher) details(t *testing.T, subject string) map[string]any {
+	t.Helper()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := len(p.subjects) - 1; i >= 0; i-- {
+		if p.subjects[i] != subject {
+			continue
+		}
+		var ev struct {
+			Details map[string]any `json:"details"`
+		}
+		if err := json.Unmarshal(p.payloads[i], &ev); err != nil {
+			t.Fatal(err)
+		}
+		return ev.Details
+	}
+	t.Fatalf("no %s event published: %v", subject, p.subjects)
 	return nil
 }
 

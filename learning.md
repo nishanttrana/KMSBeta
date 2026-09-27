@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### An audit register row must name a test, not the code that emits
+- **What happened:** the 1.27.0-beta register listed
+  `audit.signing.request_refused` with "handler `bindTenant`" as its proof.
+  `sign_refused` pointed at a service test that checks error codes but never
+  looks at the events. Both events were emitted, but a regression that
+  dropped either one would have passed CI.
+- **Why it slipped through:** naming the line that emits an event reads like
+  evidence. The events were added in a large sweep, and the register was
+  filled from the diff, not from the tests.
+- **Rule:** every register row names a test that fails if the event
+  disappears, checking its `result` and `reason` too. When a refusal is
+  emitted by the handler, the test goes through the handler
+  (`TestTenantMismatchRefusedAndAudited`, `TestSignRefusalAuditedPostgres`).
+
 ### A release gate must bind its output to the verified party
 - **What happened:** confidential compute verified attestations well but had
   nowhere to send a key, so it returned a verdict and the feature was

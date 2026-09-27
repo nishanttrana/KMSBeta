@@ -4,6 +4,20 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.31.0-beta] — 2026-09-27
+
+### Signing refusals are proven audited
+- `audit.signing.sign_refused` and `audit.signing.request_refused` were
+  emitted, but no test showed it. The audit register named a handler function
+  instead of a test. New handler tests cover both.
+  `TestTenantMismatchRefusedAndAudited` sends a blob, git or verify request
+  that names another tenant. It gets 403, emits `request_refused`
+  (`reason: tenant_mismatch`, `route`), and nothing else is audited.
+  `TestSignRefusalAuditedPostgres` runs against real Postgres. Signing while
+  disabled, and signing with a forged OIDC token, each emit `sign_refused`
+  with its `code`. A later valid sign is audited as signed, not refused.
+- No behaviour change.
+
 ## [1.30.0-beta] — 2026-09-27
 
 ### Attested key release is real
