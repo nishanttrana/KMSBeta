@@ -100,7 +100,6 @@ const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m =>
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
-const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
 const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
@@ -208,7 +207,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
-  envelope_enc: EnvelopeEncTab,
   ops_metrics: OpsMetricsTab,
   backup: BackupTab,
   devsecops: DevSecOpsTab,
@@ -253,7 +251,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
-  envelope_enc: "Envelope Encryption",
   ops_metrics: "Operations Metrics",
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
@@ -278,7 +275,6 @@ const NAV = [
   { g: "Keys & lifecycle", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
-    { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
   ]},
   { g: "PKI & certificates", items: [

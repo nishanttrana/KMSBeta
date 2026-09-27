@@ -7,6 +7,32 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Envelope encryption: KMS generates and wraps DEKs, never stores them
+**Decision:** envelope encryption is `POST /keys/{id}/generate-data-key`
+(fresh DEK, plus the DEK wrapped under a keycore key) and `/unwrap` to recover
+it. The caller stores the wrapped DEK with its data. The keycore KEK/DEK
+"hierarchy" tables are removed.
+
+**Why:**
+- Envelope encryption exists so bulk data never crosses the wire to the KMS.
+  Only the 32-byte DEK is wrapped and unwrapped.
+- The KEK is an ordinary keycore key, so it gets real versions, rotation,
+  access policy, FIPS mode, HSM backing and audit for free.
+- A KMS-side DEK registry would either hold wrapped DEKs the KMS cannot
+  usefully rewrap without the data owner, or leak usage metadata. AWS KMS,
+  GCP KMS and Vault Transit don't keep one either.
+
+**Rejected:**
+- Making the old `/envelope/*` tables real. That would duplicate keycore key
+  lifecycle in a second, weaker model.
+- A separate `decrypt-data-key` route: `/unwrap` already does exactly this
+  and is audited.
+
+**Enforced by:** `TestGenerateDataKeyRoundTripsThroughUnwrap`,
+`TestGenerateDataKeyRefusalIsAudited`, `TestDataKeyRoutesRefusalsAudited`.
+
+---
+
 ## 2026-09-26 — Re-key the CRWK on a passphrase change, don't just re-seal it
 **Decision:** when the certs CRWK passphrase changes, including the
 migration off the retired public default, certs:

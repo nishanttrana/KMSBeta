@@ -4,6 +4,45 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.13.0-beta] — 2026-09-27
+
+### Removed: keycore "Envelope Encryption" hierarchy (it held no keys)
+- **Removed the Envelope Encryption tab and keycore's `/envelope/*`
+  endpoints** (`keks`, `keks/{id}/rotate`, `deks`, `hierarchy`, `rewrap`,
+  `rewrap-jobs`).
+- **Why:**
+  - A "KEK" was a name and version row with no key material.
+  - "Rotate KEK" only incremented the version number.
+  - Nothing ever created a DEK, so the DEK list and hierarchy were always
+    empty.
+  - A "rewrap job" was a row that no worker ever processed.
+  - The routes were on the raw mux, with no permission check and no audit
+    event.
+- Keycore migration 024 drops `envelope_keks`, `envelope_deks` and
+  `envelope_rewrap_jobs`. The code is recoverable from `a238c2782`, the last
+  commit that has it.
+
+### Added: `POST /keys/{id}/generate-data-key` (real envelope encryption)
+- Returns a fresh 128/192/256-bit DEK from the FIPS module's DRBG and the
+  same DEK wrapped under the named keycore key. `include_plaintext: false`
+  returns only the wrapped copy (for a producer that stores it for later).
+- The caller encrypts locally and keeps the wrapped DEK beside the data.
+  `POST /keys/{id}/unwrap` recovers it. Rotating the key wraps new DEKs under
+  the new version; old versions still unwrap.
+- Wrapping runs through the same path as `/wrap`: key access, policy, FIPS
+  mode, approval, metering and ops limits all apply.
+- Registered through the `pkg/route` kernel: permission `key.wrap`, audit
+  `audit.key.data_key_generated`, refusals included (`ops_limit_reached`,
+  `policy_denied`, `fips_mode_violation`, access refusals and the kernel's
+  own). It runs locally on a cluster member, like `/wrap`.
+- Dashboard: Data Encryption → Envelope → Mode "Generate data key".
+- dataprotect's `/app/envelope-encrypt|decrypt` is unchanged.
+
+### Fixed: the Secret Vault "Envelope Encryption" switch did nothing
+- The switch only changed labels and a metadata field. Every secret is always
+  encrypted (a MEK-wrapped DEK per secret, AES-256-GCM), but turning it off
+  claimed "secret will be stored as-is". It is now a read-only indicator.
+
 ## [1.11.0-beta] — 2026-09-26
 
 ### Security fix: hsm-integration SSH access

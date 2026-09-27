@@ -46,4 +46,6 @@ working backend behind it doesn't count as a feature.
 | DR drill (keycore) | Every step "passed", synthetic RTO/RPO | Verify Backup (`POST /governance/backups/verify`) |
 | mTLS Mesh (certs) | "Renew" discarded the cert and key; topology claimed mTLS on plain-HTTP links | Internal mTLS from the internal-services Sub CA ([INTERNAL_TLS.md](INTERNAL_TLS.md)) |
 | "TLS 1.3 + Hybrid PQC (KMS internal)" mode (governance) | Minted ML-DSA certificates for every service, then discarded them; audited `internal_hybrid_tls_applied` | Real hybrid ML-KEM key exchange on every internal mTLS link, asserted by `TestMutualTLSBetweenServices` |
+| Envelope Encryption hierarchy (keycore, 2026-09-27) | KEKs without key material, "rotate" bumped a counter, DEK list always empty, rewrap jobs never ran | `POST /keys/{id}/generate-data-key` + `/unwrap` on real keycore keys |
+| Secret Vault envelope switch (dashboard, 2026-09-27) | "Off" claimed secrets were stored as-is; the backend always encrypts | Read-only indicator |
 | Tokenize nonce fallback (dashboard) | `Math.random` / timestamp nonces | The browser CSPRNG only; fails closed |

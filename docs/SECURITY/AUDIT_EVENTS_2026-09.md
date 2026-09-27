@@ -95,6 +95,7 @@ are per tenant, with actor type `service`, and carry `item_type`, `count`
 | `audit.<svc>.mek_exposure_remediated` | an exposure entry closed: material rotated, deleted or re-keyed, or acknowledged with a reason | info; warning when acknowledged |
 | `audit.<svc>.mek_exposure_listed` / `mek_exposure_acknowledged` | kernel events for `GET /mek/exposure` and the acknowledge route (refusals included) | info / warning |
 | `audit.<svc>.mek_backup_rewrap` | governance re-wrapped backup contents through the service (counts; `result: refused` for any other caller) | warning |
+| `audit.key.data_key_generated` | keycore `POST /keys/{id}/generate-data-key` (kernel event; details `key_bytes`, `include_plaintext`, `version`; refusals `result: refused` with `reason`: `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access refusals, HSM refusals, `permission_denied`) | info; warning for refusals |
 | `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info |
 | `audit.key.system_key_created` | keycore created a service's system key | info |
 | `audit.key.system_key_change_refused` | destroy, disable, version delete or export of a system key was refused (`operation`, `reason: system_key_protected`) | critical |

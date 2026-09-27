@@ -3,6 +3,22 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-27
+
+### A test that greps for registrations goes blind to kernel routes
+- **What happened:** `TestLocalRoutesExist` (pkg/clusterroute) proved that
+  each cluster-local route exists by grepping for `HandleFunc("...")`. The
+  first keycore route registered through the `pkg/route` kernel
+  (`r.Handle("POST /keys/{id}/generate-data-key", ...)`) looked unregistered.
+- **Fix:** the pattern now matches `Handle(` and `HandleFunc(`.
+- **Still open:** `scripts/generate_product_map.py` has the same blind spot.
+  Kernel routes don't appear in `docs/generated/backend-routes.csv`.
+
+### "Envelope encryption" can be faked with nothing but metadata
+- A KEK/DEK table with names, versions and a "rewrap job" queue looks like a
+  key hierarchy but holds no keys. To check, follow the data: is there key
+  material, does anything insert DEKs, does anything process the job?
+
 ## 2026-09-26
 
 ### A README can hold a live credential, and the path to it can be indirect

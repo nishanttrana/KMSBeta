@@ -80,15 +80,6 @@ type Store interface {
 
 	RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error)
 
-	// Envelope Encryption
-	ListKEKs(ctx context.Context, tenantID string) ([]KEK, error)
-	CreateKEK(ctx context.Context, kek KEK) (KEK, error)
-	RotateKEK(ctx context.Context, tenantID, kekID string) (KEK, error)
-	ListDEKs(ctx context.Context, tenantID string, kekID string) ([]DEK, error)
-	GetEnvelopeHierarchy(ctx context.Context, tenantID string) ([]EnvelopeHierarchyNode, error)
-	CreateRewrapJob(ctx context.Context, job RewrapJob) (RewrapJob, error)
-	ListRewrapJobs(ctx context.Context, tenantID string) ([]RewrapJob, error)
-
 	// Crypto Agility
 	GetAlgorithmDistribution(ctx context.Context, tenantID string) ([]AlgorithmUsage, error)
 	ListKeysByAlgorithm(ctx context.Context, tenantID, algorithm string) ([]Key, error)

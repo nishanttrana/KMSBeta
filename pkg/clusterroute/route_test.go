@@ -20,6 +20,7 @@ func TestDecide(t *testing.T) {
 		{"kms-keycore", "POST", "/keys/k1/rotate", Forward},
 		{"kms-keycore", "POST", "/keys/k1/destroy", Forward},
 		{"kms-keycore", "DELETE", "/keys/k1", Forward},
+		{"kms-keycore", "POST", "/keys/k1/generate-data-key", RunLocal},
 		{"kms-keycore", "POST", "/keys//encrypt", Forward}, // empty id matches nothing local
 		{"kms-dataprotect", "POST", "/fpe/encrypt", RunLocal},
 		{"kms-dataprotect", "POST", "/tokenize", Forward}, // writes vault tokens
@@ -45,7 +46,7 @@ func TestLocalRoutesExist(t *testing.T) {
 		"kms-keycore": "keycore", "kms-dataprotect": "dataprotect", "kms-auth": "auth",
 		"kms-governance": "governance", "kms-audit": "audit",
 	}
-	re := regexp.MustCompile(`HandleFunc\("([A-Z]+ [^"]+)"`)
+	re := regexp.MustCompile(`\bHandle(?:Func)?\("([A-Z]+ [^"]+)"`) // legacy mux and route kernel
 	for svc, pats := range Local {
 		files, _ := filepath.Glob(filepath.Join("..", "..", "services", dirs[svc], "*.go"))
 		registered := map[string]bool{}

@@ -177,6 +177,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/service-derive", h.handleServiceDerive)
 	// Kernel-routed (pkg/route): platform services' master-key system keys.
 	h.systemKeyRouter().MountOn(mux)
+	h.dataKeyRouter(kernelEmitter{h}).MountOn(mux)
 	h.hsmRouter(kernelEmitter{h}).MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)
@@ -186,15 +187,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/kem/decapsulate", h.handleKEMDecapsulate)
 	mux.HandleFunc("POST /crypto/hash", h.handleHash)
 	mux.HandleFunc("POST /crypto/random", h.handleRandom)
-
-	// Envelope Encryption
-	mux.HandleFunc("GET /envelope/keks", h.handleListKEKs)
-	mux.HandleFunc("POST /envelope/keks", h.handleCreateKEK)
-	mux.HandleFunc("POST /envelope/keks/{id}/rotate", h.handleRotateKEK)
-	mux.HandleFunc("GET /envelope/deks", h.handleListDEKs)
-	mux.HandleFunc("GET /envelope/hierarchy", h.handleGetHierarchy)
-	mux.HandleFunc("POST /envelope/rewrap", h.handleStartRewrap)
-	mux.HandleFunc("GET /envelope/rewrap-jobs", h.handleListRewrapJobs)
 
 	// Crypto Agility
 	mux.HandleFunc("GET /agility/score", h.handleGetAgilityScore)

@@ -867,6 +867,34 @@ export async function encryptData(
   };
 }
 
+export interface DataKey {
+  key_id: string;
+  version: number;
+  kcv: string;
+  wrapped_dek: string;
+  wrapped_dek_iv: string;
+  key_bytes: number;
+  plaintext_dek?: string;
+}
+
+// Envelope encryption: a fresh DEK wrapped under keyId. Encrypt data locally
+// with plaintext_dek, store wrapped_dek beside it, recover it with /unwrap.
+export async function generateDataKey(
+  session: AuthSession,
+  keyId: string,
+  options?: { keyBytes?: number; aad?: string; includePlaintext?: boolean }
+): Promise<DataKey> {
+  return apiRequest<DataKey>(session, `/keys/${encodeURIComponent(keyId)}/generate-data-key`, {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      key_bytes: options?.keyBytes || 32,
+      aad: options?.aad ? encodeInputToBase64(options.aad, "utf-8") : "",
+      include_plaintext: options?.includePlaintext !== false
+    })
+  });
+}
+
 export async function decryptData(
   session: AuthSession,
   keyId: string,

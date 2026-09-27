@@ -51,6 +51,7 @@ import {
   tokenizeValues,
   updateDataProtectionPolicy
 } from "../../../lib/dataprotect";
+import { generateDataKey } from "../../../lib/keycore";
 import { PKCS11Tab } from "./PKCS11Tab";
 import { PaymentPolicyTab } from "./PaymentPolicyTab";
 
@@ -702,6 +703,9 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
     }
     if(mode==="Envelope"){
       await run(async()=>{
+        if(encMode==="generate-data-key"){
+          return generateDataKey(session,keyId,{aad});
+        }
         if(encMode==="encrypt"){
           if(!String(plainText||"")){
             throw new Error("Plaintext is required.");
@@ -763,7 +767,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
         {tabs.map((name)=>(
           <button
             key={name}
-            onClick={()=>setMode(name)}
+            onClick={()=>{setMode(name);if(name!=="Envelope"&&encMode==="generate-data-key")setEncMode("encrypt");}}
             style={{
               background:mode===name?C.accentDim:"transparent",
               color:mode===name?C.accent:C.text,
@@ -783,7 +787,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
         <div>
           <FG label="Key" required hint="Only active symmetric cipher keys are allowed for data encryption"><Sel value={keyId} onChange={(e)=>setKeyId(e.target.value)}>{renderKeyOptions(dataProtectKeyChoices)}</Sel></FG>
           <Row2>
-            <FG label="Mode"><Sel value={encMode} onChange={(e)=>setEncMode(e.target.value)}><option value="encrypt">Encrypt</option><option value="decrypt">Decrypt</option></Sel></FG>
+            <FG label="Mode"><Sel value={encMode} onChange={(e)=>setEncMode(e.target.value)}><option value="encrypt">Encrypt</option><option value="decrypt">Decrypt</option>{mode==="Envelope"&&<option value="generate-data-key">Generate data key</option>}</Sel></FG>
             {(mode==="Field-Level (FLE)"||mode==="Envelope")
               ?<FG label="Algorithm"><Sel value={algorithm} onChange={(e)=>setAlgorithm(e.target.value)}><option value="AES-GCM">AES-GCM</option><option value="AES-SIV">AES-SIV</option><option value="CHACHA20-POLY1305">ChaCha20-Poly1305</option></Sel></FG>
               :<FG label="Algorithm"><Inp value={mode==="Searchable (AES-SIV)"?"AES-SIV (fixed for searchable deterministic encryption)":"Not applicable in FPE mode"} readOnly/></FG>}
@@ -794,7 +798,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
             <FG label="Document JSON"><Txt value={docText} onChange={(e)=>setDocText(e.target.value)} rows={8}/></FG>
           </>}
           {mode==="Envelope"&&<>
-            {encMode==="encrypt"?<FG label="Plaintext"><Txt value={plainText} onChange={(e)=>setPlainText(e.target.value)} rows={6}/></FG>:<FG label="Envelope payload JSON"><Txt value={envelopeText} onChange={(e)=>setEnvelopeText(e.target.value)} rows={6}/></FG>}
+            {encMode==="generate-data-key"?<div style={{fontSize:11,color:C.dim,lineHeight:1.5,marginBottom:8}}>Returns a fresh 256-bit DEK and the same DEK wrapped under the selected key. Encrypt locally with the DEK, store only the wrapped DEK, and recover it with the key's unwrap operation.</div>:encMode==="encrypt"?<FG label="Plaintext"><Txt value={plainText} onChange={(e)=>setPlainText(e.target.value)} rows={6}/></FG>:<FG label="Envelope payload JSON"><Txt value={envelopeText} onChange={(e)=>setEnvelopeText(e.target.value)} rows={6}/></FG>}
           </>}
           {mode==="Searchable (AES-SIV)"&&<>
             {encMode==="encrypt"?<FG label="Plaintext"><Txt value={searchablePlaintext} onChange={(e)=>setSearchablePlaintext(e.target.value)} rows={6}/></FG>:<FG label="Ciphertext (base64)"><Txt value={searchableCiphertext} onChange={(e)=>setSearchableCiphertext(e.target.value)} rows={6}/></FG>}

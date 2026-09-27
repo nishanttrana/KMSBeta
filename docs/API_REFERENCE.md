@@ -535,13 +535,43 @@ Body: `message`, `signature`, `messageType`, `algorithm`, `keyVersion`. Response
 
 ### POST /svc/keycore/keys/{id}/wrap
 
-Body: `targetKeyId` (UUID) OR `keyMaterial` (base64), `algorithm` (AES-KW/AES-KWP/RSA-OAEP). Response: `wrappedKey`, `algorithm`, `wrappingKeyId`, `wrappingKeyVersion`
+Body: `plaintext` (base64 key material), `aad` (base64, optional), `iv_mode`.
+Response: `ciphertext`, `iv`, `version`, `key_id`, `kcv`. Same checks as
+`encrypt`, metered and policy-evaluated as `key.wrap`.
 
 ---
 
 ### POST /svc/keycore/keys/{id}/unwrap
 
-Body: `wrappedKey`, `algorithm`, `keySpec` (name, algorithm, purpose, tags). Response: new Key object.
+Body: `ciphertext`, `iv`, `aad` (all base64). Response: `plaintext` (base64),
+`version`, `key_id`. Evaluated as `key.unwrap`.
+
+---
+
+### POST /svc/keycore/keys/{id}/generate-data-key
+
+Envelope encryption. Keycore generates a data key (DEK) from the FIPS module's
+DRBG and wraps it under this key.
+
+Body: `key_bytes` (16, 24 or 32; default 32), `aad` (base64, optional; the
+same value must be given to `/unwrap`), `include_plaintext` (default `true`;
+`false` returns only the wrapped DEK).
+
+Response: `plaintext_dek` (base64, omitted when `include_plaintext` is
+`false`), `wrapped_dek`, `wrapped_dek_iv`, `key_bytes`, `key_id`, `version`,
+`kcv`.
+
+Encrypt the data locally with the DEK, discard it, and store `wrapped_dek` +
+`wrapped_dek_iv` with the ciphertext. Recover the DEK with `/unwrap`
+(`ciphertext` = `wrapped_dek`, `iv` = `wrapped_dek_iv`).
+
+- Permission `key.wrap`. The key's access policy, governance policy, FIPS mode,
+  approval, metering and ops limit apply as for `/wrap`. An approval-gated key
+  answers `202` with `approval_request_id`.
+- Audit `audit.key.data_key_generated`. Refusals carry `result: refused` and
+  `reason` (for example `ops_limit_reached` → `429`, `policy_denied` /
+  `fips_mode_violation` → `403`).
+- Runs locally on a cluster member.
 
 ---
 
@@ -3483,6 +3513,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 Selected events with dedicated audit classification:
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.sign`, `audit.key.verify`
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
+- `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
