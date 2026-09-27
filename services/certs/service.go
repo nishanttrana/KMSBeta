@@ -23,11 +23,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"vecta-kms/pkg/svctls"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 
@@ -58,12 +58,16 @@ type EventPublisher interface {
 }
 
 type Service struct {
-	store             Store
-	events            EventPublisher
-	keycore           KeyCoreSigner
-	mek               atomic.Pointer[[]byte] // master key from keycore; nil until loaded
-	exposure          *mek.Keyring           // exposure register; nil in tests
-	internalPKI       *bootstrapPKI          // set once the internal PKI is recorded in the database
+	store       Store
+	events      EventPublisher
+	keycore     KeyCoreSigner
+	mek         atomic.Pointer[[]byte] // master key from keycore; nil until loaded
+	exposure    *mek.Keyring           // exposure register; nil in tests
+	internalPKI *bootstrapPKI          // set once the internal PKI is recorded in the database
+	// Service mTLS (internal_mtls.go): where the policy is published, and
+	// where the certificates of Envoy, the dashboard and the daemons live.
+	trustDir          string
+	runtimeCfg        RuntimeCertMaterializerConfig
 	securityProvider  certRootKeyProvider
 	certStorageMode   string
 	rootKeyMode       string
@@ -146,6 +150,12 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 // and NATS were reachable (internal PKI bootstrap, internal_bootstrap.go).
 func (s *Service) AttachStore(store Store)            { s.store = store }
 func (s *Service) SetPublisher(events EventPublisher) { s.events = events }
+
+// SetInternalMTLSDirs tells the Service mTLS code where the trust bundle
+// (and the published policy) and the file identities' certificates live.
+func (s *Service) SetInternalMTLSDirs(trustDir string, cfg RuntimeCertMaterializerConfig) {
+	s.trustDir, s.runtimeCfg = trustDir, cfg
+}
 
 // SetLegacyMEK installs the 32-byte master key from keycore.
 func (s *Service) SetLegacyMEK(key []byte) error {
@@ -2749,34 +2759,34 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 	}
 	// Internal identities that can't enrol themselves, from the internal
 	// services Sub CA: Envoy's client certificate to the services, and the
-	// dashboard's server certificate (docs/SECURITY/INTERNAL_TLS.md).
-	_, sub, err := s.EnsureInternalPKI(ctx, tenantID)
-	if err != nil {
+	// dashboard's server certificate, and the Postgres, NATS, Valkey and
+	// Consul servers (docs/SECURITY/INTERNAL_TLS.md).
+	if _, _, err := s.EnsureInternalPKI(ctx, tenantID); err != nil {
 		return err
 	}
+	// Each is renewed at two thirds of its life, or reissued when its key
+	// doesn't match the Service mTLS policy (internal_mtls.go).
 	internalDays := internalCertValidityDays()
 	internalRenew := time.Duration(internalDays) * 24 * time.Hour / 3
-	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, filepath.Join(materializeDir, "envoy-client"), "ECDSA-P256", "tls-client", "vecta-envoy", []string{"envoy", "vecta-envoy"}, internalDays, internalRenew, sub.CertPEM); err != nil {
-		return err
+	var policies map[string]mtlsPolicyRow
+	if st, err := s.mtls(); err == nil {
+		policies, _ = st.ListMTLSPolicies(ctx)
 	}
-	if dir := strings.TrimSpace(cfg.DashboardTLSDir); dir != "" {
-		if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, dir, "ECDSA-P256", "tls-server", "vecta-dashboard", []string{"dashboard", "vecta-dashboard"}, internalDays, internalRenew, sub.CertPEM); err != nil {
-			return err
+	for _, identity := range mtlsIdentities() {
+		if mtlsKind(identity) != mtlsKindFile {
+			continue
 		}
-		// nginx in the dashboard runs as another user: hand the key over by
-		// group (CERTS_DASHBOARD_TLS_GID, certs is a member via group_add),
-		// never by making it world-readable.
-		if err := shareWithGroup(dir, envInt("CERTS_DASHBOARD_TLS_GID", -1)); err != nil {
-			return fmt.Errorf("dashboard TLS permissions: %w", err)
+		t, ok := s.fileTarget(identity)
+		if !ok {
+			continue
 		}
-	}
-	// Infrastructure servers (Postgres, NATS, Valkey, Consul): renewed here
-	// once the database is up; first issued before it (internal_bootstrap.go).
-	if dir := strings.TrimSpace(cfg.InfraTLSDir); dir != "" {
-		for identity, host := range svctls.Infrastructure {
-			if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, filepath.Join(dir, host), "ECDSA-P256", infraCertType(host), identity, []string{host, identity}, internalDays, internalRenew, sub.CertPEM); err != nil {
-				return fmt.Errorf("%s TLS: %w", host, err)
-			}
+		p := effectivePolicy(identity, policies)
+		certPath, keyPath := filepath.Join(t.dir, "tls.crt"), filepath.Join(t.dir, "tls.key")
+		if !runtimeCertNeedsRenew(certPath, keyPath, internalRenew) && sameKeyLabel(fileKeyAlgorithm(certPath), p.KeyAlgorithm) {
+			continue
+		}
+		if err := s.reissueFileIdentity(ctx, tenantID, identity, p); err != nil {
+			return fmt.Errorf("%s TLS: %w", identity, err)
 		}
 	}
 	_ = s.publishAudit(ctx, "audit.cert.runtime_materialized", tenantID, map[string]interface{}{
@@ -2828,11 +2838,24 @@ func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string
 	if err := os.MkdirAll(outDir, 0o700); err != nil {
 		return err
 	}
+	// Also reissued when the key on disk isn't the one asked for: until
+	// 1.16.0-beta an "RSA-3072" request got a 2048-bit key (generateKeyFor).
 	certPath := filepath.Join(outDir, "tls.crt")
-	keyPath := filepath.Join(outDir, "tls.key")
-	if !runtimeCertNeedsRenew(certPath, keyPath, renewBefore) {
+	if !runtimeCertNeedsRenew(certPath, filepath.Join(outDir, "tls.key"), renewBefore) && sameKeyLabel(fileKeyAlgorithm(certPath), algorithm) {
 		return nil
 	}
+	_, err := s.writeRuntimeEndpointCert(ctx, tenantID, ca, outDir, algorithm, certType, cn, sans, validityDays, chainPEM)
+	return err
+}
+
+// writeRuntimeEndpointCert issues a certificate with a server-generated key
+// and writes tls.crt (with chainPEM) and tls.key into outDir.
+func (s *Service) writeRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, certType string, cn string, sans []string, validityDays int64, chainPEM string) (Certificate, error) {
+	if err := os.MkdirAll(outDir, 0o700); err != nil {
+		return Certificate{}, err
+	}
+	certPath := filepath.Join(outDir, "tls.crt")
+	keyPath := filepath.Join(outDir, "tls.key")
 	issued, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
 		TenantID:     tenantID,
 		CAID:         ca.ID,
@@ -2847,10 +2870,10 @@ func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string
 		MetadataJSON: `{"runtime_materializer":true}`,
 	})
 	if err != nil {
-		return err
+		return Certificate{}, err
 	}
 	if strings.TrimSpace(keyPEM) == "" {
-		return errors.New("runtime materializer received empty private key")
+		return Certificate{}, errors.New("runtime materializer received empty private key")
 	}
 	keyBytes := []byte(keyPEM)
 	defer pkgcrypto.Zeroize(keyBytes)
@@ -2859,12 +2882,21 @@ func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string
 		certOut += strings.TrimSpace(chainPEM) + "\n"
 	}
 	if err := writeFileAtomically(certPath, []byte(certOut), 0o600); err != nil {
-		return err
+		return Certificate{}, err
 	}
 	if err := writeFileAtomically(keyPath, keyBytes, 0o600); err != nil {
-		return err
+		return Certificate{}, err
 	}
-	return nil
+	return issued, nil
+}
+
+// fileKeyAlgorithm names the key of the certificate at path, "" if unreadable.
+func fileKeyAlgorithm(path string) string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return actualKeyAlgorithm(string(raw))
 }
 
 func shareWithGroup(dir string, gid int) error {
@@ -3101,47 +3133,33 @@ func certTypeFromUploadPurpose(purpose string) string {
 	}
 }
 
+// generateSigningKey makes a CA key; generateLeafKey a certificate key. Both
+// generate the size the algorithm names (RSA-2048/3072/4096,
+// ECDSA-P256/P384/P521, Ed25519). Until 1.16.0-beta they ignored the size:
+// every RSA leaf got 2048 bits and every ECDSA leaf P-256 (every CA RSA-3072
+// or P-384), while the record kept the requested name.
 func generateSigningKey(algorithm string) (crypto.Signer, string, error) {
-	alg := strings.ToUpper(strings.TrimSpace(algorithm))
-	switch {
-	case strings.Contains(alg, "RSA"):
-		key, err := rsa.GenerateKey(rand.Reader, 3072)
-		if err != nil {
-			return nil, "", err
-		}
-		der := x509.MarshalPKCS1PrivateKey(key)
-		p := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: der})
-		return key, string(p), nil
-	case strings.Contains(alg, "ED25519"):
-		_, key, err := ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			return nil, "", err
-		}
-		der, err := x509.MarshalPKCS8PrivateKey(key)
-		if err != nil {
-			return nil, "", err
-		}
-		p := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
-		return key, string(p), nil
-	default:
-		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		if err != nil {
-			return nil, "", err
-		}
-		der, err := x509.MarshalECPrivateKey(key)
-		if err != nil {
-			return nil, "", err
-		}
-		p := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
-		return key, string(p), nil
-	}
+	return generateKeyFor(algorithm, 3072, elliptic.P384())
 }
 
 func generateLeafKey(algorithm string) (crypto.Signer, string, error) {
+	return generateKeyFor(algorithm, 2048, elliptic.P256())
+}
+
+// generateKeyFor generates the key algorithm names; a name without a size
+// ("RSA", "ECDSA") uses the defaults. An unlisted size (RSA-1024) gets the
+// default, never less.
+func generateKeyFor(algorithm string, rsaDefault int, curveDefault elliptic.Curve) (crypto.Signer, string, error) {
 	alg := strings.ToUpper(strings.TrimSpace(algorithm))
 	switch {
 	case strings.Contains(alg, "RSA"):
-		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		bits := rsaDefault
+		for _, b := range []string{"2048", "3072", "4096"} {
+			if strings.Contains(alg, b) {
+				bits, _ = strconv.Atoi(b)
+			}
+		}
+		key, err := rsa.GenerateKey(rand.Reader, bits)
 		if err != nil {
 			return nil, "", err
 		}
@@ -3160,7 +3178,16 @@ func generateLeafKey(algorithm string) (crypto.Signer, string, error) {
 		p := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
 		return key, string(p), nil
 	default:
-		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		curve := curveDefault
+		switch {
+		case strings.Contains(alg, "521"):
+			curve = elliptic.P521()
+		case strings.Contains(alg, "384"):
+			curve = elliptic.P384()
+		case strings.Contains(alg, "256"):
+			curve = elliptic.P256()
+		}
+		key, err := ecdsa.GenerateKey(curve, rand.Reader)
 		if err != nil {
 			return nil, "", err
 		}

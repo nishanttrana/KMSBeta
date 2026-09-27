@@ -1,6 +1,7 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { ServiceMTLSPanel } from "./ServiceMTLSPanel";
 import {
   acmeChallengeComplete,
   acmeChallengeInfo,
@@ -203,9 +204,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const [starMetadataText,setStarMetadataText]=useState("{\n  \"workload\": \"edge-gateway\"\n}");
   const promptDialog=usePromptDialog();
   const requestedCertPane=String(subView||"cert-overview").trim().toLowerCase();
-  const activeCertPane=requestedCertPane==="cert-enrollment"?"cert-enrollment":"cert-overview";
+  const activeCertPane=["cert-enrollment","cert-service-mtls"].includes(requestedCertPane)?requestedCertPane:"cert-overview";
   const showEnrollmentPane=activeCertPane==="cert-enrollment";
-  const showOverviewPane=!showEnrollmentPane;
+  const showServiceMTLSPane=activeCertPane==="cert-service-mtls";
+  const showOverviewPane=activeCertPane==="cert-overview";
 
   const [caLoading,setCALoading]=useState(false);
   const [certLoading,setCertLoading]=useState(false);
@@ -1520,6 +1522,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       <Chk label="Show HSM partition certificates (certificates stored in the HSM, including ones the KMS didn't create)" checked={showHSMCerts} onChange={()=>setShowHSMCerts(!showHSMCerts)}/>
     </div>}
     {showHSMCerts&&<HSMPartitionTable session={session} kind="certificates" onToast={onToast}/>}
+    {showServiceMTLSPane&&<ServiceMTLSPanel session={session} onToast={onToast}/>}
     {showOverviewPane&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:14}}>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.greenTint} 100%)`}}>

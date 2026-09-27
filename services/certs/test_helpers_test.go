@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 
 	pkgdb "vecta-kms/pkg/db"
@@ -154,6 +156,23 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 			PRIMARY KEY (tenant_id, id),
 			UNIQUE (tenant_id, name)
 		);`,
+	}
+	// Service mTLS tables straight from the migration, so the tests run the
+	// schema production runs.
+	raw, err := os.ReadFile("migrations/013_internal_mtls_policy.sql")
+	if err != nil {
+		return err
+	}
+	var sqlOnly []string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "--") {
+			sqlOnly = append(sqlOnly, line)
+		}
+	}
+	for _, stmt := range strings.Split(strings.Join(sqlOnly, "\n"), ";") {
+		if strings.Contains(stmt, "CREATE TABLE") {
+			stmts = append(stmts, stmt)
+		}
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {

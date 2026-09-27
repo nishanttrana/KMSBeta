@@ -118,8 +118,9 @@ function Set-ComposeEnvironment {
         } elseif ($line -match '^\s{8,}passphrase_file_path:\s*(.+)$') {
             $env:CERTS_CRWK_PASSPHRASE_FILE = $matches[1].Trim()
             continue
-        } elseif ($line -match '^\s{8,}use_tpm_seal:\s*(true|false)$') {
-            $env:CERTS_CRWK_USE_TPM_SEAL = $matches[1].ToLowerInvariant()
+        } elseif ($line -match '^\s{8,}use_tpm_seal:\s*true$') {
+            # Never implemented (nothing was sealed to a TPM); removed.
+            Write-Warning "cert_security.use_tpm_seal is ignored: TPM sealing of the CRWK was never implemented (the CRWK is sealed with Argon2id + AES-GCM under the passphrase). Remove the line from the deployment file."
             continue
         }
 

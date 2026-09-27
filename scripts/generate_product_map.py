@@ -92,6 +92,23 @@ def route_match_key(service: str, method: str, path: str) -> Tuple[str, str, str
     return (service_key(service), str(method or "GET").upper(), normalize_path(path))
 
 
+DYNAMIC_SERVICE = "$dynamic-service"
+
+
+def any_service_key(match_key: str) -> str:
+    """The key a call to a service chosen at runtime (DYNAMIC_SERVICE, e.g.
+    the dashboard's loop over services for MEK exposure) matches on: the same
+    method and path in any service."""
+    _service, _, rest = str(match_key).partition("|")
+    return DYNAMIC_SERVICE + "|" + rest
+
+
+def call_matches(call_key: str, backend_keys: set) -> bool:
+    if call_key.startswith(DYNAMIC_SERVICE + "|"):
+        return call_key in {any_service_key(k) for k in backend_keys}
+    return call_key in backend_keys
+
+
 def node_id(prefix: str, value: str) -> str:
     raw = re.sub(r"[^A-Za-z0-9_]+", "_", value).strip("_")
     if not raw:
@@ -608,7 +625,7 @@ def build_request_flows(
             aggregate_external_pkg_calls.extend(summary["external_package_calls"])
             aggregate_helper_calls.extend(summary["helper_calls"])
 
-        frontend_sites = frontend_by_key.get(str(route.get("match_key") or ""), [])
+        frontend_sites = frontend_by_key.get(str(route.get("match_key") or ""), []) + frontend_by_key.get(any_service_key(str(route.get("match_key") or "")), [])
         flows.append(
             {
                 "service": service,
@@ -814,7 +831,7 @@ def extract_frontend_calls() -> List[Dict[str, object]]:
                 len(service_expr) >= 2 and service_expr[0] in ("'", '"', "`") and service_expr[-1] == service_expr[0]
             )
             if service_dynamic and not service_is_static:
-                service = "$dynamic-service"
+                service = DYNAMIC_SERVICE
             api_path, path_dynamic = resolve_expr(args[2], consts)
             method = method_from_init(args[3] if len(args) > 3 else "")
             add_frontend_call(
@@ -1848,11 +1865,14 @@ def main() -> None:
     request_flows = build_request_flows(backend_routes, frontend_calls)
 
     backend_keys = {str(route["match_key"]) for route in backend_routes}
-    matched_calls = [call for call in frontend_calls if str(call["match_key"]) in backend_keys]
-    unmatched_calls = [call for call in frontend_calls if str(call["match_key"]) not in backend_keys]
+    matched_calls = [call for call in frontend_calls if call_matches(str(call["match_key"]), backend_keys)]
+    unmatched_calls = [call for call in frontend_calls if not call_matches(str(call["match_key"]), backend_keys)]
 
     frontend_keys = {str(call["match_key"]) for call in frontend_calls}
-    unused_routes = [route for route in backend_routes if str(route["match_key"]) not in frontend_keys]
+    unused_routes = [
+        route for route in backend_routes
+        if str(route["match_key"]) not in frontend_keys and any_service_key(str(route["match_key"])) not in frontend_keys
+    ]
 
     route_counts = Counter(str(route["service"]) for route in backend_routes)
     frontend_service_counts = Counter(str(call["service_key"]) for call in frontend_calls)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/fips140"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -108,7 +109,48 @@ func attachPlatformDB(store *platformFIPSStore, reader *clusterstate.Reader, dsn
 	if err := store.ReportObserved(ctx, fipsServiceName(), host, mode, fips140.Version(), fips.ModuleValidated(), time.Now()); err != nil {
 		log.Printf("fips: observed mode not reported: %v", err)
 	}
+	go reportMTLS(db, host)
 }
+
+// reportMTLS records what this process's internal mTLS actually runs
+// (platform_mtls_observed): certificate serial and key, key-exchange profile,
+// policy generation and the last negotiated group. The certs service shows it
+// and audits when a policy change or rotation has been applied
+// (docs/SECURITY/INTERNAL_TLS.md).
+func reportMTLS(db *sql.DB, instance string) {
+	for {
+		if id := pkgsvctls.Current(); id != nil {
+			st := id.Status()
+			groups, _ := json.Marshal(st.ServerGroups)
+			var lastAt interface{}
+			if !st.LastHandshakeAt.IsZero() {
+				lastAt = st.LastHandshakeAt
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_, err := db.ExecContext(ctx, MTLSObservedUpsertSQL, st.Identity, instance, st.Serial, st.NotAfter.UTC(), st.KeyAlgorithm, st.KXProfile, string(groups),
+				st.Generation, st.LastHandshakeGroup, lastAt, st.StartedAt.UTC())
+			cancel()
+			if err != nil {
+				log.Printf("svctls: mTLS status not reported (retrying): %v", err)
+			}
+		}
+		time.Sleep(mtlsReportInterval)
+	}
+}
+
+const mtlsReportInterval = 30 * time.Second
+
+// MTLSObservedUpsertSQL records one instance's internal mTLS state; the certs
+// service's Postgres test runs this same statement.
+const MTLSObservedUpsertSQL = `
+INSERT INTO platform_mtls_observed (identity, instance, serial, not_after, key_algorithm, kx_profile, server_groups,
+	generation, last_handshake_group, last_handshake_at, started_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP)
+ON CONFLICT (identity, instance) DO UPDATE SET serial = EXCLUDED.serial, not_after = EXCLUDED.not_after,
+	key_algorithm = EXCLUDED.key_algorithm, kx_profile = EXCLUDED.kx_profile, server_groups = EXCLUDED.server_groups,
+	generation = EXCLUDED.generation, last_handshake_group = EXCLUDED.last_handshake_group,
+	last_handshake_at = EXCLUDED.last_handshake_at, started_at = EXCLUDED.started_at, updated_at = CURRENT_TIMESTAMP
+`
 
 // RequireFIPSRuntime puts the process in the platform FIPS mode and stops it
 // if that fails. Called from Load and NewHTTPServer so every service gets it

@@ -1,0 +1,198 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { B, Btn, Card, Inp, Section, Sel } from "../legacyPrimitives";
+import { C } from "../theme";
+import { errMsg } from "../runtimeUtils";
+import {
+  getInternalMTLS,
+  rotateAllInternalMTLS,
+  rotateInternalMTLS,
+  setInternalMTLSPolicy,
+  type MTLSIdentity,
+  type MTLSInventory,
+  type MTLSRestartMode
+} from "../../../lib/certs";
+
+// Service mTLS (docs/SECURITY/INTERNAL_TLS.md): every internal identity's
+// certificate from the internal-services Sub CA, its key and key-exchange
+// policy, and what its instances actually run (reported by the service, not
+// assumed). Changes and rotations restart the service (graceful or forced)
+// or, for Envoy, the dashboard and the daemons, rewrite the certificate they
+// reload. Root administrators only; every action is audited.
+
+type Props = { session: any; onToast?: (msg: string) => void };
+
+const PROFILE_LABEL: Record<string, string> = {
+  "pqc-required": "PQC required: hybrid ML-KEM only",
+  "pqc-preferred": "PQC preferred: hybrid ML-KEM, classical fallback",
+  classical: "Classical: no ML-KEM"
+};
+
+const ago = (iso?: string) => {
+  if (!iso) return "";
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 90) return `${s}s ago`;
+  if (s < 5400) return `${Math.round(s / 60)}m ago`;
+  return `${Math.round(s / 3600)}h ago`;
+};
+
+const day = (iso?: string) => (iso ? new Date(iso).toISOString().slice(0, 10) : "");
+
+export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
+  const [inv, setInv] = useState<MTLSInventory | null>(null);
+  const [error, setError] = useState("");
+  const [draft, setDraft] = useState<Record<string, { key_algorithm: string; kx_profile: string }>>({});
+  const [confirmForce, setConfirmForce] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState("");
+  const [allMode, setAllMode] = useState<MTLSRestartMode>("graceful");
+  const [allConfirm, setAllConfirm] = useState("");
+  const [filter, setFilter] = useState("");
+
+  const load = useCallback(async () => {
+    if (!session?.token) return;
+    try {
+      setInv(await getInternalMTLS(session));
+      setError("");
+    } catch (e) {
+      setError(errMsg(e));
+    }
+  }, [session]);
+
+  useEffect(() => { void load(); }, [load]);
+  const pending = useMemo(() => (inv?.items || []).filter((i) => !i.applied).length, [inv]);
+  // Poll while changes are being applied (services restart and report back).
+  useEffect(() => {
+    const id = window.setInterval(() => void load(), pending > 0 ? 5000 : 30000);
+    return () => window.clearInterval(id);
+  }, [pending, load]);
+
+  const run = async (key: string, fn: () => Promise<unknown>, done: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      onToast?.(done);
+      await load();
+    } catch (e) {
+      onToast?.(`${key}: ${errMsg(e)}`);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  if (error) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.red }}>Service mTLS unavailable: {error}</div></Card>;
+  if (!inv) return <Card style={{ padding: 12 }}><div style={{ fontSize: 11, color: C.dim }}>Loading internal mTLS inventory...</div></Card>;
+
+  const items = inv.items.filter((i) => !filter || i.identity.includes(filter.toLowerCase()) || i.host.includes(filter.toLowerCase()));
+
+  const row = (i: MTLSIdentity) => {
+    const d = draft[i.identity] || { key_algorithm: i.policy.key_algorithm, kx_profile: i.policy.kx_profile };
+    const changed = d.key_algorithm !== i.policy.key_algorithm || (i.kind === "service" && d.kx_profile !== i.policy.kx_profile);
+    const observed = i.observed || [];
+    const live = i.kind === "service" ? observed[0] : i.served_file;
+    const cert = (i.certificates || [])[0];
+    const set = (patch: Partial<typeof d>) => setDraft((prev) => ({ ...prev, [i.identity]: { ...d, ...patch } }));
+    return (
+      <div key={i.identity} style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", borderTop: `1px solid ${C.border}`, alignItems: "center", fontSize: 11 }}>
+        <div>
+          <div style={{ fontWeight: 700, color: C.text }}>{i.identity}</div>
+          <div style={{ color: C.dim, fontSize: 10 }}>{i.host} · {i.kind === "service" ? "service (enrols itself)" : "daemon (certs writes its files)"}</div>
+        </div>
+        <div>
+          <div style={{ color: C.text }}>{live?.key_algorithm || cert?.key_algorithm || "not reported"}</div>
+          <div style={{ color: C.dim, fontSize: 10 }}>
+            {live?.serial || cert?.serial ? `serial ${(live?.serial || cert?.serial || "").slice(0, 16)}` : "no active certificate"}
+            {(live?.not_after || cert?.not_after) ? ` · until ${day(live?.not_after || cert?.not_after)}` : ""}
+          </div>
+          <Sel value={d.key_algorithm} onChange={(e: any) => set({ key_algorithm: String(e.target.value) })} style={{ marginTop: 4 }}>
+            {inv.meta.key_algorithms.map((a) => <option key={a} value={a}>{a}</option>)}
+          </Sel>
+        </div>
+        <div>
+          {i.kind === "service" ? (
+            <>
+              <div style={{ color: C.text }}>{PROFILE_LABEL[live?.kx_profile || ""] || live?.kx_profile || "not reported"}</div>
+              <div style={{ color: C.dim, fontSize: 10 }}>
+                {live?.last_handshake_group ? `last handshake ${live.last_handshake_group} ${ago(live.last_handshake_at)}` : "no handshake reported yet"}
+              </div>
+              <Sel value={d.kx_profile} onChange={(e: any) => set({ kx_profile: String(e.target.value) })} style={{ marginTop: 4 }}>
+                {(i.kx_profiles || inv.meta.kx_profiles).map((p) => <option key={p} value={p}>{PROFILE_LABEL[p] || p}</option>)}
+              </Sel>
+            </>
+          ) : (
+            <div style={{ color: C.dim, fontSize: 10 }}>{i.note}</div>
+          )}
+        </div>
+        <div>
+          {i.applied
+            ? <B c="green">{`generation ${i.policy.generation} · running`}</B>
+            : <B c="amber" pulse>{observed.length === 0 && i.kind === "service" ? "not reported yet" : `applying generation ${i.policy.generation}`}</B>}
+          {i.kind === "service" && observed.length > 1 && <div style={{ color: C.dim, fontSize: 10, marginTop: 2 }}>{observed.length} instances</div>}
+          {live?.started_at && i.kind === "service" && <div style={{ color: C.dim, fontSize: 10, marginTop: 2 }}>started {ago(live.started_at)}</div>}
+        </div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <Btn small primary disabled={!changed || busy !== ""} onClick={() => void run(i.identity, () => setInternalMTLSPolicy(session, i.identity,
+            i.kind === "service" ? { key_algorithm: d.key_algorithm, kx_profile: d.kx_profile, reason } : { key_algorithm: d.key_algorithm, reason }), `${i.identity}: policy saved; ${i.kind === "service" ? "the service restarts gracefully to apply it" : "certificate reissued, the daemon reloads it"}`)}>
+            Apply
+          </Btn>
+          <Btn small disabled={busy !== ""} onClick={() => void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful", reason),
+            `${i.identity}: certificate revoked; ${i.kind === "service" ? "graceful restart with a fresh key" : "new certificate written"}`)}>
+            {i.kind === "service" ? "Rotate" : "Rotate (reload)"}
+          </Btn>
+          {i.restart_modes.includes("force") && (confirmForce === i.identity ? (
+            <Btn small danger disabled={busy !== ""} onClick={() => { setConfirmForce(""); void run(i.identity, () => rotateInternalMTLS(session, i.identity, "force", reason),
+              `${i.identity}: certificate revoked (key compromise); forced restart`); }}>
+              Confirm force
+            </Btn>
+          ) : (
+            <Btn small danger disabled={busy !== ""} onClick={() => setConfirmForce(i.identity)}>Force restart</Btn>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Section title="Service mTLS" actions={<B c={pending > 0 ? "amber" : "green"}>{pending > 0 ? `${pending} applying` : "all applied"}</B>}>
+      <Card style={{ padding: 12, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: C.text }}>
+          Every internal connection is TLS 1.3 with mutual authentication. Certificates come from <b>{inv.meta.sub_ca}</b>.
+          {" "}FIPS mode is {inv.meta.fips_mode ? "on (X25519 alone is not offered)" : "off"}.
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          A service with <b>PQC required</b> accepts only {(inv.meta.groups["pqc-required"] || []).join(", ")}. Every platform client offers all
+          groups, so no choice cuts a service off from its callers. {inv.meta.signature_note}
+        </div>
+        <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+          Rotate revokes the current certificate. A service then restarts: gracefully (drains requests) or forced (at once, for a
+          suspected key compromise); the new process generates a fresh key. The state below is what each service reports it runs.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginTop: 8 }}>
+          <Inp placeholder="Reason (recorded in the audit log)" value={reason} onChange={(e: any) => setReason(String(e.target.value || ""))} />
+          <Inp placeholder="Filter identities" value={filter} onChange={(e: any) => setFilter(String(e.target.value || ""))} />
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Rotate all</div>
+          <Sel value={allMode} onChange={(e: any) => setAllMode(e.target.value as MTLSRestartMode)} w={150}>
+            <option value="graceful">graceful restarts</option>
+            <option value="force">forced restarts</option>
+          </Sel>
+          <Inp placeholder='Type "rotate-all" to confirm' value={allConfirm} onChange={(e: any) => setAllConfirm(String(e.target.value || ""))} w={200} />
+          <Btn small danger={allMode === "force"} primary={allMode === "graceful"} disabled={busy !== "" || allConfirm !== "rotate-all"}
+            onClick={() => void run("rotate-all", async () => {
+              const out = await rotateAllInternalMTLS(session, allMode, reason, allConfirm);
+              setAllConfirm("");
+              onToast?.(`Every internal certificate revoked; services restart one every ${inv.meta.rotate_all_step}s (about ${Math.round(out.restart_span_seconds / 60)} min, certs last).`);
+            }, "Rotation of every internal certificate started")}>
+            Rotate every certificate
+          </Btn>
+        </div>
+      </Card>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", fontSize: 10, fontWeight: 700, color: C.dim }}>
+          <div>Identity</div><div>Certificate key</div><div>Key exchange (server)</div><div>State</div><div>Actions</div>
+        </div>
+        {items.map(row)}
+      </Card>
+    </Section>
+  );
+};

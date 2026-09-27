@@ -120,6 +120,8 @@ func main() {
 	}
 	svc.AttachStore(NewSQLStore(rt.DB))
 	svc.SetPublisher(publisher)
+	runtimeCfg := loadRuntimeMaterializerConfig()
+	svc.SetInternalMTLSDirs(trustDir, runtimeCfg)
 	if err := pki.Reconcile(rt.Ctx); err != nil {
 		logger.Fatalf("refusing to start: internal PKI reconcile: %v", err)
 	}
@@ -168,7 +170,29 @@ func main() {
 		logger.Fatalf("refusing to start: %v", err)
 	}
 
-	runtimeCfg := loadRuntimeMaterializerConfig()
+	// Service mTLS (docs/SECURITY/INTERNAL_TLS.md): publish the per-service
+	// policy for every service to apply (all nodes, from the replicated
+	// table), and audit each change once its services run it (primary).
+	go func() {
+		for {
+			pctx, cancel := context.WithTimeout(rt.Ctx, 10*time.Second)
+			if err := svc.PublishMTLSPolicy(pctx, trustDir); err != nil {
+				logger.Printf("mTLS policy not published: %v", err)
+			}
+			if clusterstate.RunsPrimaryJobs(pctx) {
+				if err := svc.AuditAppliedMTLS(pctx, enrollAudit); err != nil {
+					logger.Printf("mTLS applied-audit: %v", err)
+				}
+			}
+			cancel()
+			select {
+			case <-rt.Ctx.Done():
+				return
+			case <-time.After(15 * time.Second):
+			}
+		}
+	}()
+
 	if runtimeCfg.Enabled {
 		go func() {
 			run := func() {
@@ -200,6 +224,13 @@ func main() {
 		defer cancel()
 		if !clusterstate.RunsPrimaryJobs(migrateCtx) {
 			return // the primary rewraps; the result replicates
+		}
+		// Records that name a key their certificate doesn't carry
+		// (key_label_correction.go) are corrected and audited.
+		if n, err := svc.CorrectKeyLabels(migrateCtx, enrollAudit); err != nil {
+			logger.Printf("key label correction: %v", err)
+		} else if n > 0 {
+			logger.Printf("corrected %d certificate/CA records to the key their certificate carries", n)
 		}
 		n, err := svc.RewrapLegacyCASigners(migrateCtx)
 		if err != nil {
@@ -233,6 +264,7 @@ func main() {
 	handler := NewHandler(svc)
 	kernel := route.New("cert", audit, logger)
 	keyring.Routes(kernel, "cert")
+	svc.RegisterInternalMTLSRoutes(kernel)
 	kernel.MountOn(handler.mux)
 	if err := rt.Serve(handler); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
@@ -251,7 +283,6 @@ func loadCertRootKeyConfig() CertRootKeyConfig {
 		ArgonIterations:         uint32(envInt("CERTS_CRWK_ARGON_ITERATIONS", defaultCRWKIterations)),
 		ArgonParallel:           uint8(envInt("CERTS_CRWK_ARGON_PARALLEL", int(defaultCRWKParallel))),
 		MlockRequired:           envBool("CERTS_CRWK_MLOCK_REQUIRED", false),
-		UseTPMSeal:              envBool("CERTS_CRWK_USE_TPM_SEAL", false),
 	}
 }
 

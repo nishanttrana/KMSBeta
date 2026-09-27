@@ -161,7 +161,7 @@ const restartAllowedFor=(service:{name?:string;restart_allowed?:boolean}):boolea
   return !RESTART_BLOCKED_TARGETS.has(target);
 };
 
-const INTERNAL_TLS_POLICY="TLS 1.3 · internal mTLS · hybrid ML-KEM key exchange";
+const INTERNAL_TLS_POLICY="TLS 1.3 · internal mTLS · key exchange per service (hybrid ML-KEM by default)";
 
 const dl=(name:string,b64:string,type:string)=>{
   const raw=atob(String(b64||""));
@@ -2150,9 +2150,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     : !certSecurity
       ? "not reported"
       : `${String(certSecurity.storage_mode||"unknown")} / ${String(certSecurity.root_key_mode||"unknown")} / ${String(certSecurity.state||"unknown")}${certSecurity.key_version?` (${String(certSecurity.key_version)})`:""}${certSecurity.rotation_pending?" · passphrase rotation pending: CA signers being rewrapped":""}${certSecurity.last_error?` · ${String(certSecurity.last_error)}`:""}`;
-  // The enforced policy, not a setting: every service link is TLS 1.3 mTLS
-  // from the internal-services Sub CA and negotiates hybrid ML-KEM key
-  // exchange (pkg/svctls, proven by TestMutualTLSBetweenServices).
+  // The enforced policy: every service link is TLS 1.3 mTLS from the
+  // internal-services Sub CA. Key exchange is set per service (hybrid ML-KEM
+  // by default) under Certificates / PKI > Service mTLS (pkg/svctls).
   const tlsPolicyLabel = INTERNAL_TLS_POLICY;
   const tlsDefaultCertSummary = systemTLSCertSource==="internal_ca"
     ? "Internal CA auto-issue"
@@ -2380,8 +2380,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <FG label="Internal TLS (enforced)">
         <div style={{fontSize:11,color:C.text,lineHeight:1.5}}>
           {INTERNAL_TLS_POLICY}. Every service, Envoy and the dashboard use certificates from the
-          internal-services Sub CA; there is no plain HTTP between components. Certificate signatures are
-          classical (ECDSA): Go's TLS stack does not support ML-DSA certificates yet.
+          internal-services Sub CA; there is no plain HTTP between components. Each service's certificate key and
+          key exchange (PQC required, preferred or classical) are set and rotated under Certificates / PKI &gt; Service
+          mTLS. Certificate signatures are classical: the certified Go Cryptographic Module v1.0.0 has no ML-DSA.
         </div>
       </FG>
       <FG label="Default Certificate Source">

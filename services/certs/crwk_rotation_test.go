@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -159,7 +160,7 @@ func exerciseCRWKMigration(t *testing.T, conn *pkgdb.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	publicSealed, err := sealCRWKBlob(crwk, []byte(retiredPublicCRWKPassphrase), v, false, cfg.ArgonMemoryKB, cfg.ArgonIterations, cfg.ArgonParallel)
+	publicSealed, err := sealCRWKBlob(crwk, []byte(retiredPublicCRWKPassphrase), v, cfg.ArgonMemoryKB, cfg.ArgonIterations, cfg.ArgonParallel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,4 +319,71 @@ func TestCRWKWrongPassphraseWithoutPreviousIsNotReady(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatal("the sealed key must be left untouched")
 	}
+}
+
+// TPM sealing was only ever a recorded flag. Nothing claims it any more: not
+// the status API, not a newly sealed blob. A blob written by an earlier
+// release with "use_tpm_seal": true still unseals, and the flag is ignored.
+func TestCRWKStatusMakesNoTPMClaim(t *testing.T) {
+	dir := t.TempDir()
+	cfg := crwkTestConfig(dir)
+	passphrase := randomPassphrase(t)
+	writeSecretFile(t, cfg.BootstrapPassphraseFile, passphrase)
+
+	// An old install's blob, carrying the flag.
+	crwk, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	blob, err := sealCRWKBlob(crwk, []byte(passphrase), "crwk-old", cfg.ArgonMemoryKB, cfg.ArgonIterations, cfg.ArgonParallel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old map[string]any
+	_ = json.Unmarshal(blob, &old)
+	old["use_tpm_seal"] = true
+	blob, _ = json.Marshal(old)
+	if err := os.WriteFile(cfg.SealedPath, blob, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	conn := sqliteCertsDB(t)
+	svc, sw := crwkService(t, conn, cfg)
+	if st := sw.Status(); !st.Ready || st.KeyVersion != "crwk-old" {
+		t.Fatalf("an old blob with use_tpm_seal must still unseal: %+v", st)
+	}
+	for name, v := range map[string]any{"provider status": sw.Status(), "service status": svc.SecurityStatus()} {
+		if k := tpmKey(t, v); k != "" {
+			t.Fatalf("%s must not claim TPM sealing (field %q)", name, k)
+		}
+	}
+
+	fresh, err := sealCRWKBlob(crwk, []byte(passphrase), "crwk-new", cfg.ArgonMemoryKB, cfg.ArgonIterations, cfg.ArgonParallel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sealed map[string]any
+	_ = json.Unmarshal(fresh, &sealed)
+	if k := tpmKey(t, sealed); k != "" {
+		t.Fatalf("a newly sealed blob must not record TPM sealing (field %q)", k)
+	}
+}
+
+// tpmKey returns the first JSON field of v whose name mentions TPM.
+func tpmKey(t *testing.T, v any) string {
+	t.Helper()
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for k := range fields {
+		if strings.Contains(strings.ToLower(k), "tpm") {
+			return k
+		}
+	}
+	return ""
 }

@@ -205,6 +205,11 @@ type Identity struct {
 	roots     *x509.CertPool
 	enroller  Enroller
 	logger    *log.Logger
+
+	policy        ServicePolicy // applied at start; a change restarts the process
+	policyFile    string
+	started       time.Time
+	lastHandshake atomic.Pointer[handshake]
 }
 
 var current atomic.Pointer[Identity]
@@ -216,8 +221,12 @@ func Current() *Identity { return current.Load() }
 type Options struct {
 	Enroller  Enroller // default: the certs enrolment endpoint
 	TrustFile string   // default: VECTA_INTERNAL_CA_FILE or /run/vecta/trust/internal-ca.crt
-	Algorithm string   // default: VECTA_MTLS_KEY_ALGORITHM or ECDSA-P256
+	Algorithm string   // overrides the policy's key algorithm (tests)
 	Logger    *log.Logger
+	// PolicyFile defaults to PolicyFileName next to the trust file.
+	PolicyFile string
+	// OnPolicyChange replaces the restart on a policy change (tests).
+	OnPolicyChange func(mode string)
 	// KeepDefaultTransport leaves http.DefaultTransport alone (tests).
 	KeepDefaultTransport bool
 }
@@ -248,12 +257,22 @@ func Init(ctx context.Context, identity string, opts Options) (*Identity, error)
 			}},
 		}
 	}
+	// The administrator's policy for this identity (key, key exchange,
+	// rotation generation), published by the certs service.
+	policyFile := firstNonEmpty(opts.PolicyFile, filepath.Join(filepath.Dir(trustFile), PolicyFileName))
+	policy, perr := ReadPolicy(policyFile, identity)
+	if perr != nil {
+		logger.Printf("mTLS policy unreadable (%v); using the default for %s", perr, identity)
+	}
 	id := &Identity{
-		Name:      identity,
-		Algorithm: firstNonEmpty(opts.Algorithm, os.Getenv("VECTA_MTLS_KEY_ALGORITHM"), pkgcrypto.AlgECDSAP256),
-		roots:     roots,
-		enroller:  enroller,
-		logger:    logger,
+		Name:       identity,
+		Algorithm:  firstNonEmpty(opts.Algorithm, policy.KeyAlgorithm),
+		roots:      roots,
+		enroller:   enroller,
+		logger:     logger,
+		policy:     policy,
+		policyFile: policyFile,
+		started:    time.Now().UTC(),
 	}
 	for attempt := 0; ; attempt++ {
 		if err = id.renew(ctx); err == nil {
@@ -271,6 +290,12 @@ func Init(ctx context.Context, identity string, opts Options) (*Identity, error)
 		http.DefaultTransport = id.Router(http.DefaultTransport)
 	}
 	go id.renewLoop(ctx)
+	onChange := opts.OnPolicyChange
+	if onChange == nil {
+		onChange = restartSelf
+	}
+	go id.watchPolicy(ctx.Done(), onChange)
+	logger.Printf("internal mTLS policy for %s: %s, key exchange %s (generation %d)", identity, id.Algorithm, policy.KXProfile, policy.Generation)
 	return id, nil
 }
 
@@ -291,23 +316,32 @@ func (id *Identity) Leaf() *x509.Certificate {
 	return nil
 }
 
-// ServerConfig requires a client certificate from the internal Sub CA.
+// ServerConfig requires a client certificate from the internal Sub CA and
+// accepts only the key-exchange groups of this identity's profile. It
+// records the group of each handshake (reported as Status).
 func (id *Identity) ServerConfig() *tls.Config {
-	return tlsprofile.ApplyServerDefaults(&tls.Config{
-		MinVersion:     tls.VersionTLS13,
-		ClientAuth:     tls.RequireAndVerifyClientCert,
-		ClientCAs:      id.roots,
-		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return id.Certificate() },
+	cfg := tlsprofile.ApplyServerDefaults(&tls.Config{
+		MinVersion:       tls.VersionTLS13,
+		ClientAuth:       tls.RequireAndVerifyClientCert,
+		ClientCAs:        id.roots,
+		GetCertificate:   func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return id.Certificate() },
+		VerifyConnection: id.recordHandshake,
 	})
+	cfg.CurvePreferences = ServerGroups(id.policy.KXProfile)
+	return cfg
 }
 
 // ClientConfig presents this identity and trusts only the internal Sub CA.
+// It offers every group (profile decides the order), so it reaches servers
+// of any profile.
 func (id *Identity) ClientConfig() *tls.Config {
-	return tlsprofile.ApplyClientDefaults(&tls.Config{
+	cfg := tlsprofile.ApplyClientDefaults(&tls.Config{
 		MinVersion:           tls.VersionTLS13,
 		RootCAs:              id.roots,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) { return id.Certificate() },
 	})
+	cfg.CurvePreferences = ClientGroups(id.policy.KXProfile)
+	return cfg
 }
 
 // ClientTLSConfigFor presents this identity to serverName, trusting only

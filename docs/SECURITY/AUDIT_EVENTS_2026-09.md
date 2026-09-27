@@ -138,6 +138,29 @@ Proven by `TestLibraryWatcherAuditsUploads` (pkg/hsmconnector),
 SSH logins themselves are in the hsm-integration container log (sshd,
 `LogLevel VERBOSE`, with key fingerprints), not the audit trail.
 
+## Service mTLS (certs, docs/SECURITY/INTERNAL_TLS.md)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.certs.internal_mtls_inventory_read` | the Service mTLS page was read (root only) | info |
+| `audit.certs.internal_mtls_policy_updated` | an identity's certificate key or key-exchange profile changed; previous and new values, generation, certificates revoked | warning |
+| `audit.certs.internal_mtls_rotated` | an identity's certificate was revoked and replaced; `restart_mode` graceful or force | warning |
+| `audit.certs.internal_mtls_rotated_all` | every internal certificate was rotated, with staggered restarts | critical |
+| `audit.certs.internal_mtls_applied` | every reporting instance runs the new generation (from their reports, not the request); serials | info |
+| `audit.certs.certificate_key_label_corrected` | a certificate or CA record named a key its certificate doesn't carry, and was corrected (`recorded_algorithm`, `actual_algorithm`) | warning |
+
+Refusals carry `result: refused` and a `reason`: `not_root_tenant`,
+`unchanged`, `invalid_policy`, `unknown_identity`,
+`kx_profile_not_applicable`, `force_not_available`,
+`confirmation_required`, and the kernel's own. Proven by
+`TestMTLSRoutesRefusalsAudited`, `TestMTLSRoutesRootOnlyAndAudited`,
+`TestMTLSAppliedOnlyWhenReportedAndAuditedOnce` and `TestCorrectKeyLabels`
+(services/certs).
+
+**How a restart shows:** a service restarting for a policy change logs
+`mTLS policy for <identity> changed (...): graceful|force restart`. Its
+next report shows the new generation.
+
 ## Certs root wrapping key (certs, docs/SECURITY/SECRET_ROTATION.md)
 
 | Event | When | Severity |

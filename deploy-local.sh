@@ -79,6 +79,11 @@ if [[ -n "${crwk_inline}" && "${#crwk_inline}" -lt 32 ]]; then
   die "CERTS_CRWK_BOOTSTRAP_PASSPHRASE in .env is shorter than 32 characters; remove it to have one generated (docs/SECURITY/SECRET_ROTATION.md)"
 fi
 crwk_inline=""
+# CERTS_CRWK_USE_TPM_SEAL was never implemented (nothing was sealed to a TPM)
+# and is gone; say so rather than let an old .env imply TPM protection.
+if [[ "$(env_get CERTS_CRWK_USE_TPM_SEAL)" == "true" ]]; then
+  warn "CERTS_CRWK_USE_TPM_SEAL in .env is ignored: TPM sealing of the certs root wrapping key was never implemented. Remove the line."
+fi
 
 fips_mode="$(env_get VECTA_FIPS_MODE)"
 case "${fips_mode:-on}" in

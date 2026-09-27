@@ -5,6 +5,52 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A label is not the key: check what was generated, not what was asked
+- **What happened:** `generateLeafKey` and `generateSigningKey` switched on
+  "RSA" or "ECDSA" and ignored the size. Every "RSA-3072" certificate had a
+  2048-bit key, and "ECDSA-P384" had P-256.
+- **The same path faked PQC:** an "ML-DSA-65" certificate without a CSR fell
+  through to ECDSA and was still recorded and audited as PQC.
+- **How it surfaced:** only when a test read the key back out of the
+  certificate that the Service mTLS page wrote.
+- **Rule:** a test of key generation asserts on the generated key
+  (`pkgcrypto.DescribePublicKey`), never on the stored name. When records
+  and reality disagree, correct the records from the certificate and audit
+  each correction.
+
+### Check the toolchain before repeating a limitation
+- **What happened:** the docs said Go's TLS can't use ML-DSA certificates.
+  Go 1.27 can.
+- **The real constraint:** the certified Go Cryptographic Module v1.0.0 that
+  this platform must use has no ML-DSA (`crypto/mldsa` returns an error).
+- **Rule:** state the actual constraint, and re-check it when the toolchain
+  changes.
+
+### A post-quantum choice must fit every caller
+- **The constraint:** Envoy (BoringSSL) offers only `X25519MLKEM768` among
+  the post-quantum groups.
+- **What that rules out:** a per-service list that let a server accept only
+  ML-KEM-1024 would have made that service unreachable through the gateway.
+- **Rule:** before offering a crypto choice per service, list every client
+  of that service and what it can negotiate.
+
+### Postgres tests that share a database can collide
+- **What happened:** governance's backup test restores every public table
+  with `TRUNCATE ... CASCADE`, in parallel with other packages' tests on the
+  same database. It put back rows the certs test had just truncated.
+- **Rule:** a Postgres test creates its own schema (`search_path` in the
+  DSN), runs the migrations there, and drops it afterwards.
+
+### A config flag copied into a status response is a claim
+- **What happened:** `use_tpm_seal` passed from the installer through
+  `.env` into the sealed blob and the status API, and nothing read it for
+  any decision. The status reported `use_tpm_seal: true` for a key that was
+  never near a TPM.
+- **Rule:** when a status or report field names a protection, trace it to
+  the code that enforces it. If there is none, remove the field (rule 8).
+  Keep reading old data that carries it, and warn operators who had turned
+  it on, since they believed they had that protection.
+
 ### A test that greps for registrations goes blind to kernel routes
 - **What happened:** `TestLocalRoutesExist` (pkg/clusterroute) proved that
   each cluster-local route exists by grepping for `HandleFunc("...")`. The

@@ -790,6 +790,54 @@ It isn't routed through the edge.
 - **Refusals:** 400 (bad request or CSR) and 403 (proof rejected). Each is
   audited.
 
+### Service mTLS: `/svc/certs/certs/internal-mtls` (1.16.0, root tenant only)
+
+The certificate key, key exchange and rotation of every internal identity
+(docs/SECURITY/INTERNAL_TLS.md). Permissions `cert.internal_mtls.read` and
+`cert.internal_mtls.write`. Another tenant is refused with `not_root_tenant`.
+Every call is audited as `audit.certs.<action>`, refusals included.
+
+- **`GET /certs/internal-mtls`** (`internal_mtls_inventory_read`): every
+  identity in `pkg/svctls` (services, Envoy and the dashboard, Postgres,
+  NATS, Valkey, Consul) with:
+  - `policy` (`key_algorithm`, `kx_profile`, `generation`, `restart_mode`,
+    `apply_after`);
+  - `certificates`: its active certificates from the Sub CA;
+  - `observed`: what each running instance reports (serial, key, profile,
+    generation, last negotiated group and time);
+  - `served_file`: what certs last wrote, for a daemon;
+  - `applied`: every instance runs the current generation.
+
+  `meta` lists the choices, the groups of each profile and the FIPS mode.
+- **`PUT /certs/internal-mtls/{identity}/policy`**
+  (`internal_mtls_policy_updated`):
+  - **Body:** `{"key_algorithm": "ECDSA-P256|ECDSA-P384|RSA-3072",
+    "kx_profile": "pqc-required|pqc-preferred|classical", "reason": "..."}`.
+  - **A service** restarts gracefully to apply it.
+  - **A daemon** gets a new certificate with that key at once and reloads it.
+    `kx_profile` is refused for daemons (`kx_profile_not_applicable`).
+  - **Refusals:** `unchanged`, `invalid_policy`, `unknown_identity`.
+- **`POST /certs/internal-mtls/{identity}/rotate`**
+  (`internal_mtls_rotated`):
+  - **Body:** `{"mode": "graceful|force", "reason": "..."}`.
+  - **A service:** the active certificate is revoked (`superseded`, or
+    `keyCompromise` when forced), the generation increases, and the service
+    restarts and enrols a fresh key.
+  - **A daemon:** a new certificate is written; `force` is refused with
+    `force_not_available`, because certs doesn't restart the daemons.
+- **`POST /certs/internal-mtls/rotate-all`** (`internal_mtls_rotated_all`):
+  - **Body:** `{"mode": ..., "reason": ..., "confirm": "rotate-all"}`.
+  - **Staggering:** services restart one every 20 s, certs last; daemons
+    are reissued at once.
+  - **Refusal:** without the confirmation, `confirmation_required`.
+
+**How a service learns its policy:**
+- Certs publishes it as `/run/vecta/trust/mtls-policy.json`, which is
+  public: algorithms and generations only.
+- Each service reads it before enrolling and re-reads it every 15 s.
+- Each service reports what it runs to `platform_mtls_observed` every
+  30 s.
+
 `POST /certs/internal/mtls/{service}` is **removed**. It let any authenticated
 caller obtain a certificate *and private key* for any service name.
 
@@ -801,6 +849,10 @@ Environment:
 - **certs (1.9.0):** `CERTS_INFRA_TLS_DIR` (default `/run/vecta/infra-tls`,
   one subdirectory per daemon), `CERTS_INTERNAL_PKI_CACHE` (default
   `/var/lib/vecta/certs/internal-pki.json`).
+- **certs (1.15.0):** `CERTS_CRWK_USE_TPM_SEAL` and
+  `cert_security.use_tpm_seal` are removed; they never sealed anything to a
+  TPM. `GET /certs/security/status` no longer returns `use_tpm_seal`. The
+  start scripts and `deploy-local.sh` warn if an old config still sets it.
 - **hsm-integration (1.11.0):** `HSM_INTEGRATION_SSH_AUTHORIZED_KEYS` (SSH
   public keys, `;`-separated; set means password login off),
   `HSM_INTEGRATION_SSH_BIND` (bind address of port 2222, default
@@ -827,8 +879,8 @@ Environment:
     file) and `VECTA_PLATFORM_FIPS_MODE_FILE` (governance).
 - **Every service:** `CERTS_ENROLL_URL` (default
   `https://certs:8035/v1/enroll`), `VECTA_INTERNAL_CA_FILE` (default
-  `/run/vecta/trust/internal-ca.crt`), `VECTA_MTLS_KEY_ALGORITHM` (default
-  `ECDSA-P256`).
+  `/run/vecta/trust/internal-ca.crt`). `VECTA_MTLS_KEY_ALGORITHM` is
+  removed in 1.16.0: the certificate key comes from the Service mTLS policy.
 - **All `*_URL` service addresses are now `https://`.** Plain `http://` to a
   platform host is refused by the client.
 
@@ -3520,6 +3572,7 @@ Selected events with dedicated audit classification:
 - `audit.cert.internal_subca_created`, `audit.certs.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
+- `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`

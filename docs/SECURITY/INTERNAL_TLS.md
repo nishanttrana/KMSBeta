@@ -35,39 +35,113 @@ vecta-runtime-root           (root CA, ECDSA P-384; created at first start)
 
 ## Mechanisms, including post-quantum
 
-Each service's mTLS has two independent choices, set per service in the
-dashboard with one click:
+Each identity's mTLS is set in the dashboard (Certificates / PKI > Service
+mTLS). There are two independent choices:
 
 | Choice | Options |
 |---|---|
-| Certificate key | ECDSA P-256, ECDSA P-384, RSA-3072 |
-| Key exchange (TLS 1.3 group) | **PQC hybrids:** `X25519MLKEM768`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`; classical: P-256, P-384, X25519 |
+| Certificate key | ECDSA P-256 (default), ECDSA P-384, RSA-3072 |
+| Key exchange (server side) | **PQC required:** `X25519MLKEM768`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024` only; **PQC preferred** (default): those, then P-256, P-384 (and X25519 with FIPS mode off); **Classical:** no ML-KEM |
 
-- **Post-quantum protection applies to key exchange.** Go's TLS stack (the
-  certified module) negotiates the hybrid ML-KEM groups above, which protect
-  recorded traffic against a future quantum attacker.
-- **Certificate signatures stay classical.** Go's TLS can't use ML-DSA
-  certificates yet, and the UI says so instead of offering it.
-- **In FIPS `only` mode**, the choices shown are the ones the Go runtime
-  accepts in that mode.
+- **The profile decides what a service's server accepts.** A peer that
+  can't meet it is refused in the handshake; the tests show this with real
+  handshakes.
+- **Every platform client offers every group, and the profile only orders
+  them.** No choice cuts a service off from its callers; a mismatch costs a
+  HelloRetryRequest.
+  - Envoy offers `X25519MLKEM768`, X25519, P-256 and P-384.
+  - So a service behind the gateway can require PQC, but can't require a
+    group Envoy doesn't offer. ML-KEM-1024 groups aren't offered as a
+    profile for that reason.
+- **With FIPS mode on** (`on` or `only`), Go's TLS refuses X25519 alone. It
+  is dropped from every profile automatically.
+- **Certificate signatures stay classical.**
+  - The platform builds on the certified Go Cryptographic Module v1.0.0,
+    which has no ML-DSA.
+  - Go's TLS does support ML-DSA certificates from module v1.26.0. This
+    document used to say Go's TLS couldn't; that was wrong about Go, right
+    about this platform.
+  - Post-quantum protection is the key exchange.
+- **Envoy, the dashboard, Postgres, NATS, Valkey and Consul** have their
+  certificate key chosen the same way. Certs writes their files, and their
+  TLS groups are the daemon's own configuration.
 
-## Rotation
+## How a change reaches a service
 
-- **One click per service, or for all of them:**
-  1. The Sub CA issues the new certificate through a fresh CSR.
-  2. The old certificate is revoked, and its key is deleted from the
-     service.
-  3. The service swaps to the new one.
-- **Graceful swap (default):** the service stops accepting new connections,
-  finishes the requests in flight, and re-executes with the new certificate.
-  This reuses the staggered self-restart the FIPS mode change already uses.
-- **Force restart:** for when a key is suspected compromised.
-- **Every rotation, algorithm change, restart and refusal is audited.**
-- **The service TLS page shows each service's real state:** certificate
-  serial, issuer, key algorithm, negotiated group, expiry, and the last
-  successful mTLS handshake.
+1. **Publish.** Certs publishes the policy of every service identity in the
+   public trust directory as `mtls-policy.json` (algorithms and
+   generations, no secrets).
+2. **Apply at start.** A service reads its entry before it enrols, so its
+   key and groups are right from the first handshake.
+3. **Watch.** The service re-reads its entry every 15 s. When the
+   generation, key or profile changes, it restarts:
+   - **Graceful:** SIGTERM; the service drains its requests and the
+     container restart policy starts it again. This is the same path as a
+     FIPS mode change.
+   - **Forced:** an immediate exit.
+4. **Re-enrol.** The new process generates a new key and enrols. The old
+   key existed only in the old process's memory.
+5. **Report.** Each instance writes what it actually runs to
+   `platform_mtls_observed` every 30 s: serial, key, profile, generation,
+   and the group and time of its last handshake.
+   - The page shows those reports, not the request.
+   - `audit.certs.internal_mtls_applied` is emitted once every instance
+     runs the new generation.
 
 ## Status
+
+### Done in slice 3 (1.16.0-beta)
+
+**Certificates / PKI > Service mTLS** lists every internal identity:
+- its policy, its active certificate from the Sub CA, and what each instance
+  reports it runs;
+- whether a change has been applied.
+
+Per identity, with one click each:
+- **Change** the certificate key and the key-exchange profile.
+- **Rotate:** revoke the certificate, then a graceful restart.
+- **Force restart:** revoke the certificate as `keyCompromise`, then an
+  immediate exit.
+- **Rotate every certificate:** services restart one every 20 s, certs
+  last; this needs a typed confirmation.
+
+Daemons don't restart: certs reissues their files, and they reload them
+within 30 s. A forced restart is refused for them.
+
+Every action and every refusal is audited:
+- `audit.certs.internal_mtls_policy_updated`, `internal_mtls_rotated`,
+  `internal_mtls_rotated_all` and `internal_mtls_inventory_read`;
+- `internal_mtls_applied` once a change is running.
+
+**Proven by:**
+- `pkg/svctls`, with real TLS handshakes:
+  - `TestPQCRequiredServerRefusesClassicalOnlyPeers`
+  - `TestClassicalServerRefusesHybridOnlyPeers`
+  - `TestPolicyKeyAlgorithmIsEnrolled`
+  - `TestPolicyChangeTriggersRestart`
+- `services/certs`, with the SQLite and real Postgres stores:
+  - `TestMTLSRotateServiceRevokesAndPublishes`
+  - `TestMTLSPolicyChangesAndRefusals`
+  - `TestMTLSFileIdentityReissueSparesOtherCAs`
+  - `TestMTLSAppliedOnlyWhenReportedAndAuditedOnce`
+  - `TestMTLSRoutesRefusalsAudited`
+  - `TestMTLSRoutesRootOnlyAndAudited`
+  - `TestMTLSStorePostgres`
+
+**Found and fixed along the way:**
+- **Key sizes were ignored.** Key generation ignored the size in the
+  algorithm name:
+  - every RSA certificate got 2048 bits and every ECDSA certificate P-256;
+  - every CA got RSA-3072 or P-384;
+  - the records kept the requested name.
+
+  Keys are now generated as named. On the primary, certs corrects existing
+  records to the key their certificate carries
+  (`audit.certs.certificate_key_label_corrected`), and it reissues the edge
+  certificate at the RSA-3072 it was supposed to have.
+- **PQC certificates are open.** A "PQC" (ML-DSA) certificate issued
+  without a CSR got an ECDSA key. That is left for the owner to decide
+  (docs/DECISIONS.md).
 
 ### Done in slice 1 (1.8.0-beta)
 
@@ -114,12 +188,15 @@ from the host:
   CA.
 
 ### Still open
+- **Cluster members** apply the replicated policy, but only the primary
+  audits "applied", from its own node's reports.
 - **Cluster replication** between nodes (clustering profile) still builds
   its subscription connection strings without client certificates. That is
   next when clustering is enabled.
 - **Internal verifiers don't check revocation.** Short lifetimes (7 days)
-  are the control, and a rotation in slice 3 revokes the old certificate
-  and swaps the new one immediately.
+  are the control. A rotation revokes the old certificate and restarts the
+  service, which removes the old key. Until the restart completes, peers
+  still accept the old certificate.
 - **The edge certificate** still comes from `vecta-runtime-root`, chosen in
   code, and port 80 still answers with a redirect. That's slice 4.
 

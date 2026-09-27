@@ -250,6 +250,10 @@ certs,GET,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPGet,mux,,,,service
 certs,POST,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPPKIOperation,mux,,,,services/certs/handler.go,105,certs|POST|/scep/pkiclient.exe
 certs,POST,/cmpv2,/cmpv2,h.handleCMPv2,mux,,,,services/certs/handler.go,107,certs|POST|/cmpv2
 certs,POST,/cmpv2/confirm,/cmpv2/confirm,h.handleCMPv2Confirm,mux,,,,services/certs/handler.go,108,certs|POST|/cmpv2/confirm
+certs,GET,/certs/internal-mtls,/certs/internal-mtls,s.handleMTLSInventory,kernel,cert.internal_mtls.read,internal_mtls_inventory_read,internal_mtls_identity,services/certs/internal_mtls_routes.go,23,certs|GET|/certs/internal-mtls
+certs,PUT,/certs/internal-mtls/{identity}/policy,/certs/internal-mtls/{param}/policy,s.handleMTLSPolicy,kernel,cert.internal_mtls.write,internal_mtls_policy_updated,internal_mtls_identity,services/certs/internal_mtls_routes.go,26,certs|PUT|/certs/internal-mtls/{param}/policy
+certs,POST,/certs/internal-mtls/{identity}/rotate,/certs/internal-mtls/{param}/rotate,s.handleMTLSRotate,kernel,cert.internal_mtls.write,internal_mtls_rotated,internal_mtls_identity,services/certs/internal_mtls_routes.go,30,certs|POST|/certs/internal-mtls/{param}/rotate
+certs,POST,/certs/internal-mtls/rotate-all,/certs/internal-mtls/rotate-all,s.handleMTLSRotateAll,kernel,cert.internal_mtls.write,internal_mtls_rotated_all,internal_mtls_identity,services/certs/internal_mtls_routes.go,34,certs|POST|/certs/internal-mtls/rotate-all
 certs,POST,/v1/enroll,/v1/enroll,<inline func>,kernel,public,internal_enroll,internal_certificate,services/certs/internal_tls.go,184,certs|POST|/v1/enroll
 cloud,POST,/cloud/accounts,/cloud/accounts,h.handleRegisterAccount,mux,,,,services/cloud/handler.go,30,cloud|POST|/cloud/accounts
 cloud,GET,/cloud/accounts,/cloud/accounts,h.handleListAccounts,mux,,,,services/cloud/handler.go,31,cloud|GET|/cloud/accounts

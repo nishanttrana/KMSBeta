@@ -7,6 +7,53 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Service mTLS: per-service policy by published file, restart to apply
+**Decision:**
+- **Where the policy lives:** each internal identity's certificate key and
+  key-exchange profile are stored in certs (`cert_internal_mtls_policy`,
+  replicated) and published as a public file on the trust volume every
+  service already mounts.
+- **Applying it:** a service reads it before enrolling and restarts itself
+  when its entry changes. A rotation is a generation bump: the old
+  certificate is revoked and the service restarts.
+- **Reporting:** services report what they run to `platform_mtls_observed`
+  through the connection they already use for the FIPS mode.
+
+**Why:**
+- **Before enrolment.** A file can be read before the service has a
+  certificate. A policy endpoint would need mTLS to fetch the policy that
+  mTLS depends on.
+- **No audit noise.** A polling route would audit about one event a second.
+- **Restart, not hot swap.** A restart drops every session made with the
+  old key, and it is the same graceful path the FIPS mode change already
+  uses.
+- **The page shows reports.** It shows what services report, not what was
+  requested.
+
+**The profile governs the server side.** Clients always offer every group.
+- Envoy offers only `X25519MLKEM768` among the post-quantum groups. If the
+  choice restricted clients too, or ML-KEM-1024 were offered as a profile,
+  one click could make services unreachable through the gateway.
+- "PQC required" is enforced where it can't break a caller: the service
+  refuses classical-only peers.
+
+**Rejected:**
+- A policy endpoint on the enrolment listener.
+- Hot-swapping certificates without a restart: sessions under the old key
+  would survive.
+- Per-group lists: they can break callers.
+- ML-DSA certificate keys: the certified module v1.0.0 has none.
+
+**Open, for the owner:** certificates and CAs requested as PQC (ML-DSA) or
+hybrid are issued with ECDSA keys while recorded as PQC (rule 8). They can't
+be made real on the certified module. The choice is between:
+- removing PQC certificate issuance (the rule's preferred option);
+- making it a labelled preview that returns `409 feature_preview`.
+
+Existing records are left unchanged until then.
+
+---
+
 ## 2026-09-27 — Envelope encryption: KMS generates and wraps DEKs, never stores them
 **Decision:** envelope encryption is `POST /keys/{id}/generate-data-key`
 (fresh DEK, plus the DEK wrapped under a keycore key) and `/unwrap` to recover
@@ -71,9 +118,9 @@ migration off the retired public default, certs:
 - The passphrase file sits on the same volume as `crwk.sealed`, so the
   volume alone opens the CRWK. A host-held or TPM-sealed passphrase would
   separate them.
-- **`CERTS_CRWK_USE_TPM_SEAL` isn't real:** it only records a flag in the
-  sealed file, while the installer offers it as "Use TPM sealing". This
-  breaks rule 8 and needs removing or implementing.
+- ~~`CERTS_CRWK_USE_TPM_SEAL` isn't real~~ **Resolved in 1.15.0-beta:**
+  it only recorded a flag, so it was removed rather than implemented (rule
+  8). Real TPM sealing would be a new feature, built end to end.
 - Cluster members don't rewrap; the primary's rows replicate.
 
 ---

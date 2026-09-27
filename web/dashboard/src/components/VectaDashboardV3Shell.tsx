@@ -340,7 +340,8 @@ const SUB_PANES: Record<string, any[]> = {
   ],
   certs: [
     { id: "cert-overview", label: "Certificate Operations", hint: "CA hierarchy, issuance, signing and certificate lifecycle", icon: FileText, feature: "certs" },
-    { id: "cert-enrollment", label: "Enrollment Protocols", hint: "ACME, EST, SCEP, CMPv2 and runtime mTLS enrollment settings", icon: Link, feature: "certs" }
+    { id: "cert-enrollment", label: "Enrollment Protocols", hint: "ACME, EST, SCEP, CMPv2 and runtime mTLS enrollment settings", icon: Link, feature: "certs" },
+    { id: "cert-service-mtls", label: "Service mTLS", hint: "Internal certificates: key, PQC key exchange, rotation and restarts", icon: Shield, feature: "certs" }
   ],
   hsm: [
     { id: "hsm-aws", label: "AWS CloudHSM", hint: "Cluster endpoint, slot mapping and crypto user binding", icon: Cloud, feature: "hsm_hardware_or_software" },

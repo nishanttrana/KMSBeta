@@ -4,6 +4,109 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.17.0-beta] — 2026-09-27
+
+### Product map: dashboard calls to a service chosen at runtime
+- The dashboard's MEK exposure page calls the same `/mek/exposure` routes on
+  each of several services in a loop. The generator recorded those calls
+  under `$dynamic-service` and reported them as unmatched.
+- They now match any service's route with the same method and path, in the
+  unmatched-call count, the unused-route list and the request flows. The
+  kernel-route parsing itself came in 1.14.0-beta.
+- Result: unmatched dashboard calls 52 → 50; `/mek/exposure` and its
+  acknowledge call now match, as do the Service mTLS calls (1.16.0-beta).
+
+## [1.16.0-beta] — 2026-09-27
+
+### Internal mTLS, slice 3: Service mTLS page
+- **Certificates / PKI > Service mTLS** lists every internal identity: the
+  services, Envoy and the dashboard, and Postgres, NATS, Valkey and Consul.
+  For each it shows:
+  - its policy and its active certificate from `vecta-internal-services`;
+  - what each running instance reports it uses: serial, key, key-exchange
+    profile, and the group and time of its last handshake;
+  - whether a change has been applied.
+- **Per identity, one click each:**
+  - **Certificate key:** ECDSA P-256, ECDSA P-384 or RSA-3072.
+  - **Key exchange:**
+    - **PQC required:** the server accepts only hybrid ML-KEM
+      (`X25519MLKEM768`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`), and
+      classical-only peers are refused in the handshake;
+    - **PQC preferred:** the default;
+    - **Classical:** no ML-KEM.
+  - **Rotate:** the certificate is revoked, then a graceful restart drains
+    in-flight requests.
+  - **Force restart:** the certificate is revoked as `keyCompromise`, then
+    the service exits at once.
+  - The restarted service generates a fresh key and enrols.
+- **Daemons** get a reissued certificate that they reload within 30 s.
+- **Rotate every certificate** restarts services one every 20 s, certs last,
+  and needs a typed confirmation.
+- **How it works:**
+  - certs publishes the policy as `/run/vecta/trust/mtls-policy.json`;
+  - every service reads it before enrolling and restarts itself when its
+    entry changes;
+  - every service reports what it runs (`platform_mtls_observed`).
+  Root tenant only.
+- **Audit:**
+  - `audit.certs.internal_mtls_policy_updated`, `internal_mtls_rotated`,
+    `internal_mtls_rotated_all` and `internal_mtls_inventory_read`, with
+    their refusals;
+  - `internal_mtls_applied` once a change is running on every instance.
+- **Breaking:** `VECTA_MTLS_KEY_ALGORITHM` is removed; the key comes from the
+  policy.
+
+### Security fix: requested key sizes were ignored
+- **What was wrong:** key generation ignored the size in the algorithm name.
+  - Every RSA certificate got a 2048-bit key and every ECDSA certificate
+    P-256.
+  - Every CA got RSA-3072 or P-384.
+  - The records kept the requested name. The edge and KMIP certificates,
+    labelled RSA-3072, were RSA-2048.
+- **Fixed:**
+  - Keys are generated as named, and never weaker than the old defaults.
+  - On the primary, certs corrects every certificate and CA record to the
+    key its certificate actually carries
+    (`audit.certs.certificate_key_label_corrected`).
+  - The edge and KMIP certificates are reissued at RSA-3072.
+- **Open for the owner:** a certificate requested as PQC (ML-DSA) or hybrid
+  without a CSR also got an ECDSA key while it was recorded and audited as
+  PQC. The certified Go module v1.0.0 has no ML-DSA, so this can't be made
+  real on the certified module. Those records are left unchanged until the
+  owner decides to remove it or make it a labelled preview
+  (docs/DECISIONS.md).
+
+### Docs correction
+- INTERNAL_TLS.md said Go's TLS can't use ML-DSA certificates. Go's TLS can
+  (from module v1.26.0). The accurate reason signatures stay classical here
+  is that the certified module v1.0.0 has no ML-DSA.
+
+## [1.15.0-beta] — 2026-09-27
+
+### Removed: the CRWK "TPM sealing" option, which did nothing
+- **The problem.** `install.sh` offered "Use TPM sealing for CRWK blob". It
+  fed `CERTS_CRWK_USE_TPM_SEAL`, `cert_security.use_tpm_seal` in
+  `deployment.yaml`, and `use_tpm_seal: true` in
+  `GET /certs/security/status`. No TPM was ever used: the certs root
+  wrapping key is sealed with Argon2id(passphrase) + AES-GCM either way. The
+  status presented a recorded flag as protection (rule 8).
+- **Removed everywhere:**
+  - the installer prompt;
+  - the `.env` and compose variable;
+  - the `deployment.yaml` field and its schema;
+  - the start scripts;
+  - the certs config field, the status field and the sealed-blob field;
+  - the dashboard type.
+- **Old configs and blobs:**
+  - A sealed blob written by an earlier release still unseals; its
+    `use_tpm_seal` field is ignored.
+  - `start-kms.sh`, `start-kms.ps1` and `deploy-local.sh` warn when an old
+    `deployment.yaml` or `.env` still turns the option on, instead of
+    silently implying TPM protection.
+- **Test:** `TestCRWKStatusMakesNoTPMClaim` shows that neither status
+  reports TPM sealing and a new blob doesn't record it, and that an old
+  blob with the flag still unseals.
+
 ## [1.14.0-beta] — 2026-09-27
 
 ### Fixed: the product map missed every `pkg/route` kernel route

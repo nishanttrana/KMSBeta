@@ -216,7 +216,6 @@ export type CertSecurityStatus = {
   state: string;
   key_version?: string;
   sealed_path?: string;
-  use_tpm_seal?: boolean;
   mlock_status?: string;
   rotation_pending?: boolean;
   last_error?: string;
@@ -1132,4 +1131,90 @@ export async function verifyCertMerkleProof(
     { method: "POST", body: JSON.stringify(proof) }
   );
   return out;
+}
+
+// Service mTLS (docs/SECURITY/INTERNAL_TLS.md): per-identity certificate key,
+// key-exchange profile, rotation and what each instance actually runs.
+// Root tenant only.
+export type MTLSRestartMode = "graceful" | "force";
+export type MTLSPolicy = {
+  key_algorithm: string;
+  kx_profile: string;
+  generation: number;
+  restart_mode: MTLSRestartMode;
+  apply_after?: string;
+};
+export type MTLSObserved = {
+  identity: string;
+  instance: string;
+  serial: string;
+  not_after: string;
+  key_algorithm: string;
+  kx_profile: string;
+  server_groups: string[] | null;
+  generation: number;
+  last_handshake_group?: string;
+  last_handshake_at?: string;
+  started_at?: string;
+  updated_at: string;
+};
+export type MTLSIdentity = {
+  identity: string;
+  host: string;
+  kind: "service" | "file";
+  policy: MTLSPolicy;
+  certificates: { id: string; serial: string; key_algorithm: string; not_after: string; issuer: string }[] | null;
+  observed: MTLSObserved[] | null;
+  served_file?: MTLSObserved;
+  applied: boolean;
+  restart_modes: MTLSRestartMode[];
+  kx_profiles?: string[];
+  note?: string;
+  policy_record?: { reason?: string; updated_by?: string; updated_at?: string };
+};
+export type MTLSInventory = {
+  items: MTLSIdentity[];
+  meta: {
+    key_algorithms: string[];
+    kx_profiles: string[];
+    fips_mode: boolean;
+    sub_ca: string;
+    groups: Record<string, string[]>;
+    signature_note: string;
+    rotate_all_step: number;
+  };
+};
+
+export async function getInternalMTLS(session: AuthSession): Promise<MTLSInventory> {
+  return serviceRequest<MTLSInventory>(session, "certs", `/certs/internal-mtls?${tenantQuery(session)}`);
+}
+
+export async function setInternalMTLSPolicy(
+  session: AuthSession,
+  identity: string,
+  change: { key_algorithm?: string; kx_profile?: string; reason?: string }
+): Promise<void> {
+  await serviceRequest(session, "certs", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify(change)
+  });
+}
+
+export async function rotateInternalMTLS(session: AuthSession, identity: string, mode: MTLSRestartMode, reason: string): Promise<void> {
+  await serviceRequest(session, "certs", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`, {
+    method: "POST",
+    body: JSON.stringify({ mode, reason })
+  });
+}
+
+export async function rotateAllInternalMTLS(
+  session: AuthSession,
+  mode: MTLSRestartMode,
+  reason: string,
+  confirm: string
+): Promise<{ restart_span_seconds: number }> {
+  return serviceRequest(session, "certs", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`, {
+    method: "POST",
+    body: JSON.stringify({ mode, reason, confirm })
+  });
 }

@@ -12,7 +12,7 @@
 services/keycore/keycore.go
 services/keycore/main.go
 #
-# certs: root-of-trust key sealing (Argon2id/TPM-sealed CA root wrapping key)
+# certs: root-of-trust key sealing (Argon2id-sealed CA root wrapping key)
 # and the CA issuance engine (leaf/CA key generation, X.509 signing across
 # RSA/ECDSA/Ed25519/PQC) — the PKI equivalent of keycore.
 services/certs/root_key_provider.go

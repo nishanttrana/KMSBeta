@@ -44,7 +44,6 @@ type CertRootKeyConfig struct {
 	ArgonParallel   uint8
 
 	MlockRequired bool
-	UseTPMSeal    bool
 }
 
 type CertRootKeyStatus struct {
@@ -55,7 +54,6 @@ type CertRootKeyStatus struct {
 
 	KeyVersion  string `json:"key_version"`
 	SealedPath  string `json:"sealed_path"`
-	UseTPMSeal  bool   `json:"use_tpm_seal"`
 	MlockStatus string `json:"mlock_status"`
 
 	// RotationPending: the CRWK was re-keyed under a new passphrase and the
@@ -123,7 +121,8 @@ type sealedCRWKBlob struct {
 	KDF        string `json:"kdf"`
 	KeyVersion string `json:"key_version"`
 	CreatedAt  string `json:"created_at"`
-	UseTPMSeal bool   `json:"use_tpm_seal"`
+	// Blobs written before 1.15.0-beta also carry "use_tpm_seal". It was
+	// only ever a recorded flag (nothing was sealed to a TPM) and is ignored.
 
 	SaltB64       string `json:"salt_b64"`
 	NonceB64      string `json:"nonce_b64"`
@@ -190,7 +189,6 @@ func newSoftwareCRWKProvider(cfg CertRootKeyConfig) (certRootKeyProvider, error)
 				Ready:       false,
 				State:       "awaiting_bootstrap_passphrase",
 				SealedPath:  path,
-				UseTPMSeal:  cfg.UseTPMSeal,
 				LastError:   err.Error(),
 			},
 		}, nil
@@ -222,7 +220,6 @@ func newSoftwareCRWKProvider(cfg CertRootKeyConfig) (certRootKeyProvider, error)
 			Ready:       false,
 			State:       "initializing",
 			SealedPath:  path,
-			UseTPMSeal:  cfg.UseTPMSeal,
 		},
 	}
 	fail := func(format string, args ...interface{}) (certRootKeyProvider, error) {
@@ -243,7 +240,7 @@ func newSoftwareCRWKProvider(cfg CertRootKeyConfig) (certRootKeyProvider, error)
 			return fail("generate root key failed: %v", err)
 		}
 		keyVersion := fmt.Sprintf("crwk-%d", time.Now().UTC().Unix())
-		sealed, sealErr := sealCRWKBlob(crwk, passphrase, keyVersion, cfg.UseTPMSeal, memKB, iters, parallel)
+		sealed, sealErr := sealCRWKBlob(crwk, passphrase, keyVersion, memKB, iters, parallel)
 		if sealErr != nil {
 			pkgcrypto.Zeroize(crwk)
 			return fail("seal root key failed: %v", sealErr)
@@ -414,7 +411,7 @@ func (p *softwareCRWKProvider) beginRotation(cfg CertRootKeyConfig, path string,
 		if nextVersion == oldVersion {
 			nextVersion += "-r"
 		}
-		sealed, sealErr := sealCRWKBlob(next, passphrase, nextVersion, cfg.UseTPMSeal, memKB, iters, parallel)
+		sealed, sealErr := sealCRWKBlob(next, passphrase, nextVersion, memKB, iters, parallel)
 		if sealErr == nil {
 			sealErr = writeFileAtomically(nextPath, sealed, 0o600)
 		}
@@ -537,7 +534,7 @@ func readBootstrapPassphrase(inline string, path string) ([]byte, error) {
 	return []byte(v), nil
 }
 
-func sealCRWKBlob(crwk []byte, passphrase []byte, keyVersion string, useTPMSeal bool, memKB uint32, iters uint32, parallel uint8) ([]byte, error) {
+func sealCRWKBlob(crwk []byte, passphrase []byte, keyVersion string, memKB uint32, iters uint32, parallel uint8) ([]byte, error) {
 	salt, err := pkgcrypto.RandomBytes(16)
 	if err != nil {
 		return nil, err
@@ -554,7 +551,6 @@ func sealCRWKBlob(crwk []byte, passphrase []byte, keyVersion string, useTPMSeal 
 		KDF:             "argon2id",
 		KeyVersion:      strings.TrimSpace(keyVersion),
 		CreatedAt:       time.Now().UTC().Format(time.RFC3339Nano),
-		UseTPMSeal:      useTPMSeal,
 		SaltB64:         base64.StdEncoding.EncodeToString(salt),
 		NonceB64:        base64.StdEncoding.EncodeToString(nonce),
 		CiphertextB64:   base64.StdEncoding.EncodeToString(ciphertext),

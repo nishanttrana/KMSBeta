@@ -162,6 +162,24 @@ docker compose exec -e PGPASSWORD postgres psql -U postgres -d vecta
   should be seconds old. If not, read `docker compose logs audit` for
   ingest errors.
 
+## Rotating Internal Certificates
+
+Go to **Certificates / PKI > Service mTLS** (root administrator).
+- **Rotate:** revokes the identity's certificate. The service restarts
+  gracefully and enrols a new key.
+- **Force restart:** use it when a key may be compromised. The certificate
+  is revoked as `keyCompromise` and the service exits at once.
+- **Rotate every certificate:** services restart one every 20 s, certs last.
+  Type `rotate-all` to confirm.
+- **Daemons** (Envoy client, dashboard, Postgres, NATS, Valkey, Consul) get a
+  new certificate that they reload within 30 s.
+
+**When it's done:** the State column turns green once each instance reports
+the new generation, and `audit.certs.internal_mtls_applied` is emitted.
+
+**If it stays amber:** check the service's log for `mTLS policy for ...
+changed`, and its container restart count.
+
 ## Daily Operational Tasks
 
 ### Check Platform Health

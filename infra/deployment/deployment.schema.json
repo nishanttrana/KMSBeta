@@ -90,9 +90,6 @@
               "type": "string",
               "minLength": 1
             },
-            "use_tpm_seal": {
-              "type": "boolean"
-            },
             "acme_renewal": {
               "type": "object",
               "additionalProperties": false,

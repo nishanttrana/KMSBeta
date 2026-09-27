@@ -322,7 +322,11 @@ CERTS_STORAGE_MODE_CFG="$(extract_cert_security_field cert_storage_mode)"
 CERTS_ROOT_KEY_MODE_CFG="$(extract_cert_security_field root_key_mode)"
 CERTS_CRWK_SEALED_PATH_CFG="$(extract_cert_security_field sealed_key_path)"
 CERTS_CRWK_PASSPHRASE_FILE_CFG="$(extract_cert_security_field passphrase_file_path)"
-CERTS_CRWK_USE_TPM_SEAL_CFG="$(extract_cert_security_field use_tpm_seal)"
+# use_tpm_seal was never implemented (nothing was sealed to a TPM) and is
+# gone; an old deployment.yaml that turned it on is told so, not trusted.
+if [[ "$(extract_cert_security_field use_tpm_seal)" == "true" ]]; then
+  echo "WARNING: cert_security.use_tpm_seal is ignored: TPM sealing of the CRWK was never implemented (the CRWK is sealed with Argon2id + AES-GCM under the passphrase). Remove the line from ${DEPLOYMENT_FILE}." >&2
+fi
 CERTS_ENABLE_ARI_CFG="$(extract_cert_security_acme_field enable_ari)"
 CERTS_ARI_POLL_HOURS_CFG="$(extract_cert_security_acme_field ari_poll_hours)"
 CERTS_ARI_WINDOW_BIAS_PERCENT_CFG="$(extract_cert_security_acme_field ari_window_bias_percent)"
@@ -342,9 +346,6 @@ if [[ -n "${CERTS_CRWK_PASSPHRASE_FILE_CFG}" ]]; then
   export CERTS_CRWK_PASSPHRASE_FILE="${CERTS_CRWK_PASSPHRASE_FILE_CFG}"
 elif [[ -f "/etc/vecta/certs-bootstrap.secret" ]]; then
   export CERTS_CRWK_PASSPHRASE_FILE="/etc/vecta/certs-bootstrap.secret"
-fi
-if [[ -n "${CERTS_CRWK_USE_TPM_SEAL_CFG}" ]]; then
-  export CERTS_CRWK_USE_TPM_SEAL="${CERTS_CRWK_USE_TPM_SEAL_CFG}"
 fi
 if [[ -n "${CERTS_ENABLE_ARI_CFG}" ]]; then
   export CERTS_ENABLE_ARI="${CERTS_ENABLE_ARI_CFG}"

@@ -1255,7 +1255,6 @@ collect_inputs() {
   fi
   prompt_default CERTS_SEALED_KEY_PATH "CRWK sealed key path" "/var/lib/vecta/certs/crwk.sealed"
   prompt_default CERTS_PASSPHRASE_FILE_PATH "CRWK passphrase file path" "/var/lib/vecta/certs/bootstrap.passphrase"
-  prompt_yes_no CERTS_USE_TPM_SEAL "Use TPM sealing for CRWK blob" "false"
   prompt_yes_no CERTS_ENABLE_ARI "Enable ACME Renewal Information (RFC 9773)" "true"
   prompt_default CERTS_ARI_POLL_HOURS "ACME ARI poll interval (hours)" "24"
   prompt_default CERTS_ARI_WINDOW_BIAS_PERCENT "Renewal window bias (% of remaining lifetime)" "35"
@@ -1509,7 +1508,6 @@ ${features_block}    cluster_bootstrap:
         root_key_mode: ${ROOT_KEY_MODE}
         sealed_key_path: ${CERTS_SEALED_KEY_PATH}
         passphrase_file_path: ${CERTS_PASSPHRASE_FILE_PATH}
-        use_tpm_seal: ${CERTS_USE_TPM_SEAL}
         acme_renewal:
             enable_ari: ${CERTS_ENABLE_ARI}
             ari_poll_hours: ${CERTS_ARI_POLL_HOURS}
@@ -1732,7 +1730,6 @@ CERTS_STORAGE_MODE=${CERT_STORAGE_MODE}
 CERTS_ROOT_KEY_MODE=${ROOT_KEY_MODE}
 CERTS_CRWK_SEALED_PATH=${CERTS_SEALED_KEY_PATH}
 CERTS_CRWK_PASSPHRASE_FILE=${CERTS_PASSPHRASE_FILE_PATH}
-CERTS_CRWK_USE_TPM_SEAL=${CERTS_USE_TPM_SEAL}
 AUTH_BOOTSTRAP_TENANT_ID=${TENANT_ID}
 AUTH_BOOTSTRAP_TENANT_NAME=${TENANT_NAME}
 AUTH_BOOTSTRAP_ADMIN_USERNAME=${ADMIN_USERNAME}
@@ -2238,7 +2235,6 @@ collect_fast_inputs() {
   ROOT_KEY_MODE="software"
   CERTS_SEALED_KEY_PATH="/var/lib/vecta/certs/crwk.sealed"
   CERTS_PASSPHRASE_FILE_PATH="/var/lib/vecta/certs/bootstrap.passphrase"
-  CERTS_USE_TPM_SEAL="false"
   CERTS_BOOTSTRAP_PASSPHRASE="$(generate_random_secret 48)"
   FIPS_MODE="on"
   detected_iface="$(detect_default_route_interface)"
