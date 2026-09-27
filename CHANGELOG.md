@@ -172,6 +172,11 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   encrypted (a MEK-wrapped DEK per secret, AES-256-GCM), but turning it off
   claimed "secret will be stored as-is". It is now a read-only indicator.
 
+## [1.12.0-beta] — not released
+
+This number was held by uncommitted work while 1.13.0-beta landed. That
+work shipped as 1.15.0–1.17.0-beta.
+
 ## [1.11.0-beta] — 2026-09-26
 
 ### Security fix: hsm-integration SSH access
