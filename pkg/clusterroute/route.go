@@ -80,10 +80,8 @@ var Local = map[string][]string{
 		"POST /auth/client-token", "POST /auth/cluster/mint",
 	},
 	"kms-governance": {
-		// This node's settings (network, FDE, SNMP, entropy) are node-local.
+		// This node's settings (SNMP target, entropy sample) are node-local.
 		"PUT /governance/system/state", "POST /governance/system/snmp/test",
-		"POST /governance/system/network/apply", "POST /governance/system/fde/integrity-check",
-		"POST /governance/system/fde/rotate-key", "POST /governance/system/fde/test-recovery",
 	},
 	"kms-audit": {
 		// Every node appends and verifies its own audit chain; search and

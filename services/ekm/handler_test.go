@@ -2,10 +2,14 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -22,7 +26,7 @@ func TestHandlerEKMFlow(t *testing.T) {
 	registerReq := httptest.NewRequest(http.MethodPost, "/ekm/agents/register", bytes.NewReader(registerAgentBody))
 	registerReq.Header.Set("X-Request-ID", "req-ekm-1")
 	registerRR := httptest.NewRecorder()
-	h.ServeHTTP(registerRR, registerReq)
+	h.ServeHTTP(registerRR, authed(registerReq))
 	if registerRR.Code != http.StatusCreated {
 		t.Fatalf("register agent status=%d body=%s", registerRR.Code, registerRR.Body.String())
 	}
@@ -46,7 +50,7 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"config_version_ack":1
 	}`)))
 	heartbeatRR := httptest.NewRecorder()
-	h.ServeHTTP(heartbeatRR, heartbeatReq)
+	h.ServeHTTP(heartbeatRR, authed(heartbeatReq))
 	if heartbeatRR.Code != http.StatusOK {
 		t.Fatalf("heartbeat status=%d body=%s", heartbeatRR.Code, heartbeatRR.Body.String())
 	}
@@ -61,7 +65,7 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"database_name":"FinanceDB"
 	}`)))
 	dbRR := httptest.NewRecorder()
-	h.ServeHTTP(dbRR, dbReq)
+	h.ServeHTTP(dbRR, authed(dbReq))
 	if dbRR.Code != http.StatusCreated {
 		t.Fatalf("register database status=%d body=%s", dbRR.Code, dbRR.Body.String())
 	}
@@ -78,7 +82,7 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"name":"manual-key"
 	}`)))
 	keyRR := httptest.NewRecorder()
-	h.ServeHTTP(keyRR, keyReq)
+	h.ServeHTTP(keyRR, authed(keyReq))
 	if keyRR.Code != http.StatusCreated {
 		t.Fatalf("create key status=%d body=%s", keyRR.Code, keyRR.Body.String())
 	}
@@ -100,7 +104,7 @@ func TestHandlerEKMFlow(t *testing.T) {
 	wrapRaw, _ := json.Marshal(wrapPayload)
 	wrapReq := httptest.NewRequest(http.MethodPost, "/ekm/tde/keys/"+keyResp.Key.ID+"/wrap", bytes.NewReader(wrapRaw))
 	wrapRR := httptest.NewRecorder()
-	h.ServeHTTP(wrapRR, wrapReq)
+	h.ServeHTTP(wrapRR, authed(wrapReq))
 	if wrapRR.Code != http.StatusOK {
 		t.Fatalf("wrap status=%d body=%s", wrapRR.Code, wrapRR.Body.String())
 	}
@@ -120,14 +124,14 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"agent_id":"agent-h1"
 	}`)))
 	unwrapRR := httptest.NewRecorder()
-	h.ServeHTTP(unwrapRR, unwrapReq)
+	h.ServeHTTP(unwrapRR, authed(unwrapReq))
 	if unwrapRR.Code != http.StatusOK {
 		t.Fatalf("unwrap status=%d body=%s", unwrapRR.Code, unwrapRR.Body.String())
 	}
 
 	publicReq := httptest.NewRequest(http.MethodGet, "/ekm/tde/keys/"+keyResp.Key.ID+"/public?tenant_id=tenant-h1", nil)
 	publicRR := httptest.NewRecorder()
-	h.ServeHTTP(publicRR, publicReq)
+	h.ServeHTTP(publicRR, authed(publicReq))
 	if publicRR.Code != http.StatusOK {
 		t.Fatalf("public status=%d body=%s", publicRR.Code, publicRR.Body.String())
 	}
@@ -137,49 +141,59 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"reason":"scheduled"
 	}`)))
 	rotateRR := httptest.NewRecorder()
-	h.ServeHTTP(rotateRR, rotateReq)
+	h.ServeHTTP(rotateRR, authed(rotateReq))
 	if rotateRR.Code != http.StatusOK {
 		t.Fatalf("rotate status=%d body=%s", rotateRR.Code, rotateRR.Body.String())
 	}
 
 	listAgentsReq := httptest.NewRequest(http.MethodGet, "/ekm/agents?tenant_id=tenant-h1", nil)
 	listAgentsRR := httptest.NewRecorder()
-	h.ServeHTTP(listAgentsRR, listAgentsReq)
+	h.ServeHTTP(listAgentsRR, authed(listAgentsReq))
 	if listAgentsRR.Code != http.StatusOK {
 		t.Fatalf("list agents status=%d body=%s", listAgentsRR.Code, listAgentsRR.Body.String())
 	}
 
 	agentStatusReq := httptest.NewRequest(http.MethodGet, "/ekm/agents/agent-h1/status?tenant_id=tenant-h1", nil)
 	agentStatusRR := httptest.NewRecorder()
-	h.ServeHTTP(agentStatusRR, agentStatusReq)
+	h.ServeHTTP(agentStatusRR, authed(agentStatusReq))
 	if agentStatusRR.Code != http.StatusOK {
 		t.Fatalf("agent status status=%d body=%s", agentStatusRR.Code, agentStatusRR.Body.String())
 	}
 
 	agentHealthReq := httptest.NewRequest(http.MethodGet, "/ekm/agents/agent-h1/health?tenant_id=tenant-h1", nil)
 	agentHealthRR := httptest.NewRecorder()
-	h.ServeHTTP(agentHealthRR, agentHealthReq)
+	h.ServeHTTP(agentHealthRR, authed(agentHealthReq))
 	if agentHealthRR.Code != http.StatusOK {
 		t.Fatalf("agent health status=%d body=%s", agentHealthRR.Code, agentHealthRR.Body.String())
 	}
 
 	agentLogsReq := httptest.NewRequest(http.MethodGet, "/ekm/agents/agent-h1/logs?tenant_id=tenant-h1&limit=10", nil)
 	agentLogsRR := httptest.NewRecorder()
-	h.ServeHTTP(agentLogsRR, agentLogsReq)
+	h.ServeHTTP(agentLogsRR, authed(agentLogsReq))
 	if agentLogsRR.Code != http.StatusOK {
 		t.Fatalf("agent logs status=%d body=%s", agentLogsRR.Code, agentLogsRR.Body.String())
 	}
 
 	sdkOverviewReq := httptest.NewRequest(http.MethodGet, "/ekm/sdk/overview?tenant_id=tenant-h1", nil)
 	sdkOverviewRR := httptest.NewRecorder()
-	h.ServeHTTP(sdkOverviewRR, sdkOverviewReq)
+	h.ServeHTTP(sdkOverviewRR, authed(sdkOverviewReq))
 	if sdkOverviewRR.Code != http.StatusOK {
 		t.Fatalf("sdk overview status=%d body=%s", sdkOverviewRR.Code, sdkOverviewRR.Body.String())
 	}
 
-	sdkDownloadReq := httptest.NewRequest(http.MethodGet, "/ekm/sdk/download?tenant_id=tenant-h1&provider=pkcs11&os=linux", nil)
+	// Vecta ships no PKCS#11 module: that SDK is refused; the JCA provider is real.
+	if strings.Contains(sdkOverviewRR.Body.String(), "pkcs11") || strings.Contains(sdkOverviewRR.Body.String(), "CKM_") {
+		t.Fatalf("sdk overview still claims a PKCS#11 provider or mechanism usage: %s", sdkOverviewRR.Body.String())
+	}
+	pkcsReq := httptest.NewRequest(http.MethodGet, "/ekm/sdk/download?tenant_id=tenant-h1&provider=pkcs11&os=linux", nil)
+	pkcsRR := httptest.NewRecorder()
+	h.ServeHTTP(pkcsRR, authed(pkcsReq))
+	if pkcsRR.Code != http.StatusBadRequest {
+		t.Fatalf("pkcs11 sdk download status=%d", pkcsRR.Code)
+	}
+	sdkDownloadReq := httptest.NewRequest(http.MethodGet, "/ekm/sdk/download?tenant_id=tenant-h1&provider=jca&os=all", nil)
 	sdkDownloadRR := httptest.NewRecorder()
-	h.ServeHTTP(sdkDownloadRR, sdkDownloadReq)
+	h.ServeHTTP(sdkDownloadRR, authed(sdkDownloadReq))
 	if sdkDownloadRR.Code != http.StatusOK {
 		t.Fatalf("sdk download status=%d body=%s", sdkDownloadRR.Code, sdkDownloadRR.Body.String())
 	}
@@ -189,28 +203,28 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"reason":"manual"
 	}`)))
 	agentRotateRR := httptest.NewRecorder()
-	h.ServeHTTP(agentRotateRR, agentRotateReq)
+	h.ServeHTTP(agentRotateRR, authed(agentRotateReq))
 	if agentRotateRR.Code != http.StatusOK {
 		t.Fatalf("agent rotate status=%d body=%s", agentRotateRR.Code, agentRotateRR.Body.String())
 	}
 
 	deployPkgReq := httptest.NewRequest(http.MethodGet, "/ekm/agents/agent-h1/deploy?tenant_id=tenant-h1&os=linux", nil)
 	deployPkgRR := httptest.NewRecorder()
-	h.ServeHTTP(deployPkgRR, deployPkgReq)
+	h.ServeHTTP(deployPkgRR, authed(deployPkgReq))
 	if deployPkgRR.Code != http.StatusOK {
 		t.Fatalf("deploy package status=%d body=%s", deployPkgRR.Code, deployPkgRR.Body.String())
 	}
 
 	listDBReq := httptest.NewRequest(http.MethodGet, "/ekm/databases?tenant_id=tenant-h1", nil)
 	listDBRR := httptest.NewRecorder()
-	h.ServeHTTP(listDBRR, listDBReq)
+	h.ServeHTTP(listDBRR, authed(listDBReq))
 	if listDBRR.Code != http.StatusOK {
 		t.Fatalf("list db status=%d body=%s", listDBRR.Code, listDBRR.Body.String())
 	}
 
 	getDBReq := httptest.NewRequest(http.MethodGet, "/ekm/databases/"+dbResp.Database.ID+"?tenant_id=tenant-h1", nil)
 	getDBRR := httptest.NewRecorder()
-	h.ServeHTTP(getDBRR, getDBReq)
+	h.ServeHTTP(getDBRR, authed(getDBReq))
 	if getDBRR.Code != http.StatusOK {
 		t.Fatalf("get db status=%d body=%s", getDBRR.Code, getDBRR.Body.String())
 	}
@@ -220,14 +234,14 @@ func TestHandlerEKMFlow(t *testing.T) {
 		"reason":"cleanup"
 	}`)))
 	deleteAgentRR := httptest.NewRecorder()
-	h.ServeHTTP(deleteAgentRR, deleteAgentReq)
+	h.ServeHTTP(deleteAgentRR, authed(deleteAgentReq))
 	if deleteAgentRR.Code != http.StatusOK {
 		t.Fatalf("delete agent status=%d body=%s", deleteAgentRR.Code, deleteAgentRR.Body.String())
 	}
 
 	listAgentsAfterDeleteReq := httptest.NewRequest(http.MethodGet, "/ekm/agents?tenant_id=tenant-h1", nil)
 	listAgentsAfterDeleteRR := httptest.NewRecorder()
-	h.ServeHTTP(listAgentsAfterDeleteRR, listAgentsAfterDeleteReq)
+	h.ServeHTTP(listAgentsAfterDeleteRR, authed(listAgentsAfterDeleteReq))
 	if listAgentsAfterDeleteRR.Code != http.StatusOK {
 		t.Fatalf("list agents after delete status=%d body=%s", listAgentsAfterDeleteRR.Code, listAgentsAfterDeleteRR.Body.String())
 	}
@@ -240,22 +254,40 @@ func TestHandlerEKMFlow(t *testing.T) {
 	}
 }
 
-func TestHandlerEKMTenantRequired(t *testing.T) {
-	h, _, _, _ := newEKMHandler(t)
-	req := httptest.NewRequest(http.MethodGet, "/ekm/agents", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 got %d body=%s", rr.Code, rr.Body.String())
+// Every EKM route needs a verified token for the tenant it names. The TLS
+// peer is Envoy, so a peer certificate (even one with a tenant:role CN) is
+// never an identity.
+func TestHandlerEKMRequiresVerifiedTenantToken(t *testing.T) {
+	h, _, _, pub := newEKMHandler(t)
+	call := func(token string, peer bool) int {
+		req := httptest.NewRequest(http.MethodGet, "/ekm/agents?tenant_id=tenant-h1", nil)
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		if peer {
+			req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{Subject: pkix.Name{CommonName: "tenant-h1:ekm-admin"}}}}
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		return rr.Code
 	}
-	var out struct {
-		Error struct {
-			Code string `json:"code"`
-		} `json:"error"`
+	if code := call("", false); code != http.StatusUnauthorized {
+		t.Fatalf("no token: %d", code)
 	}
-	_ = json.Unmarshal(rr.Body.Bytes(), &out)
-	if out.Error.Code == "" {
-		t.Fatalf("expected structured error body=%s", rr.Body.String())
+	if code := call("", true); code != http.StatusUnauthorized {
+		t.Fatalf("peer certificate accepted as identity: %d", code)
+	}
+	if code := call("forged", false); code != http.StatusUnauthorized {
+		t.Fatalf("unverifiable token: %d", code)
+	}
+	if code := call("jwt:tenant-x:admin", false); code != http.StatusForbidden {
+		t.Fatalf("other tenant's token: %d", code)
+	}
+	if pub.Count("audit.ekm.request_refused") < 4 {
+		t.Fatalf("refusals not audited: %d", pub.Count("audit.ekm.request_refused"))
+	}
+	if code := call("jwt:tenant-h1:admin", false); code != http.StatusOK {
+		t.Fatalf("valid token: %d", code)
 	}
 }
 
@@ -269,10 +301,10 @@ func TestHandlerBitLockerRegisterAndDeployWithDashboardJWT(t *testing.T) {
 		"os_version":"Windows 11",
 		"mount_point":"C:"
 	}`)))
-	registerReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	registerReq.Header.Set("Authorization", "Bearer jwt:tenant-h1:admin")
 	registerReq.Header.Set("X-Tenant-ID", "tenant-h1")
 	registerRR := httptest.NewRecorder()
-	h.ServeHTTP(registerRR, registerReq)
+	h.ServeHTTP(registerRR, authed(registerReq))
 	if registerRR.Code != http.StatusCreated {
 		t.Fatalf("register bitlocker client status=%d body=%s", registerRR.Code, registerRR.Body.String())
 	}
@@ -291,10 +323,10 @@ func TestHandlerBitLockerRegisterAndDeployWithDashboardJWT(t *testing.T) {
 		"os_version":"Windows 11",
 		"mount_point":"C:"
 	}`)))
-	dupReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	dupReq.Header.Set("Authorization", "Bearer jwt:tenant-h1:admin")
 	dupReq.Header.Set("X-Tenant-ID", "tenant-h1")
 	dupRR := httptest.NewRecorder()
-	h.ServeHTTP(dupRR, dupReq)
+	h.ServeHTTP(dupRR, authed(dupReq))
 	if dupRR.Code != http.StatusConflict {
 		t.Fatalf("duplicate bitlocker registration status=%d body=%s", dupRR.Code, dupRR.Body.String())
 	}
@@ -304,10 +336,10 @@ func TestHandlerBitLockerRegisterAndDeployWithDashboardJWT(t *testing.T) {
 		"/ekm/bitlocker/clients/"+registerResp.Client.ID+"/deploy?tenant_id=tenant-h1&os=windows",
 		nil,
 	)
-	deployReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	deployReq.Header.Set("Authorization", "Bearer jwt:tenant-h1:admin")
 	deployReq.Header.Set("X-Tenant-ID", "tenant-h1")
 	deployRR := httptest.NewRecorder()
-	h.ServeHTTP(deployRR, deployReq)
+	h.ServeHTTP(deployRR, authed(deployReq))
 	if deployRR.Code != http.StatusOK {
 		t.Fatalf("bitlocker deploy package status=%d body=%s", deployRR.Code, deployRR.Body.String())
 	}

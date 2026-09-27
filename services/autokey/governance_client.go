@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPGovernanceClient struct {
@@ -39,6 +40,7 @@ func (c *HTTPGovernanceClient) CreateApprovalRequest(ctx context.Context, req Go
 		return GovernanceApprovalRequest{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	servicetoken.Authorize(ctx, httpReq)
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return GovernanceApprovalRequest{}, err
@@ -71,6 +73,7 @@ func (c *HTTPGovernanceClient) GetApprovalRequest(ctx context.Context, tenantID 
 	if err != nil {
 		return GovernanceApprovalRequest{}, err
 	}
+	servicetoken.Authorize(ctx, httpReq)
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return GovernanceApprovalRequest{}, err

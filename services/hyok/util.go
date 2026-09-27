@@ -60,7 +60,8 @@ func normalizeProtocol(v string) string {
 func normalizeAuthMode(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case "", AuthModeMTLSOrJWT:
-		return AuthModeMTLSOrJWT
+		// Only the JWT half of "mtls_or_jwt" was ever verifiable.
+		return AuthModeJWT
 	case AuthModeMTLS:
 		return AuthModeMTLS
 	case AuthModeJWT:
@@ -132,7 +133,7 @@ func defaultEndpointConfig(tenantID string, protocol string) EndpointConfig {
 		TenantID:           strings.TrimSpace(tenantID),
 		Protocol:           normalizeProtocol(protocol),
 		Enabled:            true,
-		AuthMode:           AuthModeMTLSOrJWT,
+		AuthMode:           AuthModeJWT,
 		PolicyID:           "",
 		GovernanceRequired: false,
 		MetadataJSON:       "{}",

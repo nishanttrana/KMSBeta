@@ -450,25 +450,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     if(approvalVoteBusy===key){
       return;
     }
-    let approver=String(homeSummary?.approverIdentity||"").trim().toLowerCase();
-    const allowed=(Array.isArray(item?.allowed_approvers)?item.allowed_approvers:[]).map((entry:any)=>String(entry||"").trim().toLowerCase()).filter(Boolean);
-    if(!approver&&allowed.length){
-      approver=allowed[0];
-    }
-    if(allowed.length&&approver&&!allowed.includes(approver)){
-      const username=String(session?.username||"").trim().toLowerCase();
-      const localPartMatch=allowed.find((entry:any)=>String(entry.split("@")[0]||"")===username);
-      if(localPartMatch){
-        approver=localPartMatch;
-      }else{
-        onToast?.(`Approver is not allowed for this request. Use one of: ${allowed.join(", ")}`);
-        return;
-      }
-    }
-    if(!approver){
-      onToast?.("Unable to resolve approver identity for this request.");
-      return;
-    }
     let challengeCode="";
     if(homeSummary?.govChallengeRequired){
       const raw=await promptDialog.prompt({
@@ -492,8 +473,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     try{
       await voteGovernanceRequest(session,String(item?.id||""),{
         vote,
-        approver_email:approver,
-        approver_id:approver,
         challenge_code:challengeCode
       });
       onToast?.(`Request ${vote==="approved"?"approved":"denied"}: ${String(item?.id||"")}`);

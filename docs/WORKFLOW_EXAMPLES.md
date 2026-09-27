@@ -382,7 +382,6 @@ curl -k -X POST https://127.0.0.1/svc/signing/signing/profiles \
     "signing_algorithm": "ecdsa-sha384",
     "identity_mode": "workload",
     "allowed_workload_patterns": ["spiffe://root/workloads/release-*"],
-    "transparency_required": true,
     "enabled": true
   }'
 ```

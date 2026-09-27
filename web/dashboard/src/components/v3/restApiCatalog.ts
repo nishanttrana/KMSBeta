@@ -347,7 +347,7 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists HYOK endpoint protocols and policy bindings (DKE/Salesforce/Google/Generic).",
     requestExample: "GET /svc/hyok/hyok/v1/endpoints?tenant_id=root",
-    responseExample: { items: [{ protocol: "dke", enabled: true, auth_mode: "mtls_or_jwt", governance_required: true }] },
+    responseExample: { items: [{ protocol: "dke", enabled: true, auth_mode: "jwt", governance_required: true }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -569,7 +569,7 @@ export const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/governance/approve/REQ_ID_HERE",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "request_id": "REQ_ID_HERE",\n  "vote": "approved",\n  "approver_email": "approver@bank.com",\n  "comment": "Approved after review",\n  "vote_method": "dashboard",\n  "challenge_code": ""\n}',
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "request_id": "REQ_ID_HERE",\n  "vote": "approved",\n  "comment": "Approved after review",\n  "challenge_code": ""\n}',
     description: "Submits governance vote for pending request; supports challenge-response when enabled.",
     requestExample: "POST /svc/governance/governance/approve/{request_id}",
     responseExample: { request: { id: "req_01", status: "approved", current_approvals: 2, required_approvals: 2 } },
@@ -589,7 +589,7 @@ export const REST_API_CATALOG = [
     bodyTemplate: "",
     description: "Lists alert center events with severity/status filters and pagination.",
     requestExample: "GET /svc/reporting/alerts?tenant_id=root&status=open&limit=100&offset=0",
-    responseExample: { items: [{ id: "alert_01", severity: "critical", title: "FDE Integrity Check Failed", status: "open" }] },
+    responseExample: { items: [{ id: "alert_01", severity: "critical", title: "Key rotation overdue", status: "open" }] },
     errorCodes: [
       { code: 400, meaning: "Invalid query filters" },
       { code: 401, meaning: "JWT missing/invalid/expired" }
@@ -2985,101 +2985,6 @@ export const REST_API_CATALOG = [
   },
 
   // ── Disk Encryption ──
-  {
-    id: "fde-status",
-    group: "Disk Encryption",
-    title: "Get FDE Status",
-    service: "governance",
-    method: "GET",
-    pathTemplate: "/governance/system/fde/status?tenant_id={{tenant_id}}",
-    bodyTemplate: "",
-    description: "Returns full-disk encryption status including algorithm, LUKS version, key slots, and storage usage.",
-    requestExample: "GET /svc/governance/governance/system/fde/status?tenant_id=root",
-    responseExample: {
-      enabled: true,
-      algorithm: "aes-xts-plain64",
-      luks_version: "2",
-      key_derivation: "argon2id",
-      device: "/dev/sda2",
-      unlock_method: "passphrase",
-      recovery_shares: 5,
-      recovery_threshold: 3,
-      key_slots: [{ slot: 0, status: "active", type: "passphrase" }],
-      volume_size_gb: 500,
-      used_gb: 120
-    },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" }
-    ]
-  },
-  {
-    id: "fde-integrity-check",
-    group: "Disk Encryption",
-    title: "Run Integrity Check",
-    service: "governance",
-    method: "POST",
-    pathTemplate: "/governance/system/fde/integrity-check",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Triggers a LUKS integrity verification on the encrypted volume.",
-    requestExample: "POST /svc/governance/governance/system/fde/integrity-check",
-    responseExample: { passed: true, mode: "dm-integrity", checked_at: "2026-03-05T10:30:00Z", errors: [] },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" },
-      { code: 500, meaning: "Integrity check failed with internal error" }
-    ]
-  },
-  {
-    id: "fde-rotate-key",
-    group: "Disk Encryption",
-    title: "Rotate Volume Key",
-    service: "governance",
-    method: "POST",
-    pathTemplate: "/governance/system/fde/rotate-key",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "confirm": true,\n  "reason": "scheduled-rotation"\n}',
-    description: "Initiates an online LUKS volume key rotation. This is a long-running operation.",
-    requestExample: "POST /svc/governance/governance/system/fde/rotate-key",
-    responseExample: { status: "rotating", job_id: "fde-rot-001", started_at: "2026-03-05T10:35:00Z", estimated_duration_minutes: 15 },
-    errorCodes: [
-      { code: 400, meaning: "Missing confirmation flag" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" }
-    ]
-  },
-  {
-    id: "fde-test-recovery",
-    group: "Disk Encryption",
-    title: "Test Recovery Shares",
-    service: "governance",
-    method: "POST",
-    pathTemplate: "/governance/system/fde/test-recovery",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "shares": ["share-1-hex...", "share-2-hex...", "share-3-hex..."]\n}',
-    description: "Validates Shamir recovery shares without actually unlocking the volume.",
-    requestExample: "POST /svc/governance/governance/system/fde/test-recovery",
-    responseExample: { valid: true, shares_provided: 3, threshold_required: 3, tested_at: "2026-03-05T10:40:00Z" },
-    errorCodes: [
-      { code: 400, meaning: "Insufficient shares provided" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" }
-    ]
-  },
-  {
-    id: "fde-recovery-shares",
-    group: "Disk Encryption",
-    title: "Get Recovery Share Status",
-    service: "governance",
-    method: "GET",
-    pathTemplate: "/governance/system/fde/recovery-shares?tenant_id={{tenant_id}}",
-    bodyTemplate: "",
-    description: "Returns the current recovery share distribution status and verification timestamps.",
-    requestExample: "GET /svc/governance/governance/system/fde/recovery-shares?tenant_id=root",
-    responseExample: { total: 5, threshold: 3, shares: [{ index: 1, label: "CTO", verified: true, last_verified: "2026-03-01T08:00:00Z" }] },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" }
-    ]
-  },
 
   // ── AI / LLM ──
   {
@@ -3269,23 +3174,6 @@ export const REST_API_CATALOG = [
   },
 
   // ── Network ──
-  {
-    id: "network-apply",
-    group: "Network",
-    title: "Apply Network Config",
-    service: "governance",
-    method: "POST",
-    pathTemplate: "/governance/system/network/apply",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}"\n}',
-    description: "Applies pending network configuration changes including IP and interface updates. May cause brief connectivity disruption.",
-    requestExample: "POST /svc/governance/governance/system/network/apply",
-    responseExample: { status: "applied", applied_at: "2026-03-05T12:05:00Z" },
-    errorCodes: [
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Not a system admin" },
-      { code: 500, meaning: "Network configuration apply failed" }
-    ]
-  },
 
   // ── EKM Agent ──
   {
@@ -3742,9 +3630,9 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/ekm/sdk/overview",
     bodyTemplate: "",
-    description: "Returns available SDK packages: PKCS#11 provider, JCA provider, agent binaries, with version and platform info.",
-    requestExample: "GET /svc/ekm/ekm/sdk/overview",
-    responseExample: { packages: [{ name: "pkcs11-provider", version: "1.0.0", platforms: ["linux-amd64", "windows-amd64", "darwin-arm64"] }, { name: "jca-provider", version: "1.0.0", platforms: ["java11+"] }] },
+    description: "Lists the client SDK Vecta ships: the Java JCA provider (source), with the services it registers. No PKCS#11 module is shipped and no usage telemetry is reported.",
+    requestExample: "GET /svc/ekm/ekm/sdk/overview?tenant_id={{tenant_id}}",
+    responseExample: { providers: [{ id: "jca", name: "Java JCA/JCE Provider", status: "available", capabilities: ["Cipher AES/GCM/NoPadding", "Signature SHA256withRSA", "Signature SHA256withECDSA", "KeyStore VectaKMS"] }], mechanisms: [], clients: [] },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" }
     ]
@@ -3755,11 +3643,11 @@ export const REST_API_CATALOG = [
     title: "Download SDK Package",
     service: "ekm",
     method: "GET",
-    pathTemplate: "/ekm/sdk/download/{{package_name}}?platform={{platform}}",
+    pathTemplate: "/ekm/sdk/download?tenant_id={{tenant_id}}&provider=jca&os=all",
     bodyTemplate: "",
-    description: "Downloads an SDK package (PKCS#11 .so/.dll/.dylib, JCA .jar, agent binary) for the specified platform.",
-    requestExample: "GET /svc/ekm/ekm/sdk/download/pkcs11-provider?platform=linux-amd64",
-    responseExample: { content_type: "application/octet-stream", filename: "libvecta-pkcs11.so" },
+    description: "Downloads the Java JCA provider source as a zip (base64 in the JSON response). provider=pkcs11 is refused: no PKCS#11 module exists.",
+    requestExample: "GET /svc/ekm/ekm/sdk/download?tenant_id={{tenant_id}}&provider=jca&os=all",
+    responseExample: { artifact: { provider: "jca", filename: "vecta-jca-sdk-all.zip", content_type: "application/zip", encoding: "base64" } },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 404, meaning: "Package or platform not found" }

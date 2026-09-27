@@ -79,7 +79,7 @@ function SAMLForm({ model }: { model: UserAdminModel }) {
         <ConfigInput model={model} configKey="acs_url" label="ACS URL (Assertion Consumer)" placeholder="https://your-app.com/auth/sso/saml/callback" />
       </Row2>
       <Row2>
-        <ConfigInput model={model} configKey="idp_metadata_url" label="IdP Metadata URL" placeholder="https://idp.example.com/metadata" />
+        <ConfigInput model={model} configKey="idp_entity_id" label="IdP Entity ID (Issuer)" placeholder="https://idp.example.com/metadata" />
         <ConfigInput model={model} configKey="idp_sso_url" label="IdP SSO URL" placeholder="https://idp.example.com/sso" />
       </Row2>
       <Row2>
@@ -107,16 +107,12 @@ function SAMLForm({ model }: { model: UserAdminModel }) {
         </FG>
       </Row2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 8 }}>
-        <ConfigCheckbox model={model} configKey="sign_requests" label="Sign AuthnRequests" />
         <ConfigCheckbox model={model} configKey="auto_create_users" label="Auto-create users on first login" />
       </div>
       <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginTop: 12, marginBottom: 4 }}>Certificates</div>
       <Row2>
-        <FG label="IdP Certificate (PEM)">
+        <FG label="IdP Signing Certificate (PEM, required: assertions are verified against it)">
           <Txt rows={4} value={getSecretKey(model, "idp_certificate")} onChange={(e) => setSecretKey(model, "idp_certificate", e.target.value)} mono />
-        </FG>
-        <FG label="SP Private Key (PEM)">
-          <Txt rows={4} value={getSecretKey(model, "sp_private_key")} onChange={(e) => setSecretKey(model, "sp_private_key", e.target.value)} mono />
         </FG>
       </Row2>
     </>
@@ -136,7 +132,6 @@ function OIDCForm({ model }: { model: UserAdminModel }) {
       </Row2>
       <Row2>
         <ConfigInput model={model} configKey="scopes" label="Scopes" placeholder="openid profile email" />
-        <ConfigInput model={model} configKey="response_type" label="Response Type" placeholder="code" />
       </Row2>
       <Row2>
         <ConfigInput model={model} configKey="display_name" label="Display Name (Login Button)" placeholder="OpenID Connect" />

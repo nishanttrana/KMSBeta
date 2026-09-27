@@ -576,10 +576,10 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 		out.Config = map[string]any{
 			"sp_entity_id":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "sp_entity_id", "")),
 			"acs_url":           strings.TrimSpace(identityProviderConfigMapString(out.Config, "acs_url", "")),
-			"idp_metadata_url":  strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_metadata_url", "")),
+			"idp_entity_id":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_entity_id", "")),
+			"display_name":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "display_name", "")),
 			"idp_sso_url":       strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_sso_url", "")),
 			"name_id_format":    strings.TrimSpace(identityProviderConfigMapString(out.Config, "name_id_format", "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress")),
-			"sign_requests":     identityProviderConfigMapBool(out.Config, "sign_requests", false),
 			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
 			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
 			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "username")),
@@ -587,22 +587,21 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 			"attr_display_name": strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_display_name", "displayName")),
 		}
 		cert := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "idp_certificate", ""))
-		spKey := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "sp_private_key", ""))
 		out.Secrets = map[string]any{}
 		if cert != "" {
 			out.Secrets["idp_certificate"] = cert
-		}
-		if spKey != "" {
-			out.Secrets["sp_private_key"] = spKey
+			if _, err := samlIdPCertificates(out); err != nil {
+				return out, err
+			}
 		}
 		return out, nil
 	case identityProviderOIDC:
 		out.Config = map[string]any{
 			"issuer_url":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "issuer_url", "")),
+			"display_name":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "display_name", "")),
 			"client_id":         strings.TrimSpace(identityProviderConfigMapString(out.Config, "client_id", "")),
 			"redirect_uri":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "redirect_uri", "")),
 			"scopes":            strings.TrimSpace(identityProviderConfigMapString(out.Config, "scopes", "openid profile email")),
-			"response_type":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "response_type", "code")),
 			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
 			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
 			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "preferred_username")),

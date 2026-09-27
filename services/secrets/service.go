@@ -557,8 +557,6 @@ func convertSecretFormat(secret Secret, plain []byte, format string) ([]byte, st
 		switch format {
 		case "pem":
 			return ensurePEMPrivate(plain)
-		case "ppk":
-			return toPPK(plain)
 		case "openssh":
 			return privateToOpenSSHPublic(plain)
 		default:
@@ -592,26 +590,6 @@ func ensurePEMPrivate(raw []byte) ([]byte, string, string, error) {
 	return nil, "", "", errors.New("ssh private key is not in pem format")
 }
 
-func toPPK(raw []byte) ([]byte, string, string, error) {
-	key, err := ssh.ParseRawPrivateKey(raw)
-	if err != nil {
-		return nil, "", "", err
-	}
-	signer, err := ssh.NewSignerFromKey(key)
-	if err != nil {
-		return nil, "", "", err
-	}
-	pub := signer.PublicKey()
-	pubLine := base64.StdEncoding.EncodeToString(pub.Marshal())
-	privLine := base64.StdEncoding.EncodeToString(raw)
-	mac, err := pkgcrypto.Hash("SHA-256", []byte(pubLine+privLine))
-	if err != nil {
-		return nil, "", "", err
-	}
-	out := fmt.Sprintf("PuTTY-User-Key-File-2: %s\nEncryption: none\nComment: vecta\nPublic-Lines: 1\n%s\nPrivate-Lines: 1\n%s\nPrivate-MAC: %x\n", pub.Type(), pubLine, privLine, mac[:16])
-	return []byte(out), "ppk", "application/x-putty-private-key", nil
-}
-
 func privateToOpenSSHPublic(raw []byte) ([]byte, string, string, error) {
 	key, err := ssh.ParseRawPrivateKey(raw)
 	if err != nil {
@@ -625,24 +603,29 @@ func privateToOpenSSHPublic(raw []byte) ([]byte, string, string, error) {
 	return []byte(pub), "openssh", "text/plain", nil
 }
 
+// toPGPArmor returns the key in RFC 4880 ASCII armor. A key stored already
+// armored (as generated keys are) is returned unchanged; binary key packets
+// are armored with the matching block type and CRC-24 checksum.
 func toPGPArmor(secretType string, raw []byte) ([]byte, string, string, error) {
-	head := "PGP PRIVATE KEY BLOCK"
+	if bytes.HasPrefix(bytes.TrimSpace(raw), []byte("-----BEGIN PGP ")) {
+		return raw, "armored", "application/pgp-keys", nil
+	}
+	blockType := openpgp.PrivateKeyType
 	if secretType == "pgp_public_key" {
-		head = "PGP PUBLIC KEY BLOCK"
+		blockType = openpgp.PublicKeyType
 	}
-	body := base64.StdEncoding.EncodeToString(raw)
-	lines := make([]string, 0, len(body)/64+1)
-	for len(body) > 64 {
-		lines = append(lines, body[:64])
-		body = body[64:]
+	var buf bytes.Buffer
+	w, err := armor.Encode(&buf, blockType, nil)
+	if err != nil {
+		return nil, "", "", err
 	}
-	if len(body) > 0 {
-		lines = append(lines, body)
+	if _, err := w.Write(raw); err != nil {
+		return nil, "", "", err
 	}
-	armored := "-----BEGIN " + head + "-----\n"
-	armored += strings.Join(lines, "\n")
-	armored += "\n-----END " + head + "-----\n"
-	return []byte(armored), "armored", "application/pgp-keys", nil
+	if err := w.Close(); err != nil {
+		return nil, "", "", err
+	}
+	return buf.Bytes(), "armored", "application/pgp-keys", nil
 }
 
 func extractPKCS12(raw []byte) ([]byte, string, string, error) {

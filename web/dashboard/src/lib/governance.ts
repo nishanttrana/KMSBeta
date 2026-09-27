@@ -160,12 +160,6 @@ export async function patchGovernanceSystemState(
   };
 }
 
-export async function applyNetworkConfig(session: AuthSession): Promise<{ applied: boolean; message?: string }> {
-  return serviceRequest<{ applied: boolean; message?: string }>(session, "governance", "/governance/system/network/apply", {
-    method: "POST",
-    body: JSON.stringify({ tenant_id: session.tenantId })
-  });
-}
 
 export async function testGovernanceSystemSNMP(session: AuthSession, target: string): Promise<void> {
   await serviceRequest<Record<string, unknown>>(session, "governance", "/governance/system/snmp/test", {
@@ -470,8 +464,6 @@ export async function voteGovernanceRequest(
   requestID: string,
   input: {
     vote: "approved" | "denied";
-    approver_email?: string;
-    approver_id?: string;
     comment?: string;
     challenge_code?: string;
   }
@@ -486,11 +478,8 @@ export async function voteGovernanceRequest(
         tenant_id: session.tenantId,
         request_id: requestID,
         vote: input.vote,
-        approver_email: input.approver_email || "",
-        approver_id: input.approver_id || "",
         comment: input.comment || "",
-        challenge_code: input.challenge_code || "",
-        vote_method: input.challenge_code ? "dashboard_challenge" : "dashboard"
+        challenge_code: input.challenge_code || ""
       })
     }
   );

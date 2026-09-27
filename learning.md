@@ -5,6 +5,110 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### Behind Envoy, the TLS peer is Envoy (hyok, EKM)
+- **What happened:** hyok and EKM read `r.TLS.PeerCertificates[0]` as the
+  customer's client certificate. Every request arrives through Envoy over
+  internal mTLS, so the peer is `vecta-envoy`: hyok authenticated every caller
+  as "mtls" for any tenant it named, and EKM rejected every edge request with
+  401 because `vecta-envoy` has no `tenant:role` CN. hyok also trusted
+  `X-Client-CN` headers.
+- **Why it slipped through:** unit tests called handlers directly with a
+  hand-made peer certificate or header, a path production never takes; nobody
+  sent a request through the real edge.
+- **Rule:** identity comes only from a verified credential (a JWT the service
+  verifies). The internal mTLS peer identifies the calling *service*, never
+  the end user. Probe a changed route through Envoy on a running stack.
+
+### A signature field that is collected must be checked (SAML, OIDC, KACLS)
+- **What happened:** the SAML form collected `idp_certificate` and the SP
+  metadata advertised `WantAssertionsSigned`, but `parseSAMLResponse` never
+  verified a signature. OIDC read ID-token claims "without full signature
+  validation for now". EKM's KACLS decoded Google's authorization token without
+  verifying it.
+- **Why it slipped through:** the parsing worked, so logins "worked". No test
+  sent a forged assertion or token.
+- **Rule:** every token or assertion that grants access has a test that sends
+  a forged, tampered, expired, mis-addressed and replayed copy and proves each
+  is refused. "For now" in a verification path is a blocker, not a TODO.
+
+### A quorum is only as real as the voter's identity (governance)
+- **What happened:** the approval API needed no token, and a dashboard vote
+  counted as the `approver_email` in the body; the dashboard even offered a
+  free-text "your email" box and fell back to the first allowed approver.
+  Users could also add their own `approver_emails` and a gRPC callback.
+- **Why it slipped through:** tests drove the service with email-link tokens
+  (which are real) and never checked who a dashboard vote was cast as.
+- **Rule:** an M-of-N control binds each vote to a verified identity, refuses
+  the requester, and never lets the requester choose approvers or side effects.
+
+### A placeholder string is not an approval (auth)
+- **What happened:** client activation stored `TODO-GOVERNANCE-HOOK` as the
+  approval ID and activated. The test asserted the activation succeeded.
+- **Why it slipped through:** the test encoded the stub's behaviour as the
+  requirement.
+- **Rule:** grep for `TODO` in security paths before a release; a test that
+  passes because of a stub is a bug in the test.
+
+### Delivery status must come from the delivery (reporting)
+- **What happened:** alerts recorded `sent` for email, Slack, Teams and SIEM
+  from a severity rule; no code sent anything. Schedule `recipients` were
+  stored and never mailed.
+- **Why it slipped through:** "sent" was computed where the channel list was
+  filtered, and the dashboard showed the field.
+- **Rule:** a status like sent/delivered/applied is written only by the code
+  that did it, from its result.
+
+### A settings form is not a feature (governance FDE, network, license)
+- **What happened:** FDE returned a hard-coded LUKS volume and "passed" for any
+  input; network apply returned `applied: true`; license, backup schedule,
+  DNS/NTP, proxy, TLS profile and RNG mode were stored and never read. A TLS
+  private key sat in the settings table unused.
+- **Why it slipped through:** each had a form, a save and an audit event, so it
+  looked finished; nobody grepped for a consumer of the stored value.
+- **Rule:** for each stored setting, name the code that reads and applies it.
+  No consumer, no setting.
+
+### A module is real only if its consumers can load it (PKCS#11, JCA)
+- **What happened:** the PKCS#11 provider exported no `C_GetFunctionList`, so
+  OpenSSL, SunPKCS11, pkcs11-tool and databases could not load it; docs gave
+  RPM/DEB/Homebrew packages that never existed and TDE recipes around it. The
+  JCA `VectaQRNG` called a missing endpoint and silently used the JVM RNG.
+- **Why it slipped through:** it compiled and had samples; nobody loaded it
+  with a real consumer.
+- **Rule:** a client library is tested by a real consumer (pkcs11-tool,
+  SunPKCS11, the JCA test harness). Docs name only packages that exist.
+
+### Two sides of a protocol drift unless one test holds both (BitLocker)
+- **What happened:** the agent polled jobs with GET (the route is POST), read
+  the wrong JSON shape, sent `completed` and a string result; no remote
+  BitLocker operation or recovery-key escrow ever completed. Installers wrote
+  `mode` while the agent reads `agent_mode`.
+- **Why it slipped through:** the agent and service were tested separately.
+- **Rule:** an agent/service contract has a test that decodes the agent's
+  request with the service's type and `DisallowUnknownFields`
+  (`TestBitLockerJobRoundTripMatchesServiceContract`).
+
+### Advertise only what is routed (KMIP Query)
+- **What happened:** Query listed 32 operations; 15 were routed, and the rest
+  lived in a build-tagged file that no longer compiled.
+- **Why it slipped through:** the build tag hid the file from every build and
+  test.
+- **Rule:** a capability list is derived from, or tested against, the router
+  (`TestQueryAdvertisesOnlyRoutedOperations`). A build-tagged file nobody
+  builds is dead code.
+
+### Smaller fakes in the same sweep
+- Secrets "PPK" was not PuTTY's format and PGP armor double-wrapped armored
+  keys: format tests checked a prefix string, not a round trip.
+- Signing identities came from the request body; `require_transparency`
+  gated an empty `if`.
+- Autokey template versioning had no caller and no table.
+- EKM health said "within threshold" with no metrics; new BitLocker clients
+  were "healthy" before a heartbeat.
+- `pkg/tsa` used an invented policy OID; `pkg/compliance` returned "pass" with
+  invented evidence. Neither was imported: unused packages still read as
+  capability to a reviewer.
+
 ### A cipher named after a standard must pass the standard's vectors
 - **What happened:** "FF1" had tests, but they only round-tripped (encrypt
   then decrypt). An additive keystream round-trips perfectly, and it leaked

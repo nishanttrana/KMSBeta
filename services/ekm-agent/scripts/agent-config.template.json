@@ -27,9 +27,6 @@
   "db_password": "",
   "db_name": "",
   "db_port": 1433,
-  "pkcs11_module_path": "C:\\Program Files\\OpenSC Project\\OpenSC\\pkcs11\\opensc-pkcs11.dll",
-  "pkcs11_slot_id": 0,
-  "pkcs11_pin_env": "PKCS11_PIN",
   "active_key_id": "",
   "active_key_version": "v1",
   "config_version_ack": 0

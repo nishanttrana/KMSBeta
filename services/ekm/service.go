@@ -902,6 +902,18 @@ func (s *Service) GetAgentHealth(ctx context.Context, tenantID string, agentID s
 	}
 	warnings := make([]string, 0)
 	health := "healthy"
+	// Thresholds are judged only on metrics the agent actually reported; an
+	// agent that sent none is not "within threshold".
+	metricsReported := false
+	for _, k := range []string{"cpu_usage_pct", "cpu_pct", "cpu_percent", "memory_usage_pct", "memory_pct", "mem_pct", "disk_usage_pct", "disk_pct"} {
+		if _, ok := meta[k]; ok {
+			metricsReported = true
+		}
+	}
+	if !metricsReported {
+		health = "unknown"
+		warnings = append(warnings, "agent has not reported OS metrics")
+	}
 	if normalizeAgentStatus(agent.Status) == AgentStatusDisconnected {
 		health = "down"
 		warnings = append(warnings, "heartbeat timed out")
@@ -925,7 +937,7 @@ func (s *Service) GetAgentHealth(ctx context.Context, tenantID string, agentID s
 		health = "down"
 	}
 	if len(warnings) == 0 {
-		warnings = []string{"all health checks within threshold"}
+		warnings = []string{"reported OS metrics are within threshold"}
 	}
 	return AgentHealthStatus{
 		Agent:               agent,
@@ -1123,10 +1135,6 @@ func (s *Service) BuildAgentDeployPackage(ctx context.Context, tenantID string, 
 	if rotation <= 0 {
 		rotation = 90
 	}
-	pkcs11ModuleHint := "/usr/lib/softhsm/libsofthsm2.so"
-	if targetOS == "windows" {
-		pkcs11ModuleHint = "C:\\Program Files\\OpenSC Project\\OpenSC\\pkcs11\\opensc-pkcs11.dll"
-	}
 	engine := normalizeDBEngine(agent.DBEngine)
 	if engine == "" {
 		engine = DefaultDBEngine
@@ -1139,22 +1147,13 @@ DB_ENGINE=%s
 AGENT_HOST=%s
 HEARTBEAT_INTERVAL_SEC=%d
 ROTATION_CYCLE_DAYS=%d
-PKCS11_MODULE_PATH=%s
-PKCS11_SLOT_ID=0
-PKCS11_PIN_ENV=PKCS11_PIN
 EKM_API_BASE_URL=${EKM_API_BASE_URL:-https://kms.example.com/svc/ekm}
 EKM_REGISTER_PATH=/ekm/agents/register
 EKM_HEARTBEAT_PATH=/ekm/agents/%s/heartbeat
 EKM_ROTATE_PATH=/ekm/agents/%s/rotate
 EKM_VALIDATE_PATH=/ekm/agents/%s/validate-deploy
-`, tenantID, agent.ID, agent.Name, engine, defaultString(agent.Host, "127.0.0.1"), defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec), rotation, pkcs11ModuleHint, agent.ID, agent.ID, agent.ID))
+`, tenantID, agent.ID, agent.Name, engine, defaultString(agent.Host, "127.0.0.1"), defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec), rotation, agent.ID, agent.ID, agent.ID))
 
-	pkcs11Cfg := `provider = "pkcs11"
-module_path = "${PKCS11_MODULE_PATH}"
-slot_id = "${PKCS11_SLOT_ID}"
-pin_env = "${PKCS11_PIN_ENV}"
-key_usage = "tde"
-`
 	linuxHeartbeat := `#!/usr/bin/env bash
 set -euo pipefail
 source /etc/vecta-ekm/agent.env
@@ -1166,7 +1165,7 @@ HOST=$(hostname | tr -dc 'a-zA-Z0-9._-')
 OS=$(uname -s | tr -dc 'a-zA-Z0-9._-')
 META=$(printf '{"hostname":"%s","os_name":"%s","cpu_usage_pct":%s,"memory_usage_pct":%s,"disk_usage_pct":%s,"uptime_sec":%s}' "$HOST" "$OS" "$CPU" "$MEM" "$DISK" "$UP")
 BODY=$(printf '{"tenant_id":"%s","status":"connected","tde_state":"enabled","active_key_id":"%s","active_key_version":"%s","metadata_json":"%s"}' "$TENANT_ID" "${ACTIVE_KEY_ID:-}" "${ACTIVE_KEY_VERSION:-}" "$(printf '%s' "$META" | sed 's/"/\\"/g')")
-curl -fsS -X POST "$EKM_API_BASE_URL$EKM_HEARTBEAT_PATH" -H "Content-Type: application/json" -d "$BODY" >/dev/null
+curl -fsS -X POST "$EKM_API_BASE_URL$EKM_HEARTBEAT_PATH" -H "Content-Type: application/json" -H "Authorization: Bearer ${EKM_TOKEN:?set EKM_TOKEN in the environment}" -d "$BODY" >/dev/null
 `
 	windowsHeartbeat := `$ErrorActionPreference = "Stop"
 $envFile = "C:\vecta-ekm\agent.env"
@@ -1201,7 +1200,7 @@ $body = @{
   active_key_version = $cfg["ACTIVE_KEY_VERSION"]
   metadata_json = $meta
 } | ConvertTo-Json -Compress
-Invoke-RestMethod -Method Post -Uri ($cfg["EKM_API_BASE_URL"] + $cfg["EKM_HEARTBEAT_PATH"]) -ContentType "application/json" -Body $body | Out-Null
+Invoke-RestMethod -Method Post -Uri ($cfg["EKM_API_BASE_URL"] + $cfg["EKM_HEARTBEAT_PATH"]) -ContentType "application/json" -Headers @{ Authorization = "Bearer $env:EKM_TOKEN" } -Body $body | Out-Null
 `
 	linuxInstall := fmt.Sprintf(`#!/usr/bin/env bash
 set -euo pipefail
@@ -1248,9 +1247,6 @@ mkdir -p "$INSTALL_DIR"
 cat > "$INSTALL_DIR/agent.env" <<'EOF'
 %s
 EOF
-cat > "$INSTALL_DIR/pkcs11.conf" <<'EOF'
-%s
-EOF
 cat > "$INSTALL_DIR/heartbeat.sh" <<'EOF'
 %s
 EOF
@@ -1262,6 +1258,7 @@ echo "  1. Install vecta-ekm-agent binary and systemd service"
 echo "  2. Run: systemctl daemon-reload && systemctl enable --now vecta-ekm-agent"
 echo "  3. Schedule heartbeat every 30s (systemd timer or cron) using $INSTALL_DIR/heartbeat.sh"
 echo "  4. Set EKM_API_BASE_URL in agent.env if KMS is not at the default address"
+echo "  5. Provide EKM_TOKEN (an auth-service token for this tenant) in the service environment; it is never written to disk here"
 
 # ---- Validate deployment ----
 echo "[validate] Contacting KMS to validate deployment..."
@@ -1269,6 +1266,7 @@ VALIDATE_BODY=$(printf '{"tenant_id":"%%s","agent_id":"%%s","version":"1.0","con
 if curl -fsS -X POST "${EKM_URL%%/}/ekm/agents/%s/validate-deploy" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: %s" \
+  -H "Authorization: Bearer ${EKM_TOKEN:-}" \
   -d "$VALIDATE_BODY" 2>/dev/null; then
   echo ""
   echo "[validate] Deployment validated successfully."
@@ -1278,7 +1276,7 @@ fi
 
 trap - ERR
 echo "[done] Vecta EKM agent setup complete."
-`, envFile, pkcs11Cfg, linuxHeartbeat, tenantID, agent.ID, agent.ID, tenantID)
+`, envFile, linuxHeartbeat, tenantID, agent.ID, agent.ID, tenantID)
 
 	windowsInstall := fmt.Sprintf(`$ErrorActionPreference = "Stop"
 
@@ -1317,9 +1315,6 @@ try {
 "@ | Set-Content -Path "$installDir\agent.env" -Encoding UTF8
   @"
 %s
-"@ | Set-Content -Path "$installDir\pkcs11.conf" -Encoding UTF8
-  @"
-%s
 "@ | Set-Content -Path "$installDir\heartbeat.ps1" -Encoding UTF8
 
   Write-Host "[install] Configuration written to $installDir"
@@ -1338,21 +1333,20 @@ try {
 Write-Host "[validate] Contacting KMS to validate deployment..."
 try {
   $body = @{ tenant_id = "%s"; agent_id = "%s"; version = "1.0"; connectivity = "ok" } | ConvertTo-Json -Compress
-  $null = Invoke-RestMethod -Method Post -Uri "$ekmUrl/ekm/agents/%s/validate-deploy" -ContentType "application/json" -Body $body -Headers @{"X-Tenant-ID"="%s"} -TimeoutSec 10
+  $null = Invoke-RestMethod -Method Post -Uri "$ekmUrl/ekm/agents/%s/validate-deploy" -ContentType "application/json" -Body $body -Headers @{"X-Tenant-ID"="%s"; Authorization = "Bearer $env:EKM_TOKEN"} -TimeoutSec 10
   Write-Host "[validate] Deployment validated successfully."
 } catch {
   Write-Warning "[warn] Could not validate deployment with KMS. Verify connectivity and try manually."
 }
 
 Write-Host "[done] Vecta EKM agent setup complete."
-`, strings.ReplaceAll(envFile, "\n", "\r\n"), strings.ReplaceAll(pkcs11Cfg, "\n", "\r\n"), strings.ReplaceAll(windowsHeartbeat, "\n", "\r\n"), tenantID, agent.ID, agent.ID, tenantID)
+`, strings.ReplaceAll(envFile, "\n", "\r\n"), strings.ReplaceAll(windowsHeartbeat, "\n", "\r\n"), tenantID, agent.ID, agent.ID, tenantID)
 
 	// Engine-specific TDE setup guide
 	tdeSetupGuide := buildTDESetupGuide(engine, agent.ID)
 
 	files := []DeployPackageFile{
 		{Path: "agent.env", Content: envFile, Mode: "0600"},
-		{Path: "pkcs11.conf", Content: pkcs11Cfg, Mode: "0600"},
 		{Path: "tde-setup.md", Content: tdeSetupGuide, Mode: "0644"},
 	}
 	if targetOS == "linux" {
@@ -1373,7 +1367,6 @@ Write-Host "[done] Vecta EKM agent setup complete."
 		DBEngine:            engine,
 		TargetOS:            targetOS,
 		CreatedAt:           time.Now().UTC(),
-		PKCS11Provider:      "PKCS#11",
 		HeartbeatPath:       "/ekm/agents/" + agent.ID + "/heartbeat",
 		RegisterPath:        "/ekm/agents/register",
 		RotatePath:          "/ekm/agents/" + agent.ID + "/rotate",
@@ -2217,132 +2210,97 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 	return s.events.Publish(ctx, subject, raw)
 }
 
+// recommendedProfilesForEngine names the integration Vecta really offers for
+// an engine: KMIP, for engines whose TDE can use a KMIP key server. SQL
+// Server (EKM provider DLL), Oracle (PKCS#11 library) and MariaDB have no
+// Vecta integration, so nothing is recommended for them.
 func recommendedProfilesForEngine(engine string) []string {
 	switch normalizeDBEngine(engine) {
-	case "mssql":
-		return []string{"mssql-tde-pkcs11"}
-	case "oracle":
-		return []string{"oracle-tde-pkcs11"}
-	case "postgresql":
-		return []string{"postgresql-tde-pkcs11"}
 	case "mysql":
-		return []string{"mysql-tde-pkcs11"}
-	case "mariadb":
-		return []string{"mariadb-tde-pkcs11"}
+		return []string{"mysql-tde-kmip"}
+	case "postgresql":
+		return []string{"postgresql-tde-kmip"}
 	case "db2":
-		return []string{"db2-tde-pkcs11"}
+		return []string{"db2-tde-kmip"}
 	default:
-		return []string{"mssql-tde-pkcs11", "oracle-tde-pkcs11"}
+		return []string{}
 	}
 }
 
+// buildTDESetupGuide says how each engine's TDE master key can be held in
+// Vecta. The route is Vecta's KMIP server (TTLV over mTLS on port 5696) for
+// engines that support a KMIP key manager; the others are stated as
+// unsupported rather than given instructions that cannot work.
 func buildTDESetupGuide(engine string, agentID string) string {
 	header := `# Vecta EKM - TDE Setup Guide
 # Agent: ` + agentID + `
 # Engine: ` + engine + `
 #
-# This file contains SQL commands to configure Transparent Data Encryption (TDE)
-# using the Vecta EKM PKCS#11 provider. Replace placeholder values before executing.
+# Vecta holds a database's TDE master key through its KMIP server
+# (TTLV over mutually authenticated TLS, port 5696). Register a KMIP client
+# in the KMIP tab first: it issues the client certificate and key, and the
+# CA to trust is the Vecta internal CA. The EKM agent itself reports TDE
+# state; it does not sit in the database's key path.
 
 `
-	mssqlGuide := `## MSSQL (SQL Server) TDE Setup
+	kmipPrereq := "Prerequisites: a KMIP client registered in the KMIP tab (client certificate + key), the Vecta internal CA certificate, and network access to <kms-host>:5696.\n\n"
 
-` + "```sql" + `
--- Step 1: Create EKM Provider
-CREATE CRYPTOGRAPHIC PROVIDER VectaEKM FROM FILE = 'C:\vecta-ekm\vecta-pkcs11.dll';
+	mysqlGuide := `## MySQL Enterprise TDE (keyring_okv, KMIP)
 
--- Step 2: Create credential mapped to EKM
-CREATE CREDENTIAL VectaEKMCred WITH IDENTITY = 'vecta-ekm', SECRET = '<agent-token>';
-ALTER LOGIN [sa] ADD CREDENTIAL VectaEKMCred;
-
--- Step 3: Create asymmetric key from EKM
-CREATE ASYMMETRIC KEY VectaTDEKey FROM PROVIDER VectaEKM WITH ALGORITHM = RSA_2048, PROVIDER_KEY_NAME = '<key-name>';
-
--- Step 4: Create database encryption key and enable TDE
-USE <database>;
-CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER ASYMMETRIC KEY VectaTDEKey;
-ALTER DATABASE <database> SET ENCRYPTION ON;
+` + kmipPrereq + "```ini" + `
+# my.cnf
+[mysqld]
+early-plugin-load=keyring_okv.so
+keyring_okv_conf_dir=/usr/local/mysql/mysql-keyring-okv
 ` + "```" + `
 
-`
-
-	oracleGuide := `## Oracle TDE Setup
-
-` + "```sql" + `
--- Option A: Configure Oracle TDE wallet
-ALTER SYSTEM SET ENCRYPTION WALLET OPEN IDENTIFIED BY "<wallet-password>";
-
--- Option B: PKCS#11 integration
-ALTER SYSTEM SET TDE_CONFIGURATION='KEYSTORE_CONFIGURATION=OKV|PKCS11' SCOPE=BOTH;
-
--- Create master encryption key
-ADMINISTER KEY MANAGEMENT CREATE KEY USING TAG 'vecta-managed' IDENTIFIED BY "<password>" WITH BACKUP;
-ADMINISTER KEY MANAGEMENT SET KEY IDENTIFIED BY "<password>" WITH BACKUP;
-
--- Encrypt tablespace
-ALTER TABLESPACE users ENCRYPTION ONLINE USING 'AES256' ENCRYPT;
-` + "```" + `
-
-`
-
-	postgresqlGuide := `## PostgreSQL TDE Setup (pg_tde extension or native 17+)
+In keyring_okv_conf_dir, create okvclient.ora containing SERVER=<kms-host>:5696,
+and an ssl/ directory holding CA.pem (Vecta internal CA), cert.pem and key.pem
+(the KMIP client certificate and key). Restart mysqld, then:
 
 ` + "```sql" + `
--- Configure encryption provider
-ALTER SYSTEM SET pg_tde.keyring_provider = 'pkcs11';
-ALTER SYSTEM SET pg_tde.pkcs11_library = '/usr/lib/vecta-ekm/libvecta-pkcs11.so';
-SELECT pg_reload_conf();
-
--- Create encrypted tablespace
-CREATE TABLESPACE encrypted_ts LOCATION '/data/encrypted' WITH (encryption = 'aes-256');
-` + "```" + `
-
-`
-
-	mysqlGuide := `## MySQL TDE Setup (with PKCS#11 keyring)
-
-` + "```sql" + `
--- Install PKCS#11 keyring plugin
-INSTALL PLUGIN keyring_pkcs11 SONAME 'keyring_pkcs11.so';
-SET GLOBAL keyring_pkcs11_lib_path = '/usr/lib/vecta-ekm/libvecta-pkcs11.so';
-
--- Encrypt a table
 ALTER TABLE sensitive_data ENCRYPTION='Y';
-
--- Encrypt a tablespace
-CREATE TABLESPACE encrypted_ts ADD DATAFILE 'encrypted01.ibd' ENCRYPTION='Y';
 ` + "```" + `
 
 `
+	postgresqlGuide := `## PostgreSQL TDE (Percona pg_tde, KMIP key provider)
 
-	db2Guide := `## DB2 TDE Setup (native encryption with external keystore)
-
-` + "```sql" + `
--- Configure DB2 to use external keystore
-UPDATE DBM CFG USING KEYSTORE_TYPE PKCS12 KEYSTORE_LOCATION /etc/vecta-ekm/db2keystore;
-
--- Create encrypted database
-CREATE DATABASE mydb ENCRYPT;
-` + "```" + `
+` + kmipPrereq + `Register a KMIP key provider in pg_tde pointing at <kms-host>:5696 with the
+KMIP client certificate, key and the Vecta internal CA, then make it the
+principal key provider for the database. The function names differ between
+pg_tde releases; use the ones documented for your installed version.
+Community PostgreSQL has no built-in TDE.
 
 `
+	db2Guide := `## Db2 native encryption (centralized KMIP key manager)
 
-	mariadbGuide := `## MariaDB TDE Setup (with PKCS#11 encryption plugin)
-
-` + "```sql" + `
--- Install file_key_management or PKCS#11 encryption plugin
-INSTALL SONAME 'file_key_management';
-
--- Or use the Vecta PKCS#11 provider via keyring
-SET GLOBAL innodb_encrypt_tables = ON;
-SET GLOBAL innodb_encryption_threads = 4;
-
--- Encrypt individual tables
-ALTER TABLE sensitive_data ENCRYPTED=YES ENCRYPTION_KEY_ID=1;
-` + "```" + `
+` + kmipPrereq + `Configure Db2 native encryption with KEYSTORE_TYPE KMIP and a KMIP
+configuration file naming <kms-host>:5696 and the client certificate, key and
+Vecta internal CA, as described in IBM's documentation for your Db2 release.
 
 `
+	mssqlGuide := `## SQL Server TDE: not supported by Vecta
 
+SQL Server protects a TDE key in an external manager only through an EKM
+provider DLL implementing SQL Server's EKM interface. Vecta does not ship
+one, so SQL Server TDE keys are not held in Vecta. The EKM agent reports the
+database's TDE state only.
+
+`
+	oracleGuide := `## Oracle TDE: not supported by Vecta
+
+Oracle TDE keeps its master key in a software keystore, Oracle Key Vault, or
+an HSM through a PKCS#11 library. Vecta provides none of these, so Oracle TDE
+keys are not held in Vecta. The EKM agent reports the database's TDE state
+only.
+
+`
+	mariadbGuide := `## MariaDB encryption: not supported by Vecta
+
+MariaDB's key management plugins do not speak KMIP, so its encryption keys
+cannot be held in Vecta. The EKM agent reports encryption state only.
+
+`
 	switch normalizeDBEngine(engine) {
 	case "mssql":
 		return header + mssqlGuide
@@ -2357,8 +2315,7 @@ ALTER TABLE sensitive_data ENCRYPTED=YES ENCRYPTION_KEY_ID=1;
 	case "mariadb":
 		return header + mariadbGuide
 	default:
-		// Include all guides when engine is unknown
-		return header + mssqlGuide + oracleGuide + postgresqlGuide + mysqlGuide + db2Guide + mariadbGuide
+		return header + mysqlGuide + postgresqlGuide + db2Guide + mssqlGuide + oracleGuide + mariadbGuide
 	}
 }
 

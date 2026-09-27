@@ -106,7 +106,6 @@ export type ScheduledReport = {
   template_id: string;
   format: string;
   schedule: string;
-  recipients: string[];
   enabled: boolean;
   last_run_at?: string;
   next_run_at?: string;
@@ -399,7 +398,6 @@ export async function createReportingScheduledReport(
     template_id: string;
     format: string;
     schedule: "hourly" | "daily" | "weekly";
-    recipients: string[];
     filters?: Record<string, unknown>;
   }
 ): Promise<ScheduledReport> {
@@ -411,9 +409,6 @@ export async function createReportingScheduledReport(
       template_id: String(input?.template_id || "").trim(),
       format: String(input?.format || "pdf").trim().toLowerCase(),
       schedule: String(input?.schedule || "daily").trim().toLowerCase(),
-      recipients: Array.isArray(input?.recipients)
-        ? input.recipients.map((value) => String(value || "").trim()).filter(Boolean)
-        : [],
       filters: input?.filters && typeof input.filters === "object" ? input.filters : {}
     })
   });

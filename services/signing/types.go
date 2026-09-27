@@ -31,7 +31,7 @@ type SigningSettings struct {
 	TenantID             string    `json:"tenant_id"`
 	Enabled              bool      `json:"enabled"`
 	DefaultProfileID     string    `json:"default_profile_id,omitempty"`
-	RequireTransparency  bool      `json:"require_transparency"`
+	RequireTransparency  bool      `json:"-"`
 	AllowedIdentityModes []string  `json:"allowed_identity_modes"`
 	UpdatedBy            string    `json:"updated_by,omitempty"`
 	UpdatedAt            time.Time `json:"updated_at,omitempty"`
@@ -61,49 +61,49 @@ type SigningPolicy struct {
 }
 
 type SigningProfile struct {
-	ID                      string        `json:"id"`
-	TenantID                string        `json:"tenant_id"`
-	Name                    string        `json:"name"`
-	ArtifactType            string        `json:"artifact_type"`
-	KeyID                   string        `json:"key_id"`
-	SigningAlgorithm        string        `json:"signing_algorithm"`
-	IdentityMode            string        `json:"identity_mode"`
-	AllowedWorkloadPatterns []string      `json:"allowed_workload_patterns"`
-	AllowedOIDCIssuers      []string      `json:"allowed_oidc_issuers"`
-	AllowedSubjectPatterns  []string      `json:"allowed_subject_patterns"`
-	AllowedRepositories     []string      `json:"allowed_repositories"`
+	ID                      string   `json:"id"`
+	TenantID                string   `json:"tenant_id"`
+	Name                    string   `json:"name"`
+	ArtifactType            string   `json:"artifact_type"`
+	KeyID                   string   `json:"key_id"`
+	SigningAlgorithm        string   `json:"signing_algorithm"`
+	IdentityMode            string   `json:"identity_mode"`
+	AllowedWorkloadPatterns []string `json:"allowed_workload_patterns"`
+	AllowedOIDCIssuers      []string `json:"allowed_oidc_issuers"`
+	AllowedSubjectPatterns  []string `json:"allowed_subject_patterns"`
+	AllowedRepositories     []string `json:"allowed_repositories"`
 	// Policy adds content-level constraints beyond identity verification.
-	Policy                  SigningPolicy  `json:"policy"`
-	TransparencyRequired    bool          `json:"transparency_required"`
-	Enabled                 bool          `json:"enabled"`
-	Description             string        `json:"description,omitempty"`
-	UpdatedBy               string        `json:"updated_by,omitempty"`
-	UpdatedAt               time.Time     `json:"updated_at,omitempty"`
+	Policy               SigningPolicy `json:"policy"`
+	TransparencyRequired bool          `json:"-"`
+	Enabled              bool          `json:"enabled"`
+	Description          string        `json:"description,omitempty"`
+	UpdatedBy            string        `json:"updated_by,omitempty"`
+	UpdatedAt            time.Time     `json:"updated_at,omitempty"`
 }
 
 type SigningRecord struct {
-	ID                string                 `json:"id"`
-	TenantID          string                 `json:"tenant_id"`
-	ProfileID         string                 `json:"profile_id"`
-	ArtifactType      string                 `json:"artifact_type"`
-	ArtifactName      string                 `json:"artifact_name"`
-	DigestSHA256      string                 `json:"digest_sha256"`
-	SignatureB64      string                 `json:"signature"`
-	KeyID             string                 `json:"key_id"`
-	SigningAlgorithm  string                 `json:"signing_algorithm"`
-	IdentityMode      string                 `json:"identity_mode"`
-	OIDCIssuer        string                 `json:"oidc_issuer,omitempty"`
-	OIDCSubject       string                 `json:"oidc_subject,omitempty"`
-	WorkloadIdentity  string                 `json:"workload_identity,omitempty"`
-	Repository        string                 `json:"repository,omitempty"`
-	CommitSHA         string                 `json:"commit_sha,omitempty"`
-	OCIReference      string                 `json:"oci_reference,omitempty"`
-	TransparencyEntryID string               `json:"transparency_entry_id,omitempty"`
-	TransparencyHash  string                 `json:"transparency_hash,omitempty"`
-	TransparencyIndex int                    `json:"transparency_index,omitempty"`
-	VerificationStatus string                `json:"verification_status,omitempty"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
-	CreatedAt         time.Time              `json:"created_at,omitempty"`
+	ID                  string                 `json:"id"`
+	TenantID            string                 `json:"tenant_id"`
+	ProfileID           string                 `json:"profile_id"`
+	ArtifactType        string                 `json:"artifact_type"`
+	ArtifactName        string                 `json:"artifact_name"`
+	DigestSHA256        string                 `json:"digest_sha256"`
+	SignatureB64        string                 `json:"signature"`
+	KeyID               string                 `json:"key_id"`
+	SigningAlgorithm    string                 `json:"signing_algorithm"`
+	IdentityMode        string                 `json:"identity_mode"`
+	OIDCIssuer          string                 `json:"oidc_issuer,omitempty"`
+	OIDCSubject         string                 `json:"oidc_subject,omitempty"`
+	WorkloadIdentity    string                 `json:"workload_identity,omitempty"`
+	Repository          string                 `json:"repository,omitempty"`
+	CommitSHA           string                 `json:"commit_sha,omitempty"`
+	OCIReference        string                 `json:"oci_reference,omitempty"`
+	TransparencyEntryID string                 `json:"transparency_entry_id,omitempty"`
+	TransparencyHash    string                 `json:"transparency_hash,omitempty"`
+	TransparencyIndex   int                    `json:"transparency_index,omitempty"`
+	VerificationStatus  string                 `json:"verification_status,omitempty"`
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt           time.Time              `json:"created_at,omitempty"`
 }
 
 type SigningArtifactCount struct {
@@ -112,33 +112,33 @@ type SigningArtifactCount struct {
 }
 
 type SigningSummary struct {
-	TenantID                string                `json:"tenant_id"`
-	Enabled                 bool                  `json:"enabled"`
-	ProfileCount            int                   `json:"profile_count"`
-	RecordCount24h          int                   `json:"record_count_24h"`
-	TransparencyLogged24h   int                   `json:"transparency_logged_24h"`
-	WorkloadSigned24h       int                   `json:"workload_signed_24h"`
-	OIDCSigned24h           int                   `json:"oidc_signed_24h"`
-	VerificationFailures24h int                   `json:"verification_failures_24h"`
+	TenantID                string                 `json:"tenant_id"`
+	Enabled                 bool                   `json:"enabled"`
+	ProfileCount            int                    `json:"profile_count"`
+	RecordCount24h          int                    `json:"record_count_24h"`
+	TransparencyLogged24h   int                    `json:"transparency_logged_24h"`
+	WorkloadSigned24h       int                    `json:"workload_signed_24h"`
+	OIDCSigned24h           int                    `json:"oidc_signed_24h"`
+	VerificationFailures24h int                    `json:"verification_failures_24h"`
 	ArtifactCounts          []SigningArtifactCount `json:"artifact_counts"`
 }
 
 type SignArtifactInput struct {
-	TenantID         string                 `json:"tenant_id"`
-	ProfileID        string                 `json:"profile_id,omitempty"`
-	ArtifactType     string                 `json:"artifact_type"`
-	ArtifactName     string                 `json:"artifact_name"`
-	PayloadB64       string                 `json:"payload,omitempty"`
-	DigestSHA256     string                 `json:"digest_sha256,omitempty"`
-	Repository       string                 `json:"repository,omitempty"`
-	CommitSHA        string                 `json:"commit_sha,omitempty"`
-	OCIReference     string                 `json:"oci_reference,omitempty"`
-	IdentityMode     string                 `json:"identity_mode,omitempty"`
-	OIDCIssuer       string                 `json:"oidc_issuer,omitempty"`
-	OIDCSubject      string                 `json:"oidc_subject,omitempty"`
-	WorkloadIdentity string                 `json:"workload_identity,omitempty"`
-	Metadata         map[string]interface{} `json:"metadata,omitempty"`
-	RequestedBy      string                 `json:"requested_by,omitempty"`
+	TenantID     string `json:"tenant_id"`
+	ProfileID    string `json:"profile_id,omitempty"`
+	ArtifactType string `json:"artifact_type"`
+	ArtifactName string `json:"artifact_name"`
+	PayloadB64   string `json:"payload,omitempty"`
+	DigestSHA256 string `json:"digest_sha256,omitempty"`
+	Repository   string `json:"repository,omitempty"`
+	CommitSHA    string `json:"commit_sha,omitempty"`
+	OCIReference string `json:"oci_reference,omitempty"`
+	IdentityMode string `json:"identity_mode,omitempty"`
+	// OIDCToken is the signer's OIDC ID token (for example a CI job token);
+	// issuer and subject are read only from it after verification.
+	OIDCToken   string                 `json:"oidc_token,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	RequestedBy string                 `json:"requested_by,omitempty"`
 }
 
 type SignArtifactResult struct {
@@ -157,11 +157,11 @@ type VerifyArtifactInput struct {
 }
 
 type VerifyArtifactResult struct {
-	Valid             bool      `json:"valid"`
-	RecordID          string    `json:"record_id,omitempty"`
-	TransparencyHash  string    `json:"transparency_hash,omitempty"`
-	TransparencyEntryID string  `json:"transparency_entry_id,omitempty"`
-	VerifiedAt        time.Time `json:"verified_at"`
+	Valid               bool      `json:"valid"`
+	RecordID            string    `json:"record_id,omitempty"`
+	TransparencyHash    string    `json:"transparency_hash,omitempty"`
+	TransparencyEntryID string    `json:"transparency_entry_id,omitempty"`
+	VerifiedAt          time.Time `json:"verified_at"`
 	// SignatureValid: keycore verified the signature over the signed envelope.
 	// DigestMatch: the presented artifact's digest equals the signed digest
 	// (false when no artifact was presented).

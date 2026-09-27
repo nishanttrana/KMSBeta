@@ -60,8 +60,7 @@ Output zip is generated under `dist/ekm-agent-windows/`.
   -HostIP 10.0.0.15 `
   -ApiBaseUrl https://kms.example.com/svc/ekm `
   -DbVersion "SQL Server 2022" `
-  -DbDsn "sqlserver://user:pass@10.0.0.15?database=master" `
-  -Pkcs11ModulePath "C:\Program Files\OpenSC Project\OpenSC\pkcs11\opensc-pkcs11.dll"
+  -DbDsn "sqlserver://user:pass@10.0.0.15?database=master"
 ```
 
 For Oracle:

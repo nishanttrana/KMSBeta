@@ -110,7 +110,6 @@ flowchart LR
   tab_payment --> svc_payment
   tab_pkcs11["pkcs11"]
   UI --> tab_pkcs11
-  tab_pkcs11 --> svc_auth_edge
   tab_pkcs11 --> svc_ekm
   tab_pkcs11 --> svc_tfe
   tab_restapi["restapi"]
@@ -132,7 +131,7 @@ flowchart LR
   svc_compliance["compliance (42 routes)"]
   svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (64 routes)"]
-  svc_governance["governance (40 routes)"]
+  svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (173 routes)"]

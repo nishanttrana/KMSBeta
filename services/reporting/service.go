@@ -344,11 +344,6 @@ func (s *Service) ensureDefaultChannels(ctx context.Context, tenantID string) ([
 	}
 	defaults := []NotificationChannel{
 		{TenantID: tenantID, Name: "screen", Enabled: true, Config: map[string]interface{}{"show_info": true}},
-		{TenantID: tenantID, Name: "email", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
-		{TenantID: tenantID, Name: "slack", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
-		{TenantID: tenantID, Name: "teams", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high"}}},
-		{TenantID: tenantID, Name: "webhook", Enabled: false, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
-		{TenantID: tenantID, Name: "siem", Enabled: true, Config: map[string]interface{}{"include_info": true}},
 	}
 	for _, ch := range defaults {
 		_ = s.store.UpsertChannel(ctx, ch)
@@ -360,9 +355,12 @@ func (s *Service) ensureDefaultChannels(ctx context.Context, tenantID string) ([
 	return filterRetiredChannels(seeded), nil
 }
 
+// isRetiredChannel is true for every channel but the dashboard screen feed:
+// reporting has no email, chat, webhook or SIEM delivery, and used to mark
+// alerts "sent" to those channels without sending anything. Outbound
+// delivery lives in the audit service's webhooks and SIEM forwarding.
 func isRetiredChannel(name string) bool {
-	v := strings.ToLower(strings.TrimSpace(name))
-	return v == "pager" || v == "pagerduty"
+	return !strings.EqualFold(strings.TrimSpace(name), "screen")
 }
 
 func filterRetiredChannels(items []NotificationChannel) []NotificationChannel {
@@ -376,30 +374,16 @@ func filterRetiredChannels(items []NotificationChannel) []NotificationChannel {
 	return out
 }
 
+// dispatchChannels records where an alert was delivered: the screen feed,
+// which is the one channel reporting delivers to itself.
 func (s *Service) dispatchChannels(tenantID string, severity string, action string) ([]NotificationChannel, []string, map[string]string) {
 	channels, _ := s.ensureDefaultChannels(context.Background(), tenantID)
-	sent := []string{"screen"}
-	status := map[string]string{"screen": "delivered"}
-	severity = normalizeSeverity(severity)
-
-	for _, ch := range channels {
-		if !ch.Enabled {
-			continue
-		}
-		name := strings.ToLower(strings.TrimSpace(ch.Name))
-		if name == "screen" || isRetiredChannel(name) {
-			continue
-		}
-		if !channelAllowsSeverity(ch.Config, severity) {
-			continue
-		}
-		if name == "siem" || severityRank(severity) >= severityRank(severityHigh) || name == "email" && severity == severityWarning {
-			sent = append(sent, name)
-			status[name] = "sent"
-		}
-	}
-	return channels, uniqueStrings(sent), status
+	return channels, []string{"screen"}, map[string]string{"screen": "delivered"}
 }
+
+// deliverableChannels keeps only channels reporting actually delivers to:
+// the screen feed.
+func deliverableChannels([]string) []string { return []string{"screen"} }
 
 func channelAllowsSeverity(cfg map[string]interface{}, severity string) bool {
 	if cfg == nil {
@@ -547,6 +531,7 @@ func (s *Service) ListRules(ctx context.Context, tenantID string) ([]AlertRule, 
 func (s *Service) CreateRule(ctx context.Context, tenantID string, item AlertRule) (AlertRule, error) {
 	item.ID = newID("rule")
 	item.TenantID = tenantID
+	item.Channels = deliverableChannels(item.Channels)
 	item.Severity = normalizeSeverity(item.Severity)
 	item.Enabled = true
 	if strings.EqualFold(strings.TrimSpace(item.Condition), "expression") {
@@ -564,6 +549,7 @@ func (s *Service) CreateRule(ctx context.Context, tenantID string, item AlertRul
 func (s *Service) UpdateRule(ctx context.Context, tenantID string, id string, item AlertRule) error {
 	item.ID = id
 	item.TenantID = tenantID
+	item.Channels = deliverableChannels(item.Channels)
 	item.Severity = normalizeSeverity(item.Severity)
 	if strings.EqualFold(strings.TrimSpace(item.Condition), "expression") {
 		if err := ValidateExpression(item.Expression); err != nil {
@@ -994,7 +980,9 @@ func (s *Service) DeleteReportJob(ctx context.Context, tenantID string, id strin
 	return nil
 }
 
-func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name string, templateID string, format string, schedule string, recipients []string, filters map[string]interface{}) (ScheduledReport, error) {
+// ScheduleReport schedules a report that the scheduler generates into the
+// report jobs list. Reports are not emailed: reporting has no mail delivery.
+func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name string, templateID string, format string, schedule string, filters map[string]interface{}) (ScheduledReport, error) {
 	item := ScheduledReport{
 		ID:         newID("sched"),
 		TenantID:   tenantID,
@@ -1002,7 +990,6 @@ func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name stri
 		TemplateID: strings.ToLower(strings.TrimSpace(templateID)),
 		Format:     strings.ToLower(strings.TrimSpace(format)),
 		Schedule:   strings.ToLower(strings.TrimSpace(schedule)),
-		Recipients: uniqueStrings(recipients),
 		Filters:    filters,
 		Enabled:    true,
 		NextRunAt:  nextRunTime(time.Now().UTC(), schedule),

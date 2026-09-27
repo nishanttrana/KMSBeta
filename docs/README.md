@@ -174,5 +174,4 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 - [Posture Service](../services/posture/README.md)
 - [HSM Integration](../services/hsm-integration/README.md)
 - [EKM Agent](../services/ekm-agent/README.md)
-- [PKCS#11 Provider](../services/pkcs11-provider/samples/README.md)
 - [JCA Provider](../services/jca-provider/samples/README.md)

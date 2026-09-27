@@ -85,7 +85,6 @@ export const DashboardTabView = (props: any) => {
       case "compliance": return `${homeSummary?.complianceScore || 0}/100`;
       case "cluster": return clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
       case "approvals": case "governance": return fmtInt(homeSummary?.myPendingApprovals || 0);
-      case "hsm": return String(homeSystemState?.hsm_mode || "software");
       case "reporting": return "Live";
       default: return "—";
     }
@@ -314,11 +313,11 @@ export const DashboardTabView = (props: any) => {
             </div>
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_tls_profile || (globalFipsEnabled ? "1.2+ FIPS" : "Standard TLS"))}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_tls_profile || "not reported")}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>RNG</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_rng_mode || "CTR_DRBG")}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_rng_mode || "not reported")}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Violations</div>
@@ -336,10 +335,7 @@ export const DashboardTabView = (props: any) => {
             {statusPill(networkStatus === "ok" ? "OK" : "DEGRADED", statusTone(networkStatus), networkStatus !== "down")}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Mgmt</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(homeSystemState?.mgmt_ip || "n/a")}</div></div>
-            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Cluster</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(homeSystemState?.cluster_ip || "n/a")}</div></div>
             <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{"TLS 1.3 mTLS · ML-KEM"}</div></div>
-            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>HSM</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.hsm_mode || "software")}</div></div>
           </div>
         </Card>
       </div>

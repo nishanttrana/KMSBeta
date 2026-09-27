@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-27T03:40:16Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T08:51:21Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `32`
 - Tab/component mappings: `40`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `947` across `30` services
+- Backend HTTP routes discovered: `941` across `30` services
 - Backend routes on the `pkg/route` kernel: `86` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `612`
-- Frontend call sites with exact backend route match: `562`
+- Frontend API call sites discovered: `606`
+- Frontend call sites with exact backend route match: `556`
 - Frontend call sites needing review or dynamic/runtime confirmation: `50`
-- Clickable controls with static `onClick` handlers: `824`
-- Backend request flows with handler/service/package summaries: `947`
+- Clickable controls with static `onClick` handlers: `809`
+- Backend request flows with handler/service/package summaries: `941`
 
 ## How To Use This For Launch
 
@@ -140,7 +140,6 @@ flowchart LR
   tab_payment --> svc_payment
   tab_pkcs11["pkcs11"]
   UI --> tab_pkcs11
-  tab_pkcs11 --> svc_auth_edge
   tab_pkcs11 --> svc_ekm
   tab_pkcs11 --> svc_tfe
   tab_restapi["restapi"]
@@ -162,7 +161,7 @@ flowchart LR
   svc_compliance["compliance (42 routes)"]
   svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (64 routes)"]
-  svc_governance["governance (40 routes)"]
+  svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (173 routes)"]
@@ -185,7 +184,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 201 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 200 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Operations Metrics | ops_metrics | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | audit | 5 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
@@ -201,7 +200,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | AI Security Gateway | ai_gateway | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | ai, ai-gateway | 26 |
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 15 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 26 |
-| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 24 |
+| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 23 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | auth, autokey, certs, compliance, keyaccess, keycore, pqc, reporting, signing, workload | 179 |
 | Security & compliance | Threat & Exposure | threat_exposure | web/dashboard/src/components/v3/tabs/ThreatExposureTab.tsx | keycore, posture | 8 |
@@ -220,7 +219,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | payment | payment | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | payment | 27 |
-| UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/PKCS11Tab.tsx | auth-edge, ekm, tfe | 49 |
+| UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
 | UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 110 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
@@ -241,7 +240,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | dataprotect | 50 | 29 |
 | discovery | 26 | 20 |
 | ekm | 64 | 44 |
-| governance | 40 | 29 |
+| governance | 34 | 23 |
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
@@ -312,8 +311,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /compliance/regulatory | trackedFetch | web/dashboard/src/lib/regulatory.ts | 6 |
 | keycore | GET | /compliance/dashboard | trackedFetch | web/dashboard/src/lib/regulatory.ts | 12 |
 | keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
-| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 236 |
-| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 280 |
+| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 235 |
+| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 279 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
 Showing `50` of `50`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.

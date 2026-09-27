@@ -84,15 +84,9 @@ func (h *Handler) handleSSOLogin(w http.ResponseWriter, r *http.Request) {
 	var redirectURL string
 	switch provider {
 	case identityProviderSAML:
-		redirectURL, err = buildSAMLAuthnRequest(cfg)
+		redirectURL, err = buildSAMLAuthnRequest(cfg, tenantID)
 	case identityProviderOIDC:
-		var state string
-		state, err = generateSSOState(tenantID, provider)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "state_error", "failed to generate state", reqID, tenantID)
-			return
-		}
-		redirectURL, err = buildOIDCAuthURL(cfg, state)
+		redirectURL, err = buildOIDCAuthURL(r.Context(), cfg, tenantID)
 	default:
 		writeErr(w, http.StatusBadRequest, "bad_request", "SSO login not supported for provider: "+provider, reqID, tenantID)
 		return
@@ -117,72 +111,86 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 	var tenantID string
 	var err error
 
+	refuse := func(status int, code, reason, tenant string) {
+		writeErr(w, status, code, reason, reqID, tenant)
+		_ = h.publishAudit(r.Context(), "audit.auth.sso_login_refused", reqID, tenant, map[string]any{
+			"provider": provider,
+			"reason":   reason,
+			"result":   "refused",
+			"severity": "warning",
+			"ip":       clientIP(r),
+		})
+	}
+
 	switch provider {
 	case identityProviderSAML:
-		// SAML responses come as POST with SAMLResponse form field
+		// SAML responses come as POST with SAMLResponse and the RelayState
+		// this service issued with the AuthnRequest.
 		if parseErr := r.ParseForm(); parseErr != nil {
-			writeErr(w, http.StatusBadRequest, "bad_request", "failed to parse form", reqID, "")
+			refuse(http.StatusBadRequest, "bad_request", "failed to parse form", "")
 			return
 		}
 		samlResponse := r.FormValue("SAMLResponse")
-		relayState := r.FormValue("RelayState")
 		if samlResponse == "" {
-			writeErr(w, http.StatusBadRequest, "bad_request", "missing SAMLResponse", reqID, "")
+			refuse(http.StatusBadRequest, "bad_request", "missing SAMLResponse", "")
 			return
 		}
-		// RelayState carries tenant_id for SAML
-		tenantID = strings.TrimSpace(relayState)
-		if tenantID == "" {
-			writeErr(w, http.StatusBadRequest, "bad_request", "missing RelayState (tenant_id)", reqID, "")
+		state, stateErr := validateSSOState(r.FormValue("RelayState"))
+		if stateErr != nil || state.Provider != identityProviderSAML {
+			refuse(http.StatusUnauthorized, "state_error", "unknown, expired or reused RelayState: start the login from Vecta KMS", "")
 			return
 		}
+		tenantID = state.TenantID
 		cfg, cfgErr := h.store.GetIdentityProviderConfig(r.Context(), tenantID, provider)
-		if cfgErr != nil {
-			writeErr(w, http.StatusNotFound, "not_found", "SAML provider not configured", reqID, tenantID)
+		if cfgErr != nil || !cfg.Enabled {
+			refuse(http.StatusNotFound, "not_found", "SAML provider not configured", tenantID)
 			return
 		}
-		attrs, err = parseSAMLResponse(cfg, samlResponse)
-		if err != nil {
-			writeErr(w, http.StatusUnauthorized, "saml_error", err.Error(), reqID, tenantID)
+		assertion, parseErr := parseSAMLResponse(cfg, samlResponse, state.Bind, time.Now().UTC())
+		if parseErr != nil {
+			refuse(http.StatusUnauthorized, "saml_error", parseErr.Error(), tenantID)
 			return
 		}
+		if !consumeSAMLAssertion(assertion.ID, assertion.NotOnOrAfter) {
+			refuse(http.StatusUnauthorized, "saml_error", "saml assertion was already used", tenantID)
+			return
+		}
+		attrs = assertion.Attrs
 
 	case identityProviderOIDC:
 		code := r.URL.Query().Get("code")
-		state := r.URL.Query().Get("state")
-		if code == "" || state == "" {
-			// Check for error response from IdP
+		stateParam := r.URL.Query().Get("state")
+		if code == "" || stateParam == "" {
 			if errCode := r.URL.Query().Get("error"); errCode != "" {
-				errDesc := r.URL.Query().Get("error_description")
-				writeErr(w, http.StatusUnauthorized, "oidc_error", errCode+": "+errDesc, reqID, "")
+				refuse(http.StatusUnauthorized, "oidc_error", errCode+": "+r.URL.Query().Get("error_description"), "")
 				return
 			}
-			writeErr(w, http.StatusBadRequest, "bad_request", "missing code or state parameter", reqID, "")
+			refuse(http.StatusBadRequest, "bad_request", "missing code or state parameter", "")
 			return
 		}
-		var stateProvider string
-		tenantID, stateProvider, err = validateSSOState(state)
-		if err != nil {
-			writeErr(w, http.StatusUnauthorized, "state_error", err.Error(), reqID, "")
+		state, stateErr := validateSSOState(stateParam)
+		if stateErr != nil {
+			refuse(http.StatusUnauthorized, "state_error", stateErr.Error(), "")
 			return
 		}
-		if stateProvider != identityProviderOIDC {
-			writeErr(w, http.StatusBadRequest, "bad_request", "state mismatch", reqID, tenantID)
+		tenantID = state.TenantID
+		if state.Provider != identityProviderOIDC {
+			refuse(http.StatusBadRequest, "bad_request", "state mismatch", tenantID)
 			return
 		}
 		cfg, cfgErr := h.store.GetIdentityProviderConfig(r.Context(), tenantID, provider)
-		if cfgErr != nil {
-			writeErr(w, http.StatusNotFound, "not_found", "OIDC provider not configured", reqID, tenantID)
+		if cfgErr != nil || !cfg.Enabled {
+			refuse(http.StatusNotFound, "not_found", "OIDC provider not configured", tenantID)
 			return
 		}
-		attrs, err = exchangeOIDCCode(r.Context(), cfg, code)
+		attrs, err = exchangeOIDCCode(r.Context(), cfg, code, state.Bind)
 		if err != nil {
-			writeErr(w, http.StatusUnauthorized, "oidc_error", err.Error(), reqID, tenantID)
+			refuse(http.StatusUnauthorized, "oidc_error", err.Error(), tenantID)
 			return
 		}
 
 	default:
-		writeErr(w, http.StatusBadRequest, "bad_request", "SSO callback not supported for provider: "+provider, reqID, "")
+		refuse(http.StatusBadRequest, "bad_request", "SSO callback not supported for provider: "+provider, "")
 		return
 	}
 

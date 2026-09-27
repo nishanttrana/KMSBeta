@@ -145,7 +145,6 @@ const NAV = [
   { id: "config-backup", label: "Config: Backup" },
   { id: "config-profiles", label: "Config: Docker Profiles" },
   { id: "config-fastinstall", label: "Config: Fast Install" },
-  { id: "api-fde", label: "API: Disk Encryption" },
   { id: "guide-crypto-inventory", label: "Guide: Crypto Inventory" },
   { id: "guide-vault-hierarchy", label: "Guide: Vault Hierarchy" },
   { id: "guide-hsm-certs", label: "Guide: HSM Certificates" },
@@ -1615,45 +1614,29 @@ const SectionApiEkmBitlocker = () => (
 
 const SectionApiEkmSdk = () => (
   <div>
-    <div style={S.h1}>API: PKCS#11 &amp; JCA Providers</div>
-    <P>SDK packages for integrating applications with Vecta KMS key operations</P>
-
-    <H2>PKCS#11 Provider</H2>
-    <P>A shared library (libvecta-pkcs11.so / .dll / .dylib) that implements the OASIS PKCS#11 v2.40 interface. Applications using PKCS#11 (OpenSSL, OpenSC, database EKM providers) can use Vecta KMS keys without code changes.</P>
-
-    <H3>Supported Mechanisms</H3>
-    <P>AES-GCM encrypt/decrypt (local cache or remote), RSA sign/verify (always remote), ECDSA sign/verify (always remote), key enumeration via C_FindObjects.</P>
-
-    <H3>Installation</H3>
-    <P>Linux: Copy libvecta-pkcs11.so to /opt/vecta/lib/ and set VECTA_* environment variables.</P>
-    <P>Windows: Copy vecta-pkcs11.dll to C:\Program Files\Vecta\ and configure in registry.</P>
-    <P>macOS: Copy libvecta-pkcs11.dylib to /usr/local/lib/vecta/.</P>
-
-    <H2>JCA Provider</H2>
-    <P>A Java Cryptography Architecture provider (vecta-jca-provider.jar) for Java 11+. No external dependencies — uses only java.net.http.</P>
+    <div style={S.h1}>API: Java SDK (JCA provider)</div>
+    <P>Vecta ships one client SDK: the Java JCA provider, as source (services/jca-provider). There is no PKCS#11 module; reach keys through the REST API, the KMIP server (port 5696, mTLS) or this provider.</P>
 
     <H3>Registered Services</H3>
-    <P>Cipher: AES/GCM/NoPadding — local cache if key is exportable, else remote KMS</P>
-    <P>Signature: SHA256withRSA, SHA256withECDSA — always remote (asymmetric)</P>
-    <P>KeyStore: VectaKMS — enumerate and load keys from KMS</P>
-    <P>SecureRandom: VectaQRNG — quantum random bytes from QRNG endpoint, fallback to local</P>
+    <P>Cipher: AES/GCM/NoPadding — local cache if the key is exportable, else in the KMS</P>
+    <P>Signature: SHA256withRSA, SHA256withECDSA — in the KMS</P>
+    <P>KeyStore: VectaKMS — enumerate and load keys from the KMS</P>
 
     <H3>Setup</H3>
-    <P>Programmatic: Security.addProvider(new VectaKMSProvider())</P>
-    <P>Or add to java.security: security.provider.N=com.vecta.kms.VectaKMSProvider</P>
+    <P>Build with mvn package, then Security.addProvider(new com.vecta.kms.VectaKMSProvider()) or add it to java.security.</P>
 
     <Collapse title="SDK Endpoints" defaultOpen>
       <EndpointTable rows={[
-        ["GET", "/ekm/sdk/overview", "List available SDK packages with versions and platforms"],
-        ["GET", "/ekm/sdk/download/{package}?platform={platform}", "Download SDK package binary"],
+        ["GET", "/ekm/sdk/overview?tenant_id=", "The Java SDK and the services it registers"],
+        ["GET", "/ekm/sdk/download?tenant_id=&provider=jca&os=all", "Download the Java SDK source zip"],
       ]} />
     </Collapse>
 
     <H2>Authentication</H2>
-    <P>Both providers support the same multi-auth chain: mTLS (transport) → JWT (auto-refresh) → API Key (X-API-Key header) → Bearer token. Configure via environment variables: VECTA_BASE_URL, VECTA_TENANT_ID, VECTA_AUTH_TOKEN, VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA, VECTA_API_KEY, VECTA_JWT_ENDPOINT.</P>
+    <P>Configure via environment variables: VECTA_BASE_URL, VECTA_TENANT_ID, VECTA_AUTH_TOKEN, VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA, VECTA_API_KEY, VECTA_JWT_ENDPOINT.</P>
 
     <H2>Key Caching</H2>
-    <P>Set VECTA_KEY_CACHE_TTL (seconds) to enable local caching. Exportable keys are cached in process memory for fast AES-GCM operations. Non-exportable keys always proxy to KMS. Cache TTL of 0 disables caching.</P>
+    <P>Set VECTA_KEY_CACHE_TTL (seconds) to cache exportable keys in process memory; non-exportable keys always go to the KMS. 0 disables caching.</P>
   </div>
 );
 
@@ -3128,96 +3111,6 @@ spec:
   </div>
 );
 
-const SectionApiFde = () => (
-  <div>
-    <div style={S.h1}>API: Disk Encryption (FDE)</div>
-    <P>Service: kms-governance | Prefix: /governance/system/fde</P>
-    <P>Full-disk encryption management endpoints for monitoring LUKS volume status, running integrity checks, rotating volume keys, and testing Shamir recovery shares. All endpoints require system admin privileges.</P>
-
-    <Collapse title="FDE Endpoints" defaultOpen>
-      <EndpointTable rows={[
-        ["GET", "/governance/system/fde/status", "Get FDE status (algorithm, LUKS version, key slots, storage usage)"],
-        ["POST", "/governance/system/fde/integrity-check", "Run LUKS integrity verification on encrypted volume"],
-        ["POST", "/governance/system/fde/rotate-key", "Initiate online LUKS volume key rotation"],
-        ["POST", "/governance/system/fde/test-recovery", "Validate Shamir recovery shares without unlocking"],
-        ["GET", "/governance/system/fde/recovery-shares", "Get recovery share distribution and verification status"],
-      ]} />
-    </Collapse>
-
-    <Collapse title="FDE Status Response">
-      <Code>{`GET /svc/governance/governance/system/fde/status?tenant_id=root
-
-{
-  "enabled": true,
-  "algorithm": "aes-xts-plain64",
-  "luks_version": "2",
-  "key_derivation": "argon2id",
-  "device": "/dev/sda2",
-  "unlock_method": "passphrase",
-  "recovery_shares": 5,
-  "recovery_threshold": 3,
-  "key_slots": [
-    { "slot": 0, "status": "active", "type": "passphrase" },
-    { "slot": 1, "status": "active", "type": "recovery" }
-  ],
-  "volume_size_gb": 500,
-  "used_gb": 120,
-  "integrity_last_check": "2026-03-04T08:00:00Z",
-  "integrity_status": "passed"
-}`}</Code>
-    </Collapse>
-
-    <Collapse title="Integrity Check">
-      <Code>{`POST /svc/governance/governance/system/fde/integrity-check
-{ "tenant_id": "root" }
-
-Response:
-{
-  "passed": true,
-  "mode": "dm-integrity",
-  "checked_at": "2026-03-05T10:30:00Z",
-  "errors": []
-}`}</Code>
-      <P>Runs a non-destructive integrity verification using dm-integrity. Safe to run on a live system.</P>
-    </Collapse>
-
-    <Collapse title="Volume Key Rotation">
-      <Code>{`POST /svc/governance/governance/system/fde/rotate-key
-{
-  "tenant_id": "root",
-  "confirm": true,
-  "reason": "scheduled-rotation"
-}
-
-Response:
-{
-  "status": "rotating",
-  "job_id": "fde-rot-001",
-  "started_at": "2026-03-05T10:35:00Z",
-  "estimated_duration_minutes": 15
-}`}</Code>
-      <P>Online volume key rotation using LUKS2 reencryption. The volume remains accessible during rotation. Estimated duration depends on volume size.</P>
-    </Collapse>
-
-    <Collapse title="Recovery Share Testing">
-      <Code>{`POST /svc/governance/governance/system/fde/test-recovery
-{
-  "tenant_id": "root",
-  "shares": ["share-hex-1...", "share-hex-2...", "share-hex-3..."]
-}
-
-Response:
-{
-  "valid": true,
-  "shares_provided": 3,
-  "threshold_required": 3,
-  "tested_at": "2026-03-05T10:40:00Z"
-}`}</Code>
-      <P>Validates that the provided Shamir shares can reconstruct the recovery key. Does not actually unlock or modify the volume. Use this to verify your disaster recovery procedure.</P>
-    </Collapse>
-  </div>
-);
-
 /* ───────── Crypto Inventory Guide ───────── */
 const SectionGuideCryptoInventory = () => (
   <div>
@@ -3560,7 +3453,6 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "config-backup": SectionConfigBackup,
   "config-profiles": SectionConfigProfiles,
   "config-fastinstall": SectionConfigFastInstall,
-  "api-fde": SectionApiFde,
   "guide-crypto-inventory": SectionGuideCryptoInventory,
   "guide-vault-hierarchy": SectionGuideVaultHierarchy,
   "guide-hsm-certs": SectionGuideHsmCerts,

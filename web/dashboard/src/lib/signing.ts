@@ -5,7 +5,6 @@ export type SigningSettings = {
   tenant_id: string;
   enabled: boolean;
   default_profile_id?: string;
-  require_transparency: boolean;
   allowed_identity_modes: string[];
   updated_by?: string;
   updated_at?: string;
@@ -23,7 +22,6 @@ export type SigningProfile = {
   allowed_oidc_issuers: string[];
   allowed_subject_patterns: string[];
   allowed_repositories: string[];
-  transparency_required: boolean;
   enabled: boolean;
   description?: string;
   updated_by?: string;
@@ -77,9 +75,7 @@ export type SignArtifactInput = {
   commit_sha?: string;
   oci_reference?: string;
   identity_mode?: string;
-  oidc_issuer?: string;
-  oidc_subject?: string;
-  workload_identity?: string;
+  oidc_token?: string;
   metadata?: Record<string, unknown>;
   requested_by?: string;
 };

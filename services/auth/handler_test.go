@@ -47,7 +47,7 @@ func newTestHandler(t *testing.T) (*Handler, *AuthLogic, *SQLStore, *mockPublish
 }
 
 func TestHandlerRegisterActivateFlow(t *testing.T) {
-	h, logic, _, pub := newTestHandler(t)
+	h, logic, store, pub := newTestHandler(t)
 
 	regBody := map[string]any{
 		"tenant_id":      "t1",
@@ -74,17 +74,53 @@ func TestHandlerRegisterActivateFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	actBody := []byte(`{"tenant_id":"t1","governance_enabled":true}`)
-	actReq := httptest.NewRequest(http.MethodPost, "/auth/register/"+regID+"/activate", bytes.NewReader(actBody))
-	actReq.Header.Set("Authorization", "Bearer "+token)
-	actRR := httptest.NewRecorder()
-	h.ServeHTTP(actRR, actReq)
-	if actRR.Code != http.StatusOK {
-		t.Fatalf("activate status=%d body=%s", actRR.Code, actRR.Body.String())
+	scoped, _, err := logic.IssueJWT("t1", "operator", []string{"auth.client.activate"}, "op-1", false)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(pub.subjects) < 2 {
-		t.Fatalf("expected >=2 audit events, got %v", pub.subjects)
+	activateAs := func(tok, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/auth/register/"+regID+"/activate", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+tok)
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		return rr
 	}
+	activate := func(body string) *httptest.ResponseRecorder { return activateAs(token, body) }
+	// Governance-gated activation without an approved request is refused and
+	// audited; nothing stands in for the approval.
+	if rr := activate(`{"tenant_id":"t1","governance_enabled":true}`); rr.Code != http.StatusForbidden {
+		t.Fatalf("activation without approval: status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if rr := activate(`{"tenant_id":"t1","governance_enabled":true,"approval_id":"apr-missing"}`); rr.Code != http.StatusForbidden {
+		t.Fatalf("activation with unknown approval: status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if !containsSubject(pub.subjects, "audit.auth.client_activation_refused") {
+		t.Fatalf("refusal not audited: %v", pub.subjects)
+	}
+	// Another tenant cannot be targeted by body tenant_id.
+	if rr := activateAs(scoped, `{"tenant_id":"t-other"}`); rr.Code != http.StatusForbidden {
+		t.Fatalf("cross-tenant activation: status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-act','t1','client.activate','client',$1,'approved')`, regID); err != nil {
+		t.Fatal(err)
+	}
+	if rr := activate(`{"tenant_id":"t1","governance_enabled":true,"approval_id":"apr-act"}`); rr.Code != http.StatusOK {
+		t.Fatalf("approved activation: status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if !containsSubject(pub.subjects, "audit.auth.client_activated") {
+		t.Fatalf("activation not audited: %v", pub.subjects)
+	}
+}
+
+func containsSubject(subjects []string, want string) bool {
+	for _, s := range subjects {
+		if s == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestHandlerRegisterRejectsUnknownTenant(t *testing.T) {

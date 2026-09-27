@@ -7,7 +7,7 @@ export type HYOKEndpoint = {
   tenant_id: string;
   protocol: HYOKProtocol;
   enabled: boolean;
-  auth_mode: "mtls_or_jwt" | "mtls" | "jwt";
+  auth_mode: "jwt" | "mtls";
   policy_id: string;
   governance_required: boolean;
   metadata_json: string;
@@ -66,7 +66,7 @@ export type HYOKCryptoInput = {
   reference_id?: string;
   requester_id?: string;
   requester_email?: string;
-  approver_emails?: string[];
+  approval_request_id?: string;
 };
 
 type EndpointListResponse = { items: HYOKEndpoint[] };
@@ -118,7 +118,7 @@ export async function configureHYOKEndpoint(
   protocol: string,
   input: {
     enabled: boolean;
-    auth_mode: "mtls_or_jwt" | "mtls" | "jwt";
+    auth_mode: "jwt";
     policy_id?: string;
     governance_required?: boolean;
     metadata_json?: string;
@@ -129,7 +129,7 @@ export async function configureHYOKEndpoint(
     body: JSON.stringify({
       tenant_id: session.tenantId,
       enabled: Boolean(input.enabled),
-      auth_mode: input.auth_mode || "mtls_or_jwt",
+      auth_mode: input.auth_mode || "jwt",
       policy_id: String(input.policy_id || "").trim(),
       governance_required: Boolean(input.governance_required),
       metadata_json: String(input.metadata_json || "{}")
@@ -191,7 +191,7 @@ export async function hyokCrypto(
         reference_id: String(input?.reference_id || "").trim(),
         requester_id: String(input?.requester_id || "").trim(),
         requester_email: String(input?.requester_email || "").trim(),
-        approver_emails: Array.isArray(input?.approver_emails) ? input?.approver_emails : []
+        ...(input?.approval_request_id ? { approval_request_id: String(input.approval_request_id).trim() } : {})
       })
     }
   );

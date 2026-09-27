@@ -1,15 +1,55 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
+	"time"
+
+	"vecta-kms/pkg/oidc"
 )
 
 var googleCSEProvider = NewGoogleCSEProvider(nil)
+
+// Google signs CSE authorization tokens with per-application service
+// accounts (gsuitecse-tokenissuer-<app>@system.gserviceaccount.com) whose
+// keys are published at the service-account JWK endpoint. The token must
+// verify against them, with audience "cse-authorization".
+var (
+	kaclsVerifier = oidc.NewVerifier()
+	kaclsIssuerRE = regexp.MustCompile(`^gsuitecse-tokenissuer-[a-z0-9-]+@system\.gserviceaccount\.com$`)
+	kaclsJWKSURL  = func(issuer string) string {
+		return "https://www.googleapis.com/service_accounts/v1/jwk/" + url.PathEscape(issuer)
+	}
+)
+
+// verifyKACLSAuthorization verifies a Google CSE authorization token and
+// returns its claims. Nothing is read from an unverified token.
+func verifyKACLSAuthorization(ctx context.Context, token string) (GoogleCSEClaims, error) {
+	issuer, err := oidc.UnverifiedIssuer(token)
+	if err != nil {
+		return GoogleCSEClaims{}, err
+	}
+	if !kaclsIssuerRE.MatchString(issuer) {
+		return GoogleCSEClaims{}, fmt.Errorf("authorization token issuer %q is not a Google CSE token issuer", issuer)
+	}
+	claims, err := kaclsVerifier.VerifyJWT(ctx, token, kaclsJWKSURL(issuer), issuer, "cse-authorization", time.Now())
+	if err != nil {
+		return GoogleCSEClaims{}, err
+	}
+	str := func(k string) string { v, _ := claims[k].(string); return strings.TrimSpace(v) }
+	out := GoogleCSEClaims{Email: str("email"), ResourceName: str("resource_name"), KeyURI: str("kacls_url"), Issuer: issuer}
+	if out.Email == "" {
+		return GoogleCSEClaims{}, fmt.Errorf("authorization token has no email")
+	}
+	return out, nil
+}
 
 const kaclsVersion = "1.0.0"
 
@@ -455,19 +495,11 @@ func (h *Handler) resolveKACLSContext(r *http.Request, authenticationToken, auth
 		tenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
 	}
 
-	// Parse the authorization JWT to extract key URI and resource info
-	// The authorization JWT contains the kacls_url claim that identifies which key to use
-	authzParts := strings.Split(authorizationToken, ".")
-	if len(authzParts) != 3 {
-		return "", GoogleCSEKey{}, nil, fmt.Errorf("invalid authorization JWT format")
-	}
-	authzPayload, err := base64.RawURLEncoding.DecodeString(authzParts[1])
+	// The authorization token is Google's statement that this user may use
+	// this key for this resource: verify it before anything else.
+	authzClaims, err := verifyKACLSAuthorization(r.Context(), authorizationToken)
 	if err != nil {
-		return "", GoogleCSEKey{}, nil, fmt.Errorf("decode authorization JWT payload: %w", err)
-	}
-	var authzClaims GoogleCSEClaims
-	if err := json.Unmarshal(authzPayload, &authzClaims); err != nil {
-		return "", GoogleCSEKey{}, nil, fmt.Errorf("parse authorization JWT claims: %w", err)
+		return "", GoogleCSEKey{}, nil, fmt.Errorf("authorization token rejected: %w", err)
 	}
 
 	// Find the CSE config and key by scanning all configs for this tenant
@@ -483,34 +515,23 @@ func (h *Handler) resolveKACLSContext(r *http.Request, authenticationToken, auth
 		if validateErr != nil {
 			continue
 		}
-
-		// Look up the key by the kacls_url from the authorization JWT
-		keyURI := authzClaims.KeyURI
-		if keyURI == "" {
-			// Fallback: try resource_name
-			keyURI = authzClaims.ResourceName
+		// Both tokens must be about the same user (CSE API: authentication
+		// and authorization email must match).
+		if !strings.EqualFold(authnClaims.Email, authzClaims.Email) {
+			continue
 		}
-
-		if keyURI != "" {
-			cseKey, keyErr := h.svc.store.GetGoogleCSEKeyByURI(r.Context(), cfg.TenantID, keyURI)
-			if keyErr == nil {
-				authnClaims.ResourceName = authzClaims.ResourceName
-				authnClaims.KeyURI = keyURI
-				return cfg.TenantID, cseKey, authnClaims, nil
-			}
+		// The key is the one the authorization token names; there is no
+		// fallback to some other key.
+		if authzClaims.KeyURI == "" {
+			continue
 		}
-
-		// Fallback: try to find the key by config and return first active key
-		keys, keysErr := h.svc.store.ListGoogleCSEKeys(r.Context(), cfg.TenantID, cfg.ID)
-		if keysErr == nil && len(keys) > 0 {
-			for _, k := range keys {
-				if k.Status == "active" {
-					authnClaims.ResourceName = authzClaims.ResourceName
-					authnClaims.KeyURI = authzClaims.KeyURI
-					return cfg.TenantID, k, authnClaims, nil
-				}
-			}
+		cseKey, keyErr := h.svc.store.GetGoogleCSEKeyByURI(r.Context(), cfg.TenantID, authzClaims.KeyURI)
+		if keyErr != nil || cseKey.Status != "active" {
+			continue
 		}
+		authnClaims.ResourceName = authzClaims.ResourceName
+		authnClaims.KeyURI = authzClaims.KeyURI
+		return cfg.TenantID, cseKey, authnClaims, nil
 	}
 
 	return "", GoogleCSEKey{}, nil, fmt.Errorf("no matching CSE config/key found for the provided tokens")
@@ -537,21 +558,13 @@ func (h *Handler) resolveKACLSContextPrivileged(r *http.Request, authenticationT
 			continue
 		}
 
-		if keyID != "" {
-			cseKey, keyErr := h.svc.store.GetGoogleCSEKey(r.Context(), cfg.TenantID, keyID)
-			if keyErr == nil {
-				return cfg.TenantID, cseKey, authnClaims, nil
-			}
+		// Privileged unwrap names its key explicitly; no fallback key.
+		if keyID == "" {
+			continue
 		}
-
-		// Find first active key for this config
-		keys, keysErr := h.svc.store.ListGoogleCSEKeys(r.Context(), cfg.TenantID, cfg.ID)
-		if keysErr == nil && len(keys) > 0 {
-			for _, k := range keys {
-				if k.Status == "active" {
-					return cfg.TenantID, k, authnClaims, nil
-				}
-			}
+		cseKey, keyErr := h.svc.store.GetGoogleCSEKey(r.Context(), cfg.TenantID, keyID)
+		if keyErr == nil && cseKey.Status == "active" {
+			return cfg.TenantID, cseKey, authnClaims, nil
 		}
 	}
 

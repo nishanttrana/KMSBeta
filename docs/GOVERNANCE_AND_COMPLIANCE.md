@@ -1696,7 +1696,6 @@ curl -X POST "https://localhost/svc/reporting/reports/schedules?tenant_id=root" 
     "day_of_month": 1,
     "time": "07:00",
     "timezone": "UTC",
-    "recipients": ["ciso@company.com", "compliance@company.com"],
     "filters": {}
   }'
 
@@ -1710,8 +1709,7 @@ curl -X POST "https://localhost/svc/reporting/reports/schedules?tenant_id=root" 
     "frequency": "weekly",
     "day_of_week": "monday",
     "time": "06:00",
-    "timezone": "UTC",
-    "recipients": ["key-custodian@company.com"]
+    "timezone": "UTC"
   }'
 ```
 

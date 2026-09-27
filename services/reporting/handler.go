@@ -642,7 +642,6 @@ func (h *Handler) handleCreateScheduledReport(w http.ResponseWriter, r *http.Req
 		TemplateID string                 `json:"template_id"`
 		Format     string                 `json:"format"`
 		Schedule   string                 `json:"schedule"`
-		Recipients []string               `json:"recipients"`
 		Filters    map[string]interface{} `json:"filters"`
 	}
 	if err := decodeJSON(r, &body); err != nil {
@@ -654,7 +653,7 @@ func (h *Handler) handleCreateScheduledReport(w http.ResponseWriter, r *http.Req
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
 		return
 	}
-	item, err := h.svc.ScheduleReport(r.Context(), body.TenantID, body.Name, body.TemplateID, body.Format, body.Schedule, body.Recipients, body.Filters)
+	item, err := h.svc.ScheduleReport(r.Context(), body.TenantID, body.Name, body.TemplateID, body.Format, body.Schedule, body.Filters)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
 		return

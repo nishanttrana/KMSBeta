@@ -79,6 +79,9 @@ func main() {
 		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "https://keycore:8010"), 5*time.Second),
 		publisher,
 	)
+	// The audience a signer's OIDC token must carry (a CI job requests its
+	// token for this audience).
+	svc.oidcAudience = envOr("SIGNING_OIDC_AUDIENCE", svc.oidcAudience)
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8280")

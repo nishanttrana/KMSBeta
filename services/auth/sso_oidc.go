@@ -13,28 +13,24 @@ import (
 	"sync"
 	"time"
 
+	"vecta-kms/pkg/oidc"
 	"vecta-kms/pkg/ssrfguard"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
-// OIDCDiscovery holds discovered OIDC endpoints from .well-known/openid-configuration.
-type OIDCDiscovery struct {
-	AuthorizationEndpoint string `json:"authorization_endpoint"`
-	TokenEndpoint         string `json:"token_endpoint"`
-	UserinfoEndpoint      string `json:"userinfo_endpoint"`
-	JwksURI               string `json:"jwks_uri"`
-}
-
-// ssoStateEntry stores SSO state parameters with expiry.
+// ssoStateEntry stores SSO state parameters with expiry. Bind is the value
+// the IdP must echo back: the SAML AuthnRequest ID or the OIDC nonce.
 type ssoStateEntry struct {
 	TenantID  string
 	Provider  string
+	Bind      string
 	CreatedAt time.Time
 }
 
 var (
 	ssoStateStore sync.Map
+	oidcVerifier  = oidc.NewVerifier()
 )
 
 func init() {
@@ -54,8 +50,9 @@ func init() {
 	}()
 }
 
-// generateSSOState creates a random state value and stores the tenant/provider mapping.
-func generateSSOState(tenantID, provider string) (string, error) {
+// generateSSOState creates a random one-time state value bound to the
+// tenant, provider and the value the IdP must echo (request ID or nonce).
+func generateSSOState(tenantID, provider, bind string) (string, error) {
 	buf := make([]byte, 32)
 	if _, err := pkgcrypto.Reader.Read(buf); err != nil {
 		return "", err
@@ -64,74 +61,39 @@ func generateSSOState(tenantID, provider string) (string, error) {
 	ssoStateStore.Store(state, &ssoStateEntry{
 		TenantID:  tenantID,
 		Provider:  provider,
+		Bind:      bind,
 		CreatedAt: time.Now(),
 	})
 	return state, nil
 }
 
-// validateSSOState checks and consumes a state parameter, returning the associated tenant/provider.
-func validateSSOState(state string) (tenantID string, provider string, err error) {
+// validateSSOState checks and consumes a state parameter.
+func validateSSOState(state string) (ssoStateEntry, error) {
 	state = strings.TrimSpace(state)
 	if state == "" {
-		return "", "", errors.New("missing state parameter")
+		return ssoStateEntry{}, errors.New("missing state parameter")
 	}
 	raw, ok := ssoStateStore.LoadAndDelete(state)
 	if !ok {
-		return "", "", errors.New("invalid or expired state parameter")
+		return ssoStateEntry{}, errors.New("invalid or expired state parameter")
 	}
 	entry, ok2 := raw.(*ssoStateEntry)
 	if !ok2 {
-		return "", "", errors.New("corrupted state entry")
+		return ssoStateEntry{}, errors.New("corrupted state entry")
 	}
 	if time.Since(entry.CreatedAt) > 10*time.Minute {
-		return "", "", errors.New("state parameter has expired")
+		return ssoStateEntry{}, errors.New("state parameter has expired")
 	}
-	return entry.TenantID, entry.Provider, nil
+	return *entry, nil
 }
 
-// discoverOIDCEndpoints fetches the OIDC discovery document.
-func discoverOIDCEndpoints(ctx context.Context, issuerURL string) (OIDCDiscovery, error) {
-	issuerURL = strings.TrimRight(strings.TrimSpace(issuerURL), "/")
-	if issuerURL == "" {
-		return OIDCDiscovery{}, errors.New("oidc issuer_url is required")
-	}
-	wellKnown := issuerURL + "/.well-known/openid-configuration"
-	// SSRF protection: ensure OIDC issuer URL does not point to internal services
-	if err := ssrfguard.ValidateWebhookURL(wellKnown); err != nil {
-		return OIDCDiscovery{}, fmt.Errorf("oidc issuer URL blocked: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, wellKnown, nil)
-	if err != nil {
-		return OIDCDiscovery{}, err
-	}
-	req.Header.Set("Accept", "application/json")
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return OIDCDiscovery{}, fmt.Errorf("oidc discovery request failed: %w", err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return OIDCDiscovery{}, fmt.Errorf("oidc discovery failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-	var discovery OIDCDiscovery
-	if err := json.Unmarshal(body, &discovery); err != nil {
-		return OIDCDiscovery{}, fmt.Errorf("oidc discovery parse failed: %w", err)
-	}
-	if discovery.AuthorizationEndpoint == "" || discovery.TokenEndpoint == "" {
-		return OIDCDiscovery{}, errors.New("oidc discovery document missing required endpoints")
-	}
-	return discovery, nil
-}
-
-// buildOIDCAuthURL constructs the authorization redirect URL.
-func buildOIDCAuthURL(cfg IdentityProviderConfig, state string) (string, error) {
+// buildOIDCAuthURL constructs the authorization-code redirect URL with a
+// one-time state and nonce.
+func buildOIDCAuthURL(ctx context.Context, cfg IdentityProviderConfig, tenantID string) (string, error) {
 	issuerURL := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "issuer_url", ""))
 	clientID := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "client_id", ""))
 	redirectURI := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "redirect_uri", ""))
 	scopes := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "scopes", "openid profile email"))
-	responseType := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "response_type", "code"))
 
 	if issuerURL == "" {
 		return "", errors.New("oidc issuer_url is required")
@@ -142,25 +104,41 @@ func buildOIDCAuthURL(cfg IdentityProviderConfig, state string) (string, error) 
 	if redirectURI == "" {
 		return "", errors.New("oidc redirect_uri is required")
 	}
-
-	discovery, err := discoverOIDCEndpoints(context.Background(), issuerURL)
+	discovery, err := oidcVerifier.Discover(ctx, issuerURL)
 	if err != nil {
 		return "", err
 	}
-
+	if discovery.AuthorizationEndpoint == "" || discovery.TokenEndpoint == "" {
+		return "", errors.New("oidc discovery document missing required endpoints")
+	}
+	nonceRaw := make([]byte, 24)
+	if _, err := pkgcrypto.Reader.Read(nonceRaw); err != nil {
+		return "", err
+	}
+	nonce := base64.RawURLEncoding.EncodeToString(nonceRaw)
+	state, err := generateSSOState(tenantID, identityProviderOIDC, nonce)
+	if err != nil {
+		return "", err
+	}
 	params := url.Values{
-		"response_type": {responseType},
+		"response_type": {"code"},
 		"client_id":     {clientID},
 		"redirect_uri":  {redirectURI},
 		"scope":         {scopes},
 		"state":         {state},
+		"nonce":         {nonce},
 	}
-
-	return discovery.AuthorizationEndpoint + "?" + params.Encode(), nil
+	sep := "?"
+	if strings.Contains(discovery.AuthorizationEndpoint, "?") {
+		sep = "&"
+	}
+	return discovery.AuthorizationEndpoint + sep + params.Encode(), nil
 }
 
-// exchangeOIDCCode exchanges an authorization code for tokens and extracts user attributes.
-func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code string) (SSOUserAttributes, error) {
+// exchangeOIDCCode exchanges an authorization code for tokens and returns the
+// user from the ID token, after verifying its signature against the issuer's
+// JWKS and its iss, aud, exp and nonce.
+func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code string, nonce string) (SSOUserAttributes, error) {
 	issuerURL := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "issuer_url", ""))
 	clientID := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "client_id", ""))
 	clientSecret := strings.TrimSpace(identityProviderConfigMapString(cfg.Secrets, "client_secret", ""))
@@ -170,12 +148,11 @@ func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code stri
 	attrEmail := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "attr_email", "email"))
 	attrDisplayName := strings.TrimSpace(identityProviderConfigMapString(cfg.Config, "attr_display_name", "name"))
 
-	discovery, err := discoverOIDCEndpoints(ctx, issuerURL)
+	discovery, err := oidcVerifier.Discover(ctx, issuerURL)
 	if err != nil {
 		return SSOUserAttributes{}, err
 	}
 
-	// Exchange code for tokens
 	values := url.Values{
 		"grant_type":   {"authorization_code"},
 		"code":         {code},
@@ -185,8 +162,6 @@ func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code stri
 	if clientSecret != "" {
 		values.Set("client_secret", clientSecret)
 	}
-
-	// SSRF protection: validate token endpoint before making request
 	if err := ssrfguard.ValidateWebhookURL(discovery.TokenEndpoint); err != nil {
 		return SSOUserAttributes{}, fmt.Errorf("oidc token endpoint blocked: %w", err)
 	}
@@ -203,41 +178,27 @@ func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code stri
 		return SSOUserAttributes{}, fmt.Errorf("oidc token exchange failed: %w", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return SSOUserAttributes{}, fmt.Errorf("oidc token exchange failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return SSOUserAttributes{}, fmt.Errorf("oidc token exchange failed (%d)", resp.StatusCode)
 	}
-
 	var tokenResp struct {
-		IDToken     string `json:"id_token"`
-		AccessToken string `json:"access_token"`
+		IDToken string `json:"id_token"`
 	}
 	if err := json.Unmarshal(body, &tokenResp); err != nil {
 		return SSOUserAttributes{}, fmt.Errorf("oidc token response parse failed: %w", err)
 	}
-
-	// Parse ID token claims (JWT without full signature validation for now)
-	claims, err := parseJWTClaims(tokenResp.IDToken)
+	claims, err := oidcVerifier.VerifyIDToken(ctx, tokenResp.IDToken, discovery, clientID, nonce, time.Now())
 	if err != nil {
-		// Fallback: try userinfo endpoint
-		if discovery.UserinfoEndpoint != "" && tokenResp.AccessToken != "" {
-			claims, err = fetchOIDCUserInfo(ctx, discovery.UserinfoEndpoint, tokenResp.AccessToken)
-			if err != nil {
-				return SSOUserAttributes{}, fmt.Errorf("oidc failed to extract user info: %w", err)
-			}
-		} else {
-			return SSOUserAttributes{}, fmt.Errorf("oidc id_token parse failed: %w", err)
-		}
+		return SSOUserAttributes{}, err
 	}
 
 	attrs := SSOUserAttributes{
-		ExternalID: anyString(claims["sub"]),
-		Username:   anyString(claims[attrUsername]),
-		Email:      anyString(claims[attrEmail]),
-		Provider:   identityProviderOIDC,
-	}
-	if v := anyString(claims[attrDisplayName]); v != "" {
-		attrs.DisplayName = v
+		ExternalID:  anyString(claims["sub"]),
+		Username:    anyString(claims[attrUsername]),
+		Email:       anyString(claims[attrEmail]),
+		DisplayName: anyString(claims[attrDisplayName]),
+		Provider:    identityProviderOIDC,
 	}
 	if attrs.Username == "" && attrs.Email != "" {
 		attrs.Username = sanitizeImportedUsername(strings.SplitN(attrs.Email, "@", 2)[0])
@@ -245,65 +206,5 @@ func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code stri
 	if attrs.Username == "" {
 		return SSOUserAttributes{}, errors.New("oidc token did not contain a usable username")
 	}
-
 	return attrs, nil
-}
-
-// parseJWTClaims extracts claims from a JWT without full signature validation.
-func parseJWTClaims(token string) (map[string]any, error) {
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return nil, errors.New("empty token")
-	}
-	parts := strings.SplitN(token, ".", 4)
-	if len(parts) < 3 {
-		return nil, errors.New("invalid JWT format")
-	}
-	payload := parts[1]
-	// Pad base64
-	if m := len(payload) % 4; m != 0 {
-		payload += strings.Repeat("=", 4-m)
-	}
-	decoded, err := base64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		// Try URL-safe encoding
-		decoded, err = base64.URLEncoding.DecodeString(payload)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var claims map[string]any
-	if err := json.Unmarshal(decoded, &claims); err != nil {
-		return nil, err
-	}
-	return claims, nil
-}
-
-// fetchOIDCUserInfo fetches user info from the OIDC userinfo endpoint.
-func fetchOIDCUserInfo(ctx context.Context, endpoint string, accessToken string) (map[string]any, error) {
-	// SSRF protection: validate userinfo endpoint
-	if err := ssrfguard.ValidateWebhookURL(endpoint); err != nil {
-		return nil, fmt.Errorf("oidc userinfo endpoint blocked: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Accept", "application/json")
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("userinfo request failed (%d)", resp.StatusCode)
-	}
-	var claims map[string]any
-	if err := json.Unmarshal(body, &claims); err != nil {
-		return nil, err
-	}
-	return claims, nil
 }

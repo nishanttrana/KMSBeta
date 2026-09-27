@@ -123,10 +123,9 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 		cfg.Config = map[string]any{
 			"sp_entity_id":      "",
 			"acs_url":           "",
-			"idp_metadata_url":  "",
+			"idp_entity_id":     "",
 			"idp_sso_url":       "",
 			"name_id_format":    "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
-			"sign_requests":     false,
 			"auto_create_users": false,
 			"default_role":      "viewer",
 			"attr_username":     "username",
@@ -139,7 +138,6 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 			"client_id":         "",
 			"redirect_uri":      "",
 			"scopes":            "openid profile email",
-			"response_type":     "code",
 			"auto_create_users": false,
 			"default_role":      "viewer",
 			"attr_username":     "preferred_username",
@@ -203,7 +201,6 @@ func identityProviderConfigView(cfg IdentityProviderConfig) IdentityProviderConf
 		view.SecretPresence["client_secret_set"] = strings.TrimSpace(anyString(cfg.Secrets["client_secret"])) != ""
 	case identityProviderSAML:
 		view.SecretPresence["idp_certificate_set"] = strings.TrimSpace(anyString(cfg.Secrets["idp_certificate"])) != ""
-		view.SecretPresence["sp_private_key_set"] = strings.TrimSpace(anyString(cfg.Secrets["sp_private_key"])) != ""
 	case identityProviderOIDC:
 		view.SecretPresence["client_secret_set"] = strings.TrimSpace(anyString(cfg.Secrets["client_secret"])) != ""
 	case identityProviderLDAP:

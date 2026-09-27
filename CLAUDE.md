@@ -54,7 +54,10 @@ an approach, record it here or in the matching doc below.
 4. **Tenancy bypass must be unforgeable.** A privilege that skips tenant checks
    is keyed on something only the platform can mint (see
    `tenantcheck.IsServicePrincipal`), never on a role name or an `X-Actor-*`
-   header.
+   header. **Identity comes only from a credential the service verifies** (a
+   JWT, an XML signature, a JWKS-verified token): never from a request body
+   field, an `X-Client-*` header, or the TLS peer certificate — behind Envoy
+   the peer is always Envoy (1.27.0-beta, docs/DECISIONS.md).
 5. **FIPS 140-3 is the customer's choice (made in the KMS UI), on the certified module**
    ([docs/SECURITY/FIPS.md](docs/SECURITY/FIPS.md)):
    - Every binary builds with `GOFIPS140` = `pkg/fips.CertifiedModuleVersion`.

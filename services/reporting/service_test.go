@@ -27,6 +27,13 @@ func TestServiceSyncAlertsAndEscalation(t *testing.T) {
 	if len(items) == 0 {
 		t.Fatalf("expected alerts after sync")
 	}
+	// Only the screen feed is delivered; nothing claims email, chat or SIEM
+	// delivery that never happened.
+	for _, it := range items {
+		if len(it.ChannelsSent) != 1 || it.ChannelsSent[0] != "screen" || len(it.ChannelStatus) != 1 {
+			t.Fatalf("alert claims undelivered channels: %v %v", it.ChannelsSent, it.ChannelStatus)
+		}
+	}
 	if pub.Count("audit.reporting.alert_created") == 0 {
 		t.Fatalf("expected reporting audit publication")
 	}
@@ -112,8 +119,8 @@ func TestServiceListChannelsExcludesPagerDuty(t *testing.T) {
 		t.Fatalf("list channels: %v", err)
 	}
 	for _, ch := range channels {
-		if strings.EqualFold(ch.Name, "pagerduty") {
-			t.Fatalf("pagerduty channel should be excluded")
+		if !strings.EqualFold(ch.Name, "screen") {
+			t.Fatalf("undeliverable channel %q listed", ch.Name)
 		}
 	}
 }
@@ -187,7 +194,7 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 		t.Fatalf("invalid pdf header")
 	}
 
-	sched, err := svc.ScheduleReport(context.Background(), tenantID, "daily-alerts", "alert_summary", "pdf", "daily", []string{"soc@example.com"}, nil)
+	sched, err := svc.ScheduleReport(context.Background(), tenantID, "daily-alerts", "alert_summary", "pdf", "daily", nil)
 	if err != nil {
 		t.Fatalf("schedule report: %v", err)
 	}

@@ -98,6 +98,9 @@ type VoteInput struct {
 	ApproverEmail string `json:"approver_email"`
 	VoteMethod    string `json:"vote_method"`
 	IPAddress     string `json:"ip_address"`
+	// Set only by the handler after authenticating the caller: the approver
+	// identity above came from the verified token, not the request body.
+	VerifiedIdentity bool `json:"-"`
 }
 
 type ApprovalRequestDetails struct {
@@ -124,6 +127,12 @@ type ApprovalStatus struct {
 	CurrentApprovals int       `json:"current_approvals"`
 	CurrentDenials   int       `json:"current_denials"`
 	ExpiresAt        time.Time `json:"expires_at"`
+	// What was approved, so the requesting service can bind a release to it.
+	Action      string `json:"action"`
+	TargetType  string `json:"target_type"`
+	TargetID    string `json:"target_id"`
+	Operation   string `json:"operation,omitempty"`
+	PayloadHash string `json:"payload_hash,omitempty"`
 }
 
 type GovernanceSettings struct {
@@ -149,6 +158,10 @@ type GovernanceSettings struct {
 	UpdatedAt                  time.Time `json:"updated_at"`
 }
 
+// GovernanceSystemState is what System Administration shows. Only runtime
+// facts and settings the platform enforces are exposed; the `json:"-"`
+// fields are legacy columns (network, license, backup schedule, TLS mode, HSM
+// and cluster labels, QRNG) that nothing ever read or applied.
 type GovernanceSystemState struct {
 	TenantID                         string    `json:"tenant_id"`
 	FIPSMode                         string    `json:"fips_mode"`
@@ -162,27 +175,27 @@ type GovernanceSystemState struct {
 	FIPSRNGMode                      string    `json:"fips_rng_mode"`
 	FIPSEntropySource                string    `json:"fips_entropy_source"`
 	FIPSEntropyHealth                string    `json:"fips_entropy_health"`
-	FIPSEntropyBitsByte              float64   `json:"fips_entropy_bits_per_byte"`
+	FIPSEntropyBitsByte              float64   `json:"-"`
 	FIPSEntropyBytes                 int       `json:"fips_entropy_sample_bytes"`
 	FIPSEntropyReadUs                int64     `json:"fips_entropy_read_micros"`
 	FIPSEntropyAt                    time.Time `json:"fips_entropy_measured_at"`
-	HSMMode                          string    `json:"hsm_mode"`
-	ClusterMode                      string    `json:"cluster_mode"`
-	LicenseKey                       string    `json:"license_key,omitempty"`
-	LicenseStatus                    string    `json:"license_status"`
-	MgmtIP                           string    `json:"mgmt_ip"`
-	ClusterIP                        string    `json:"cluster_ip"`
-	DNSServers                       string    `json:"dns_servers"`
-	NTPServers                       string    `json:"ntp_servers"`
-	TLSMode                          string    `json:"tls_mode"`
-	TLSCertPEM                       string    `json:"tls_cert_pem,omitempty"`
-	TLSKeyPEM                        string    `json:"tls_key_pem,omitempty"`
-	TLSCABundlePEM                   string    `json:"tls_ca_bundle_pem,omitempty"`
-	BackupSchedule                   string    `json:"backup_schedule"`
-	BackupTarget                     string    `json:"backup_target"`
-	BackupRetentionDays              int       `json:"backup_retention_days"`
-	BackupEncrypted                  bool      `json:"backup_encrypted"`
-	ProxyEndpoint                    string    `json:"proxy_endpoint"`
+	HSMMode                          string    `json:"-"`
+	ClusterMode                      string    `json:"-"`
+	LicenseKey                       string    `json:"-"`
+	LicenseStatus                    string    `json:"-"`
+	MgmtIP                           string    `json:"-"`
+	ClusterIP                        string    `json:"-"`
+	DNSServers                       string    `json:"-"`
+	NTPServers                       string    `json:"-"`
+	TLSMode                          string    `json:"-"`
+	TLSCertPEM                       string    `json:"-"`
+	TLSKeyPEM                        string    `json:"-"`
+	TLSCABundlePEM                   string    `json:"-"`
+	BackupSchedule                   string    `json:"-"`
+	BackupTarget                     string    `json:"-"`
+	BackupRetentionDays              int       `json:"-"`
+	BackupEncrypted                  bool      `json:"-"`
+	ProxyEndpoint                    string    `json:"-"`
 	SNMPTarget                       string    `json:"snmp_target"`
 	GoRuntimeVersion                 string    `json:"go_runtime_version"`
 	FlightRecorderReady              bool      `json:"flight_recorder_ready"`
@@ -191,9 +204,9 @@ type GovernanceSystemState struct {
 	PostureRequireStepUpAuth         bool      `json:"posture_require_step_up_auth"`
 	PosturePauseConnectorSync        bool      `json:"posture_pause_connector_sync"`
 	PostureGuardrailPolicyRequired   bool      `json:"posture_guardrail_policy_required"`
-	QRNGEnabled                      bool      `json:"qrng_enabled"`
-	QRNGDefaultSource                string    `json:"qrng_default_source"`
-	QRNGMinEntropyBPB                float64   `json:"qrng_min_entropy_bpb"`
+	QRNGEnabled                      bool      `json:"-"`
+	QRNGDefaultSource                string    `json:"-"`
+	QRNGMinEntropyBPB                float64   `json:"-"`
 	UpdatedBy                        string    `json:"updated_by"`
 	UpdatedAt                        time.Time `json:"updated_at"`
 }

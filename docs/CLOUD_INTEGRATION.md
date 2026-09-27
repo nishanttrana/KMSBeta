@@ -1075,223 +1075,27 @@ curl -X POST "https://localhost/svc/ekm/integrations?tenant_id=root" \
 
 ---
 
-### 3.3 Microsoft SQL Server TDE with EKM
+### 3.3 Which databases can keep their TDE key in Vecta
 
-#### Full Setup Walkthrough
+Vecta holds a TDE master key only through its KMIP server (TTLV over mTLS,
+port 5696). Register a KMIP client in the KMIP tab first; it issues the client
+certificate and key, and the CA to trust is the Vecta internal CA. The EKM
+agent reports TDE state; it is not in the database's key path.
 
-**Step 1 — Install Vecta EKM Agent on SQL Server host** (see above)
+| Engine | Vecta integration | How |
+|---|---|---|
+| MySQL Enterprise | Yes | `keyring_okv` plugin: `okvclient.ora` with `SERVER=<kms-host>:5696` and an `ssl/` directory holding `CA.pem`, `cert.pem`, `key.pem` |
+| PostgreSQL (Percona pg_tde) | Yes | pg_tde KMIP key provider pointing at `<kms-host>:5696` |
+| Db2 native encryption | Yes | `KEYSTORE_TYPE KMIP` with a KMIP configuration file |
+| Microsoft SQL Server | No | needs an EKM provider DLL implementing SQL Server's EKM interface; Vecta ships none |
+| Oracle | No | needs a software keystore, Oracle Key Vault, or a PKCS#11 HSM library; Vecta ships none |
+| MariaDB | No | its key management plugins do not speak KMIP |
 
-**Step 2 — Copy the EKM provider DLL**
+These earlier sections described a `vecta-ekm.dll` SQL Server provider and a
+`vecta-pkcs11.so` Oracle library. Neither exists; the text was removed in
+1.27.0-beta ([REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)).
 
-The installer places `vecta-ekm.dll` (or `vecta-ekm-x64.dll`) in `C:\Program Files\Vecta EKM\`. Verify:
-
-```powershell
-Test-Path "C:\Program Files\Vecta EKM\vecta-ekm.dll"
-# Expected: True
-```
-
-**Step 3 — Enable EKM in SQL Server**
-
-```sql
--- Enable advanced options
-sp_configure 'show advanced options', 1;
-RECONFIGURE;
-
--- Enable EKM provider
-sp_configure 'EKM provider enabled', 1;
-RECONFIGURE;
-```
-
-**Step 4 — Create EKM Cryptographic Provider**
-
-```sql
-CREATE CRYPTOGRAPHIC PROVIDER VectaEKM
-FROM FILE = 'C:\Program Files\Vecta EKM\vecta-ekm.dll';
-
--- Verify provider is registered
-SELECT * FROM sys.cryptographic_providers;
-```
-
-**Step 5 — Create SQL Server credential**
-
-```sql
-CREATE CREDENTIAL VectaEKMCredential
-  WITH IDENTITY = N'vecta-ekm-agent',
-       SECRET    = N'agent-authentication-token-here';
-```
-
-**Step 6 — Create login with EKM credential**
-
-```sql
--- Create a login for EKM operations
-CREATE LOGIN VectaEKMLogin FROM WINDOWS
-  WITH DEFAULT_DATABASE = master;
-
--- Alternatively, SQL login:
-CREATE LOGIN VectaEKMLogin WITH PASSWORD = 'StrongP@ssw0rd!',
-  DEFAULT_DATABASE = master;
-
-ALTER LOGIN VectaEKMLogin
-  ADD CREDENTIAL VectaEKMCredential;
-```
-
-**Step 7 — Create asymmetric key from EKM**
-
-```sql
--- Run as the EKM login
-EXECUTE AS LOGIN = 'VectaEKMLogin';
-
-CREATE ASYMMETRIC KEY VectaMasterKey
-FROM PROVIDER VectaEKM
-  WITH PROVIDER_KEY_NAME = N'prod-mssql-master-key',
-       CREATION_DISPOSITION = CREATE_NEW,
-       ALGORITHM = RSA_2048;
-
-REVERT;
-
--- Verify key
-SELECT * FROM sys.asymmetric_keys;
-```
-
-**Step 8 — Create Service Master Key backup (for disaster recovery)**
-
-```sql
--- Backup the service master key
-BACKUP SERVICE MASTER KEY TO FILE = '\\backup-server\pki\smk-backup.key'
-  ENCRYPTION BY PASSWORD = 'BackupP@ssword!';
-```
-
-**Step 9 — Create and enable Database Encryption Key**
-
-```sql
-USE PaymentsDB;
-
--- Create Database Encryption Key (encrypted by the EKM asymmetric key)
-CREATE DATABASE ENCRYPTION KEY
-  WITH ALGORITHM = AES_256
-  ENCRYPTION BY SERVER ASYMMETRIC KEY VectaMasterKey;
-
--- Enable TDE
-ALTER DATABASE PaymentsDB
-  SET ENCRYPTION ON;
-
--- Verify encryption state
-SELECT
-  DB_NAME(database_id)  AS database_name,
-  encryption_state,
-  CASE encryption_state
-    WHEN 0 THEN 'No database encryption key present'
-    WHEN 1 THEN 'Unencrypted'
-    WHEN 2 THEN 'Encryption in progress'
-    WHEN 3 THEN 'Encrypted'
-    WHEN 4 THEN 'Key change in progress'
-    WHEN 5 THEN 'Decryption in progress'
-  END AS encryption_state_desc,
-  percent_complete,
-  key_algorithm,
-  key_length
-FROM sys.dm_database_encryption_keys;
-```
-
-Repeat Step 9 for each database you want to encrypt.
-
-**Step 10 — Encrypt TempDB (automatically encrypted when first DB is encrypted)**
-
-```sql
--- TempDB is automatically encrypted once any user database is encrypted
--- Verify:
-SELECT DB_NAME(database_id), encryption_state
-FROM sys.dm_database_encryption_keys
-WHERE DB_NAME(database_id) = 'tempdb';
-```
-
-#### SQL Server EKM Key Rotation
-
-```bash
-# Rotate the master key in Vecta
-curl -X POST "https://localhost/svc/keycore/keys/{MASTER_KEY_ID}/rotate?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-```sql
--- After rotating the key in Vecta, update SQL Server to use the new key version
-ALTER DATABASE PaymentsDB
-  SET ENCRYPTION KEY;
--- SQL Server re-encrypts the DEK with the new key version automatically
-```
-
----
-
-### 3.4 Oracle TDE with EKM
-
-Oracle TDE uses PKCS#11 to communicate with an external keystore. Vecta provides a PKCS#11 library that implements the Oracle External Keystore interface.
-
-#### Oracle EKM Setup
-
-**Step 1 — Install Vecta PKCS#11 library**
-
-```bash
-# Copy PKCS#11 library to Oracle host
-sudo cp vecta-pkcs11.so /opt/oracle/extapi/64/hsm/vecta/1.0/vecta-pkcs11.so
-sudo chmod 755 /opt/oracle/extapi/64/hsm/vecta/1.0/vecta-pkcs11.so
-
-# Configure Vecta PKCS#11
-cat > /etc/vecta-pkcs11.conf <<EOF
-kms_url = https://kms.internal.acme.com
-tenant_id = root
-agent_token = pkcs11-agent-token-here
-ca_cert_file = /etc/vecta-pkcs11/ca-chain.pem
-cert_file = /etc/vecta-pkcs11/client.pem
-key_file = /etc/vecta-pkcs11/client.key
-slot_id = 1
-EOF
-```
-
-**Step 2 — Configure Oracle Wallet**
-
-```sql
--- sqlplus / as sysdba
-
--- Set encryption wallet location to PKCS#11 external keystore
-ADMINISTER KEY MANAGEMENT SET KEYSTORE CLOSE;
-
--- Configure external keystore
-ALTER SYSTEM SET ENCRYPTION_WALLET_LOCATION =
-  '(SOURCE=(METHOD=PKCS11)(DIRECTORY=/opt/oracle/extapi/64/hsm/vecta/1.0/)(METHOD_DATA=(CREDENTIAL_FILE=/etc/oracle/vecta-pkcs11.conf)))'
-  SCOPE = SPFILE;
-
--- Bounce the database
-SHUTDOWN IMMEDIATE;
-STARTUP;
-```
-
-**Step 3 — Open keystore and set master key**
-
-```sql
--- Open the external keystore
-ADMINISTER KEY MANAGEMENT SET KEYSTORE OPEN
-  IDENTIFIED BY "vecta-slot-pin"
-  CONTAINER = ALL;
-
--- Create master encryption key
-ADMINISTER KEY MANAGEMENT SET KEY
-  USING TAG 'prod-oracle-tde-2026'
-  IDENTIFIED BY "vecta-slot-pin"
-  WITH BACKUP USING 'tde-backup-2026'
-  CONTAINER = ALL;
-
--- Enable tablespace encryption
-ALTER TABLESPACE users
-  ENCRYPTION USING AES256 ENCRYPT;
-
--- Verify
-SELECT * FROM v$encryption_wallet;
-SELECT TABLESPACE_NAME, ENCRYPTED FROM DBA_TABLESPACES;
-```
-
----
-
-### 3.5 BitLocker Endpoint Encryption
+### 3.4 BitLocker Endpoint Encryption
 
 Vecta EKM manages BitLocker recovery keys for Windows endpoints, providing centralized control and compliance reporting for full-disk encryption.
 
@@ -1804,7 +1608,6 @@ curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
       "allowed_branches": ["main", "release/*"],
       "require_protected_branch": true
     },
-    "require_transparency_log": true,
     "expiry_days": 365,
     "allowed_registries": [
       "registry.acme.com",
@@ -1831,7 +1634,6 @@ curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
       "require_tag": true,
       "tag_pattern": "v[0-9]+\\.[0-9]+\\.[0-9]+"
     },
-    "require_transparency_log": true,
     "max_sign_per_day": 50
   }'
 ```
@@ -2220,18 +2022,20 @@ rekor-cli --rekor_server https://kms.internal.acme.com/svc/signing/rekor \
 
 ### Use Case 3 — Database TDE for PCI DSS Scope Reduction
 
-**Scenario:** Payment card data stored in SQL Server. PCI DSS Requirement 3.5 requires key custodian separation. Using Vecta EKM, the DBA cannot access the master encryption key.
+**Scenario:** Payment card data stored in MySQL Enterprise or PostgreSQL
+(Percona pg_tde). PCI DSS Requirement 3.5 requires key custodian separation:
+the TDE master key is held in Vecta, not on the database host.
 
-**Architecture:** SQL Server DEK → Vecta EKM Agent → Vecta KMS → HSM
+**Architecture:** database TDE → KMIP (mTLS, port 5696) → Vecta KMS
 
 **Steps:**
-1. Register Vecta EKM integration for SQL Server (Section 3.3)
-2. Create TDE key in Vecta for each database (PaymentsDB, CardholderDB)
-3. Enable TDE on all PCI-scoped databases
-4. Configure Vecta EKM alert for agent heartbeat miss
-5. Document key custodian roles (Security team = Vecta admin, DBA = SQL Server admin, no overlap)
+1. Issue a KMIP client certificate for the database host and register the client (KMIP tab)
+2. Configure the engine's KMIP key provider (Section 3.3)
+3. Enable TDE on the PCI-scoped tables or tablespaces
+4. Document key custodian roles (security team = Vecta admin, DBA = database admin)
 
-**PCI DSS evidence:** Vecta audit log shows all key access events; HSM attestation shows key never left hardware; role separation documented and enforced by RBAC.
+**PCI DSS evidence:** the Vecta audit log records every KMIP key operation.
+SQL Server and Oracle cannot use Vecta for their TDE keys (Section 3.3).
 
 ---
 
@@ -2259,7 +2063,7 @@ rekor-cli --rekor_server https://kms.internal.acme.com/svc/signing/rekor \
 
 **Steps:**
 1. Create an Ed25519 signing key in the KMS (for a key that never leaves your HSM, create an ECDSA P-256 key with **Create in HSM**)
-2. Create container signing policy with `allowed_subjects = gitlab-ci@acme.com`, `require_transparency_log = true`
+2. Create container signing policy with `allowed_subjects = gitlab-ci@acme.com`
 3. Add signing step to `.gitlab-ci.yml` (Section 5.4)
 4. Deploy Vecta webhook admission controller in K8s cluster
 5. Enable webhook for `production` and `staging` namespaces

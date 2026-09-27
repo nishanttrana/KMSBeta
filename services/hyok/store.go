@@ -22,6 +22,7 @@ type Store interface {
 	CompleteRequestLog(ctx context.Context, tenantID string, requestID string, status string, responseJSON string, errMessage string, approvalRequestID string, decision string) error
 	GetRequestLog(ctx context.Context, tenantID string, requestID string) (ProxyRequestLog, error)
 	ListRequestLogs(ctx context.Context, tenantID string, protocol string, limit int, offset int) ([]ProxyRequestLog, error)
+	ApprovalRedeemed(ctx context.Context, tenantID string, approvalRequestID string, exceptRequestID string) (bool, error)
 }
 
 type SQLStore struct {
@@ -136,6 +137,17 @@ WHERE tenant_id = $7 AND id = $8
 		return errNotFound
 	}
 	return nil
+}
+
+// ApprovalRedeemed reports whether another request already used (or is
+// using) this governance approval: an approval releases one operation.
+func (s *SQLStore) ApprovalRedeemed(ctx context.Context, tenantID string, approvalRequestID string, exceptRequestID string) (bool, error) {
+	var n int
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(1) FROM hyok_requests
+WHERE tenant_id=$1 AND approval_request_id=$2 AND id<>$3 AND status IN ('started','success')
+`, tenantID, approvalRequestID, exceptRequestID).Scan(&n)
+	return n > 0, err
 }
 
 func (s *SQLStore) GetRequestLog(ctx context.Context, tenantID string, requestID string) (ProxyRequestLog, error) {

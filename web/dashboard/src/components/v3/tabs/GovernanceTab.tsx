@@ -68,7 +68,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
   const [settings, setSettings] = useState<any>(null);
   const [voteBusy, setVoteBusy] = useState("");
   const [filter, setFilter] = useState("");
-  const [approver, setApprover] = useState("");
+  const [smtpTestTo, setSmtpTestTo] = useState("");
   const [expandedReq, setExpandedReq] = useState<string | null>(null);
   const [reqDetail, setReqDetail] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -120,10 +120,6 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       setPolicies(Array.isArray(p) ? p : []);
       setRequests(Array.isArray(r) ? r : []);
       setSettings(s || null);
-      if (!approver) {
-        const u = String(session?.username || "").trim().toLowerCase();
-        setApprover(u.includes("@") ? u : u ? `${u}@vecta.local` : "");
-      }
     } catch (error: any) {
       onToast?.(`Governance load failed: ${errMsg(error)}`);
     } finally {
@@ -183,8 +179,6 @@ export const GovernanceTab = ({ session, onToast }: any) => {
     try {
       await voteGovernanceRequest(session, id, {
         vote,
-        approver_email: String(approver || "").trim(),
-        approver_id: String(approver || "").trim(),
         comment: comment || "",
         challenge_code: challenge,
       });
@@ -327,8 +321,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       <Card style={{ padding: "10px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <Users size={14} color={C.accent} />
-          <span style={{ fontSize: 11, color: C.dim }}>Approver Identity:</span>
-          <Inp value={approver} onChange={(e) => setApprover(e.target.value)} placeholder="your-email@company.com" style={{ width: 280, fontSize: 11 }} />
+          <span style={{ fontSize: 11, color: C.dim }}>You vote as your signed-in account ({String(session?.username || "")}); only approvers the request was sent to can vote.</span>
           {settings?.challenge_response_enabled && <B c="amber">Challenge Required</B>}
           {settings?.notify_slack && <B c="purple">Slack</B>}
           {settings?.notify_teams && <B c="blue">Teams</B>}
@@ -589,8 +582,10 @@ export const GovernanceTab = ({ session, onToast }: any) => {
           <FG label="From Address"><Inp value={smtpFrom} onChange={(e) => setSmtpFrom(e.target.value)} placeholder="kms@corp.com" /></FG>
           <FG label="TLS"><Chk label="Enable STARTTLS" checked={smtpStarttls} onChange={setSmtpStarttls} /></FG>
         </Row2>
+        <FG label="Send test email to"><Inp value={smtpTestTo} onChange={(e) => setSmtpTestTo(e.target.value)} placeholder="you@corp.com" /></FG>
         <Btn small onClick={async () => {
-          try { await testGovernanceSMTP(session, approver || "test@example.com"); onToast?.("SMTP test email sent."); }
+          if (!smtpTestTo.trim()) { onToast?.("Enter a recipient for the test email."); return; }
+          try { await testGovernanceSMTP(session, smtpTestTo.trim()); onToast?.("SMTP test email sent."); }
           catch (e: any) { onToast?.(`SMTP test failed: ${errMsg(e)}`); }
         }}>Test SMTP</Btn>
       </>}

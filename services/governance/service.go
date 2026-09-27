@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -370,11 +369,11 @@ func (s *Service) Vote(ctx context.Context, in VoteInput) (ApprovalRequest, erro
 	if err != nil {
 		return ApprovalRequest{}, err
 	}
-	approverEmail := in.ApproverEmail
-	approverID := in.ApproverID
-	voteMethod := firstNonEmpty(in.VoteMethod, "email_link")
+	var approverEmail, approverID, voteMethod string
 	var tokenHash []byte
 	if in.Token != "" {
+		// Email-link vote: the one-time token is the credential, and the
+		// approver is whoever it was issued to.
 		expectedAction := "approve"
 		if in.Vote == "denied" {
 			expectedAction = "deny"
@@ -383,10 +382,15 @@ func (s *Service) Vote(ctx context.Context, in VoteInput) (ApprovalRequest, erro
 		if consumeErr != nil {
 			return ApprovalRequest{}, consumeErr
 		}
-		approverEmail = firstNonEmpty(in.ApproverEmail, token.ApproverEmail)
-		approverID = firstNonEmpty(in.ApproverID, in.ApproverEmail, token.ApproverEmail)
+		approverEmail, approverID = token.ApproverEmail, token.ApproverEmail
 		tokenHash = token.TokenHash
+		voteMethod = "email_link"
 	} else {
+		if !in.VerifiedIdentity || in.ApproverEmail == "" {
+			return ApprovalRequest{}, errors.New("a vote needs an email-link token or an authenticated approver")
+		}
+		approverEmail, approverID = in.ApproverEmail, firstNonEmpty(in.ApproverID, in.ApproverEmail)
+		voteMethod = "dashboard"
 		settings, err := s.GetSettings(ctx, in.TenantID)
 		if err != nil {
 			return ApprovalRequest{}, err
@@ -399,21 +403,24 @@ func (s *Service) Vote(ctx context.Context, in VoteInput) (ApprovalRequest, erro
 			if consumeErr != nil {
 				return ApprovalRequest{}, consumeErr
 			}
-			approverEmail = firstNonEmpty(in.ApproverEmail, challengeToken.ApproverEmail)
-			approverID = firstNonEmpty(in.ApproverID, in.ApproverEmail, challengeToken.ApproverEmail)
+			if !strings.EqualFold(challengeToken.ApproverEmail, approverEmail) {
+				return ApprovalRequest{}, errors.New("challenge code was issued to a different approver")
+			}
 			tokenHash = challengeToken.TokenHash
-			voteMethod = firstNonEmpty(in.VoteMethod, "dashboard_challenge")
-		} else {
-			if approverEmail == "" {
-				return ApprovalRequest{}, errors.New("token or approver_email is required")
-			}
-			allowed := resolveApprovers(policy, details.Request.TargetDetails)
-			if len(allowed) > 0 && !containsIgnoreCase(allowed, approverEmail) {
-				return ApprovalRequest{}, errors.New("approver_email is not allowed for this request")
-			}
-			approverID = firstNonEmpty(in.ApproverID, approverEmail)
-			voteMethod = firstNonEmpty(in.VoteMethod, "dashboard")
+			voteMethod = "dashboard_challenge"
 		}
+		// The approvers are the ones this request issued tokens to when it was
+		// opened; a later policy edit does not change who may vote on it.
+		approvers, err := s.store.RequestApprovers(ctx, in.RequestID)
+		if err != nil {
+			return ApprovalRequest{}, err
+		}
+		if !containsIgnoreCase(approvers, approverEmail) {
+			return ApprovalRequest{}, errors.New("you are not an approver for this request")
+		}
+	}
+	if strings.EqualFold(approverEmail, details.Request.RequesterEmail) || strings.EqualFold(approverID, details.Request.RequesterID) {
+		return ApprovalRequest{}, errors.New("the requester cannot vote on their own request")
 	}
 	vote := ApprovalVote{
 		ID:            newID("avt"),
@@ -479,11 +486,17 @@ func (s *Service) GetKeyApprovalStatus(ctx context.Context, tenantID string, req
 	if err != nil {
 		return ApprovalStatus{}, err
 	}
+	str := func(k string) string { v, _ := req.TargetDetails[k].(string); return strings.TrimSpace(v) }
 	return ApprovalStatus{
 		Status:           req.Status,
 		CurrentApprovals: req.CurrentApprovals,
 		CurrentDenials:   req.CurrentDenials,
 		ExpiresAt:        req.ExpiresAt,
+		Action:           req.Action,
+		TargetType:       req.TargetType,
+		TargetID:         req.TargetID,
+		Operation:        str("operation"),
+		PayloadHash:      str("payload_hash"),
 	}, nil
 }
 
@@ -583,12 +596,6 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 	if state.UpdatedBy == "" {
 		state.UpdatedBy = "system"
 	}
-	if state.LicenseKey != "" {
-		state.LicenseStatus = "active"
-	}
-	if state.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(state.HSMMode) {
-		return GovernanceSystemState{}, errors.New("hsm_trng requires a connected HSM; configure/connect HSM first")
-	}
 	if err := s.store.UpsertSystemState(ctx, state); err != nil {
 		return GovernanceSystemState{}, err
 	}
@@ -597,15 +604,11 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 		"fips_mode_policy":                     state.FIPSModePolicy,
 		"fips_tls_profile":                     state.FIPSTLSProfile,
 		"fips_rng_mode":                        state.FIPSRNGMode,
-		"hsm_mode":                             state.HSMMode,
-		"cluster_mode":                         state.ClusterMode,
-		"license_status":                       state.LicenseStatus,
 		"crypto_library":                       state.FIPSCryptoLibrary,
 		"library_validated":                    state.FIPSLibraryValidated,
 		"runtime_enabled":                      state.FIPSRuntimeEnabled,
 		"runtime_enforced":                     state.FIPSRuntimeEnforced,
 		"module_version":                       state.FIPSModuleVersion,
-		"tls_mode":                             state.TLSMode,
 		"posture_force_quorum_destructive_ops": state.PostureForceQuorumDestructiveOps,
 		"posture_require_step_up_auth":         state.PostureRequireStepUpAuth,
 		"posture_pause_connector_sync":         state.PosturePauseConnectorSync,
@@ -729,6 +732,9 @@ func (s *Service) certsJSONRequest(ctx context.Context, method string, path stri
 	return nil
 }
 
+// SystemIntegrity reports checks that are measured, not stated: SMTP
+// configuration, the FIPS mode the process actually runs in, whether a
+// completed backup exists, and an SNMP reachability probe.
 func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemIntegrityStatus, error) {
 	settings, err := s.GetSettings(ctx, tenantID)
 	if err != nil {
@@ -739,30 +745,25 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 		return SystemIntegrityStatus{}, err
 	}
 	checks := map[string]string{
-		"smtp":       "not_configured",
-		"fips":       sys.FIPSMode,
-		"hsm":        sys.HSMMode,
-		"license":    sys.LicenseStatus,
-		"network":    "missing",
-		"backup":     "missing",
-		"proxy":      "not_configured",
-		"snmp":       "not_configured",
-		"cluster":    sys.ClusterMode,
-		"tls":        sys.TLSMode,
-		"governance": "ok",
+		"smtp": "not_configured",
+		"fips": "off",
+		"snmp": "not_configured",
 	}
-
+	switch {
+	case fips140.Enforced():
+		checks["fips"] = "only"
+	case fips140.Enabled():
+		checks["fips"] = "on"
+	}
 	if strings.TrimSpace(settings.SMTPHost) != "" && strings.TrimSpace(settings.SMTPPort) != "" {
 		checks["smtp"] = "configured"
 	}
-	if strings.TrimSpace(sys.MgmtIP) != "" && strings.TrimSpace(sys.DNSServers) != "" && strings.TrimSpace(sys.NTPServers) != "" {
-		checks["network"] = "configured"
-	}
-	if strings.TrimSpace(sys.BackupSchedule) != "" && strings.TrimSpace(sys.BackupTarget) != "" && sys.BackupRetentionDays > 0 {
-		checks["backup"] = "configured"
-	}
-	if strings.TrimSpace(sys.ProxyEndpoint) != "" {
-		checks["proxy"] = "configured"
+	if backups, err := s.ListBackups(ctx, tenantID, "", "completed", 1); err != nil {
+		checks["backup"] = "error"
+	} else if len(backups) == 0 {
+		checks["backup"] = "missing"
+	} else {
+		checks["backup"] = "last_completed " + backups[0].CompletedAt.UTC().Format(time.RFC3339)
 	}
 	if strings.TrimSpace(sys.SNMPTarget) != "" {
 		if _, err := parseSNMPTarget(sys.SNMPTarget); err != nil {
@@ -777,21 +778,13 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 			checks["snmp"] = "configured"
 		}
 	}
-	if strings.TrimSpace(sys.LicenseKey) == "" {
-		checks["license"] = "inactive"
-	}
-
 	status := "healthy"
 	for _, value := range checks {
 		switch value {
-		case "missing", "inactive", "invalid_target", "unreachable", "error":
+		case "missing", "invalid_target", "unreachable", "error":
 			status = "degraded"
 		}
-		if status == "degraded" {
-			break
-		}
 	}
-
 	return SystemIntegrityStatus{
 		TenantID:  tenantID,
 		Status:    status,
@@ -879,30 +872,12 @@ func sanitizeSystemStateForSNMP(state GovernanceSystemState) map[string]interfac
 		"fips_rng_mode":                        state.FIPSRNGMode,
 		"fips_entropy_source":                  state.FIPSEntropySource,
 		"fips_entropy_health":                  state.FIPSEntropyHealth,
-		"fips_entropy_bits_per_byte":           state.FIPSEntropyBitsByte,
-		"fips_entropy_sample_bytes":            state.FIPSEntropyBytes,
-		"fips_entropy_read_micros":             state.FIPSEntropyReadUs,
-		"hsm_mode":                             state.HSMMode,
-		"cluster_mode":                         state.ClusterMode,
-		"license_status":                       state.LicenseStatus,
-		"mgmt_ip":                              state.MgmtIP,
-		"cluster_ip":                           state.ClusterIP,
-		"dns_servers":                          state.DNSServers,
-		"ntp_servers":                          state.NTPServers,
-		"tls_mode":                             state.TLSMode,
-		"backup_schedule":                      state.BackupSchedule,
-		"backup_target":                        state.BackupTarget,
-		"backup_retention_days":                state.BackupRetentionDays,
-		"backup_encrypted":                     state.BackupEncrypted,
-		"proxy_endpoint":                       state.ProxyEndpoint,
 		"snmp_target":                          state.SNMPTarget,
 		"posture_force_quorum_destructive_ops": state.PostureForceQuorumDestructiveOps,
 		"posture_require_step_up_auth":         state.PostureRequireStepUpAuth,
 		"posture_pause_connector_sync":         state.PosturePauseConnectorSync,
 		"posture_guardrail_policy_required":    state.PostureGuardrailPolicyRequired,
 		"go_runtime_version":                   state.GoRuntimeVersion,
-		"flight_recorder_ready":                state.FlightRecorderReady,
-		"runtime_secret_ready":                 state.RuntimeSecretReady,
 		"updated_by":                           state.UpdatedBy,
 		"updated_at":                           state.UpdatedAt,
 	}
@@ -975,50 +950,6 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.FIPSRuntimeEnabled = fips140.Enabled()
 	in.FIPSRuntimeEnforced = fips140.Enforced()
 	in.FIPSModuleVersion = runtimeFIPSModuleVersion()
-	in.FIPSTLSProfile = strings.ToLower(strings.TrimSpace(in.FIPSTLSProfile))
-	switch in.FIPSTLSProfile {
-	case "tls12_fips_suites", "tls13_only":
-	default:
-		in.FIPSTLSProfile = "tls12_fips_suites"
-	}
-	in.FIPSRNGMode = strings.ToLower(strings.TrimSpace(in.FIPSRNGMode))
-	switch in.FIPSRNGMode {
-	case "ctr_drbg", "hmac_drbg", "hsm_trng":
-	default:
-		in.FIPSRNGMode = "ctr_drbg"
-	}
-	in.HSMMode = strings.ToLower(strings.TrimSpace(in.HSMMode))
-	if in.HSMMode == "" {
-		in.HSMMode = "software"
-	}
-	in.ClusterMode = strings.ToLower(strings.TrimSpace(in.ClusterMode))
-	if in.ClusterMode == "" {
-		in.ClusterMode = "standalone"
-	}
-	in.LicenseStatus = strings.ToLower(strings.TrimSpace(in.LicenseStatus))
-	if in.LicenseStatus == "" {
-		in.LicenseStatus = "inactive"
-	}
-	in.TLSMode = strings.ToLower(strings.TrimSpace(in.TLSMode))
-	if in.TLSMode == "" {
-		in.TLSMode = "internal_ca"
-	}
-	in.BackupSchedule = strings.TrimSpace(in.BackupSchedule)
-	if in.BackupSchedule == "" {
-		in.BackupSchedule = "daily@02:00"
-	}
-	in.BackupTarget = strings.TrimSpace(in.BackupTarget)
-	if in.BackupTarget == "" {
-		in.BackupTarget = "local"
-	}
-	if in.BackupRetentionDays <= 0 {
-		in.BackupRetentionDays = 30
-	}
-	in.MgmtIP = strings.TrimSpace(in.MgmtIP)
-	in.ClusterIP = strings.TrimSpace(in.ClusterIP)
-	in.DNSServers = strings.TrimSpace(in.DNSServers)
-	in.NTPServers = strings.TrimSpace(in.NTPServers)
-	in.ProxyEndpoint = strings.TrimSpace(in.ProxyEndpoint)
 	in.SNMPTarget = strings.TrimSpace(in.SNMPTarget)
 	in.GoRuntimeVersion = strings.TrimSpace(runtime.Version())
 	if in.GoRuntimeVersion == "" {
@@ -1027,21 +958,11 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.FlightRecorderReady = runtimeFlightRecorderReady()
 	in.RuntimeSecretReady = false
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
-	in.FIPSEntropySource = strings.TrimSpace(in.FIPSEntropySource)
-	if in.FIPSEntropySource == "" {
-		in.FIPSEntropySource = "os-csprng"
-	}
 	in.FIPSEntropyHealth = strings.ToLower(strings.TrimSpace(in.FIPSEntropyHealth))
 	switch in.FIPSEntropyHealth {
 	case "ok", "degraded", "error", "unknown":
 	default:
 		in.FIPSEntropyHealth = "unknown"
-	}
-	if in.FIPSEntropyBitsByte < 0 {
-		in.FIPSEntropyBitsByte = 0
-	}
-	if in.FIPSEntropyBitsByte > 8 {
-		in.FIPSEntropyBitsByte = 8
 	}
 	if in.FIPSEntropyBytes < 0 {
 		in.FIPSEntropyBytes = 0
@@ -1065,76 +986,38 @@ func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
 	in.FlightRecorderReady = runtimeFlightRecorderReady()
 	// runtime/secret is experimental and not available in this toolchain by default.
 	in.RuntimeSecretReady = false
+	// fips_mode / fips_mode_policy is the tenant algorithm policy keycore
+	// enforces (services/keycore/fips_mode.go); strict whenever the process
+	// itself runs FIPS-only.
 	if in.FIPSRuntimeEnforced {
 		in.FIPSModePolicy = "strict"
 		in.FIPSMode = "enabled"
 	}
-	if in.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(in.HSMMode) {
-		in.FIPSEntropyAt = time.Now().UTC()
-		in.FIPSEntropySource = "hsm-not-connected"
-		in.FIPSEntropyHealth = "error"
-		in.FIPSEntropyBitsByte = 0
-		in.FIPSEntropyBytes = 0
-		in.FIPSEntropyReadUs = 0
-		return in
+	// The platform's randomness is Go's crypto/rand: in FIPS mode the
+	// certified module's SP 800-90A CTR_DRBG seeded from the OS, otherwise the
+	// OS CSPRNG directly. Report exactly that, plus whether a read succeeded;
+	// no HSM or other source is claimed, and no statistic is computed over
+	// DRBG output (it would say nothing about entropy).
+	in.FIPSRNGMode = "os_csprng"
+	if fips140.Enabled() {
+		in.FIPSRNGMode = "ctr_drbg"
 	}
+	in.FIPSEntropySource = "os-csprng"
+	in.FIPSTLSProfile = "tls13_minimum"
 	const sampleBytes = 4096
 	buf := make([]byte, sampleBytes)
 	start := time.Now()
 	n, err := pkgcrypto.Reader.Read(buf)
-	elapsed := time.Since(start)
 	in.FIPSEntropyAt = time.Now().UTC()
 	in.FIPSEntropyBytes = n
-	in.FIPSEntropyReadUs = elapsed.Microseconds()
-	if in.FIPSEntropyReadUs < 0 {
-		in.FIPSEntropyReadUs = 0
-	}
-	in.FIPSEntropySource = "os-csprng"
-	if in.FIPSRNGMode == "hsm_trng" {
-		if in.HSMMode == "hsm" || in.HSMMode == "hardware" {
-			in.FIPSEntropySource = "hsm-trng"
-		} else {
-			in.FIPSEntropySource = "hsm-trng-unavailable-fallback"
-		}
-	}
-	if err != nil || n <= 0 {
-		in.FIPSEntropyHealth = "error"
-		in.FIPSEntropyBitsByte = 0
-		return in
-	}
-	counts := [256]int{}
-	for _, b := range buf[:n] {
-		counts[int(b)]++
-	}
-	total := float64(n)
-	entropy := 0.0
-	for _, c := range counts {
-		if c == 0 {
-			continue
-		}
-		p := float64(c) / total
-		entropy += -p * math.Log2(p)
-	}
-	in.FIPSEntropyBitsByte = math.Round(entropy*1000) / 1000
-	if in.FIPSEntropyBitsByte >= 7.0 && in.FIPSEntropyReadUs <= 250000 {
-		in.FIPSEntropyHealth = "ok"
-	} else {
-		in.FIPSEntropyHealth = "degraded"
-	}
-	if in.FIPSRNGMode == "hsm_trng" && in.FIPSEntropySource == "hsm-trng-unavailable-fallback" {
+	in.FIPSEntropyReadUs = time.Since(start).Microseconds()
+	in.FIPSEntropyHealth = "ok"
+	if err != nil || n != sampleBytes {
 		in.FIPSEntropyHealth = "error"
 	}
 	return in
 }
 
-func isHSMReadyForTRNG(mode string) bool {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "hsm", "hardware", "connected", "active":
-		return true
-	default:
-		return false
-	}
-}
 
 func (s *Service) ExpiryCheckInterval(ctx context.Context, tenantID string) time.Duration {
 	settings, err := s.GetSettings(ctx, tenantID)
@@ -1151,6 +1034,13 @@ func (s *Service) ApprovalPageHTML(ctx context.Context, tenantID string, request
 	}
 	if token == "" {
 		return "", errors.New("token is required")
+	}
+	// The page shows the request, so the link must carry a live token for it.
+	if _, err := s.store.ConsumeToken(ctx, requestID, token, ""); err != nil {
+		_ = s.publishAudit(ctx, "audit.governance.link_refused", tenantID, map[string]interface{}{
+			"request_id": requestID, "reason": "invalid_or_used_token", "result": "refused", "severity": "warning",
+		})
+		return "", errors.New("approval link is invalid, expired or already used")
 	}
 	_ = s.publishAudit(ctx, "audit.governance.link_accessed", tenantID, map[string]interface{}{"request_id": requestID})
 	return buildApprovalPage(req, token), nil

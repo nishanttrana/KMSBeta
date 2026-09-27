@@ -81,17 +81,17 @@ type RevokeDatabaseTDEResponse struct {
 
 // Validate deployment types
 type ValidateDeploymentRequest struct {
-	TenantID    string `json:"tenant_id"`
-	AgentID     string `json:"agent_id"`
-	Version     string `json:"version"`
-	Host        string `json:"host"`
-	DBEngine    string `json:"db_engine"`
+	TenantID     string `json:"tenant_id"`
+	AgentID      string `json:"agent_id"`
+	Version      string `json:"version"`
+	Host         string `json:"host"`
+	DBEngine     string `json:"db_engine"`
 	Connectivity string `json:"connectivity"` // ok, degraded, failed
 }
 
 type ValidateDeploymentResponse struct {
-	AgentID  string `json:"agent_id"`
-	Status   string `json:"status"` // valid, invalid
+	AgentID  string   `json:"agent_id"`
+	Status   string   `json:"status"` // valid, invalid
 	Messages []string `json:"messages"`
 }
 
@@ -190,7 +190,6 @@ type DeployPackage struct {
 	DBEngine            string              `json:"db_engine"`
 	TargetOS            string              `json:"target_os"`
 	CreatedAt           time.Time           `json:"created_at"`
-	PKCS11Provider      string              `json:"pkcs11_provider"`
 	HeartbeatPath       string              `json:"heartbeat_path"`
 	RegisterPath        string              `json:"register_path"`
 	RotatePath          string              `json:"rotate_path"`
@@ -203,10 +202,10 @@ type DeployPackage struct {
 // The agent runs entirely in user-space — no kernel module or OS-level driver is required.
 type FileEncryptDownloadRequest struct {
 	TenantID     string `json:"tenant_id"`
-	TargetOS     string `json:"target_os"`   // windows | linux
-	Distro       string `json:"distro"`      // ubuntu | debian | rhel | alpine (Linux only)
-	KeyID        string `json:"key_id"`      // Vecta KMS key ID (AES-256)
-	WatchDirs    string `json:"watch_dirs"`  // comma-separated paths to encrypt
+	TargetOS     string `json:"target_os"`     // windows | linux
+	Distro       string `json:"distro"`        // ubuntu | debian | rhel | alpine (Linux only)
+	KeyID        string `json:"key_id"`        // Vecta KMS key ID (AES-256)
+	WatchDirs    string `json:"watch_dirs"`    // comma-separated paths to encrypt
 	FilePatterns string `json:"file_patterns"` // comma-separated glob patterns e.g. "*.docx,*.pdf"
 	RotationDays int    `json:"rotation_days"`
 	APIBaseURL   string `json:"api_base_url"`
@@ -217,8 +216,8 @@ type FileEncryptPackage struct {
 	TargetOS     string              `json:"target_os"`
 	Distro       string              `json:"distro"`
 	CreatedAt    time.Time           `json:"created_at"`
-	Algorithm    string              `json:"algorithm"`    // always AES-256-GCM (FIPS 140-3)
-	Mode         string              `json:"mode"`         // always "file_encrypt"
+	Algorithm    string              `json:"algorithm"` // always AES-256-GCM (FIPS 140-3)
+	Mode         string              `json:"mode"`      // always "file_encrypt"
 	KeyID        string              `json:"key_id"`
 	RotationDays int                 `json:"rotation_days"`
 	Files        []DeployPackageFile `json:"files"`
@@ -252,12 +251,12 @@ type CreateTDEKeyRequest struct {
 }
 
 type WrapDEKRequest struct {
-	TenantID     string `json:"tenant_id"`
-	PlaintextB64 string `json:"plaintext"`
-	IVB64        string `json:"iv"`
-	ReferenceID  string `json:"reference_id"`
-	AgentID      string `json:"agent_id"`
-	DatabaseID   string `json:"database_id"`
+	TenantID          string `json:"tenant_id"`
+	PlaintextB64      string `json:"plaintext"`
+	IVB64             string `json:"iv"`
+	ReferenceID       string `json:"reference_id"`
+	AgentID           string `json:"agent_id"`
+	DatabaseID        string `json:"database_id"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	JustificationCode string `json:"justification_code,omitempty"`
@@ -265,20 +264,20 @@ type WrapDEKRequest struct {
 }
 
 type WrapDEKResponse struct {
-	KeyID         string `json:"key_id"`
-	Version       int    `json:"version"`
-	CiphertextB64 string `json:"ciphertext"`
-	IVB64         string `json:"iv"`
+	KeyID             string `json:"key_id"`
+	Version           int    `json:"version"`
+	CiphertextB64     string `json:"ciphertext"`
+	IVB64             string `json:"iv"`
 	Status            string `json:"status,omitempty"`
 	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }
 
 type UnwrapDEKRequest struct {
-	TenantID      string `json:"tenant_id"`
-	CiphertextB64 string `json:"ciphertext"`
-	IVB64         string `json:"iv"`
-	AgentID       string `json:"agent_id"`
-	DatabaseID    string `json:"database_id"`
+	TenantID          string `json:"tenant_id"`
+	CiphertextB64     string `json:"ciphertext"`
+	IVB64             string `json:"iv"`
+	AgentID           string `json:"agent_id"`
+	DatabaseID        string `json:"database_id"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	JustificationCode string `json:"justification_code,omitempty"`
@@ -286,16 +285,16 @@ type UnwrapDEKRequest struct {
 }
 
 type UnwrapDEKResponse struct {
-	KeyID        string `json:"key_id"`
-	Version      int    `json:"version"`
-	PlaintextB64 string `json:"plaintext"`
+	KeyID             string `json:"key_id"`
+	Version           int    `json:"version"`
+	PlaintextB64      string `json:"plaintext"`
 	Status            string `json:"status,omitempty"`
 	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }
 
 type RotateTDEKeyRequest struct {
-	TenantID string `json:"tenant_id"`
-	Reason   string `json:"reason"`
+	TenantID          string `json:"tenant_id"`
+	Reason            string `json:"reason"`
 	RequesterID       string `json:"requester_id,omitempty"`
 	RequesterEmail    string `json:"requester_email,omitempty"`
 	JustificationCode string `json:"justification_code,omitempty"`
@@ -303,9 +302,9 @@ type RotateTDEKeyRequest struct {
 }
 
 type RotateTDEKeyResponse struct {
-	KeyID            string   `json:"key_id"`
-	VersionID        string   `json:"version_id"`
-	AffectedAgentIDs []string `json:"affected_agent_ids"`
+	KeyID             string   `json:"key_id"`
+	VersionID         string   `json:"version_id"`
+	AffectedAgentIDs  []string `json:"affected_agent_ids"`
 	Status            string   `json:"status,omitempty"`
 	ApprovalRequestID string   `json:"approval_request_id,omitempty"`
 }
@@ -546,11 +545,11 @@ type CreateAzureEKMConfigRequest struct {
 }
 
 type CreateAzureKeyMappingRequest struct {
-	TenantID   string `json:"tenant_id"`
-	ConfigID   string `json:"config_id"`
-	VectaKeyID string `json:"vecta_key_id"`
+	TenantID     string `json:"tenant_id"`
+	ConfigID     string `json:"config_id"`
+	VectaKeyID   string `json:"vecta_key_id"`
 	AzureKeyName string `json:"azure_key_name"`
-	Purpose    string `json:"purpose"`
+	Purpose      string `json:"purpose"`
 }
 
 type AzureWrapUnwrapRequest struct {
@@ -566,8 +565,8 @@ type GoogleCSEConfig struct {
 	GoogleWorkspaceCustomerID string    `json:"google_workspace_customer_id"`
 	ServiceAccountEmail       string    `json:"service_account_email"`
 	ServiceAccountKeyJSON     string    `json:"service_account_key_json"` // encrypted at rest
-	AllowedDomains            []string  `json:"allowed_domains"`         // e.g., ["company.com"]
-	KACLSEndpoint             string    `json:"kacls_endpoint"`          // public URL where Google calls us
+	AllowedDomains            []string  `json:"allowed_domains"`          // e.g., ["company.com"]
+	KACLSEndpoint             string    `json:"kacls_endpoint"`           // public URL where Google calls us
 	Status                    string    `json:"status"`
 	KeyCount                  int       `json:"key_count"`
 	LastActivityAt            time.Time `json:"last_activity_at"`
@@ -579,7 +578,7 @@ type GoogleCSEKey struct {
 	TenantID     string    `json:"tenant_id"`
 	ConfigID     string    `json:"config_id"`
 	KeyName      string    `json:"key_name"`
-	VectaKeyID   string    `json:"vecta_key_id"`  // Backing key in Vecta KMS
+	VectaKeyID   string    `json:"vecta_key_id"`   // Backing key in Vecta KMS
 	GoogleKeyURI string    `json:"google_key_uri"` // URI Google uses to reference this key
 	Purpose      string    `json:"purpose"`        // "gmail", "drive", "calendar", "meet"
 	Status       string    `json:"status"`         // "active", "disabled", "destroyed"

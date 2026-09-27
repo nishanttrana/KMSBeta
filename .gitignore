@@ -60,7 +60,6 @@ services/*/__debug_bin*
 /jca-provider
 /keyaccess
 /kmip
-/pkcs11-provider
 /policy
 /pqc
 /reconciler
@@ -95,7 +94,6 @@ services/jca-provider/jca-provider
 services/keyaccess/keyaccess
 services/kmip/kmip
 services/payment/payment
-services/pkcs11-provider/pkcs11-provider
 services/policy/policy
 services/posture/posture
 services/pqc/pqc

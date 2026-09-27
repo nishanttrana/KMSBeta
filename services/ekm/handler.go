@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/x509"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -16,12 +16,18 @@ import (
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc       *Service
+	mux       *http.ServeMux
+	jwtParser func(string) (*pkgauth.Claims, error)
 }
+
+// SetJWTParser installs the verifier for auth-service tokens. Every
+// tenant-scoped route requires one; see tenantFromRequest.
+func (h *Handler) SetJWTParser(p func(string) (*pkgauth.Claims, error)) { h.jwtParser = p }
 
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
@@ -29,7 +35,16 @@ func NewHandler(svc *Service) *Handler {
 	return h
 }
 
+// ServeHTTP attaches the caller's verified claims, when the bearer token is
+// an auth-service token, so tenantFromRequest can enforce the tenant.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if h.jwtParser != nil {
+		if raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer")); raw != "" {
+			if claims, err := h.jwtParser(raw); err == nil && claims != nil {
+				r = r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims))
+			}
+		}
+	}
 	h.mux.ServeHTTP(w, r)
 }
 
@@ -857,6 +872,10 @@ func requestID(r *http.Request) string {
 	return newID("req")
 }
 
+// tenantFromRequest requires a verified auth-service token and returns the
+// tenant it may act for. The TLS peer is never an identity: requests arrive
+// through Envoy over internal mTLS (the peer is Envoy), and the edge does not
+// verify customer client certificates.
 func tenantFromRequest(r *http.Request, bodyTenant string) (string, string, error) {
 	tenantID := strings.TrimSpace(bodyTenant)
 	if tenantID == "" {
@@ -865,53 +884,20 @@ func tenantFromRequest(r *http.Request, bodyTenant string) (string, string, erro
 	if tenantID == "" {
 		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	}
-	certTenant, role, cn, err := certPrincipal(r)
-	if err != nil {
-		return "", "", newServiceError(http.StatusUnauthorized, "invalid_client_cert", err.Error())
-	}
-	if certTenant != "" {
-		if tenantID == "" {
-			tenantID = certTenant
-		}
-		if tenantID != certTenant {
-			return "", "", newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant in request does not match mTLS certificate")
-		}
-		if !isEKMRole(role) {
-			return "", "", newServiceError(http.StatusForbidden, "role_not_allowed", "mTLS role is not allowed for EKM")
-		}
+	claims, ok := pkgauth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		return "", "", newServiceError(http.StatusUnauthorized, "unauthorized", "a valid bearer token is required")
 	}
 	if tenantID == "" {
-		return "", "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required (body/query/header or mTLS CN)")
+		tenantID = strings.TrimSpace(claims.TenantID)
 	}
-	return tenantID, cn, nil
-}
-
-func certPrincipal(r *http.Request) (string, string, string, error) {
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		return "", "", "", nil
+	if tenantID == "" {
+		return "", "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	cert := r.TLS.PeerCertificates[0]
-	return principalFromCert(cert)
-}
-
-func principalFromCert(cert *x509.Certificate) (string, string, string, error) {
-	if cert == nil {
-		return "", "", "", errors.New("certificate is nil")
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		return "", "", newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant_id does not match authenticated token")
 	}
-	cn := strings.TrimSpace(cert.Subject.CommonName)
-	if cn == "" {
-		return "", "", "", errors.New("client cert CN is required")
-	}
-	parts := strings.SplitN(cn, ":", 2)
-	if len(parts) != 2 {
-		return "", "", "", errors.New("client cert CN must be tenant:role")
-	}
-	tenantID := strings.TrimSpace(parts[0])
-	role := strings.TrimSpace(parts[1])
-	if tenantID == "" || role == "" {
-		return "", "", "", errors.New("invalid tenant:role in CN")
-	}
-	return tenantID, role, cn, nil
+	return tenantID, firstNonEmpty(claims.UserID, claims.ClientID, claims.Subject), nil
 }
 
 func isEKMRole(role string) bool {
@@ -933,30 +919,13 @@ func bitLockerTenantFromRequest(r *http.Request, bodyTenant string, requireAgent
 		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	}
 
-	certTenant, certRole, certCN, certErr := certPrincipal(r)
-	if certErr != nil {
-		return "", "", "", false, newServiceError(http.StatusUnauthorized, "invalid_client_cert", certErr.Error())
-	}
-	if certTenant != "" {
-		if tenantID == "" {
-			tenantID = certTenant
-		}
-		if tenantID != certTenant {
-			return "", "", "", false, newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant in request does not match mTLS certificate")
-		}
-		if !isBitLockerRole(certRole) {
-			return "", "", "", false, newServiceError(http.StatusForbidden, "role_not_allowed", "mTLS role is not allowed for bitlocker")
-		}
-		return tenantID, certCN, "", true, nil
-	}
-
 	rawToken := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
 	if rawToken != "" {
 		claims, err := parseBitLockerJWT(rawToken)
-		if err == nil {
-			if !isBitLockerRole(claims.Role) {
-				return "", "", "", false, newServiceError(http.StatusForbidden, "role_not_allowed", "jwt role is not allowed for bitlocker")
-			}
+		if err == nil && !isBitLockerRole(claims.Role) && requireAgentAuth {
+			return "", "", "", false, newServiceError(http.StatusForbidden, "role_not_allowed", "jwt role is not allowed for bitlocker")
+		}
+		if err == nil && isBitLockerRole(claims.Role) {
 			if tenantID == "" {
 				tenantID = claims.TenantID
 			}
@@ -968,20 +937,19 @@ func bitLockerTenantFromRequest(r *http.Request, bodyTenant string, requireAgent
 			}
 			return tenantID, "", claims.Subject, true, nil
 		}
-		// Dashboard/admin calls include Auth service JWTs, which are not BitLocker-agent JWTs.
-		// For non-agent endpoints, keep tenant resolution from request and do not fail on JWT parse.
-		if requireAgentAuth {
+		if err != nil && requireAgentAuth {
 			return "", "", "", false, newServiceError(http.StatusUnauthorized, "invalid_token", err.Error())
 		}
 	}
-
 	if requireAgentAuth {
-		return "", "", "", false, newServiceError(http.StatusUnauthorized, "unauthorized", "bitlocker agent auth requires mTLS or JWT")
+		return "", "", "", false, newServiceError(http.StatusUnauthorized, "unauthorized", "bitlocker agent auth requires a bitlocker-role JWT")
 	}
-	if tenantID == "" {
-		return "", "", "", false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	// Dashboard and admin calls: a verified auth-service token for the tenant.
+	tenantID, actor, err := tenantFromRequest(r, tenantID)
+	if err != nil {
+		return "", "", "", false, err
 	}
-	return tenantID, "", "", false, nil
+	return tenantID, "", actor, false, nil
 }
 
 type bitLockerJWTClaims struct {
@@ -1037,6 +1005,12 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 	var svcErr serviceError
 	if errors.As(err, &svcErr) {
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
+		if svcErr.HTTPStatus == http.StatusUnauthorized || svcErr.HTTPStatus == http.StatusForbidden {
+			_ = h.svc.publishAudit(context.Background(), "audit.ekm.request_refused", tenantID, map[string]interface{}{
+				"code": svcErr.Code, "reason": svcErr.Message, "status": svcErr.HTTPStatus,
+				"result": "refused", "severity": "warning", "request_id": reqID,
+			})
+		}
 		return
 	}
 	// A05: avoid leaking internal error details for 5xx responses

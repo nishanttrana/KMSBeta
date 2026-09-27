@@ -14,7 +14,7 @@ Required:
   --api-base-url       URL           Vecta KMS base URL (e.g. https://kms.acme.com)
 
 Optional:
-  --mode               MODE          tde | bitlocker | pkcs11 | azure-ekm | google-cse (default: tde)
+  --mode               MODE          tde (default; BitLocker needs Windows)
   --db-engine          ENGINE        mssql | mysql | postgresql | oracle | mariadb (default: mssql)
   --host               IP            Database host IP (default: 127.0.0.1)
   --auth-token         TOKEN         Bearer token (optional; prefer env VECTA_AUTH_TOKEN)
@@ -25,8 +25,6 @@ Optional:
   --db-port            PORT          Default derived from engine
   --heartbeat-sec      N             Heartbeat interval seconds (default: 30)
   --rotation-days      N             Key rotation cycle days (default: 90)
-  --pkcs11-module      PATH          PKCS#11 .so path (default: /usr/lib/opensc-pkcs11.so)
-  --pkcs11-slot        N             PKCS#11 slot ID (default: 0)
   --install-dir        DIR           Install directory (default: /opt/vecta/ekm-agent)
   --no-service                       Write config only; skip systemd service installation
 
@@ -50,8 +48,6 @@ DB_NAME=""
 DB_PORT=0
 HEARTBEAT_SEC=30
 ROTATION_DAYS=90
-PKCS11_MODULE="/usr/lib/opensc-pkcs11.so"
-PKCS11_SLOT=0
 INSTALL_DIR="/opt/vecta/ekm-agent"
 NO_SERVICE=0
 
@@ -73,8 +69,6 @@ while [[ $# -gt 0 ]]; do
     --db-port)       DB_PORT="$2";      shift 2 ;;
     --heartbeat-sec) HEARTBEAT_SEC="$2"; shift 2 ;;
     --rotation-days) ROTATION_DAYS="$2"; shift 2 ;;
-    --pkcs11-module) PKCS11_MODULE="$2"; shift 2 ;;
-    --pkcs11-slot)   PKCS11_SLOT="$2";  shift 2 ;;
     --install-dir)   INSTALL_DIR="$2";  shift 2 ;;
     --no-service)    NO_SERVICE=1;      shift ;;
     -h|--help)       usage ;;
@@ -129,15 +123,12 @@ cfg = {
   "tenant_id":              "$TENANT_ID",
   "agent_id":               "$AGENT_ID",
   "agent_name":             "$AGENT_NAME",
-  "mode":                   "$MODE",
+  "agent_mode":             "$MODE",
   "role":                   "ekm-agent",
   "db_engine":              "$DB_ENGINE",
   "host":                   "$HOST_IP",
   "version":                "",
   "api_base_url":           "$API_BASE_URL",
-  "register_path":          "/ekm/agents/register",
-  "heartbeat_path":         "/ekm/agents/{agent_id}/heartbeat",
-  "rotate_path":            "/ekm/agents/{agent_id}/rotate",
   "auth_token":             "$AUTH_TOKEN",
   "tls_skip_verify":        False,
   "heartbeat_interval_sec": $HEARTBEAT_SEC,
@@ -153,21 +144,9 @@ cfg = {
   "config_version_ack":     0,
 }
 
-if "$MODE" in ("pkcs11",) or "$DB_ENGINE" in ("mssql", "oracle"):
-    cfg["pkcs11"] = {
-        "module_path": "$PKCS11_MODULE",
-        "slot_id":     $PKCS11_SLOT,
-        "pin_env":     "PKCS11_PIN",
-    }
-
 if "$MODE" == "bitlocker":
-    cfg["bitlocker"] = {
-        "protect_os_volume":    True,
-        "protect_data_volumes": True,
-        "require_tpm":          True,
-        "key_rotation_days":    $ROTATION_DAYS,
-        "escrow_to_vecta":      True,
-    }
+    cfg["bitlocker_mount_point"] = "C:"
+    cfg["bitlocker_protector_type"] = "tpm"
 
 print(json.dumps(cfg, indent=2))
 PYEOF

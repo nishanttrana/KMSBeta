@@ -188,7 +188,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
   const [health, setHealth] = useState<any>(null);
   const [cfgProtocol, setCfgProtocol] = useState("generic");
   const [cfgEnabled, setCfgEnabled] = useState(true);
-  const [cfgAuthMode, setCfgAuthMode] = useState("mtls_or_jwt");
+  const [cfgAuthMode, setCfgAuthMode] = useState("jwt");
   const [cfgPolicyID, setCfgPolicyID] = useState("");
   const [cfgGovernance, setCfgGovernance] = useState(false);
   const [cfgMetadata, setCfgMetadata] = useState("{\n  \"description\": \"\"\n}");
@@ -242,7 +242,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     const existing = (Array.isArray(endpoints) ? endpoints : []).find((item) => String(item?.protocol || "") === protocol);
     setCfgProtocol(protocol);
     setCfgEnabled(existing ? Boolean(existing.enabled) : true);
-    setCfgAuthMode(String(existing?.auth_mode || "mtls_or_jwt"));
+    setCfgAuthMode(String(existing?.auth_mode === "mtls_or_jwt" ? "jwt" : existing?.auth_mode || "jwt"));
     setCfgPolicyID(String(existing?.policy_id || ""));
     setCfgGovernance(Boolean(existing?.governance_required));
 
@@ -424,7 +424,7 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
             {/* Status details */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px", fontSize: 10, marginBottom: 8 }}>
               <span style={{ color: C.muted }}>Auth Mode</span>
-              <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.auth_mode || "mtls_or_jwt")}</span>
+              <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.auth_mode === "mtls_or_jwt" ? "jwt" : item?.auth_mode || "jwt")}</span>
               <span style={{ color: C.muted }}>Policy</span>
               <span style={{ color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(item?.policy_id || "default")}</span>
               <span style={{ color: C.muted }}>Governance</span>
@@ -532,11 +532,9 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
         </FG>
       </Row2>
       <Row2>
-        <FG label="Auth Mode" required hint="mTLS recommended for production deployments.">
+        <FG label="Auth Mode" required hint="Callers authenticate with a Vecta-issued JWT. Client-certificate (mTLS) authentication is not offered: the edge does not verify client certificates.">
           <Sel value={cfgAuthMode} onChange={(e) => setCfgAuthMode(e.target.value)}>
-            <option value="mtls_or_jwt">mTLS or JWT</option>
-            <option value="mtls">mTLS only</option>
-            <option value="jwt">JWT only</option>
+            <option value="jwt">JWT</option>
           </Sel>
         </FG>
         <FG label="Policy ID" hint="Optional policy ID for operation-level access control.">

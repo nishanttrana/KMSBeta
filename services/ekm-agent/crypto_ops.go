@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -135,75 +136,89 @@ func (r *AgentRunner) Decrypt(ctx context.Context, keyID string, ciphertext, iv 
 }
 
 // PollAndExecuteJob polls for the next BitLocker job and executes it.
+// bitLockerJob is what POST .../jobs/next returns under "job".
+type bitLockerJob struct {
+	ID         string `json:"id"`
+	Operation  string `json:"operation"`
+	ParamsJSON string `json:"params_json"`
+}
+
+// PollAndExecuteJob claims the next queued BitLocker operation, runs it, and
+// reports the result in the shape the EKM service accepts
+// (BitLockerJobResultRequest): status succeeded|failed, a structured result,
+// and a rotated recovery password as recovery_key so the service escrows it.
 func (r *AgentRunner) PollAndExecuteJob(ctx context.Context) {
 	nextURL := joinURL(r.cfg.APIBaseURL, replaceAgentIDPath(r.cfg.JobsNextPath, r.cfg.AgentID))
-	var job struct {
-		JobID     string `json:"job_id"`
-		Operation string `json:"operation"`
-		Params    struct {
-			MountPoint    string `json:"mount_point"`
-			ProtectorType string `json:"protector_type"`
-		} `json:"params"`
+	var next struct {
+		Job bitLockerJob `json:"job"`
 	}
-	if err := r.getJSON(ctx, nextURL, &job); err != nil {
-		// No job or network error — expected, not logged as error
+	// 404 (no pending job) and network errors both mean nothing to run now.
+	if err := r.postJSON(ctx, nextURL, map[string]string{"tenant_id": r.cfg.TenantID}, &next); err != nil {
 		return
 	}
-	if strings.TrimSpace(job.JobID) == "" {
+	job := next.Job
+	if strings.TrimSpace(job.ID) == "" {
 		return
 	}
+	var params struct {
+		MountPoint    string `json:"mount_point"`
+		ProtectorType string `json:"protector_type"`
+	}
+	if strings.TrimSpace(job.ParamsJSON) != "" {
+		_ = json.Unmarshal([]byte(job.ParamsJSON), &params)
+	}
+	mount := firstNonEmpty(params.MountPoint, r.cfg.BitLockerMountPoint)
+	protector := firstNonEmpty(params.ProtectorType, r.cfg.BitLockerProtector)
+	r.logger.Printf("bitlocker job received: id=%s op=%s mount=%s", job.ID, job.Operation, mount)
 
-	r.logger.Printf("bitlocker job received: id=%s op=%s mount=%s", job.JobID, job.Operation, job.Params.MountPoint)
-
-	mount := firstNonEmpty(job.Params.MountPoint, r.cfg.BitLockerMountPoint)
-	protector := firstNonEmpty(job.Params.ProtectorType, r.cfg.BitLockerProtector)
-
-	var result string
+	result := map[string]interface{}{"operation": job.Operation, "mount_point": mount}
+	protection, recoveryKey := "", ""
 	var execErr error
-
 	switch strings.ToLower(strings.TrimSpace(job.Operation)) {
 	case "status":
-		status, err := GetBitLockerStatus(mount)
-		execErr = err
-		result = mustJSON(status)
+		var st BitLockerStatus
+		if st, execErr = GetBitLockerStatus(mount); execErr == nil {
+			result["status"] = st
+			protection = st.ProtectionStatus
+		}
 	case "enable":
-		result, execErr = EnableBitLocker(mount, protector)
+		var out string
+		if out, execErr = EnableBitLocker(mount, protector); execErr == nil {
+			result["output"] = out
+		}
 	case "disable":
 		execErr = DisableBitLocker(mount)
-		result = "disabled"
 	case "suspend":
 		execErr = SuspendBitLocker(mount)
-		result = "suspended"
 	case "resume":
 		execErr = ResumeBitLocker(mount)
-		result = "resumed"
 	case "rotate_recovery":
-		result, execErr = RotateRecoveryPassword(mount)
+		recoveryKey, execErr = RotateRecoveryPassword(mount)
 	case "tpm_status":
 		present, ready, err := GetTPMStatus()
 		execErr = err
-		result = mustJSON(map[string]interface{}{"present": present, "ready": ready})
+		result["tpm_present"], result["tpm_ready"] = present, ready
 	default:
-		result = "unknown_operation"
 		execErr = fmt.Errorf("unsupported operation: %s", job.Operation)
 	}
 
-	status := "completed"
-	errMsg := ""
-	if execErr != nil {
-		status = "failed"
-		errMsg = execErr.Error()
-		r.logger.Printf("bitlocker job %s failed: %v", job.JobID, execErr)
+	body := map[string]interface{}{
+		"tenant_id":          r.cfg.TenantID,
+		"status":             "succeeded",
+		"result":             result,
+		"protection_status":  protection,
+		"volume_mount_point": mount,
 	}
-
-	// Report result
+	if execErr != nil {
+		body["status"] = "failed"
+		body["error_message"] = execErr.Error()
+		r.logger.Printf("bitlocker job %s failed: %v", job.ID, execErr)
+	} else if recoveryKey != "" {
+		body["recovery_key"] = recoveryKey
+	}
 	resultPath := strings.ReplaceAll(r.cfg.JobResultPath, "{agent_id}", r.cfg.AgentID)
-	resultPath = strings.ReplaceAll(resultPath, "{job_id}", job.JobID)
-	resultURL := joinURL(r.cfg.APIBaseURL, resultPath)
-	_ = r.postJSON(ctx, resultURL, map[string]interface{}{
-		"job_id": job.JobID,
-		"status": status,
-		"result": result,
-		"error":  errMsg,
-	}, nil)
+	resultPath = strings.ReplaceAll(resultPath, "{job_id}", job.ID)
+	if err := r.postJSON(ctx, joinURL(r.cfg.APIBaseURL, resultPath), body, nil); err != nil {
+		r.logger.Printf("bitlocker job %s result not accepted: %v", job.ID, err)
+	}
 }

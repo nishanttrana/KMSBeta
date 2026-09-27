@@ -1688,60 +1688,13 @@ Interface configuration fields:
 
 ### 11.3 Applying Network Configuration Changes
 
-```
-POST /svc/governance/governance/system/network/apply
-Authorization: Bearer <access_token>
-Content-Type: application/json
-
-{
-  "interfaces": [
-    {
-      "name": "rest",
-      "bind_address": "0.0.0.0",
-      "port": 5173,
-      "tls_mode": "tls",
-      "tls_cert_source": "internal_ca"
-    },
-    {
-      "name": "kmip",
-      "bind_address": "0.0.0.0",
-      "port": 5696,
-      "tls_mode": "mtls",
-      "tls_cert_source": "file",
-      "tls_cert_path": "/certs/kmip-server.pem",
-      "tls_key_path": "/certs/kmip-server-key.pem"
-    },
-    {
-      "name": "grpc",
-      "bind_address": "127.0.0.1",
-      "port": 50051,
-      "tls_mode": "tls",
-      "tls_cert_source": "internal_ca"
-    }
-  ]
-}
-```
-
-**cURL example:**
-
-```bash
-curl -sk -X POST https://localhost/svc/governance/governance/system/network/apply \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "interfaces": [
-      {
-        "name": "rest",
-        "bind_address": "0.0.0.0",
-        "port": 5173,
-        "tls_mode": "tls",
-        "tls_cert_source": "internal_ca"
-      }
-    ]
-  }' | jq .
-```
-
-> **Warning:** Applying network configuration changes causes the affected interface to briefly restart. If the REST interface is reconfigured, the dashboard connection will be interrupted. Ensure you have an alternative access path (e.g., local console access) before applying REST interface changes.
+Interface ports, bind addresses and TLS are set in System Administration >
+Interfaces and take effect through the services that own those listeners.
+There is no "apply network configuration" call: the former
+`POST /governance/system/network/apply` (and the management IP, cluster IP,
+DNS, NTP and proxy fields it read) changed nothing on the host and was removed
+in 1.27.0-beta ([REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)). Host
+networking belongs to the host or orchestrator.
 
 ### 11.4 TLS Certificate Sources
 
@@ -1992,9 +1945,7 @@ Use this checklist immediately after installation before onboarding any users or
 
 2. Configure TLS for each enabled interface
 
-3. Apply via POST /svc/governance/governance/system/network/apply
-
-4. Verify all interfaces show healthy in System Health
+3. Verify all interfaces show healthy in System Health
 ```
 
 ---

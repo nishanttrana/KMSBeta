@@ -66,16 +66,18 @@ type AuthIdentity struct {
 }
 
 type ProxyCryptoRequest struct {
-	TenantID       string   `json:"tenant_id"`
-	PlaintextB64   string   `json:"plaintext"`
-	CiphertextB64  string   `json:"ciphertext"`
-	IVB64          string   `json:"iv"`
-	ReferenceID    string   `json:"reference_id"`
-	RequesterID    string   `json:"requester_id"`
-	RequesterEmail string   `json:"requester_email"`
-	JustificationCode string `json:"justification_code,omitempty"`
-	JustificationText string `json:"justification_text,omitempty"`
-	ApproverEmails []string `json:"approver_emails"`
+	TenantID          string   `json:"tenant_id"`
+	PlaintextB64      string   `json:"plaintext"`
+	CiphertextB64     string   `json:"ciphertext"`
+	IVB64             string   `json:"iv"`
+	ReferenceID       string   `json:"reference_id"`
+	RequesterID       string   `json:"requester_id"`
+	RequesterEmail    string   `json:"requester_email"`
+	JustificationCode string   `json:"justification_code,omitempty"`
+	JustificationText string   `json:"justification_text,omitempty"`
+	ApproverEmails    []string `json:"approver_emails"`
+	// ApprovalRequestID retries a pending request once governance approved it.
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }
 
 type ProxyCryptoResponse struct {
@@ -158,4 +160,9 @@ type GovernanceApprovalStatus struct {
 	CurrentApprovals int    `json:"current_approvals"`
 	CurrentDenials   int    `json:"current_denials"`
 	ExpiresAt        string `json:"expires_at"`
+	Action           string `json:"action"`
+	TargetType       string `json:"target_type"`
+	TargetID         string `json:"target_id"`
+	Operation        string `json:"operation"`
+	PayloadHash      string `json:"payload_hash"`
 }

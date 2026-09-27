@@ -1,0 +1,140 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
+)
+
+func hyokCall(h *Handler, token, method, path, body string, headers ...string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	for i := 0; i+1 < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+// Client-certificate headers and the TLS peer are never an identity: only a
+// verified JWT is, and it must match the tenant.
+func TestHYOKRefusesSpoofedIdentity(t *testing.T) {
+	h, _, keycore, _, _, _ := newHYOKHandler(t)
+	keycore.Seed("tenant-a", "key-1", "AES-256")
+	path := "/hyok/generic/v1/keys/key-1/wrap?tenant_id=tenant-a"
+	body := `{"plaintext":"aGVsbG8="}`
+	if rr := hyokCall(h, "", http.MethodPost, path, body, "X-Client-CN", "tenant-a:cloud", "X-Client-Subject", "CN=tenant-a:cloud"); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("spoofed client-cert headers accepted: %d %s", rr.Code, rr.Body.String())
+	}
+	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPost, path, body); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("other tenant's token accepted: %d", rr.Code)
+	}
+	if rr := hyokCall(h, "forged", http.MethodPost, path, body); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("unverifiable token accepted: %d", rr.Code)
+	}
+}
+
+// Endpoint administration needs a verified token of the tenant, and a tenant
+// administrator to change anything; refusals are audited.
+func TestHYOKAdminRoutesRequireTenantAdmin(t *testing.T) {
+	h, _, _, _, _, pub := newHYOKHandler(t)
+	cfg := `{"enabled":true,"auth_mode":"jwt","governance_required":false}`
+	if rr := hyokCall(h, "", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated configure: %d", rr.Code)
+	}
+	if rr := hyokCall(h, "jwt:tenant-b:admin", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("cross-tenant configure: %d", rr.Code)
+	}
+	if rr := hyokCall(h, "jwt:tenant-a:operator", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusForbidden {
+		t.Fatalf("non-admin configure: %d", rr.Code)
+	}
+	for _, path := range []string{"/hyok/v1/endpoints?tenant_id=tenant-a", "/hyok/v1/requests?tenant_id=tenant-a", "/hyok/v1/health?tenant_id=tenant-a"} {
+		if rr := hyokCall(h, "", http.MethodGet, path, ""); rr.Code != http.StatusUnauthorized {
+			t.Fatalf("unauthenticated %s: %d", path, rr.Code)
+		}
+	}
+	if rr := hyokCall(h, "", http.MethodDelete, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", ""); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated delete: %d", rr.Code)
+	}
+	if pub.Count("audit.hyok.admin_refused") == 0 {
+		t.Fatal("admin refusals not audited")
+	}
+	if rr := hyokCall(h, "jwt:tenant-a:admin", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", `{"enabled":true,"auth_mode":"mtls"}`); rr.Code != http.StatusBadRequest {
+		t.Fatalf("unverifiable mtls mode stored: %d %s", rr.Code, rr.Body.String())
+	}
+	if rr := hyokCall(h, "jwt:tenant-a:admin", http.MethodPut, "/hyok/v1/endpoints/generic?tenant_id=tenant-a", cfg); rr.Code != http.StatusOK {
+		t.Fatalf("admin configure refused: %d %s", rr.Code, rr.Body.String())
+	}
+}
+
+// A governance-gated operation completes when retried with its approval:
+// once, and only for the approved key, operation and payload.
+func TestHYOKGovernanceApprovalReleasesOperationOnce(t *testing.T) {
+	svc, _, keycore, _, gov, pub := newHYOKService(t)
+	ctx := context.Background()
+	keycore.Seed("tenant-g", "key-g", "AES-256")
+	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{TenantID: "tenant-g", Protocol: ProtocolGeneric, Enabled: true, AuthMode: AuthModeJWT, GovernanceRequired: true}); err != nil {
+		t.Fatal(err)
+	}
+	id := AuthIdentity{Mode: "jwt", Subject: "u1", TenantID: "tenant-g"}
+	req := ProxyCryptoRequest{PlaintextB64: "aGVsbG8="}
+	run := func(r ProxyCryptoRequest) (ProxyCryptoResponse, error) {
+		return svc.ProcessCrypto(ctx, "tenant-g", ProtocolGeneric, "wrap", "key-g", "/hyok/generic/v1/keys/key-g/wrap", id, r)
+	}
+	pending, err := run(req)
+	if err != nil || pending.Status != "pending_approval" || pending.ApprovalRequestID == "" {
+		t.Fatalf("expected pending approval: %+v %v", pending, err)
+	}
+	retry := req
+	retry.ApprovalRequestID = pending.ApprovalRequestID
+	if _, err := run(retry); err == nil {
+		t.Fatal("released before approval")
+	}
+	gov.status = map[string]GovernanceApprovalStatus{pending.ApprovalRequestID: {
+		Status: "approved", Action: "key.wrap", TargetType: "key", TargetID: "key-g", PayloadHash: approvalPayloadHash(req),
+	}}
+	other := retry
+	other.PlaintextB64 = "b3RoZXI="
+	if _, err := run(other); err == nil {
+		t.Fatal("approval released a different payload")
+	}
+	out, err := run(retry)
+	if err != nil || out.Status != "ok" || out.CiphertextB64 == "" {
+		t.Fatalf("approved operation did not run: %+v %v", out, err)
+	}
+	if _, err := run(retry); err == nil {
+		t.Fatal("approval reused")
+	}
+	if pub.Count("audit.hyok.approval_refused") == 0 {
+		t.Fatal("approval refusals not audited")
+	}
+}
+
+type failingKeyAccess struct{}
+
+func (failingKeyAccess) Evaluate(context.Context, pkgkeyaccess.EvaluateRequest) (pkgkeyaccess.EvaluateResponse, error) {
+	return pkgkeyaccess.EvaluateResponse{}, errors.New("unreachable")
+}
+
+// When the key-access service cannot answer, a fail-closed proxy refuses.
+func TestHYOKKeyAccessFailsClosed(t *testing.T) {
+	svc, _, keycore, _, _, _ := newHYOKService(t)
+	ctx := context.Background()
+	keycore.Seed("tenant-k", "key-k", "AES-256")
+	svc.SetKeyAccessClient(failingKeyAccess{})
+	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{TenantID: "tenant-k", Protocol: ProtocolGeneric, Enabled: true, AuthMode: AuthModeJWT}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := svc.ProcessCrypto(ctx, "tenant-k", ProtocolGeneric, "wrap", "key-k", "/p", AuthIdentity{Mode: "jwt"}, ProxyCryptoRequest{PlaintextB64: "aGVsbG8="})
+	if err == nil {
+		t.Fatal("operation allowed while key access was unavailable")
+	}
+}

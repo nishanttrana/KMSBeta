@@ -5,7 +5,7 @@
 
 .DESCRIPTION
   Installs ekm-agent.exe, writes the agent config, and registers it as a Windows
-  service with optional TDE, BitLocker, PKCS#11, and Azure/Google CSE modes.
+  service in TDE-monitoring or BitLocker mode (the only modes the agent has).
 
 .EXAMPLE
   # SQL Server TDE
@@ -25,16 +25,14 @@
   # BitLocker key management mode
   .\install-ekm-agent.ps1 -Mode bitlocker -TenantId root ...
 
-  # PKCS#11 hardware token mode
-  .\install-ekm-agent.ps1 -Mode pkcs11 -TenantId root ...
 #>
 param(
   [Parameter(Mandatory=$true)][string]$TenantId,
   [Parameter(Mandatory=$true)][string]$AgentId,
   [Parameter(Mandatory=$true)][string]$AgentName,
 
-  # Operation mode: tde (default), bitlocker, pkcs11, azure-ekm, google-cse
-  [ValidateSet("tde","bitlocker","pkcs11","azure-ekm","google-cse")][string]$Mode = "tde",
+  # Operation mode: tde (default) or bitlocker
+  [ValidateSet("tde","bitlocker")][string]$Mode = "tde",
 
   # TDE mode: target database engine
   [ValidateSet("mssql","mysql","postgresql","oracle","mariadb")][string]$DbEngine = "mssql",
@@ -53,23 +51,6 @@ param(
   [int]$HeartbeatIntervalSec = 30,
   [int]$RotationCycleDays    = 90,
   [switch]$AutoProvisionTDE  = $true,
-
-  # PKCS#11 settings
-  [string]$Pkcs11ModulePath = "C:\Program Files\OpenSC Project\OpenSC\pkcs11\opensc-pkcs11.dll",
-  [int]$Pkcs11SlotId        = 0,
-  [string]$Pkcs11PinEnv     = "PKCS11_PIN",
-
-  # Azure EKM settings
-  [string]$AzureKeyVaultUrl    = "",
-  [string]$AzureTenantId       = "",
-  [string]$AzureClientId       = "",
-  [string]$AzureClientSecretEnv = "AZURE_CLIENT_SECRET",
-
-  # Google CSE settings
-  [string]$GoogleProjectId      = "",
-  [string]$GoogleKmsLocation    = "global",
-  [string]$GoogleKmsKeyRing     = "",
-  [string]$GoogleCredentialsEnv = "GOOGLE_APPLICATION_CREDENTIALS",
 
   [string]$InstallDir = "C:\ProgramData\Vecta\EKMAgent"
 )
@@ -117,15 +98,12 @@ $cfg = [ordered]@{
   tenant_id              = $TenantId
   agent_id               = $AgentId
   agent_name             = $AgentName
-  mode                   = $Mode
+  agent_mode             = $Mode
   role                   = "ekm-agent"
   db_engine              = $DbEngine
   host                   = $HostIP
   version                = $DbVersion
   api_base_url           = $ApiBaseUrl
-  register_path          = "/ekm/agents/register"
-  heartbeat_path         = "/ekm/agents/{agent_id}/heartbeat"
-  rotate_path            = "/ekm/agents/{agent_id}/rotate"
   auth_token             = $AuthToken
   tls_skip_verify        = $false
   heartbeat_interval_sec = $HeartbeatIntervalSec
@@ -141,42 +119,11 @@ $cfg = [ordered]@{
   config_version_ack     = 0
 }
 
-# Mode-specific config sections
-if ($Mode -eq "pkcs11" -or $DbEngine -in @("mssql","oracle")) {
-  $cfg["pkcs11"] = [ordered]@{
-    module_path = $Pkcs11ModulePath
-    slot_id     = $Pkcs11SlotId
-    pin_env     = $Pkcs11PinEnv
-  }
-}
-
+# BitLocker mode: the agent reads these two keys; endpoint paths default
+# per mode inside the agent.
 if ($Mode -eq "bitlocker") {
-  $cfg["bitlocker"] = [ordered]@{
-    recovery_key_path      = Join-Path $InstallDir "recovery"
-    protect_os_volume      = $true
-    protect_data_volumes   = $true
-    require_tpm            = $true
-    key_rotation_days      = $RotationCycleDays
-    escrow_to_vecta        = $true
-  }
-}
-
-if ($Mode -eq "azure-ekm") {
-  $cfg["azure_ekm"] = [ordered]@{
-    key_vault_url     = $AzureKeyVaultUrl
-    tenant_id         = $AzureTenantId
-    client_id         = $AzureClientId
-    client_secret_env = $AzureClientSecretEnv
-  }
-}
-
-if ($Mode -eq "google-cse") {
-  $cfg["google_cse"] = [ordered]@{
-    project_id          = $GoogleProjectId
-    kms_location        = $GoogleKmsLocation
-    key_ring            = $GoogleKmsKeyRing
-    credentials_env     = $GoogleCredentialsEnv
-  }
+  $cfg["bitlocker_mount_point"]    = "C:"
+  $cfg["bitlocker_protector_type"] = "tpm"
 }
 
 $cfgPath = Join-Path $InstallDir "agent-config.json"

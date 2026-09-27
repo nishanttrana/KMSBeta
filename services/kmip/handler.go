@@ -85,10 +85,7 @@ func (h *Handler) NewBatchExecutor() *kmipserver.BatchExecutor {
 	exec.Route(kmip.OperationRevoke, kmipserver.HandleFunc(h.handleRevoke))
 	exec.Route(kmip.OperationDestroy, kmipserver.HandleFunc(h.handleDestroy))
 	exec.Route(kmip.OperationReKey, kmipserver.HandleFunc(h.handleReKey))
-	// KMIP 3.2 extension routes (CreateKeyPair, Import, Export, Archive, Recover,
-	// DeriveKey, Certify, ReCertify, GetAttributeList, ModifyAttribute,
-	// DeleteAttribute, Check, Validate, MAC, MACVerify, Hash, GetUsageAllocation)
-	// are gated behind the `kmip32_extension` build tag in handler_kmip32.go.
+	// Keep supportedKMIPOperations in step: Query advertises exactly these.
 	exec.Route(kmip.OperationEncrypt, kmipserver.HandleFunc(h.handleEncrypt))
 	exec.Route(kmip.OperationDecrypt, kmipserver.HandleFunc(h.handleDecrypt))
 	exec.Route(kmip.OperationSign, kmipserver.HandleFunc(h.handleSign))
@@ -977,34 +974,19 @@ func getConnectionContext(ctx context.Context) (kmipConnectionContext, bool) {
 	return v, true
 }
 
+// supportedKMIPOperations is what Query advertises: exactly the operations
+// routed in the executor, nothing more.
 func supportedKMIPOperations() []kmip.Operation {
 	return []kmip.Operation{
 		kmip.OperationCreate,
-		kmip.OperationCreateKeyPair,
 		kmip.OperationRegister,
-		kmip.OperationImport,
 		kmip.OperationGet,
 		kmip.OperationGetAttributes,
-		kmip.OperationGetAttributeList,
-		kmip.OperationModifyAttribute,
-		kmip.OperationDeleteAttribute,
 		kmip.OperationLocate,
 		kmip.OperationActivate,
 		kmip.OperationRevoke,
 		kmip.OperationDestroy,
-		kmip.OperationArchive,
-		kmip.OperationRecover,
 		kmip.OperationReKey,
-		kmip.OperationDeriveKey,
-		kmip.OperationExport,
-		kmip.OperationCertify,
-		kmip.OperationReCertify,
-		kmip.OperationCheck,
-		kmip.OperationValidate,
-		kmip.OperationMAC,
-		kmip.OperationMACVerify,
-		kmip.OperationHash,
-		kmip.OperationGetUsageAllocation,
 		kmip.OperationEncrypt,
 		kmip.OperationDecrypt,
 		kmip.OperationSign,

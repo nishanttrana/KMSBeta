@@ -38,10 +38,6 @@ type AgentConfig struct {
 	DBName     string `json:"db_name"`
 	DBPort     int    `json:"db_port"`
 
-	PKCS11ModulePath string `json:"pkcs11_module_path"`
-	PKCS11SlotID     int    `json:"pkcs11_slot_id"`
-	PKCS11PINEnv     string `json:"pkcs11_pin_env"`
-
 	// Multi-auth: mTLS + JWT + API Key (new)
 	MTLSCertPath string `json:"mtls_cert_path"`
 	MTLSKeyPath  string `json:"mtls_key_path"`
@@ -101,8 +97,6 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.DBUser = envOr("DB_USER", cfg.DBUser)
 	cfg.DBPassword = envOr("DB_PASSWORD", cfg.DBPassword)
 	cfg.DBName = envOr("DB_NAME", cfg.DBName)
-	cfg.PKCS11ModulePath = envOr("PKCS11_MODULE_PATH", cfg.PKCS11ModulePath)
-	cfg.PKCS11PINEnv = envOr("PKCS11_PIN_ENV", cfg.PKCS11PINEnv)
 	cfg.MTLSCertPath = envOr("MTLS_CERT_PATH", cfg.MTLSCertPath)
 	cfg.MTLSKeyPath = envOr("MTLS_KEY_PATH", cfg.MTLSKeyPath)
 	cfg.MTLSCAPath = envOr("MTLS_CA_PATH", cfg.MTLSCAPath)
@@ -114,7 +108,6 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.ActiveKeyVersion = envOr("ACTIVE_KEY_VERSION", cfg.ActiveKeyVersion)
 
 	cfg.DBPort = envIntOr("DB_PORT", cfg.DBPort)
-	cfg.PKCS11SlotID = envIntOr("PKCS11_SLOT_ID", cfg.PKCS11SlotID)
 	cfg.HeartbeatIntervalSec = envIntOr("HEARTBEAT_INTERVAL_SEC", cfg.HeartbeatIntervalSec)
 	cfg.RotationCycleDays = envIntOr("ROTATION_CYCLE_DAYS", cfg.RotationCycleDays)
 	cfg.ConfigVersionAck = envIntOr("CONFIG_VERSION_ACK", cfg.ConfigVersionAck)

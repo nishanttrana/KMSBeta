@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/fips140"
@@ -9,8 +10,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"io"
 	"strings"
 	"testing"
+
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -181,12 +185,8 @@ func TestFormatConversions(t *testing.T) {
 	}
 	sshID := items[0].ID
 
-	ppk, err := svc.GetSecretValue(ctx, "t4", sshID, "ppk")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(ppk.Value, "PuTTY-User-Key-File-2") {
-		t.Fatalf("expected PPK content, got %q", ppk.Value)
+	if _, err := svc.GetSecretValue(ctx, "t4", sshID, "ppk"); err == nil {
+		t.Fatal("ppk export is not a real PuTTY encoding and must be refused")
 	}
 	openSSH, err := svc.GetSecretValue(ctx, "t4", sshID, "openssh")
 	if err != nil {
@@ -308,5 +308,32 @@ func TestGenerateKeyPairTypes(t *testing.T) {
 func TestSupportedTypesAtLeast17(t *testing.T) {
 	if len(supportedSecretTypes) < 17 {
 		t.Fatalf("expected at least 17 secret types, got %d", len(supportedSecretTypes))
+	}
+}
+
+// Export formats produce what they are named: PPK is refused (no valid
+// PuTTY encoder exists here), and PGP armor round-trips without wrapping an
+// already-armored key a second time.
+func TestSecretExportFormatsAreReal(t *testing.T) {
+	if _, _, _, err := convertSecretFormat(Secret{SecretType: "ssh_private_key"}, []byte("x"), "ppk"); err == nil {
+		t.Fatal("ppk export still offered")
+	}
+	armored := []byte("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nxsBNBGT=\n-----END PGP PUBLIC KEY BLOCK-----\n")
+	out, _, _, err := convertSecretFormat(Secret{SecretType: "pgp_public_key"}, armored, "armored")
+	if err != nil || string(out) != string(armored) {
+		t.Fatalf("armored key re-wrapped: %q %v", out, err)
+	}
+	packets := []byte{0x99, 0x00, 0x03, 0x04, 0x05, 0x06}
+	out, _, _, err = convertSecretFormat(Secret{SecretType: "pgp_public_key"}, packets, "armored")
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := armor.Decode(bytes.NewReader(out))
+	if err != nil || block.Type != "PGP PUBLIC KEY BLOCK" {
+		t.Fatalf("armor not decodable: %v", err)
+	}
+	got, _ := io.ReadAll(block.Body)
+	if !bytes.Equal(got, packets) {
+		t.Fatalf("armor round-trip changed the key: %x", got)
 	}
 }

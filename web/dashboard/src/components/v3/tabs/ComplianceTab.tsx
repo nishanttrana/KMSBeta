@@ -136,7 +136,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [reportJobs, setReportJobs] = useState<any[]>([]);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
   const [reportForm, setReportForm] = useState<any>({ template_id: "", format: "pdf" });
-  const [scheduleForm, setScheduleForm] = useState<any>({ name: "weekly-compliance", template_id: "", format: "pdf", schedule: "weekly", recipients: "" });
+  const [scheduleForm, setScheduleForm] = useState<any>({ name: "weekly-compliance", template_id: "", format: "pdf", schedule: "weekly" });
   const [reportBusy, setReportBusy] = useState(false);
 
   /* ── NEW: alert stats state ── */
@@ -503,7 +503,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     if (!String(scheduleForm?.template_id || "").trim()) { onToast?.("Select a template for schedule."); return; }
     setReportBusy(true);
     try {
-      await createReportingScheduledReport(session, { name: String(scheduleForm?.name || "weekly-compliance").trim() || "weekly-compliance", template_id: String(scheduleForm?.template_id || "").trim(), format: String(scheduleForm?.format || "pdf").trim().toLowerCase(), schedule: String(scheduleForm?.schedule || "weekly").trim().toLowerCase() as any, recipients: String(scheduleForm?.recipients || "").split(",").map((v) => String(v || "").trim()).filter(Boolean) });
+      await createReportingScheduledReport(session, { name: String(scheduleForm?.name || "weekly-compliance").trim() || "weekly-compliance", template_id: String(scheduleForm?.template_id || "").trim(), format: String(scheduleForm?.format || "pdf").trim().toLowerCase(), schedule: String(scheduleForm?.schedule || "weekly").trim().toLowerCase() as any });
       onToast?.("Scheduled report created.");
       await loadReporting();
     } catch (error) { onToast?.(`Create schedule failed: ${errMsg(error)}`); }
@@ -1053,9 +1053,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                     </Sel>
                   </FG>
                 </Row2>
-                <FG label="Recipients (comma separated)">
-                  <Inp value={String(scheduleForm?.recipients || "")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, recipients: e.target.value }))} placeholder="admin@org.com,security@org.com" />
-                </FG>
+                <div style={{ fontSize: 10, color: C.dim }}>Scheduled reports are generated into the report jobs list for download; they are not emailed.</div>
                 <div><Btn small onClick={() => void createScheduleReport()} disabled={reportBusy}>{reportBusy ? "Saving..." : "Create Schedule"}</Btn></div>
               </div>
             </Card>

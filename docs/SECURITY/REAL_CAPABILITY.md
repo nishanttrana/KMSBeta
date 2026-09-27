@@ -99,9 +99,57 @@ learned: CHANGELOG 1.26.0-beta, [learning.md](../../learning.md).
 | Dead code | `pkg/hwtoken`, `pkg/caim`, unwired keycore types, cloud mock outside tests | Deleted / moved to `_test` |
 | Conformance gate | Missed `MOCK_*` and `newMock…` | Checked (`MOCK_*` since 1.20.0-beta; constructors in 1.26.0-beta) |
 
+## Fixed or removed (second sweep, 1.27.0-beta)
+
+The services the first sweep only skimmed. Details: CHANGELOG 1.27.0-beta,
+[learning.md](../../learning.md).
+
+| Area | What was fake | Now |
+|---|---|---|
+| SAML SSO (auth) | No signature, issuer, audience or request check; `idp_certificate` never read | goxmldsig verification against the IdP certificate (SHA-2), issuer/audience/recipient/InResponseTo/window/single use (`audit.auth.sso_login_refused`) |
+| OIDC SSO (auth) | ID token claims read unverified | `pkg/oidc`: JWKS signature, `iss`, `aud`, `exp`, `nonce`, `azp` |
+| Client activation (auth) | Approval ID `TODO-GOVERNANCE-HOOK` | Approved `client.activate` governance request required |
+| Governance approvals | No authentication; vote identity from the body; users picked approvers and callbacks | Verified token per tenant, vote as the logged-in user, requester excluded, approvers fixed by the request (`audit.governance.approval_refused`) |
+| Governance FDE / network apply | Hard-coded LUKS data, "passed" for anything, "applied" with no effect | Removed |
+| Governance system state | License, network, backup schedule, TLS mode/PEMs, HSM/cluster labels, QRNG stored, never read; "hsm-trng" on software bytes; bits/byte over DRBG output | Not exposed; unused TLS key cleared; runtime RNG/TLS reported; integrity checks measured |
+| HYOK | Envoy's peer cert or `X-Client-CN` taken as the client; admin routes open; approvals never released; key-access fail-open | JWT only, admin needs tenant admin, approval releases once, fail closed |
+| EKM | Peer-cert identity (every edge call 401) with no other auth; KACLS authorization token unverified with first-key fallback | Verified tenant token (`audit.ekm.request_refused`); KACLS verifies Google's token and binds user and key |
+| Signing | OIDC/workload identity from the body; cross-tenant body tenant; no-op transparency toggles | Verified `oidc_token` or token workload identity; tenant enforced; toggles removed |
+| Reporting | Alerts "sent" to email/Slack/Teams/SIEM; schedule recipients never mailed | Screen channel only; recipients removed |
+| PKCS#11 provider | Not loadable (no `C_GetFunctionList`); mechanism/PIN ignored; invented packages in docs; EKM "active v2.40" card and CKM telemetry | Removed; Java SDK view only |
+| EKM TDE guides | Vecta EKM DLL / PKCS#11 library recipes for SQL Server, Oracle, pg_tde, MySQL | KMIP for MySQL, pg_tde, Db2; others stated unsupported |
+| BitLocker agent | GET poll on a POST route, wrong shapes: no job or escrow ever completed; installer `mode` ignored | Service contract, tested; `agent_mode` |
+| ekm-agent PKCS#11 readiness | File-exists check reported "ready" and marked agents degraded; OS always "windows" | Removed; real OS |
+| JCA SecureRandom | `VectaQRNG` hit a missing endpoint, used the JVM RNG | Removed |
+| KMIP Query | Advertised 32 operations, 15 routed; extension file did not compile | Routed list only; file deleted |
+| Secrets | Invalid PPK; double PGP armor; invented Vault seal fields | PPK removed; RFC 4880 armor; fields removed |
+| Autokey | Template versioning/drift never called, no table | Removed |
+| EKM health | "Within threshold" with no metrics; "healthy" before any heartbeat | "unknown" until reported |
+| Dead code | `pkg/tsa` (invented OID), `pkg/compliance` + `pkg/evidence` (hard-coded pass) | Deleted |
+
 ## Still open
 
 - **Attested key release** is not built: releasing key material to a verified
   enclave (wrapped to the attestation's public key) would need keycore
   support. Until then, confidential compute returns a verdict only and says
   so.
+- **Microsoft DKE with Entra ID tokens**: hyok verifies only Vecta-issued
+  JWTs, so a DKE endpoint whose `valid_issuers` names Entra cannot be
+  satisfied. Verifying Entra tokens (`pkg/oidc` against the tenant's issuer)
+  is not built.
+- **Google CSE authentication audience**: the authentication token's `aud`
+  is not checked (no client ID is configured); the verified authorization
+  token and the email match carry the binding.
+- **Governance `approver_roles`** are stored and shown but do not decide who
+  may vote; approvers are the emails a request is sent to.
+- **Docs describing APIs that do not exist**: for example
+  CLOUD_INTEGRATION.md's signing `/policies` with `branch_policy`, and
+  report schedules with frequency/day/time fields. A docs accuracy pass
+  against the routers is needed.
+- **Unused packages** still in `pkg/`, imported by nothing: `keyrisk`,
+  `sprawlscanner`, `analytics`, `multicloudsync`, `keylineage`, `geofence`,
+  `classification`, `cicd`, `imagesign`, `dynamicsecrets`, `breakglass`. They
+  are not capability; review each and delete or wire it.
+- **JCA provider** has no test with a real JCA consumer.
+- **ekm-agent Windows build** fails in `pkg/svctls` (`syscall.Kill`), which
+  predates this sweep.

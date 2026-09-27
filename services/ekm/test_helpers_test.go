@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
+	pkgauth "vecta-kms/pkg/auth"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -178,7 +180,9 @@ func newEKMService(t *testing.T) (*Service, *SQLStore, *fakeEKMKeyCore, *nopEKMP
 func newEKMHandler(t *testing.T) (*Handler, *Service, *fakeEKMKeyCore, *nopEKMPublisher) {
 	t.Helper()
 	svc, _, keycore, pub := newEKMService(t)
-	return NewHandler(svc), svc, keycore, pub
+	h := NewHandler(svc)
+	h.SetJWTParser(testEKMJWT)
+	return h, svc, keycore, pub
 }
 
 func createEKMSchemaForTest(conn *pkgdb.DB) error {
@@ -318,4 +322,21 @@ func createEKMSchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	return nil
+}
+
+// testEKMJWT verifies test tokens of the form "jwt:<tenant>:<role>".
+func testEKMJWT(tok string) (*pkgauth.Claims, error) {
+	parts := strings.Split(tok, ":")
+	if len(parts) != 3 || parts[0] != "jwt" {
+		return nil, errors.New("invalid token")
+	}
+	return &pkgauth.Claims{TenantID: parts[1], Role: parts[2], UserID: "u-" + parts[2]}, nil
+}
+
+// authed gives a test request a tenant-h1 admin token unless it has one.
+func authed(r *http.Request) *http.Request {
+	if r.Header.Get("Authorization") == "" {
+		r.Header.Set("Authorization", "Bearer jwt:tenant-h1:admin")
+	}
+	return r
 }

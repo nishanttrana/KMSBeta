@@ -42,7 +42,6 @@ import {
   listGovernancePolicies,
   createGovernancePolicy,
   updateGovernancePolicy,
-  applyNetworkConfig,
   type GovernanceBackupJob,
   type GovernanceBackupKeyFile,
   type GovernanceVerifyBackupResult,
@@ -90,14 +89,6 @@ import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
 import { FipsModePanel } from "./FipsModePanel";
-import {
-  getFDEStatus,
-  runFDEIntegrityCheck,
-  rotateFDEVolumeKey,
-  testFDERecoveryShares,
-  getFDERecoveryShareStatus,
-  type FDEStatus as FDEStatusT
-} from "../../lib/fde";
 
 const tone=(status:string):"green"|"amber"|"red"|"blue"=>{
   const s=String(status||"").toLowerCase();
@@ -338,19 +329,6 @@ const BackupRestoreFilePicker = ({
 const SYSTEM_STATE_DEFAULT = {
   fips_mode: "disabled",
   fips_mode_policy: "standard",
-  fips_tls_profile: "tls1.2_fips",
-  fips_rng_mode: "ctr_drbg",
-  fips_entropy_source: "software",
-  mgmt_ip: "",
-  cluster_ip: "",
-  dns_servers: "",
-  ntp_servers: "",
-  tls_mode: "internal_ca",
-  backup_schedule: "daily@02:00",
-  backup_target: "local",
-  backup_retention_days: 30,
-  backup_encrypted: true,
-  proxy_endpoint: "",
   snmp_target: "",
   snmp_transport: "udp",
   snmp_host: "",
@@ -651,9 +629,7 @@ const interfaceStatusRank = (status:string):number => {
 type SystemAdminPanel =
   | "health"
   | "runtime"
-  | "network"
   | "snmp"
-  | "license"
   | "tags"
   | "password"
   | "login"
@@ -664,15 +640,12 @@ type SystemAdminPanel =
   | "governance"
   | "backup"
   | "alertrules"
-  | "approvals"
-  | "diskencryption";
+  | "approvals";
 const SYSTEM_ADMIN_OPEN_CLI_KEY = "vecta_system_admin_open_cli";
 const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Health", panel:"health" },
   { label:"Runtime Crypto", panel:"runtime" },
-  { label:"Network", panel:"network" },
   { label:"SNMP", panel:"snmp" },
-  { label:"License", panel:"license" },
   { label:"Tags", panel:"tags" },
   { label:"Password Policy", panel:"password" },
   { label:"Login Security", panel:"login" },
@@ -682,8 +655,7 @@ const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Governance", panel:"governance" },
   { label:"Backup", panel:"backup" },
   { label:"Alert Rules", panel:"alertrules" },
-  { label:"Approval Policies", panel:"approvals" },
-  { label:"Disk Encryption", panel:"diskencryption" }
+  { label:"Approval Policies", panel:"approvals" }
 ];
 
 const parseSNMPTargetToState = (rawTarget:string): Record<string, any> => {
@@ -890,13 +862,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [certificateOptions,setCertificateOptions]=useState<CertificateItem[]>([]);
 
   // ── Disk Encryption state ──
-  const [fdeStatus,setFdeStatus]=useState<FDEStatusT|null>(null);
-  const [fdeLoading,setFdeLoading]=useState(false);
-  const [fdeIntegrityRunning,setFdeIntegrityRunning]=useState(false);
-  const [fdeKeyRotating,setFdeKeyRotating]=useState(false);
-  const [fdeRecoveryTesting,setFdeRecoveryTesting]=useState(false);
-  const [fdeRecoveryShares,setFdeRecoveryShares]=useState<any>(null);
-  const [fdeTestShareInputs,setFdeTestShareInputs]=useState<string[]>([]);
 
   // ── Approval Policies state ──
   const ADMIN_OPS=["user.create","user.delete","user.role_change","tenant.create","tenant.disable","tenant.delete","system.backup","system.restore","system.config_change","hsm.config_change","governance.policy_change","license.update"];
@@ -921,42 +886,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [gpStatus,setGpStatus]=useState("active");
   const [gpSaving,setGpSaving]=useState(false);
 
-  const loadFDEStatus=useCallback(async()=>{
-    if(!session?.token){setFdeStatus(null);return;}
-    setFdeLoading(true);
-    try{
-      const [status,shares]=await Promise.all([getFDEStatus(session),getFDERecoveryShareStatus(session)]);
-      setFdeStatus(status||null);
-      setFdeRecoveryShares(shares||null);
-    }catch(error){onToast(`FDE status load failed: ${errMsg(error)}`);}
-    finally{setFdeLoading(false);}
-  },[onToast,session]);
-
-  const doFDEIntegrityCheck=useCallback(async()=>{
-    if(!session?.token)return;
-    setFdeIntegrityRunning(true);
-    try{const r=await runFDEIntegrityCheck(session);onToast(r.passed?"Integrity check passed.":"Integrity check FAILED — review logs.");await loadFDEStatus();}
-    catch(error){onToast(`Integrity check failed: ${errMsg(error)}`);}
-    finally{setFdeIntegrityRunning(false);}
-  },[loadFDEStatus,onToast,session]);
-
-  const doFDERotateKey=useCallback(async()=>{
-    if(!session?.token)return;
-    setFdeKeyRotating(true);
-    try{const r=await rotateFDEVolumeKey(session);onToast(`Key rotation started (job ${r.job_id}). Estimated ${r.estimated_duration_minutes} min.`);}
-    catch(error){onToast(`Key rotation failed: ${errMsg(error)}`);}
-    finally{setFdeKeyRotating(false);}
-  },[onToast,session]);
-
-  const doFDETestRecovery=useCallback(async()=>{
-    if(!session?.token)return;
-    const shares=fdeTestShareInputs.filter((s)=>s.trim());
-    if(shares.length<(fdeRecoveryShares?.threshold||3)){onToast(`Provide at least ${fdeRecoveryShares?.threshold||3} shares.`);return;}
-    setFdeRecoveryTesting(true);
-    try{const r=await testFDERecoveryShares(session,shares);onToast(r.valid?"Recovery shares are VALID.":"Recovery shares are INVALID.");}
-    catch(error){onToast(`Recovery test failed: ${errMsg(error)}`);}
-    finally{setFdeRecoveryTesting(false);}
-  },[fdeRecoveryShares?.threshold,fdeTestShareInputs,onToast,session]);
 
   const loadGovPolicies=useCallback(async()=>{
     if(!session?.token) return;
@@ -1375,12 +1304,11 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     setSystemStateSaving(true);
     try{
       const snmpTarget = buildSNMPTargetFromState(systemState as Record<string, any>);
+      // Only fields the server stores and enforces.
       const payload={
-        ...SYSTEM_STATE_DEFAULT,
-        ...systemState,
         tenant_id: session.tenantId,
-        backup_retention_days: Math.max(1,Math.trunc(Number(systemState?.backup_retention_days||30))),
-        backup_encrypted: Boolean(systemState?.backup_encrypted),
+        fips_mode: String(systemState?.fips_mode||"disabled"),
+        fips_mode_policy: String(systemState?.fips_mode_policy||"standard"),
         snmp_target: snmpTarget,
         posture_force_quorum_destructive_ops: Boolean(systemState?.posture_force_quorum_destructive_ops),
         posture_require_step_up_auth: Boolean(systemState?.posture_require_step_up_auth),
@@ -1600,9 +1528,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   useEffect(()=>{
     if(panel==="alertrules"&&session?.token) void refreshAlertRules();
     if(panel==="approvals"&&session?.token) void loadGovPolicies();
-    if(panel==="diskencryption"&&session?.token) void loadFDEStatus();
     if((panel==="interfaces"||panel==="runtime")&&session?.token&&(caOptions.length===0&&certificateOptions.length===0)) void loadTLSCatalog();
-  },[caOptions.length,certificateOptions.length,loadFDEStatus,loadGovPolicies,loadTLSCatalog,panel,refreshAlertRules,session?.token]);
+  },[caOptions.length,certificateOptions.length,loadGovPolicies,loadTLSCatalog,panel,refreshAlertRules,session?.token]);
 
   useEffect(()=>{
     setSystemState((prev)=>({
@@ -2137,7 +2064,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     .replace("tls13_only","TLS 1.3 only")
     .replace("tls1.2_fips","TLS 1.2+ FIPS");
   const runtimeRngLabel=systemState?.fips_rng_mode?String(systemState.fips_rng_mode).toUpperCase():"not reported";
-  const entropyBits=Number(systemState?.fips_entropy_bits_per_byte||0);
   const entropySampleBytes=Math.max(0,Number(systemState?.fips_entropy_sample_bytes||0));
   const entropySampleMicros=Math.max(0,Number(systemState?.fips_entropy_read_micros||0));
   const runtimeAllOk = Number(health.summary?.degraded||0)===0 && Number(health.summary?.down||0)===0;
@@ -2160,13 +2086,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     : systemTLSCertSource==="pki_ca"
       ? (systemTLSCAName ? `CA: ${systemTLSCAName}` : "CA from Certificates / PKI")
       : (systemTLSCertificateName ? `Certificate: ${systemTLSCertificateName}` : "Uploaded certificate from PKI");
-  const networkSummary = [
-    String(systemState?.mgmt_ip||"IP"),
-    String(systemState?.dns_servers||"DNS"),
-    String(systemState?.ntp_servers||"NTP"),
-    String(systemState?.proxy_endpoint||"Proxy")
-  ].join(", ");
-  const backupSummary = `${String(systemState?.backup_schedule||"daily@02:00")} / ${String(systemState?.backup_target||"local")} / retention ${Number(systemState?.backup_retention_days||30)}d`;
   const passwordSummary = passwordPolicyLoading
     ? "loading..."
     : `Min ${Number(passwordPolicy?.min_length||12)}-${Number(passwordPolicy?.max_length||128)}, unique ${Number(passwordPolicy?.min_unique_chars||6)}, rules: ${[
@@ -2286,12 +2205,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </div>}
     >
       <Card style={{padding:10,borderRadius:8}}>
-        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Enforced policy for approved algorithms, TLS profile, RNG mode, and entropy health.</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>The tenant algorithm policy, and the TLS minimum and random-number generator this platform actually runs with.</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
           <div><span style={{fontSize:10,color:C.muted}}>Mode:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{runtimeModeLabel}</span></div>
           <div style={{textAlign:"right"}}><span style={{fontSize:10,color:C.muted}}>TLS:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{runtimeTlsLabel}</span></div>
           <div><span style={{fontSize:10,color:C.muted}}>RNG:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{runtimeRngLabel}</span></div>
-          <div style={{textAlign:"right"}}><span style={{fontSize:10,color:C.muted}}>Entropy:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{`${entropyBits.toFixed(3)} bits/byte`}</span></div>
+          <div style={{textAlign:"right"}}><span style={{fontSize:10,color:C.muted}}>RNG read:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{String(systemState?.fips_entropy_health||"not reported")}</span></div>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
           <Btn small primary={fipsMode!=="enabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"enabled"}));onFipsModeChange("enabled");}}>Enable FIPS</Btn>
@@ -2314,7 +2233,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
         <B c="blue">{runtimeModeLabel}</B>
         <B c="accent">{runtimeTlsLabel}</B>
-        <B c={String(systemState?.fips_entropy_health||"").toLowerCase()==="ok"?"green":"amber"}>{`${entropyBits.toFixed(3)} bits/byte`}</B>
+        <B c={String(systemState?.fips_entropy_health||"").toLowerCase()==="ok"?"green":"amber"}>{`RNG read ${String(systemState?.fips_entropy_health||"not reported")}`}</B>
       </div>
       <Row2>
         <FG label="FIPS Policy">
@@ -2327,28 +2246,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <Inp value={String(systemState?.fips_mode||"disabled")} readOnly />
         </FG>
       </Row2>
-      <Row2>
-        <FG label="TLS Profile">
-          <Sel value={String(systemState?.fips_tls_profile||"tls12_fips_suites")} onChange={(e)=>setSystemState((p)=>({...p,fips_tls_profile:String(e.target.value||"tls12_fips_suites")}))}>
-            <option value="tls12_fips_suites">TLS 1.2+ FIPS suites</option>
-            <option value="tls13_only">TLS 1.3 only</option>
-          </Sel>
-        </FG>
-        <FG label="RNG Mode">
-          <Sel value={String(systemState?.fips_rng_mode||"ctr_drbg")} onChange={(e)=>setSystemState((p)=>({...p,fips_rng_mode:String(e.target.value||"ctr_drbg")}))}>
-            <option value="ctr_drbg">CTR_DRBG</option>
-            <option value="hmac_drbg">HMAC_DRBG</option>
-            <option value="hsm_trng">HSM_TRNG</option>
-          </Sel>
-        </FG>
-      </Row2>
-      <FG label="Entropy Source">
-        <Sel value={String(systemState?.fips_entropy_source||"os-csprng")} onChange={(e)=>setSystemState((p)=>({...p,fips_entropy_source:String(e.target.value||"os-csprng")}))}>
-          <option value="os-csprng">OS CSPRNG</option>
-          <option value="software">Software</option>
-          <option value="hsm-trng">HSM TRNG</option>
-        </Sel>
-      </FG>
+      <div style={{fontSize:10,color:C.dim,marginTop:6}}>TLS is 1.3 minimum on every platform listener; randomness is Go's crypto/rand (the certified module's CTR_DRBG in FIPS mode, otherwise the OS CSPRNG). Neither is a setting.</div>
       <div style={{
         display:"grid",
         gap:4,
@@ -2360,7 +2258,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         borderRadius:10,
         background:C.bg
       }}>
-        <div>{`Entropy health: ${String(systemState?.fips_entropy_health||"unknown")} | ${entropyBits.toFixed(3)} bits/byte`}</div>
+        <div>{`RNG: ${String(systemState?.fips_rng_mode||"not reported")} from ${String(systemState?.fips_entropy_source||"not reported")}; last read ${String(systemState?.fips_entropy_health||"not reported")}`}</div>
         <div>{`Sample: ${entropySampleBytes} bytes in ${entropySampleMicros} us`}</div>
         <div>{`This service runs FIPS mode: ${fipsRuntimeMode}`}</div>
         <div>{runtimeLibraryLine}</div>
@@ -2369,7 +2267,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </div>
       <div style={{marginTop:8}}><FipsModePanel session={session} onToast={onToast}/></div>
       <div style={{fontSize:10,color:C.dim,marginTop:8}}>
-        Runtime Crypto stays on this tab. Network addresses live under Network, and certificate issuance for exposed TLS interfaces is governed from Configure TLS.
+        Certificate issuance for exposed TLS interfaces is governed from Configure TLS.
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
         <Btn small onClick={()=>setFipsConfigModalOpen(false)}>Cancel</Btn>
@@ -2426,33 +2324,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
       </div>
     </Modal>
-
-    {panel==="network"&&<>
-    <Section title="Network" actions={<div style={{display:"flex",gap:8}}>
-      <Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh"}</Btn>
-      <Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn>
-      <Btn small onClick={async()=>{try{const r=await applyNetworkConfig(session!);onToast(r?.message||"Network config applied.");}catch(e){onToast(`Apply failed: ${errMsg(e)}`);}}} disabled={!session?.token||systemStateSaving}>Apply Network Config</Btn>
-    </div>}>
-      <Card style={{padding:10,borderRadius:8}}>
-        <Row2>
-          <FG label="Management IP"><Inp value={String(systemState?.mgmt_ip||"")} onChange={(e)=>setSystemState((p)=>({...p,mgmt_ip:e.target.value}))} placeholder="10.0.1.100"/></FG>
-          <FG label="Cluster IP"><Inp value={String(systemState?.cluster_ip||"")} onChange={(e)=>setSystemState((p)=>({...p,cluster_ip:e.target.value}))} placeholder="172.16.0.100"/></FG>
-        </Row2>
-        <Row2>
-          <FG label="DNS Servers"><Inp value={String(systemState?.dns_servers||"")} onChange={(e)=>setSystemState((p)=>({...p,dns_servers:e.target.value}))} placeholder="8.8.8.8,1.1.1.1"/></FG>
-          <FG label="NTP Servers"><Inp value={String(systemState?.ntp_servers||"")} onChange={(e)=>setSystemState((p)=>({...p,ntp_servers:e.target.value}))} placeholder="pool.ntp.org"/></FG>
-        </Row2>
-        <Row2>
-          <FG label="Proxy Endpoint"><Inp value={String(systemState?.proxy_endpoint||"")} onChange={(e)=>setSystemState((p)=>({...p,proxy_endpoint:e.target.value}))} placeholder="https://proxy.bank.local:8443"/></FG>
-          <FG label="Routing Note"><Inp value="TLS listener and certificate settings are managed from Runtime Crypto and Interfaces." readOnly /></FG>
-        </Row2>
-        <div style={{fontSize:10,color:C.dim,marginTop:8}}>{networkSummary}</div>
-      </Card>
-      <Card style={{padding:8,borderRadius:8,marginTop:8,background:`${C.amber}11`,border:`1px solid ${C.amber}33`}}>
-        <div style={{fontSize:10,color:C.amber,fontWeight:600}}>Changing the management or cluster IP will update Docker network bindings on next restart. This may cause a brief connectivity disruption. Ensure you can reach the appliance on the new IP before applying.</div>
-      </Card>
-    </Section>
-    </>}
 
     {panel==="snmp"&&<>
     <Section title="SNMP / SIEM Integration" actions={<div style={{display:"flex",gap:8}}>
@@ -2535,19 +2406,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{fontSize:10,color:C.dim,marginTop:8,wordBreak:"break-all"}}>
           {`Target: ${buildSNMPTargetFromState(systemState as Record<string, any>) || "not configured"}`}
         </div>
-      </Card>
-    </Section>
-    </>}
-
-    {panel==="license"&&<>
-    <Section title="License" actions={<Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn>}>
-      <Card style={{padding:10,borderRadius:8}}>
-        <FG label="License Status"><Inp value={String(systemState?.license_status||"inactive")} onChange={(e)=>setSystemState((p)=>({...p,license_status:e.target.value}))}/></FG>
-        <FG label="License Key / Activation Token"><Inp value={String(systemState?.license_key||"")} onChange={(e)=>setSystemState((p)=>({...p,license_key:e.target.value}))} placeholder="paste activation token"/></FG>
-        <Row2>
-          <FG label="Licensed Tenants"><Inp type="number" value={String(systemState?.license_tenants||0)} onChange={(e)=>setSystemState((p)=>({...p,license_tenants:Math.max(0,Number(e.target.value||0))}))}/></FG>
-          <FG label="Licensed Ops/Day"><Inp type="number" value={String(systemState?.license_ops_per_day||0)} onChange={(e)=>setSystemState((p)=>({...p,license_ops_per_day:Math.max(0,Number(e.target.value||0))}))}/></FG>
-        </Row2>
       </Card>
     </Section>
     </>}
@@ -2814,7 +2672,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             </Sel>
           </FG>
           <div style={{fontSize:10,color:C.dim,display:"grid",gap:2}}>
-            <div>{`Entropy health: ${String(systemState?.fips_entropy_health||"unknown")} | ${Number(systemState?.fips_entropy_bits_per_byte||0).toFixed(3)} bits/byte`}</div>
+            <div>{`RNG: ${String(systemState?.fips_rng_mode||"not reported")}; last read ${String(systemState?.fips_entropy_health||"not reported")}`}</div>
             <div>{`Sample: ${Number(systemState?.fips_entropy_sample_bytes||0)} bytes in ${Number(systemState?.fips_entropy_read_micros||0)} us`}</div>
             <div>{`Runtime mode: ${fipsRuntimeMode} (change it in Runtime Crypto)`}</div>
             <div>{runtimeLibraryLine}</div>
@@ -2827,38 +2685,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <Chk label="Require step-up auth for risky operations" checked={Boolean(systemState?.posture_require_step_up_auth)} onChange={()=>setSystemState((p)=>({...p,posture_require_step_up_auth:!p.posture_require_step_up_auth}))}/>
           <Chk label="Pause connector sync when posture risk is high" checked={Boolean(systemState?.posture_pause_connector_sync)} onChange={()=>setSystemState((p)=>({...p,posture_pause_connector_sync:!p.posture_pause_connector_sync}))}/>
           <Chk label="Require guardrail policy for remediation actions" checked={Boolean(systemState?.posture_guardrail_policy_required)} onChange={()=>setSystemState((p)=>({...p,posture_guardrail_policy_required:!p.posture_guardrail_policy_required}))}/>
-          <FG label="License Status"><Inp value={String(systemState?.license_status||"inactive")} onChange={(e)=>setSystemState((p)=>({...p,license_status:e.target.value}))}/></FG>
         </Card>
       </Row2>
 
-      <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>QRNG Entropy Source</div>
-          <Chk label="Enable QRNG entropy integration" checked={Boolean(systemState?.qrng_enabled)} onChange={()=>setSystemState((p:any)=>({...p,qrng_enabled:!p.qrng_enabled}))}/>
-          <div style={{marginTop:8}}>
-            <FG label="Default QRNG Source ID"><Inp value={String(systemState?.qrng_default_source||"")} onChange={(e:any)=>setSystemState((p:any)=>({...p,qrng_default_source:e.target.value}))} placeholder="qrng_xxxxxxxxxxxxxxxx"/></FG>
-          </div>
-          <div style={{marginTop:8}}>
-            <FG label="Minimum Entropy (bits/byte)"><Inp value={String(systemState?.qrng_min_entropy_bpb||"7.0")} onChange={(e:any)=>setSystemState((p:any)=>({...p,qrng_min_entropy_bpb:parseFloat(e.target.value)||7.0}))} placeholder="7.0"/></FG>
-          </div>
-          <div style={{fontSize:9,color:C.muted,marginTop:6}}>
-            When enabled, KeyCore uses QRNG-seeded CSPRNG for key generation. External QRNG sources inject quantum entropy
-            that is XOR-mixed with OS CSPRNG for defense-in-depth. NIST SP 800-90B health tests run on every ingest.
-          </div>
-        </Card>
-        <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>QRNG Integration Status</div>
-          <div style={{fontSize:11,color:C.text,lineHeight:1.7}}>
-            <div>Status: <span style={{color:Boolean(systemState?.qrng_enabled)?C.green:C.dim,fontWeight:600}}>{Boolean(systemState?.qrng_enabled)?"ENABLED":"DISABLED"}</span></div>
-            <div>Default Source: <span style={{color:C.accent}}>{String(systemState?.qrng_default_source||"none")}</span></div>
-            <div>Min Entropy: <span style={{color:C.text}}>{Number(systemState?.qrng_min_entropy_bpb||7.0).toFixed(1)} bpb</span></div>
-            <div style={{marginTop:8,fontSize:9,color:C.muted}}>
-              Supported vendors: ID Quantique Quantis, QuintessenceLabs qStream, Toshiba QRNG, AWS CloudHSM QRNG, Azure Quantum, Custom.
-              QRNG is NOT FIPS 140-3 approved — under FIPS mode, the system falls back to KMS-CSPRNG automatically.
-            </div>
-          </div>
-        </Card>
-      </Row2>
 
       <Row2>
         <Card style={{padding:10,borderRadius:8}}>
@@ -2866,14 +2695,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{display:"grid",gap:8}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>{tlsPolicyLabel}</div>
             <div style={{fontSize:10,color:C.dim}}>
-              Network addresses stay on the Network tab. User-facing listeners, HTTP versus HTTPS/TLS, mTLS, and certificate attachment stay on Interfaces.
+              User-facing listeners, HTTP versus HTTPS/TLS, mTLS, and certificate attachment stay on Interfaces.
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <B c="blue">{tlsPolicyLabel}</B>
               <B c="accent">{tlsDefaultCertSummary}</B>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
-              <Btn small onClick={()=>setPanel("network")}>Open Network</Btn>
               <Btn small primary onClick={()=>setPanel("interfaces")}>Open Interfaces</Btn>
             </div>
           </div>
@@ -2958,19 +2786,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </>}
 
     {panel==="backup"&&<>
-    <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn><Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save Backup Policy"}</Btn></div>}>
+    <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn></div>}>
       <ScopeBanner section="backupPolicy"/>
-      <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
-        <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Backup Policy</div>
-        <Row2>
-          <FG label="Backup Schedule"><Inp value={String(systemState?.backup_schedule||"daily@02:00")} onChange={(e)=>setSystemState((p)=>({...p,backup_schedule:e.target.value}))}/></FG>
-          <FG label="Backup Target"><Inp value={String(systemState?.backup_target||"local")} onChange={(e)=>setSystemState((p)=>({...p,backup_target:e.target.value}))}/></FG>
-        </Row2>
-        <Row2>
-          <FG label="Backup Retention (days)"><Inp type="number" value={String(systemState?.backup_retention_days||30)} onChange={(e)=>setSystemState((p)=>({...p,backup_retention_days:Math.max(1,Number(e.target.value||30))}))}/></FG>
-        </Row2>
-        <Chk label="Encrypt backup artifacts" checked={Boolean(systemState?.backup_encrypted)} onChange={()=>setSystemState((p)=>({...p,backup_encrypted:!p.backup_encrypted}))}/>
-      </Card>
       <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Create Backup</div>
         <Row2><FG label="Scope"><Sel value={backupScope} onChange={(e)=>setBackupScope(String(e.target.value||"system") as "system"|"tenant")}><option value="system">System</option><option value="tenant">Tenant</option></Sel></FG><FG label="Target Tenant ID (tenant scope)"><Inp value={backupTenant} onChange={(e)=>setBackupTenant(e.target.value)} placeholder="tenant-id"/></FG></Row2>
@@ -3304,75 +3121,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
       </div>
     </Modal>}
-    </>}
-
-    {panel==="diskencryption"&&<>
-    <Section title="Full Disk Encryption" actions={<div style={{display:"flex",gap:8}}>
-      <Btn small onClick={()=>void loadFDEStatus()} disabled={fdeLoading}>{fdeLoading?"Refreshing...":"Refresh"}</Btn>
-    </div>}>
-      <Card style={{padding:10,borderRadius:8,marginBottom:10}}>
-        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
-          <Stat l="Status" v={fdeStatus?.enabled?"Encrypted":"Not Encrypted"} c={fdeStatus?.enabled?"green":"red"}/>
-          <Stat l="Algorithm" v={fdeStatus?.algorithm||"-"} c="accent"/>
-          <Stat l="LUKS Version" v={fdeStatus?.luks_version||"-"} c="blue"/>
-          <Stat l="Key Derivation" v={fdeStatus?.key_derivation||"-"} c="purple"/>
-        </div>
-        <Row2>
-          <FG label="Device"><Inp value={String(fdeStatus?.device||"-")} readOnly/></FG>
-          <FG label="Unlock Method"><Inp value={String(fdeStatus?.unlock_method||"-")} readOnly/></FG>
-        </Row2>
-        <div style={{marginTop:8,height:6,borderRadius:3,background:C.surface,overflow:"hidden"}}>
-          <div style={{height:"100%",borderRadius:3,background:C.accent,width:`${fdeStatus?.volume_size_gb?Math.min(100,(fdeStatus.used_gb/fdeStatus.volume_size_gb)*100):0}%`,transition:"width .3s ease"}}/>
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{`${fdeStatus?.used_gb||0} / ${fdeStatus?.volume_size_gb||0} GB used`}</div>
-      </Card>
-
-      <Card style={{padding:10,borderRadius:8,marginBottom:10}}>
-        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Key Slots</div>
-        <div style={{display:"grid",gap:6}}>
-          {(fdeStatus?.key_slots||[]).map((slot:any)=>
-            <div key={slot.slot} style={{display:"flex",gap:8,alignItems:"center"}}>
-              <B c={slot.status==="active"?"green":"dim"}>Slot {slot.slot}</B>
-              <span style={{fontSize:10,color:C.dim}}>{slot.type} — {slot.status}</span>
-            </div>
-          )}
-          {!(fdeStatus?.key_slots||[]).length&&<div style={{fontSize:10,color:C.muted}}>No key slot data available.</div>}
-        </div>
-      </Card>
-
-      <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Integrity Check</div>
-          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Last check: {fdeStatus?.integrity_last_check||"Never"} | Status: <B c={fdeStatus?.integrity_status==="healthy"?"green":"amber"}>{fdeStatus?.integrity_status||"Unknown"}</B></div>
-          <Btn small primary onClick={()=>void doFDEIntegrityCheck()} disabled={fdeIntegrityRunning}>{fdeIntegrityRunning?"Checking...":"Run Integrity Check"}</Btn>
-        </Card>
-        <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Volume Key Rotation</div>
-          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Re-encrypt the volume with a new master key. This is a long-running operation and cannot be interrupted.</div>
-          <Btn small danger onClick={()=>void doFDERotateKey()} disabled={fdeKeyRotating}>{fdeKeyRotating?"Rotating...":"Rotate Volume Key"}</Btn>
-        </Card>
-      </Row2>
-
-      <Card style={{padding:10,borderRadius:8,marginTop:10}}>
-        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Recovery Shares (Shamir {fdeRecoveryShares?.threshold||"?"}-of-{fdeRecoveryShares?.total||"?"})</div>
-        <div style={{display:"grid",gap:6,marginBottom:10}}>
-          {(fdeRecoveryShares?.shares||[]).map((share:any)=>
-            <div key={share.index} style={{display:"flex",gap:8,alignItems:"center"}}>
-              <B c={share.verified?"green":"amber"}>Share {share.index}</B>
-              <span style={{fontSize:10,color:C.dim}}>{share.label} | {share.verified?`Verified ${share.last_verified||""}`:"Not verified"}</span>
-            </div>
-          )}
-          {!(fdeRecoveryShares?.shares||[]).length&&<div style={{fontSize:10,color:C.muted}}>No recovery share data.</div>}
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Test recovery by providing {fdeRecoveryShares?.threshold||3} share values:</div>
-        {Array.from({length:fdeRecoveryShares?.threshold||3}).map((_,i)=>
-          <FG key={i} label={`Share ${i+1}`}>
-            <Inp type="password" value={fdeTestShareInputs[i]||""} onChange={(e)=>setFdeTestShareInputs((prev)=>{const next=[...prev];next[i]=e.target.value;return next;})} placeholder="Paste recovery share hex value"/>
-          </FG>
-        )}
-        <Btn small primary onClick={()=>void doFDETestRecovery()} disabled={fdeRecoveryTesting} style={{marginTop:8}}>{fdeRecoveryTesting?"Testing...":"Test Recovery Shares"}</Btn>
-      </Card>
-    </Section>
     </>}
 
     {promptDialog.ui}

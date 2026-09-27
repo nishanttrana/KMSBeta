@@ -206,8 +206,7 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 		"name":"daily",
 		"template_id":"alert_summary",
 		"format":"pdf",
-		"schedule":"daily",
-		"recipients":["soc@example.com"]
+		"schedule":"daily"
 	}`))
 	schedReq.Header.Set("Content-Type", "application/json")
 	schedRR := httptest.NewRecorder()

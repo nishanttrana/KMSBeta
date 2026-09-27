@@ -59,7 +59,6 @@ func mustTenantChecked(r *http.Request, w http.ResponseWriter, reqID string) (st
 	return tenantID, true
 }
 
-
 func requestID(r *http.Request) string {
 	return firstNonEmpty(r.Header.Get("X-Request-ID"), newID("req"))
 }
@@ -194,10 +193,18 @@ func (h *Handler) handleSign(w http.ResponseWriter, r *http.Request, artifactTyp
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	if !h.bindTenant(w, r, reqID, &body.TenantID) {
+		return
+	}
 	body.ArtifactType = firstNonEmpty(body.ArtifactType, artifactType)
 	item, err := h.svc.SignArtifact(r.Context(), body)
 	if err != nil {
+		if status := httpStatusForErr(err); status < 500 {
+			_ = publishAudit(r.Context(), h.svc.events, "audit.signing.sign_refused", body.TenantID, map[string]interface{}{
+				"profile_id": body.ProfileID, "identity_mode": body.IdentityMode, "code": serviceCode(err),
+				"reason": err.Error(), "result": "refused", "severity": "warning",
+			})
+		}
 		h.writeServiceError(w, err, reqID, body.TenantID)
 		return
 	}
@@ -211,13 +218,38 @@ func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
-	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	if !h.bindTenant(w, r, reqID, &body.TenantID) {
+		return
+	}
 	item, err := h.svc.VerifyArtifact(r.Context(), body)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, body.TenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": item, "request_id": reqID})
+}
+
+// bindTenant resolves the tenant from the body or request and requires it to
+// match the caller's verified token; a body tenant_id never reaches another
+// tenant's profiles or keys.
+func (h *Handler) bindTenant(w http.ResponseWriter, r *http.Request, reqID string, tenantID *string) bool {
+	*tenantID = firstNonEmpty(strings.TrimSpace(*tenantID), tenantFromRequest(r))
+	if *tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return false
+	}
+	if q := tenantFromRequest(r); q != "" && !strings.EqualFold(q, *tenantID) {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id in body and request differ", reqID, *tenantID)
+		return false
+	}
+	if err := tenantcheck.Enforce(r, *tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, *tenantID)
+		_ = publishAudit(r.Context(), h.svc.events, "audit.signing.request_refused", *tenantID, map[string]interface{}{
+			"route": r.Method + " " + r.URL.Path, "reason": "tenant_mismatch", "result": "refused", "severity": "warning",
+		})
+		return false
+	}
+	return true
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

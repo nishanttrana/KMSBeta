@@ -35,7 +35,6 @@ function fmtTS(value: any): string {
 const DEFAULT_SETTINGS = {
   enabled: false,
   default_profile_id: "",
-  require_transparency: true,
   allowed_identity_modes: ["oidc", "workload"]
 };
 
@@ -50,7 +49,6 @@ const DEFAULT_PROFILE = {
   allowed_oidc_issuers_csv: "",
   allowed_subject_patterns_csv: "",
   allowed_repositories_csv: "",
-  transparency_required: true,
   enabled: true,
   description: ""
 };
@@ -64,9 +62,7 @@ const DEFAULT_SIGN = {
   commit_sha: "",
   oci_reference: "",
   identity_mode: "oidc",
-  oidc_issuer: "",
-  oidc_subject: "",
-  workload_identity: ""
+  oidc_token: ""
 };
 
 export const ArtifactSigningTab = ({ session, onToast }: any) => {
@@ -143,7 +139,6 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
         allowed_oidc_issuers: csvToList(profileDraft?.allowed_oidc_issuers_csv),
         allowed_subject_patterns: csvToList(profileDraft?.allowed_subject_patterns_csv),
         allowed_repositories: csvToList(profileDraft?.allowed_repositories_csv),
-        transparency_required: Boolean(profileDraft?.transparency_required),
         enabled: Boolean(profileDraft?.enabled),
         description: String(profileDraft?.description || "").trim(),
         updated_by: session.username
@@ -171,7 +166,6 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
       allowed_oidc_issuers_csv: listToCsv(item?.allowed_oidc_issuers),
       allowed_subject_patterns_csv: listToCsv(item?.allowed_subject_patterns),
       allowed_repositories_csv: listToCsv(item?.allowed_repositories),
-      transparency_required: item?.transparency_required !== false,
       enabled: item?.enabled !== false,
       description: item?.description || ""
     });
@@ -206,9 +200,7 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
         commit_sha: signDraft?.commit_sha || undefined,
         oci_reference: signDraft?.oci_reference || undefined,
         identity_mode: signDraft?.identity_mode || undefined,
-        oidc_issuer: signDraft?.oidc_issuer || undefined,
-        oidc_subject: signDraft?.oidc_subject || undefined,
-        workload_identity: signDraft?.workload_identity || undefined,
+        oidc_token: signDraft?.identity_mode === "workload" ? undefined : signDraft?.oidc_token || undefined,
         requested_by: session.username
       });
       onToast?.(`Artifact signed: ${String(out?.record?.id || "").trim()}`);
@@ -251,7 +243,7 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
           <Stat l="Signed / 24h" v={summary?.record_count_24h || 0} c="accent" />
           <Stat l="Profiles" v={summary?.profile_count || 0} c="blue" />
-          <Stat l="Transparency Logged" v={summary?.transparency_logged_24h || 0} c="green" />
+          <Stat l="Logged (24h)" v={summary?.transparency_logged_24h || 0} c="green" />
           <Stat l="Workload Signed" v={summary?.workload_signed_24h || 0} c="purple" />
           <Stat l="OIDC Signed" v={summary?.oidc_signed_24h || 0} c="amber" />
           <Stat l="Verify Failures" v={summary?.verification_failures_24h || 0} c="red" />
@@ -259,10 +251,9 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
         <Card style={{ padding: 14, marginBottom: 14 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
             <B c={settingsDraft?.enabled ? "green" : "amber"}>{settingsDraft?.enabled ? "Enabled" : "Disabled"}</B>
-            <B c={settingsDraft?.require_transparency ? "blue" : "purple"}>{settingsDraft?.require_transparency ? "Transparency Required" : "Transparency Optional"}</B>
           </div>
           <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.6 }}>
-            Use this service to sign blobs, Git commit manifests, or OCI references without handing private key material to build systems. Profiles bind identities, repositories, and KMS key IDs; every signature is logged with transparency-style metadata so supply-chain evidence can be audited later.
+            Use this service to sign blobs, Git commit manifests, or OCI references without handing private key material to build systems. Profiles bind identities, repositories, and KMS key IDs; the signer's identity is taken only from a verified OIDC ID token or the caller's workload token, and every signature is recorded in this tenant's signing log (a local, indexed record; not a public transparency log).
           </div>
           <div style={{ marginTop: 10, fontSize: 10, color: C.muted }}>
             {artifactCounts.length ? artifactCounts.map((item: any) => `${item.artifact_type}: ${item.count_24h}`).join(" • ") : "No recent artifact types signed yet."}
@@ -300,12 +291,11 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
               <FG label="OCI Reference"><Inp value={signDraft?.oci_reference || ""} onChange={(e) => setSignDraft((p: any) => ({ ...p, oci_reference: e.target.value }))} placeholder="ghcr.io/org/app:1.2.3" /></FG>
             </Row3>
             {signDraft?.identity_mode === "workload" ? (
-              <FG label="Workload Identity"><Inp value={signDraft?.workload_identity || ""} onChange={(e) => setSignDraft((p: any) => ({ ...p, workload_identity: e.target.value }))} placeholder="spiffe://tenant/workloads/build-runner" /></FG>
+              <div style={{ fontSize: 11, color: C.dim }}>Workload mode signs as the workload identity in your session token; it cannot be typed in.</div>
             ) : (
-              <Row2>
-                <FG label="OIDC Issuer"><Inp value={signDraft?.oidc_issuer || ""} onChange={(e) => setSignDraft((p: any) => ({ ...p, oidc_issuer: e.target.value }))} placeholder="https://token.actions.githubusercontent.com" /></FG>
-                <FG label="OIDC Subject"><Inp value={signDraft?.oidc_subject || ""} onChange={(e) => setSignDraft((p: any) => ({ ...p, oidc_subject: e.target.value }))} placeholder="repo:org/repo:ref:refs/heads/main" /></FG>
-              </Row2>
+              <FG label="OIDC ID Token" hint="The signer's ID token (for example a CI job token requested for the signing audience). Issuer and subject are read from it after verification.">
+                <Inp value={signDraft?.oidc_token || ""} onChange={(e) => setSignDraft((p: any) => ({ ...p, oidc_token: e.target.value }))} placeholder="eyJhbGciOi..." />
+              </FG>
             )}
           </Card>
         </Section>
@@ -321,7 +311,6 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
           <Row3>
             <FG label="Signing Algorithm"><Inp value={profileDraft?.signing_algorithm || ""} onChange={(e) => setProfileDraft((p: any) => ({ ...p, signing_algorithm: e.target.value }))} placeholder="ecdsa-sha384" /></FG>
             <FG label="Identity Mode"><Sel value={profileDraft?.identity_mode || "oidc"} onChange={(e) => setProfileDraft((p: any) => ({ ...p, identity_mode: e.target.value }))}><option value="oidc">OIDC</option><option value="workload">Workload</option></Sel></FG>
-            <FG label="Transparency"><Chk label="Require transparency metadata" checked={Boolean(profileDraft?.transparency_required)} onChange={() => setProfileDraft((p: any) => ({ ...p, transparency_required: !Boolean(p?.transparency_required) }))} /></FG>
           </Row3>
           <Row2>
             <FG label="Allowed Repositories"><Inp value={profileDraft?.allowed_repositories_csv || ""} onChange={(e) => setProfileDraft((p: any) => ({ ...p, allowed_repositories_csv: e.target.value }))} placeholder="github.com/org/*, ghcr.io/org/*" /></FG>
@@ -333,7 +322,6 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
           </Row2>
           <Row2>
             <Chk label="Enabled" checked={Boolean(profileDraft?.enabled)} onChange={() => setProfileDraft((p: any) => ({ ...p, enabled: !Boolean(p?.enabled) }))} />
-            <Chk label="Tenant requires transparency by default" checked={Boolean(settingsDraft?.require_transparency)} onChange={() => setSettingsDraft((p: any) => ({ ...p, require_transparency: !Boolean(p?.require_transparency) }))} />
           </Row2>
           <FG label="Description"><Txt rows={3} mono={false} value={profileDraft?.description || ""} onChange={(e) => setProfileDraft((p: any) => ({ ...p, description: e.target.value }))} placeholder="Release signing profile for production build pipelines." /></FG>
         </Card>
@@ -378,7 +366,7 @@ export const ArtifactSigningTab = ({ session, onToast }: any) => {
                 <Btn small onClick={() => void verifyRecord(item)} disabled={busy}>{busy ? "Verifying..." : "Verify"}</Btn>
               </div>
               <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.6 }}>
-                {`${item.digest_sha256} • transparency ${item.transparency_entry_id || "-"} #${item.transparency_index || 0}`}
+                {`${item.digest_sha256} • log ${item.transparency_entry_id || "-"} #${item.transparency_index || 0}`}
               </div>
             </Card>
           ))}

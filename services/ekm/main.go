@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
@@ -109,6 +110,11 @@ func main() {
 	svc.SetKeyring(keyring)
 	svc.SetKeyAccessClient(pkgkeyaccess.NewHTTPClient(envOr("KEY_ACCESS_URL", ""), 3*time.Second))
 	handler := NewHandler(svc)
+	jwtParser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "EKM", Issuer: cfg.JWTIssuer, Audience: cfg.JWTAudience})
+	if err != nil || jwtParser == nil {
+		logger.Fatalf("refusing to start: no JWT verification key (set JWT_PUBLIC_KEY_B64): %v", err)
+	}
+	handler.SetJWTParser(jwtParser)
 	kernel := route.New("ekm", audit, logger)
 	keyring.Routes(kernel, "ekm")
 	kernel.MountOn(handler.mux)

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -298,11 +299,10 @@ func (r *AgentRunner) Register(ctx context.Context) error {
 
 func (r *AgentRunner) SendHeartbeat(ctx context.Context) error {
 	tdeState, tdeDetails, stateErr := r.inspector.State(ctx)
-	pkcs11 := CheckPKCS11Readiness(r.cfg.PKCS11ModulePath)
 	osm := GatherOSMetrics(ctx)
 
 	status := "connected"
-	if stateErr != nil || !pkcs11.Ready {
+	if stateErr != nil {
 		status = "degraded"
 	}
 
@@ -324,11 +324,8 @@ func (r *AgentRunner) SendHeartbeat(ctx context.Context) error {
 		"agent_runtime_sec":   osm.AgentRuntimeSec,
 		"db_tde_state":        tdeState,
 		"db_tde_details":      tdeDetails,
-		"pkcs11_module_path":  r.cfg.PKCS11ModulePath,
-		"pkcs11_ready":        pkcs11.Ready,
-		"pkcs11_reason":       pkcs11.Reason,
 		"rotation_cycle_days": r.cfg.RotationCycleDays,
-		"target_os":           "windows",
+		"target_os":           runtime.GOOS,
 	}
 	if stateErr != nil {
 		meta["db_error"] = stateErr.Error()
@@ -347,7 +344,7 @@ func (r *AgentRunner) SendHeartbeat(ctx context.Context) error {
 	if err := r.postJSON(ctx, url, body, nil); err != nil {
 		return err
 	}
-	r.logger.Printf("heartbeat sent status=%s tde_state=%s pkcs11_ready=%t", status, tdeState, pkcs11.Ready)
+	r.logger.Printf("heartbeat sent status=%s tde_state=%s", status, tdeState)
 	return nil
 }
 

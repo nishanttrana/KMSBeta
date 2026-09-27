@@ -189,8 +189,8 @@ func (h *Handler) handleDKEPublicKey(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListEndpoints(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+	tenantID := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
+	if !h.adminCaller(w, r, reqID, tenantID, false) {
 		return
 	}
 	items, err := h.svc.ListEndpoints(r.Context(), tenantID)
@@ -222,8 +222,7 @@ func (h *Handler) handleConfigureEndpoint(w http.ResponseWriter, r *http.Request
 	if tenantID == "" {
 		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	}
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+	if !h.adminCaller(w, r, reqID, tenantID, true) {
 		return
 	}
 	enabled := true
@@ -248,8 +247,8 @@ func (h *Handler) handleConfigureEndpoint(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) handleDeleteEndpoint(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+	tenantID := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
+	if !h.adminCaller(w, r, reqID, tenantID, true) {
 		return
 	}
 	if err := h.svc.DeleteEndpoint(r.Context(), tenantID, r.PathValue("protocol")); err != nil {
@@ -261,8 +260,8 @@ func (h *Handler) handleDeleteEndpoint(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListRequests(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+	tenantID := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
+	if !h.adminCaller(w, r, reqID, tenantID, false) {
 		return
 	}
 	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
@@ -277,8 +276,8 @@ func (h *Handler) handleListRequests(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+	tenantID := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("tenant_id")), strings.TrimSpace(r.Header.Get("X-Tenant-ID")))
+	if !h.adminCaller(w, r, reqID, tenantID, false) {
 		return
 	}
 	out, err := h.svc.Health(r.Context(), tenantID)
@@ -310,86 +309,74 @@ func (h *Handler) authenticateAndTenant(r *http.Request, w http.ResponseWriter, 
 	return identity, tenantID, true
 }
 
+// authenticate accepts only a verified Bearer JWT. The TLS peer certificate
+// is never an identity here: every request arrives through Envoy over
+// internal mTLS, so the peer is Envoy, and the edge does not verify customer
+// client certificates. Client-certificate headers are never trusted.
 func (h *Handler) authenticate(r *http.Request, tenantHint string) (AuthIdentity, error) {
-	if r.TLS != nil && len(r.TLS.PeerCertificates) > 0 {
-		cert := r.TLS.PeerCertificates[0]
-		id := AuthIdentity{
-			Mode:     "mtls",
-			Subject:  cert.Subject.String(),
-			ClientCN: strings.TrimSpace(cert.Subject.CommonName),
-			Issuer:   cert.Issuer.String(),
-			RemoteIP: strings.TrimSpace(r.RemoteAddr),
-		}
-		id.TenantID, id.Role = splitCN(id.ClientCN)
-		if tenantHint != "" && id.TenantID != "" && !strings.EqualFold(id.TenantID, tenantHint) {
-			return AuthIdentity{}, errors.New("tenant mismatch with client certificate")
-		}
-		return id, nil
-	}
-	headerCN := strings.TrimSpace(r.Header.Get("X-Client-CN"))
-	headerSub := strings.TrimSpace(r.Header.Get("X-Client-Subject"))
-	headerIss := strings.TrimSpace(r.Header.Get("X-Client-Issuer"))
-	if headerCN != "" || headerSub != "" || headerIss != "" {
-		id := AuthIdentity{
-			Mode:     "mtls",
-			Subject:  firstNonEmpty(headerSub, headerCN),
-			ClientCN: headerCN,
-			Issuer:   headerIss,
-			RemoteIP: strings.TrimSpace(r.RemoteAddr),
-		}
-		id.TenantID, id.Role = splitCN(id.ClientCN)
-		if tenantHint != "" && id.TenantID != "" && !strings.EqualFold(id.TenantID, tenantHint) {
-			return AuthIdentity{}, errors.New("tenant mismatch with client certificate")
-		}
-		return id, nil
-	}
 	authz := strings.TrimSpace(r.Header.Get("Authorization"))
-	if strings.HasPrefix(strings.ToLower(authz), "bearer ") {
-		if h.jwtParser == nil {
-			return AuthIdentity{}, errors.New("jwt parser is not configured")
-		}
-		token := strings.TrimSpace(authz[7:])
-		claims, err := h.jwtParser(token)
-		if err != nil {
-			return AuthIdentity{}, errors.New("invalid bearer token")
-		}
-		id := AuthIdentity{
-			Mode:      "jwt",
-			Subject:   strings.TrimSpace(claims.Subject),
-			TenantID:  strings.TrimSpace(firstNonEmpty(claims.TenantID, claims.AzureTenantID)),
-			UserID:    strings.TrimSpace(claims.UserID),
-			Role:      strings.TrimSpace(claims.Role),
-			TokenJTI:  strings.TrimSpace(claims.ID),
-			RemoteIP:  strings.TrimSpace(r.RemoteAddr),
-			JWTIssuer: strings.TrimSpace(claims.Issuer),
-		}
-		if len(claims.Audience) > 0 {
-			id.JWTAudiences = make([]string, 0, len(claims.Audience))
-			for _, aud := range claims.Audience {
-				aud = strings.TrimSpace(aud)
-				if aud != "" {
-					id.JWTAudiences = append(id.JWTAudiences, aud)
-				}
-			}
-		}
-		if tenantHint != "" && id.TenantID != "" && !strings.EqualFold(id.TenantID, tenantHint) {
-			return AuthIdentity{}, errors.New("tenant mismatch with bearer token")
-		}
-		return id, nil
+	if !strings.HasPrefix(strings.ToLower(authz), "bearer ") {
+		return AuthIdentity{}, errors.New("a Bearer JWT is required")
 	}
-	return AuthIdentity{}, errors.New("mTLS client identity or Bearer JWT is required")
+	if h.jwtParser == nil {
+		return AuthIdentity{}, errors.New("jwt parser is not configured")
+	}
+	claims, err := h.jwtParser(strings.TrimSpace(authz[7:]))
+	if err != nil || claims == nil {
+		return AuthIdentity{}, errors.New("invalid bearer token")
+	}
+	id := AuthIdentity{
+		Mode:      "jwt",
+		Subject:   strings.TrimSpace(firstNonEmpty(claims.Subject, claims.UserID, claims.ClientID)),
+		TenantID:  strings.TrimSpace(firstNonEmpty(claims.TenantID, claims.AzureTenantID)),
+		UserID:    strings.TrimSpace(claims.UserID),
+		Role:      strings.TrimSpace(claims.Role),
+		TokenJTI:  strings.TrimSpace(claims.ID),
+		RemoteIP:  strings.TrimSpace(r.RemoteAddr),
+		JWTIssuer: strings.TrimSpace(claims.Issuer),
+	}
+	for _, aud := range claims.Audience {
+		if aud = strings.TrimSpace(aud); aud != "" {
+			id.JWTAudiences = append(id.JWTAudiences, aud)
+		}
+	}
+	if tenantHint != "" && id.TenantID != "" && !strings.EqualFold(id.TenantID, tenantHint) {
+		return AuthIdentity{}, errors.New("tenant mismatch with bearer token")
+	}
+	return id, nil
 }
 
-func splitCN(cn string) (string, string) {
-	cn = strings.TrimSpace(cn)
-	if cn == "" {
-		return "", ""
+// adminCaller authenticates a caller of the endpoint-administration routes
+// and enforces its tenant; changing an endpoint needs a tenant administrator.
+// Every refusal is audited.
+func (h *Handler) adminCaller(w http.ResponseWriter, r *http.Request, reqID, tenantID string, write bool) bool {
+	tenantID = strings.TrimSpace(tenantID)
+	refuse := func(status int, code, reason string) bool {
+		writeErr(w, status, code, reason, reqID, tenantID)
+		_ = h.svc.publishAudit(r.Context(), "audit.hyok.admin_refused", tenantID, map[string]interface{}{
+			"route": r.Method + " " + r.URL.Path, "reason": reason, "result": "refused", "severity": "warning", "status": status,
+		})
+		return false
 	}
-	parts := strings.SplitN(cn, ":", 2)
-	if len(parts) == 2 {
-		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+	if tenantID == "" {
+		return refuse(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	return "", ""
+	id, err := h.authenticate(r, tenantID)
+	if err != nil {
+		return refuse(http.StatusUnauthorized, "unauthorized", err.Error())
+	}
+	if write && !hyokAdminRole(id.Role) {
+		return refuse(http.StatusForbidden, "forbidden", "changing HYOK endpoints requires a tenant administrator")
+	}
+	return true
+}
+
+func hyokAdminRole(role string) bool {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "admin", "tenant-admin", "super-admin":
+		return true
+	}
+	return false
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

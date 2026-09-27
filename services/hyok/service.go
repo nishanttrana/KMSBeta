@@ -55,6 +55,12 @@ func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (En
 	if cfg.AuthMode == "" {
 		return EndpointConfig{}, newServiceError(http.StatusBadRequest, "bad_request", "invalid auth_mode")
 	}
+	if cfg.AuthMode == AuthModeMTLS {
+		// Envoy's edge listener does not verify client certificates, so no
+		// request could ever prove an mTLS identity; refuse rather than store a
+		// mode that looks enforced.
+		return EndpointConfig{}, newServiceError(http.StatusBadRequest, "auth_mode_unavailable", "mTLS client authentication is not available: the edge does not verify client certificates; use jwt")
+	}
 	if err := s.store.UpsertEndpoint(ctx, cfg); err != nil {
 		return EndpointConfig{}, err
 	}
@@ -278,22 +284,39 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	}
 
 	logEntry := ProxyRequestLog{
-		ID:             newID("hreq"),
-		TenantID:       tenantID,
-		Protocol:       protocol,
-		Operation:      operation,
-		KeyID:          keyID,
-		Endpoint:       strings.TrimSpace(endpointPath),
-		AuthMode:       identity.Mode,
-		AuthSubject:    firstNonEmpty(identity.Subject, identity.ClientCN, identity.UserID),
-		RequesterID:    firstNonEmpty(req.RequesterID, identity.UserID, identity.Subject),
-		RequesterEmail: strings.TrimSpace(req.RequesterEmail),
-		Status:         "started",
-		RequestJSON:    mustJSON(req),
-		ResponseJSON:   "{}",
+		ID:                newID("hreq"),
+		TenantID:          tenantID,
+		Protocol:          protocol,
+		Operation:         operation,
+		KeyID:             keyID,
+		Endpoint:          strings.TrimSpace(endpointPath),
+		AuthMode:          identity.Mode,
+		AuthSubject:       firstNonEmpty(identity.Subject, identity.ClientCN, identity.UserID),
+		RequesterID:       firstNonEmpty(req.RequesterID, identity.UserID, identity.Subject),
+		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
+		Status:            "started",
+		RequestJSON:       mustJSON(req),
+		ResponseJSON:      "{}",
+		GovernanceReq:     cfg.GovernanceRequired,
+		ApprovalRequestID: strings.TrimSpace(req.ApprovalRequestID),
 	}
 	if err := s.store.CreateRequestLog(ctx, logEntry); err != nil {
 		return ProxyCryptoResponse{}, err
+	}
+	// A retry carrying an approval ID is released only by that approval:
+	// approved, for this key and operation (and payload, for a HYOK
+	// approval), and not used before.
+	approvedBy := ""
+	if id := logEntry.ApprovalRequestID; id != "" {
+		if err := s.redeemApproval(ctx, tenantID, id, logEntry.ID, keyID, operation, req); err != nil {
+			_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "denied", "{}", err.Error(), id, "")
+			_ = s.publishAudit(ctx, "audit.hyok.approval_refused", tenantID, map[string]interface{}{
+				"request_id": logEntry.ID, "approval_request_id": id, "protocol": protocol, "operation": operation,
+				"key_id": keyID, "reason": err.Error(), "result": "refused", "severity": "warning",
+			})
+			return ProxyCryptoResponse{}, newServiceError(http.StatusForbidden, "approval_invalid", err.Error())
+		}
+		approvedBy = id
 	}
 
 	policyDecision, policyReason, err := s.evaluatePolicy(ctx, tenantID, protocol, operation, keyID, cfg.PolicyID)
@@ -314,7 +337,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	}
 
 	keyAccessResult := pkgkeyaccess.EvaluateResponse{Action: "allow"}
-	if s.keyAccess != nil {
+	if s.keyAccess != nil && approvedBy == "" {
 		keyAccessResult, err = s.keyAccess.Evaluate(ctx, pkgkeyaccess.EvaluateRequest{
 			TenantID:          tenantID,
 			Service:           "hyok",
@@ -336,7 +359,15 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 			},
 		})
 		if err != nil {
-			keyAccessResult = pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key access justifications service unavailable"}
+			if s.policyFailClosed {
+				_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", "key access service unavailable", "", policyDecision)
+				_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
+					"request_id": logEntry.ID, "protocol": protocol, "operation": operation, "key_id": keyID,
+					"reason": "key_access_unavailable", "result": "refused", "severity": "warning",
+				})
+				return ProxyCryptoResponse{}, newServiceError(http.StatusFailedDependency, "key_access_unavailable", "key access justification service is unavailable")
+			}
+			keyAccessResult = pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key_access_unavailable_fail_open"}
 		}
 	}
 	if strings.EqualFold(keyAccessResult.Action, "deny") {
@@ -374,23 +405,20 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		return resp, nil
 	}
 
-	if cfg.GovernanceRequired {
+	if cfg.GovernanceRequired && approvedBy == "" {
 		if s.governance == nil {
 			err := newServiceError(http.StatusFailedDependency, "governance_unavailable", "governance client is not configured")
 			_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 			return ProxyCryptoResponse{}, err
 		}
 		approvalID, err := s.governance.CreateKeyApproval(ctx, GovernanceApprovalRequest{
-			TenantID:        tenantID,
-			KeyID:           keyID,
-			Operation:       operation,
-			PayloadHash:     hashJSONPayload(req),
-			RequesterID:     logEntry.RequesterID,
-			RequesterEmail:  logEntry.RequesterEmail,
-			RequesterIP:     identity.RemoteIP,
-			CallbackService: "kms-hyok-proxy",
-			CallbackAction:  "release_pending_operation",
-			CallbackPayload: map[string]interface{}{"request_id": logEntry.ID},
+			TenantID:       tenantID,
+			KeyID:          keyID,
+			Operation:      operation,
+			PayloadHash:    approvalPayloadHash(req),
+			RequesterID:    logEntry.RequesterID,
+			RequesterEmail: logEntry.RequesterEmail,
+			RequesterIP:    identity.RemoteIP,
 		})
 		if err != nil {
 			_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
@@ -430,17 +458,63 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		PlaintextB64:  strings.TrimSpace(firstString(raw["plaintext"])),
 		IVB64:         strings.TrimSpace(firstString(raw["iv"])),
 	}
-	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(resp), "", "", policyDecision)
+	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(resp), "", approvedBy, policyDecision)
 	_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
-		"request_id":         logEntry.ID,
-		"protocol":           protocol,
-		"operation":          operation,
-		"key_id":             keyID,
-		"policy_decision":    policyDecision,
-		"justification_code": req.JustificationCode,
-		"status":             "success",
+		"request_id":          logEntry.ID,
+		"protocol":            protocol,
+		"operation":           operation,
+		"key_id":              keyID,
+		"policy_decision":     policyDecision,
+		"justification_code":  req.JustificationCode,
+		"key_access_reason":   keyAccessResult.Reason,
+		"approval_request_id": approvedBy,
+		"status":              "success",
 	})
 	return resp, nil
+}
+
+// approvalPayloadHash is the hash a HYOK approval binds to: the request
+// without the approval ID it is later retried with.
+func approvalPayloadHash(req ProxyCryptoRequest) string {
+	req.ApprovalRequestID = ""
+	return hashJSONPayload(req)
+}
+
+// redeemApproval checks that a governance approval releases this operation.
+func (s *Service) redeemApproval(ctx context.Context, tenantID, approvalID, logID, keyID, operation string, req ProxyCryptoRequest) error {
+	if s.governance == nil {
+		return errors.New("governance is not configured")
+	}
+	st, err := s.governance.GetApprovalStatus(ctx, tenantID, approvalID)
+	if err != nil {
+		return fmt.Errorf("approval could not be checked: %w", err)
+	}
+	if !strings.EqualFold(st.Status, "approved") {
+		return fmt.Errorf("approval is %s, not approved", firstNonEmpty(st.Status, "unknown"))
+	}
+	if st.TargetID != keyID {
+		return errors.New("approval is for a different key")
+	}
+	switch st.Action {
+	case "key." + operation:
+		if st.PayloadHash != approvalPayloadHash(req) {
+			return errors.New("approval is for a different request payload")
+		}
+	case "external_key_access":
+		if !strings.EqualFold(st.Operation, operation) {
+			return errors.New("approval is for a different operation")
+		}
+	default:
+		return errors.New("approval is for a different action")
+	}
+	used, err := s.store.ApprovalRedeemed(ctx, tenantID, approvalID, logID)
+	if err != nil {
+		return err
+	}
+	if used {
+		return errors.New("approval was already used")
+	}
+	return nil
 }
 
 func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID string, endpointPath string, identity AuthIdentity) (DKEPublicKeyResponse, error) {
@@ -697,7 +771,7 @@ func (s *Service) endpointForProtocol(ctx context.Context, tenantID string, prot
 	}
 	cfg.AuthMode = normalizeAuthMode(cfg.AuthMode)
 	if cfg.AuthMode == "" {
-		cfg.AuthMode = AuthModeMTLSOrJWT
+		cfg.AuthMode = AuthModeJWT
 	}
 	return cfg, nil
 }
@@ -801,16 +875,9 @@ func checkAuthMode(required string, actual string) error {
 	required = normalizeAuthMode(required)
 	actual = strings.TrimSpace(strings.ToLower(actual))
 	switch required {
-	case AuthModeMTLSOrJWT:
-		if actual == "mtls" || actual == "jwt" {
-			return nil
-		}
-		return errors.New("mTLS or JWT authentication is required")
 	case AuthModeMTLS:
-		if actual == "mtls" {
-			return nil
-		}
-		return errors.New("mTLS authentication is required")
+		// Stored before mTLS was refused: no request can satisfy it.
+		return errors.New("this endpoint requires mTLS, which the edge cannot verify; reconfigure it to jwt")
 	case AuthModeJWT:
 		if actual == "jwt" {
 			return nil

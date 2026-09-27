@@ -9,185 +9,36 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 )
 
+// GetSDKOverview lists the client SDK Vecta ships: the Java JCA provider,
+// with the services it registers (services/jca-provider). Vecta ships no
+// PKCS#11 module, and nothing observes SDK sessions or mechanisms, so no
+// usage figures are reported.
 func (s *Service) GetSDKOverview(ctx context.Context, tenantID string) (SDKOverview, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return SDKOverview{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	agents, err := s.ListAgents(ctx, tenantID)
-	if err != nil {
-		return SDKOverview{}, err
-	}
-	logs, err := s.store.ListKeyAccessByTenant(ctx, tenantID, time.Now().UTC().Add(-24*time.Hour), 20000)
-	if err != nil {
-		return SDKOverview{}, err
-	}
-
-	type mechAgg struct {
-		total int64
-	}
-	mechanismOps := map[string]*mechAgg{}
-	agentOps := map[string]int64{}
-	agentMechOps := map[string]map[string]int64{}
-	keyAlgByID := map[string]string{}
-
-	for _, item := range logs {
-		if strings.ToLower(strings.TrimSpace(item.Status)) != "success" {
-			continue
-		}
-		keyID := strings.TrimSpace(item.KeyID)
-		keyAlg := ""
-		if keyID != "" {
-			if v, ok := keyAlgByID[keyID]; ok {
-				keyAlg = v
-			} else if key, keyErr := s.store.GetTDEKey(ctx, tenantID, keyID); keyErr == nil {
-				keyAlg = strings.TrimSpace(key.Algorithm)
-				keyAlgByID[keyID] = keyAlg
-			}
-		}
-		mech := mapOperationMechanism(strings.TrimSpace(item.Operation), keyAlg)
-		if mech == "" {
-			mech = "CKM_AES_GCM"
-		}
-		if _, ok := mechanismOps[mech]; !ok {
-			mechanismOps[mech] = &mechAgg{}
-		}
-		mechanismOps[mech].total++
-
-		agentID := strings.TrimSpace(item.AgentID)
-		if agentID != "" {
-			agentOps[agentID]++
-			if _, ok := agentMechOps[agentID]; !ok {
-				agentMechOps[agentID] = map[string]int64{}
-			}
-			agentMechOps[agentID][mech]++
-		}
-	}
-
-	mechRows := make([]SDKMechanismUsage, 0, len(mechanismOps))
-	totalOps := int64(0)
-	for _, v := range mechanismOps {
-		totalOps += v.total
-	}
-	for mech, v := range mechanismOps {
-		pct := 0.0
-		if totalOps > 0 {
-			pct = (float64(v.total) / float64(totalOps)) * 100.0
-		}
-		mechRows = append(mechRows, SDKMechanismUsage{
-			Mechanism: mech,
-			Ops24h:    v.total,
-			Percent:   pct,
-		})
-	}
-	sort.Slice(mechRows, func(i, j int) bool {
-		if mechRows[i].Ops24h == mechRows[j].Ops24h {
-			return mechRows[i].Mechanism < mechRows[j].Mechanism
-		}
-		return mechRows[i].Ops24h > mechRows[j].Ops24h
-	})
-
-	pkcsOps := int64(0)
-	jcaOps := int64(0)
-	pkcsClients := 0
-	jcaClients := 0
-	sessionsActive := 0
-	clientRows := make([]SDKClient, 0, len(agents))
-	for _, agent := range agents {
-		agentID := strings.TrimSpace(agent.ID)
-		agentStatus := sdkStatusLabel(agent.Status)
-		if strings.EqualFold(agentStatus, "Active") {
-			sessionsActive++
-		}
-		meta := parseJSONMap(agent.MetadataJSON)
-		clientSDK := detectClientSDK(agent, meta)
-		ops := agentOps[agentID]
-		topMech := topMechanism(agentMechOps[agentID])
-		if topMech == "" {
-			topMech = "CKM_AES_GCM"
-		}
-		if clientSDK == "jca" {
-			jcaOps += ops
-			jcaClients++
-		} else {
-			pkcsOps += ops
-			pkcsClients++
-		}
-		clientRows = append(clientRows, SDKClient{
-			ID:        agentID,
-			Name:      defaultString(agent.Name, agentID),
-			SDK:       sdkArtifactName(clientSDK),
-			Mechanism: topMech,
-			Ops24h:    ops,
-			Status:    agentStatus,
-		})
-	}
-	sort.Slice(clientRows, func(i, j int) bool {
-		if clientRows[i].Ops24h == clientRows[j].Ops24h {
-			return clientRows[i].Name < clientRows[j].Name
-		}
-		return clientRows[i].Ops24h > clientRows[j].Ops24h
-	})
-
-	// Keep the most relevant mechanism rows in dashboard summary.
-	if len(mechRows) > 8 {
-		mechRows = mechRows[:8]
-	}
-	topMech := "CKM_AES_GCM"
-	if len(mechRows) > 0 {
-		topMech = mechRows[0].Mechanism
-	}
-
-	pkcsSize := humanizeBytes(estimatedSDKSize("pkcs11", "linux"))
-	jcaSize := humanizeBytes(estimatedSDKSize("jca", "all"))
-	providers := []SDKProviderSummary{
-		{
-			ID:               "pkcs11",
-			Name:             "PKCS#11 C Provider",
-			ArtifactName:     "libvecta-pkcs11.so",
-			Version:          "v2.40 / v3.0",
-			Status:           "active",
-			SizeLabel:        pkcsSize,
-			Transport:        "HTTPS + mTLS",
-			SessionsActive:   sessionsActive,
-			Ops24h:           pkcsOps,
-			ClientsConnected: pkcsClients,
-			TopMechanism:     topMech,
-			Platforms:        []string{"Linux .so", "macOS .dylib", "Windows .dll"},
-			Capabilities:     []string{"Cipher", "Sign", "Verify", "Wrap", "Unwrap"},
-		},
-		{
-			ID:               "jca",
-			Name:             "Java JCA/JCE Provider",
-			ArtifactName:     "vecta-jca-provider.jar",
-			Version:          "VECTA v1.0",
-			Status:           "active",
-			SizeLabel:        jcaSize,
-			Transport:        "HTTPS + mTLS",
-			SessionsActive:   sessionsActive,
-			Ops24h:           jcaOps,
-			ClientsConnected: jcaClients,
-			TopMechanism:     topMech,
-			Platforms:        []string{"Java 11 LTS", "Java 17 LTS", "Java 21 LTS"},
-			Capabilities:     []string{"Cipher", "Signature", "KeyStore", "KeyGen", "Mac", "SecureRandom"},
-		},
-	}
 	out := SDKOverview{
 		RefreshedAt: time.Now().UTC().Format(time.RFC3339Nano),
-		Providers:   providers,
-		Mechanisms:  mechRows,
-		Clients:     clientRows,
+		Providers: []SDKProviderSummary{{
+			ID:           "jca",
+			Name:         "Java JCA/JCE Provider",
+			ArtifactName: "vecta-jca-sdk-all.zip",
+			Version:      "source",
+			Status:       "available",
+			SizeLabel:    humanizeBytes(estimatedSDKSize("jca", "all")),
+			Transport:    "HTTPS (mTLS or bearer token)",
+			Platforms:    []string{"Java 11+"},
+			Capabilities: []string{"Cipher AES/GCM/NoPadding", "Signature SHA256withRSA", "Signature SHA256withECDSA", "KeyStore VectaKMS"},
+		}},
+		Mechanisms: []SDKMechanismUsage{},
+		Clients:    []SDKClient{},
 	}
-	_ = s.publishAudit(ctx, "audit.ekm.sdk_overview_viewed", tenantID, map[string]interface{}{
-		"providers": len(providers),
-		"clients":   len(clientRows),
-		"ops_24h":   totalOps,
-	})
+	_ = s.publishAudit(ctx, "audit.ekm.sdk_overview_viewed", tenantID, map[string]interface{}{"providers": len(out.Providers)})
 	return out, nil
 }
 
@@ -255,367 +106,10 @@ func buildSDKArchive(provider string, targetOS string) ([]byte, string, error) {
 
 func sdkFiles(provider string, targetOS string) map[string]string {
 	switch normalizeSDKProvider(provider) {
-	case "pkcs11":
-		return pkcs11SDKFiles(targetOS)
 	case "jca":
 		return jcaSDKFiles()
 	default:
 		return map[string]string{}
-	}
-}
-
-func pkcs11SDKFiles(targetOS string) map[string]string {
-	osLabel := strings.ToUpper(defaultString(targetOS, "linux"))
-	readme := fmt.Sprintf(`# Vecta PKCS#11 SDK (%s)
-
-This package provides both a C client starter and the full PKCS#11 shared library provider.
-
-## Full PKCS#11 Provider
-
-The Vecta PKCS#11 provider (libvecta-pkcs11.so / .dll / .dylib) implements OASIS PKCS#11 v2.40.
-Source: services/pkcs11-provider/ in the Vecta KMS repository.
-
-Build from source:
-  cd services/pkcs11-provider && make build-linux   # or build-macos / build-windows
-
-Supported mechanisms:
-  AES-GCM (encrypt/decrypt — local cache or remote)
-  RSA (sign/verify — always remote)
-  ECDSA (sign/verify — always remote)
-
-## Authentication
-
-Four methods supported (priority order):
-  1. mTLS: Set VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA
-  2. JWT: Set VECTA_API_KEY + VECTA_JWT_ENDPOINT (auto-refresh)
-  3. API Key: Set VECTA_API_KEY (sent as X-API-Key header)
-  4. Bearer: Set VECTA_AUTH_TOKEN (static token)
-
-## Key Caching
-
-Set VECTA_KEY_CACHE_TTL=300 to enable local key caching (seconds).
-Exportable keys are cached in mlock'd memory for fast AES-GCM.
-Non-exportable keys always proxy to KMS. TTL of 0 disables caching.
-
-## C Client Starter
-
-Files:
-- examples/c/vecta_kms_client.c (libcurl-based C client)
-- examples/c/Makefile
-- config/vecta-kms.env.example
-
-Build:
-  make -C examples/c
-
-Examples:
-  ./examples/c/vecta_kms_client register-client root app1 ops@acme.com service app-service
-  ./examples/c/vecta_kms_client wrap root key_123 BASE64PLAINTEXT
-  ./examples/c/vecta_kms_client public root key_123
-
-Environment:
-  VECTA_BASE_URL, VECTA_AUTH_BASE_URL, VECTA_TOKEN, VECTA_AGENT_ID, VECTA_DATABASE_ID
-
-Target OS profile: %s
-`, osLabel, osLabel)
-
-	cClient := `#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <curl/curl.h>
-
-struct resp_buf { char *data; size_t size; };
-
-static size_t on_write(void *ptr, size_t size, size_t nmemb, void *userdata) {
-  size_t realsz = size * nmemb;
-  struct resp_buf *buf = (struct resp_buf *)userdata;
-  char *next = realloc(buf->data, buf->size + realsz + 1);
-  if (!next) return 0;
-  buf->data = next;
-  memcpy(buf->data + buf->size, ptr, realsz);
-  buf->size += realsz;
-  buf->data[buf->size] = '\0';
-  return realsz;
-}
-
-static void print_usage(void) {
-  fprintf(stderr,
-    "Usage:\n"
-    "  vecta_kms_client register-client <tenant_id> <client_name> <contact_email> [client_type] [requested_role]\n"
-    "  vecta_kms_client wrap           <tenant_id> <key_id> <plaintext_b64> [agent_id] [database_id]\n"
-    "  vecta_kms_client unwrap         <tenant_id> <key_id> <ciphertext_b64> <iv_b64> [agent_id] [database_id]\n"
-    "  vecta_kms_client rotate         <tenant_id> <key_id> [reason]\n"
-    "  vecta_kms_client public         <tenant_id> <key_id>\n"
-  );
-}
-
-static int http_json(
-  const char *method,
-  const char *url,
-  const char *tenant,
-  const char *token,
-  const char *body,
-  struct resp_buf *out
-) {
-  CURL *curl = curl_easy_init();
-  if (!curl) return 2;
-  struct curl_slist *headers = NULL;
-  char auth[2048];
-  char tenantHdr[512];
-  headers = curl_slist_append(headers, "Content-Type: application/json");
-  if (tenant && tenant[0]) {
-    snprintf(tenantHdr, sizeof(tenantHdr), "X-Tenant-ID: %s", tenant);
-    headers = curl_slist_append(headers, tenantHdr);
-  }
-  if (token && token[0]) {
-    snprintf(auth, sizeof(auth), "Authorization: Bearer %s", token);
-    headers = curl_slist_append(headers, auth);
-  }
-
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
-  if (body && body[0]) {
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-  }
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, on_write);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, out);
-  CURLcode rc = curl_easy_perform(curl);
-  long code = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
-  curl_slist_free_all(headers);
-  curl_easy_cleanup(curl);
-  if (rc != CURLE_OK) return 3;
-  return (code >= 300) ? 4 : 0;
-}
-
-int vecta_register_client(
-  const char *auth_base,
-  const char *tenant_id,
-  const char *client_name,
-  const char *contact_email,
-  const char *client_type,
-  const char *requested_role,
-  struct resp_buf *out
-) {
-  char url[1024];
-  char body[4096];
-  snprintf(url, sizeof(url), "%s/auth/register", auth_base);
-  snprintf(body, sizeof(body),
-           "{\"tenant_id\":\"%s\",\"client_name\":\"%s\",\"client_type\":\"%s\",\"contact_email\":\"%s\",\"requested_role\":\"%s\"}",
-           tenant_id, client_name, client_type, contact_email, requested_role);
-  return http_json("POST", url, tenant_id, NULL, body, out);
-}
-
-int vecta_wrap(
-  const char *base,
-  const char *token,
-  const char *tenant_id,
-  const char *key_id,
-  const char *plaintext_b64,
-  const char *agent_id,
-  const char *database_id,
-  struct resp_buf *out
-) {
-  char url[1024];
-  char body[4096];
-  snprintf(url, sizeof(url), "%s/ekm/tde/keys/%s/wrap", base, key_id);
-  snprintf(body, sizeof(body),
-           "{\"tenant_id\":\"%s\",\"plaintext\":\"%s\",\"agent_id\":\"%s\",\"database_id\":\"%s\"}",
-           tenant_id, plaintext_b64, agent_id ? agent_id : "", database_id ? database_id : "");
-  return http_json("POST", url, tenant_id, token, body, out);
-}
-
-int vecta_unwrap(
-  const char *base,
-  const char *token,
-  const char *tenant_id,
-  const char *key_id,
-  const char *ciphertext_b64,
-  const char *iv_b64,
-  const char *agent_id,
-  const char *database_id,
-  struct resp_buf *out
-) {
-  char url[1024];
-  char body[4096];
-  snprintf(url, sizeof(url), "%s/ekm/tde/keys/%s/unwrap", base, key_id);
-  snprintf(body, sizeof(body),
-           "{\"tenant_id\":\"%s\",\"ciphertext\":\"%s\",\"iv\":\"%s\",\"agent_id\":\"%s\",\"database_id\":\"%s\"}",
-           tenant_id, ciphertext_b64, iv_b64, agent_id ? agent_id : "", database_id ? database_id : "");
-  return http_json("POST", url, tenant_id, token, body, out);
-}
-
-int vecta_rotate(
-  const char *base,
-  const char *token,
-  const char *tenant_id,
-  const char *key_id,
-  const char *reason,
-  struct resp_buf *out
-) {
-  char url[1024];
-  char body[1024];
-  snprintf(url, sizeof(url), "%s/ekm/tde/keys/%s/rotate", base, key_id);
-  snprintf(body, sizeof(body), "{\"tenant_id\":\"%s\",\"reason\":\"%s\"}", tenant_id, reason ? reason : "manual");
-  return http_json("POST", url, tenant_id, token, body, out);
-}
-
-int vecta_public(
-  const char *base,
-  const char *token,
-  const char *tenant_id,
-  const char *key_id,
-  struct resp_buf *out
-) {
-  char url[1024];
-  snprintf(url, sizeof(url), "%s/ekm/tde/keys/%s/public?tenant_id=%s", base, key_id, tenant_id);
-  return http_json("GET", url, tenant_id, token, NULL, out);
-}
-
-int main(int argc, char **argv) {
-  const char *base = getenv("VECTA_BASE_URL");
-  const char *authBase = getenv("VECTA_AUTH_BASE_URL");
-  const char *token = getenv("VECTA_TOKEN");
-  const char *defaultAgent = getenv("VECTA_AGENT_ID");
-  const char *defaultDB = getenv("VECTA_DATABASE_ID");
-  struct resp_buf out = {0};
-  int rc = 0;
-
-  if (argc < 2) {
-    print_usage();
-    return 1;
-  }
-  const char *op = argv[1];
-
-  if (strcmp(op, "register-client") == 0) {
-    if (!authBase || argc < 5) {
-      fprintf(stderr, "VECTA_AUTH_BASE_URL is required for register-client\n");
-      print_usage();
-      return 1;
-    }
-    const char *tenant = argv[2];
-    const char *clientName = argv[3];
-    const char *contactEmail = argv[4];
-    const char *clientType = (argc > 5) ? argv[5] : "service";
-    const char *requestedRole = (argc > 6) ? argv[6] : "app-service";
-    rc = vecta_register_client(authBase, tenant, clientName, contactEmail, clientType, requestedRole, &out);
-  } else if (strcmp(op, "wrap") == 0) {
-    if (!base || !token || argc < 5) {
-      fprintf(stderr, "VECTA_BASE_URL and VECTA_TOKEN are required for wrap\n");
-      print_usage();
-      return 1;
-    }
-    const char *tenant = argv[2];
-    const char *keyID = argv[3];
-    const char *plaintextB64 = argv[4];
-    const char *agent = (argc > 5) ? argv[5] : defaultAgent;
-    const char *database = (argc > 6) ? argv[6] : defaultDB;
-    rc = vecta_wrap(base, token, tenant, keyID, plaintextB64, agent, database, &out);
-  } else if (strcmp(op, "unwrap") == 0) {
-    if (!base || !token || argc < 6) {
-      fprintf(stderr, "VECTA_BASE_URL and VECTA_TOKEN are required for unwrap\n");
-      print_usage();
-      return 1;
-    }
-    const char *tenant = argv[2];
-    const char *keyID = argv[3];
-    const char *cipherB64 = argv[4];
-    const char *ivB64 = argv[5];
-    const char *agent = (argc > 6) ? argv[6] : defaultAgent;
-    const char *database = (argc > 7) ? argv[7] : defaultDB;
-    rc = vecta_unwrap(base, token, tenant, keyID, cipherB64, ivB64, agent, database, &out);
-  } else if (strcmp(op, "rotate") == 0) {
-    if (!base || !token || argc < 4) {
-      fprintf(stderr, "VECTA_BASE_URL and VECTA_TOKEN are required for rotate\n");
-      print_usage();
-      return 1;
-    }
-    const char *tenant = argv[2];
-    const char *keyID = argv[3];
-    const char *reason = (argc > 4) ? argv[4] : "manual";
-    rc = vecta_rotate(base, token, tenant, keyID, reason, &out);
-  } else if (strcmp(op, "public") == 0) {
-    if (!base || !token || argc < 4) {
-      fprintf(stderr, "VECTA_BASE_URL and VECTA_TOKEN are required for public\n");
-      print_usage();
-      return 1;
-    }
-    const char *tenant = argv[2];
-    const char *keyID = argv[3];
-    rc = vecta_public(base, token, tenant, keyID, &out);
-  } else {
-    fprintf(stderr, "Unsupported operation: %s\n", op);
-    print_usage();
-    return 1;
-  }
-
-  if (rc != 0) {
-    fprintf(stderr, "Request failed rc=%d body=%s\n", rc, out.data ? out.data : "");
-    free(out.data);
-    return rc;
-  }
-  printf("%s\n", out.data ? out.data : "{}");
-  free(out.data);
-  return 0;
-}
-`
-
-	makefile := `CC ?= cc
-CFLAGS ?= -O2 -Wall -Wextra
-LDFLAGS ?= -lcurl
-
-all: vecta_kms_client
-
-vecta_kms_client: vecta_kms_client.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
-
-clean:
-	rm -f vecta_kms_client
-`
-
-	env := `VECTA_BASE_URL=https://localhost/svc/ekm
-VECTA_AUTH_BASE_URL=https://localhost
-VECTA_TOKEN=replace-with-jwt
-VECTA_AGENT_ID=replace-with-agent-id
-VECTA_DATABASE_ID=replace-with-database-id
-`
-
-	sh := `#!/usr/bin/env bash
-set -euo pipefail
-if [ -f ./config/vecta-kms.env.example ]; then
-  source ./config/vecta-kms.env.example
-fi
-if [ $# -lt 1 ]; then
-  echo "Usage: ./scripts/run_sdk_demo.sh <operation> [args...]"
-  exit 1
-fi
-./examples/c/vecta_kms_client "$@"
-`
-	ps := `$ErrorActionPreference = "Stop"
-if (Test-Path ".\config\vecta-kms.env.example") {
-  Get-Content ".\config\vecta-kms.env.example" | ForEach-Object {
-    if ($_ -match "^[A-Za-z_][A-Za-z0-9_]*=") {
-      $idx = $_.IndexOf("=")
-      $k = $_.Substring(0, $idx)
-      $v = $_.Substring($idx + 1)
-      [Environment]::SetEnvironmentVariable($k, $v, "Process")
-    }
-  }
-}
-if ($args.Count -lt 1) {
-  Write-Host "Usage: .\scripts\run_sdk_demo.ps1 <operation> [args...]"
-  exit 1
-}
-.\examples\c\vecta_kms_client.exe @args
-`
-
-	return map[string]string{
-		"README.md":                     readme,
-		"config/vecta-kms.env.example":  env,
-		"examples/c/vecta_kms_client.c": cClient,
-		"examples/c/Makefile":           makefile,
-		"scripts/run_sdk_demo.sh":       sh,
-		"scripts/run_sdk_demo.ps1":      ps,
 	}
 }
 
@@ -630,7 +124,6 @@ The Vecta JCA Provider (vecta-jca-provider.jar) for Java 11+ registers:
   Cipher: AES/GCM/NoPadding (local cache if exportable, else remote KMS)
   Signature: SHA256withRSA, SHA256withECDSA (always remote)
   KeyStore: VectaKMS (enumerate/load keys from KMS)
-  SecureRandom: VectaQRNG (proxy to QRNG endpoint, fallback to local)
 
 Source: services/jca-provider/ in the Vecta KMS repository.
 
@@ -643,7 +136,7 @@ Build from source:
 
 ## Authentication
 
-Same four methods as PKCS#11 (priority order):
+Four methods (priority order):
   1. mTLS: VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA
   2. JWT: VECTA_API_KEY + VECTA_JWT_ENDPOINT
   3. API Key: VECTA_API_KEY
@@ -886,79 +379,13 @@ public final class Main {
 	}
 }
 
-func mapOperationMechanism(operation string, keyAlg string) string {
-	op := strings.ToLower(strings.TrimSpace(operation))
-	alg := strings.ToUpper(strings.TrimSpace(keyAlg))
-	if strings.HasPrefix(alg, "ML-DSA") {
-		return "CKM_VECTA_ML_DSA"
-	}
-	if strings.HasPrefix(alg, "ML-KEM") {
-		return "CKM_ML_KEM"
-	}
-	if strings.Contains(alg, "ECDSA") || strings.Contains(alg, "ECDH") {
-		return "CKM_ECDSA_SHA256"
-	}
-	if strings.Contains(alg, "RSA") {
-		return "CKM_RSA_PKCS_PSS"
-	}
-	if strings.Contains(alg, "AES") {
-		return "CKM_AES_GCM"
-	}
-	if strings.Contains(alg, "HMAC") {
-		return "CKM_SHA256_HMAC"
-	}
-	switch op {
-	case "wrap", "unwrap":
-		return "CKM_AES_GCM"
-	case "public":
-		return "CKM_ECDSA_SHA256"
-	default:
-		return "CKM_AES_GCM"
-	}
-}
 
-func topMechanism(mechOps map[string]int64) string {
-	best := ""
-	bestCount := int64(0)
-	for mech, count := range mechOps {
-		if count > bestCount || (count == bestCount && (best == "" || mech < best)) {
-			best = mech
-			bestCount = count
-		}
-	}
-	return best
-}
 
-func detectClientSDK(agent Agent, metadata map[string]interface{}) string {
-	sdk := strings.ToLower(mapStringAny(metadata, "sdk", "client_sdk", "provider", "runtime"))
-	if strings.Contains(sdk, "jca") || strings.Contains(sdk, "java") || strings.Contains(strings.ToLower(agent.Role), "java") {
-		return "jca"
-	}
-	return "pkcs11"
-}
 
-func sdkArtifactName(kind string) string {
-	if normalizeSDKProvider(kind) == "jca" {
-		return "vecta-jca-provider.jar"
-	}
-	return "libvecta-pkcs11.so"
-}
 
-func sdkStatusLabel(status string) string {
-	switch strings.ToLower(strings.TrimSpace(status)) {
-	case AgentStatusConnected:
-		return "Active"
-	case AgentStatusDegraded:
-		return "Degraded"
-	default:
-		return "Down"
-	}
-}
 
 func normalizeSDKProvider(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "pkcs11", "pkcs11_c", "c", "pkcs":
-		return "pkcs11"
 	case "jca", "jce", "java":
 		return "jca"
 	default:

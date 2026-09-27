@@ -10,21 +10,27 @@ import (
 	"sort"
 	"strings"
 	"time"
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/oidc"
 )
 
 type Service struct {
-	store   Store
-	keycore KeyCoreClient
-	events  EventPublisher
-	now     func() time.Time
+	store        Store
+	keycore      KeyCoreClient
+	events       EventPublisher
+	now          func() time.Time
+	oidc         *oidc.Verifier
+	oidcAudience string
 }
 
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Service {
 	return &Service{
-		store:   store,
-		keycore: keycore,
-		events:  events,
-		now:     func() time.Time { return time.Now().UTC() },
+		store:        store,
+		keycore:      keycore,
+		events:       events,
+		now:          func() time.Time { return time.Now().UTC() },
+		oidc:         oidc.NewVerifier(),
+		oidcAudience: "vecta-kms-signing",
 	}
 }
 
@@ -32,7 +38,6 @@ func defaultSettings(tenantID string) SigningSettings {
 	return SigningSettings{
 		TenantID:             strings.TrimSpace(tenantID),
 		Enabled:              false,
-		RequireTransparency:  true,
 		AllowedIdentityModes: []string{"oidc", "workload"},
 	}
 }
@@ -119,9 +124,8 @@ func (s *Service) UpdateSettings(ctx context.Context, in SigningSettings) (Signi
 		return SigningSettings{}, err
 	}
 	_ = publishAudit(ctx, s.events, "audit.signing.settings_updated", saved.TenantID, map[string]interface{}{
-		"enabled":               saved.Enabled,
-		"default_profile_id":    saved.DefaultProfileID,
-		"require_transparency":  saved.RequireTransparency,
+		"enabled":                saved.Enabled,
+		"default_profile_id":     saved.DefaultProfileID,
 		"allowed_identity_modes": saved.AllowedIdentityModes,
 	})
 	return saved, nil
@@ -152,10 +156,9 @@ func (s *Service) UpsertProfile(ctx context.Context, in SigningProfile) (Signing
 		return SigningProfile{}, err
 	}
 	_ = publishAudit(ctx, s.events, "audit.signing.profile_upserted", saved.TenantID, map[string]interface{}{
-		"profile_id":      saved.ID,
-		"artifact_type":   saved.ArtifactType,
-		"identity_mode":   saved.IdentityMode,
-		"transparency_required": saved.TransparencyRequired,
+		"profile_id":    saved.ID,
+		"artifact_type": saved.ArtifactType,
+		"identity_mode": saved.IdentityMode,
 	})
 	return saved, nil
 }
@@ -205,9 +208,11 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (SigningSumma
 	for artifactType, count := range counts {
 		summary.ArtifactCounts = append(summary.ArtifactCounts, SigningArtifactCount{ArtifactType: artifactType, Count24h: count})
 	}
-	sort.Slice(summary.ArtifactCounts, func(i, j int) bool { return summary.ArtifactCounts[i].ArtifactType < summary.ArtifactCounts[j].ArtifactType })
+	sort.Slice(summary.ArtifactCounts, func(i, j int) bool {
+		return summary.ArtifactCounts[i].ArtifactType < summary.ArtifactCounts[j].ArtifactType
+	})
 	_ = publishAudit(ctx, s.events, "audit.signing.summary_viewed", tenantID, map[string]interface{}{
-		"profile_count": len(profiles),
+		"profile_count":    len(profiles),
 		"record_count_24h": summary.RecordCount24h,
 	})
 	return summary, nil
@@ -260,18 +265,13 @@ func (s *Service) SignArtifact(ctx context.Context, in SignArtifactInput) (SignA
 	if !matchesPatternList(settings.AllowedIdentityModes, identityMode) {
 		return SignArtifactResult{}, newServiceError(http.StatusForbidden, "identity_mode_denied", "identity mode is not allowed by tenant policy")
 	}
-	switch identityMode {
-	case "workload":
-		if !matchesPatternList(profile.AllowedWorkloadPatterns, input.WorkloadIdentity) {
-			return SignArtifactResult{}, newServiceError(http.StatusForbidden, "workload_identity_denied", "workload identity is not allowed for this signing profile")
-		}
-	default:
-		if len(profile.AllowedOIDCIssuers) > 0 && !matchesPatternList(profile.AllowedOIDCIssuers, input.OIDCIssuer) {
-			return SignArtifactResult{}, newServiceError(http.StatusForbidden, "oidc_issuer_denied", "oidc issuer is not allowed for this signing profile")
-		}
-		if !matchesPatternList(profile.AllowedSubjectPatterns, input.OIDCSubject) {
-			return SignArtifactResult{}, newServiceError(http.StatusForbidden, "oidc_subject_denied", "oidc subject is not allowed for this signing profile")
-		}
+	signer, err := s.resolveSigner(ctx, identityMode, input, profile)
+	if err != nil {
+		return SignArtifactResult{}, err
+	}
+	if signer.Repository != "" {
+		// A verified repository claim wins over whatever the request names.
+		input.Repository = signer.Repository
 	}
 	if len(profile.AllowedRepositories) > 0 && !matchesPatternList(profile.AllowedRepositories, firstNonEmpty(input.Repository, input.OCIReference)) {
 		return SignArtifactResult{}, newServiceError(http.StatusForbidden, "repository_denied", "repository or artifact reference is not allowed for this signing profile")
@@ -298,9 +298,9 @@ func (s *Service) SignArtifact(ctx context.Context, in SignArtifactInput) (SignA
 		CommitSHA:        trimLimit(input.CommitSHA, 120),
 		OCIReference:     trimLimit(input.OCIReference, 240),
 		IdentityMode:     identityMode,
-		OIDCIssuer:       trimLimit(input.OIDCIssuer, 240),
-		OIDCSubject:      trimLimit(input.OIDCSubject, 240),
-		WorkloadIdentity: trimLimit(input.WorkloadIdentity, 240),
+		OIDCIssuer:       trimLimit(signer.Issuer, 240),
+		OIDCSubject:      trimLimit(signer.Subject, 240),
+		WorkloadIdentity: trimLimit(signer.Workload, 240),
 		IssuedAt:         s.now().Format(time.RFC3339),
 	}
 	payload, err := json.Marshal(envelope)
@@ -320,54 +320,106 @@ func (s *Service) SignArtifact(ctx context.Context, in SignArtifactInput) (SignA
 		return SignArtifactResult{}, err
 	}
 	record := SigningRecord{
-		ID:                 newID("sigrec"),
-		TenantID:           input.TenantID,
-		ProfileID:          profile.ID,
-		ArtifactType:       artifactType,
-		ArtifactName:       envelope.ArtifactName,
-		DigestSHA256:       digest,
-		SignatureB64:       signResp.SignatureB64,
-		KeyID:              firstNonEmpty(signResp.KeyID, profile.KeyID),
-		SigningAlgorithm:   profile.SigningAlgorithm,
-		IdentityMode:       identityMode,
-		OIDCIssuer:         envelope.OIDCIssuer,
-		OIDCSubject:        envelope.OIDCSubject,
-		WorkloadIdentity:   envelope.WorkloadIdentity,
-		Repository:         envelope.Repository,
-		CommitSHA:          envelope.CommitSHA,
-		OCIReference:       envelope.OCIReference,
+		ID:                  newID("sigrec"),
+		TenantID:            input.TenantID,
+		ProfileID:           profile.ID,
+		ArtifactType:        artifactType,
+		ArtifactName:        envelope.ArtifactName,
+		DigestSHA256:        digest,
+		SignatureB64:        signResp.SignatureB64,
+		KeyID:               firstNonEmpty(signResp.KeyID, profile.KeyID),
+		SigningAlgorithm:    profile.SigningAlgorithm,
+		IdentityMode:        identityMode,
+		OIDCIssuer:          envelope.OIDCIssuer,
+		OIDCSubject:         envelope.OIDCSubject,
+		WorkloadIdentity:    envelope.WorkloadIdentity,
+		Repository:          envelope.Repository,
+		CommitSHA:           envelope.CommitSHA,
+		OCIReference:        envelope.OCIReference,
 		TransparencyEntryID: newID("tlog"),
-		TransparencyHash:   sha256Hex(string(payload), signResp.SignatureB64),
-		TransparencyIndex:  transparencyIndex,
-		VerificationStatus: "logged",
+		TransparencyHash:    sha256Hex(string(payload), signResp.SignatureB64),
+		TransparencyIndex:   transparencyIndex,
+		VerificationStatus:  "logged",
 		Metadata: map[string]interface{}{
 			// envelope_b64 keeps the exact signed bytes: the JSONB column
 			// re-orders keys, so the parsed envelope cannot be re-marshalled
 			// into what was signed.
-			"envelope_b64":  base64.StdEncoding.EncodeToString(payload),
-			"envelope":      parseJSONObjectString(string(payload)),
-			"requested_by":  strings.TrimSpace(input.RequestedBy),
-			"profile_name":  profile.Name,
+			"envelope_b64": base64.StdEncoding.EncodeToString(payload),
+			"envelope":     parseJSONObjectString(string(payload)),
+			"requested_by": strings.TrimSpace(input.RequestedBy),
+			"profile_name": profile.Name,
 		},
 		CreatedAt: s.now(),
-	}
-	if profile.TransparencyRequired || settings.RequireTransparency {
-		// Transparency metadata is always written for tenant auditability.
 	}
 	if err := s.store.CreateRecord(ctx, record); err != nil {
 		return SignArtifactResult{}, err
 	}
 	_ = publishAudit(ctx, s.events, "audit.signing.artifact_signed", input.TenantID, map[string]interface{}{
-		"record_id":            record.ID,
-		"profile_id":           record.ProfileID,
-		"artifact_type":        record.ArtifactType,
-		"artifact_name":        record.ArtifactName,
-		"key_id":               record.KeyID,
-		"identity_mode":        record.IdentityMode,
+		"record_id":             record.ID,
+		"profile_id":            record.ProfileID,
+		"artifact_type":         record.ArtifactType,
+		"artifact_name":         record.ArtifactName,
+		"key_id":                record.KeyID,
+		"identity_mode":         record.IdentityMode,
 		"transparency_entry_id": record.TransparencyEntryID,
-		"transparency_index":   record.TransparencyIndex,
+		"transparency_index":    record.TransparencyIndex,
 	})
 	return SignArtifactResult{Record: record, Envelope: parseJSONObjectString(string(payload))}, nil
+}
+
+// signerIdentity is who signs, taken only from verified credentials.
+type signerIdentity struct {
+	Issuer, Subject, Workload, Repository string
+}
+
+// resolveSigner proves the signer's identity. Workload mode reads the
+// workload identity from the caller's verified Vecta token. OIDC mode
+// verifies the request's ID token against its issuer's JWKS; the issuer must
+// be one the profile lists exactly, and the token's audience must be this
+// service's signing audience. Nothing the request merely states is trusted.
+func (s *Service) resolveSigner(ctx context.Context, mode string, in SignArtifactInput, profile SigningProfile) (signerIdentity, error) {
+	if mode == "workload" {
+		claims, ok := pkgauth.ClaimsFromContext(ctx)
+		workload := ""
+		if ok && claims != nil {
+			workload = strings.TrimSpace(claims.WorkloadIdentity)
+		}
+		if workload == "" || !matchesPatternList(profile.AllowedWorkloadPatterns, workload) {
+			return signerIdentity{}, newServiceError(http.StatusForbidden, "workload_identity_denied", "the caller's token carries no workload identity allowed for this signing profile")
+		}
+		return signerIdentity{Workload: workload}, nil
+	}
+	token := strings.TrimSpace(in.OIDCToken)
+	if token == "" {
+		return signerIdentity{}, newServiceError(http.StatusBadRequest, "oidc_token_required", "oidc mode needs the signer's OIDC ID token in oidc_token")
+	}
+	issuer, err := oidc.UnverifiedIssuer(token)
+	if err != nil {
+		return signerIdentity{}, newServiceError(http.StatusBadRequest, "oidc_token_invalid", err.Error())
+	}
+	allowed := false
+	for _, iss := range profile.AllowedOIDCIssuers {
+		if strings.TrimRight(strings.TrimSpace(iss), "/") == strings.TrimRight(issuer, "/") {
+			allowed = true
+		}
+	}
+	if !allowed {
+		return signerIdentity{}, newServiceError(http.StatusForbidden, "oidc_issuer_denied", "oidc issuer is not listed for this signing profile")
+	}
+	d, err := s.oidc.Discover(ctx, issuer)
+	if err != nil {
+		return signerIdentity{}, newServiceError(http.StatusForbidden, "oidc_token_invalid", err.Error())
+	}
+	claims, err := s.oidc.VerifyIDToken(ctx, token, d, s.oidcAudience, "", s.now())
+	if err != nil {
+		return signerIdentity{}, newServiceError(http.StatusForbidden, "oidc_token_invalid", err.Error())
+	}
+	subject, _ := claims["sub"].(string)
+	if !matchesPatternList(profile.AllowedSubjectPatterns, subject) {
+		return signerIdentity{}, newServiceError(http.StatusForbidden, "oidc_subject_denied", "oidc subject is not allowed for this signing profile")
+	}
+	repo, _ := claims["repository"].(string)
+	return signerIdentity{Issuer: d.Issuer, Subject: subject, Repository: strings.TrimSpace(repo)}, nil
 }
 
 func (s *Service) VerifyArtifact(ctx context.Context, in VerifyArtifactInput) (VerifyArtifactResult, error) {

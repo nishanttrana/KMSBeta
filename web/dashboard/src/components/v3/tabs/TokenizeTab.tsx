@@ -52,7 +52,7 @@ import {
   updateDataProtectionPolicy
 } from "../../../lib/dataprotect";
 import { generateDataKey } from "../../../lib/keycore";
-import { PKCS11Tab } from "./PKCS11Tab";
+import { ClientSDKTab } from "./ClientSDKTab";
 import { PaymentPolicyTab } from "./PaymentPolicyTab";
 
 function normalizeKeyState(state: string): string {
@@ -3006,10 +3006,10 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
       <Btn small primary={currentSubtab==="payment-policy"} onClick={()=>selectSubtab("payment-policy")}>Payment Policy</Btn>
-      <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>PKCS#11 / JCA</Btn>
+      <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>Java SDK</Btn>
     </div>}
     {currentSubtab==="pkcs11"
-      ? <PKCS11Tab session={session} onToast={onToast}/>
+      ? <ClientSDKTab session={session} onToast={onToast}/>
       : currentSubtab==="token-policy"
         ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
         : currentSubtab==="payment-policy"

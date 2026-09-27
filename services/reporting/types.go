@@ -140,7 +140,7 @@ type ScheduledReport struct {
 	Format     string                 `json:"format"`
 	Schedule   string                 `json:"schedule"`
 	Filters    map[string]interface{} `json:"filters"`
-	Recipients []string               `json:"recipients"`
+	Recipients []string               `json:"-"`
 	Enabled    bool                   `json:"enabled"`
 	LastRunAt  time.Time              `json:"last_run_at"`
 	NextRunAt  time.Time              `json:"next_run_at"`

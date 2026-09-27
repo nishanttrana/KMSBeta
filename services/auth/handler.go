@@ -286,13 +286,30 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
 		return
 	}
-	tenantID := claims.TenantID
-	if req.TenantID != "" {
-		tenantID = req.TenantID
+	tenantID, err := h.resolveTenantScope(r, claims, "auth.client.write", req.TenantID)
+	if err != nil {
+		h.refuseClientActivation(r, reqID, claims, req.TenantID, "", http.StatusForbidden, "forbidden", err.Error())
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
 	}
-	if req.GovernanceEnabled && req.ApprovalID == "" {
-		// TODO: call governance service for M-of-N approval workflow.
-		req.ApprovalID = "TODO-GOVERNANCE-HOOK"
+	// A governance-gated activation needs a real, approved governance request
+	// for exactly this client; an approval ID is never invented or trusted
+	// unchecked.
+	governanceRequired := req.GovernanceEnabled
+	if !governanceRequired {
+		if governanceRequired, err = h.store.IsPlatformQuorumRequired(r.Context(), tenantID, "client.activate"); err != nil {
+			writeErr(w, http.StatusInternalServerError, "store_error", "failed to evaluate governance policy", reqID, tenantID)
+			return
+		}
+	}
+	if governanceRequired {
+		if err := h.requireApprovedGovernanceRequest(r.Context(), tenantID, req.ApprovalID, "client.activate", "client", r.PathValue("id")); err != nil {
+			h.refuseClientActivation(r, reqID, claims, tenantID, req.ApprovalID, http.StatusForbidden, "governance_required", err.Error())
+			writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+			return
+		}
+	} else {
+		req.ApprovalID = ""
 	}
 	if req.RateLimit <= 0 {
 		req.RateLimit = 1000
@@ -325,6 +342,21 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"registration_id": r.PathValue("id"), "status": "approved", "api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+// refuseClientActivation audits a refused client activation.
+func (h *Handler) refuseClientActivation(r *http.Request, reqID string, claims *pkgauth.Claims, tenantID, approvalID string, status int, code, reason string) {
+	_ = h.publishAudit(r.Context(), "audit.auth.client_activation_refused", reqID, firstNonEmptyAuthString(tenantID, claims.TenantID), map[string]any{
+		"registration_id":        r.PathValue("id"),
+		"actor_user_id":          claims.UserID,
+		"actor_tenant_id":        claims.TenantID,
+		"governance_approval_id": strings.TrimSpace(approvalID),
+		"code":                   code,
+		"status":                 status,
+		"reason":                 reason,
+		"result":                 "refused",
+		"severity":               "warning",
+	})
 }
 
 func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {

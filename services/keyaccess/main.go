@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
@@ -41,6 +42,7 @@ func main() {
 	defer stop()
 	// Internal mTLS identity from the internal-services Sub CA; nothing is
 	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-key-access"))
 	if _, err := pkgsvctls.Init(ctx, "kms-key-access", pkgsvctls.Options{Logger: logger}); err != nil {
 		logger.Fatalf("internal mTLS enrolment failed: %v", err)
 	}

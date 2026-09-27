@@ -138,7 +138,7 @@ function defaultFormatForType(secret) {
   const t = String(secret?.secret_type || "");
   if (t === "ssh_private_key") return "pem";
   if (t.includes("pgp_")) return "armored";
-  if (t === "ppk") return "ppk";
+  if (t === "ppk") return "raw";
   if (t === "jwk") return "jwk";
   if (t === "pkcs12") return "extract";
   return "raw";
@@ -713,7 +713,6 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
             <option value="pem">PEM</option>
             <option value="jwk">JWK</option>
             <option value="armored">Armored</option>
-            <option value="ppk">PPK</option>
           </Sel>
         </FG>
       </Row2>
@@ -778,7 +777,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
             <FG label="Output Format">
               <Sel value={valueFormat} onChange={(e) => setValueFormat(e.target.value)}>
                 <option value="raw">raw</option><option value="pem">pem</option><option value="openssh">openssh</option>
-                <option value="ppk">ppk</option><option value="extract">extract</option><option value="jwk">jwk</option>
+                <option value="extract">extract</option><option value="jwk">jwk</option>
                 <option value="armored">armored</option>
               </Sel>
             </FG>

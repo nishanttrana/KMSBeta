@@ -7,6 +7,37 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Second fake sweep: identity only from verified credentials; remove what cannot load
+
+**Context.** The second sweep (1.27.0-beta) found services that took identity
+from the TLS peer (hyok, EKM), from request bodies (governance votes, signing),
+or from unverified tokens (SAML, OIDC, KACLS), and client artefacts that no
+consumer could use (PKCS#11 provider, JCA `VectaQRNG`).
+
+**Decisions.**
+- *Identity comes only from a credential the service verifies* (a JWT against
+  the platform key or an IdP's JWKS, an XML signature against a configured
+  certificate). The internal mTLS peer identifies the calling service; behind
+  Envoy it is always Envoy, so it is never a user or tenant identity. Customer
+  client-certificate auth (hyok `mtls`) is refused rather than kept, because the
+  edge does not verify client certificates; it can return when Envoy validates
+  them and services check `x-forwarded-client-cert` from the Envoy peer only.
+- *One verifier package.* `pkg/oidc` does discovery, JWKS and claim checks for
+  SSO, signing and KACLS, so the rules (asymmetric algorithms only, exact
+  issuer, audience, expiry) are the same everywhere.
+- *SAML uses goxmldsig* (v1.6.1, with beevik/etree) rather than hand-written
+  canonicalisation: XML-DSig is easy to get subtly wrong, and the library returns
+  the verified element so signature wrapping cannot slip values past it.
+- *Remove, don't rebuild, the PKCS#11 provider.* A correct module (function
+  list, attributes, mechanisms, sessions, tested with pkcs11-tool and
+  SunPKCS11) is a project of its own. REST, KMIP and the JCA provider cover
+  application access; rebuilding it is for the owner to request.
+- *TDE via KMIP only.* Vecta's real path for a database's master key is its
+  KMIP server; engines without a KMIP key manager are documented as unsupported.
+
+**Rejected.** Keeping peer-certificate identity "for direct connections":
+services only accept internal-CA clients, so no customer can connect directly.
+
 ## 2026-09-27 — Fake capabilities: make real where the path exists, otherwise remove
 **Decision** (1.26.0-beta, owner directive "fix all of this"):
 - **Made real** where a real dependency already existed:

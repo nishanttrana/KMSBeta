@@ -1413,6 +1413,11 @@ Services apply the change by a staggered graceful restart.
 
 Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
+- `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
+- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`), `audit.governance.link_refused` (approval page with an invalid or used token)
+- `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
+- `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
+- `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
 
@@ -1690,12 +1695,12 @@ Body: `templateId` (use `evidence_pack` for full audit package), `params`, `form
 
 ### GET /svc/reporting/scheduled / POST /svc/reporting/scheduled / PATCH/DELETE /svc/reporting/scheduled/{id}
 
-ScheduledReport: reportConfig, schedule (cron), delivery (type: email/s3/webhook, config), enabled, lastRunAt, nextRunAt
+ScheduledReport: reportConfig, schedule (cron), enabled, lastRunAt, nextRunAt. Reports are generated into the report jobs list; reporting delivers nothing by email, S3 or webhook (1.27.0-beta).
 
 ```bash
 curl -sk -X POST https://localhost/svc/reporting/scheduled \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"reportConfig":{"name":"Weekly Audit Summary","type":"audit-volume","format":"pdf"},"schedule":"0 8 * * MON","delivery":{"type":"email","config":{"recipients":["security@acme.example"]}},"enabled":true}'
+  -d '{"reportConfig":{"name":"Weekly Audit Summary","type":"audit-volume","format":"pdf"},"schedule":"0 8 * * MON","enabled":true}'
 ```
 
 ---
@@ -3755,6 +3760,101 @@ Lists AI-detected anomalies in key usage, access patterns, or audit events.
 Returns a single anomaly with full AI analysis and recommended actions.
 
 ---
+
+## Authentication and capability changes in 1.27.0-beta
+
+Behaviour that changed in 1.27.0-beta (CHANGELOG 1.27.0-beta,
+[REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)). Every refusal below is
+audited with `result: refused` and a `reason`.
+
+**Auth — SSO.** `GET /auth/sso/{provider}/login` returns an IdP redirect whose
+state is one-time and bound to the request: SAML sends `RelayState` bound to
+the AuthnRequest ID, OIDC sends `state` bound to a `nonce`.
+`POST /auth/sso/saml/callback` accepts only a SAML Response whose Assertion (or
+Response) XML signature verifies against the configured `idp_certificate`
+(RSA/ECDSA with SHA-2; SHA-1 refused), from `idp_entity_id`, for audience
+`sp_entity_id` and recipient `acs_url`, answering the outstanding request,
+within its validity window, and not seen before; encrypted assertions are
+refused. The OIDC callback verifies the ID token against the issuer's JWKS
+(RS/PS/ES algorithms only) with `iss`, `aud` = `client_id`, `exp`, `nonce` and
+`azp`. SAML config: `idp_entity_id` and `idp_certificate` are required;
+`idp_metadata_url`, `sign_requests` and `sp_private_key` were never used and
+are gone. OIDC config: `response_type` is gone (code flow only).
+Refusals: `audit.auth.sso_login_refused`.
+
+**Auth — client activation.** `POST /auth/register/{id}/activate` with
+`governance_enabled`, or for a tenant whose platform policy covers
+`client.activate`, needs `approval_id` naming an approved governance request
+for action `client.activate`, target `client`/`{id}`; a body `tenant_id` other
+than the caller's needs cross-tenant permission. Refusals:
+`audit.auth.client_activation_refused`.
+
+**Governance — approvals.** Every `/governance/policies`, `/governance/requests*`,
+`/governance/key-approval*` route and dashboard vote needs a verified bearer
+token for the tenant (a platform service principal may act for any tenant);
+policy changes need a tenant administrator. A JSON vote without `token` is cast
+as the authenticated user, whose email is read from their account; body
+`approver_email`/`approver_id` are ignored. Only emails the request issued
+approve tokens to may vote, the requester may not vote, and a challenge code
+must belong to the voter. A user-created request cannot set its requester,
+`target_details.approver_emails` or a callback. `GET /governance/approve/{id}`
+needs a live token for that request. `GET /governance/key-approval/{id}/status`
+also returns `action`, `target_type`, `target_id`, `operation` and
+`payload_hash`. Removed: `/governance/system/fde/*` (status, integrity-check,
+rotate-key, test-recovery, recovery-shares) and
+`POST /governance/system/network/apply`. `GET/PUT /governance/system/state`
+no longer carries network, license, backup-schedule, TLS-mode/PEM, HSM/cluster
+labels or QRNG fields; `fips_tls_profile` (`tls13_minimum`), `fips_rng_mode`
+(`ctr_drbg` in FIPS mode, else `os_csprng`) and `fips_entropy_source`
+(`os-csprng`) report the runtime, and `fips_entropy_bits_per_byte` is gone.
+Refusals: `audit.governance.approval_refused`, `audit.governance.link_refused`.
+
+**HYOK.** Crypto routes accept only a verified bearer JWT (no client
+certificate or `X-Client-*` header identity). `auth_mode` is `jwt`; `mtls` is
+refused (`400 auth_mode_unavailable`), stored `mtls_or_jwt` reads as `jwt`.
+A `202 pending_approval` response carries `approval_request_id`; retrying the
+same request body with `"approval_request_id"` runs it once the approval is
+approved for that key, operation and payload (`403 approval_invalid`
+otherwise; `audit.hyok.approval_refused`). With `HYOK_POLICY_FAIL_CLOSED`
+(default true) an unreachable key-access service refuses (`424
+key_access_unavailable`). `approver_emails` is no longer accepted.
+Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
+`/hyok/v1/health`) needs a verified token; changes need a tenant
+administrator (`audit.hyok.admin_refused`).
+
+**Signing.** `POST /signing/blob|git` and `/signing/verify` enforce the body
+`tenant_id` against the token. OIDC mode takes `oidc_token` (the signer's ID
+token, audience `SIGNING_OIDC_AUDIENCE`, default `vecta-kms-signing`); its
+issuer must be listed exactly in the profile and its `sub` (and `repository`
+claim, when present) are what is checked and signed. Workload mode signs as
+the caller token's `workload_identity`. Body `oidc_issuer`, `oidc_subject`
+and `workload_identity` are ignored. `require_transparency` /
+`transparency_required` are gone (every record is in the tenant signing log).
+Refusals: `audit.signing.sign_refused`, `audit.signing.request_refused`.
+
+**Reporting.** Notification channels are `screen` only; alerts record
+`channels_sent: ["screen"]`. Scheduled reports take no `recipients`.
+
+**Secrets.** Export format `ppk` is refused; `armored` returns a stored armored
+key unchanged and armors binary packets with RFC 4880 armor. The
+Vault-compatible `sys/health` and `sys/seal-status` no longer report Shamir,
+replication, cluster or build fields.
+
+**KMIP.** Query reports only the routed operations (Create, Register, Get,
+GetAttributes, Locate, Activate, Revoke, Destroy, ReKey, Encrypt, Decrypt,
+Sign, SignatureVerify, Query, DiscoverVersions).
+
+**EKM.** Every tenant route needs a verified bearer token for the tenant; the
+TLS peer is never an identity. BitLocker agent routes need a bitlocker-role
+JWT. Deploy-package scripts read `EKM_TOKEN` from the environment.
+`GET /ekm/sdk/overview` lists the Java JCA provider only (no usage figures);
+`/ekm/sdk/download?provider=pkcs11` is refused. The TDE setup guide describes
+KMIP for MySQL (`keyring_okv`), pg_tde and Db2 and states SQL Server, Oracle
+and MariaDB are not supported. KACLS (`/ekm/kacls/*`) verifies the Google CSE
+authorization token (issuer `gsuitecse-tokenissuer-*@system.gserviceaccount.com`,
+audience `cse-authorization`), requires its email to match the authentication
+token, requires `exp` and an allowed `hd` on the authentication token, and
+uses only the key the authorization token names.
 
 ## Appendix: Audit Action Subject Reference
 

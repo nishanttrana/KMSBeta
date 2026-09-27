@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type governanceApprovalClient struct {
@@ -155,6 +156,7 @@ func (c *governanceApprovalClient) doJSON(ctx context.Context, method string, pa
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Tenant-ID", tenantID)
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

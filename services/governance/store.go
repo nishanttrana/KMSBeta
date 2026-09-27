@@ -37,6 +37,8 @@ type Store interface {
 	ListPendingByApprover(ctx context.Context, tenantID string, approverEmail string) ([]ApprovalRequest, error)
 	CountPendingByApprover(ctx context.Context, tenantID string, approverEmail string) (int, error)
 	ConsumeToken(ctx context.Context, requestID string, tokenRaw string, expectedAction string) (ApprovalToken, error)
+	UserEmail(ctx context.Context, tenantID string, userID string) (string, error)
+	RequestApprovers(ctx context.Context, requestID string) ([]string, error)
 	ApplyVote(ctx context.Context, req ApprovalRequest, policy ApprovalPolicy, vote ApprovalVote) (ApprovalRequest, error)
 	ExpirePendingRequests(ctx context.Context, now time.Time) ([]ApprovalRequest, error)
 	GetSettings(ctx context.Context, tenantID string) (GovernanceSettings, error)
@@ -339,6 +341,50 @@ LIMIT 1
 		return ApprovalToken{}, errors.New("token action mismatch")
 	}
 	return tok, nil
+}
+
+// UserEmail returns the email of an active user from the auth service's
+// users table (same database), so a dashboard vote is cast as the
+// authenticated user rather than as whatever email the request names.
+func (s *SQLStore) UserEmail(ctx context.Context, tenantID string, userID string) (string, error) {
+	var email string
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(email,'')
+FROM auth_users
+WHERE tenant_id=$1 AND id=$2 AND LOWER(COALESCE(status,'active'))='active'
+`, strings.TrimSpace(tenantID), strings.TrimSpace(userID)).Scan(&email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", errNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return "", errNotFound
+	}
+	return email, nil
+}
+
+// RequestApprovers lists the approver emails a request issued approve
+// tokens to when it was opened.
+func (s *SQLStore) RequestApprovers(ctx context.Context, requestID string) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT DISTINCT LOWER(approver_email) FROM approval_tokens WHERE request_id=$1 AND action='approve'
+`, strings.TrimSpace(requestID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, err
+		}
+		out = append(out, email)
+	}
+	return out, rows.Err()
 }
 
 func (s *SQLStore) ApplyVote(ctx context.Context, req ApprovalRequest, policy ApprovalPolicy, vote ApprovalVote) (ApprovalRequest, error) {
@@ -700,23 +746,17 @@ WHERE tenant_id=$1
 	return out, nil
 }
 
+// UpsertSystemState writes the columns System Administration still
+// exposes. The legacy columns (network, license, backup schedule, TLS mode and
+// PEMs, HSM/cluster labels, QRNG) are left alone: nothing reads them.
 func (s *SQLStore) UpsertSystemState(ctx context.Context, state GovernanceSystemState) error {
-	if state.BackupRetentionDays <= 0 {
-		state.BackupRetentionDays = 30
-	}
-	state.QRNGDefaultSource = strings.TrimSpace(state.QRNGDefaultSource)
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO governance_system_state (
     tenant_id, fips_mode, fips_mode_policy, fips_crypto_library, fips_library_validated, fips_tls_profile, fips_rng_mode,
-    hsm_mode, cluster_mode, license_key, license_status,
-    mgmt_ip, cluster_ip, dns_servers, ntp_servers,
-    tls_mode, tls_cert_pem, tls_key_pem, tls_ca_bundle_pem,
-    backup_schedule, backup_target, backup_retention_days, backup_encrypted,
-    proxy_endpoint, snmp_target,
+    snmp_target,
     posture_force_quorum_destructive_ops, posture_require_step_up_auth, posture_pause_connector_sync, posture_guardrail_policy_required,
-    qrng_enabled, qrng_default_source, qrng_min_entropy_bpb,
     updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,CURRENT_TIMESTAMP)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id) DO UPDATE
 SET fips_mode=EXCLUDED.fips_mode,
     fips_mode_policy=EXCLUDED.fips_mode_policy,
@@ -724,43 +764,17 @@ SET fips_mode=EXCLUDED.fips_mode,
     fips_library_validated=EXCLUDED.fips_library_validated,
     fips_tls_profile=EXCLUDED.fips_tls_profile,
     fips_rng_mode=EXCLUDED.fips_rng_mode,
-    hsm_mode=EXCLUDED.hsm_mode,
-    cluster_mode=EXCLUDED.cluster_mode,
-    license_key=EXCLUDED.license_key,
-    license_status=EXCLUDED.license_status,
-    mgmt_ip=EXCLUDED.mgmt_ip,
-    cluster_ip=EXCLUDED.cluster_ip,
-    dns_servers=EXCLUDED.dns_servers,
-    ntp_servers=EXCLUDED.ntp_servers,
-    tls_mode=EXCLUDED.tls_mode,
-    tls_cert_pem=EXCLUDED.tls_cert_pem,
-    tls_key_pem=EXCLUDED.tls_key_pem,
-    tls_ca_bundle_pem=EXCLUDED.tls_ca_bundle_pem,
-    backup_schedule=EXCLUDED.backup_schedule,
-    backup_target=EXCLUDED.backup_target,
-    backup_retention_days=EXCLUDED.backup_retention_days,
-    backup_encrypted=EXCLUDED.backup_encrypted,
-    proxy_endpoint=EXCLUDED.proxy_endpoint,
     snmp_target=EXCLUDED.snmp_target,
     posture_force_quorum_destructive_ops=EXCLUDED.posture_force_quorum_destructive_ops,
     posture_require_step_up_auth=EXCLUDED.posture_require_step_up_auth,
     posture_pause_connector_sync=EXCLUDED.posture_pause_connector_sync,
     posture_guardrail_policy_required=EXCLUDED.posture_guardrail_policy_required,
-    qrng_enabled=EXCLUDED.qrng_enabled,
-    qrng_default_source=EXCLUDED.qrng_default_source,
-    qrng_min_entropy_bpb=EXCLUDED.qrng_min_entropy_bpb,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
 `, state.TenantID, nullable(state.FIPSMode), nullable(state.FIPSModePolicy),
-		nullable(state.FIPSCryptoLibrary), state.FIPSLibraryValidated, nullable(state.FIPSTLSProfile), nullable(state.FIPSRNGMode),
-		nullable(state.HSMMode), nullable(state.ClusterMode),
-		nullable(state.LicenseKey), nullable(state.LicenseStatus),
-		nullable(state.MgmtIP), nullable(state.ClusterIP), nullable(state.DNSServers), nullable(state.NTPServers),
-		nullable(state.TLSMode), nullable(state.TLSCertPEM), nullable(state.TLSKeyPEM), nullable(state.TLSCABundlePEM),
-		nullable(state.BackupSchedule), nullable(state.BackupTarget), state.BackupRetentionDays, state.BackupEncrypted,
-		nullable(state.ProxyEndpoint), nullable(state.SNMPTarget),
+		nullable(state.FIPSCryptoLibrary), state.FIPSLibraryValidated, firstNonEmptyString(state.FIPSTLSProfile, "tls13_minimum"),
+		firstNonEmptyString(state.FIPSRNGMode, "os_csprng"), nullable(state.SNMPTarget),
 		state.PostureForceQuorumDestructiveOps, state.PostureRequireStepUpAuth, state.PosturePauseConnectorSync, state.PostureGuardrailPolicyRequired,
-		state.QRNGEnabled, state.QRNGDefaultSource, state.QRNGMinEntropyBPB,
 		nullable(state.UpdatedBy))
 	return err
 }

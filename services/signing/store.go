@@ -217,7 +217,9 @@ func (s *SQLStore) NextTransparencyIndex(ctx context.Context, tenantID string) (
 	return out, nil
 }
 
-func scanSettings(scanner interface{ Scan(dest ...interface{}) error }) (SigningSettings, error) {
+func scanSettings(scanner interface {
+	Scan(dest ...interface{}) error
+}) (SigningSettings, error) {
 	var out SigningSettings
 	var enabledRaw, transparencyRaw interface{}
 	var modesRaw string
@@ -233,7 +235,9 @@ func scanSettings(scanner interface{ Scan(dest ...interface{}) error }) (Signing
 	return normalizeSettings(out), nil
 }
 
-func scanProfile(scanner interface{ Scan(dest ...interface{}) error }) (SigningProfile, error) {
+func scanProfile(scanner interface {
+	Scan(dest ...interface{}) error
+}) (SigningProfile, error) {
 	var out SigningProfile
 	var transparencyRaw, enabledRaw interface{}
 	var workloadsRaw, issuersRaw, subjectsRaw, reposRaw string
@@ -254,7 +258,9 @@ func scanProfile(scanner interface{ Scan(dest ...interface{}) error }) (SigningP
 	return normalizeProfile(out), nil
 }
 
-func scanRecord(scanner interface{ Scan(dest ...interface{}) error }) (SigningRecord, error) {
+func scanRecord(scanner interface {
+	Scan(dest ...interface{}) error
+}) (SigningRecord, error) {
 	var out SigningRecord
 	var metadataRaw string
 	var createdRaw interface{}

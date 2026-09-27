@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	pkgauth "vecta-kms/pkg/auth"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -186,8 +187,9 @@ func (f *fakeHYOKPolicy) Evaluate(_ context.Context, _ PolicyEvaluateRequest) (P
 }
 
 type fakeHYOKGovernance struct {
-	id  string
-	err error
+	id     string
+	err    error
+	status map[string]GovernanceApprovalStatus
 }
 
 func (f *fakeHYOKGovernance) CreateKeyApproval(_ context.Context, _ GovernanceApprovalRequest) (string, error) {
@@ -200,7 +202,10 @@ func (f *fakeHYOKGovernance) CreateKeyApproval(_ context.Context, _ GovernanceAp
 	return f.id, nil
 }
 
-func (f *fakeHYOKGovernance) GetApprovalStatus(_ context.Context, _ string, _ string) (GovernanceApprovalStatus, error) {
+func (f *fakeHYOKGovernance) GetApprovalStatus(_ context.Context, _ string, id string) (GovernanceApprovalStatus, error) {
+	if st, ok := f.status[id]; ok {
+		return st, nil
+	}
 	return GovernanceApprovalStatus{Status: "pending"}, nil
 }
 
@@ -231,7 +236,7 @@ func newHYOKService(t *testing.T) (*Service, *SQLStore, *fakeHYOKKeyCore, *fakeH
 func newHYOKHandler(t *testing.T) (*Handler, *Service, *fakeHYOKKeyCore, *fakeHYOKPolicy, *fakeHYOKGovernance, *nopHYOKPublisher) {
 	t.Helper()
 	svc, _, keycore, policy, governance, pub := newHYOKService(t)
-	return NewHandler(svc, nil), svc, keycore, policy, governance, pub
+	return NewHandler(svc, testJWTParser), svc, keycore, policy, governance, pub
 }
 
 func createHYOKSchemaForTest(conn *pkgdb.DB) error {
@@ -277,4 +282,13 @@ func createHYOKSchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	return nil
+}
+
+// testJWTParser verifies test tokens of the form "jwt:<tenant>:<role>".
+func testJWTParser(tok string) (*pkgauth.Claims, error) {
+	parts := strings.Split(tok, ":")
+	if len(parts) != 3 || parts[0] != "jwt" {
+		return nil, errors.New("invalid token")
+	}
+	return &pkgauth.Claims{TenantID: parts[1], Role: parts[2], UserID: "u-" + parts[2]}, nil
 }

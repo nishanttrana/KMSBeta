@@ -300,33 +300,25 @@ func (h *Handler) stats(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"stats": stats})
 }
 
+// vaultSysHealth and vaultSealStatus answer Vault/OpenBao clients' readiness
+// probes with what is true here: the service is up and serving, so it is
+// initialized and unsealed. Vecta has no Shamir unseal, replication or
+// cluster identity, so none is reported.
 func (h *Handler) vaultSysHealth(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"initialized":                  true,
-		"sealed":                       false,
-		"standby":                      false,
-		"performance_standby":          false,
-		"replication_performance_mode": "disabled",
-		"replication_dr_mode":          "disabled",
-		"server_time_utc":              time.Now().UTC().Unix(),
-		"version":                      "openbao-compatible-v1",
-		"cluster_name":                 "vecta-kms",
-		"cluster_id":                   "vecta-kms-local",
+		"initialized":     true,
+		"sealed":          false,
+		"standby":         false,
+		"server_time_utc": time.Now().UTC().Unix(),
+		"version":         "openbao-compatible-v1",
 	})
 }
 
 func (h *Handler) vaultSealStatus(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"type":          "shamir",
-		"initialized":   true,
-		"sealed":        false,
-		"t":             1,
-		"n":             1,
-		"progress":      0,
-		"nonce":         "",
-		"version":       "openbao-compatible-v1",
-		"build_date":    time.Now().UTC().Format(time.RFC3339),
-		"recovery_seal": false,
+		"initialized": true,
+		"sealed":      false,
+		"version":     "openbao-compatible-v1",
 	})
 }
 

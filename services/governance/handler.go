@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/tenantcheck"
@@ -70,12 +69,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /governance/system/fips-mode", h.handleSetFIPSMode)
 	mux.HandleFunc("PUT /governance/system/posture-controls", h.handleUpdatePostureControls)
 	mux.HandleFunc("POST /governance/system/snmp/test", h.handleTestSystemSNMP)
-	mux.HandleFunc("POST /governance/system/network/apply", h.handleApplyNetworkConfig)
-	mux.HandleFunc("GET /governance/system/fde/status", h.handleFDEStatus)
-	mux.HandleFunc("POST /governance/system/fde/integrity-check", h.handleFDEIntegrityCheck)
-	mux.HandleFunc("POST /governance/system/fde/rotate-key", h.handleFDERotateKey)
-	mux.HandleFunc("POST /governance/system/fde/test-recovery", h.handleFDETestRecovery)
-	mux.HandleFunc("GET /governance/system/fde/recovery-shares", h.handleFDERecoveryShareStatus)
 	mux.HandleFunc("GET /governance/system/integrity", h.handleSystemIntegrity)
 
 	mux.HandleFunc("GET /governance/policies", h.handleListPolicies)
@@ -545,6 +538,10 @@ func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	p.TenantID = firstNonEmpty(strings.TrimSpace(p.TenantID), requestTenant(r))
+	if _, ok := h.approvalCaller(w, r, reqID, p.TenantID, approvalAdmin); !ok {
+		return
+	}
 	out, err := h.svc.CreatePolicy(r.Context(), p)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, p.TenantID)
@@ -561,6 +558,10 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.ID = r.PathValue("id")
+	p.TenantID = firstNonEmpty(strings.TrimSpace(p.TenantID), requestTenant(r))
+	if _, ok := h.approvalCaller(w, r, reqID, p.TenantID, approvalAdmin); !ok {
+		return
+	}
 	out, err := h.svc.UpdatePolicy(r.Context(), p)
 	if err != nil {
 		code := http.StatusBadRequest
@@ -575,8 +576,8 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	if _, ok := h.approvalCaller(w, r, reqID, tenantID, approvalAdmin); !ok {
 		return
 	}
 	if err := h.svc.DeletePolicy(r.Context(), tenantID, r.PathValue("id")); err != nil {
@@ -592,8 +593,8 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	if _, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead); !ok {
 		return
 	}
 	items, err := h.svc.ListPolicies(r.Context(), tenantID, r.URL.Query().Get("scope"), r.URL.Query().Get("status"))
@@ -606,8 +607,8 @@ func (h *Handler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListRequests(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	if _, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead); !ok {
 		return
 	}
 	items, err := h.svc.ListApprovalRequests(r.Context(), tenantID, r.URL.Query().Get("status"), r.URL.Query().Get("target_type"), r.URL.Query().Get("target_id"))
@@ -620,8 +621,8 @@ func (h *Handler) handleListRequests(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGetRequest(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	if _, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead); !ok {
 		return
 	}
 	out, err := h.svc.GetApprovalRequest(r.Context(), tenantID, r.PathValue("id"))
@@ -643,6 +644,12 @@ func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	in.TenantID = firstNonEmpty(strings.TrimSpace(in.TenantID), requestTenant(r))
+	claims, ok := h.approvalCaller(w, r, reqID, in.TenantID, approvalWrite)
+	if !ok {
+		return
+	}
+	h.bindRequester(r, claims, &in)
 	out, err := h.svc.CreateApprovalRequest(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "approval_request_failed", err.Error(), reqID, in.TenantID)
@@ -653,14 +660,20 @@ func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleCancelRequest(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	claims, ok := h.approvalCaller(w, r, reqID, tenantID, approvalWrite)
+	if !ok {
 		return
 	}
 	var body struct {
 		RequesterID string `json:"requester_id"`
 	}
 	_ = decodeJSON(r, &body)
+	// Only the requester may cancel: a user is who their token says, and only
+	// a platform service may name the requester it acted for.
+	if callerIsUser(claims) {
+		body.RequesterID = claims.UserID
+	}
 	if strings.TrimSpace(body.RequesterID) == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "requester_id is required", reqID, tenantID)
 		return
@@ -678,13 +691,14 @@ func (h *Handler) handleCancelRequest(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handlePendingRequests(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	claims, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead)
+	if !ok {
 		return
 	}
-	email := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("approver_email")))
-	if email == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "approver_email query parameter is required", reqID, tenantID)
+	// The caller's own queue: the email comes from their account.
+	email, ok := h.approverEmail(w, r, reqID, tenantID, claims)
+	if !ok {
 		return
 	}
 	items, err := h.svc.ListPendingByApprover(r.Context(), tenantID, email)
@@ -697,13 +711,14 @@ func (h *Handler) handlePendingRequests(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) handlePendingCount(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	claims, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead)
+	if !ok {
 		return
 	}
-	email := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("approver_email")))
-	if email == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "approver_email query parameter is required", reqID, tenantID)
+	// The caller's own queue: the email comes from their account.
+	email, ok := h.approverEmail(w, r, reqID, tenantID, claims)
+	if !ok {
 		return
 	}
 	count, err := h.svc.CountPendingByApprover(r.Context(), tenantID, email)
@@ -746,8 +761,21 @@ func (h *Handler) handleApprovalVote(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 			return
 		}
-		if input.RequestID == "" {
-			input.RequestID = r.PathValue("id")
+		input.RequestID = r.PathValue("id")
+		input.TenantID = firstNonEmpty(input.TenantID, tenantID)
+		input.VerifiedIdentity, input.ApproverEmail, input.ApproverID = false, "", ""
+		if strings.TrimSpace(input.Token) == "" {
+			// A dashboard vote is cast as the authenticated user, never as
+			// an email the request names.
+			claims, ok := h.approvalCaller(w, r, reqID, input.TenantID, approvalWrite)
+			if !ok {
+				return
+			}
+			email, ok := h.approverEmail(w, r, reqID, input.TenantID, claims)
+			if !ok {
+				return
+			}
+			input.VerifiedIdentity, input.ApproverEmail, input.ApproverID = true, email, claims.UserID
 		}
 	} else {
 		_ = r.ParseForm()
@@ -782,6 +810,15 @@ func (h *Handler) handleCreateKeyApproval(w http.ResponseWriter, r *http.Request
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
+	in.TenantID = firstNonEmpty(strings.TrimSpace(in.TenantID), requestTenant(r))
+	claims, ok := h.approvalCaller(w, r, reqID, in.TenantID, approvalWrite)
+	if !ok {
+		return
+	}
+	if !tenantcheck.IsServicePrincipal(claims) {
+		in.CallbackService, in.CallbackAction, in.CallbackPayload = "", "", nil
+		in.RequesterID = firstNonEmpty(claims.UserID, claims.ClientID)
+	}
 	out, err := h.svc.CreateKeyApproval(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "key_approval_failed", err.Error(), reqID, in.TenantID)
@@ -792,8 +829,8 @@ func (h *Handler) handleCreateKeyApproval(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) handleGetKeyApprovalStatus(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID := requestTenant(r)
+	if _, ok := h.approvalCaller(w, r, reqID, tenantID, approvalRead); !ok {
 		return
 	}
 	status, err := h.svc.GetKeyApprovalStatus(r.Context(), tenantID, r.PathValue("id"))
@@ -944,155 +981,6 @@ func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(payload)
-}
-
-// ── Network Apply ────────────────────────────────────────────────────
-
-func (h *Handler) handleApplyNetworkConfig(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
-	if !ok {
-		return
-	}
-	state, err := h.svc.GetSystemState(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "network_apply_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	mgmtIP := state.MgmtIP
-	clusterIP := state.ClusterIP
-	if mgmtIP == "" && clusterIP == "" {
-		writeErr(w, http.StatusBadRequest, "network_apply_no_ip", "No management or cluster IP configured in system state", reqID, tenantID)
-		return
-	}
-	_ = h.svc.publishAudit(r.Context(), "governance.network.apply", tenantID, map[string]interface{}{
-		"mgmt_ip": mgmtIP, "cluster_ip": clusterIP, "actor": tenantID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"applied":    true,
-		"message":    "Network configuration applied. Docker services will bind to the configured IP on next restart.",
-		"mgmt_ip":    mgmtIP,
-		"cluster_ip": clusterIP,
-		"request_id": reqID,
-	})
-}
-
-// ── Full Disk Encryption (FDE) ───────────────────────────────────────
-
-func (h *Handler) handleFDEStatus(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
-	if !ok {
-		return
-	}
-	_ = tenantID
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"enabled":            true,
-		"algorithm":          "AES-256-XTS",
-		"luks_version":       "LUKS2",
-		"key_derivation":     "Argon2id",
-		"device":             "/dev/sda3",
-		"unlock_method":      "rest_api",
-		"recovery_shares":    5,
-		"recovery_threshold": 3,
-		"volume_size_gb":     500,
-		"used_gb":            187,
-		"key_slots": []map[string]interface{}{
-			{"slot": 0, "status": "active", "type": "passphrase"},
-			{"slot": 1, "status": "active", "type": "recovery"},
-			{"slot": 2, "status": "inactive", "type": "unused"},
-		},
-		"integrity_last_check": "2026-03-04T10:30:00Z",
-		"integrity_status":     "healthy",
-		"request_id":           reqID,
-	})
-}
-
-func (h *Handler) handleFDEIntegrityCheck(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
-	if !ok {
-		return
-	}
-	_ = h.svc.publishAudit(r.Context(), "governance.fde.integrity_check", tenantID, map[string]interface{}{
-		"mode": "quick", "actor": tenantID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"passed":          true,
-		"mode":            "quick",
-		"checked_at":      time.Now().UTC().Format(time.RFC3339),
-		"blocks_verified": 0,
-		"errors":          []string{},
-		"request_id":      reqID,
-	})
-}
-
-func (h *Handler) handleFDERotateKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
-	if !ok {
-		return
-	}
-	_ = h.svc.publishAudit(r.Context(), "governance.fde.rotate_key", tenantID, map[string]interface{}{
-		"actor": tenantID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"status":                     "rotating",
-		"job_id":                     "fde_rot_" + reqID[:8],
-		"started_at":                 time.Now().UTC().Format(time.RFC3339),
-		"estimated_duration_minutes": 45,
-		"request_id":                 reqID,
-	})
-}
-
-func (h *Handler) handleFDETestRecovery(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
-	if !ok {
-		return
-	}
-	var body struct {
-		Shares []string `json:"shares"`
-	}
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	if len(body.Shares) < 3 {
-		writeErr(w, http.StatusUnprocessableEntity, "insufficient_shares", "At least 3 recovery shares are required", reqID, tenantID)
-		return
-	}
-	_ = h.svc.publishAudit(r.Context(), "governance.fde.test_recovery", tenantID, map[string]interface{}{
-		"shares_provided": len(body.Shares), "actor": tenantID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"valid":              true,
-		"shares_provided":    len(body.Shares),
-		"threshold_required": 3,
-		"tested_at":          time.Now().UTC().Format(time.RFC3339),
-		"request_id":         reqID,
-	})
-}
-
-func (h *Handler) handleFDERecoveryShareStatus(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
-	if !ok {
-		return
-	}
-	_ = tenantID
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"total":     5,
-		"threshold": 3,
-		"shares": []map[string]interface{}{
-			{"index": 1, "label": "Admin Share 1", "verified": true, "last_verified": "2026-03-01T08:00:00Z"},
-			{"index": 2, "label": "Admin Share 2", "verified": true, "last_verified": "2026-03-01T08:00:00Z"},
-			{"index": 3, "label": "Security Officer", "verified": false},
-			{"index": 4, "label": "DR Custodian", "verified": false},
-			{"index": 5, "label": "Escrow Agent", "verified": true, "last_verified": "2026-02-15T12:00:00Z"},
-		},
-		"request_id": reqID,
-	})
 }
 
 func writeErr(w http.ResponseWriter, code int, errCode string, msg string, requestID string, tenantID string) {

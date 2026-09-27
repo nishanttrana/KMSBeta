@@ -2,18 +2,27 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
+	"vecta-kms/pkg/oidc"
 )
 
 // Signing service against real Postgres (metadata_json is JSONB, which
@@ -95,9 +104,51 @@ func (p *recordingPublisher) count(subject string) int {
 }
 
 type signingFixture struct {
-	svc  *Service
-	conn *pkgdb.DB
-	pub  *recordingPublisher
+	svc    *Service
+	conn   *pkgdb.DB
+	pub    *recordingPublisher
+	issuer *ciIssuer
+}
+
+// ciIssuer is a real OIDC issuer over TLS (discovery + JWKS) that mints
+// ES256 ID tokens, standing in for a CI provider such as GitHub Actions.
+type ciIssuer struct {
+	srv *httptest.Server
+	key *ecdsa.PrivateKey
+}
+
+func newCIIssuer(t *testing.T) *ciIssuer {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ci := &ciIssuer{key: key}
+	mux := http.NewServeMux()
+	ci.srv = httptest.NewTLSServer(mux)
+	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{"issuer": ci.srv.URL, "jwks_uri": ci.srv.URL + "/jwks"})
+	})
+	mux.HandleFunc("/jwks", func(w http.ResponseWriter, _ *http.Request) {
+		b := func(v []byte) string { return base64.RawURLEncoding.EncodeToString(v) }
+		_ = json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]any{{"kty": "EC", "crv": "P-256", "kid": "ci", "use": "sig",
+			"x": b(key.PublicKey.X.FillBytes(make([]byte, 32))), "y": b(key.PublicKey.Y.FillBytes(make([]byte, 32)))}}})
+	})
+	t.Cleanup(ci.srv.Close)
+	return ci
+}
+
+func (ci *ciIssuer) token(t *testing.T, key *ecdsa.PrivateKey, iss, sub, repo string) string {
+	t.Helper()
+	now := time.Now()
+	tok := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{"iss": iss, "sub": sub, "aud": "vecta-kms-signing",
+		"repository": repo, "iat": now.Unix(), "exp": now.Add(5 * time.Minute).Unix()})
+	tok.Header["kid"] = "ci"
+	s, err := tok.SignedString(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
 
 func newSigningFixture(t *testing.T) signingFixture {
@@ -120,7 +171,9 @@ func newSigningFixture(t *testing.T) signingFixture {
 	}
 	pub := &recordingPublisher{}
 	svc := NewService(NewSQLStore(conn), keycoreForTest{t: t, kc: &ecdsaKeycore{keys: map[string]*pkgcrypto.KeyPair{}}}, pub)
-	return signingFixture{svc: svc, conn: conn, pub: pub}
+	ci := newCIIssuer(t)
+	svc.oidc = &oidc.Verifier{HTTP: ci.srv.Client()}
+	return signingFixture{svc: svc, conn: conn, pub: pub, issuer: ci}
 }
 
 // enable turns signing on for the tenant with one OIDC profile.
@@ -129,23 +182,23 @@ func (f signingFixture) enable(t *testing.T, tenant string) SigningProfile {
 	ctx := context.Background()
 	prof, err := f.svc.UpsertProfile(ctx, SigningProfile{
 		TenantID: tenant, Name: "release", ArtifactType: "blob", KeyID: "key-release", IdentityMode: "oidc",
-		AllowedOIDCIssuers: []string{"https://token.actions.githubusercontent.com"}, AllowedSubjectPatterns: []string{"repo:acme/*:ref:refs/tags/*"},
-		AllowedRepositories: []string{"acme/*"}, Enabled: true, TransparencyRequired: true,
+		AllowedOIDCIssuers: []string{f.issuer.srv.URL}, AllowedSubjectPatterns: []string{"repo:acme/*:ref:refs/tags/*"},
+		AllowedRepositories: []string{"acme/*"}, AllowedWorkloadPatterns: []string{"spiffe://acme/ci/*"}, Enabled: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.svc.UpdateSettings(ctx, SigningSettings{TenantID: tenant, Enabled: true, DefaultProfileID: prof.ID, RequireTransparency: true, AllowedIdentityModes: []string{"oidc", "workload"}}); err != nil {
+	if _, err := f.svc.UpdateSettings(ctx, SigningSettings{TenantID: tenant, Enabled: true, DefaultProfileID: prof.ID, AllowedIdentityModes: []string{"oidc", "workload"}}); err != nil {
 		t.Fatal(err)
 	}
 	return prof
 }
 
-func validSignInput(tenant string, payload []byte) SignArtifactInput {
+func (f signingFixture) validSignInput(t *testing.T, tenant string, payload []byte) SignArtifactInput {
 	return SignArtifactInput{
 		TenantID: tenant, ArtifactName: "vecta-cli-1.2.0.tar.gz", PayloadB64: base64.StdEncoding.EncodeToString(payload),
-		Repository: "acme/vecta-cli", IdentityMode: "oidc", OIDCIssuer: "https://token.actions.githubusercontent.com",
-		OIDCSubject: "repo:acme/vecta-cli:ref:refs/tags/v1.2.0", RequestedBy: "ci",
+		IdentityMode: "oidc", RequestedBy: "ci",
+		OIDCToken: f.issuer.token(t, f.issuer.key, f.issuer.srv.URL, "repo:acme/vecta-cli:ref:refs/tags/v1.2.0", "acme/vecta-cli"),
 	}
 }
 
@@ -161,7 +214,7 @@ func TestSignAndVerifyArtifactPostgres(t *testing.T) {
 	ctx := context.Background()
 	f.enable(t, "t-sign")
 	payload := []byte("release artifact bytes")
-	res, err := f.svc.SignArtifact(ctx, validSignInput("t-sign", payload))
+	res, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-sign", payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +239,7 @@ func TestSignAndVerifyArtifactPostgres(t *testing.T) {
 		t.Fatalf("sign and verify must be audited: %v", f.pub.subjects)
 	}
 
-	second, err := f.svc.SignArtifact(ctx, validSignInput("t-sign", []byte("next")))
+	second, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-sign", []byte("next")))
 	if err != nil || second.Record.TransparencyIndex != 2 {
 		t.Fatalf("transparency index must increase: %+v %v", second.Record, err)
 	}
@@ -198,7 +251,7 @@ func TestVerifyDetectsTamperedRecordPostgres(t *testing.T) {
 	f := newSigningFixture(t)
 	ctx := context.Background()
 	f.enable(t, "t-tamper")
-	res, err := f.svc.SignArtifact(ctx, validSignInput("t-tamper", []byte("artifact")))
+	res, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-tamper", []byte("artifact")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +268,7 @@ func TestVerifyDetectsTamperedRecordPostgres(t *testing.T) {
 		t.Fatalf("a record whose envelope was altered must not verify: %+v %v", got, err)
 	}
 
-	res2, err := f.svc.SignArtifact(ctx, validSignInput("t-tamper", []byte("artifact-2")))
+	res2, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-tamper", []byte("artifact-2")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,23 +287,34 @@ func TestSignArtifactPolicyGatesPostgres(t *testing.T) {
 	ctx := context.Background()
 	payload := []byte("artifact")
 
-	if _, err := f.svc.SignArtifact(ctx, validSignInput("t-gates", payload)); errCode(err) != "disabled" {
+	if _, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-gates", payload)); errCode(err) != "disabled" {
 		t.Fatalf("signing must be refused while the tenant has it disabled, got %v", err)
 	}
 	prof := f.enable(t, "t-gates")
 
+	ci := f.issuer
+	forged, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	cases := map[string]func(*SignArtifactInput){
-		"oidc_issuer_denied":  func(in *SignArtifactInput) { in.OIDCIssuer = "https://evil.example" },
-		"oidc_subject_denied": func(in *SignArtifactInput) { in.OIDCSubject = "repo:other/project:ref:main" },
-		"repository_denied":   func(in *SignArtifactInput) { in.Repository = "other/project" },
-		"workload_identity_denied": func(in *SignArtifactInput) {
-			in.IdentityMode = "workload"
-			in.WorkloadIdentity = ""
+		// Identity is only what a verified token proves; stating it is not enough.
+		"oidc_issuer_denied": func(in *SignArtifactInput) {
+			in.OIDCToken = ci.token(t, ci.key, "https://evil.example", "repo:acme/vecta-cli:ref:refs/tags/v1", "acme/vecta-cli")
 		},
-		"bad_request": func(in *SignArtifactInput) { in.PayloadB64 = "%%%not-base64" },
+		"oidc_token_invalid": func(in *SignArtifactInput) {
+			in.OIDCToken = ci.token(t, forged, ci.srv.URL, "repo:acme/vecta-cli:ref:refs/tags/v1", "acme/vecta-cli")
+		},
+		"oidc_token_required": func(in *SignArtifactInput) { in.OIDCToken = "" },
+		"oidc_subject_denied": func(in *SignArtifactInput) {
+			in.OIDCToken = ci.token(t, ci.key, ci.srv.URL, "repo:other/project:ref:main", "acme/vecta-cli")
+		},
+		"repository_denied": func(in *SignArtifactInput) {
+			in.OIDCToken = ci.token(t, ci.key, ci.srv.URL, "repo:acme/vecta-cli:ref:refs/tags/v1", "other/project")
+			in.Repository = "acme/vecta-cli"
+		},
+		"workload_identity_denied": func(in *SignArtifactInput) { in.IdentityMode = "workload" },
+		"bad_request":              func(in *SignArtifactInput) { in.PayloadB64 = "%%%not-base64" },
 	}
 	for want, mutate := range cases {
-		in := validSignInput("t-gates", payload)
+		in := f.validSignInput(t, "t-gates", payload)
 		mutate(&in)
 		if _, err := f.svc.SignArtifact(ctx, in); errCode(err) != want {
 			t.Fatalf("%s: got %v", want, err)
@@ -260,7 +324,7 @@ func TestSignArtifactPolicyGatesPostgres(t *testing.T) {
 	if _, err := f.svc.UpdateSettings(ctx, SigningSettings{TenantID: "t-gates", Enabled: true, DefaultProfileID: prof.ID, AllowedIdentityModes: []string{"workload"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.svc.SignArtifact(ctx, validSignInput("t-gates", payload)); errCode(err) != "identity_mode_denied" {
+	if _, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-gates", payload)); errCode(err) != "identity_mode_denied" {
 		t.Fatalf("an identity mode the tenant disallows must be refused, got %v", err)
 	}
 
@@ -271,7 +335,7 @@ func TestSignArtifactPolicyGatesPostgres(t *testing.T) {
 	if _, err := f.svc.UpdateSettings(ctx, SigningSettings{TenantID: "t-gates", Enabled: true, DefaultProfileID: prof.ID, AllowedIdentityModes: []string{"oidc"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.svc.SignArtifact(ctx, validSignInput("t-gates", payload)); errCode(err) != "disabled" {
+	if _, err := f.svc.SignArtifact(ctx, f.validSignInput(t, "t-gates", payload)); errCode(err) != "disabled" {
 		t.Fatalf("a disabled profile must refuse signing, got %v", err)
 	}
 	if f.pub.count("audit.signing.artifact_signed") != 0 {

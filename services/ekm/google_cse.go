@@ -207,15 +207,25 @@ func (p *GoogleCSEProvider) ValidateGoogleJWT(tokenString string, allowedDomains
 
 	// Verify expiry with 60s leeway
 	now := time.Now().Unix()
-	if claims.ExpiresAt > 0 && now > claims.ExpiresAt+60 {
+	if claims.ExpiresAt <= 0 {
+		return nil, fmt.Errorf("google cse: JWT has no expiry")
+	}
+	if now > claims.ExpiresAt+60 {
 		return nil, fmt.Errorf("google cse: JWT expired at %d, now %d", claims.ExpiresAt, now)
 	}
 	if claims.IssuedAt > 0 && now < claims.IssuedAt-60 {
 		return nil, fmt.Errorf("google cse: JWT issued in the future: iat=%d, now=%d", claims.IssuedAt, now)
 	}
 
-	// Verify hosted domain is in allowed list
-	if len(allowedDomains) > 0 && claims.HD != "" {
+	// The user's hosted domain must be one the config allows; a config that
+	// names none, or a token without hd (a consumer account), is refused.
+	if len(allowedDomains) == 0 {
+		return nil, fmt.Errorf("google cse: config lists no allowed domains")
+	}
+	if strings.TrimSpace(claims.HD) == "" {
+		return nil, fmt.Errorf("google cse: token has no hosted domain")
+	}
+	{
 		domainAllowed := false
 		for _, d := range allowedDomains {
 			if strings.EqualFold(strings.TrimSpace(d), strings.TrimSpace(claims.HD)) {

@@ -243,3 +243,19 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 `TestGenericDeriveCannotReproduceServiceSubkey` (keycore);
 `TestLegacyKeyStaysReadableAndIsAudited`, `TestKDFMigrationDualReadThenCutover`
 (dataprotect).
+
+## Authentication and approval refusals (1.27.0-beta)
+
+| Event | When | Test |
+|---|---|---|
+| `audit.auth.sso_login_refused` | A SAML or OIDC callback is refused: bad or missing signature, wrong issuer, audience, recipient or request, replayed assertion, bad state | `TestSAMLRefusesForgedAndMisdirectedAssertions` (parser); handler emits on every refusal path |
+| `audit.auth.client_activation_refused` | Client activation without an approved governance request, or for another tenant | `TestHandlerRegisterActivateFlow` |
+| `audit.governance.approval_refused` | An approval-API call without a token, from another tenant, a policy change by a non-administrator, a vote by a service or a user with no email | `TestApprovalAPIRequiresAuthenticatedTenantCaller` |
+| `audit.governance.link_refused` | The email-link approval page opened with an invalid or used token | `TestApprovalPageNeedsAValidToken` |
+| `audit.hyok.admin_refused` | HYOK endpoint administration without a valid token, cross-tenant, or by a non-administrator | `TestHYOKAdminRoutesRequireTenantAdmin` |
+| `audit.hyok.approval_refused` | A retry whose approval is not approved, is for another key, operation or payload, or was already used | `TestHYOKGovernanceApprovalReleasesOperationOnce` |
+| `audit.hyok.request_denied` (`reason: key_access_unavailable`) | The key-access service is unreachable and the proxy fails closed | `TestHYOKKeyAccessFailsClosed` |
+| `audit.signing.sign_refused` | A sign request refused for identity, token or policy | `TestSignArtifactPolicyGatesPostgres` (service codes); handler emits for every 4xx |
+| `audit.signing.request_refused` | A sign or verify request naming another tenant | handler `bindTenant` |
+
+| `audit.ekm.request_refused` | An EKM call without a verified token for its tenant, or a BitLocker agent call without a bitlocker-role JWT | `TestHandlerEKMRequiresVerifiedTenantToken` |

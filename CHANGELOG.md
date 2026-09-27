@@ -4,6 +4,156 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.27.0-beta] — 2026-09-27
+
+The second sweep for fake capability (CLAUDE.md rule 8), covering the
+services the first sweep only skimmed: auth, governance, hyok, signing,
+reporting, secrets, kmip, autokey, ekm, ekm-agent, the PKCS#11 provider and
+`pkg/tsa`. Several were security holes, not just labels. Each item was made
+real, or removed where no real path exists.
+[learning.md](learning.md) records how each slipped through;
+[docs/SECURITY/REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md) lists them.
+
+### Security: SAML and OIDC SSO verify what they accept (breaking)
+- **SAML** accepted any SAMLResponse: no XML signature check, no issuer,
+  audience, recipient or request binding, so anyone could log in as any user.
+  The `idp_certificate` the admin entered was never read. Now the Assertion
+  (or Response) signature is verified with goxmldsig v1.6.1 against that
+  certificate (SHA-2 only), and issuer (`idp_entity_id`, now required),
+  audience, recipient, `InResponseTo` (bound to a one-time RelayState), validity
+  window and single use are enforced. Values are read only from the signed
+  element, so signature wrapping is refused.
+- **OIDC** read ID-token claims without checking the signature. `pkg/oidc`
+  now verifies the token against the issuer's JWKS with `iss`, `aud`, `exp`,
+  `nonce` and `azp`; the userinfo fallback is gone.
+- Unused settings removed: `idp_metadata_url`, `sign_requests`,
+  `sp_private_key` (SAML), `response_type` (OIDC). Existing SAML providers
+  must set `idp_entity_id` and `idp_certificate` before logins work.
+- Refusals are audited: `audit.auth.sso_login_refused`.
+
+### Security: governance approvals are enforced (breaking)
+- The approval API (policies, requests, votes, key approvals) needed no
+  authentication, and a dashboard vote counted as whatever `approver_email`
+  the body named, so one user could meet any quorum. Now every route needs a
+  verified token for the tenant, policy changes need a tenant administrator,
+  and a dashboard vote is cast as the logged-in user (email from their
+  account). Only approvers the request was sent to may vote, never the
+  requester; a challenge code must be the voter's. Users cannot pick their own
+  approvers or set a completion callback. The email-link page needs a live
+  token. `approver_roles` was never enforced and is documented as such.
+  Refusals: `audit.governance.approval_refused`, `audit.governance.link_refused`.
+- Auth client activation stored the placeholder `TODO-GOVERNANCE-HOOK` as its
+  approval; it now requires an approved `client.activate` request
+  (`audit.auth.client_activation_refused`) and no longer accepts another
+  tenant in the body.
+- hyok, autokey, keyaccess and keycore now send their service token to
+  governance.
+
+### Security: HYOK authentication (breaking)
+- Every request arrives through Envoy over internal mTLS, so the TLS peer
+  certificate hyok treated as the client's identity was Envoy's: any caller
+  was "mtls"-authenticated for whatever `tenant_id` it named. `X-Client-CN`
+  headers were trusted too. Now only a verified JWT authenticates.
+  `auth_mode` `mtls` is refused (the edge does not verify client
+  certificates); `mtls_or_jwt` reads as `jwt`.
+- Endpoint administration had no authentication; it now needs a tenant
+  administrator (`audit.hyok.admin_refused`).
+- Governance-gated operations could never complete (each retry opened a new
+  approval; the callback named no reachable method). A retry carrying
+  `approval_request_id` now runs once the approval is approved for that key,
+  operation and payload, and only once (`audit.hyok.approval_refused`).
+- A down key-access service allowed the request; with the default
+  `HYOK_POLICY_FAIL_CLOSED=true` it now refuses.
+
+### Security: EKM is authenticated, and reachable
+- EKM treated the TLS peer as a `tenant:role` client certificate; behind Envoy
+  that is `vecta-envoy`, so every edge request failed with 401 (confirmed on
+  a running stack), and dropping the check would have left EKM with no
+  authentication at all. EKM now requires a verified auth-service token for
+  the tenant on every tenant route (`audit.ekm.request_refused`); BitLocker
+  agents use their bitlocker-role JWT. Deploy scripts read `EKM_TOKEN` from the
+  environment and never write it to disk.
+- Google CSE KACLS decoded Google's authorization token without verifying it
+  and fell back to "the first active key". It now verifies the token
+  (`gsuitecse-tokenissuer-*` issuer, audience `cse-authorization`), requires
+  the same user as the authentication token, requires `exp` and an allowed
+  hosted domain, and uses only the key the token names.
+
+### Security: signing identity is verified
+- OIDC issuer/subject and workload identity came from the request body and
+  were signed into the envelope as if proven. Now OIDC mode takes
+  `oidc_token`, verified against the issuer's JWKS (issuer must be listed
+  exactly; audience `SIGNING_OIDC_AUDIENCE`), and workload mode signs as the
+  caller token's `workload_identity`.
+- `/signing/blob|git|verify` accepted another tenant's `tenant_id` in the
+  body; it is now enforced (`audit.signing.request_refused`,
+  `audit.signing.sign_refused`).
+- The `require_transparency` toggles gated nothing (an empty `if`) and are
+  removed; the record index is described as the tenant signing log, not a
+  transparency log.
+
+### Removed or corrected fakes
+- **Governance FDE** (status, integrity check, key rotation, recovery test,
+  recovery shares) returned hard-coded LUKS data and "passed" for anything;
+  **network apply** changed nothing. Both removed, API and UI.
+- **Governance system state**: network, DNS/NTP, proxy, license, backup
+  schedule, TLS mode and PEMs, HSM/cluster labels and QRNG were stored but
+  never read. They are no longer exposed, a migration clears the unused TLS
+  private key and license key, and the integrity check reports only measured
+  items (SMTP, runtime FIPS mode, a completed backup, SNMP reachability).
+  The RNG shown is the one in use (module CTR_DRBG in FIPS mode, else the OS
+  CSPRNG); the "hsm-trng" label on software bytes and the bits-per-byte
+  statistic over DRBG output are gone. The System Admin save sent fields the
+  server rejects and now sends only accepted ones.
+- **Reporting** marked alerts "sent" to email, Slack, Teams and SIEM without
+  sending anything, and stored schedule recipients nobody emailed. Channels
+  are now `screen` only and `recipients` is gone.
+- **PKCS#11 provider** (`services/pkcs11-provider`) could not be loaded by any
+  PKCS#11 application (no `C_GetFunctionList`), ignored mechanism and PIN, and
+  always signed as RSA. Removed, with its SDK download, the "PKCS#11 C
+  Provider v2.40/v3.0 active" card and the mechanism "telemetry" that
+  relabelled EKM agent activity. The dashboard view is now "Java SDK".
+- **EKM TDE guides** told customers to load a Vecta EKM DLL in SQL Server and
+  a PKCS#11 library in Oracle, pg_tde and MySQL; none exists. Guides now
+  describe KMIP for MySQL (`keyring_okv`), pg_tde and Db2 and say SQL Server,
+  Oracle and MariaDB are not supported. The agent's PKCS#11 "readiness" (a
+  file-exists check that also marked agents degraded) is gone, and heartbeats
+  report the real OS instead of always "windows".
+- **BitLocker jobs**: the agent polled with GET (the route is POST), read the
+  wrong response shape, reported status `completed` and a string result, so no
+  remote operation or recovery-key escrow ever completed. Aligned with the
+  service contract; rotated recovery passwords are sent as `recovery_key`.
+  Installers wrote `mode` (the agent reads `agent_mode`) and offered
+  pkcs11/azure-ekm/google-cse modes the agent does not have.
+- **JCA** `SecureRandom.VectaQRNG` called a non-existent endpoint and silently
+  used the JVM generator; removed.
+- **KMIP** Query advertised 32 operations while 15 are routed; the other
+  handlers sat in a build-tagged file that no longer compiled. The file is
+  deleted and Query lists the routed operations (tested against the router).
+- **Secrets** "PPK" export was not a PuTTY file (removed); PGP armor wrapped
+  already-armored keys again (fixed); Vault seal status invented Shamir,
+  cluster and build fields (removed).
+- **Autokey** template versioning and drift detection were never called, had
+  no table, and `version`/`policy_drifted` were always zero; removed.
+- **EKM health** said "all checks within threshold" for agents that reported
+  no metrics, and new BitLocker clients were "healthy" before any heartbeat.
+- **Dead code**: `pkg/tsa` (unused, invented policy OID under PEN 99999),
+  `pkg/compliance` and `pkg/evidence` (hard-coded "pass" with invented
+  evidence such as "external TLS scan confirms").
+- Docs: DATA_PROTECTION.md's PKCS#11 section (invented RPM/DEB/Homebrew
+  packages) and JCA section (invented Maven coordinates and config builder),
+  CLOUD_INTEGRATION.md's SQL Server/Oracle EKM walkthroughs, and the network
+  apply guide are corrected.
+
+### Upgrade notes
+- SAML: set `idp_entity_id` and the IdP signing certificate, and start logins
+  from Vecta (IdP-initiated SAML is refused).
+- Signing clients in OIDC mode send `oidc_token`.
+- HYOK callers use bearer JWTs; `mtls` endpoints must be reconfigured.
+- EKM agents and scripts need an auth-service token (`EKM_TOKEN`).
+- Anything that voted or managed governance policies without a token must
+  authenticate.
+
 ## [1.26.0-beta] — 2026-09-27
 
 A code-wide sweep for fake, simulated, mock or fabricated capability (CLAUDE.md

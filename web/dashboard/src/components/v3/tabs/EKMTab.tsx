@@ -51,80 +51,50 @@ import type { AzureEKMConfig, AzureKeyMapping } from "../../../lib/ekm";
 import { KMIPTab } from "./KMIPTab";
 
 /* ── Setup guide content per DB engine ── */
+/* ── Setup guide per DB engine ──
+   Vecta holds a TDE master key only through its KMIP server (mTLS, port 5696).
+   Engines without a KMIP key manager have no Vecta integration and say so. */
+const KMIP_PREREQ = "1. Register a KMIP client in the KMIP tab: it issues the client certificate and key. Trust the Vecta internal CA; connect to <kms-host>:5696.";
+const NOT_SUPPORTED_NOTE = "The EKM agent still reports this database's TDE state; register it with Deploy Agent to monitor it.";
 const SETUP_GUIDES: Record<string, { title: string; steps: string[] }> = {
   mssql: {
-    title: "SQL Server TDE with Vecta EKM",
+    title: "SQL Server TDE: not supported by Vecta",
     steps: [
-      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
-      "2. Download the deploy package (agent.env + install script + heartbeat script).",
-      "3. Copy files to the SQL Server host and run the install script as administrator.",
-      "4. In SQL Server, enable EKM:\n   sp_configure 'EKM provider enabled', 1;\n   RECONFIGURE;",
-      "5. Create an EKM provider pointing to the Vecta PKCS#11 module:\n   CREATE CRYPTOGRAPHIC PROVIDER VectaEKM FROM FILE = 'C:\\vecta-ekm\\libvecta-pkcs11.dll';",
-      "6. Create a credential mapped to the Vecta agent:\n   CREATE CREDENTIAL VectaCred WITH IDENTITY = '<agent_id>', SECRET = '<auth_token>';",
-      "7. Create an asymmetric key from the EKM provider:\n   CREATE ASYMMETRIC KEY TDE_Key FROM PROVIDER VectaEKM WITH ALGORITHM = RSA_2048;",
-      "8. Create a database encryption key and enable TDE:\n   USE <database>;\n   CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER ASYMMETRIC KEY TDE_Key;\n   ALTER DATABASE <database> SET ENCRYPTION ON;",
-      "9. Verify TDE status: SELECT * FROM sys.dm_database_encryption_keys;",
-      "10. Schedule key rotation via the dashboard or automate with cron/Task Scheduler."
+      "SQL Server keeps a TDE key in an external manager only through an EKM provider DLL implementing its EKM interface. Vecta ships none, so SQL Server TDE keys are not held in Vecta.",
+      NOT_SUPPORTED_NOTE
     ]
   },
   oracle: {
-    title: "Oracle TDE with Vecta EKM",
+    title: "Oracle TDE: not supported by Vecta",
     steps: [
-      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
-      "2. Download the deploy package and deploy on the Oracle DB host.",
-      "3. Configure Oracle wallet location in sqlnet.ora:\n   ENCRYPTION_WALLET_LOCATION = (SOURCE = (METHOD = HSM))",
-      "4. Configure the PKCS#11 library in the Oracle environment:\n   export ORACLE_PKCS11_LIB=/etc/vecta-ekm/libvecta-pkcs11.so",
-      "5. Open the TDE keystore:\n   ADMINISTER KEY MANAGEMENT SET KEYSTORE OPEN IDENTIFIED BY \"HSM\";",
-      "6. Set the TDE master encryption key:\n   ADMINISTER KEY MANAGEMENT SET KEY IDENTIFIED BY \"HSM\" WITH BACKUP;",
-      "7. Enable TDE on tablespace or column level:\n   ALTER TABLESPACE users ENCRYPTION ONLINE ENCRYPT;",
-      "8. Verify: SELECT * FROM V$ENCRYPTION_WALLET;",
-      "9. Schedule key rotation via the dashboard Rotate button.",
-      "10. Monitor agent health and TDE state from the dashboard."
+      "Oracle TDE keeps its master key in a software keystore, Oracle Key Vault, or an HSM through a PKCS#11 library. Vecta provides none of these, so Oracle TDE keys are not held in Vecta.",
+      NOT_SUPPORTED_NOTE
     ]
   },
   postgresql: {
-    title: "PostgreSQL TDE with Vecta EKM (pg_tde)",
+    title: "PostgreSQL TDE with Percona pg_tde (KMIP)",
     steps: [
-      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
-      "2. Download the deploy package and deploy on the PostgreSQL host.",
-      "3. Install the pg_tde extension:\n   CREATE EXTENSION pg_tde;",
-      "4. Configure the PKCS#11 provider in postgresql.conf:\n   pg_tde.keyring_provider = 'pkcs11'\n   pg_tde.pkcs11_library = '/etc/vecta-ekm/libvecta-pkcs11.so'",
-      "5. Set the TDE master key:\n   SELECT pg_tde_set_master_key('vecta-master-key', 'pkcs11');",
-      "6. Enable encryption on a table:\n   CREATE TABLE sensitive_data (...) USING tde_heap;",
-      "7. Or enable TDE on an existing tablespace:\n   ALTER TABLESPACE pg_default SET (tde = on);",
-      "8. Verify status:\n   SELECT * FROM pg_tde_master_key_info();",
-      "9. Rotate the master key via the dashboard or:\n   SELECT pg_tde_rotate_master_key('vecta-new-key', 'pkcs11');",
-      "10. Monitor agent health and TDE state from the dashboard."
+      KMIP_PREREQ,
+      "2. Register a KMIP key provider in pg_tde pointing at <kms-host>:5696 with the client certificate, key and Vecta internal CA.",
+      "3. Make it the principal key provider for the database (function names differ between pg_tde releases; use your version's documentation).",
+      "Community PostgreSQL has no built-in TDE."
     ]
   },
   mysql: {
-    title: "MySQL / MariaDB TDE with Vecta EKM (keyring_pkcs11)",
+    title: "MySQL Enterprise TDE with keyring_okv (KMIP)",
     steps: [
-      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
-      "2. Download the deploy package and deploy on the MySQL/MariaDB host.",
-      "3. Install the keyring_pkcs11 plugin in my.cnf:\n   [mysqld]\n   early-plugin-load=keyring_pkcs11=keyring_pkcs11.so\n   keyring_pkcs11_lib_path=/etc/vecta-ekm/libvecta-pkcs11.so",
-      "4. Restart MySQL to load the plugin:\n   systemctl restart mysqld",
-      "5. Verify keyring plugin is active:\n   SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME='keyring_pkcs11';",
-      "6. Enable encryption on an InnoDB tablespace:\n   ALTER TABLE sensitive_data ENCRYPTION='Y';",
-      "7. Enable general tablespace encryption:\n   CREATE TABLESPACE ts_encrypted ADD DATAFILE 'ts_encrypted.ibd' ENCRYPTION='Y';",
-      "8. Enable redo/undo log encryption (MySQL 8.0+):\n   SET GLOBAL innodb_redo_log_encrypt = ON;\n   SET GLOBAL innodb_undo_log_encrypt = ON;",
-      "9. Verify encryption status:\n   SELECT NAME, ENCRYPTION FROM INFORMATION_SCHEMA.INNODB_TABLESPACES WHERE ENCRYPTION='Y';",
-      "10. Rotate master key:\n   ALTER INSTANCE ROTATE INNODB MASTER KEY;"
+      KMIP_PREREQ,
+      "2. In my.cnf:\n   [mysqld]\n   early-plugin-load=keyring_okv.so\n   keyring_okv_conf_dir=/usr/local/mysql/mysql-keyring-okv",
+      "3. In keyring_okv_conf_dir create okvclient.ora containing SERVER=<kms-host>:5696, and an ssl/ directory with CA.pem (Vecta internal CA), cert.pem and key.pem (the KMIP client certificate and key).",
+      "4. Restart mysqld, then encrypt: ALTER TABLE sensitive_data ENCRYPTION='Y';",
+      "MariaDB's key plugins do not speak KMIP, so MariaDB is not supported."
     ]
   },
   db2: {
-    title: "IBM DB2 TDE with Vecta EKM",
+    title: "Db2 native encryption with a KMIP key manager",
     steps: [
-      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
-      "2. Download the deploy package and deploy on the DB2 host.",
-      "3. Configure the keystore in the DB2 instance:\n   gsk8capicmd_64 -keydb -create -db /etc/vecta-ekm/db2keystore.kdb -pw <password> -type pkcs12",
-      "4. Set the PKCS#11 library path:\n   db2 UPDATE DBM CFG USING KEYSTORE_TYPE PKCS11\n   db2 UPDATE DBM CFG USING KEYSTORE_LOCATION /etc/vecta-ekm/libvecta-pkcs11.so",
-      "5. Create an encrypted database:\n   db2 CREATE DATABASE mydb ENCRYPT",
-      "6. Or enable encryption on an existing database:\n   db2 ALTER DATABASE mydb ENCRYPT",
-      "7. Set the master key label:\n   db2 \"CALL SYSPROC.ADMIN_ROTATE_MASTER_KEY('vecta-master-key')\"",
-      "8. Verify encryption status:\n   db2 \"SELECT * FROM TABLE(SYSPROC.ADMIN_GET_ENCRYPTION_INFO())\"",
-      "9. Rotate the master key via the dashboard or:\n   db2 \"CALL SYSPROC.ADMIN_ROTATE_MASTER_KEY('vecta-new-key')\"",
-      "10. Monitor agent health and TDE state from the dashboard."
+      KMIP_PREREQ,
+      "2. Configure Db2 native encryption with KEYSTORE_TYPE KMIP and a KMIP configuration file naming <kms-host>:5696, the client certificate, key and Vecta internal CA (see IBM's documentation for your Db2 release)."
     ]
   }
 };
@@ -488,7 +458,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       const metadataJSON=JSON.stringify({
         target_os:deployForm.target_os,
         rotation_cycle_days:Math.max(1,Math.trunc(Number(deployForm.rotation_cycle_days||90))),
-        pkcs11_profile:`${deployForm.db_engine}-tde-pkcs11`,
         deployed_from:"dashboard"
       });
       const agent=await registerEKMAgent(session,{
@@ -1312,11 +1281,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           </div>
         </div>
         <div style={{marginTop:16}}>
-          <B style={{fontSize:13,marginBottom:6,display:"block"}}>PKCS#11 Status</B>
-          <div style={{fontSize:12,color:C.textDim}}>Module Path: {meta.pkcs11_module_path||"n/a"}</div>
-          <div style={{fontSize:12,color:meta.pkcs11_ready?C.green:C.red}}>Ready: {meta.pkcs11_ready?"Yes":"No"}{meta.pkcs11_reason&&` (${meta.pkcs11_reason})`}</div>
-        </div>
-        <div style={{marginTop:16}}>
           <B style={{fontSize:13,marginBottom:6,display:"block"}}>Health Status: <span style={{color:String(h.health||"")=="healthy"?C.green:String(h.health||"")=="degraded"?C.amber:C.red}}>{String(h.health||"unknown")}</span></B>
           {Array.isArray(h.warnings)&&h.warnings.length>0&&(<div style={{fontSize:12}}>
             {h.warnings.map((w,i)=>(<div key={i} style={{color:C.amber,marginBottom:2}}>- {w}</div>))}
@@ -1421,7 +1385,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         </>)}
 
         {deployModalTab==="verify"&&(<>
-          <div style={{fontSize:12,color:C.textDim,marginBottom:12}}>Verify that the deployed agent can connect to Vecta KMS and the PKCS#11 module is operational.</div>
+          <div style={{fontSize:12,color:C.textDim,marginBottom:12}}>Verify that the deployed agent can reach Vecta KMS.</div>
           <Btn onClick={async()=>{
             const agentId=String(deployPackage?.agent_id||"").trim();
             if(!agentId){ onToast?.("No agent ID available."); return; }
@@ -1436,7 +1400,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             <div style={{fontSize:12,fontWeight:600,color:verifyResult.valid?C.green:C.red,marginBottom:4}}>{verifyResult.valid?"Verification Successful":"Verification Failed"}</div>
             {verifyResult.error&&(<div style={{fontSize:11,color:C.red}}>{verifyResult.error}</div>)}
             {verifyResult.agent_status&&(<div style={{fontSize:11,color:C.textDim}}>Agent Status: {verifyResult.agent_status}</div>)}
-            {verifyResult.pkcs11_status&&(<div style={{fontSize:11,color:C.textDim}}>PKCS#11: {verifyResult.pkcs11_status}</div>)}
             {verifyResult.heartbeat_age_sec!=null&&(<div style={{fontSize:11,color:C.textDim}}>Last Heartbeat: {verifyResult.heartbeat_age_sec}s ago</div>)}
           </div>)}
         </>)}

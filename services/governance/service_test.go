@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/fips140"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -78,6 +80,12 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			audited_started_at TIMESTAMP,
 			PRIMARY KEY (service, instance)
+		);`,
+		`CREATE TABLE auth_users (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			email TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'active'
 		);`,
 		`CREATE TABLE approval_policies (
 			id TEXT PRIMARY KEY,
@@ -517,109 +525,59 @@ func TestExpireWorkerTick(t *testing.T) {
 	}
 }
 
-func TestSystemStatePersistenceAndIntegrity(t *testing.T) {
+// The integrity summary is measured: no stored label (license, network,
+// backup schedule, TLS mode) can make it healthy, and a backup check that
+// cannot read backups says so instead of passing.
+func TestSystemIntegrityReportsOnlyMeasuredChecks(t *testing.T) {
 	store := newGovernanceStore(t)
 	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
-
-	updated, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
-		TenantID:            "t4",
-		FIPSMode:            "enabled",
-		HSMMode:             "hardware",
-		ClusterMode:         "ha",
-		LicenseKey:          "SEC-KMS-ENT-2026-XXXX",
-		MgmtIP:              "10.0.1.100",
-		ClusterIP:           "172.16.0.100",
-		DNSServers:          "10.0.0.2,10.0.0.3",
-		NTPServers:          "ntp.bank.local",
-		TLSMode:             "uploaded",
-		BackupSchedule:      "daily@02:00",
-		BackupTarget:        "s3",
-		BackupRetentionDays: 90,
-		BackupEncrypted:     true,
-		ProxyEndpoint:       "http://proxy.bank.local:8080",
-		SNMPTarget:          "udp://snmp.bank.local:162",
-		UpdatedBy:           "admin",
-	})
-	if err != nil {
+	if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
+		TenantID: "t4", SNMPTarget: "udp://snmp.bank.local:162", PostureRequireStepUpAuth: true, UpdatedBy: "admin",
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if updated.LicenseStatus != "active" {
-		t.Fatalf("expected active license status, got %s", updated.LicenseStatus)
-	}
-
-	_, err = svc.UpdateSettings(context.Background(), GovernanceSettings{
-		TenantID:              "t4",
-		SMTPHost:              "smtp.bank.local",
-		SMTPPort:              "587",
-		SMTPStartTLS:          true,
-		ApprovalExpiryMinutes: 60,
-		UpdatedBy:             "admin",
-	})
-	if err != nil {
+	if _, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
+		TenantID: "t4", SMTPHost: "smtp.bank.local", SMTPPort: "587", SMTPStartTLS: true, ApprovalExpiryMinutes: 60, UpdatedBy: "admin",
+	}); err != nil {
 		t.Fatal(err)
 	}
-
 	integrity, err := svc.SystemIntegrity(context.Background(), "t4")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if integrity.Status != "healthy" {
-		t.Fatalf("expected healthy integrity, got %s with checks=%v", integrity.Status, integrity.Checks)
-	}
-}
-
-// The old "hybrid PQC (KMS internal)" TLS mode minted ML-DSA certificates
-// that no service used. It is gone: internal mTLS and its hybrid ML-KEM key
-// exchange come from pkg/svctls, so a TLS mode change issues nothing.
-func TestSystemStateTLSModeIssuesNoCertificates(t *testing.T) {
-	store := newGovernanceStore(t)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Errorf("a TLS mode change must not call the certs service: %s %s", r.Method, r.URL.Path)
-	}))
-	defer server.Close()
-	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050",
-		WithCertsURL(server.URL), WithHTTPClient(server.Client()))
-	for _, mode := range []string{"tls13_only", "tls13_hybrid_kms"} {
-		if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{TenantID: "thybrid", TLSMode: mode, UpdatedBy: "admin"}); err != nil {
-			t.Fatal(err)
+	for _, gone := range []string{"license", "network", "proxy", "cluster", "tls", "hsm", "governance"} {
+		if _, ok := integrity.Checks[gone]; ok {
+			t.Fatalf("unmeasured check %q reported: %v", gone, integrity.Checks)
 		}
 	}
-}
-
-func TestUpdateSystemStateRejectsHSMTRNGWithoutHSM(t *testing.T) {
-	store := newGovernanceStore(t)
-	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
-
-	_, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
-		TenantID:       "tfips-rng",
-		FIPSRNGMode:    "hsm_trng",
-		HSMMode:        "software",
-		FIPSMode:       "enabled",
-		UpdatedBy:      "admin",
-		FIPSModePolicy: "strict",
-	})
-	if err == nil {
-		t.Fatal("expected hsm_trng validation error when hsm is not connected")
+	if integrity.Checks["smtp"] != "configured" || integrity.Checks["backup"] != "error" || integrity.Status != "degraded" {
+		t.Fatalf("checks: %v status %s", integrity.Checks, integrity.Status)
 	}
-	if !strings.Contains(strings.ToLower(err.Error()), "configure/connect hsm first") {
-		t.Fatalf("unexpected error: %v", err)
+	state, err := svc.GetSystemState(context.Background(), "t4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.PostureRequireStepUpAuth || state.SNMPTarget == "" {
+		t.Fatalf("enforced settings not persisted: %+v", state)
 	}
 }
 
-func TestEnrichFIPSRuntimeStateHSMTRNGWithoutHSMReportsError(t *testing.T) {
-	out := enrichFIPSRuntimeState(GovernanceSystemState{
-		TenantID:    "tfips-rng-2",
-		FIPSRNGMode: "hsm_trng",
-		HSMMode:     "software",
-	})
-	if out.FIPSEntropyHealth != "error" {
-		t.Fatalf("expected error health, got %s", out.FIPSEntropyHealth)
+// The RNG shown is the one the process uses, and no entropy statistic is
+// computed over DRBG output.
+func TestEnrichFIPSRuntimeStateReportsTheRealRNG(t *testing.T) {
+	out := enrichFIPSRuntimeState(GovernanceSystemState{TenantID: "t-rng"})
+	want := "os_csprng"
+	if fips140.Enabled() {
+		want = "ctr_drbg"
 	}
-	if out.FIPSEntropySource != "hsm-not-connected" {
-		t.Fatalf("expected hsm-not-connected source, got %s", out.FIPSEntropySource)
+	if out.FIPSRNGMode != want || out.FIPSEntropySource != "os-csprng" || out.FIPSEntropyHealth != "ok" || out.FIPSEntropyBytes != 4096 {
+		t.Fatalf("rng state: %+v", out)
 	}
-	if out.FIPSEntropyBitsByte != 0 {
-		t.Fatalf("expected entropy bits to be 0, got %f", out.FIPSEntropyBitsByte)
+	if out.FIPSTLSProfile != "tls13_minimum" {
+		t.Fatalf("tls profile %q", out.FIPSTLSProfile)
+	}
+	if raw, _ := json.Marshal(out); strings.Contains(string(raw), "bits_per_byte") || strings.Contains(string(raw), "license") || strings.Contains(string(raw), "mgmt_ip") {
+		t.Fatalf("never-applied fields still exposed: %s", raw)
 	}
 }
 

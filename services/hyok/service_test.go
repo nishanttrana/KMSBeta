@@ -13,7 +13,7 @@ func TestServiceProcessCryptoSuccess(t *testing.T) {
 	svc, _, keycore, _, _, pub := newHYOKService(t)
 	ctx := context.Background()
 	keycore.Seed("tenant-1", "key-1", "AES-256")
-	identity := AuthIdentity{Mode: "mtls", Subject: "tenant-1:cloud"}
+	identity := AuthIdentity{Mode: "jwt", Subject: "tenant-1:cloud"}
 
 	wrapResp, err := svc.ProcessCrypto(ctx, "tenant-1", ProtocolGeneric, "wrap", "key-1", "/hyok/generic/v1/keys/key-1/wrap", identity, ProxyCryptoRequest{
 		PlaintextB64: "aGVsbG8=",
@@ -47,7 +47,7 @@ func TestServicePolicyDenied(t *testing.T) {
 	policy.decision = "DENY"
 	policy.reason = "blocked by policy"
 
-	_, err := svc.ProcessCrypto(ctx, "tenant-2", ProtocolGeneric, "decrypt", "key-2", "/hyok/generic/v1/keys/key-2/decrypt", AuthIdentity{Mode: "mtls", Subject: "tenant-2:cloud"}, ProxyCryptoRequest{
+	_, err := svc.ProcessCrypto(ctx, "tenant-2", ProtocolGeneric, "decrypt", "key-2", "/hyok/generic/v1/keys/key-2/decrypt", AuthIdentity{Mode: "jwt", Subject: "tenant-2:cloud"}, ProxyCryptoRequest{
 		CiphertextB64: "enc:aGVsbG8=",
 		IVB64:         "aXYxMjM0NTY3ODkw",
 	})
@@ -83,12 +83,12 @@ func TestServiceGovernancePendingApproval(t *testing.T) {
 		TenantID:           "tenant-3",
 		Protocol:           ProtocolGeneric,
 		Enabled:            true,
-		AuthMode:           AuthModeMTLSOrJWT,
+		AuthMode:           AuthModeJWT,
 		GovernanceRequired: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	resp, err := svc.ProcessCrypto(ctx, "tenant-3", ProtocolGeneric, "wrap", "key-3", "/hyok/generic/v1/keys/key-3/wrap", AuthIdentity{Mode: "mtls", Subject: "tenant-3:cloud", RemoteIP: "127.0.0.1"}, ProxyCryptoRequest{
+	resp, err := svc.ProcessCrypto(ctx, "tenant-3", ProtocolGeneric, "wrap", "key-3", "/hyok/generic/v1/keys/key-3/wrap", AuthIdentity{Mode: "jwt", Subject: "tenant-3:cloud", RemoteIP: "127.0.0.1"}, ProxyCryptoRequest{
 		PlaintextB64: "aGVsbG8=",
 		RequesterID:  "svc-hyok",
 	})
@@ -111,7 +111,7 @@ func TestServiceGetDKEPublicKey(t *testing.T) {
 	svc, _, keycore, _, _, pub := newHYOKService(t)
 	ctx := context.Background()
 	keycore.Seed("tenant-4", "key-4", "AES-256")
-	resp, err := svc.GetDKEPublicKey(ctx, "tenant-4", "key-4", "/hyok/dke/v1/keys/key-4/publickey", AuthIdentity{Mode: "mtls", Subject: "tenant-4:cloud"})
+	resp, err := svc.GetDKEPublicKey(ctx, "tenant-4", "key-4", "/hyok/dke/v1/keys/key-4/publickey", AuthIdentity{Mode: "jwt", Subject: "tenant-4:cloud"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestServiceMicrosoftDKEAdapter(t *testing.T) {
 	ctx := context.Background()
 	keycore.Seed("tenant-ms", "rsa-1", "RSA-2048")
 
-	keyDoc, err := svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1", "localhost", AuthIdentity{Mode: "mtls", Subject: "tenant-ms:cloud"})
+	keyDoc, err := svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestServiceMicrosoftDKEAdapter(t *testing.T) {
 		t.Fatalf("unexpected key doc %+v", keyDoc)
 	}
 
-	resp, err := svc.ProcessMicrosoftDKEDecrypt(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1/decrypt", "localhost", AuthIdentity{Mode: "mtls", Subject: "tenant-ms:cloud"}, MicrosoftDKEDecryptRequest{
+	resp, err := svc.ProcessMicrosoftDKEDecrypt(ctx, "tenant-ms", "rsa-1", "/api/v1/keys/rsa-1/decrypt", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"}, MicrosoftDKEDecryptRequest{
 		Alg:   "RSA-OAEP-256",
 		KID:   "rsa-1",
 		Value: base64.RawURLEncoding.EncodeToString([]byte("wrap:aGVsbG8=")),
@@ -157,13 +157,13 @@ func TestServiceMicrosoftDKEAdapterMetadataHostEnforcement(t *testing.T) {
 		TenantID:     "tenant-ms",
 		Protocol:     ProtocolDKE,
 		Enabled:      true,
-		AuthMode:     AuthModeMTLSOrJWT,
+		AuthMode:     AuthModeJWT,
 		MetadataJSON: `{"key_uri_hostname":"keys.example.com"}`,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-2", "/api/v1/keys/rsa-2", "localhost", AuthIdentity{Mode: "mtls", Subject: "tenant-ms:cloud"})
+	_, err = svc.GetMicrosoftDKEKey(ctx, "tenant-ms", "rsa-2", "/api/v1/keys/rsa-2", "localhost", AuthIdentity{Mode: "jwt", Subject: "tenant-ms:cloud"})
 	if err == nil {
 		t.Fatalf("expected host validation error")
 	}
@@ -197,11 +197,11 @@ func TestServiceHealthReflectsConfiguredAndConnectedStatus(t *testing.T) {
 		TenantID: "tenant-h",
 		Protocol: ProtocolGeneric,
 		Enabled:  true,
-		AuthMode: AuthModeMTLSOrJWT,
+		AuthMode: AuthModeJWT,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.ProcessCrypto(ctx, "tenant-h", ProtocolGeneric, "wrap", "key-h", "/hyok/generic/v1/keys/key-h/wrap", AuthIdentity{Mode: "mtls", Subject: "tenant-h:cloud"}, ProxyCryptoRequest{
+	_, err = svc.ProcessCrypto(ctx, "tenant-h", ProtocolGeneric, "wrap", "key-h", "/hyok/generic/v1/keys/key-h/wrap", AuthIdentity{Mode: "jwt", Subject: "tenant-h:cloud"}, ProxyCryptoRequest{
 		PlaintextB64: "aGVsbG8=",
 		IVB64:        "aXYxMjM0NTY3ODkw",
 	})

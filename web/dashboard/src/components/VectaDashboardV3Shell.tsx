@@ -80,7 +80,7 @@ const EKMTab = lazy(() => import("./v3/tabs/EKMTab").then(m => ({ default: m.EKM
 const DataProtectionTabs = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataProtectionTab })));
 const TokenizeTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.TokenizeTab })));
 const DataEncryptionTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataEncryptionTab })));
-const PKCS11Tab = lazy(() => import("./v3/tabs/PKCS11Tab").then(m => ({ default: m.PKCS11Tab })));
+const ClientSDKTab = lazy(() => import("./v3/tabs/ClientSDKTab").then(m => ({ default: m.ClientSDKTab })));
 const BYOKTab = lazy(() => import("./v3/tabs/BYOKTab").then(m => ({ default: m.BYOKTab })));
 const HYOKTab = lazy(() => import("./v3/tabs/HYOKTab").then(m => ({ default: m.HYOKTab })));
 const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").then(m => ({ default: m.CloudKeyControlTab })));
@@ -198,7 +198,7 @@ const TABS: Record<string, any> = {
   posture: PostureTab,
   compliance: ComplianceTab,
   sbom: SBOMTab,
-  pkcs11: PKCS11Tab,
+  pkcs11: ClientSDKTab,
   admin: AdminTab,
   docs: DocsViewTab,
   rotation: RotationSchedulingTab,
@@ -242,7 +242,7 @@ const TITLES: Record<string, string> = {
   posture: "Posture Management",
   compliance: "Compliance",
   sbom: "SBOM / CBOM",
-  pkcs11: "PKCS#11 / JCA",
+  pkcs11: "Java SDK",
   admin: "Administration",
   docs: "Documentation",
   rotation: "Rotation & Scheduling",
@@ -321,7 +321,7 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },
     { id: "token-policy", label: "Token / Mask / Redact Policy", hint: "Policy controls only for tokenization, masking and redaction", icon: VenetianMask, feature: "data_protection" },
     { id: "payment-policy", label: "Payment Policy", hint: "Policy controls only for payment cryptography operations", icon: CreditCard, feature: "payment_crypto" },
-    { id: "pkcs11", label: "PKCS#11 / JCA", hint: "SDK providers, mechanism usage and client telemetry", icon: Plug }
+    { id: "pkcs11", label: "Java SDK", hint: "Java JCA provider download", icon: Plug }
   ],
   cloudctl: [
     { id: "byok", label: "BYOK", hint: "Cloud provider key import and sync", icon: Cloud, feature: "cloud_byok" },
