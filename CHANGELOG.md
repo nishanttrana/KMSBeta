@@ -4,6 +4,71 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.0.0-beta] — 2026-09-28
+
+### Breaking: the Threat & Exposure tab is removed; its real parts move to Keys, Posture and Reporting
+The tab combined three things. Only threat detection did real work, and it
+ran only while someone had the tab open. The rest moved or went away
+(docs/DECISIONS.md, 2.0.0-beta). The removed code is in the commit that
+carries this entry.
+
+- **Threat detection runs on a schedule and reaches someone.** Keycore's
+  `ThreatSweeper` evaluates `new_actor`, `volume_spike` and
+  `dormant_key_activity` every minute, on every node, over that node's
+  key usage trail (`key_usage_events` and `threat_signals` are node-local).
+  Before, the rules ran only on `GET /threat/signals`. Each new signal emits
+  `audit.keycore.threat_signal_raised` (it was `audit.threat.signal_raised`).
+  - **Posture** turns each signal into one finding (`threat_<type>`,
+    corrective engine, evidence names the signal and audit event), audited as
+    `audit.posture.threat_finding_raised`. Open threat findings add to the
+    corrective score. Resolving one is final: the event still in the hot
+    window never reopens it.
+  - **Reporting** raises critical and high signals as alerts. Reporting now
+    syncs alerts from audit every minute on the primary, for every tenant it
+    knows and root, so the header's unread count moves without anyone
+    opening the Alert Center. Before, alerts were created only when the
+    Alert Center was listed. A cluster member no longer creates alerts when
+    it serves that list (it wrote a replicated table).
+- **Canary keys are in Keys** (**Keys → Canary Key**), on the route kernel
+  (`key.canary.read` / `key.canary.write`, events `audit.key.canary_*`
+  including refusals). Before, create and deactivate were not audited.
+  - A new canary's ID is minted like a real key ID (`key_…`). It was
+    `canary_…`, which told the prober it was a decoy.
+  - A trip raises a critical threat signal, so it becomes a Posture finding
+    and an alert, as well as `audit.keycore.canary_tripped`.
+  - Trips are written only to the node-local trip log, and counts are read
+    from it. A probe served by a cluster member no longer updates the
+    replicated `canary_keys` row.
+  - Removed `POST /canary/{id}/trip`. It recorded a trip that never happened
+    and audited it as a real `canary_tripped`.
+  - Removed the `notify_email`, `algorithm`, `purpose` and `metadata` fields
+    from the API: nothing sent email and a decoy has no algorithm. The UI's
+    "alert on use" checkbox was never stored.
+  - Routes are now `GET|POST /canary/keys`, `GET /canary/keys/{id}/trips` and
+    `DELETE /canary/keys/{id}`. `GET|POST /canary`, `GET|DELETE /canary/{id}`,
+    `GET /canary/{id}/trips` and `GET /canary/summary` are gone.
+- **The leak scanner is removed.** It scanned pasted text or a folder on the
+  posture host, which is not a credible place for secret scanning. Removed:
+  the `/leaks/*` routes, `posture.leak.*` permissions and events, and its
+  tables (posture migration `004_drop_leak_scanner.sql`).
+- **The credential → key binding registry is removed.** It existed only to
+  correlate leak findings with keys. Removed: the `/credential-bindings`
+  routes, `/keys/{id}/credential-bindings`, the `credential_binding` field
+  of encrypt and wrap requests, `audit.key.credential_binding_auto_registered`,
+  and its table (keycore migration `026_drop_credential_bindings.sql`).
+- **Also removed:** `GET /threat/signals`, `POST /threat/signals/{id}/ack`
+  and `GET /threat/dashboard` (acknowledge and resolve the Posture finding
+  instead), the `threat_protection` feature flag, and three dashboard
+  libraries nothing imported.
+- **Compliance:** no new screen. `audit.keycore.threat_signal_raised` and
+  `audit.posture.threat_finding_raised` are the evidence for controls that
+  ask for anomaly monitoring.
+- **Open:** each node judges its own traffic, so a volume baseline is
+  per node, not cluster-wide. Reporting syncs only tenants it already knows
+  (any alert, rule, override, channel or report) plus root. A tenant with
+  none of those gets its first threat alerts when someone opens its Alert
+  Center. Its Posture findings are raised as usual.
+
 ## [1.39.0-beta] — 2026-09-28
 
 ### One Health view, in Administration

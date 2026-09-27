@@ -230,6 +230,9 @@ func main() {
 	// Rotation policies: due auto-rotate policies run on the primary.
 	go NewRotationScheduler(svc, auditClient, logger).Run(ctx)
 
+	// Threat detection over this node's (node-local) key usage trail.
+	go NewThreatSweeper(svc).Run(ctx)
+
 	// Heartbeat publisher so the watchdog observes liveness.
 	if nc, _, err := initNATS(cfg.NATSURL); err == nil {
 		hb := pkgheartbeat.New(nc, "keycore", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("KEYCORE_VERSION", "dev"))

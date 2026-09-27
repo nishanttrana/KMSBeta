@@ -66,6 +66,7 @@ func (s *Service) StartScheduler(ctx context.Context) {
 					continue
 				}
 				_ = s.RunDueSchedules(context.Background())
+				s.SyncAlertsAllTenants(context.Background())
 				telemetryPurgeTick++
 				if telemetryPurgeTick >= 60 {
 					telemetryPurgeTick = 0
@@ -74,6 +75,28 @@ func (s *Service) StartScheduler(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// SyncAlertsAllTenants turns new audit events into alerts for every tenant
+// reporting knows (any alert, rule, override, channel or report) and root, so
+// the header's unread count moves without anyone opening the Alert Center.
+// The scheduler runs it on the primary only: alerts are replicated.
+func (s *Service) SyncAlertsAllTenants(ctx context.Context) {
+	tenants, err := s.store.ListKnownTenants(ctx)
+	if err != nil {
+		logger.Printf("alert sync: list tenants: %v", err)
+		return
+	}
+	seen := map[string]bool{}
+	for _, tenantID := range append([]string{"root"}, tenants...) {
+		if tenantID = strings.TrimSpace(tenantID); tenantID == "" || seen[tenantID] {
+			continue
+		}
+		seen[tenantID] = true
+		if err := s.SyncAlertsFromAudit(ctx, tenantID, 300); err != nil {
+			logger.Printf("alert sync tenant=%s: %v", tenantID, err)
+		}
+	}
 }
 
 func (s *Service) SyncAlertsFromAudit(ctx context.Context, tenantID string, limit int) error {
@@ -185,6 +208,19 @@ func (s *Service) classifySeverity(ctx context.Context, tenantID string, action 
 	for _, o := range overrides {
 		if strings.EqualFold(strings.TrimSpace(o.AuditAction), action) {
 			return normalizeSeverity(o.Severity)
+		}
+	}
+	if action == threatSignalAction {
+		// Keycore's threat signals carry their own severity; critical and
+		// high ones become alerts, the rest stay posture findings only.
+		details, _ := event["details"].(map[string]interface{})
+		switch strings.ToLower(firstString(details["severity"])) {
+		case "critical":
+			return severityCritical
+		case "high":
+			return severityHigh
+		default:
+			return severityInfo
 		}
 	}
 	defaults := severityDefaults()
@@ -333,6 +369,11 @@ func descriptionForEvent(ev map[string]interface{}) string {
 	if d := firstString(ev["description"], ev["message"]); d != "" {
 		return d
 	}
+	if details, ok := ev["details"].(map[string]interface{}); ok {
+		if d := firstString(details["description"]); d != "" {
+			return d
+		}
+	}
 	return "Generated from audit event correlation pipeline"
 }
 
@@ -452,7 +493,10 @@ func (s *Service) attachIncident(ctx context.Context, tenantID string, title str
 }
 
 func (s *Service) ListAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error) {
-	_ = s.SyncAlertsFromAudit(ctx, tenantID, 400)
+	// A member serves the replicated alerts; only the primary creates them.
+	if clusterstate.RunsPrimaryJobs(ctx) {
+		_ = s.SyncAlertsFromAudit(ctx, tenantID, 400)
+	}
 	return s.store.ListAlerts(ctx, tenantID, q)
 }
 

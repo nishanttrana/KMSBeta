@@ -189,6 +189,9 @@ func (s *Service) RunScanTenant(ctx context.Context, tenantID string, syncAudit 
 func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnapshot, error) {
 	s.correctLegacyActions(ctx, tenantID)
 	now := nowUTC()
+	// Before the engines, so open threat findings count in this scan's
+	// corrective score.
+	s.raiseThreatFindings(ctx, tenantID, now.Add(-s.hotRetention), now)
 	current24, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-24*time.Hour), now)
 	if err != nil {
 		return RiskSnapshot{}, err
@@ -1096,6 +1099,10 @@ var correctiveWeight = map[string]int{
 	"certificate_emergency_rotation_active":     12,
 	"certificate_mass_renewal_hotspot":          6,
 	"certificate_schedule_rebalancing_required": 6,
+	"threat_canary_tripped":                     25,
+	"threat_new_actor":                          12,
+	"threat_volume_spike":                       10,
+	"threat_dormant_key_activity":               6,
 }
 
 // actionExecutors are the remediation action types posture really performs.

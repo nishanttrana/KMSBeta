@@ -7,6 +7,50 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Threat & Exposure folded into Keys, Posture and Reporting; leak scanner removed (2.0.0-beta)
+
+**Decision.** The Threat & Exposure tab is removed.
+- Keycore keeps threat detection, because the usage trail lives there, and
+  runs it every minute on every node.
+- Signals leave keycore only as `audit.keycore.threat_signal_raised`.
+  Posture raises a finding per signal, and Reporting raises critical and
+  high signals as alerts, both from the audit pipeline they already
+  consume.
+- Canary keys are created from Keys.
+- The leak scanner and the credential → key binding registry are deleted.
+
+**Why:**
+- Detection that ran only while the tab was open could not alert anyone.
+- Posture already has findings, risk scoring, remediation and approvals,
+  and Reporting already feeds the header's unread count. A separate
+  console duplicated both.
+- A KMS scanning pasted text or a folder on its own host is not credible
+  secret scanning. That belongs in CI tooling that sees repositories and
+  images, and the owner's rule is to remove what isn't really built
+  rather than leave it half-done.
+
+*Rejected:*
+- **Posture calls a keycore threat API.** That adds a second client and
+  identity, where the audit pipeline already carries the signal to Posture
+  and Reporting by construction.
+- **Sweeping only on the primary.** `key_usage_events` and
+  `threat_signals` are node-local and crypto runs on every node, so a
+  primary-only sweep would miss member traffic. Every node sweeping its
+  own trail writes nothing replicated. The cost is that volume baselines
+  are per node.
+- **A canary as a real key with material.** A decoy that resolves would
+  answer the attacker's crypto requests. The not-found decoy trips on the
+  first reference and reveals nothing.
+- **Keeping the leak scanner as a Posture sub-view.** The owner chose
+  removal.
+
+**Enforced by:**
+- `TestThreatSweepCoversEveryTenantSeparately` and the `TestThreat*` tests
+  (keycore);
+- `TestThreatSignalBecomesFindingOnce` (posture);
+- `TestThreatSignalsBecomeAlertsOnScheduledSync` and
+  `TestListAlertsDoesNotSyncOnMember` (reporting);
+- `TestCanaryRoutesRefusalsAudited`.
 ## 2026-09-28 — One Health view, in Administration (1.39.0-beta)
 
 **Decision.** Platform > Health and Administration > Health are merged into

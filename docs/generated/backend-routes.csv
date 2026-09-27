@@ -654,34 +654,22 @@ keycore,DELETE,/scheduling/jobs/{id},/scheduling/jobs/{param},h.handleDeleteSche
 keycore,POST,/keys/{id}/attest,/keys/{param}/attest,h.handleAttestKey,mux,,,,services/keycore/handler.go,268,keycore|POST|/keys/{param}/attest
 keycore,GET,/attestation/public-key,/attestation/public-key,h.handleAttestationPublicKey,mux,,,,services/keycore/handler.go,269,keycore|GET|/attestation/public-key
 keycore,POST,/keys/{id}/verify-material,/keys/{param}/verify-material,h.handleVerifyKeyMaterial,mux,,,,services/keycore/handler.go,272,keycore|POST|/keys/{param}/verify-material
-keycore,GET,/keys/{id}/credential-bindings,/keys/{param}/credential-bindings,h.handleListCredentialBindings,mux,,,,services/keycore/handler.go,275,keycore|GET|/keys/{param}/credential-bindings
-keycore,POST,/keys/{id}/credential-bindings,/keys/{param}/credential-bindings,h.handleCreateCredentialBinding,mux,,,,services/keycore/handler.go,276,keycore|POST|/keys/{param}/credential-bindings
-keycore,DELETE,/credential-bindings/{binding_id},/credential-bindings/{param},h.handleDeleteCredentialBinding,mux,,,,services/keycore/handler.go,277,keycore|DELETE|/credential-bindings/{param}
-keycore,POST,/credential-bindings/resolve,/credential-bindings/resolve,h.handleResolveCredentialBindings,mux,,,,services/keycore/handler.go,278,keycore|POST|/credential-bindings/resolve
-keycore,GET,/threat/signals,/threat/signals,h.handleListThreatSignals,mux,,,,services/keycore/handler.go,281,keycore|GET|/threat/signals
-keycore,POST,/threat/signals/{id}/ack,/threat/signals/{param}/ack,h.handleAckThreatSignal,mux,,,,services/keycore/handler.go,282,keycore|POST|/threat/signals/{param}/ack
-keycore,GET,/threat/dashboard,/threat/dashboard,h.handleThreatDashboard,mux,,,,services/keycore/handler.go,283,keycore|GET|/threat/dashboard
-keycore,GET,/canary/keys,/canary/keys,h.handleListCanaryKeys,mux,,,,services/keycore/handler.go,286,keycore|GET|/canary/keys
-keycore,POST,/canary/keys,/canary/keys,h.handleCreateCanaryKey,mux,,,,services/keycore/handler.go,287,keycore|POST|/canary/keys
-keycore,GET,/canary/summary,/canary/summary,h.handleGetCanarySummary,mux,,,,services/keycore/handler.go,288,keycore|GET|/canary/summary
-keycore,GET,/canary,/canary,h.handleListCanaryKeys,mux,,,,services/keycore/handler.go,289,keycore|GET|/canary
-keycore,POST,/canary,/canary,h.handleCreateCanaryKey,mux,,,,services/keycore/handler.go,290,keycore|POST|/canary
-keycore,GET,/canary/{id},/canary/{param},h.handleGetCanaryKey,mux,,,,services/keycore/handler.go,291,keycore|GET|/canary/{param}
-keycore,DELETE,/canary/{id},/canary/{param},h.handleDeleteCanaryKey,mux,,,,services/keycore/handler.go,292,keycore|DELETE|/canary/{param}
-keycore,POST,/canary/{id}/trip,/canary/{param}/trip,h.handleTripCanaryKey,mux,,,,services/keycore/handler.go,293,keycore|POST|/canary/{param}/trip
-keycore,GET,/canary/{id}/trips,/canary/{param}/trips,h.handleListCanaryTrips,mux,,,,services/keycore/handler.go,294,keycore|GET|/canary/{param}/trips
-keycore,POST,/fips/self-test,/fips/self-test,h.handleFIPSSelfTest,mux,,,,services/keycore/handler.go,297,keycore|POST|/fips/self-test
-keycore,GET,/fips/rng-health,/fips/rng-health,h.handleRNGHealth,mux,,,,services/keycore/handler.go,298,keycore|GET|/fips/rng-health
-keycore,POST,/keys/{id}/zeroize-verify,/keys/{param}/zeroize-verify,h.handleZeroizeVerify,mux,,,,services/keycore/handler.go,299,keycore|POST|/keys/{param}/zeroize-verify
-keycore,GET,/keys/due-for-lifecycle,/keys/due-for-lifecycle,internalauth.RequireToken(h.handleDueForLifecycle),mux,,,,services/keycore/handler.go,305,keycore|GET|/keys/due-for-lifecycle
-keycore,POST,/tenants/onboard,/tenants/onboard,internalauth.RequireToken(h.handleTenantOnboard),mux,,,,services/keycore/handler.go,306,keycore|POST|/tenants/onboard
-keycore,POST,/keys/{id}/archive,/keys/{param}/archive,internalauth.RequireToken(h.handleArchiveKey),mux,,,,services/keycore/handler.go,307,keycore|POST|/keys/{param}/archive
+keycore,POST,/fips/self-test,/fips/self-test,h.handleFIPSSelfTest,mux,,,,services/keycore/handler.go,278,keycore|POST|/fips/self-test
+keycore,GET,/fips/rng-health,/fips/rng-health,h.handleRNGHealth,mux,,,,services/keycore/handler.go,279,keycore|GET|/fips/rng-health
+keycore,POST,/keys/{id}/zeroize-verify,/keys/{param}/zeroize-verify,h.handleZeroizeVerify,mux,,,,services/keycore/handler.go,280,keycore|POST|/keys/{param}/zeroize-verify
+keycore,GET,/keys/due-for-lifecycle,/keys/due-for-lifecycle,internalauth.RequireToken(h.handleDueForLifecycle),mux,,,,services/keycore/handler.go,286,keycore|GET|/keys/due-for-lifecycle
+keycore,POST,/tenants/onboard,/tenants/onboard,internalauth.RequireToken(h.handleTenantOnboard),mux,,,,services/keycore/handler.go,287,keycore|POST|/tenants/onboard
+keycore,POST,/keys/{id}/archive,/keys/{param}/archive,internalauth.RequireToken(h.handleArchiveKey),mux,,,,services/keycore/handler.go,288,keycore|POST|/keys/{param}/archive
 keycore,GET,/agility/score,/agility/score,h.getAgilityScore,kernel,key.agility.read,agility_score_read,agility,services/keycore/handler_agility.go,17,keycore|GET|/agility/score
 keycore,GET,/agility/algorithms,/agility/algorithms,h.getAlgorithmInventory,kernel,key.agility.read,agility_inventory_read,agility,services/keycore/handler_agility.go,18,keycore|GET|/agility/algorithms
 keycore,GET,/agility/keys-by-algorithm,/agility/keys-by-algorithm,h.getKeysByAlgorithm,kernel,key.agility.read,agility_keys_by_algorithm_read,agility,services/keycore/handler_agility.go,19,keycore|GET|/agility/keys-by-algorithm
 keycore,GET,/agility/migration-plans,/agility/migration-plans,h.listMigrationPlans,kernel,key.agility.read,agility_migration_plans_listed,migration_plan,services/keycore/handler_agility.go,20,keycore|GET|/agility/migration-plans
 keycore,POST,/agility/migration-plans,/agility/migration-plans,h.createMigrationPlan,kernel,key.agility.write,agility_migration_plan_created,migration_plan,services/keycore/handler_agility.go,21,keycore|POST|/agility/migration-plans
 keycore,PATCH,/agility/migration-plans/{id},/agility/migration-plans/{param},h.updateMigrationPlan,kernel,key.agility.write,agility_migration_plan_updated,migration_plan,services/keycore/handler_agility.go,22,keycore|PATCH|/agility/migration-plans/{param}
+keycore,GET,/canary/keys,/canary/keys,h.listCanaryKeys,kernel,key.canary.read,canary_keys_listed,canary_key,services/keycore/handler_canary.go,47,keycore|GET|/canary/keys
+keycore,POST,/canary/keys,/canary/keys,h.createCanaryKey,kernel,key.canary.write,canary_key_created,canary_key,services/keycore/handler_canary.go,48,keycore|POST|/canary/keys
+keycore,GET,/canary/keys/{id}/trips,/canary/keys/{param}/trips,h.listCanaryTrips,kernel,key.canary.read,canary_trips_listed,canary_key,services/keycore/handler_canary.go,49,keycore|GET|/canary/keys/{param}/trips
+keycore,DELETE,/canary/keys/{id},/canary/keys/{param},h.deactivateCanaryKey,kernel,key.canary.write,canary_key_deactivated,canary_key,services/keycore/handler_canary.go,50,keycore|DELETE|/canary/keys/{param}
 keycore,GET,/rotation/policies,/rotation/policies,h.listRotationPolicies,kernel,key.rotation.read,rotation_policies_listed,rotation_policy,services/keycore/handler_rotation.go,17,keycore|GET|/rotation/policies
 keycore,POST,/rotation/policies,/rotation/policies,h.createRotationPolicy,kernel,key.rotation.write,rotation_policy_created,rotation_policy,services/keycore/handler_rotation.go,18,keycore|POST|/rotation/policies
 keycore,PATCH,/rotation/policies/{id},/rotation/policies/{param},h.updateRotationPolicy,kernel,key.rotation.write,rotation_policy_updated,rotation_policy,services/keycore/handler_rotation.go,19,keycore|PATCH|/rotation/policies/{param}
@@ -693,7 +681,7 @@ keycore,GET,/hsm/settings,/hsm/settings,h.getHSM,kernel,key.hsm.read,hsm_status_
 keycore,PUT,/hsm/settings,/hsm/settings,h.putHSM,kernel,key.hsm.write,hsm_settings_update,hsm,services/keycore/hsm.go,556,keycore|PUT|/hsm/settings
 keycore,GET,/hsm/objects,/hsm/objects,h.listHSMObjects,kernel,key.hsm.read,hsm_objects_listed,hsm,services/keycore/hsm.go,557,keycore|GET|/hsm/objects
 keycore,GET,/keys/{id}/hsm,/keys/{param}/hsm,h.inspectHSMKey,kernel,key.hsm.read,hsm_key_inspected,key,services/keycore/hsm.go,558,keycore|GET|/keys/{param}/hsm
-keycore,GET,/keys/{id}/consumers,/keys/{param}/consumers,h.getKeyConsumers,kernel,key.usage.read,key_consumers_read,key,services/keycore/key_consumers.go,146,keycore|GET|/keys/{param}/consumers
+keycore,GET,/keys/{id}/consumers,/keys/{param}/consumers,h.getKeyConsumers,kernel,key.usage.read,key_consumers_read,key,services/keycore/key_consumers.go,151,keycore|GET|/keys/{param}/consumers
 keycore,POST,/system-keys/ensure,/system-keys/ensure,h.ensureSystemKey,kernel,key.system.ensure,system_key_ensure,key,services/keycore/system_keys.go,149,keycore|POST|/system-keys/ensure
 kmip,GET,/kmip/capabilities,/kmip/capabilities,h.handleCapabilities,mux,,,,services/kmip/http_api.go,26,kmip|GET|/kmip/capabilities
 kmip,GET,/kmip/profiles,/kmip/profiles,h.handleListClientProfiles,mux,,,,services/kmip/http_api.go,27,kmip|GET|/kmip/profiles
@@ -763,25 +751,18 @@ policy,POST,/policies/lint,/policies/lint,h.handleLintPolicy,mux,,,,services/pol
 policy,POST,/policies/dry-run,/policies/dry-run,h.handleDryRunPolicy,mux,,,,services/policy/handler.go,39,policy|POST|/policies/dry-run
 policy,GET,/policy/quota/{tenant_id},/policy/quota/{param},h.handleGetQuota,mux,,,,services/policy/handler.go,40,policy|GET|/policy/quota/{param}
 policy,PUT,/policy/quota/{tenant_id},/policy/quota/{param},h.handleSetQuota,mux,,,,services/policy/handler.go,41,policy|PUT|/policy/quota/{param}
-posture,GET,/posture/health,/posture/health,h.handleHealth,kernel,authenticated,health_read,,services/posture/handler.go,55,posture|GET|/posture/health
-posture,POST,/posture/events,/posture/events,oneTenant(h.handleIngestEvent),kernel,posture.write,events_ingested,posture_event,services/posture/handler.go,56,posture|POST|/posture/events
-posture,POST,/posture/events/batch,/posture/events/batch,oneTenant(h.handleIngestEventsBatch),kernel,posture.write,events_ingested,posture_event,services/posture/handler.go,57,posture|POST|/posture/events/batch
-posture,POST,/posture/ingest/audit,/posture/ingest/audit,oneTenant(h.handleIngestFromAudit),kernel,posture.write,audit_synced,posture_event,services/posture/handler.go,58,posture|POST|/posture/ingest/audit
-posture,POST,/posture/scan,/posture/scan,oneTenant(h.handleRunScan),kernel,posture.write,scan_run,posture_risk,services/posture/handler.go,59,posture|POST|/posture/scan
-posture,GET,/posture/findings,/posture/findings,oneTenant(h.handleListFindings),kernel,posture.read,findings_listed,posture_finding,services/posture/handler.go,61,posture|GET|/posture/findings
-posture,PUT,/posture/findings/{id}/status,/posture/findings/{param}/status,oneTenant(h.handleUpdateFindingStatus),kernel,posture.write,finding_status_updated,posture_finding,services/posture/handler.go,62,posture|PUT|/posture/findings/{param}/status
-posture,GET,/posture/risk,/posture/risk,oneTenant(h.handleLatestRisk),kernel,posture.read,risk_read,posture_risk,services/posture/handler.go,64,posture|GET|/posture/risk
-posture,GET,/posture/risk/history,/posture/risk/history,oneTenant(h.handleRiskHistory),kernel,posture.read,risk_history_read,posture_risk,services/posture/handler.go,65,posture|GET|/posture/risk/history
-posture,GET,/posture/actions,/posture/actions,oneTenant(h.handleListActions),kernel,posture.read,actions_listed,posture_action,services/posture/handler.go,67,posture|GET|/posture/actions
-posture,POST,/posture/actions/{id}/execute,/posture/actions/{param}/execute,oneTenant(h.handleExecuteAction),kernel,posture.action.execute,action_executed,posture_action,services/posture/handler.go,68,posture|POST|/posture/actions/{param}/execute
-posture,GET,/posture/dashboard,/posture/dashboard,oneTenant(h.handleDashboard),kernel,posture.read,dashboard_viewed,posture_risk,services/posture/handler.go,70,posture|GET|/posture/dashboard
-posture,GET,/leaks/targets,/leaks/targets,h.listLeakTargets,kernel,posture.leak.read,leak_targets_listed,leak_target,services/posture/handler_leak.go,40,posture|GET|/leaks/targets
-posture,POST,/leaks/targets,/leaks/targets,h.createLeakTarget,kernel,posture.leak.write,leak_target_created,leak_target,services/posture/handler_leak.go,41,posture|POST|/leaks/targets
-posture,DELETE,/leaks/targets/{id},/leaks/targets/{param},h.deleteLeakTarget,kernel,posture.leak.write,leak_target_deleted,leak_target,services/posture/handler_leak.go,42,posture|DELETE|/leaks/targets/{param}
-posture,POST,/leaks/targets/{id}/scan,/leaks/targets/{param}/scan,h.triggerLeakScan,kernel,posture.leak.write,leak_scan_started,leak_target,services/posture/handler_leak.go,43,posture|POST|/leaks/targets/{param}/scan
-posture,GET,/leaks/jobs,/leaks/jobs,h.listLeakJobs,kernel,posture.leak.read,leak_jobs_listed,leak_scan,services/posture/handler_leak.go,44,posture|GET|/leaks/jobs
-posture,GET,/leaks/findings,/leaks/findings,h.listLeakFindings,kernel,posture.leak.read,leak_findings_listed,leak_finding,services/posture/handler_leak.go,45,posture|GET|/leaks/findings
-posture,PATCH,/leaks/findings/{id},/leaks/findings/{param},h.updateLeakFinding,kernel,posture.leak.write,leak_finding_updated,leak_finding,services/posture/handler_leak.go,46,posture|PATCH|/leaks/findings/{param}
+posture,GET,/posture/health,/posture/health,h.handleHealth,kernel,authenticated,health_read,,services/posture/handler.go,73,posture|GET|/posture/health
+posture,POST,/posture/events,/posture/events,oneTenant(h.handleIngestEvent),kernel,posture.write,events_ingested,posture_event,services/posture/handler.go,74,posture|POST|/posture/events
+posture,POST,/posture/events/batch,/posture/events/batch,oneTenant(h.handleIngestEventsBatch),kernel,posture.write,events_ingested,posture_event,services/posture/handler.go,75,posture|POST|/posture/events/batch
+posture,POST,/posture/ingest/audit,/posture/ingest/audit,oneTenant(h.handleIngestFromAudit),kernel,posture.write,audit_synced,posture_event,services/posture/handler.go,76,posture|POST|/posture/ingest/audit
+posture,POST,/posture/scan,/posture/scan,oneTenant(h.handleRunScan),kernel,posture.write,scan_run,posture_risk,services/posture/handler.go,77,posture|POST|/posture/scan
+posture,GET,/posture/findings,/posture/findings,oneTenant(h.handleListFindings),kernel,posture.read,findings_listed,posture_finding,services/posture/handler.go,79,posture|GET|/posture/findings
+posture,PUT,/posture/findings/{id}/status,/posture/findings/{param}/status,oneTenant(h.handleUpdateFindingStatus),kernel,posture.write,finding_status_updated,posture_finding,services/posture/handler.go,80,posture|PUT|/posture/findings/{param}/status
+posture,GET,/posture/risk,/posture/risk,oneTenant(h.handleLatestRisk),kernel,posture.read,risk_read,posture_risk,services/posture/handler.go,82,posture|GET|/posture/risk
+posture,GET,/posture/risk/history,/posture/risk/history,oneTenant(h.handleRiskHistory),kernel,posture.read,risk_history_read,posture_risk,services/posture/handler.go,83,posture|GET|/posture/risk/history
+posture,GET,/posture/actions,/posture/actions,oneTenant(h.handleListActions),kernel,posture.read,actions_listed,posture_action,services/posture/handler.go,85,posture|GET|/posture/actions
+posture,POST,/posture/actions/{id}/execute,/posture/actions/{param}/execute,oneTenant(h.handleExecuteAction),kernel,posture.action.execute,action_executed,posture_action,services/posture/handler.go,86,posture|POST|/posture/actions/{param}/execute
+posture,GET,/posture/dashboard,/posture/dashboard,oneTenant(h.handleDashboard),kernel,posture.read,dashboard_viewed,posture_risk,services/posture/handler.go,88,posture|GET|/posture/dashboard
 pqc,GET,/pqc/policy,/pqc/policy,h.handleGetPolicy,mux,,,,services/pqc/handler.go,30,pqc|GET|/pqc/policy
 pqc,PUT,/pqc/policy,/pqc/policy,h.handleUpdatePolicy,mux,,,,services/pqc/handler.go,31,pqc|PUT|/pqc/policy
 pqc,GET,/pqc/inventory,/pqc/inventory,h.handleGetInventory,mux,,,,services/pqc/handler.go,32,pqc|GET|/pqc/inventory
@@ -798,8 +779,7 @@ pqc,POST,/pqc/migration/plans/{id}/rollback,/pqc/migration/plans/{param}/rollbac
 pqc,GET,/pqc/migration/plans/{id}/runs,/pqc/migration/plans/{param}/runs,h.handleListRuns,mux,,,,services/pqc/handler.go,44,pqc|GET|/pqc/migration/plans/{param}/runs
 pqc,GET,/pqc/timeline,/pqc/timeline,h.handleTimeline,mux,,,,services/pqc/handler.go,46,pqc|GET|/pqc/timeline
 pqc,GET,/pqc/cbom/export,/pqc/cbom/export,h.handleExportCBOM,mux,,,,services/pqc/handler.go,47,pqc|GET|/pqc/cbom/export
-reconciler,GET,/reconciler/status,/reconciler/status,<inline func>,mux,,,,services/reconciler/main.go,63,reconciler|GET|/reconciler/status
-reconciler,GET,/healthz,/healthz,<inline func>,mux,,,,services/reconciler/main.go,66,reconciler|GET|/healthz
+reconciler,GET,/reconciler/status,/reconciler/status,<inline func>,kernel,health.read,status_read,reconciler,services/reconciler/handler.go,20,reconciler|GET|/reconciler/status
 reporting,GET,/alerts,/alerts,h.alerts,kernel,reporting.read,alerts_listed,alert,services/reporting/handler.go,92,reporting|GET|/alerts
 reporting,GET,/alerts/feed,/alerts/feed,h.alertsFeed,kernel,reporting.read,alerts_feed_streamed,alert,services/reporting/handler.go,93,reporting|GET|/alerts/feed
 reporting,GET,/alerts/unread,/alerts/unread,h.alertsUnread,kernel,reporting.read,alerts_unread_counted,alert,services/reporting/handler.go,94,reporting|GET|/alerts/unread
@@ -884,9 +864,8 @@ signing,GET,/signing/records,/signing/records,h.handleListRecords,mux,,,,service
 signing,POST,/signing/blob,/signing/blob,h.handleSignBlob,mux,,,,services/signing/handler.go,38,signing|POST|/signing/blob
 signing,POST,/signing/git,/signing/git,h.handleSignGit,mux,,,,services/signing/handler.go,39,signing|POST|/signing/git
 signing,POST,/signing/verify,/signing/verify,h.handleVerify,mux,,,,services/signing/handler.go,40,signing|POST|/signing/verify
-watchdog,GET,/watchdog/heartbeats,/watchdog/heartbeats,<inline func>,mux,,,,services/watchdog/main.go,48,watchdog|GET|/watchdog/heartbeats
-watchdog,GET,/watchdog/incidents,/watchdog/incidents,<inline func>,mux,,,,services/watchdog/main.go,51,watchdog|GET|/watchdog/incidents
-watchdog,GET,/healthz,/healthz,<inline func>,mux,,,,services/watchdog/main.go,54,watchdog|GET|/healthz
+watchdog,GET,/watchdog/heartbeats,/watchdog/heartbeats,<inline func>,kernel,health.read,heartbeats_listed,service_heartbeat,services/watchdog/handler.go,24,watchdog|GET|/watchdog/heartbeats
+watchdog,GET,/watchdog/incidents,/watchdog/incidents,<inline func>,kernel,health.read,incidents_listed,watchdog_incident,services/watchdog/handler.go,30,watchdog|GET|/watchdog/incidents
 workload,GET,/workload-identity/settings,/workload-identity/settings,h.handleGetSettings,mux,,,,services/workload/handler.go,26,workload|GET|/workload-identity/settings
 workload,PUT,/workload-identity/settings,/workload-identity/settings,h.handlePutSettings,mux,,,,services/workload/handler.go,27,workload|PUT|/workload-identity/settings
 workload,GET,/workload-identity/summary,/workload-identity/summary,h.handleGetSummary,mux,,,,services/workload/handler.go,28,workload|GET|/workload-identity/summary

@@ -14,6 +14,7 @@ import (
 var errNotFound = errors.New("not found")
 
 type Store interface {
+	ListKnownTenants(ctx context.Context) ([]string, error)
 	CreateAlert(ctx context.Context, item Alert) error
 	UpdateAlertDedup(ctx context.Context, tenantID string, id string, addCount int, channels []string, channelStatus map[string]string) error
 	GetAlert(ctx context.Context, tenantID string, id string) (Alert, error)
@@ -546,6 +547,30 @@ ON CONFLICT (tenant_id, name) DO UPDATE SET
 	updated_at = CURRENT_TIMESTAMP
 `, item.TenantID, strings.ToLower(strings.TrimSpace(item.Name)), item.Enabled, mustJSON(item.Config, "{}"))
 	return err
+}
+
+// ListKnownTenants returns every tenant with a row in any reporting table.
+func (s *SQLStore) ListKnownTenants(ctx context.Context) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id FROM reporting_alerts
+UNION SELECT tenant_id FROM reporting_alert_rules
+UNION SELECT tenant_id FROM reporting_severity_overrides
+UNION SELECT tenant_id FROM reporting_notification_channels
+UNION SELECT tenant_id FROM reporting_report_jobs
+UNION SELECT tenant_id FROM reporting_scheduled_reports`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
 
 func (s *SQLStore) ListChannels(ctx context.Context, tenantID string) ([]NotificationChannel, error) {

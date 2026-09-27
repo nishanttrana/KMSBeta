@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/route"
 )
 
@@ -34,12 +36,28 @@ func NewHandler(svc *Service) *Handler {
 	return h
 }
 
-// newRouter registers every posture route, engine and leak scanner, on one
-// pkg/route kernel router.
+// postureEmitter sends kernel events through posture's audit client,
+// resolved per call so it can be wired after the routes are built.
+type postureEmitter struct{ h *Handler }
+
+func (e postureEmitter) Emit(ctx context.Context, action string, evt pkgaudit.Event) error {
+	if e.h.audit == nil {
+		return nil
+	}
+	return e.h.audit.Emit(ctx, action, evt)
+}
+
+// SetAuditClient wires the unified audit client used by kernel routes.
+func (h *Handler) SetAuditClient(c *pkgaudit.Client) {
+	if c != nil {
+		h.audit = c
+	}
+}
+
+// newRouter registers every posture route on one pkg/route kernel router.
 func (h *Handler) newRouter(audit route.Emitter) *route.Router {
 	r := route.New("posture", audit, nil)
 	h.postureRoutes(r)
-	h.leakRoutes(r)
 	return r
 }
 

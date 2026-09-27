@@ -44,9 +44,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   discovery: "crypto_discovery",
   // Enterprise Advanced Features
   key_analytics: "key_analytics",
-  // Unified console (Triage + folded-in canary & scan-target config):
-  // visible if either underlying sensor is enabled.
-  threat_exposure: ["threat_protection", "posture_management"],
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {

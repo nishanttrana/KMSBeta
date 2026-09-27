@@ -1,28 +1,33 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/route"
 )
 
-// CanaryKey represents a honeypot key that triggers alerts when accessed.
+// A canary key is a decoy key ID. It holds no material and resolves to no
+// key: an ID a legitimate caller would never use, planted where an attacker
+// would find it (a config file, a vault entry, a wiki page). Any reference to
+// it through the key API is recorded as a trip at GetKey's not-found branch
+// (noteCanaryProbe), raises a critical threat signal and returns not-found,
+// so the prober learns nothing. Its ID is minted like a real key ID so it
+// can't be told apart.
 type CanaryKey struct {
-	ID          string            `json:"id"`
-	TenantID    string            `json:"tenant_id"`
-	Name        string            `json:"name"`
-	Algorithm   string            `json:"algorithm"`
-	Purpose     string            `json:"purpose"`
-	TripCount   int               `json:"trip_count"`
-	LastTripped *time.Time        `json:"last_tripped,omitempty"`
-	CreatedAt   time.Time         `json:"created_at"`
-	Active      bool              `json:"active"`
-	NotifyEmail string            `json:"notify_email"`
-	Metadata    map[string]string `json:"metadata"`
+	ID          string     `json:"id"`
+	TenantID    string     `json:"tenant_id"`
+	Name        string     `json:"name"`
+	Active      bool       `json:"active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	TripCount   int        `json:"trip_count"`
+	LastTripped *time.Time `json:"last_tripped,omitempty"`
 }
 
-// CanaryTripEvent records each time a canary key is accessed.
+// CanaryTripEvent is one recorded probe of a canary key.
 type CanaryTripEvent struct {
 	ID         string    `json:"id"`
 	CanaryID   string    `json:"canary_id"`
@@ -35,233 +40,81 @@ type CanaryTripEvent struct {
 	RawRequest string    `json:"raw_request"`
 }
 
-// handleListCanaryKeys lists all canary keys for the tenant.
-func (h *Handler) handleListCanaryKeys(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	keys, err := h.svc.store.ListCanaryKeys(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_canary_keys_failed", "failed to list canary keys", reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": keys, "canary_keys": keys, "request_id": reqID})
+// canaryRouter serves canary keys through the pkg/route kernel (tenant,
+// permission and audit by construction); the legacy mux mounts it.
+func (h *Handler) canaryRouter(audit route.Emitter) *route.Router {
+	r := route.New("key", audit, nil)
+	r.Handle("GET /canary/keys", route.Spec{Action: "canary_keys_listed", Permission: "key.canary.read", Resource: "canary_key"}, h.listCanaryKeys)
+	r.Handle("POST /canary/keys", route.Spec{Action: "canary_key_created", Permission: "key.canary.write", Resource: "canary_key"}, h.createCanaryKey)
+	r.Handle("GET /canary/keys/{id}/trips", route.Spec{Action: "canary_trips_listed", Permission: "key.canary.read", Resource: "canary_key", TargetParam: "id"}, h.listCanaryTrips)
+	r.Handle("DELETE /canary/keys/{id}", route.Spec{Action: "canary_key_deactivated", Permission: "key.canary.write", Resource: "canary_key", TargetParam: "id", Severity: "warning"}, h.deactivateCanaryKey)
+	return r
 }
 
-// handleCreateCanaryKey creates a new canary key for the tenant.
-func (h *Handler) handleCreateCanaryKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) listCanaryKeys(c *route.Call) {
+	keys, err := h.svc.store.ListCanaryKeys(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "list_canary_keys_failed", err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": keys})
+}
+
+func (h *Handler) createCanaryKey(c *route.Call) {
 	var req struct {
-		TenantID    string            `json:"tenant_id"`
-		Name        string            `json:"name"`
-		Label       string            `json:"label"`
-		Algorithm   string            `json:"algorithm"`
-		Purpose     string            `json:"purpose"`
-		NotifyEmail string            `json:"notify_email"`
-		Metadata    map[string]string `json:"metadata"`
+		TenantID string `json:"tenant_id"` // enforced by the kernel
+		Name     string `json:"name"`
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+	if !c.Decode(&req) {
 		return
 	}
-	tenantID := req.TenantID
-	if tenantID == "" {
-		tenantID = mustTenant(r, reqID, w)
-		if tenantID == "" {
-			return
-		}
-	}
-	if req.Name == "" {
-		req.Name = strings.TrimSpace(req.Label)
-	}
-	if req.Name == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "name is required", reqID, tenantID)
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		c.Error(http.StatusBadRequest, "bad_request", "name is required")
 		return
 	}
-	algo := req.Algorithm
-	if algo == "" {
-		algo = "AES-256-GCM"
-	}
-	purpose := req.Purpose
-	if purpose == "" {
-		purpose = "detect_exfiltration"
-	}
-	if req.Metadata == nil {
-		req.Metadata = map[string]string{}
-	}
-
-	key := CanaryKey{
-		ID:          newID("canary"),
-		TenantID:    tenantID,
-		Name:        req.Name,
-		Algorithm:   algo,
-		Purpose:     purpose,
-		Active:      true,
-		NotifyEmail: req.NotifyEmail,
-		Metadata:    req.Metadata,
-	}
-
-	if err := h.svc.store.CreateCanaryKey(r.Context(), key); err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_canary_key_failed", "failed to create canary key", reqID, tenantID)
+	key := CanaryKey{ID: newID("key"), TenantID: c.Tenant, Name: name, Active: true}
+	if err := h.svc.store.CreateCanaryKey(c.R.Context(), key); err != nil {
+		c.Error(http.StatusInternalServerError, "create_canary_key_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"data": key, "request_id": reqID})
-}
-
-// handleGetCanaryKey returns details for a single canary key.
-func (h *Handler) handleGetCanaryKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	canaryID := strings.TrimSpace(r.PathValue("id"))
-	if canaryID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "canary id is required", reqID, tenantID)
-		return
-	}
-	key, err := h.svc.store.GetCanaryKey(r.Context(), tenantID, canaryID)
+	created, err := h.svc.store.GetCanaryKey(c.R.Context(), c.Tenant, key.ID)
 	if err != nil {
-		if err == errStoreNotFound {
-			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
-			return
-		}
-		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", "failed to retrieve canary key", reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "create_canary_key_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": key, "request_id": reqID})
+	c.Target(created.ID)
+	c.Detail("name", created.Name)
+	c.JSON(http.StatusCreated, map[string]interface{}{"item": created})
 }
 
-// handleDeleteCanaryKey deactivates a canary key.
-func (h *Handler) handleDeleteCanaryKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listCanaryTrips(c *route.Call) {
+	id := c.R.PathValue("id")
+	if _, err := h.svc.store.GetCanaryKey(c.R.Context(), c.Tenant, id); err != nil {
+		h.canaryLookupError(c, err)
 		return
 	}
-	canaryID := strings.TrimSpace(r.PathValue("id"))
-	if canaryID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "canary id is required", reqID, tenantID)
-		return
-	}
-	if err := h.svc.store.DeleteCanaryKey(r.Context(), tenantID, canaryID); err != nil {
-		if err == errStoreNotFound {
-			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
-			return
-		}
-		writeErr(w, http.StatusInternalServerError, "delete_canary_key_failed", "failed to delete canary key", reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]string{"status": "deactivated"}, "request_id": reqID})
-}
-
-// handleTripCanaryKey manually trips a canary key (for testing).
-func (h *Handler) handleTripCanaryKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	canaryID := strings.TrimSpace(r.PathValue("id"))
-	if canaryID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "canary id is required", reqID, tenantID)
-		return
-	}
-
-	// Verify the canary key exists.
-	_, err := h.svc.store.GetCanaryKey(r.Context(), tenantID, canaryID)
+	limit, _ := strconv.Atoi(c.R.URL.Query().Get("limit"))
+	trips, err := h.svc.store.ListCanaryTrips(c.R.Context(), c.Tenant, id, limit)
 	if err != nil {
-		if err == errStoreNotFound {
-			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
-			return
-		}
-		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", "failed to retrieve canary key", reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "list_canary_trips_failed", err.Error())
 		return
 	}
-
-	// Derive actor info from request context.
-	actor := accessActorFromHTTPRequest(r)
-	actorID := actor.SubjectID
-	if actorID == "" {
-		actorID = "manual_test"
-	}
-	actorIP := r.Header.Get("X-Forwarded-For")
-	if actorIP == "" {
-		actorIP = r.RemoteAddr
-	}
-
-	event := CanaryTripEvent{
-		ID:         newID("ctrip"),
-		CanaryID:   canaryID,
-		TenantID:   tenantID,
-		ActorID:    actorID,
-		ActorIP:    actorIP,
-		UserAgent:  r.Header.Get("User-Agent"),
-		TrippedAt:  time.Now().UTC(),
-		Severity:   "critical",
-		RawRequest: "POST /canary/" + canaryID + "/trip",
-	}
-
-	if err := h.svc.store.RecordCanaryTrip(r.Context(), event); err != nil {
-		writeErr(w, http.StatusInternalServerError, "record_canary_trip_failed", err.Error(), reqID, tenantID)
-		return
-	}
-
-	// Publish audit event for the canary trip.
-	if h.svc.events != nil {
-		_ = publishAuditEvent(r.Context(), h.svc.events, "audit.keycore.canary_tripped", tenantID, map[string]any{
-			"canary_id":  canaryID,
-			"actor_id":   actorID,
-			"actor_ip":   actorIP,
-			"severity":   "critical",
-			"request_id": reqID,
-			"tripped_at": event.TrippedAt,
-		})
-	}
-
-	writeJSON(w, http.StatusCreated, map[string]any{"data": event, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": trips})
 }
 
-// handleListCanaryTrips lists trip events for a canary key.
-func (h *Handler) handleListCanaryTrips(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) deactivateCanaryKey(c *route.Call) {
+	if err := h.svc.store.DeactivateCanaryKey(c.R.Context(), c.Tenant, c.R.PathValue("id")); err != nil {
+		h.canaryLookupError(c, err)
 		return
 	}
-	canaryID := strings.TrimSpace(r.PathValue("id"))
-	if canaryID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "canary id is required", reqID, tenantID)
-		return
-	}
-	limitStr := r.URL.Query().Get("limit")
-	limit := 50
-	if limitStr != "" {
-		if v, err := strconv.Atoi(limitStr); err == nil && v > 0 {
-			limit = v
-		}
-	}
-	trips, err := h.svc.store.ListCanaryTrips(r.Context(), tenantID, canaryID, limit)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_canary_trips_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": trips, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deactivated"})
 }
 
-// handleGetCanarySummary returns a summary of canary key activity for the tenant.
-func (h *Handler) handleGetCanarySummary(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) canaryLookupError(c *route.Call, err error) {
+	if errors.Is(err, errStoreNotFound) {
+		c.Error(http.StatusNotFound, "not_found", "canary key not found")
 		return
 	}
-	summary, err := h.svc.store.GetCanarySummary(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "get_canary_summary_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": summary, "request_id": reqID})
+	c.Error(http.StatusInternalServerError, "canary_lookup_failed", err.Error())
 }

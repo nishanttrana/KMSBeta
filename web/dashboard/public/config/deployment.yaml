@@ -54,4 +54,3 @@ spec:
     advanced_encryption: true
     key_binding: true
     key_metadata: true
-    threat_protection: true

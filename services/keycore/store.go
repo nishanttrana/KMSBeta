@@ -159,23 +159,15 @@ type Store interface {
 	CountKeyUsageBetween(ctx context.Context, tenantID, keyID string, from, to time.Time) (int, error)
 	LastKeyUsageBefore(ctx context.Context, tenantID, keyID string, before time.Time) (time.Time, error)
 	CreateThreatSignal(ctx context.Context, sig ThreatSignal) (bool, error)
-	ListThreatSignals(ctx context.Context, tenantID string, limit int) ([]ThreatSignal, error)
-	AckThreatSignal(ctx context.Context, tenantID, id, ackedBy string) error
-
-	// External credential -> key bindings (correlation join keys)
-	UpsertCredentialBinding(ctx context.Context, b CredentialBinding) (CredentialBinding, error)
-	ListCredentialBindingsByKey(ctx context.Context, tenantID, keyID string) ([]CredentialBinding, error)
-	DeleteCredentialBinding(ctx context.Context, tenantID, id string) error
-	ResolveCredentialBindings(ctx context.Context, tenantID string, fingerprints []string) (map[string]CredentialBinding, error)
+	ListUsageTenants(ctx context.Context, since time.Time) ([]string, error)
 
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
 	CreateCanaryKey(ctx context.Context, key CanaryKey) error
 	GetCanaryKey(ctx context.Context, tenantID, id string) (CanaryKey, error)
-	DeleteCanaryKey(ctx context.Context, tenantID, id string) error
+	DeactivateCanaryKey(ctx context.Context, tenantID, id string) error
 	RecordCanaryTrip(ctx context.Context, event CanaryTripEvent) error
 	ListCanaryTrips(ctx context.Context, tenantID, canaryID string, limit int) ([]CanaryTripEvent, error)
-	GetCanarySummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
 }
 
 type SQLStore struct {

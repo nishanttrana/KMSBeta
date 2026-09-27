@@ -93,9 +93,8 @@ func expectRefused(t *testing.T, rec *routetest.Recorder, rr *httptest.ResponseR
 	}
 }
 
-// Every posture route, engine and leak scanner, refuses and audits an
-// unauthenticated caller, a caller without the permission and a caller
-// naming another tenant.
+// Every posture route refuses and audits an unauthenticated caller, a caller
+// without the permission and a caller naming another tenant.
 func TestPostureRoutesRefusalsAudited(t *testing.T) {
 	h, _, rec := newPostureHandler(t, nil)
 	routetest.RefusalsAudited(t, h.newRouter(rec), rec)

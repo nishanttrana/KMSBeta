@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"time"
 )
@@ -116,67 +115,37 @@ ORDER BY occurred_at DESC LIMIT 1`,
 	return ts.Time, nil
 }
 
+// ListUsageTenants returns the tenants with key usage on this node since t.
+func (s *SQLStore) ListUsageTenants(ctx context.Context, since time.Time) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx,
+		`SELECT DISTINCT tenant_id FROM key_usage_events WHERE occurred_at >= $1`, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // CreateThreatSignal inserts a signal; returns false if an identical
 // detection (same dedupe key) already exists for the tenant.
 func (s *SQLStore) CreateThreatSignal(ctx context.Context, sig ThreatSignal) (bool, error) {
-	metaRaw, _ := json.Marshal(sig.Metadata)
-	if sig.Metadata == nil {
-		metaRaw = []byte("{}")
-	}
 	res, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO threat_signals (id, tenant_id, signal_type, key_id, actor_id, severity, description, dedupe_key, detected_at, metadata)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+INSERT INTO threat_signals (id, tenant_id, signal_type, key_id, actor_id, severity, description, dedupe_key, detected_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 ON CONFLICT (tenant_id, dedupe_key) DO NOTHING`,
 		sig.ID, sig.TenantID, sig.SignalType, sig.KeyID, sig.ActorID, sig.Severity,
-		sig.Description, sig.DedupeKey, sig.DetectedAt, metaRaw)
+		sig.Description, sig.DedupeKey, sig.DetectedAt)
 	if err != nil {
 		return false, err
 	}
 	n, _ := res.RowsAffected()
 	return n > 0, nil
-}
-
-func (s *SQLStore) ListThreatSignals(ctx context.Context, tenantID string, limit int) ([]ThreatSignal, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, signal_type, key_id, actor_id, severity, description, dedupe_key,
-       detected_at, acknowledged_at, acknowledged_by, metadata
-FROM threat_signals WHERE tenant_id=$1
-ORDER BY detected_at DESC LIMIT $2`, tenantID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []ThreatSignal
-	for rows.Next() {
-		var sig ThreatSignal
-		var ack sql.NullTime
-		var metaRaw []byte
-		if err := rows.Scan(&sig.ID, &sig.TenantID, &sig.SignalType, &sig.KeyID, &sig.ActorID,
-			&sig.Severity, &sig.Description, &sig.DedupeKey, &sig.DetectedAt, &ack,
-			&sig.AcknowledgedBy, &metaRaw); err != nil {
-			return nil, err
-		}
-		if ack.Valid {
-			t := ack.Time
-			sig.AcknowledgedAt = &t
-		}
-		_ = json.Unmarshal(metaRaw, &sig.Metadata)
-		out = append(out, sig)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) AckThreatSignal(ctx context.Context, tenantID, id, ackedBy string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
-UPDATE threat_signals SET acknowledged_at=$1, acknowledged_by=$2
-WHERE tenant_id=$3 AND id=$4 AND acknowledged_at IS NULL`,
-		time.Now().UTC(), ackedBy, tenantID, id)
-	if err != nil {
-		return err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return errStoreNotFound
-	}
-	return nil
 }

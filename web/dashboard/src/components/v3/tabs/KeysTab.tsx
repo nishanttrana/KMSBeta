@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, Atom, Check, Cog, ExternalLink, MoreVertical, PenTool, Plus, RefreshCcw, X } from "lucide-react";
+import { ArrowDownToLine, Atom, Check, Cog, ExternalLink, MoreVertical, PenTool, Plus, Radar, RefreshCcw, X } from "lucide-react";
 import {
   activateKey,
   createKey,
@@ -33,6 +33,7 @@ import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt
 import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
 import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
 import { KeyHistoryPanel } from "../../../modules/keys/KeyHistoryPanel";
+import { CanaryKeysPanel } from "./CanaryKeysPanel";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -1796,6 +1797,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Atom size={13} strokeWidth={2.1}/>PQC Key</span>
           </Btn>
+          <Btn onClick={()=>setModal("canary")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Radar size={13} strokeWidth={2.1}/>Canary Key</span>
+          </Btn>
         </div>
       </div>
       <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>
@@ -2742,6 +2746,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     </Modal>
 
     {/*  GENERATE PQC KEY MODAL  */}
+    <Modal open={modal==="canary"} onClose={()=>setModal(null)} title="Canary Keys" width={820}>
+      <CanaryKeysPanel session={session}/>
+    </Modal>
     <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" width={920}>
       <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purple}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
       <Row2>

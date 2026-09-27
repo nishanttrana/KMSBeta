@@ -39,7 +39,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Edge & IoT Key Management | **Preview**: records only; there is no edge runtime | `/enterprise/edge/agents`, `/leases`, `/receipts` |
 | Fine-Grained Key Sharing | **Preview**: records only; use key access grants for enforced sharing | `/enterprise/sharing/grants` |
 | Key Metadata Management | **Preview**: records only; not applied at key creation | `/enterprise/metadata/profiles` |
-| Advanced Threat Protection | Implemented: signal intake, canary trips, compromise workflow, DSPM findings | `/enterprise/threat/signals`, canary trips, compromise workflow, DSPM findings |
+| Advanced Threat Protection | Implemented: signal intake, scheduled key-usage threat detection and canary keys raised as Posture findings and Reporting alerts, compromise workflow, DSPM findings | `/enterprise/threat/signals`, `/canary/keys`, `audit.keycore.threat_signal_raised`, compromise workflow, DSPM findings |
 
 ---
 

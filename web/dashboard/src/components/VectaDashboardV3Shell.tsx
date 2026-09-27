@@ -41,7 +41,6 @@ import {
   Server,
   RefreshCw,
   Archive,
-  ShieldAlert,
   Info,
 } from "lucide-react";
 
@@ -103,7 +102,6 @@ const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ de
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
-const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
 
 type Props = {
   session: AuthSession;
@@ -207,7 +205,6 @@ const TABS: Record<string, any> = {
   playbooks: PlaybooksTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
-  threat_exposure: ThreatExposureTab,
 };
 
 const TITLES: Record<string, string> = {
@@ -249,7 +246,6 @@ const TITLES: Record<string, string> = {
   playbooks: "Playbooks",
   // Enterprise Advanced Features
   key_analytics: "Key Analytics",
-  threat_exposure: "Threat & Exposure",
 };
 
 const NAV = [
@@ -283,7 +279,6 @@ const NAV = [
     { id: "approvals", icon: CheckCircle2, label: "Approvals" },
     { id: "posture", icon: Gauge, label: "Posture" },
     { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
-    { id: "threat_exposure", icon: ShieldAlert, label: "Threat & Exposure" },
     { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
     { id: "playbooks", icon: Play, label: "Playbooks" },
   ]},

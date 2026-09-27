@@ -271,27 +271,8 @@ func (h *Handler) routes() *http.ServeMux {
 	// Key Material Verification (real integrity check)
 	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 
-	// External credential -> key bindings (correlation join keys)
-	mux.HandleFunc("GET /keys/{id}/credential-bindings", h.handleListCredentialBindings)
-	mux.HandleFunc("POST /keys/{id}/credential-bindings", h.handleCreateCredentialBinding)
-	mux.HandleFunc("DELETE /credential-bindings/{binding_id}", h.handleDeleteCredentialBinding)
-	mux.HandleFunc("POST /credential-bindings/resolve", h.handleResolveCredentialBindings)
-
-	// Threat Detection (rule-based signals over the key usage trail)
-	mux.HandleFunc("GET /threat/signals", h.handleListThreatSignals)
-	mux.HandleFunc("POST /threat/signals/{id}/ack", h.handleAckThreatSignal)
-	mux.HandleFunc("GET /threat/dashboard", h.handleThreatDashboard)
-
-	// Canary / Honeypot Keys
-	mux.HandleFunc("GET /canary/keys", h.handleListCanaryKeys)
-	mux.HandleFunc("POST /canary/keys", h.handleCreateCanaryKey)
-	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
-	mux.HandleFunc("GET /canary", h.handleListCanaryKeys)
-	mux.HandleFunc("POST /canary", h.handleCreateCanaryKey)
-	mux.HandleFunc("GET /canary/{id}", h.handleGetCanaryKey)
-	mux.HandleFunc("DELETE /canary/{id}", h.handleDeleteCanaryKey)
-	mux.HandleFunc("POST /canary/{id}/trip", h.handleTripCanaryKey)
-	mux.HandleFunc("GET /canary/{id}/trips", h.handleListCanaryTrips)
+	// Canary (decoy) keys
+	h.canaryRouter(kernelEmitter{h}).MountOn(mux)
 
 	// FIPS 140-3 self-test and zeroization verification
 	mux.HandleFunc("POST /fips/self-test", h.handleFIPSSelfTest)
@@ -2251,9 +2232,7 @@ func isSensitiveKeycoreRoute(method string, path string) bool {
 		strings.HasPrefix(p, "/inventory") ||
 		strings.HasPrefix(p, "/compromise") ||
 		strings.HasPrefix(p, "/analytics") ||
-		strings.HasPrefix(p, "/threat") ||
 		strings.HasPrefix(p, "/canary") ||
-		strings.HasPrefix(p, "/credential-bindings") ||
 		strings.HasPrefix(p, "/enterprise") {
 		return true
 	}

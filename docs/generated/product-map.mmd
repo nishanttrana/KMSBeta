@@ -76,10 +76,6 @@ flowchart LR
   tab_compliance --> svc_reporting
   tab_compliance --> svc_signing
   tab_compliance --> svc_workload
-  tab_threat_exposure["Threat & Exposure"]
-  UI --> tab_threat_exposure
-  tab_threat_exposure --> svc_keycore
-  tab_threat_exposure --> svc_posture
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
@@ -130,9 +126,9 @@ flowchart LR
   svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (175 routes)"]
+  svc_keycore["keycore (163 routes)"]
   svc_payment["payment (42 routes)"]
-  svc_posture["posture (19 routes)"]
+  svc_posture["posture (12 routes)"]
   svc_pqc["pqc (16 routes)"]
   svc_reporting["reporting (33 routes)"]
   svc_sbom["sbom (18 routes)"]

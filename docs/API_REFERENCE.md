@@ -655,32 +655,50 @@ webhooks. Delivery runs on the node that ingested the event.
 
 ---
 
-### Leak scanner: /svc/posture/leaks/*
+### Canary keys: /svc/keycore/canary/keys
+
+A canary key is a decoy key ID with no material. Any reference to it through
+the key API (`GetKey`'s not-found path) returns `404` to the caller, records a
+trip in this node's trip log, emits `audit.keycore.canary_tripped` and raises
+a critical `canary_tripped` threat signal. Its ID is minted like a real key ID
+(`key_…`). Created from **Keys → Canary Key**.
 
 | Route | Permission | Audit |
 |---|---|---|
-| `GET /leaks/targets` | `posture.leak.read` | `audit.posture.leak_targets_listed` |
-| `POST /leaks/targets` | `posture.leak.write` | `audit.posture.leak_target_created` |
-| `DELETE /leaks/targets/{id}` | `posture.leak.write` | `audit.posture.leak_target_deleted` |
-| `POST /leaks/targets/{id}/scan` | `posture.leak.write` | `audit.posture.leak_scan_started`; the outcome is `audit.posture.leak_scan_completed` |
-| `GET /leaks/jobs` | `posture.leak.read` | `audit.posture.leak_jobs_listed` |
-| `GET /leaks/findings` | `posture.leak.read` | `audit.posture.leak_findings_listed` |
-| `PATCH /leaks/findings/{id}` | `posture.leak.write` | `audit.posture.leak_finding_updated` |
+| `GET /canary/keys` | `key.canary.read` | `audit.key.canary_keys_listed` |
+| `POST /canary/keys` | `key.canary.write` | `audit.key.canary_key_created` (`name`) |
+| `GET /canary/keys/{id}/trips` | `key.canary.read` | `audit.key.canary_trips_listed` |
+| `DELETE /canary/keys/{id}` | `key.canary.write` | `audit.key.canary_key_deactivated` (warning) |
 
-- **Target `type`:** `git_repo`, `container_image`, `log_stream`,
-  `s3_bucket` or `env_file`.
-- **Scanned content:** either the optional scan body `{content, filename}`,
-  or files at the target's path under the server's `LEAK_SCAN_ROOT`. Remote
-  URLs are not fetched: the job fails with that reason, and never invents
-  findings.
-- **Findings:** keep a redacted preview and a SHA-256 fingerprint only.
-- **`leak_scan_completed`:** carries `status`, `findings` and `job_id`. Its
-  severity is warning when there are findings or the scan failed.
-- **Finding update body:** `status` (`open`, `acknowledged`, `resolved`,
-  `false_positive`) and optional `notes`. `resolved_by` is the verified
-  caller; a `resolved_by` in the body is rejected.
-- **Disabled target:** a scan request is refused (`409`, `reason:
-  target_disabled`).
+- **Create body:** `{"name": "..."}`. Response `item`: `id`, `name`,
+  `active`, `created_at`, `trip_count`, `last_tripped`.
+- **Trip counts** come from the node-local trip log, so a member shows the
+  trips it served. Every trip on every node reaches Posture and Reporting
+  through the audit pipeline.
+- **Removed in 2.0.0-beta:** `GET|POST /canary`, `GET|DELETE /canary/{id}`,
+  `GET /canary/{id}/trips`, `GET /canary/summary`, and
+  `POST /canary/{id}/trip`, which recorded a trip that never happened.
+
+### Threat detection (keycore → posture → reporting)
+
+Keycore's `ThreatSweeper` evaluates four rules over each node's key usage
+trail every minute: `new_actor`, `volume_spike`, `dormant_key_activity`, and
+`canary_tripped` (raised at probe time). Each new signal emits
+`audit.keycore.threat_signal_raised` with `signal_id`, `signal_type`,
+`key_id`, `actor_id`, `severity` (`critical`, `high`, `medium`),
+`description` and `detected_at`. There is no threat API:
+
+- **Posture** turns each signal into one finding (`engine: corrective`,
+  `finding_type: threat_<signal_type>`, evidence names the signal and audit
+  event), audited as `audit.posture.threat_finding_raised`. Acknowledge or
+  resolve it with `PUT /posture/findings/{id}/status`; resolving is final.
+- **Reporting** raises `critical` and `high` signals as alerts, which the
+  header's unread count includes.
+- **Removed in 2.0.0-beta:** `GET /threat/signals`,
+  `POST /threat/signals/{id}/ack`, `GET /threat/dashboard`, the
+  `/credential-bindings` routes and `/keys/{id}/credential-bindings`, the
+  `credential_binding` field of encrypt and wrap requests, and the posture
+  leak scanner (`/leaks/*`).
 
 ---
 
@@ -1311,9 +1329,9 @@ Body: `frameworkId`, `templateId`, `scope`, `recompute`. Response 202: assessmen
 
 ## Service 7: Posture (`/svc/posture/`)
 
-Risk findings, risk drivers, blast radius, remediation actions. Every route,
-engine and [leak scanner](#leak-scanner-svcpostureleaks) alike, is on the
-`pkg/route` kernel (1.32.0-beta): a verified bearer token is required, the
+Risk findings, risk drivers, blast radius, remediation actions, and findings
+for keycore's [threat signals](#threat-detection-keycore--posture--reporting).
+Every route is on the `pkg/route` kernel (1.32.0-beta): a verified bearer token is required, the
 tenant is the token's (a `tenant_id` query, `X-Tenant-ID` header or body
 `tenant_id` must match it), and each request is audited as
 `audit.posture.<action>`. Refusals are audited under the same action with
@@ -2790,6 +2808,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 |--------|--------|
 | audit.auth.* | Authentication and identity |
 | audit.key.* | Key lifecycle and crypto operations |
+| audit.keycore.* | Canary trips and threat signals |
 | audit.cert.* | Certificate and CA operations |
 | audit.governance.* | Approvals, encrypted backup/restore, platform FIPS mode |
 | audit.backup.* | Backup scheduler (preview): policy changes and refused runs/restores |
@@ -2797,7 +2816,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
 | audit.compliance.* | Compliance assessments |
-| audit.posture.* | Posture engine (reads, scans, event ingest, action execution) and leak scanner |
+| audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
 | audit.scim.* | SCIM provisioning |
 | audit.mpc.* | MPC ceremonies |
 | audit.signing.* | Artifact signing |
@@ -2829,7 +2848,8 @@ Selected events with dedicated audit classification:
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
-- `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
+- `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
+- `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
 - `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
@@ -3506,16 +3526,10 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/analytics/trends`
 - `GET /svc/keycore/analytics/usage`
 - `GET /svc/keycore/attestation/public-key`
-- `GET /svc/keycore/canary`
-- `POST /svc/keycore/canary`
-- `POST /svc/keycore/canary/`
 - `GET /svc/keycore/canary/keys`
 - `POST /svc/keycore/canary/keys`
-- `GET /svc/keycore/canary/summary`
-- `DELETE /svc/keycore/canary/{id}`
-- `GET /svc/keycore/canary/{id}`
-- `POST /svc/keycore/canary/{id}/trip`
-- `GET /svc/keycore/canary/{id}/trips`
+- `DELETE /svc/keycore/canary/keys/{id}`
+- `GET /svc/keycore/canary/keys/{id}/trips`
 - `GET /svc/keycore/ceremony`
 - `POST /svc/keycore/ceremony`
 - `GET /svc/keycore/ceremony/guardians`
@@ -3532,8 +3546,6 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/compromise/events`
 - `POST /svc/keycore/compromise/events`
 - `POST /svc/keycore/compromise/events/{id}/status`
-- `POST /svc/keycore/credential-bindings/resolve`
-- `DELETE /svc/keycore/credential-bindings/{binding_id}`
 - `POST /svc/keycore/crypto/hash`
 - `POST /svc/keycore/crypto/random`
 - `POST /svc/keycore/enterprise/advanced-encryption/modes`
@@ -3595,8 +3607,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/attest`
 - `POST /svc/keycore/keys/{id}/attested-release`
 - `GET /svc/keycore/keys/{id}/consumers`
-- `GET /svc/keycore/keys/{id}/credential-bindings`
-- `POST /svc/keycore/keys/{id}/credential-bindings`
 - `POST /svc/keycore/keys/{id}/deactivate`
 - `POST /svc/keycore/keys/{id}/decrypt`
 - `POST /svc/keycore/keys/{id}/derive`
@@ -3653,9 +3663,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/tags`
 - `DELETE /svc/keycore/tags/{name}`
 - `POST /svc/keycore/tenants/onboard`
-- `GET /svc/keycore/threat/dashboard`
-- `GET /svc/keycore/threat/signals`
-- `POST /svc/keycore/threat/signals/{id}/ack`
 
 ### kmip (`/svc/kmip/`)
 
@@ -3736,13 +3743,6 @@ from the code; do not edit by hand.
 
 ### posture (`/svc/posture/`)
 
-- `GET /svc/posture/leaks/findings`
-- `PATCH /svc/posture/leaks/findings/{id}`
-- `GET /svc/posture/leaks/jobs`
-- `GET /svc/posture/leaks/targets`
-- `POST /svc/posture/leaks/targets`
-- `DELETE /svc/posture/leaks/targets/{id}`
-- `POST /svc/posture/leaks/targets/{id}/scan`
 - `GET /svc/posture/posture/actions`
 - `POST /svc/posture/posture/actions/{id}/execute`
 - `GET /svc/posture/posture/dashboard`

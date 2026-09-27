@@ -3,103 +3,105 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"errors"
 	"time"
 )
 
-// ---- Canary Keys ----
+// canary_keys is replicated; canary_trip_events is node-local
+// (pkg/clustercatalog). A trip is only ever written to the node-local log, so
+// a probe served by a cluster member never writes a replicated table. Trip
+// counts are read from that log, not kept on the key row.
 
 func (s *SQLStore) ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, algorithm, purpose, trip_count, last_tripped, created_at, active, notify_email, metadata
-FROM canary_keys
-WHERE tenant_id = $1
-ORDER BY created_at DESC
-`, tenantID)
+SELECT id, tenant_id, name, active, created_at FROM canary_keys
+WHERE tenant_id = $1 ORDER BY created_at DESC`, tenantID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
-
-	var out []CanaryKey
+	out := []CanaryKey{}
 	for rows.Next() {
-		k, err := scanCanaryKeyRow(rows)
-		if err != nil {
+		var k CanaryKey
+		if err := rows.Scan(&k.ID, &k.TenantID, &k.Name, &k.Active, &k.CreatedAt); err != nil {
+			rows.Close() //nolint:errcheck
 			return nil, err
 		}
 		out = append(out, k)
 	}
-	if out == nil {
-		out = []CanaryKey{}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
-	return out, rows.Err()
+	for i := range out {
+		if err := s.fillCanaryTrips(ctx, &out[i]); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 func (s *SQLStore) CreateCanaryKey(ctx context.Context, key CanaryKey) error {
-	if key.Metadata == nil {
-		key.Metadata = map[string]string{}
-	}
-	metaJSON, err := json.Marshal(key.Metadata)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.SQL().ExecContext(ctx, `
-INSERT INTO canary_keys
-  (id, tenant_id, name, algorithm, purpose, trip_count, active, notify_email, metadata, created_at)
-VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,CURRENT_TIMESTAMP)
-`, key.ID, key.TenantID, key.Name, key.Algorithm, key.Purpose,
-		key.Active, nullable(key.NotifyEmail), string(metaJSON))
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO canary_keys (id, tenant_id, name, active, created_at)
+VALUES ($1,$2,$3,$4,CURRENT_TIMESTAMP)`, key.ID, key.TenantID, key.Name, key.Active)
 	return err
 }
 
 func (s *SQLStore) GetCanaryKey(ctx context.Context, tenantID, id string) (CanaryKey, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, name, algorithm, purpose, trip_count, last_tripped, created_at, active, notify_email, metadata
-FROM canary_keys
-WHERE tenant_id=$1 AND id=$2
-`, tenantID, id)
-	k, err := scanCanaryKeySingleRow(row)
-	if err == sql.ErrNoRows {
+	var k CanaryKey
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, name, active, created_at FROM canary_keys
+WHERE tenant_id=$1 AND id=$2`, tenantID, id).Scan(&k.ID, &k.TenantID, &k.Name, &k.Active, &k.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
 		return CanaryKey{}, errStoreNotFound
 	}
-	return k, err
+	if err != nil {
+		return CanaryKey{}, err
+	}
+	return k, s.fillCanaryTrips(ctx, &k)
 }
 
-func (s *SQLStore) DeleteCanaryKey(ctx context.Context, tenantID, id string) error {
-	result, err := s.db.SQL().ExecContext(ctx,
-		`UPDATE canary_keys SET active=false WHERE tenant_id=$1 AND id=$2`,
-		tenantID, id)
+func (s *SQLStore) DeactivateCanaryKey(ctx context.Context, tenantID, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx,
+		`UPDATE canary_keys SET active=false WHERE tenant_id=$1 AND id=$2`, tenantID, id)
 	if err != nil {
 		return err
 	}
-	n, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
+	if n, _ := res.RowsAffected(); n == 0 {
 		return errStoreNotFound
 	}
 	return nil
 }
 
-// ---- Canary Trip Events ----
+// fillCanaryTrips sets the trip count and latest trip from this node's log.
+// ORDER BY ... LIMIT 1 (not MAX) so the driver returns a native time value.
+func (s *SQLStore) fillCanaryTrips(ctx context.Context, k *CanaryKey) error {
+	k.CreatedAt = k.CreatedAt.UTC()
+	if err := s.db.SQL().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM canary_trip_events WHERE tenant_id=$1 AND canary_id=$2`,
+		k.TenantID, k.ID).Scan(&k.TripCount); err != nil {
+		return err
+	}
+	if k.TripCount == 0 {
+		return nil
+	}
+	var last time.Time
+	if err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tripped_at FROM canary_trip_events WHERE tenant_id=$1 AND canary_id=$2
+ORDER BY tripped_at DESC LIMIT 1`, k.TenantID, k.ID).Scan(&last); err != nil {
+		return err
+	}
+	last = last.UTC()
+	k.LastTripped = &last
+	return nil
+}
 
 func (s *SQLStore) RecordCanaryTrip(ctx context.Context, event CanaryTripEvent) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO canary_trip_events
   (id, canary_id, tenant_id, actor_id, actor_ip, user_agent, tripped_at, severity, raw_request)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-`, event.ID, event.CanaryID, event.TenantID, event.ActorID, event.ActorIP,
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		event.ID, event.CanaryID, event.TenantID, event.ActorID, event.ActorIP,
 		event.UserAgent, event.TrippedAt, event.Severity, event.RawRequest)
-	if err != nil {
-		return err
-	}
-	// Update the canary key trip_count and last_tripped.
-	_, err = s.db.SQL().ExecContext(ctx, `
-UPDATE canary_keys
-SET trip_count = trip_count + 1, last_tripped = $3
-WHERE tenant_id = $1 AND id = $2
-`, event.TenantID, event.CanaryID, event.TrippedAt)
 	return err
 }
 
@@ -112,141 +114,20 @@ SELECT id, canary_id, tenant_id, actor_id, actor_ip, user_agent, tripped_at, sev
 FROM canary_trip_events
 WHERE tenant_id=$1 AND canary_id=$2
 ORDER BY tripped_at DESC
-LIMIT $3
-`, tenantID, canaryID, limit)
+LIMIT $3`, tenantID, canaryID, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close() //nolint:errcheck
-
-	var out []CanaryTripEvent
+	out := []CanaryTripEvent{}
 	for rows.Next() {
 		var e CanaryTripEvent
-		if err := rows.Scan(
-			&e.ID, &e.CanaryID, &e.TenantID, &e.ActorID, &e.ActorIP,
-			&e.UserAgent, &e.TrippedAt, &e.Severity, &e.RawRequest,
-		); err != nil {
+		if err := rows.Scan(&e.ID, &e.CanaryID, &e.TenantID, &e.ActorID, &e.ActorIP,
+			&e.UserAgent, &e.TrippedAt, &e.Severity, &e.RawRequest); err != nil {
 			return nil, err
 		}
 		e.TrippedAt = e.TrippedAt.UTC()
 		out = append(out, e)
 	}
-	if out == nil {
-		out = []CanaryTripEvent{}
-	}
 	return out, rows.Err()
-}
-
-func (s *SQLStore) GetCanarySummary(ctx context.Context, tenantID string) (map[string]interface{}, error) {
-	// Total canaries and active count.
-	var totalCanaries, activeCanaries int
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT
-  COUNT(*) AS total,
-  SUM(CASE WHEN active THEN 1 ELSE 0 END) AS active_count
-FROM canary_keys
-WHERE tenant_id=$1
-`, tenantID)
-	if err := row.Scan(&totalCanaries, &activeCanaries); err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	// Total trips and trips in last 24h.
-	var totalTrips, trips24h int
-	row = s.db.SQL().QueryRowContext(ctx, `
-SELECT
-  COUNT(*) AS total_trips,
-  SUM(CASE WHEN tripped_at >= NOW() - INTERVAL '24 hours' THEN 1 ELSE 0 END) AS trips_24h
-FROM canary_trip_events
-WHERE tenant_id=$1
-`, tenantID)
-	if err := row.Scan(&totalTrips, &trips24h); err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	// Most recent trip.
-	var mostRecentTrip *time.Time
-	var canaryID, actorID sql.NullString
-	var trippedAt sql.NullTime
-	row = s.db.SQL().QueryRowContext(ctx, `
-SELECT canary_id, actor_id, tripped_at
-FROM canary_trip_events
-WHERE tenant_id=$1
-ORDER BY tripped_at DESC
-LIMIT 1
-`, tenantID)
-	_ = row.Scan(&canaryID, &actorID, &trippedAt)
-	if trippedAt.Valid {
-		t := trippedAt.Time.UTC()
-		mostRecentTrip = &t
-	}
-
-	out := map[string]interface{}{
-		"total_canaries":        totalCanaries,
-		"active_canaries":       activeCanaries,
-		"total_trips":           totalTrips,
-		"trips_24h":             trips24h,
-		"most_recent_trip":      mostRecentTrip,
-		"most_recent_canary_id": canaryID.String,
-		"most_recent_actor_id":  actorID.String,
-	}
-	return out, nil
-}
-
-// ---- scan helpers ----
-
-func scanCanaryKeyRow(rows interface {
-	Scan(dest ...any) error
-}) (CanaryKey, error) {
-	var k CanaryKey
-	var lastTripped sql.NullTime
-	var notifyEmail sql.NullString
-	var rawMeta string
-	if err := rows.Scan(
-		&k.ID, &k.TenantID, &k.Name, &k.Algorithm, &k.Purpose,
-		&k.TripCount, &lastTripped, &k.CreatedAt, &k.Active,
-		&notifyEmail, &rawMeta,
-	); err != nil {
-		return CanaryKey{}, err
-	}
-	if lastTripped.Valid {
-		t := lastTripped.Time.UTC()
-		k.LastTripped = &t
-	}
-	k.NotifyEmail = notifyEmail.String
-	k.CreatedAt = k.CreatedAt.UTC()
-	if rawMeta != "" && rawMeta != "null" {
-		_ = json.Unmarshal([]byte(rawMeta), &k.Metadata)
-	}
-	if k.Metadata == nil {
-		k.Metadata = map[string]string{}
-	}
-	return k, nil
-}
-
-func scanCanaryKeySingleRow(row *sql.Row) (CanaryKey, error) {
-	var k CanaryKey
-	var lastTripped sql.NullTime
-	var notifyEmail sql.NullString
-	var rawMeta string
-	if err := row.Scan(
-		&k.ID, &k.TenantID, &k.Name, &k.Algorithm, &k.Purpose,
-		&k.TripCount, &lastTripped, &k.CreatedAt, &k.Active,
-		&notifyEmail, &rawMeta,
-	); err != nil {
-		return CanaryKey{}, err
-	}
-	if lastTripped.Valid {
-		t := lastTripped.Time.UTC()
-		k.LastTripped = &t
-	}
-	k.NotifyEmail = notifyEmail.String
-	k.CreatedAt = k.CreatedAt.UTC()
-	if rawMeta != "" && rawMeta != "null" {
-		_ = json.Unmarshal([]byte(rawMeta), &k.Metadata)
-	}
-	if k.Metadata == nil {
-		k.Metadata = map[string]string{}
-	}
-	return k, nil
 }

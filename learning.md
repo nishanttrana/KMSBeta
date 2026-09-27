@@ -5,6 +5,38 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### Detection that runs on read never alerts anyone (threat signals)
+- **What happened:** keycore's threat rules were real, but they ran only
+  when `GET /threat/signals` or `/threat/dashboard` was called, which the
+  Threat & Exposure tab did on open. Nobody watching the tab meant no
+  detection. Reporting had the same shape: alerts were created from audit
+  only when the Alert Center was listed, so the header's unread count
+  could not rise on its own.
+- **Why it slipped through:** each piece was tested by calling it directly,
+  so every test passed. Nothing checked what triggers the call in
+  production.
+- **Rule:** a detection or alerting path needs a scheduler, a
+  primary-only gate if it writes replicated data, and a test that drives
+  the scheduler's tick, not the function beneath it.
+
+### A "test" endpoint that writes a real event is a fake (canary trip)
+- **What happened:** `POST /canary/{id}/trip` recorded a trip and audited
+  `audit.keycore.canary_tripped` for a probe that never happened. The
+  canary UI also sent an `alert_on_use` flag that nothing stored, and
+  canary IDs began with `canary_`, which told an attacker it was a decoy.
+- **Why it slipped through:** the endpoint was labelled "for testing" in a
+  comment, and the real trip path (GetKey's not-found branch) was added
+  later, next to it.
+- **Rule:** test paths live in `_test` files. Anything reachable over HTTP
+  that emits a security event must correspond to the event happening.
+
+### A node-local log must not update a replicated row (canary trips)
+- **What happened:** recording a trip inserted into node-local
+  `canary_trip_events` and then incremented `trip_count` on the replicated
+  `canary_keys` row, which a cluster member must never write.
+- **Rule:** derive counters from the node-local log at read time. Don't
+  denormalise them onto replicated rows.
+
 ### A "No data yet" empty state hid a tab that could never load (Platform > Health)
 - **What happened:** Platform > Health always said "No heartbeats received
   yet" while Administration > Health showed every service. The tab called

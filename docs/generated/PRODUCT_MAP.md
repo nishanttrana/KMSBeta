@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-27T18:22:24Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-27T18:44:36Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `31`
-- Tab/component mappings: `39`
+- Dashboard navigation items: `29`
+- Tab/component mappings: `37`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `931` across `30` services
+- Backend HTTP routes discovered: `910` across `30` services
 - Backend routes on the `pkg/route` kernel: `153` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `595`
-- Frontend call sites with exact backend route match: `546`
-- Frontend call sites needing review or dynamic/runtime confirmation: `49`
-- Clickable controls with static `onClick` handlers: `783`
-- Backend request flows with handler/service/package summaries: `931`
+- Frontend API call sites discovered: `578`
+- Frontend call sites with exact backend route match: `531`
+- Frontend call sites needing review or dynamic/runtime confirmation: `47`
+- Clickable controls with static `onClick` handlers: `758`
+- Backend request flows with handler/service/package summaries: `910`
 
 ## How To Use This For Launch
 
@@ -106,10 +106,6 @@ flowchart LR
   tab_compliance --> svc_reporting
   tab_compliance --> svc_signing
   tab_compliance --> svc_workload
-  tab_threat_exposure["Threat & Exposure"]
-  UI --> tab_threat_exposure
-  tab_threat_exposure --> svc_keycore
-  tab_threat_exposure --> svc_posture
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom
@@ -160,9 +156,9 @@ flowchart LR
   svc_governance["governance (34 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (175 routes)"]
+  svc_keycore["keycore (163 routes)"]
   svc_payment["payment (42 routes)"]
-  svc_posture["posture (19 routes)"]
+  svc_posture["posture (12 routes)"]
   svc_pqc["pqc (16 routes)"]
   svc_reporting["reporting (33 routes)"]
   svc_sbom["sbom (18 routes)"]
@@ -180,14 +176,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 201 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Operations Metrics | ops_metrics | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | audit | 5 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
-| Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 94 |
+| Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 5 |
-| PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 100 |
+| PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 104 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
@@ -199,18 +195,16 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 23 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | auth, autokey, certs, compliance, keyaccess, keycore, pqc, reporting, signing, workload | 179 |
-| Security & compliance | Threat & Exposure | threat_exposure | web/dashboard/src/components/v3/tabs/ThreatExposureTab.tsx | keycore, posture | 8 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 16 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
-| Platform | Health | health | web/dashboard/src/components/v3/tabs/HealthTab.tsx | - | 0 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | DevSecOps / IaC | devsecops | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | - | 0 |
 | Platform | Webhooks & SIEM | webhooks | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | audit | 6 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | Platform | Documentation | docs | web/dashboard/src/components/v3/tabs/DocsViewTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
-| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 49 |
+| UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 53 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | payment | payment | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | payment | 27 |
@@ -239,18 +233,18 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 175 | 124 |
+| keycore | 163 | 113 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
-| posture | 19 | 17 |
+| posture | 12 | 8 |
 | pqc | 16 | 6 |
-| reconciler | 2 | 0 |
+| reconciler | 1 | 1 |
 | reporting | 33 | 23 |
 | sbom | 18 | 16 |
 | secrets | 25 | 10 |
 | signing | 11 | 9 |
-| watchdog | 3 | 0 |
+| watchdog | 2 | 2 |
 | workload | 16 | 12 |
 
 ## Frontend Calls Needing Review
@@ -280,8 +274,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 163 |
 | cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 242 |
 | cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 263 |
-| keycore | POST | /compromise/report | trackedFetch | web/dashboard/src/lib/compromiseDetection.ts | 12 |
-| keycore | POST | /compromise/keys/{param}/rotate | trackedFetch | web/dashboard/src/lib/compromiseDetection.ts | 22 |
 | keycore | GET | /cost/metrics | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 6 |
 | keycore | GET | /cost/suggestions | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 12 |
 | keycore | POST | /cost/suggestions/{param}/apply | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 18 |
@@ -309,7 +301,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 275 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
-Showing `49` of `49`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `47` of `47`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -438,7 +430,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 67 |
 | compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 68 |
 
-Showing `120` of `387`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `376`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

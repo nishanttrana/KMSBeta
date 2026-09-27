@@ -12,6 +12,10 @@ const (
 	severityInfo     = "info"
 )
 
+// threatSignalAction is keycore's threat detection event (key-usage anomaly
+// or canary trip); its severity is in details.
+const threatSignalAction = "audit.keycore.threat_signal_raised"
+
 type EventPublisher interface {
 	Publish(ctx context.Context, subject string, payload []byte) error
 }

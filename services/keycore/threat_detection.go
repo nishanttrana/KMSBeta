@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -18,24 +17,26 @@ import (
 //   dormant_key_activity  a key untouched for 14+ days was suddenly used
 //   canary_tripped        any API reference to a canary key id (recorded at
 //                         the GetKey choke point, so real attacker traffic
-//                         trips it — not just the manual /trip endpoint)
+//                         trips it)
 //
-// Sweeps are evaluated on read (GET /threat/signals or /threat/dashboard) and
-// rate-limited per tenant; canary trips raise signals at trip time.
+// ThreatSweeper evaluates the rules every minute. It runs on every node:
+// key_usage_events and threat_signals are node-local (pkg/clustercatalog),
+// so each node judges the traffic it served and no replicated table is
+// written. Each new signal emits audit.keycore.threat_signal_raised; posture
+// turns it into a finding and reporting raises critical and high ones as
+// alerts. threat_signals only deduplicates: acknowledging and resolving
+// happen on the posture finding.
 
 type ThreatSignal struct {
-	ID             string         `json:"id"`
-	TenantID       string         `json:"tenant_id"`
-	SignalType     string         `json:"signal_type"`
-	KeyID          string         `json:"key_id,omitempty"`
-	ActorID        string         `json:"actor_id,omitempty"`
-	Severity       string         `json:"severity"`
-	Description    string         `json:"description"`
-	DedupeKey      string         `json:"-"`
-	DetectedAt     time.Time      `json:"detected_at"`
-	AcknowledgedAt *time.Time     `json:"acknowledged_at,omitempty"`
-	AcknowledgedBy string         `json:"acknowledged_by,omitempty"`
-	Metadata       map[string]any `json:"metadata,omitempty"`
+	ID          string
+	TenantID    string
+	SignalType  string
+	KeyID       string
+	ActorID     string
+	Severity    string
+	Description string
+	DedupeKey   string
+	DetectedAt  time.Time
 }
 
 type KeyUsageEvent struct {
@@ -49,19 +50,8 @@ type KeyUsageEvent struct {
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
-type ThreatDashboard struct {
-	ActiveBySeverity     map[string]int `json:"active_by_severity"`
-	ActiveTotal          int            `json:"active_total"`
-	AcknowledgedTotal    int            `json:"acknowledged_total"`
-	CanaryKeys           int            `json:"canary_keys"`
-	CanaryTrips          int            `json:"canary_trips"`
-	OpenCompromiseEvents int            `json:"open_compromise_events"`
-	RecentSignals        []ThreatSignal `json:"recent_signals"`
-	GeneratedAt          time.Time      `json:"generated_at"`
-}
-
 const (
-	threatSweepMinInterval   = time.Minute
+	threatSweepInterval      = time.Minute
 	usageRetention           = 30 * 24 * time.Hour
 	newActorHistoryMin       = 5
 	newActorAlertWindow      = time.Hour
@@ -71,8 +61,6 @@ const (
 	threatSweepWindow        = 24 * time.Hour
 	threatSweepMaxCandidates = 200
 )
-
-var threatSweepLast sync.Map // tenantID -> time.Time
 
 // runCryptoTx wraps the store crypto transaction and records a usage event on
 // success so the detection rules have a trail to run over. Recording is
@@ -126,14 +114,13 @@ func (s *Service) noteCanaryProbe(ctx context.Context, tenantID, keyID string) {
 		Severity:   "critical",
 		RawRequest: "key API reference to canary id " + keyID,
 	})
-	_, _ = s.store.CreateThreatSignal(ctx, ThreatSignal{
-		ID:          newID("tsig"),
+	s.raiseSignal(ctx, ThreatSignal{
 		TenantID:    tenantID,
 		SignalType:  "canary_tripped",
 		KeyID:       canary.ID,
 		ActorID:     actorID,
 		Severity:    "critical",
-		Description: fmt.Sprintf("Canary key %q was referenced through the key API by actor %q — treat as active credential compromise", canary.Name, actorID),
+		Description: fmt.Sprintf("Canary key %q was referenced through the key API by actor %q: treat as active credential compromise", canary.Name, actorID),
 		DedupeKey:   strings.Join([]string{"canary_tripped", canary.ID, actorID, now.Format("2006-01-02T15")}, "|"),
 		DetectedAt:  now,
 	})
@@ -146,19 +133,44 @@ func (s *Service) noteCanaryProbe(ctx context.Context, tenantID, keyID string) {
 	})
 }
 
-// sweepThreatSignals evaluates the detection rules for a tenant, at most once
-// per threatSweepMinInterval. Safe to call on every read.
-func (s *Service) sweepThreatSignals(ctx context.Context, tenantID string) {
-	if last, ok := threatSweepLast.Load(tenantID); ok {
-		if time.Since(last.(time.Time)) < threatSweepMinInterval {
+// ThreatSweeper evaluates the detection rules for every tenant this node
+// has served key operations for in the last day.
+type ThreatSweeper struct {
+	svc      *Service
+	interval time.Duration
+}
+
+func NewThreatSweeper(svc *Service) *ThreatSweeper {
+	return &ThreatSweeper{svc: svc, interval: threatSweepInterval}
+}
+
+func (t *ThreatSweeper) Run(ctx context.Context) {
+	tick := time.NewTicker(t.interval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case <-tick.C:
+			t.Tick(ctx)
 		}
 	}
-	threatSweepLast.Store(tenantID, time.Now())
+}
 
+func (t *ThreatSweeper) Tick(ctx context.Context) {
 	now := time.Now().UTC()
-	_ = s.store.PruneKeyUsageEvents(ctx, tenantID, now.Add(-usageRetention))
+	tenants, err := t.svc.store.ListUsageTenants(ctx, now.Add(-threatSweepWindow))
+	if err != nil {
+		logger.Printf("threat sweep: %v", err)
+		return
+	}
+	for _, tenantID := range tenants {
+		t.svc.sweepThreatSignals(ctx, tenantID, now)
+	}
+}
 
+func (s *Service) sweepThreatSignals(ctx context.Context, tenantID string, now time.Time) {
+	_ = s.store.PruneKeyUsageEvents(ctx, tenantID, now.Add(-usageRetention))
 	s.detectNewActors(ctx, tenantID, now)
 	s.detectVolumeSpikes(ctx, tenantID, now)
 	s.detectDormantActivity(ctx, tenantID, now)
@@ -268,49 +280,13 @@ func (s *Service) raiseSignal(ctx context.Context, sig ThreatSignal) {
 	if err != nil || !created {
 		return
 	}
-	_ = s.publishAudit(ctx, "audit.threat.signal_raised", sig.TenantID, map[string]any{
+	_ = s.publishAudit(ctx, "audit.keycore.threat_signal_raised", sig.TenantID, map[string]any{
 		"signal_id":   sig.ID,
 		"signal_type": sig.SignalType,
 		"key_id":      sig.KeyID,
 		"actor_id":    sig.ActorID,
 		"severity":    sig.Severity,
+		"description": sig.Description,
+		"detected_at": sig.DetectedAt.Format(time.RFC3339),
 	})
-}
-
-func (s *Service) GetThreatDashboard(ctx context.Context, tenantID string) (ThreatDashboard, error) {
-	s.sweepThreatSignals(ctx, tenantID)
-	signals, err := s.store.ListThreatSignals(ctx, tenantID, 200)
-	if err != nil {
-		return ThreatDashboard{}, err
-	}
-	dash := ThreatDashboard{
-		ActiveBySeverity: map[string]int{},
-		GeneratedAt:      time.Now().UTC(),
-	}
-	for _, sig := range signals {
-		if sig.AcknowledgedAt == nil {
-			dash.ActiveBySeverity[sig.Severity]++
-			dash.ActiveTotal++
-		} else {
-			dash.AcknowledgedTotal++
-		}
-	}
-	if len(signals) > 10 {
-		signals = signals[:10]
-	}
-	dash.RecentSignals = signals
-	if canaries, err := s.store.ListCanaryKeys(ctx, tenantID); err == nil {
-		dash.CanaryKeys = len(canaries)
-		for _, c := range canaries {
-			dash.CanaryTrips += c.TripCount
-		}
-	}
-	if events, err := s.store.ListCompromiseEvents(ctx, tenantID, "", "", 500); err == nil {
-		for _, e := range events {
-			if !strings.EqualFold(e.Status, "resolved") && !strings.EqualFold(e.Status, "closed") {
-				dash.OpenCompromiseEvents++
-			}
-		}
-	}
-	return dash, nil
 }

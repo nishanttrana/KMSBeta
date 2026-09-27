@@ -416,12 +416,6 @@ export type EncryptInputOptions = {
   aad?: string;
   aadEncoding?: TextEncoding;
   referenceId?: string;
-  // When set, registers the wrapped plaintext as an external credential
-  // protected by this key (fingerprint only — never the plaintext), so the
-  // Threat & Exposure console can correlate a future leak of that credential
-  // with anomalous usage of this key. Use on wrap operations that protect a
-  // real credential, not on bulk data encryption.
-  registerCredentialBinding?: { credentialType?: string; label?: string };
 };
 
 export type DecryptInputOptions = {
@@ -846,16 +840,7 @@ export async function encryptData(
       iv: ivPayload,
       iv_mode: options?.ivMode || "",
       aad: aadPayload,
-      reference_id: options?.referenceId || "",
-      ...(options?.registerCredentialBinding
-        ? {
-            credential_binding: {
-              register: true,
-              credential_type: options.registerCredentialBinding.credentialType || "",
-              label: options.registerCredentialBinding.label || ""
-            }
-          }
-        : {})
+      reference_id: options?.referenceId || ""
     })
   });
   return {
@@ -1444,4 +1429,49 @@ export async function deleteTag(session: AuthSession, name: string): Promise<voi
     `/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`,
     { method: "DELETE" }
   );
+}
+
+// Canary keys: decoy key IDs with no material. Any reference to one through
+// the key API returns not-found, records a trip, and raises a critical
+// threat signal (a Posture finding and a Reporting alert).
+export type CanaryKey = {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
+  trip_count: number;
+  last_tripped?: string;
+};
+
+export type CanaryTrip = {
+  id: string;
+  actor_id: string;
+  actor_ip: string;
+  user_agent: string;
+  tripped_at: string;
+  raw_request: string;
+};
+
+const tenantQ = (session: AuthSession) => `tenant_id=${encodeURIComponent(session.tenantId)}`;
+
+export async function listCanaryKeys(session: AuthSession): Promise<CanaryKey[]> {
+  const out = await apiRequest<{ items?: CanaryKey[] }>(session, `/canary/keys?${tenantQ(session)}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function createCanaryKey(session: AuthSession, name: string): Promise<CanaryKey> {
+  const out = await apiRequest<{ item: CanaryKey }>(session, "/canary/keys", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, name })
+  });
+  return out.item;
+}
+
+export async function deactivateCanaryKey(session: AuthSession, id: string): Promise<void> {
+  await apiRequest(session, `/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`, { method: "DELETE" });
+}
+
+export async function listCanaryTrips(session: AuthSession, id: string): Promise<CanaryTrip[]> {
+  const out = await apiRequest<{ items?: CanaryTrip[] }>(session, `/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`);
+  return Array.isArray(out?.items) ? out.items : [];
 }

@@ -40,7 +40,7 @@ const EVENT_PATTERNS: { pattern: string; label: string }[] = [
   { pattern: "audit.governance.*", label: "Approvals, backup, FIPS mode" },
   { pattern: "audit.cluster.*", label: "Cluster" },
   { pattern: "audit.kmip.*", label: "KMIP" },
-  { pattern: "audit.posture.*", label: "Posture and leak scans" },
+  { pattern: "audit.posture.*", label: "Posture findings and remediation" },
   { pattern: "audit.audit.*", label: "Audit service itself" },
 ];
 const PATTERN_RE = /^audit(\.[a-z0-9_]+)+(\.\*)?$|^audit\.\*$|^\*$/;

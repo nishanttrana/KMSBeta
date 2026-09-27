@@ -67,8 +67,7 @@ export type FeatureKey =
   | "cost_optimization"
   | "advanced_encryption"
   | "key_binding"
-  | "key_metadata"
-  | "threat_protection";
+  | "key_metadata";
 
 export type TabId =
   | "dashboard"
