@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### Never let a failing check reach a push
+- **What happened:** the command ran tests, then `;`, then commit and push.
+  The certs suite printed `FAIL` and the push happened anyway.
+- **Also:** the new test passed when run alone and failed in the full
+  suite, because an earlier test left a process-wide svctls identity behind.
+- **Rule:** chain verification and push with `&&` (or `set -e`), and gate
+  on the full package run, not a `-run` subset. A test that sets
+  process-wide state resets it in `t.Cleanup`.
+
 ### A plausible screen can hide a missing backend twice
 - **What happened:** removing the `MOCK_*` fallbacks from the Webhooks and
   Rotation Scheduler tabs showed that the mocks hid more than a failing

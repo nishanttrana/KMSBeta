@@ -217,6 +217,11 @@ var current atomic.Pointer[Identity]
 // Current returns the process identity, or nil before Init.
 func Current() *Identity { return current.Load() }
 
+// ResetForTests forgets the process identity Init installed, so a test that
+// enrolled doesn't make later tests in the same binary dial Postgres over
+// internal mTLS (pkg/db uses Current). Never call it outside tests.
+func ResetForTests() { current.Store(nil) }
+
 // Options tune Init. Zero values use the defaults.
 type Options struct {
 	Enroller  Enroller // default: the certs enrolment endpoint

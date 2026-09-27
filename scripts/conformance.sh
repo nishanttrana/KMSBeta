@@ -250,6 +250,17 @@ else
   echo "PASS [tls-only]"
 fi
 
+# Test hooks stay in tests: svctls.ResetForTests forgets the process's
+# internal mTLS identity.
+reset_hits=$(grep -rn "svctls\.ResetForTests" services pkg --include="*.go" 2>/dev/null | grep -v "_test\.go:" || true)
+if [ -n "$reset_hits" ]; then
+  FAIL=1
+  echo "FAIL [test-hooks-in-tests]: svctls.ResetForTests outside a test:"
+  printf '%s\n' "$reset_hits" | sed 's/^/  /'
+else
+  echo "PASS [test-hooks-in-tests]"
+fi
+
 # Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP
 # routes through pkg/route, which applies authentication, tenancy, permission
 # and a specific audit event (refusals included) to every route. A raw

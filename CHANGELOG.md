@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.23.0-beta] — 2026-09-27
+
+### Fix: 1.22.0-beta was pushed with a failing test
+- `TestCorrectKeyLabelsPostgres` failed in the full certs suite, though it
+  passed alone. `TestCertsEnrolsItselfLocally` calls `svctls.Init`, which
+  sets a process-wide identity. `pkg/db` then dialled every later Postgres
+  connection over internal mTLS, and the plain test database refused it. The
+  push went ahead because the command didn't stop on the failure.
+- **Fixed:** `svctls.ResetForTests` clears that identity when the test
+  ends. The full certs suite passes in FIPS `off`, `on` and `only`, with
+  all three Postgres tests running. A new conformance check
+  (`test-hooks-in-tests`) fails if `ResetForTests` is used outside a test.
+
 ## [1.22.0-beta] — 2026-09-27
 
 ### Tests: key-label correction proven on real Postgres

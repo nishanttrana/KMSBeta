@@ -193,6 +193,7 @@ func TestCertsEnrolsItselfLocally(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	t.Cleanup(svctls.ResetForTests) // Init sets a process-wide identity
 	id, err := svctls.Init(ctx, "kms-certs", svctls.Options{
 		Enroller: localEnroller{svc: svc, tenant: "root"}, TrustFile: dir + "/internal-ca.crt", KeepDefaultTransport: true,
 	})
