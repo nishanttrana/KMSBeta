@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### information_schema lists partitions as tables
+- **What happened:** the backup engine enumerated `information_schema.tables`
+  (`BASE TABLE`), which includes both a partitioned parent and every
+  partition, and backed up each. Every row of the partitioned tables
+  (keycore `keys`, audit `audit_events`) was captured twice, so a restore
+  failed on keys and would have doubled audit events.
+- **How it surfaced:** only when another package's test left keycore's
+  partitions in the shared test database. On a fresh database the tests
+  passed.
+- **Rule:** enumerate tables from `pg_class` with `relkind IN ('r','p') AND
+  NOT relispartition`, and read and write through the parent. Treat a
+  failure "only on a shared database" as a hint about production, where
+  every service's tables share one database, not as noise.
+
 ### Never let a failing check reach a push
 - **What happened:** the command ran tests, then `;`, then commit and push.
   The certs suite printed `FAIL` and the push happened anyway.

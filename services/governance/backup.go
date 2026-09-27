@@ -1112,6 +1112,13 @@ func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTena
 			skipped = append(skipped, tableName)
 			continue
 		}
+		// A partition's rows are restored through its parent.
+		if partition, err := s.tableIsPartition(ctx, tableName); err != nil {
+			return 0, 0, skipped, excluded, err
+		} else if partition {
+			skipped = append(skipped, tableName)
+			continue
+		}
 		if scope == backupScopeTenant {
 			hasTenantID, err := s.tableHasTenantIDColumn(ctx, tableName)
 			if err != nil {
@@ -1187,6 +1194,20 @@ func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTena
 	return rowsRestored, tablesProcessed, skipped, excluded, nil
 }
 
+// tableIsPartition reports whether tableName is a partition of another table.
+// Backups taken before 1.24.0-beta hold partitions next to their parent, and
+// the parent's rows already include theirs.
+func (s *SQLStore) tableIsPartition(ctx context.Context, tableName string) (bool, error) {
+	var partition bool
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(bool_or(c.relispartition), false)
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname = $1
+`, strings.TrimSpace(tableName)).Scan(&partition)
+	return partition, err
+}
+
 func (s *SQLStore) tableExists(ctx context.Context, tableName string) (bool, error) {
 	var exists bool
 	err := s.db.SQL().QueryRowContext(ctx, `
@@ -1201,12 +1222,20 @@ SELECT EXISTS (
 	return exists, err
 }
 
+// listBackupTables lists the tables a backup captures: plain tables and
+// partitioned parents, never a partition. information_schema reports both a
+// partitioned parent and each partition as BASE TABLE, so reading it captured
+// every row of keycore's keys (64 hash partitions) and audit_events (monthly
+// partitions) twice, and a restore failed on duplicate keys or doubled rows.
+// Reading and inserting through the parent covers every partition: Postgres
+// routes each row to its partition.
 func (s *SQLStore) listBackupTables(ctx context.Context) ([]string, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT table_name
-FROM information_schema.tables
-WHERE table_schema='public' AND table_type='BASE TABLE'
-ORDER BY table_name
+SELECT c.relname
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relispartition
+ORDER BY c.relname
 `)
 	if err != nil {
 		return nil, err

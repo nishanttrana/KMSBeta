@@ -277,6 +277,12 @@ Examples:
 
 ### Restore Workflow
 
+Partitioned tables (keycore `keys`, audit `audit_events`) are backed up and
+restored through their parent table. A backup taken before 1.24.0-beta also
+lists the partitions; the restore skips them (they appear under
+"skipped") and restores each row once, through the parent.
+
+
 1. Validate backup provenance and intended scope.
 2. Confirm restore approvals where required.
 3. Restore through governance flow.

@@ -4,6 +4,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.24.0-beta] — 2026-09-27
+
+### Fix: system backups held partitioned tables twice, and restores failed
+- **What was wrong:** the backup engine listed tables from
+  `information_schema`, which reports a partitioned parent and each of its
+  partitions as `BASE TABLE`. Every system backup therefore held every row
+  of keycore's `keys` (64 hash partitions) and audit's `audit_events`
+  (monthly partitions) twice, once through the parent and once through the
+  partition. A restore then failed with a duplicate key on `keys_pNN`, or
+  would have doubled `audit_events` rows, which have no unique key to stop
+  it.
+- **Fixed:**
+  - Backups capture plain tables and partitioned parents only (`pg_class`,
+    `NOT relispartition`). Postgres routes restored rows into their
+    partitions.
+  - A restore skips a table that is a partition in the current database
+    and reports it as skipped. Backups taken before this fix, which contain
+    the partitions, restore every row exactly once.
+- **Test:** `TestBackupPartitionedTablesPostgres` covers a hash-partitioned
+  table through a full backup and restore, and an old-format backup. It
+  fails on the previous code. The full suite passes in FIPS `off`, `on` and
+  `only` on a shared database that holds keycore's partitioned `keys` table,
+  which is where governance's backup tests used to fail.
+
 ## [1.23.0-beta] — 2026-09-27
 
 ### Fix: 1.22.0-beta was pushed with a failing test
