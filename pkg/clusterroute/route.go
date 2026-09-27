@@ -136,9 +136,24 @@ const (
 	Refuse
 )
 
+// ForwardReads are reads a member answers from the primary, because only
+// the primary holds the cluster-wide figures (the Operations metrics count
+// every node's operations there, docs/CLUSTERING.md).
+var ForwardReads = map[string][]string{
+	"kms-audit": {
+		"GET /ops-metrics/overview", "GET /ops-metrics/timeseries", "GET /ops-metrics/latency",
+		"GET /ops-metrics/by-service", "GET /ops-metrics/errors",
+	},
+}
+
 // Decide classifies a request arriving at service on a cluster member.
 func Decide(service, method, path string) Decision {
 	if !isWrite(method) {
+		for _, p := range ForwardReads[service] {
+			if matchPattern(p, method, path) {
+				return Forward
+			}
+		}
 		return RunLocal
 	}
 	if _, never := NeverForward[service]; never {

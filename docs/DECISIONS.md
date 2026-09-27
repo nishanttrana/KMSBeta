@@ -42,9 +42,11 @@ ingest still skips the relayed copy, so nothing is counted twice.
 `TestDataProtectOperationsMetered`, `TestPaymentOperationsAuditedAndMetered`,
 `TestLocalCertificateSigningMetered`, `TestCryptoOpsAuditedWithOutcomeAndDuration`.
 
-**Still open.** A member shows only its own operations: open the primary
-for the cluster view. Batch APIs (tokenize, detokenize) count one operation
-per request and carry the value count in `count`.
+**Closed in 2.3.0-beta.** A member forwards its Operations metrics reads to
+the primary (`clusterroute.ForwardReads`). Batch calls add their `count`
+to `value_count`. An operation is still one request, and values are
+reported next to it rather than inflating the operation count or
+distorting per-operation latency.
 
 ## 2026-09-28 — Operations metrics come from audit events, shown in Analytics (2.1.0-beta)
 

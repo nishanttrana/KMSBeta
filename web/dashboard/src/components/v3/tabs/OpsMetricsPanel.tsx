@@ -112,7 +112,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
       {!loadErr && !loading && overview && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 11, color: C.muted, marginBottom: 12 }}>
           <span style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, color: ov.scope === "node" ? C.amber : C.dim }}>
-            {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only: open the primary for the whole cluster" : "Single node"}
+            {ov.scope === "cluster" ? "Cluster-wide: every node's operations" : ov.scope === "node" ? "This node only" : "Single node"}
           </span>
           {(ov.by_node ?? []).length > 1 && (ov.by_node ?? []).map((n: any) => (
             <span key={n.node || "local"} style={{ fontFamily: "monospace" }}>{n.node || "(unclustered)"}: {fmt(n.total_ops)}</span>
@@ -127,7 +127,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
 
       {/* Stat Cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        {statCard(<Zap size={16} />, "Total Ops", na ? "—" : fmt(ov.total_ops ?? 0), `window: ${ov.window ?? timeWindow}`, C.accent)}
+        {statCard(<Zap size={16} />, "Total Ops", na ? "—" : fmt(ov.total_ops ?? 0), `${fmt(ov.total_values ?? 0)} values · window: ${ov.window ?? timeWindow}`, C.accent)}
         {statCard(<Activity size={16} />, "Avg Latency", na ? "—" : ms(ov.avg_latency_ms ?? 0), "across all operations", (ov.avg_latency_ms ?? 0) > 10 ? C.amber : C.green)}
         {statCard(<Clock size={16} />, "Error Rate", na ? "—" : pct(ov.error_rate ?? 0), `${ov.total_errors ?? 0} errors`, (ov.error_rate ?? 0) > 0.02 ? C.red : C.green)}
         {statCard(<BarChart2 size={16} />, "Total Errors", na ? "—" : String(ov.total_errors ?? 0), "in selected window", (ov.total_errors ?? 0) > 0 ? C.amber : C.green)}

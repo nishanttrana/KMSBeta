@@ -26,15 +26,20 @@ func recordOp(ctx context.Context, db sqlExecer, op OpSample) error {
 		errorCount = 1
 	}
 	bucket := fmt.Sprintf("lat_b%02d", latencyBucket(op.Latency))
+	values := op.Values
+	if values < 1 {
+		values = 1
+	}
 	_, err := db.ExecContext(ctx, `
-INSERT INTO ops_metrics_hourly (tenant_id, hour, node, service, op_type, count, error_count, total_latency_us, `+bucket+`)
-VALUES ($1, $2, $3, $4, $5, 1, $6, $7, 1)
+INSERT INTO ops_metrics_hourly (tenant_id, hour, node, service, op_type, count, error_count, total_latency_us, value_count, `+bucket+`)
+VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, 1)
 ON CONFLICT (tenant_id, hour, node, service, op_type) DO UPDATE
 SET count            = ops_metrics_hourly.count + 1,
+    value_count      = ops_metrics_hourly.value_count + $8,
     error_count      = ops_metrics_hourly.error_count + $6,
     total_latency_us = ops_metrics_hourly.total_latency_us + $7,
     `+bucket+`       = ops_metrics_hourly.`+bucket+` + 1
-`, op.TenantID, hour, op.Node, op.Service, op.OpType, errorCount, op.Latency.Microseconds())
+`, op.TenantID, hour, op.Node, op.Service, op.OpType, errorCount, op.Latency.Microseconds(), values)
 	return err
 }
 
@@ -45,12 +50,13 @@ func (s *SQLStore) GetOpsOverview(ctx context.Context, tenantID, window string) 
 SELECT
     COALESCE(SUM(count),0),
     COALESCE(SUM(error_count),0),
-    COALESCE(SUM(total_latency_us),0)
+    COALESCE(SUM(total_latency_us),0),
+    COALESCE(SUM(value_count),0)
 FROM ops_metrics_hourly
 WHERE tenant_id=$1 AND hour >= $2
 `, tenantID, since)
-	var totalOps, totalErrors, totalLatency int64
-	if err := row.Scan(&totalOps, &totalErrors, &totalLatency); err != nil {
+	var totalOps, totalErrors, totalLatency, totalValues int64
+	if err := row.Scan(&totalOps, &totalErrors, &totalLatency, &totalValues); err != nil {
 		return OpsOverview{}, err
 	}
 	ov := OpsOverview{
@@ -58,6 +64,7 @@ WHERE tenant_id=$1 AND hour >= $2
 		TenantID:       tenantID,
 		Window:         window,
 		TotalOps:       totalOps,
+		TotalValues:    totalValues,
 		TotalErrors:    totalErrors,
 		TotalLatencyMs: totalLatency / 1000,
 		ComputedAt:     time.Now().UTC(),

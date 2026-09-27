@@ -66,3 +66,14 @@ func TestLocalRoutesExist(t *testing.T) {
 		}
 	}
 }
+
+// A member answers Operations metrics reads from the primary, which counts
+// every node; other reads stay local.
+func TestOpsMetricsReadsForwardToPrimary(t *testing.T) {
+	if d := Decide("kms-audit", "GET", "/ops-metrics/overview"); d != Forward {
+		t.Fatalf("ops-metrics overview on a member: %v, want Forward", d)
+	}
+	if d := Decide("kms-audit", "GET", "/audit/events"); d != RunLocal {
+		t.Fatalf("other reads: %v, want RunLocal", d)
+	}
+}

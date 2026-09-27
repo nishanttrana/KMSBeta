@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.3.0-beta] — 2026-09-28
+
+### Operations metrics: cluster view on every node, values for batch calls
+- **A member now shows the cluster.** `GET /svc/audit/ops-metrics/*` on a
+  member is forwarded to the primary (`clusterroute.ForwardReads`) through
+  the existing member-to-primary forwarding path, which is authenticated and
+  audited. Every node shows the same cluster-wide figures. If the primary is
+  unreachable the view says "unavailable"; it never falls back to partial
+  local figures.
+- **Batch calls count their values.** An operation still counts once per
+  request, but the values it processed are summed from the event's `count`
+  (tokenize, detokenize; 1 for everything else) into `value_count`
+  (migration 009). The overview returns `total_values`, and the Total Ops
+  card shows it.
+
 ## [2.2.0-beta] — 2026-09-28
 
 ### Operations metrics cover the cluster and every service that does crypto

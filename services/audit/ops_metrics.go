@@ -18,6 +18,7 @@ type OpSample struct {
 	At       time.Time
 	Latency  time.Duration
 	IsError  bool
+	Values   int64 // values processed: details.count for a batch, else 1
 }
 
 // latencyBucketsMs are the histogram upper bounds (lat_b00..lat_b11,
@@ -61,6 +62,7 @@ type OpsOverview struct {
 	TenantID       string    `json:"tenant_id"`
 	Window         string    `json:"window"`
 	TotalOps       int64     `json:"total_ops"`
+	TotalValues    int64     `json:"total_values"` // values processed; a batch call is one op
 	TotalErrors    int64     `json:"total_errors"`
 	ErrorRate      float64   `json:"error_rate"`
 	AvgLatencyMs   float64   `json:"avg_latency_ms"`
@@ -185,6 +187,7 @@ func opSampleFromEvent(evt AuditEvent) (OpSample, bool) {
 		At:       evt.Timestamp,
 		Latency:  time.Duration(ms * float64(time.Millisecond)),
 		IsError:  result != "success",
+		Values:   batchValues(evt.Details),
 	}, true
 }
 
@@ -198,4 +201,16 @@ func (s *Service) recordOpMetric(ctx context.Context, evt AuditEvent) {
 	if err := s.store.RecordOp(ctx, sample); err != nil {
 		log.Printf("audit: ops metric for %s %s not recorded: %v", evt.TenantID, evt.Action, err)
 	}
+}
+
+// batchValues is the number of values an operation processed: a batch
+// call's details.count, else 1.
+func batchValues(d map[string]interface{}) int64 {
+	if n, ok := d["count"].(float64); ok && n >= 1 {
+		return int64(n)
+	}
+	if n, ok := d["count"].(int); ok && n >= 1 {
+		return int64(n)
+	}
+	return 1
 }

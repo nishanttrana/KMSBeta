@@ -91,7 +91,7 @@ func TestOpsMetricsCountAnyServicesMeteredEvents(t *testing.T) {
 	_, svc, store, _ := newAuditHandler(t, false, false)
 	ctx := context.Background()
 	for _, raw := range []string{
-		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenized","data":{"metered_op":"tokenize","duration_ms":0.3}}`,
+		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenized","data":{"metered_op":"tokenize","duration_ms":0.3,"count":25}}`,
 		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenize_refused","data":{"metered_op":"tokenize","duration_ms":0.1,"result":"refused","reason":"permission_denied"}}`,
 		`{"tenant_id":"t1","service":"dataprotect","action":"audit.dataprotect.tokenized","data":{"metered_op":"Bad Name","duration_ms":1}}`,
 	} {
@@ -113,6 +113,9 @@ func TestOpsMetricsCountAnyServicesMeteredEvents(t *testing.T) {
 	ov, err := store.GetOpsOverview(ctx, "t1", "24h")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if ov.TotalValues != 26 { // a 25-value batch plus one refused call
+		t.Fatalf("total_values = %d, want 26", ov.TotalValues)
 	}
 	if ov.RecordedSince == nil || ov.Scope != "standalone" || len(ov.ByNode) != 1 || ov.ByNode[0].TotalOps != 2 {
 		t.Fatalf("overview = %+v", ov)

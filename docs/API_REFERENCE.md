@@ -1103,12 +1103,12 @@ does its cryptography, so one request is counted once. There is no write
 endpoint (the record endpoint was removed in 2.1.0-beta). Every read takes
 `?window=1h|6h|24h|7d|30d` (default `24h`). On a cluster primary the
 figures cover every node: members' operations are counted as the audit
-relay passes their replicated events. A member counts only its own
-(2.2.0-beta).
+relay passes their replicated events. A member forwards these reads to the
+primary, so every node returns the cluster figures (2.3.0-beta).
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/svc/audit/ops-metrics/overview` | `overview`: `total_ops`, `total_errors` (refused + failed), `error_rate`, `avg_latency_ms`, `scope` (`cluster` on the primary, `node` on a member, `standalone`), `by_node` (`node`, `total_ops`), `recorded_since` (first recorded hour, or `null`: operations before it were not measured) |
+| GET | `/svc/audit/ops-metrics/overview` | `overview`: `total_ops`, `total_values` (values processed; a batch call's `count`), `total_errors` (refused + failed), `error_rate`, `avg_latency_ms`, `scope` (`cluster` on the primary, `node` on a member, `standalone`), `by_node` (`node`, `total_ops`), `recorded_since` (first recorded hour, or `null`: operations before it were not measured) |
 | GET | `/svc/audit/ops-metrics/timeseries` | `items`: per hour `total_ops`, `total_errors`, `avg_latency_ms` |
 | GET | `/svc/audit/ops-metrics/latency` | `items`: per service and `op_type`, `avg_ms` (exact) and `p50_ms` / `p90_ms` / `p99_ms`: the upper bound of the histogram bucket (0.1 to 1000 ms) each percentile falls in; `null` is slower than 1000 ms |
 | GET | `/svc/audit/ops-metrics/by-service` | `items`: `total_ops`, `total_errors`, `error_rate`, `avg_latency_ms` |

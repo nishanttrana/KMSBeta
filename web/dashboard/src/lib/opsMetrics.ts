@@ -11,6 +11,8 @@ export type OpsWindow = "1h" | "24h" | "7d" | "30d";
 export interface OpsOverview {
   window: string;
   total_ops: number;
+  // Values processed: a batch call (tokenize, detokenize) is one op.
+  total_values: number;
   total_errors: number;
   error_rate: number;
   avg_latency_ms: number;
