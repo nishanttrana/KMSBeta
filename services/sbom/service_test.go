@@ -79,7 +79,7 @@ func TestServiceCBOMGenerationAndDiff(t *testing.T) {
 	if first.Document.TotalAssetCount != 4 {
 		t.Fatalf("unexpected asset count: %+v", first.Document)
 	}
-	if pub.Count("audit.cbom.generated") == 0 {
+	if pub.Count("audit.sbom.cbom_generated") == 0 {
 		t.Fatalf("expected cbom audit event")
 	}
 
@@ -107,4 +107,3 @@ func TestServiceCBOMGenerationAndDiff(t *testing.T) {
 		t.Fatalf("expected cbom diff changes: %+v", diff)
 	}
 }
-

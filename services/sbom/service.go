@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/route"
 
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/pdfutil"
@@ -24,12 +26,12 @@ type Service struct {
 	keycore       KeyCoreClient
 	certs         CertsClient
 	discovery     DiscoveryClient
-	events        EventPublisher
+	events        route.Emitter // background events via pkg/audit
 	vulnProvider  VulnerabilityProvider
 	workspaceRoot string
 }
 
-func NewService(store Store, keycore KeyCoreClient, certs CertsClient, discovery DiscoveryClient, events EventPublisher) *Service {
+func NewService(store Store, keycore KeyCoreClient, certs CertsClient, discovery DiscoveryClient, events route.Emitter) *Service {
 	root := strings.TrimSpace(os.Getenv("WORKSPACE_ROOT"))
 	if root == "" {
 		root = "."
@@ -303,7 +305,7 @@ func (s *Service) GenerateCBOM(ctx context.Context, tenantID string, trigger str
 	if err != nil {
 		return CBOMSnapshot{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.cbom.generated", tenantID, map[string]interface{}{
+	_ = s.publishAudit(ctx, "audit.sbom.cbom_generated", tenantID, map[string]interface{}{
 		"snapshot_id":       item.ID,
 		"asset_count":       item.Document.TotalAssetCount,
 		"pqc_readiness_pct": round2(item.Document.PQCReadinessPercent),
@@ -336,12 +338,10 @@ func (s *Service) ListCBOMHistory(ctx context.Context, tenantID string, limit in
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 {
-		item, err := s.GenerateCBOM(ctx, tenantID, "bootstrap")
-		if err != nil {
-			return nil, err
-		}
-		return []CBOMSnapshot{item}, nil
+	// A read never writes: with no snapshot yet the history is empty
+	// (POST /cbom/generate or the scheduler creates one).
+	if items == nil {
+		items = []CBOMSnapshot{}
 	}
 	return items, nil
 }
@@ -1313,19 +1313,18 @@ func diffAssets(from CBOMDocument, to CBOMDocument) BOMDiff {
 	}
 }
 
+// publishAudit emits a background event (scheduled or ingest work, not an
+// API request, which the route kernel audits) through pkg/audit onto the
+// AUDIT stream. subject is audit.sbom.<action>.
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
 	if s.events == nil {
 		return nil
 	}
-	raw, err := json.Marshal(map[string]interface{}{
-		"tenant_id": tenantID,
-		"service":   "sbom",
-		"action":    subject,
-		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-		"data":      data,
+	return s.events.Emit(ctx, strings.TrimPrefix(subject, "audit.sbom."), pkgaudit.Event{
+		TenantID:  tenantID,
+		ActorID:   "kms-sbom",
+		ActorType: "service",
+		Result:    "success",
+		Details:   data,
 	})
-	if err != nil {
-		return err
-	}
-	return s.events.Publish(ctx, subject, raw)
 }

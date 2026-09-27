@@ -86,7 +86,7 @@ func main() {
 		NewHTTPAuditClient(envOr("AUDIT_URL", "https://audit:8070"), 5*time.Second),
 		NewHTTPComplianceClient(envOr("COMPLIANCE_URL", "https://compliance:8110"), 5*time.Second),
 		NewHTTPPostureClient(envOr("POSTURE_URL", "https://posture:8220"), 5*time.Second),
-		publisher,
+		audit,
 	)
 	svc.ConfigureTelemetryRetention(
 		time.Duration(envOrInt("REPORTING_TELEMETRY_RETENTION_DAYS", 30))*24*time.Hour,

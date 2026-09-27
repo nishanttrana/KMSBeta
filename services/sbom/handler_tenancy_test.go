@@ -118,3 +118,16 @@ func TestSBOMPlatformWritesRefusedOutsidePlatformTenant(t *testing.T) {
 		t.Fatalf("read refused: %d %s", rr.Code, rr.Body.String())
 	}
 }
+
+// A read never writes: GET /cbom/history with no snapshot returns an empty
+// list instead of generating one (which cluster members must not do).
+func TestCBOMHistoryReadWritesNothing(t *testing.T) {
+	h, svc, _ := newAuditedSBOMHandler(t)
+	rr := serve(h, adminOf("tenant-a"), http.MethodGet, "/cbom/history", "")
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"items":[]`) {
+		t.Fatalf("status %d: %s", rr.Code, rr.Body.String())
+	}
+	if items, _ := svc.store.ListCBOMSnapshots(context.Background(), "tenant-a", 10); len(items) != 0 {
+		t.Fatalf("a read generated %d snapshot(s)", len(items))
+	}
+}

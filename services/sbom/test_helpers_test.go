@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"sync"
 	"testing"
+	pkgaudit "vecta-kms/pkg/audit"
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
@@ -25,6 +27,12 @@ func (p *nopSBOMPublisher) Publish(_ context.Context, subject string, payload []
 	}
 	p.last[subject] = payload
 	return nil
+}
+
+// Emit records a pkg/audit event under its full subject (audit.sbom.<action>).
+func (p *nopSBOMPublisher) Emit(ctx context.Context, action string, evt pkgaudit.Event) error {
+	raw, _ := json.Marshal(evt)
+	return p.Publish(ctx, "audit.sbom."+action, raw)
 }
 
 func (p *nopSBOMPublisher) Count(subject string) int {

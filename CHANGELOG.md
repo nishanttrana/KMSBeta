@@ -4,6 +4,22 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.37.0-beta] — 2026-09-27
+
+### Close the 1.33.0-beta open items for sbom and reporting
+- **Reads never write.** `GET /cbom/history` generated and stored a first
+  CBOM snapshot when the tenant had none: a write on a read path, which
+  also ran on cluster members (they must not write replicated tables). It
+  now returns an empty list; `POST /cbom/generate` or the scheduler creates
+  snapshots.
+- **One audit pipeline for background events.** sbom's snapshot events and
+  reporting's `alert_created`, `evidence_pack_requested` and scheduled
+  `report_requested` were raw publishes of a private payload shape. They now
+  go through `pkg/audit` `Client.Emit` as standard events (actor
+  `kms-sbom` / `kms-reporting`, `actor_type: service`, fields in `details`).
+  `audit.cbom.generated` from sbom is now `audit.sbom.cbom_generated`
+  (compliance's own `audit.cbom.generated` is unchanged).
+
 ## [1.36.0-beta] — 2026-09-27
 
 ### Every audit register row names the test that proves it

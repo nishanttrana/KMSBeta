@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A "bootstrap on first read" is a write (sbom CBOM history)
+- **What happened:** `ListCBOMHistory` generated a snapshot when none
+  existed, so a GET wrote a replicated table, on cluster members too.
+- **Why it slipped through:** it looked like a UX convenience inside a read
+  function, and the member-mode rule is checked for background jobs and
+  forwarded writes, not for reads. Tests seeded data first.
+- **Rule:** a read handler never creates data; return empty and let the
+  write path create it. Test the empty case (`TestCBOMHistoryReadWritesNothing`).
+
 ### Filling in the register's test column found five real audit gaps
 - **What happened:** the earlier register tables listed each event and
   when it fires, but no test. Finding or writing a test for every row

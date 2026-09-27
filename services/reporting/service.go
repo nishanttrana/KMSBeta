@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/route"
 
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/pdfutil"
@@ -21,14 +23,14 @@ type Service struct {
 	audit               AuditClient
 	compliance          ComplianceClient
 	posture             PostureClient
-	events              EventPublisher
+	events              route.Emitter // background events via pkg/audit
 	hub                 *feedHub
 	telemetryRetention  time.Duration
 	telemetryPurgeBatch int
 	mu                  sync.Mutex
 }
 
-func NewService(store Store, audit AuditClient, compliance ComplianceClient, posture PostureClient, events EventPublisher) *Service {
+func NewService(store Store, audit AuditClient, compliance ComplianceClient, posture PostureClient, events route.Emitter) *Service {
 	return &Service{
 		store:               store,
 		audit:               audit,
@@ -1235,19 +1237,18 @@ func topKV(m map[string]int, n int) []kv {
 	return items
 }
 
+// publishAudit emits a background event (scheduled or ingest work, not an
+// API request, which the route kernel audits) through pkg/audit onto the
+// AUDIT stream. subject is audit.reporting.<action>.
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
 	if s.events == nil {
 		return nil
 	}
-	raw, err := json.Marshal(map[string]interface{}{
-		"tenant_id": tenantID,
-		"service":   "reporting",
-		"action":    subject,
-		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-		"data":      data,
+	return s.events.Emit(ctx, strings.TrimPrefix(subject, "audit.reporting."), pkgaudit.Event{
+		TenantID:  tenantID,
+		ActorID:   "kms-reporting",
+		ActorType: "service",
+		Result:    "success",
+		Details:   data,
 	})
-	if err != nil {
-		return err
-	}
-	return s.events.Publish(ctx, subject, raw)
 }

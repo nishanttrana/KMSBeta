@@ -89,7 +89,7 @@ func main() {
 		NewHTTPKeyCoreClient(keycoreURL, 5*time.Second),
 		NewHTTPCertsClient(certsURL, 5*time.Second),
 		NewHTTPDiscoveryClient(discoveryURL, 5*time.Second),
-		publisher,
+		audit,
 	)
 
 	svc.StartScheduler(ctx, SchedulerConfig{
