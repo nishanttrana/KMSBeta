@@ -38,6 +38,20 @@ func TestGeneratedKeyMatchesRequestedAlgorithm(t *testing.T) {
 // are deleted and audited.
 func TestCorrectKeyLabels(t *testing.T) {
 	svc, store := newCertsService(t)
+	exerciseCorrectKeyLabels(t, svc, store)
+}
+
+// The same on real Postgres: the UPDATEs of algorithm with cert_class and
+// ca_type, and the profile DELETE, run on the production schema.
+func TestCorrectKeyLabelsPostgres(t *testing.T) {
+	conn := postgresTestDB(t)
+	store := NewSQLStore(conn)
+	svc := NewService(store, nopCertPublisher{}, NoopKeyCoreSigner{}, []byte("0123456789ABCDEF0123456789ABCDEF"), false, false)
+	exerciseCorrectKeyLabels(t, svc, store)
+}
+
+func exerciseCorrectKeyLabels(t *testing.T, svc *Service, store *SQLStore) {
+	t.Helper()
 	ctx := context.Background()
 	ca, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "acme", Name: "acme-root", CALevel: "root", Algorithm: "ECDSA-P384", KeyBackend: "software", Subject: "CN=Acme"})
 	if err != nil {

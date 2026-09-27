@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	pkgcrypto "vecta-kms/pkg/crypto"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -203,4 +205,44 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	return nil
+}
+
+// postgresTestDB opens VECTA_TEST_POSTGRES_DSN in a schema of its own with
+// the certs migrations applied, and drops the schema afterwards. Other
+// packages' Postgres tests share the database (governance's backup test
+// restores every public table while others run). Skips without a DSN.
+func postgresTestDB(t *testing.T) *pkgdb.DB {
+	t.Helper()
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	ctx := context.Background()
+	admin, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 1, MaxIdle: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = admin.Close() })
+	suffix, err := pkgcrypto.RandomBytes(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := fmt.Sprintf("certs_test_%x", suffix)
+	if _, err := admin.SQL().ExecContext(ctx, "CREATE SCHEMA "+schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = admin.SQL().ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE") })
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	conn, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn + sep + "search_path=" + schema, MaxOpen: 4, MaxIdle: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
+		t.Fatalf("migrations: %v", err)
+	}
+	return conn
 }

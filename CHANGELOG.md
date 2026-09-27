@@ -4,6 +4,18 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.22.0-beta] — 2026-09-27
+
+### Tests: key-label correction proven on real Postgres
+- `TestCorrectKeyLabelsPostgres` runs the relabelling of PQC-labelled and
+  mis-sized certificate and CA records (`algorithm` with `cert_class` or
+  `ca_type`) and the deletion of PQC profiles against real Postgres with the
+  certs migrations. Until now only SQLite had run those statements. It
+  passes in FIPS `off`, `on` and `only`.
+- The certs Postgres tests share one helper, `postgresTestDB`: a schema of
+  their own, dropped afterwards. That way governance's backup test, which
+  restores every public table, can't interfere.
+
 ## [1.21.0-beta] — 2026-09-27
 
 ### Landed: the post-quantum certificate removal documented under 1.19.0-beta

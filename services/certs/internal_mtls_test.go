@@ -4,21 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgcrypto "vecta-kms/pkg/crypto"
-	pkgdb "vecta-kms/pkg/db"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
 	"vecta-kms/pkg/svctls"
@@ -304,36 +300,8 @@ func TestMTLSRoutesRootOnlyAndAudited(t *testing.T) {
 // migration, the upserts, timestamp handling, and the exact statement every
 // service uses to report (pkg/config.MTLSObservedUpsertSQL).
 func TestMTLSStorePostgres(t *testing.T) {
-	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
-	if dsn == "" {
-		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
-	}
 	ctx := context.Background()
-	// A schema of its own: other packages' Postgres tests share the database,
-	// and governance's backup test restores every public table while this runs.
-	admin, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 1, MaxIdle: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = admin.Close() })
-	suffix, _ := pkgcrypto.RandomBytes(4)
-	schema := fmt.Sprintf("mtls_test_%x", suffix)
-	if _, err := admin.SQL().ExecContext(ctx, "CREATE SCHEMA "+schema); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = admin.SQL().ExecContext(context.Background(), "DROP SCHEMA "+schema+" CASCADE") })
-	sep := "?"
-	if strings.Contains(dsn, "?") {
-		sep = "&"
-	}
-	conn, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn + sep + "search_path=" + schema, MaxOpen: 4, MaxIdle: 2})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = conn.Close() })
-	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
-		t.Fatalf("migrations: %v", err)
-	}
+	conn := postgresTestDB(t)
 	st := NewSQLStore(conn)
 	after := time.Now().Add(time.Minute).UTC().Truncate(time.Second)
 	for gen := int64(1); gen <= 2; gen++ {

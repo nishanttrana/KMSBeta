@@ -164,7 +164,8 @@ Refusals carry `result: refused` and a `reason`: `not_root_tenant`,
 `kx_profile_not_applicable`, `force_not_available`,
 `confirmation_required`, and the kernel's own. Proven by
 `TestMTLSRoutesRefusalsAudited`, `TestMTLSRoutesRootOnlyAndAudited`,
-`TestMTLSAppliedOnlyWhenReportedAndAuditedOnce`, `TestCorrectKeyLabels` and
+`TestMTLSAppliedOnlyWhenReportedAndAuditedOnce`, `TestCorrectKeyLabels` (and
+`TestCorrectKeyLabelsPostgres` on real Postgres) and
 `TestPQCCertificatesRefusedAndAudited` (services/certs).
 
 **How a restart shows:** a service restarting for a policy change logs
