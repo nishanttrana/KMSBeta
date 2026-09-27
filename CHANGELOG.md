@@ -4,6 +4,50 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.25.0-beta] — 2026-09-27
+
+### Webhook credentials encrypted at rest under an audit service master key
+- **Closes the item left open in 1.20.0-beta.** Webhook signing secrets and
+  custom header values (Splunk HEC tokens, Datadog API keys) were hidden in
+  the API but stored in plaintext in the audit database.
+- **How they are stored now:**
+  - Each webhook's credentials are sealed together as one envelope: a random
+    DEK encrypts them, and the audit service's master key wraps the DEK.
+  - The master key comes from keycore through `pkg/mek` (a protected system
+    key, derived for the `kms-audit` identity). There is no environment
+    variable and no fallback.
+  - The sealed payload names its tenant and webhook, so a copied blob doesn't
+    open elsewhere.
+  - The database keeps header names only. The store refuses to write
+    plaintext credentials at all.
+- **Existing plaintext rows** are sealed on the primary at startup and every
+  15 minutes (which catches restored rows). Each one is recorded in the
+  exposure register as `plaintext_storage` and shown under Webhook
+  credentials on the master-key exposure page.
+  - **Action:** a database copy made before this still holds those values.
+    Rotate each secret and token at the receiver and enter the new values.
+    The entry closes when every credential has been replaced, or when the
+    webhook is deleted.
+- **A keycore key rotation** re-wraps every envelope onto the new version, as
+  for the other `pkg/mek` services.
+- **The audit service does not wait for keycore.**
+  - It is the audit sink, so the key opens in the background.
+  - Until then, credential writes return `503 credentials_key_unavailable`,
+    and deliveries that need credentials fail with that reason.
+  - A mismatched key keeps credentials unavailable (fail closed) without
+    stopping the audit pipeline.
+- **New audit events:**
+  - `audit.audit.webhook_credentials_sealed` and
+    `audit.audit.webhook_credentials_seal_refused`;
+  - `audit.audit.mek_exposure_recorded` (new `mek.Keyring.RecordExposure`);
+  - the standard `audit.audit.mek_*` events from `pkg/mek`.
+- **Operators:** the audit container authenticates to keycore with its
+  service identity (`kms-audit`, from `INTERNAL_SERVICE_BOOTSTRAP_SECRET`,
+  already in the common environment). Migration 006 adds the envelope
+  columns and the `audit_mek_state` / `audit_mek_exposure` tables. Both
+  tables are replicated under the `audit` component.
+- **Tests:** see docs/SECURITY/SERVICE_MASTER_KEYS.md. They include real
+  Postgres, a keycore rotation and a key mismatch.
 ## [1.24.0-beta] — 2026-09-27
 
 ### Fix: system backups held partitioned tables twice, and restores failed

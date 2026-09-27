@@ -70,6 +70,21 @@ ON CONFLICT (tenant_id, item_type, item_id) DO UPDATE SET
 	return err
 }
 
+// RecordExposure opens (or re-opens) an item's register entry for material
+// that was exposed some other way than a public legacy key, for example
+// stored in plaintext by an earlier release (source names how). It is
+// audited as mek_exposure_recorded.
+func (k *Keyring) RecordExposure(ctx context.Context, tenant, itemType, itemID, source string) error {
+	if err := recordExposure(ctx, k.opts.DB, k.opts.Tables.ExposureTable, tenant, itemType, itemID, source); err != nil {
+		return err
+	}
+	emit(ctx, k.opts.Audit, "mek_exposure_recorded", tenant, pkgaudit.Event{TargetType: itemType, TargetID: itemID}, map[string]interface{}{
+		"severity": "warning", "source": source,
+		"exposure": "recorded in the exposure register until the material is replaced",
+	})
+	return nil
+}
+
 // Exposures lists a tenant's register entries; openOnly drops remediated ones.
 func (k *Keyring) Exposures(ctx context.Context, tenant string, openOnly bool) ([]Exposure, error) {
 	q := `SELECT tenant_id, item_type, item_id, source, exposed_since, remediated_at, remediation, remediated_by

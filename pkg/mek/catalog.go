@@ -76,6 +76,20 @@ var Catalog = map[string]ServiceTables{
 		DevSeed:   "vecta-ekm-dev-mek",
 		LegacyEnv: "EKM_MEK_B64",
 	},
+	// audit: webhook signing secrets and custom header values (Splunk HEC
+	// tokens, Datadog API keys), sealed as one envelope per webhook. Earlier
+	// releases stored them in plaintext, not under a key, so there are no
+	// legacy keys; the audit service seals those rows itself and records
+	// them in the exposure register (services/audit/webhook_creds.go).
+	"audit": {
+		Service: "audit", ClientID: "kms-audit",
+		StateTable: "audit_mek_state", ExposureTable: "audit_mek_exposure",
+		Tables: []Table{{
+			Name: "webhooks", Keys: []string{"tenant_id", "id"}, Tenant: "tenant_id",
+			Item: "id", ItemType: "webhook_credentials", WrappedDEK: "creds_wrapped_dek", WrappedIV: "creds_wrapped_dek_iv",
+			Where: "creds_wrapped_dek IS NOT NULL",
+		}},
+	},
 	"certs": {
 		Service: "cert", ClientID: "kms-certs",
 		StateTable: "cert_mek_state", ExposureTable: "cert_mek_exposure",

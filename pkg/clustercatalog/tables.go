@@ -15,6 +15,8 @@ var Replicated = map[string][]string{
 	},
 	"audit": {
 		"alert_rules",
+		"audit_mek_exposure",
+		"audit_mek_state",
 		"webhooks",
 	},
 	"auth": {

@@ -34,7 +34,8 @@ export const EXPOSURE_SERVICES: { service: string; label: string; remedy: string
   { service: "secrets", label: "Secrets", remedy: "Rotate the value where it is issued, then rotate it here (or delete the secret)." },
   { service: "certs", label: "CA signing keys", remedy: "Replace the CA: issue a new CA, re-issue its certificates, then delete this CA." },
   { service: "cloud", label: "Cloud credentials", remedy: "Rotate the credentials at the cloud provider, then re-register the account and delete this one." },
-  { service: "ekm", label: "BitLocker recovery keys", remedy: "Run a BitLocker rotate job for the volume (or delete the client)." }
+  { service: "ekm", label: "BitLocker recovery keys", remedy: "Run a BitLocker rotate job for the volume (or delete the client)." },
+  { service: "audit", label: "Webhook credentials", remedy: "Rotate the signing secret and every header token (Splunk, Datadog) at the receiver, then enter the new values on the webhook (or delete it)." }
 ];
 
 // reportFrom turns one service's response into a report. A 403 means the

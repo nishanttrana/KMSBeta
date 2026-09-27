@@ -16,6 +16,7 @@ import (
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/mek/mektest"
 	"vecta-kms/pkg/route/routetest"
 )
 
@@ -39,7 +40,9 @@ func webhookRig(t *testing.T) (*Handler, *Service, *SQLStore, *httptest.Server, 
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(srv.Close)
-	f := newWebhookFanout(store, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, log.Default())
+	mektest.ApplySchema(t, store.db.SQL(), "audit")
+	svc.creds.set(mektest.Open(t, store.db.SQL(), "audit", mektest.NewKeycore(t)))
+	f := newWebhookFanout(store, svc.creds, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, log.Default())
 	f.disp.client = srv.Client()
 	f.disp.validate = func(u string) error {
 		if !strings.HasPrefix(u, "https://") {
@@ -131,7 +134,7 @@ func TestWebhookDeliversMatchingAuditEvents(t *testing.T) {
 // The API never returns the signing secret or header values; an empty header
 // value on update keeps the stored one; plain http is refused and audited.
 func TestWebhookSecretsAreWriteOnly(t *testing.T) {
-	h, _, store, srv, _ := webhookRig(t)
+	h, svc, store, srv, _ := webhookRig(t)
 	_, out := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{
 		"name": "dd", "url": srv.URL, "format": "datadog", "events": []string{"*"},
 		"secret": "0123456789abcdef", "headers": map[string]string{"DD-API-KEY": "dd-secret-key"},
@@ -147,9 +150,10 @@ func TestWebhookSecretsAreWriteOnly(t *testing.T) {
 	if rr, _ := webhookReq(t, h, http.MethodPatch, "/webhooks/"+id, map[string]any{"headers": map[string]string{"DD-API-KEY": ""}, "name": "dd2"}); rr.Code != http.StatusOK {
 		t.Fatalf("update: %d %s", rr.Code, rr.Body)
 	}
-	wh, _ := store.GetWebhook(context.Background(), "t1", id)
-	if wh.Headers["DD-API-KEY"] != "dd-secret-key" || wh.Secret != "0123456789abcdef" {
-		t.Fatal("update lost a write-only value")
+	stored, _ := store.GetWebhook(context.Background(), "t1", id)
+	wh, err := svc.creds.Open(stored)
+	if err != nil || wh.Headers["DD-API-KEY"] != "dd-secret-key" || wh.Secret != "0123456789abcdef" {
+		t.Fatalf("update lost a write-only value: %v", err)
 	}
 	rr, _ = webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "plain", "url": "http://example.com/hook", "events": []string{"*"}})
 	if rr.Code != http.StatusBadRequest || actionCount(t, store, "audit.audit.webhook_created") != 2 {

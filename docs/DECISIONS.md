@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Webhook credentials: one sealed envelope, key opened in the background
+
+- **Decision:** the secret and all header values of a webhook go into one
+  envelope under a `pkg/mek` master key for the audit service. Header names
+  stay in plaintext (the API shows them).
+- **Rejected: one envelope per field.** `pkg/mek` tracks one wrapped DEK per
+  row, and a single envelope keeps rotation and the backup re-wrap simple.
+- **Binding:** the sealed payload includes the tenant and webhook ID, which
+  are checked on open. That gives the effect of AAD without changing the
+  shared envelope format.
+- **Rejected: refuse to start until the key is open**, as secrets, certs,
+  cloud and ekm do. Audit is the sink, and blocking it on keycore would
+  suspend the audit trail during exactly the incidents it must record.
+  Instead, credential writes and credentialed deliveries fail closed until
+  the key is open, and a key mismatch disables them without stopping ingest.
+- **Existing plaintext rows:** sealed on the primary, and recorded in the
+  exposure register (`plaintext_storage`) before sealing, because a database
+  copy made before the change still has them.
+- **Retiring an entry:** the entry is retired only when every credential has
+  been replaced. Rotating the secret alone leaves a Splunk token exposed.
+
+---
+
 ## 2026-09-27 — Rotation policies and webhook delivery: how they run
 
 **Rotation.** A trigger rotates keys *as the caller*, so the caller's key

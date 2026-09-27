@@ -7,14 +7,34 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
+
+const webhookColumns = `id, tenant_id, name, url, format, events_json, secret, headers_json,
+       enabled, failure_count, last_delivery_at, COALESCE(last_delivery_status,''),
+       created_at, updated_at, has_secret, creds_ciphertext, creds_data_iv,
+       creds_wrapped_dek, creds_wrapped_dek_iv`
+
+// errPlaintextCredentials: credentials reach the store only sealed.
+var errPlaintextCredentials = errors.New("webhook credentials must be sealed before they are stored")
+
+// storedCreds returns the columns a webhook is written with: header names
+// only, no secret, and the sealed envelope (NULLs when there is none).
+func storedCreds(w Webhook) (string, []interface{}, error) {
+	if hasCredentials(w.Secret, w.Headers) {
+		return "", nil, errPlaintextCredentials
+	}
+	names, _ := json.Marshal(headerNames(w.Headers))
+	if w.Sealed == nil {
+		return string(names), []interface{}{nil, nil, nil, nil}, nil
+	}
+	return string(names), []interface{}{w.Sealed.Ciphertext, w.Sealed.DataIV, w.Sealed.WrappedDEK, w.Sealed.WrappedDEKIV}, nil
+}
 
 // ListWebhooks returns all webhooks for a tenant.
 func (s *SQLStore) ListWebhooks(ctx context.Context, tenantID string) ([]Webhook, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, url, format, events_json, secret, headers_json,
-       enabled, failure_count, last_delivery_at, COALESCE(last_delivery_status,''),
-       created_at, updated_at
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+webhookColumns+`
 FROM webhooks
 WHERE tenant_id=$1
 ORDER BY created_at DESC
@@ -36,10 +56,7 @@ ORDER BY created_at DESC
 
 // GetWebhook retrieves a single webhook by tenant and id.
 func (s *SQLStore) GetWebhook(ctx context.Context, tenantID, id string) (Webhook, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, name, url, format, events_json, secret, headers_json,
-       enabled, failure_count, last_delivery_at, COALESCE(last_delivery_status,''),
-       created_at, updated_at
+	row := s.db.SQL().QueryRowContext(ctx, `SELECT `+webhookColumns+`
 FROM webhooks
 WHERE tenant_id=$1 AND id=$2
 `, tenantID, id)
@@ -68,17 +85,21 @@ func (s *SQLStore) CreateWebhook(ctx context.Context, w Webhook) (Webhook, error
 		w.Headers = map[string]string{}
 	}
 	eventsJSON, _ := json.Marshal(w.Events)
-	headersJSON, _ := json.Marshal(w.Headers)
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO webhooks (id, tenant_id, name, url, format, events_json, secret, headers_json,
-                      enabled, failure_count, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-`, w.ID, w.TenantID, w.Name, w.URL, w.Format, string(eventsJSON), w.Secret, string(headersJSON),
-		w.Enabled, w.FailureCount, w.CreatedAt, w.UpdatedAt)
+	headersJSON, creds, err := storedCreds(w)
 	if err != nil {
 		return Webhook{}, err
 	}
-	return w, nil
+	args := append([]interface{}{w.ID, w.TenantID, w.Name, w.URL, w.Format, string(eventsJSON), headersJSON,
+		w.Enabled, w.FailureCount, w.CreatedAt, w.UpdatedAt, w.HasSecret}, creds...)
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO webhooks (id, tenant_id, name, url, format, events_json, secret, headers_json,
+                      enabled, failure_count, created_at, updated_at, has_secret,
+                      creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv)
+VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+`, args...); err != nil {
+		return Webhook{}, err
+	}
+	return s.GetWebhook(ctx, w.TenantID, w.ID)
 }
 
 // UpdateWebhook applies changes to an existing webhook.
@@ -91,14 +112,20 @@ func (s *SQLStore) UpdateWebhook(ctx context.Context, tenantID, id string, w Web
 		w.Headers = map[string]string{}
 	}
 	eventsJSON, _ := json.Marshal(w.Events)
-	headersJSON, _ := json.Marshal(w.Headers)
+	headersJSON, creds, err := storedCreds(w)
+	if err != nil {
+		return Webhook{}, err
+	}
+	args := append([]interface{}{w.Name, w.URL, w.Format, string(eventsJSON), headersJSON,
+		w.Enabled, w.UpdatedAt, w.HasSecret}, creds...)
+	args = append(args, tenantID, id)
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE webhooks
-SET name=$1, url=$2, format=$3, events_json=$4, secret=$5, headers_json=$6,
-    enabled=$7, updated_at=$8
-WHERE tenant_id=$9 AND id=$10
-`, w.Name, w.URL, w.Format, string(eventsJSON), w.Secret, string(headersJSON),
-		w.Enabled, w.UpdatedAt, tenantID, id)
+SET name=$1, url=$2, format=$3, events_json=$4, secret='', headers_json=$5,
+    enabled=$6, updated_at=$7, has_secret=$8,
+    creds_ciphertext=$9, creds_data_iv=$10, creds_wrapped_dek=$11, creds_wrapped_dek_iv=$12
+WHERE tenant_id=$13 AND id=$14
+`, args...)
 	if err != nil {
 		return Webhook{}, err
 	}
@@ -122,6 +149,49 @@ DELETE FROM webhooks WHERE tenant_id=$1 AND id=$2
 		return errNotFound
 	}
 	return nil
+}
+
+// ListPlaintextWebhooks returns rows an earlier release wrote with the
+// secret or header values in plaintext (all tenants; the seal job's input).
+func (s *SQLStore) ListPlaintextWebhooks(ctx context.Context) ([]Webhook, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+webhookColumns+`
+FROM webhooks
+WHERE creds_wrapped_dek IS NULL AND (secret <> '' OR headers_json NOT IN ('', '{}'))
+ORDER BY tenant_id, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []Webhook
+	for rows.Next() {
+		w, err := scanWebhook(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// SealPlaintextWebhook replaces a plaintext row's credentials with w's
+// envelope, only if the row is still unsealed. It reports whether it did.
+func (s *SQLStore) SealPlaintextWebhook(ctx context.Context, w Webhook) (bool, error) {
+	headersJSON, creds, err := storedCreds(w)
+	if err != nil {
+		return false, err
+	}
+	args := append([]interface{}{headersJSON, w.HasSecret}, creds...)
+	args = append(args, w.TenantID, w.ID)
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE webhooks
+SET secret='', headers_json=$1, has_secret=$2,
+    creds_ciphertext=$3, creds_data_iv=$4, creds_wrapped_dek=$5, creds_wrapped_dek_iv=$6
+WHERE tenant_id=$7 AND id=$8 AND creds_wrapped_dek IS NULL`, args...)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 // RecordDelivery inserts a delivery record for a webhook.
@@ -206,14 +276,21 @@ func scanWebhook(scanner interface {
 	var lastDeliveryRaw interface{}
 	var createdRaw interface{}
 	var updatedRaw interface{}
+	var ct, dataIV, wrappedDEK, wrappedIV []byte
 	err := scanner.Scan(
 		&w.ID, &w.TenantID, &w.Name, &w.URL, &w.Format,
 		&eventsRaw, &w.Secret, &headersRaw,
 		&w.Enabled, &w.FailureCount, &lastDeliveryRaw, &w.LastDeliveryStatus,
-		&createdRaw, &updatedRaw,
+		&createdRaw, &updatedRaw, &w.HasSecret, &ct, &dataIV, &wrappedDEK, &wrappedIV,
 	)
 	if err != nil {
 		return Webhook{}, err
+	}
+	if len(wrappedDEK) > 0 {
+		w.Sealed = &pkgcrypto.EnvelopeCiphertext{Ciphertext: ct, DataIV: dataIV, WrappedDEK: wrappedDEK, WrappedDEKIV: wrappedIV}
+	}
+	if w.Secret != "" {
+		w.HasSecret = true // an earlier release's plaintext row, until it is sealed
 	}
 	w.CreatedAt = parseTimeValue(createdRaw)
 	w.UpdatedAt = parseTimeValue(updatedRaw)

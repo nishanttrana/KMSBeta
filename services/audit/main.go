@@ -30,7 +30,10 @@ import (
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/mek"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[audit] ", log.LstdFlags|log.Lmicroseconds)
@@ -48,6 +51,8 @@ func main() {
 	if _, err := pkgsvctls.Init(ctx, "kms-audit", pkgsvctls.Options{Logger: logger}); err != nil {
 		logger.Fatalf("internal mTLS enrolment failed: %v", err)
 	}
+	// Service JWT for keycore (the webhook credentials master key).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-audit"))
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -108,10 +113,32 @@ func main() {
 	quarantine := NewQuarantineEvaluator(pub)
 	svc.SetDetectors(hndl, quarantine)
 
-	fanout := newWebhookFanout(store, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
+	fanout := newWebhookFanout(store, svc.creds, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
 	fanout.Start(ctx)
 	svc.SetWebhookFanout(fanout)
 	handler := NewHandler(svc, store)
+
+	// Webhook credentials master key from keycore (pkg/mek). It opens in the
+	// background: the audit pipeline never waits on keycore (webhook_creds.go).
+	selfAudit := selfEmitter{svc}
+	auditFn := func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }
+	go svc.openCredsKeyring(ctx, func(ctx context.Context) (*mek.Keyring, error) {
+		return mek.Open(ctx, mek.Options{
+			Tables: mek.Catalog["audit"],
+			Source: mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["audit"]),
+			DB:     dbConn.SQL(),
+			Audit:  selfAudit,
+			Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
+			Logf:   logger.Printf,
+			Wait:   10 * time.Minute,
+		})
+	}, func(k *mek.Keyring) {
+		kernel := route.New("audit", selfAudit, logger)
+		k.Routes(kernel, "audit")
+		kernel.MountOn(handler.mux)
+		go k.Watch(ctx, 15*time.Minute)
+		go svc.sealLegacyLoop(ctx, k, clusterstate.RunsPrimaryJobs, auditFn, 15*time.Minute, logger.Printf)
+	}, logger.Printf)
 	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
 		envOr("CLUSTER_URL", "https://cluster-manager:8210"),
 		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),

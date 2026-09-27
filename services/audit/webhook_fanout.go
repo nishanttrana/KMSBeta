@@ -18,6 +18,7 @@ import (
 // delivered themselves.
 type webhookFanout struct {
 	store   Store
+	creds   *credVault
 	disp    *WebhookDispatcher
 	audit   func(ctx context.Context, ev AuditEvent)
 	primary func(context.Context) bool
@@ -39,9 +40,9 @@ const (
 	webhookQueueSize = 4096
 )
 
-func newWebhookFanout(store Store, audit func(context.Context, AuditEvent), logger *log.Logger) *webhookFanout {
+func newWebhookFanout(store Store, creds *credVault, audit func(context.Context, AuditEvent), logger *log.Logger) *webhookFanout {
 	return &webhookFanout{
-		store: store, disp: NewWebhookDispatcher(), audit: audit, primary: clusterstate.RunsPrimaryJobs,
+		store: store, creds: creds, disp: NewWebhookDispatcher(), audit: audit, primary: clusterstate.RunsPrimaryJobs,
 		queue: make(chan AuditEvent, webhookQueueSize), logger: logger,
 		cache: map[string]cachedWebhooks{}, ttl: 15 * time.Second,
 	}
@@ -133,6 +134,10 @@ func (f *webhookFanout) deliverEvent(ctx context.Context, ev AuditEvent) {
 
 // deliver sends one event to one webhook and records the result.
 func (f *webhookFanout) deliver(ctx context.Context, wh Webhook, ev AuditEvent) WebhookDelivery {
+	wh, err := f.creds.Open(wh) // secret and header values, in memory for this delivery only
+	if err != nil {
+		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())
+	}
 	payload, err := formatWebhookPayload(wh.Format, ev)
 	if err != nil {
 		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())

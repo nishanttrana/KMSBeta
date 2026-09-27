@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A sink can't have a hard startup dependency
+- **Context:** every other `pkg/mek` service refuses to start until keycore
+  gives it its master key. That is the safe default for a service whose whole
+  job is the encrypted data.
+- **The trap:** copied to the audit service, the same rule would stop audit
+  ingest whenever keycore is down or returns a mismatched key. Durable
+  JetStream would hold events, but the platform would lose its audit trail
+  exactly when something is wrong.
+- **What we did:** the key opens in the background, and only the feature that
+  needs it fails closed (webhook credential writes return 503, and
+  deliveries that need credentials fail with the reason).
+- **Rule:** fail closed at the smallest scope that protects the secret. Never
+  let a feature's key take down the audit pipeline.
+- **Also:** plaintext storage is an exposure like a public key. Seal the
+  rows, and record them in the register so someone rotates the material. A
+  copy made before sealing still has it.
 ### information_schema lists partitions as tables
 - **What happened:** the backup engine enumerated `information_schema.tables`
   (`BASE TABLE`), which includes both a partitioned parent and every
@@ -43,10 +59,8 @@ Newest entries on top.
   side effect (the key version, the outbound request), not to the row that
   records it. A run row, a delivery log or a status field is evidence only if
   the code that writes it also did the work.
-- **Open:** webhook secrets and header values are write-only in the API but
-  still plaintext at rest. The audit service has no `pkg/mek` master key yet.
-  Adding one means audit waits for keycore at startup and needs a
-  backup-rewrap catalogue entry, so it is its own change.
+- **Closed in 1.25.0-beta:** webhook credentials are now sealed under an
+  audit service master key (see the entry above).
 
 ### A test that doesn't exist also passes
 - **What happened:** 1.16.0-beta cited two tests as proof, and a filtered

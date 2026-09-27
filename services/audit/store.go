@@ -49,6 +49,8 @@ type Store interface {
 	ListDeliveries(ctx context.Context, tenantID string, webhookID string, limit int) ([]WebhookDelivery, error)
 	IncrementFailureCount(ctx context.Context, tenantID string, id string) error
 	UpdateLastDelivery(ctx context.Context, tenantID string, id string, status string, at time.Time) error
+	ListPlaintextWebhooks(ctx context.Context) ([]Webhook, error)
+	SealPlaintextWebhook(ctx context.Context, w Webhook) (bool, error)
 
 	// Ops metrics operations
 	RecordOp(ctx context.Context, tenantID string, service string, opType string, latencyMs int, isError bool) error

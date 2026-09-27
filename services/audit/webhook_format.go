@@ -90,13 +90,9 @@ func validateWebhookHeaders(h map[string]string) error {
 // publicWebhook is the API view: the secret is reduced to has_secret and
 // header values (tokens, API keys) are blanked. Both are write-only.
 func publicWebhook(w Webhook) Webhook {
-	w.HasSecret = w.Secret != ""
+	w.HasSecret = w.HasSecret || w.Secret != ""
 	w.Secret = ""
-	names := make(map[string]string, len(w.Headers))
-	for k := range w.Headers {
-		names[k] = ""
-	}
-	w.Headers = names
+	w.Headers = headerNames(w.Headers)
 	return w
 }
 

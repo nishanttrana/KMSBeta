@@ -392,7 +392,7 @@ func TestExposureAndRewrapRoutes(t *testing.T) {
 
 // Every catalogued service is valid and its migrations create its tables.
 func TestCatalogIsValidAndMigrated(t *testing.T) {
-	dirs := map[string]string{"secrets": "secrets", "cloud": "cloud", "ekm": "ekm", "certs": "certs"}
+	dirs := map[string]string{"secrets": "secrets", "cloud": "cloud", "ekm": "ekm", "certs": "certs", "audit": "audit"}
 	for name, st := range Catalog {
 		if err := st.Validate(); err != nil {
 			t.Errorf("%s: %v", name, err)

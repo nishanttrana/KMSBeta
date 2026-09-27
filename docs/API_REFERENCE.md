@@ -684,6 +684,13 @@ webhooks. Delivery runs on the node that ingested the event.
   also carries `X-KMS-Event-Type` and `X-KMS-Event-ID`.
 - **`headers`:** custom headers, for example `Authorization: Splunk <token>`
   or `DD-API-KEY`. The platform's own headers can't be overridden.
+- **At rest:** the secret and header values are sealed as one envelope under
+  the audit service master key from keycore (`pkg/mek`,
+  docs/SECURITY/SERVICE_MASTER_KEYS.md). Until that key is open, a create or
+  update carrying credentials returns `503 credentials_key_unavailable`. The
+  master-key routes `GET /svc/audit/mek/exposure` and
+  `POST /svc/audit/mek/exposure/{item_type}/{item_id}/acknowledge` list and
+  acknowledge webhooks whose credentials were once stored in plaintext.
 - **Write-only values:** responses never carry the secret or header values.
   They show `has_secret` and header names with empty values. On update, a
   header sent with an empty value keeps its stored value, and
@@ -3720,7 +3727,7 @@ Selected events with dedicated audit classification:
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`, `audit.key.wrap`, `audit.key.unwrap`
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
-- `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure): webhooks
+- `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.leak_targets_listed`, `audit.posture.leak_target_created`, `audit.posture.leak_target_deleted`, `audit.posture.leak_scan_started` (refused `target_disabled`), `audit.posture.leak_jobs_listed`, `audit.posture.leak_findings_listed`, `audit.posture.leak_finding_updated` (kernel events), `audit.posture.leak_scan_completed` (scan outcome, `findings`): leak scanner
 - `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`

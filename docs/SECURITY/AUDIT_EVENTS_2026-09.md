@@ -102,6 +102,9 @@ are per tenant, with actor type `service`, and carry `item_type`, `count`
 | `audit.key.rotation_policy_run` | a scheduled policy run on the primary (actor `kms-keycore-rotation-scheduler`; details `matched`, `rotated`, `failed`, `error`); each rotated key also emits `audit.key.rotate` | info; warning when a key failed |
 | `audit.audit.webhook_*` (`webhooks_listed`, `webhook_created`, `webhook_updated`, `webhook_deleted`, `webhook_tested`, `webhook_deliveries_listed`) | kernel events for webhook management; a blocked URL is `result: refused`, `reason: url_blocked` | info; warning for changes |
 | `audit.audit.webhook_delivered` | one audit event delivered (or test) to one webhook: `event_id`, `event_action`, `http_status`, `attempts`, `latency_ms`; never itself delivered | info; warning on failure |
+| `audit.audit.webhook_credentials_sealed` | the primary sealed webhook credentials an earlier release stored in plaintext (`count`, `webhook_ids`); each is also in the exposure register | warning |
+| `audit.audit.webhook_credentials_seal_refused` | plaintext webhook credentials could not be sealed (`webhook_ids`, `reason: seal_failed`) | critical |
+| `audit.<svc>.mek_exposure_recorded` | an item entered the exposure register for a reason other than a public key, e.g. `source: plaintext_storage` (`mek.Keyring.RecordExposure`) | warning |
 | `audit.posture.leak_*` (`leak_targets_listed`, `leak_target_created`, `leak_target_deleted`, `leak_scan_started`, `leak_jobs_listed`, `leak_findings_listed`, `leak_finding_updated`) | kernel events for the leak scanner; a scan of a disabled target is refused (`target_disabled`) | info |
 | `audit.posture.leak_scan_completed` | a scan finished or failed: `status`, `findings`, `job_id`, error | info; warning with findings or on failure |
 | `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info |

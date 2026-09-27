@@ -74,6 +74,10 @@ func (h *Handler) createWebhook(c *route.Call) {
 	if !h.validWebhook(c, wh) {
 		return
 	}
+	wh.ID = newID("wh") // the sealed credentials are bound to it
+	if !h.sealCreds(c, &wh) {
+		return
+	}
 	created, err := h.store.CreateWebhook(c.R.Context(), wh)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "create_failed", "failed to create webhook")
@@ -117,9 +121,28 @@ func (h *Handler) webhookChanged(c *route.Call, wh Webhook) {
 	c.Detail("format", wh.Format)
 	c.Detail("events", wh.Events)
 	c.Detail("enabled", wh.Enabled)
-	c.Detail("signed", wh.Secret != "")
+	c.Detail("signed", wh.HasSecret)
+	c.Detail("credentials_sealed", wh.Sealed != nil)
 	if f := h.fanout(); f != nil {
 		f.Invalidate(wh.TenantID)
+	}
+}
+
+// sealCreds seals the secret and header values under the audit master key,
+// answering 503 while the key is unavailable. Nothing is stored in plaintext.
+func (h *Handler) sealCreds(c *route.Call, wh *Webhook) bool {
+	if err := h.svc.creds.Seal(wh); err != nil {
+		c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
+		return false
+	}
+	return true
+}
+
+// retireExposure closes a webhook's exposure register entry (if any) when its
+// credentials were replaced or it was deleted.
+func (h *Handler) retireExposure(c *route.Call, id, how string) {
+	if k, err := h.svc.creds.current(); err == nil {
+		k.Retire(c.R.Context(), c.Tenant, webhookCredsItemType, id, how)
 	}
 }
 
@@ -136,11 +159,22 @@ func (h *Handler) updateWebhook(c *route.Call) {
 	if !c.Decode(&req) {
 		return
 	}
-	wh, err := h.store.GetWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	stored, err := h.store.GetWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
 		c.Error(http.StatusNotFound, "not_found", "webhook not found")
 		return
 	}
+	// Open the stored credentials so values the caller leaves blank are kept.
+	wh, err := h.svc.creds.Open(stored)
+	if err != nil {
+		c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
+		return
+	}
+	var sentHeaders map[string]string
+	if req.Headers != nil {
+		sentHeaders = *req.Headers
+	}
+	replaced := credsReplaced(stored, req.Secret != nil && *req.Secret != "", req.ClearSecret, sentHeaders)
 	if req.Name != nil {
 		wh.Name = strings.TrimSpace(*req.Name)
 	}
@@ -174,11 +208,30 @@ func (h *Handler) updateWebhook(c *route.Call) {
 	if !h.validWebhook(c, wh) {
 		return
 	}
+	if stored.Sealed == nil && hasCredentials(stored.Secret, stored.Headers) {
+		// An earlier release's plaintext row: register the exposure before
+		// sealing, as the startup job would have.
+		k, err := h.svc.creds.current()
+		if err == nil {
+			err = k.RecordExposure(c.R.Context(), c.Tenant, webhookCredsItemType, stored.ID, "plaintext_storage")
+		}
+		if err != nil {
+			c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
+			return
+		}
+	}
+	if !h.sealCreds(c, &wh) {
+		return
+	}
 	updated, err := h.store.UpdateWebhook(c.R.Context(), c.Tenant, wh.ID, wh)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "update_failed", "failed to update webhook")
 		return
 	}
+	if replaced {
+		h.retireExposure(c, wh.ID, "rotated")
+	}
+	c.Detail("credentials_replaced", replaced)
 	h.webhookChanged(c, updated)
 	c.JSON(http.StatusOK, map[string]interface{}{"webhook": publicWebhook(updated)})
 }
@@ -188,6 +241,7 @@ func (h *Handler) deleteWebhook(c *route.Call) {
 		c.Error(http.StatusNotFound, "not_found", "webhook not found")
 		return
 	}
+	h.retireExposure(c, c.R.PathValue("id"), "deleted")
 	if f := h.fanout(); f != nil {
 		f.Invalidate(c.Tenant)
 	}

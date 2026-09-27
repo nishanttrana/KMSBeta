@@ -5,7 +5,7 @@ master encryption key (MEK) from keycore through `pkg/mek`. No environment
 variable, no fallback, and never a value derived from a string in the repo
 (CLAUDE.md rules 3 and 6; `make conformance` rule `no-literal-key-material`).
 
-Four services store envelope-encrypted data. Each value has its own data key
+Five services store envelope-encrypted data. Each value has its own data key
 (DEK), and the service's MEK wraps it:
 
 | Service | What it protects | Table |
@@ -14,6 +14,7 @@ Four services store envelope-encrypted data. Each value has its own data key
 | certs | CA signing keys in the legacy format (the rest are under the sealed root key, CRWK) | `cert_cas` (`signer_kek_version` = `legacy*`) |
 | cloud | cloud provider credentials | `cloud_accounts` |
 | ekm | BitLocker recovery keys | `ekm_bitlocker_recovery_keys` |
+| audit | webhook signing secrets and custom header values (Splunk HEC tokens, Datadog API keys), sealed together per webhook | `webhooks` (`creds_wrapped_dek` set) |
 
 ## What was wrong (found 2026-09-26)
 
@@ -53,6 +54,23 @@ enough to decrypt them.
 Keycore must be reachable for these services to start; they retry for up to
 10 minutes and then refuse. Keycore checks the policy service before creating
 or deriving, like any other key operation.
+
+**The audit service is the exception.** It is the platform's audit sink, so
+it never refuses to start over its master key:
+- it opens the key in the background and retries every minute while keycore
+  is unreachable;
+- until the key is open, writing webhook credentials returns
+  `503 credentials_key_unavailable`, and a delivery that needs them fails with
+  that reason (recorded and audited);
+- webhooks without credentials, and the whole ingest pipeline, are
+  unaffected;
+- a key that doesn't match the stored data (`mek_check_refused`) stops the
+  retries and keeps credentials unavailable (fail closed) rather than stopping
+  the audit service;
+- its `/mek/exposure` routes appear once the key is open.
+
+The sealed payload names its tenant and webhook, so a blob copied onto
+another row doesn't open there.
 
 ## Moving data off the old keys
 
@@ -103,6 +121,7 @@ the material. So each item found under a public key is recorded in
 | certs | the CA is deleted (issue a new CA, re-issue, then delete the old one) |
 | cloud | the account is deleted (rotate at the provider, re-register, delete) |
 | ekm | a `rotate` job escrows a new recovery key for the volume, or the client is deleted |
+| audit | every credential the webhook had is replaced in one or more updates (a new or removed secret, and each header sent with a new value or dropped), or the webhook is deleted |
 
 An administrator can also close an entry with a reason of at least 10
 characters (`POST /mek/exposure/{item_type}/{item_id}/acknowledge`,
@@ -146,7 +165,14 @@ stored keys (no backups had been taken on the old version).
 - **CA signing keys** re-wrapped onto the sealed root key (certs'
   `RewrapLegacyCASigners`) are still the same private keys, so their entries
   stay open until the CA is replaced.
-- **Keycore is a startup dependency** of these four services.
+- **Keycore is a startup dependency** of secrets, certs, cloud and ekm. For
+  audit it gates webhook credentials only.
+- **Webhook credentials stored before 1.25.0-beta** were plaintext. The
+  audit service seals them at startup (and every 15 minutes, which catches
+  restored rows) and records each webhook in the exposure register
+  (`source: plaintext_storage`, audited as `audit.audit.mek_exposure_recorded`
+  and `audit.audit.webhook_credentials_sealed`). Earlier database copies still
+  hold them, so rotate them at the receiver.
 
 ## Tests
 
@@ -164,5 +190,11 @@ stored keys (no backups had been taken on the old version).
   `TestUpgradeMovesRecoveryKeysOffPublicKey`,
   `TestUpgradeMovesCASignerOffPublicKey`.
 - **governance:** `TestBackupReprotectPostgres` (capture and restore re-wrap).
+- **audit:** `TestWebhookCredentialsAreSealedAtRest`,
+  `TestWebhookCredentialsAreBoundToTheirWebhook`,
+  `TestWebhookCredentialsFailClosedWithoutKey`,
+  `TestPlaintextWebhooksAreSealedAndRegistered`,
+  `TestCredsKeyringMismatchFailsClosed`, and `TestWebhookCredentialsPostgres`
+  (migration, plaintext sealing, keycore rotation re-wrap).
 - **Mode coverage:** everything runs in FIPS modes off / on / only. The
   Postgres tests run in CI `integration-postgres`.

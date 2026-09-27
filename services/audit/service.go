@@ -22,6 +22,7 @@ type Service struct {
 	quarantine *QuarantineEvaluator
 	cluster    clusterKeyState
 	webhooks   *webhookFanout
+	creds      *credVault // webhook credentials under the audit master key
 }
 
 // SetWebhookFanout wires delivery of persisted events to webhooks.
@@ -47,6 +48,7 @@ func NewService(store Store, cfg AuditConfig, wal *WALBuffer, publisher EventPub
 		wal:       wal,
 		publisher: publisher,
 		cluster:   clusterKeyState{keyFile: clusterAuditKeyFile()},
+		creds:     &credVault{},
 	}
 }
 
