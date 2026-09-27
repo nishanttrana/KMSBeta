@@ -11,8 +11,8 @@ import (
 
 func (s *SQLStore) ListPlaybooks(ctx context.Context, tenantID string) ([]Playbook, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, description, trigger_json, actions_json,
-       enabled, run_count, last_run_at, created_at
+SELECT id, tenant_id, name, description, category, trigger_json, actions_json,
+       enabled, authorized_by, run_count, last_run_at, created_at
 FROM compliance_playbooks
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -50,23 +50,23 @@ func (s *SQLStore) CreatePlaybook(ctx context.Context, p Playbook) (Playbook, er
 	}
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO compliance_playbooks
-  (id, tenant_id, name, description, trigger_json, actions_json, enabled, run_count, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,0,CURRENT_TIMESTAMP)
-RETURNING id, tenant_id, name, description, trigger_json, actions_json,
-          enabled, run_count, last_run_at, created_at
-`, p.ID, p.TenantID, p.Name, p.Description,
-		string(triggerJSON), string(actionsJSON), p.Enabled)
-	return scanPlaybookSingleRow(row)
+  (id, tenant_id, name, description, category, trigger_json, actions_json, enabled, authorized_by, run_count, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,CURRENT_TIMESTAMP)
+RETURNING id, tenant_id, name, description, category, trigger_json, actions_json,
+          enabled, authorized_by, run_count, last_run_at, created_at
+`, p.ID, p.TenantID, p.Name, p.Description, p.Category,
+		string(triggerJSON), string(actionsJSON), p.Enabled, p.AuthorizedBy)
+	return scanPlaybookRow(row)
 }
 
 func (s *SQLStore) GetPlaybook(ctx context.Context, tenantID, id string) (Playbook, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, name, description, trigger_json, actions_json,
-       enabled, run_count, last_run_at, created_at
+SELECT id, tenant_id, name, description, category, trigger_json, actions_json,
+       enabled, authorized_by, run_count, last_run_at, created_at
 FROM compliance_playbooks
 WHERE tenant_id=$1 AND id=$2
 `, tenantID, id)
-	p, err := scanPlaybookSingleRow(row)
+	p, err := scanPlaybookRow(row)
 	if err == sql.ErrNoRows {
 		return Playbook{}, errNotFound
 	}
@@ -87,13 +87,13 @@ func (s *SQLStore) UpdatePlaybook(ctx context.Context, p Playbook) (Playbook, er
 	}
 	row := s.db.SQL().QueryRowContext(ctx, `
 UPDATE compliance_playbooks
-SET name=$3, description=$4, trigger_json=$5, actions_json=$6, enabled=$7
+SET name=$3, description=$4, category=$5, trigger_json=$6, actions_json=$7, enabled=$8, authorized_by=$9
 WHERE tenant_id=$1 AND id=$2
-RETURNING id, tenant_id, name, description, trigger_json, actions_json,
-          enabled, run_count, last_run_at, created_at
-`, p.TenantID, p.ID, p.Name, p.Description,
-		string(triggerJSON), string(actionsJSON), p.Enabled)
-	pb, err := scanPlaybookSingleRow(row)
+RETURNING id, tenant_id, name, description, category, trigger_json, actions_json,
+          enabled, authorized_by, run_count, last_run_at, created_at
+`, p.TenantID, p.ID, p.Name, p.Description, p.Category,
+		string(triggerJSON), string(actionsJSON), p.Enabled, p.AuthorizedBy)
+	pb, err := scanPlaybookRow(row)
 	if err == sql.ErrNoRows {
 		return Playbook{}, errNotFound
 	}
@@ -122,12 +122,12 @@ func (s *SQLStore) DeletePlaybook(ctx context.Context, tenantID, id string) erro
 func (s *SQLStore) CreatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO compliance_playbook_runs
-  (id, playbook_id, tenant_id, trigger_event, status, actions_run, output, started_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
-RETURNING id, playbook_id, tenant_id, trigger_event, status, actions_run, output, started_at, completed_at
-`, run.ID, run.PlaybookID, run.TenantID, run.TriggerEvent,
+  (id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP)
+RETURNING id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
+`, run.ID, run.PlaybookID, run.TenantID, run.TriggerEvent, run.Actor,
 		run.Status, run.ActionsRun, run.Output)
-	return scanPlaybookRunSingleRow(row)
+	return scanPlaybookRunRow(row)
 }
 
 func (s *SQLStore) UpdatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error) {
@@ -135,9 +135,9 @@ func (s *SQLStore) UpdatePlaybookRun(ctx context.Context, run PlaybookRun) (Play
 UPDATE compliance_playbook_runs
 SET status=$3, actions_run=$4, output=$5, completed_at=$6
 WHERE tenant_id=$1 AND id=$2
-RETURNING id, playbook_id, tenant_id, trigger_event, status, actions_run, output, started_at, completed_at
+RETURNING id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
 `, run.TenantID, run.ID, run.Status, run.ActionsRun, run.Output, nullableTimePtr(run.CompletedAt))
-	pr, err := scanPlaybookRunSingleRow(row)
+	pr, err := scanPlaybookRunRow(row)
 	if err == sql.ErrNoRows {
 		return PlaybookRun{}, errNotFound
 	}
@@ -158,7 +158,7 @@ func (s *SQLStore) ListPlaybookRuns(ctx context.Context, tenantID, playbookID st
 		limit = 50
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, playbook_id, tenant_id, trigger_event, status, actions_run, output, started_at, completed_at
+SELECT id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
 FROM compliance_playbook_runs
 WHERE tenant_id=$1 AND playbook_id=$2
 ORDER BY started_at DESC
@@ -187,7 +187,7 @@ func (s *SQLStore) GetPlaybookSummary(ctx context.Context, tenantID string) (map
 	// Total and enabled playbook counts.
 	var total, enabled int
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT COUNT(*), SUM(CASE WHEN enabled THEN 1 ELSE 0 END)
+SELECT COUNT(*), COALESCE(SUM(CASE WHEN enabled THEN 1 ELSE 0 END), 0)
 FROM compliance_playbooks
 WHERE tenant_id=$1
 `, tenantID)
@@ -233,16 +233,18 @@ LIMIT 1
 
 // ---- scan helpers ----
 
-func scanPlaybookRow(rows interface {
+type rowScanner interface {
 	Scan(dest ...any) error
-}) (Playbook, error) {
+}
+
+func scanPlaybookRow(row rowScanner) (Playbook, error) {
 	var p Playbook
 	var rawTrigger, rawActions string
 	var lastRunAt sql.NullTime
-	if err := rows.Scan(
-		&p.ID, &p.TenantID, &p.Name, &p.Description,
+	if err := row.Scan(
+		&p.ID, &p.TenantID, &p.Name, &p.Description, &p.Category,
 		&rawTrigger, &rawActions,
-		&p.Enabled, &p.RunCount, &lastRunAt, &p.CreatedAt,
+		&p.Enabled, &p.AuthorizedBy, &p.RunCount, &lastRunAt, &p.CreatedAt,
 	); err != nil {
 		return Playbook{}, err
 	}
@@ -260,61 +262,22 @@ func scanPlaybookRow(rows interface {
 	if p.Actions == nil {
 		p.Actions = []PlaybookAction{}
 	}
-	return p, nil
-}
-
-func scanPlaybookSingleRow(row *sql.Row) (Playbook, error) {
-	var p Playbook
-	var rawTrigger, rawActions string
-	var lastRunAt sql.NullTime
-	if err := row.Scan(
-		&p.ID, &p.TenantID, &p.Name, &p.Description,
-		&rawTrigger, &rawActions,
-		&p.Enabled, &p.RunCount, &lastRunAt, &p.CreatedAt,
-	); err != nil {
-		return Playbook{}, err
-	}
-	p.CreatedAt = p.CreatedAt.UTC()
-	if lastRunAt.Valid {
-		t := lastRunAt.Time.UTC()
-		p.LastRunAt = &t
-	}
-	if rawTrigger != "" {
-		_ = json.Unmarshal([]byte(rawTrigger), &p.Trigger)
-	}
-	if rawActions != "" {
-		_ = json.Unmarshal([]byte(rawActions), &p.Actions)
-	}
-	if p.Actions == nil {
-		p.Actions = []PlaybookAction{}
+	for i := range p.Actions {
+		if renamed, ok := legacyActionNames[p.Actions[i].Type]; ok {
+			p.Actions[i].Type = renamed
+		}
+		if p.Actions[i].Parameters == nil {
+			p.Actions[i].Parameters = map[string]string{}
+		}
 	}
 	return p, nil
 }
 
-func scanPlaybookRunRow(rows interface {
-	Scan(dest ...any) error
-}) (PlaybookRun, error) {
-	var pr PlaybookRun
-	var completedAt sql.NullTime
-	if err := rows.Scan(
-		&pr.ID, &pr.PlaybookID, &pr.TenantID, &pr.TriggerEvent,
-		&pr.Status, &pr.ActionsRun, &pr.Output, &pr.StartedAt, &completedAt,
-	); err != nil {
-		return PlaybookRun{}, err
-	}
-	pr.StartedAt = pr.StartedAt.UTC()
-	if completedAt.Valid {
-		t := completedAt.Time.UTC()
-		pr.CompletedAt = &t
-	}
-	return pr, nil
-}
-
-func scanPlaybookRunSingleRow(row *sql.Row) (PlaybookRun, error) {
+func scanPlaybookRunRow(row rowScanner) (PlaybookRun, error) {
 	var pr PlaybookRun
 	var completedAt sql.NullTime
 	if err := row.Scan(
-		&pr.ID, &pr.PlaybookID, &pr.TenantID, &pr.TriggerEvent,
+		&pr.ID, &pr.PlaybookID, &pr.TenantID, &pr.TriggerEvent, &pr.Actor,
 		&pr.Status, &pr.ActionsRun, &pr.Output, &pr.StartedAt, &completedAt,
 	); err != nil {
 		return PlaybookRun{}, err

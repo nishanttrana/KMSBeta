@@ -157,7 +157,7 @@ func newComplianceService(t *testing.T) (*Service, *SQLStore, *fakeComplianceKey
 func newComplianceHandler(t *testing.T) (*Handler, *Service, *fakeComplianceKeyCore, *fakeCompliancePolicy, *fakeComplianceAudit, *fakeComplianceCerts, *nopCompliancePublisher) {
 	t.Helper()
 	svc, _, keycore, policy, audit, certs, pub := newComplianceService(t)
-	return NewHandler(svc), svc, keycore, policy, audit, certs, pub
+	return NewHandler(svc, nil, nil), svc, keycore, policy, audit, certs, pub
 }
 
 func createComplianceSchemaForTest(conn *pkgdb.DB) error {
@@ -247,6 +247,34 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			frameworks_json TEXT NOT NULL DEFAULT '[]',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
+		);`,		// migrations 004 + 005
+		`CREATE TABLE compliance_playbooks (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			trigger_json TEXT NOT NULL DEFAULT '{}',
+			actions_json TEXT NOT NULL DEFAULT '[]',
+			enabled BOOLEAN NOT NULL DEFAULT TRUE,
+			run_count INT NOT NULL DEFAULT 0,
+			last_run_at TIMESTAMP,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			category TEXT NOT NULL DEFAULT 'incident_response',
+			authorized_by TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (tenant_id, id)
+		);`,
+		`CREATE TABLE compliance_playbook_runs (
+			id TEXT NOT NULL,
+			playbook_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			trigger_event TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'running',
+			actions_run INT NOT NULL DEFAULT 0,
+			output TEXT NOT NULL DEFAULT '',
+			started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			completed_at TIMESTAMP,
+			actor TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
 	}

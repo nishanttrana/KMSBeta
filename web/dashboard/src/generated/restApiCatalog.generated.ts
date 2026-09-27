@@ -5407,6 +5407,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-get-compliance-playbooks-catalog",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/playbooks/catalog",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/playbooks/catalog?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/playbooks/catalog?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-get-compliance-playbooks-summary",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/playbooks/summary",

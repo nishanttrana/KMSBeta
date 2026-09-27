@@ -5,6 +5,36 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A trigger map that listened for subjects nobody sends (playbooks)
+- **What happened:** the playbook listener mapped 40 trigger types to audit
+  subjects like `audit.keycore.key_rotated`, `audit.infra.cluster_node_down`
+  and `audit.ops.latency_spike`. Keycore actually emits `audit.key.rotate`;
+  the `infra`, `ops` and `data` services don't exist. Only a canary trip
+  (through a wildcard fallback) and `auth_failure_spike` could fire, the
+  latter on every single failed login because its threshold was never read. Five actions called
+  routes that don't exist, `destroy_key` omitted keycore's required
+  acknowledgements, and `disable_user` / `revoke_api_key` were refused by
+  auth for every service identity. The dashboard showed all of it as working.
+- **Why it slipped through:** the subject map was written from what events
+  *should* be called, and the tests checked the executor sent a token, never
+  that a subject was emitted or a route existed. Nothing connected the two
+  sides of the bus.
+- **Rule:** a consumer of an event names its producer. A trigger catalogue
+  entry needs its emitter in `TestTriggerSubjectsAreEmitted`, and an action
+  needs a test against the route it calls.
+
+### A service identity lent to anyone who can write a record (playbooks)
+- **What happened:** playbook actions run as the compliance service, which
+  passes tenant and permission checks everywhere. The playbook API checked
+  only that a JWT was valid and took the tenant from the body, so any user
+  could have the service rotate or disable keys in any tenant.
+- **Why it slipped through:** the review of 1.26.0 fixed the *outbound*
+  side (the service token only goes to platform hosts) and missed the
+  *inbound* side: who may tell the service what to do.
+- **Rule:** stored work that runs as a service checks the verified caller's
+  own permission for each operation when saved and when started, and records
+  who authorized it (docs/PLATFORM_CONTRACT.md).
+
 ### "Everything else calls keycore" was an assumption, and it hid unaudited crypto
 - **What happened:** 2.1.0-beta said only keycore's operations mattered for
   metrics because "everything else calls keycore". It was never checked.

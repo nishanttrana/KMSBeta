@@ -4,21 +4,31 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
 	svc      *Service
 	mux      *http.ServeMux
+	router   *route.Router
 	executor *PlaybookExecutor
+	// dispatch runs a playbook execution; tests run it inline.
+	dispatch func(func())
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
+// NewHandler builds the compliance API. Playbook routes are on the route
+// kernel; the rest of compliance is still on the burn-down list.
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, dispatch: func(f func()) { go f() }}
+	h.router = route.New("compliance", audit, logger)
+	h.playbookRoutes(h.router)
 	h.mux = h.routes()
+	h.router.MountOn(h.mux)
 	return h
 }
 
@@ -77,15 +87,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/risk/summary", h.handleGetDataRiskSummary)
 	mux.HandleFunc("GET /compliance/risk/remediation", h.handleGetRiskRemediation)
 
-	// Automated Incident Playbooks
-	mux.HandleFunc("GET /compliance/playbooks/summary", h.handleGetPlaybookSummary)
-	mux.HandleFunc("GET /compliance/playbooks", h.handleListPlaybooks)
-	mux.HandleFunc("POST /compliance/playbooks", h.handleCreatePlaybook)
-	mux.HandleFunc("GET /compliance/playbooks/{id}", h.handleGetPlaybook)
-	mux.HandleFunc("PUT /compliance/playbooks/{id}", h.handleUpdatePlaybook)
-	mux.HandleFunc("DELETE /compliance/playbooks/{id}", h.handleDeletePlaybook)
-	mux.HandleFunc("POST /compliance/playbooks/{id}/run", h.handleRunPlaybook)
-	mux.HandleFunc("GET /compliance/playbooks/{id}/runs", h.handleListPlaybookRuns)
 
 	return mux
 }

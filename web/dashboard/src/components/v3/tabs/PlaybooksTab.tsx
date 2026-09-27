@@ -125,154 +125,52 @@ const StatCard = ({ icon, label, value, color = C.accent, tint, sublabel }: any)
   </div>
 );
 
-const PLAYBOOK_CATEGORIES = [
-  { value: "incident_response", label: "Incident Response" },
-  { value: "key_lifecycle", label: "Key Lifecycle" },
-  { value: "certificate_management", label: "Certificate Management" },
-  { value: "compliance", label: "Compliance" },
-  { value: "access_control", label: "Access Control" },
-  { value: "infrastructure", label: "Infrastructure" },
-  { value: "data_protection", label: "Data Protection" },
-  { value: "operational", label: "Operational" },
-];
+// The trigger/action catalogue comes from the backend
+// (GET /compliance/playbooks/catalog): the dashboard offers exactly what the
+// executor performs and what services really emit, nothing hardcoded here.
 
-const TRIGGER_GROUPS = [
-  { group: "Incident Response", items: [
-    { value: "canary_tripped", label: "Canary Tripped" },
-    { value: "risk_score_critical", label: "Risk Score Critical" },
-  ]},
-  { group: "Key Lifecycle", items: [
-    { value: "key_created", label: "Key Created" },
-    { value: "key_rotated", label: "Key Rotated" },
-    { value: "key_expired", label: "Key Expired" },
-    { value: "key_destroyed", label: "Key Destroyed" },
-    { value: "key_compromised", label: "Key Compromised" },
-    { value: "key_import_failed", label: "Key Import Failed" },
-    { value: "rotation_overdue", label: "Rotation Overdue" },
-    { value: "key_expiry_imminent", label: "Key Expiry Imminent" },
-  ]},
-  { group: "Certificate", items: [
-    { value: "cert_expiring_30d", label: "Cert Expiring (30d)" },
-    { value: "cert_expiring_7d", label: "Cert Expiring (7d)" },
-    { value: "cert_expired", label: "Cert Expired" },
-    { value: "cert_revoked", label: "Cert Revoked" },
-    { value: "ca_rotation_due", label: "CA Rotation Due" },
-  ]},
-  { group: "Compliance", items: [
-    { value: "compliance_drop", label: "Compliance Score Drop" },
-    { value: "compliance_score_drop", label: "Compliance Score Drop (alt)" },
-    { value: "fips_violation_detected", label: "FIPS Violation Detected" },
-    { value: "policy_violation", label: "Policy Violation" },
-    { value: "audit_gap_detected", label: "Audit Gap Detected" },
-    { value: "framework_assessment_failed", label: "Framework Assessment Failed" },
-  ]},
-  { group: "Access & Auth", items: [
-    { value: "auth_failure_spike", label: "Auth Failure Spike" },
-    { value: "unauthorized_key_access", label: "Unauthorized Key Access" },
-    { value: "privilege_escalation_attempt", label: "Privilege Escalation Attempt" },
-    { value: "api_key_compromised", label: "API Key Compromised" },
-    { value: "session_anomaly", label: "Session Anomaly" },
-  ]},
-  { group: "Infrastructure", items: [
-    { value: "hsm_health_degraded", label: "HSM Health Degraded" },
-    { value: "cluster_node_down", label: "Cluster Node Down" },
-    { value: "replication_lag_high", label: "Replication Lag High" },
-    { value: "backup_failed", label: "Backup Failed" },
-    { value: "storage_threshold_exceeded", label: "Storage Threshold Exceeded" },
-  ]},
-  { group: "Data Protection", items: [
-    { value: "encryption_failure", label: "Encryption Failure" },
-    { value: "decryption_anomaly", label: "Decryption Anomaly" },
-    { value: "data_leak_detected", label: "Data Leak Detected" },
-    { value: "dlp_policy_triggered", label: "DLP Policy Triggered" },
-  ]},
-  { group: "Operational", items: [
-    { value: "rate_limit_exceeded", label: "Rate Limit Exceeded" },
-    { value: "service_health_degraded", label: "Service Health Degraded" },
-    { value: "latency_spike", label: "Latency Spike" },
-    { value: "error_rate_high", label: "Error Rate High" },
-  ]},
-];
+const errMsg = (res: any) => res?.error?.message || res?.message || "unknown error";
 
-// Flat list for compatibility
-const TRIGGER_TYPES = TRIGGER_GROUPS.flatMap(g => g.items);
+const prettify = (s: string) => (s || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
-// Exactly the actions the compliance executor performs (validActionTypes).
-const ACTION_GROUPS = [
-  { group: "Notification", items: [
-    { value: "send_slack", label: "Send Slack" },
-    { value: "send_teams", label: "Send Teams" },
-    { value: "send_webhook", label: "Send Webhook" },
-    { value: "send_pagerduty", label: "Send PagerDuty" },
-    { value: "create_jira_ticket", label: "Create Jira Ticket" },
-    { value: "create_servicenow_incident", label: "Create ServiceNow Incident" },
-  ]},
-  { group: "Key Operations", items: [
-    { value: "rotate_key", label: "Rotate Key" },
-    { value: "suspend_key", label: "Suspend Key" },
-    { value: "revoke_key", label: "Revoke Key" },
-    { value: "destroy_key", label: "Destroy Key" },
-    { value: "enable_key", label: "Enable Key" },
-  ]},
-  { group: "Certificate", items: [
-    { value: "renew_certificate", label: "Renew Certificate" },
-    { value: "revoke_certificate", label: "Revoke Certificate" },
-  ]},
-  { group: "Access Control", items: [
-    { value: "disable_user", label: "Disable User" },
-    { value: "revoke_api_key", label: "Revoke API Key" },
-  ]},
-  { group: "Compliance", items: [
-    { value: "trigger_assessment", label: "Trigger Assessment" },
-    { value: "snapshot_posture", label: "Snapshot Posture" },
-    { value: "create_audit_event", label: "Create Audit Event" },
-  ]},
-];
-
-const ACTION_TYPES = ACTION_GROUPS.flatMap(g => g.items);
-
-// Map trigger category groups to colors for badge display
-const triggerGroupColor: Record<string, string> = {
-  "Incident Response": C.red,
-  "Key Lifecycle": C.blue,
-  "Certificate": C.cyan || C.blue,
+const groupColor = (group: string) => ({
+  "Incident response": C.red,
+  "Key lifecycle": C.blue,
+  "Certificates": C.cyan || C.blue,
+  "Access": C.purple,
   "Compliance": C.amber,
-  "Access & Auth": C.purple,
-  "Infrastructure": C.orange,
-  "Data Protection": C.red,
-  "Operational": C.amber,
-};
-
-// Build per-trigger color map from groups
-const triggerColor: Record<string, string> = {};
-TRIGGER_GROUPS.forEach(g => {
-  const color = triggerGroupColor[g.group] || C.muted;
-  g.items.forEach(t => { triggerColor[t.value] = color; });
-});
-
-// Category label lookup
-const categoryLabel = (cat: string) =>
-  PLAYBOOK_CATEGORIES.find(c => c.value === cat)?.label || cat || "Uncategorized";
+  "Platform": C.orange,
+} as Record<string, string>)[group] || C.muted;
 
 const statusColor = (s: string) => {
   if (s === "completed") return C.green;
-  if (s === "failed") return C.red;
-  if (s === "running") return C.amber;
+  if (s === "failed" || s === "cancelled") return C.red;
+  if (s === "partial_failure") return C.orange;
+  if (s === "running" || s === "pending_approval") return C.amber;
   return C.muted;
 };
 
-const TRIGGER_COVERAGE_ITEMS = TRIGGER_TYPES.map(t => t.value);
+const groupBy = (items: any[]) => {
+  const out: { group: string; items: any[] }[] = [];
+  for (const it of items || []) {
+    let g = out.find(x => x.group === it.group);
+    if (!g) { g = { group: it.group, items: [] }; out.push(g); }
+    g.items.push(it);
+  }
+  return out;
+};
 
-// Category color map for badges
-const categoryColors: Record<string, string> = {
-  incident_response: C.red,
-  key_lifecycle: C.blue,
-  certificate_management: C.cyan || C.blue,
-  compliance: C.amber,
-  access_control: C.purple,
-  infrastructure: C.orange,
-  data_protection: C.red,
-  operational: C.amber,
+// Parameters are edited one per line as key=value (values may contain
+// commas, JSON, URLs).
+const paramsToText = (p: Record<string, string>) => Object.entries(p || {}).map(([k, v]) => `${k}=${v}`).join("\n");
+const textToParams = (text: string) => {
+  const out: Record<string, string> = {};
+  for (const line of (text || "").split("\n")) {
+    const i = line.indexOf("=");
+    if (i <= 0) continue;
+    out[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+  }
+  return out;
 };
 
 // ── main component ────────────────────────────────────────────────────────────
@@ -281,143 +179,137 @@ export function PlaybooksTab({ session }: { session: any }) {
   const tenantId = session?.tenantId || "";
   const token = session?.token || "";
   const [view, setView] = useState<"overview" | "playbooks" | "create">("overview");
+  const [catalog, setCatalog] = useState<any>(null);
+  const [catalogError, setCatalogError] = useState("");
   const [playbooks, setPlaybooks] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState("");
   const [summary, setSummary] = useState<any>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [rowRuns, setRowRuns] = useState<Record<string, any[]>>({});
-  const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // create/edit form state
+  const triggerSpec = (t: string) => catalog?.triggers?.find((x: any) => x.type === t);
+  const actionSpec = (a: string) => catalog?.actions?.find((x: any) => x.type === a);
+
   const emptyForm = () => ({
     name: "",
     description: "",
     category: "incident_response",
-    trigger_type: "canary_tripped",
-    threshold: "0",
+    trigger_type: catalog?.triggers?.[0]?.type || "",
     enabled: true,
-    actions: [{ type: "send_webhook", delay_seconds: "0", params: "" }],
+    actions: [{ type: "create_audit_event", delay_seconds: "0", params: "" }],
   });
   const [form, setForm] = useState(emptyForm());
-  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(""), 3500);
+    setTimeout(() => setToast(""), 4500);
   };
 
   const load = useCallback(async () => {
-    setLoading(true);
+    try {
+      const cat = await apiGet("/playbooks/catalog", tenantId, token);
+      if (cat?.data) { setCatalog(cat.data); setCatalogError(""); } else setCatalogError(errMsg(cat));
+    } catch (e: any) {
+      setCatalogError(String(e?.message || e));
+    }
     try {
       const [pbRes, summaryRes] = await Promise.all([
         apiGet("/playbooks", tenantId, token),
         apiGet("/playbooks/summary", tenantId, token),
       ]);
-      const pbs = pbRes.data || [];
+      if (!pbRes?.data) { setLoadError(errMsg(pbRes)); return; }
+      setLoadError("");
+      const pbs = pbRes.data;
       setPlaybooks(pbs);
-      setSummary(summaryRes.data || {});
-
-      // Collect recent runs from the playbooks that have been run.
+      setSummary(summaryRes?.data || null);
       const ran = pbs.filter((p: any) => p.run_count > 0).slice(0, 3);
-      const runResults = await Promise.all(
-        ran.map((p: any) => apiGet(`/playbooks/${p.id}/runs?limit=5`, tenantId, token))
-      );
-      const allRuns = runResults.flatMap((r: any) => r.data || []);
+      const runResults = await Promise.all(ran.map((p: any) => apiGet(`/playbooks/${p.id}/runs?limit=5`, tenantId, token)));
+      const allRuns = runResults.flatMap((r: any) => r?.data || []);
       allRuns.sort((a: any, b: any) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
       setRecentRuns(allRuns.slice(0, 10));
-    } catch (e) {
-      // ignore
-    } finally {
-      setLoading(false);
+    } catch (e: any) {
+      setLoadError(String(e?.message || e));
     }
   }, [tenantId, token]);
 
   useEffect(() => { load(); }, [load]);
 
+  const loadRuns = async (id: string) => {
+    const res = await apiGet(`/playbooks/${id}/runs?limit=10`, tenantId, token);
+    setRowRuns(prev => ({ ...prev, [id]: res?.data || [] }));
+  };
+
   const toggleRow = async (id: string) => {
     const next = new Set(expandedRows);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-      if (!rowRuns[id]) {
-        const res = await apiGet(`/playbooks/${id}/runs?limit=10`, tenantId, token);
-        setRowRuns(prev => ({ ...prev, [id]: res.data || [] }));
-      }
-    }
+    if (next.has(id)) next.delete(id);
+    else { next.add(id); if (!rowRuns[id]) await loadRuns(id); }
     setExpandedRows(next);
   };
 
-  const handleRun = async (id: string) => {
-    const res = await apiPost(`/playbooks/${id}/run`, tenantId, token, {});
-    if (res.data) {
-      showToast(`Playbook executed: ${res.data.actions_run} action(s) run. Status: ${res.data.status}`);
-      // Refresh run list for this playbook.
-      const runsRes = await apiGet(`/playbooks/${id}/runs?limit=10`, tenantId, token);
-      setRowRuns(prev => ({ ...prev, [id]: runsRes.data || [] }));
-      load();
+  const handleRun = async (pb: any) => {
+    const res = await apiPost(`/playbooks/${pb.id}/run`, tenantId, token, {});
+    if (res?.data?.run_id) {
+      showToast(`Run ${res.data.run_id} started. Each action is audited; see run history for the outcome.`);
+      setTimeout(() => { loadRuns(pb.id); load(); }, 1500);
     } else {
-      showToast("Run failed: " + (res.message || "unknown error"));
+      showToast("Run refused: " + errMsg(res));
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this playbook?")) return;
-    await apiDelete(`/playbooks/${id}`, tenantId, token);
-    showToast("Playbook deleted.");
+    const res = await apiDelete(`/playbooks/${id}`, tenantId, token);
+    showToast(res?.data ? "Playbook deleted." : "Delete failed: " + errMsg(res));
     load();
   };
+
+  // Secret parameters come back as ******** and are sent back unchanged; the
+  // backend keeps the stored value.
+  const payloadOf = (pb: any, enabled: boolean) => ({
+    name: pb.name,
+    description: pb.description,
+    category: pb.category,
+    trigger: { type: pb.trigger?.type },
+    actions: (pb.actions || []).map((a: any) => ({ type: a.type, delay_seconds: a.delay_seconds || 0, parameters: a.parameters || {} })),
+    enabled,
+  });
 
   const handleToggleEnabled = async (pb: any) => {
-    await apiPut(`/playbooks/${pb.id}`, tenantId, token, { ...pb, enabled: !pb.enabled });
+    const res = await apiPut(`/playbooks/${pb.id}`, tenantId, token, payloadOf(pb, !pb.enabled));
+    if (!res?.data) showToast("Update refused: " + errMsg(res));
     load();
   };
 
-  const formToPayload = () => {
-    const actions = form.actions.map((a: any) => {
-      const params: Record<string, string> = {};
-      if (a.params) {
-        a.params.split(",").forEach((kv: string) => {
-          const [k, v] = kv.split("=").map((s: string) => s.trim());
-          if (k) params[k] = v || "";
-        });
-      }
-      return { type: a.type, delay_seconds: parseInt(a.delay_seconds) || 0, parameters: params };
-    });
-    return {
-      tenant_id: tenantId,
-      name: form.name,
-      description: form.description,
-      category: form.category,
-      trigger: { type: form.trigger_type, threshold: parseInt(form.threshold) || 0 },
-      actions,
-      enabled: form.enabled,
-    };
-  };
-
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!form.name) { showToast("Name is required."); return; }
-    setCreating(true);
+    setSaving(true);
     try {
-      let res;
-      if (editingId) {
-        res = await apiPut(`/playbooks/${editingId}`, tenantId, token, formToPayload());
-      } else {
-        res = await apiPost("/playbooks", tenantId, token, formToPayload());
-      }
-      if (res.data?.id) {
+      const body = {
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        trigger: { type: form.trigger_type },
+        actions: form.actions.map((a: any) => ({ type: a.type, delay_seconds: parseInt(a.delay_seconds) || 0, parameters: textToParams(a.params) })),
+        enabled: form.enabled,
+      };
+      const res = editingId
+        ? await apiPut(`/playbooks/${editingId}`, tenantId, token, body)
+        : await apiPost("/playbooks", tenantId, token, body);
+      if (res?.data?.id) {
         showToast(editingId ? "Playbook updated." : `Playbook "${form.name}" created.`);
         setForm(emptyForm());
         setEditingId(null);
         setView("playbooks");
         load();
       } else {
-        showToast("Save failed: " + (res.message || "unknown error"));
+        showToast("Save refused: " + errMsg(res));
       }
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   };
 
@@ -426,46 +318,49 @@ export function PlaybooksTab({ session }: { session: any }) {
       name: pb.name,
       description: pb.description,
       category: pb.category || "incident_response",
-      trigger_type: pb.trigger?.type || "canary_tripped",
-      threshold: String(pb.trigger?.threshold || 0),
+      trigger_type: pb.trigger?.type || "",
       enabled: pb.enabled,
-      actions: (pb.actions || []).map((a: any) => ({
-        type: a.type,
-        delay_seconds: String(a.delay_seconds || 0),
-        params: Object.entries(a.parameters || {}).map(([k, v]) => `${k}=${v}`).join(", "),
-      })),
+      actions: (pb.actions || []).map((a: any) => ({ type: a.type, delay_seconds: String(a.delay_seconds || 0), params: paramsToText(a.parameters) })),
     });
     setEditingId(pb.id);
     setView("create");
   };
 
-  const addAction = () => setForm(p => ({ ...p, actions: [...p.actions, { type: "send_webhook", delay_seconds: "0", params: "" }] }));
+  const addAction = () => setForm(p => ({ ...p, actions: [...p.actions, { type: "create_audit_event", delay_seconds: "0", params: "" }] }));
   const removeAction = (i: number) => setForm(p => ({ ...p, actions: p.actions.filter((_: any, idx: number) => idx !== i) }));
   const updateAction = (i: number, field: string, value: string) => setForm(p => ({
     ...p,
     actions: p.actions.map((a: any, idx: number) => idx === i ? { ...a, [field]: value } : a),
   }));
 
-  const coveredTriggers = new Set(playbooks.map((p: any) => p.trigger?.type));
+  const triggerGroups = groupBy(catalog?.triggers);
+  const actionGroups = groupBy(catalog?.actions);
+  const coveredTriggers = new Set(playbooks.filter((p: any) => p.enabled && p.authorized_by).map((p: any) => p.trigger?.type));
+  const neededPerms = Array.from(new Set(form.actions.map((a: any) => actionSpec(a.type)?.permission).filter(Boolean)));
+
+  const authBadge = (pb: any) => {
+    const unsupported = !triggerSpec(pb.trigger?.type) || (pb.actions || []).some((a: any) => !actionSpec(a.type));
+    if (catalog && unsupported) return <Badge color={C.red}>Unsupported step, edit</Badge>;
+    if (!pb.authorized_by) return <Badge color={C.amber}>Not authorized</Badge>;
+    return <span style={{ fontSize: 10, color: C.muted }}>{pb.authorized_by}</span>;
+  };
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1200, margin: "0 auto" }}>
-      {/* Toast */}
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "10px 16px", color: C.text, fontSize: 12, zIndex: 999, boxShadow: "0 8px 24px rgba(0,0,0,.4)" }}>
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "10px 16px", color: C.text, fontSize: 12, zIndex: 999, boxShadow: "0 8px 24px rgba(0,0,0,.4)", maxWidth: 420 }}>
           {toast}
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Play size={20} color={C.accent} />
           <span style={{ fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: -0.4 }}>Playbooks</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {(["overview", "playbooks", "create"] as const).map(v => (
-            <Btn key={v} variant={view === v ? "default" : "ghost"} small onClick={() => { if (v === "create") { setForm(emptyForm()); setEditingId(null); } setView(v); }}>
+            <Btn key={v} variant={view === v ? "default" : "ghost"} small disabled={v === "create" && !catalog} onClick={() => { if (v === "create") { setForm(emptyForm()); setEditingId(null); } setView(v); }}>
               {v === "create" ? <><Plus size={12} /> New</>
                : v === "playbooks" ? <><ListChecks size={12} /> Playbooks</>
                : <><Activity size={12} /> Overview</>}
@@ -475,34 +370,39 @@ export function PlaybooksTab({ session }: { session: any }) {
         </div>
       </div>
 
-      {/* ── OVERVIEW ── */}
+      <div style={{ fontSize: 11, color: C.dim, marginBottom: 16, lineHeight: 1.5 }}>
+        A playbook runs its actions when its trigger event is audited, or when someone runs it. Actions act as the compliance service, so saving an
+        enabled playbook, or running one, needs every permission its actions use. Automatic runs act on the authority of whoever last saved it.
+      </div>
+      {catalogError && <div style={{ fontSize: 12, color: C.red, marginBottom: 12 }}>Playbook catalogue unavailable: {catalogError}</div>}
+      {loadError && <div style={{ fontSize: 12, color: C.red, marginBottom: 12 }}>Playbooks unavailable: {loadError}</div>}
+
       {view === "overview" && (
         <>
-          {/* Stat cards */}
           <div style={{ display: "flex", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
-            <StatCard icon={<ListChecks size={16} />} label="Total Playbooks" value={summary?.total_playbooks ?? "—"} color={C.accent} tint={C.accentTint} />
-            <StatCard icon={<CheckCircle2 size={16} />} label="Enabled" value={summary?.enabled_count ?? "—"} color={C.green} tint={C.greenTint} />
-            <StatCard icon={<Zap size={16} />} label="Runs Today" value={summary?.runs_today ?? "—"} color={C.amber} tint={C.amberTint} />
-            <StatCard icon={<Clock size={16} />} label="Last Run Status" value={summary?.last_run_status || "—"} color={summary?.last_run_status === "completed" ? C.green : summary?.last_run_status === "failed" ? C.red : C.muted} sublabel={summary?.last_run_at ? fmtAgo(summary.last_run_at) : undefined} />
+            <StatCard icon={<ListChecks size={16} />} label="Total Playbooks" value={summary?.total_playbooks ?? "unavailable"} color={C.accent} tint={C.accentTint} />
+            <StatCard icon={<CheckCircle2 size={16} />} label="Enabled" value={summary?.enabled_count ?? "unavailable"} color={C.green} tint={C.greenTint} />
+            <StatCard icon={<Zap size={16} />} label="Runs Today" value={summary?.runs_today ?? "unavailable"} color={C.amber} tint={C.amberTint} />
+            <StatCard icon={<Clock size={16} />} label="Last Run Status" value={summary?.last_run_status || "none"} color={statusColor(summary?.last_run_status)} sublabel={summary?.last_run_at ? fmtAgo(summary.last_run_at) : undefined} />
           </div>
 
-          {/* Execution History Table */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
               <Activity size={14} color={C.accent} />
               <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Playbook Execution History</span>
             </div>
             {recentRuns.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", color: C.muted, fontSize: 12 }}>No playbook runs yet. Run a playbook to see history here.</div>
+              <div style={{ padding: 24, textAlign: "center", color: C.muted, fontSize: 12 }}>No playbook runs yet.</div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr><TH>Playbook ID</TH><TH>Trigger</TH><TH>Status</TH><TH>Actions Run</TH><TH>Started At</TH><TH>Duration</TH></tr></thead>
+                <thead><tr><TH>Playbook ID</TH><TH>Trigger</TH><TH>On authority of</TH><TH>Status</TH><TH>Actions Run</TH><TH>Started At</TH><TH>Duration</TH></tr></thead>
                 <tbody>
                   {recentRuns.map((r: any) => (
                     <tr key={r.id}>
                       <TD mono>{r.playbook_id}</TD>
-                      <TD><Badge color={triggerColor[r.trigger_event] || C.muted}>{r.trigger_event || "—"}</Badge></TD>
-                      <TD><Badge color={statusColor(r.status)}>{r.status}</Badge></TD>
+                      <TD><Badge color={groupColor(triggerSpec(r.trigger_event)?.group)}>{r.trigger_event || "—"}</Badge></TD>
+                      <TD>{r.actor || "—"}</TD>
+                      <TD><Badge color={statusColor(r.status)}>{prettify(r.status)}</Badge></TD>
                       <TD>{r.actions_run}</TD>
                       <TD>{fmtDate(r.started_at)}</TD>
                       <TD>{fmtDuration(r.started_at, r.completed_at)}</TD>
@@ -513,53 +413,41 @@ export function PlaybooksTab({ session }: { session: any }) {
             )}
           </div>
 
-          {/* Trigger Coverage by Category */}
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-              <Shield size={14} color={C.accent} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Trigger Coverage</span>
-              <span style={{ fontSize: 10, color: C.muted, marginLeft: 8 }}>
-                {TRIGGER_TYPES.filter(t => coveredTriggers.has(t.value)).length} / {TRIGGER_TYPES.length} triggers covered
-              </span>
-            </div>
-            <div style={{ padding: 16 }}>
-              {TRIGGER_GROUPS.map(g => {
-                const coveredCount = g.items.filter(t => coveredTriggers.has(t.value)).length;
-                const groupColor = triggerGroupColor[g.group] || C.muted;
-                return (
+          {catalog && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                <Shield size={14} color={C.accent} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Trigger Coverage</span>
+                <span style={{ fontSize: 10, color: C.muted, marginLeft: 8 }}>
+                  {catalog.triggers.filter((t: any) => coveredTriggers.has(t.type)).length} / {catalog.triggers.length} triggers have an enabled, authorized playbook
+                </span>
+              </div>
+              <div style={{ padding: 16 }}>
+                {triggerGroups.map(g => (
                   <div key={g.group} style={{ marginBottom: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: groupColor }}>{g.group}</span>
-                      <span style={{ fontSize: 10, color: C.muted }}>{coveredCount}/{g.items.length}</span>
-                      <div style={{ flex: 1, height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
-                        <div style={{ width: `${g.items.length > 0 ? (coveredCount / g.items.length) * 100 : 0}%`, height: "100%", background: groupColor, borderRadius: 2, transition: "width .3s" }} />
-                      </div>
-                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: groupColor(g.group), marginBottom: 8 }}>{g.group}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {g.items.map(t => {
-                        const covered = coveredTriggers.has(t.value);
+                      {g.items.map((t: any) => {
+                        const covered = coveredTriggers.has(t.type);
                         return (
-                          <div key={t.value} style={{ background: covered ? C.greenDim : C.redDim, border: `1px solid ${covered ? C.green : C.red}33`, borderRadius: 6, padding: "6px 10px", display: "flex", alignItems: "center", gap: 6, minWidth: 140 }}>
-                            {covered
-                              ? <CheckCircle2 size={12} color={C.green} />
-                              : <XCircle size={12} color={C.red} />}
+                          <div key={t.type} title={t.subjects.join(", ")} style={{ background: covered ? C.greenDim : C.card, border: `1px solid ${covered ? C.green + "33" : C.border}`, borderRadius: 6, padding: "6px 10px", display: "flex", alignItems: "center", gap: 6, minWidth: 160 }}>
+                            {covered ? <CheckCircle2 size={12} color={C.green} /> : <XCircle size={12} color={C.muted} />}
                             <div>
                               <div style={{ fontSize: 10, fontWeight: 600, color: C.text }}>{t.label}</div>
-                              <div style={{ fontSize: 9, color: C.muted }}>{covered ? "Covered" : "No playbook"}</div>
+                              <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{t.subjects.join(", ")}</div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
-      {/* ── PLAYBOOKS VIEW ── */}
       {view === "playbooks" && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -567,13 +455,13 @@ export function PlaybooksTab({ session }: { session: any }) {
               <ListChecks size={14} color={C.accent} />
               <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>All Playbooks</span>
             </div>
-            <Btn variant="default" small onClick={() => { setForm(emptyForm()); setEditingId(null); setView("create"); }}><Plus size={11} /> New Playbook</Btn>
+            <Btn variant="default" small disabled={!catalog} onClick={() => { setForm(emptyForm()); setEditingId(null); setView("create"); }}><Plus size={11} /> New Playbook</Btn>
           </div>
           {playbooks.length === 0 ? (
-            <div style={{ padding: 32, textAlign: "center", color: C.muted, fontSize: 12 }}>No playbooks configured. Create one to automate KMS operations.</div>
+            <div style={{ padding: 32, textAlign: "center", color: C.muted, fontSize: 12 }}>No playbooks configured.</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><TH></TH><TH>Name</TH><TH>Category</TH><TH>Trigger</TH><TH>Actions</TH><TH>Enabled</TH><TH>Runs</TH><TH>Last Run</TH><TH>Actions</TH></tr></thead>
+              <thead><tr><TH></TH><TH>Name</TH><TH>Category</TH><TH>Trigger</TH><TH>Actions</TH><TH>Enabled</TH><TH>Authorized by</TH><TH>Runs</TH><TH>Last Run</TH><TH></TH></tr></thead>
               <tbody>
                 {playbooks.map((pb: any) => (
                   <>
@@ -584,41 +472,43 @@ export function PlaybooksTab({ session }: { session: any }) {
                         </button>
                       </TD>
                       <TD><span style={{ fontWeight: 600 }}>{pb.name}</span><div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{pb.description}</div></TD>
-                      <TD><Badge color={categoryColors[pb.category] || C.muted}>{categoryLabel(pb.category)}</Badge></TD>
-                      <TD><Badge color={triggerColor[pb.trigger?.type] || C.muted}>{pb.trigger?.type || "—"}</Badge></TD>
-                      <TD><span style={{ color: C.dim }}>{(pb.actions || []).length} action{(pb.actions || []).length !== 1 ? "s" : ""}</span></TD>
+                      <TD><Badge color={C.muted}>{prettify(pb.category)}</Badge></TD>
+                      <TD><Badge color={groupColor(triggerSpec(pb.trigger?.type)?.group)}>{triggerSpec(pb.trigger?.type)?.label || pb.trigger?.type || "—"}</Badge></TD>
+                      <TD><span style={{ color: C.dim }}>{(pb.actions || []).map((a: any) => actionSpec(a.type)?.label || a.type).join(", ")}</span></TD>
                       <TD>
                         <button onClick={() => handleToggleEnabled(pb)} style={{ background: "none", border: "none", cursor: "pointer", color: pb.enabled ? C.green : C.muted, padding: 0, display: "inline-flex" }}>
                           {pb.enabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                         </button>
                       </TD>
+                      <TD>{authBadge(pb)}</TD>
                       <TD>{pb.run_count}</TD>
                       <TD>{pb.last_run_at ? fmtAgo(pb.last_run_at) : "Never"}</TD>
                       <TD>
                         <div style={{ display: "flex", gap: 6 }}>
                           <Btn variant="ghost" small onClick={() => handleEdit(pb)}><Edit2 size={11} /> Edit</Btn>
-                          <Btn variant="green" small onClick={() => handleRun(pb.id)} disabled={!pb.enabled}><Play size={11} /> Run</Btn>
+                          <Btn variant="green" small onClick={() => handleRun(pb)}><Play size={11} /> Run</Btn>
                           <Btn variant="danger" small onClick={() => handleDelete(pb.id)}><Trash2 size={11} /></Btn>
                         </div>
                       </TD>
                     </tr>
                     {expandedRows.has(pb.id) && (
                       <tr key={pb.id + "_runs"}>
-                        <td colSpan={9} style={{ padding: "0 0 0 32px", background: C.bg }}>
+                        <td colSpan={10} style={{ padding: "0 0 0 32px", background: C.bg }}>
                           <div style={{ padding: "12px 16px" }}>
                             <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Run History</div>
                             {(rowRuns[pb.id] || []).length === 0 ? (
                               <div style={{ fontSize: 11, color: C.muted }}>No runs recorded yet.</div>
                             ) : (
                               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                                <thead><tr><TH>Run ID</TH><TH>Trigger</TH><TH>Status</TH><TH>Actions Run</TH><TH>Started At</TH><TH>Duration</TH></tr></thead>
+                                <thead><tr><TH>Run ID</TH><TH>Trigger</TH><TH>On authority of</TH><TH>Status</TH><TH>Output</TH><TH>Started At</TH><TH>Duration</TH></tr></thead>
                                 <tbody>
                                   {(rowRuns[pb.id] || []).map((r: any) => (
                                     <tr key={r.id}>
                                       <TD mono>{r.id}</TD>
                                       <TD>{r.trigger_event || "—"}</TD>
-                                      <TD><Badge color={statusColor(r.status)}>{r.status}</Badge></TD>
-                                      <TD>{r.actions_run}</TD>
+                                      <TD>{r.actor || "—"}</TD>
+                                      <TD><Badge color={statusColor(r.status)}>{prettify(r.status)}</Badge></TD>
+                                      <TD mono><span style={{ whiteSpace: "pre-wrap", fontSize: 10 }}>{r.output || "—"}</span></TD>
                                       <TD>{fmtDate(r.started_at)}</TD>
                                       <TD>{fmtDuration(r.started_at, r.completed_at)}</TD>
                                     </tr>
@@ -638,10 +528,8 @@ export function PlaybooksTab({ session }: { session: any }) {
         </div>
       )}
 
-      {/* ── CREATE / EDIT VIEW ── */}
-      {view === "create" && (
+      {view === "create" && catalog && (
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-          {/* Left column */}
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "20px 24px" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 18 }}>
               {editingId ? "Edit Playbook" : "New Playbook"}
@@ -649,48 +537,66 @@ export function PlaybooksTab({ session }: { session: any }) {
             <Inp label="Name *" placeholder="e.g. Canary Trip Response" value={form.name} onChange={(e: any) => setForm(p => ({ ...p, name: e.target.value }))} />
             <Txt label="Description" placeholder="What this playbook does..." value={form.description} onChange={(e: any) => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
             <Sel label="Category" value={form.category} onChange={(e: any) => setForm(p => ({ ...p, category: e.target.value }))}>
-              {PLAYBOOK_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              {catalog.categories.map((c: string) => <option key={c} value={c}>{prettify(c)}</option>)}
             </Sel>
-            <Sel label="Trigger Type" value={form.trigger_type} onChange={(e: any) => setForm(p => ({ ...p, trigger_type: e.target.value }))}>
-              {TRIGGER_GROUPS.map(g => (
+            <Sel label="Trigger" value={form.trigger_type} onChange={(e: any) => setForm(p => ({ ...p, trigger_type: e.target.value }))}>
+              {triggerGroups.map(g => (
                 <optgroup key={g.group} label={g.group}>
-                  {g.items.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {g.items.map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}
                 </optgroup>
               ))}
             </Sel>
-            <Inp label="Threshold (for numeric triggers)" type="number" placeholder="0" value={form.threshold} onChange={(e: any) => setForm(p => ({ ...p, threshold: e.target.value }))} />
-            <Chk label="Enabled" checked={form.enabled} onChange={(v: boolean) => setForm(p => ({ ...p, enabled: v }))} />
+            <div style={{ fontSize: 10, color: C.muted, marginTop: -6, marginBottom: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+              fires on {triggerSpec(form.trigger_type)?.subjects?.join(", ") || "—"}{triggerSpec(form.trigger_type)?.success_only ? " (success only)" : ""}
+            </div>
+            <Chk label="Enabled (runs automatically when the trigger fires)" checked={form.enabled} onChange={(v: boolean) => setForm(p => ({ ...p, enabled: v }))} />
+            <div style={{ fontSize: 11, color: C.dim }}>
+              {neededPerms.length ? <>Saving it enabled needs: <b>{neededPerms.join(", ")}</b></> : "These actions need no extra permission."}
+            </div>
           </div>
 
-          {/* Right column — Actions builder */}
           <div style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "20px 24px" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Response Actions</div>
-            <div style={{ fontSize: 10, color: C.muted, marginBottom: 16 }}>Actions execute in order when the trigger fires.</div>
-            {form.actions.map((action: any, i: number) => (
-              <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Action {i + 1}</span>
-                  {form.actions.length > 1 && (
-                    <button onClick={() => removeAction(i)} style={{ background: "none", border: "none", cursor: "pointer", color: C.red, padding: 0, display: "inline-flex" }}>
-                      <Trash2 size={13} />
-                    </button>
+            <div style={{ fontSize: 10, color: C.muted, marginBottom: 16 }}>Run in order. Each is audited as audit.compliance.playbook_action_executed.</div>
+            {form.actions.map((action: any, i: number) => {
+              const spec = actionSpec(action.type);
+              return (
+                <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>Action {i + 1}</span>
+                    {form.actions.length > 1 && (
+                      <button onClick={() => removeAction(i)} style={{ background: "none", border: "none", cursor: "pointer", color: C.red, padding: 0, display: "inline-flex" }}>
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <Sel value={action.type} onChange={(e: any) => updateAction(i, "type", e.target.value)}>
+                    {!spec && <option value={action.type}>{action.type} (no longer supported)</option>}
+                    {actionGroups.map(g => (
+                      <optgroup key={g.group} label={g.group}>
+                        {g.items.map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}
+                      </optgroup>
+                    ))}
+                  </Sel>
+                  <Inp label="Delay (seconds)" type="number" placeholder="0" value={action.delay_seconds} onChange={(e: any) => updateAction(i, "delay_seconds", e.target.value)} />
+                  <Txt label="Parameters (one key=value per line)" rows={3} value={action.params} onChange={(e: any) => updateAction(i, "params", e.target.value)}
+                    placeholder={(spec?.required || []).map((k: string) => `${k}=`).join("\n")} style={{ fontFamily: "'JetBrains Mono', monospace" }} />
+                  {spec && (
+                    <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.6 }}>
+                      {spec.required?.length ? <>Required: {spec.required.join(", ")}. </> : null}
+                      {spec.optional?.length ? <>Optional: {spec.optional.join(", ")}, stop_on_failure. </> : <>Optional: stop_on_failure. </>}
+                      {spec.secrets?.length ? <>Secret (never shown again after saving; leave ******** to keep): {spec.secrets.join(", ")}. </> : null}
+                      {spec.url_param ? <>{spec.url_param} must be a public https endpoint. </> : null}
+                      {spec.permission ? <>Needs {spec.permission}.</> : null}
+                    </div>
                   )}
                 </div>
-                <Sel value={action.type} onChange={(e: any) => updateAction(i, "type", e.target.value)}>
-                  {ACTION_GROUPS.map(g => (
-                    <optgroup key={g.group} label={g.group}>
-                      {g.items.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </optgroup>
-                  ))}
-                </Sel>
-                <Inp label="Delay (seconds)" type="number" placeholder="0" value={action.delay_seconds} onChange={(e: any) => updateAction(i, "delay_seconds", e.target.value)} />
-                <Inp label="Parameters (key=value, comma-separated)" placeholder="key_id=abc, email=soc@co.com" value={action.params} onChange={(e: any) => updateAction(i, "params", e.target.value)} />
-              </div>
-            ))}
+              );
+            })}
             <Btn variant="ghost" small onClick={addAction}><Plus size={11} /> Add Action</Btn>
             <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
-              <Btn variant="default" onClick={handleCreate} disabled={creating}>
-                <Play size={13} /> {creating ? "Saving..." : editingId ? "Update Playbook" : "Create Playbook"}
+              <Btn variant="default" onClick={handleSave} disabled={saving}>
+                <Play size={13} /> {saving ? "Saving..." : editingId ? "Update Playbook" : "Create Playbook"}
               </Btn>
               <Btn variant="ghost" onClick={() => { setView("playbooks"); setEditingId(null); setForm(emptyForm()); }}>Cancel</Btn>
             </div>

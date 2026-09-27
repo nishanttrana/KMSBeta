@@ -14,37 +14,55 @@ import (
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/servicetoken"
+	"vecta-kms/pkg/ssrfguard"
+	"vecta-kms/pkg/svctls"
 )
 
-// RunContext carries contextual data passed between actions during a playbook run.
+// RunContext carries what every action of one run needs.
 type RunContext struct {
-	PlaybookID   string
-	RunID        string
-	TenantID     string
-	TriggerEvent string
+	PlaybookID string
+	RunID      string
+	TenantID   string
 }
 
-// ActionResult records the outcome of a single action execution.
-type ActionResult struct {
-	Index   int           `json:"index"`
-	Type    string        `json:"type"`
-	Status  string        `json:"status"`
-	Error   string        `json:"error,omitempty"`
-	Elapsed time.Duration `json:"elapsed_ms"`
+// runSource says why a run started and on whose authority: the person who
+// ran it by hand, or the person who last authorized the playbook.
+type runSource struct {
+	Trigger string // "manual" or a trigger type
+	Subject string // the audit subject that fired it
+	EventID string // that event's target, when it names one
+	Actor   string
 }
 
-// PlaybookExecutor handles real execution of playbook actions via HTTP calls
-// to internal microservices and external webhooks.
+// Action outcomes.
+const (
+	outcomeDone            = "done"
+	outcomePendingApproval = "pending_approval"
+)
+
+// Run statuses.
+const (
+	runRunning         = "running"
+	runCompleted       = "completed"
+	runPendingApproval = "pending_approval"
+	runPartialFailure  = "partial_failure"
+	runFailed          = "failed"
+	runCancelled       = "cancelled"
+)
+
+// PlaybookExecutor runs playbook actions. Key and certificate actions call
+// keycore and certs as the compliance service identity; notifications go
+// through a client that reaches only public HTTPS endpoints and presents no
+// client certificate.
 type PlaybookExecutor struct {
 	store      Store
 	keycoreURL string
 	certsURL   string
-	policyURL  string
-	auditURL   string
-	authURL    string
-	audit      *pkgaudit.Client
-	http       *http.Client
+	audit      route.Emitter
+	platform   *http.Client
+	outbound   *http.Client
 	logger     *log.Logger
 	// ops runs compliance actions in-process (this service owns them).
 	ops complianceOps
@@ -55,580 +73,369 @@ type complianceOps interface {
 	GetPosture(ctx context.Context, tenantID string, refresh bool) (PostureSnapshot, error)
 }
 
-// NewPlaybookExecutor creates an executor wired to all service endpoints.
-func NewPlaybookExecutor(
-	store Store,
-	keycoreURL, certsURL, policyURL, auditURL string,
-	audit *pkgaudit.Client,
-	logger *log.Logger,
-) *PlaybookExecutor {
-	authURL := envOr("AUTH_URL", "https://auth:8001")
+// NewPlaybookExecutor creates an executor for the given platform services.
+func NewPlaybookExecutor(store Store, keycoreURL, certsURL string, audit route.Emitter, logger *log.Logger) *PlaybookExecutor {
+	if c, ok := audit.(*pkgaudit.Client); ok && c == nil {
+		audit = nil
+	}
+	if logger == nil {
+		logger = log.Default()
+	}
 	return &PlaybookExecutor{
 		store:      store,
 		keycoreURL: strings.TrimRight(keycoreURL, "/"),
 		certsURL:   strings.TrimRight(certsURL, "/"),
-		policyURL:  strings.TrimRight(policyURL, "/"),
-		auditURL:   strings.TrimRight(auditURL, "/"),
-		authURL:    strings.TrimRight(authURL, "/"),
 		audit:      audit,
-		http:       &http.Client{Timeout: 30 * time.Second},
-		logger:     logger,
+		// http.DefaultTransport is svctls's router: platform hosts over mTLS.
+		platform: &http.Client{Timeout: 30 * time.Second},
+		outbound: ssrfguard.NewHTTPSClient(30 * time.Second),
+		logger:   logger,
 	}
 }
 
-// ExecutePlaybook runs all actions in a playbook sequentially, recording results.
-func (e *PlaybookExecutor) ExecutePlaybook(ctx context.Context, playbook Playbook, triggerEvent string) (*PlaybookRun, error) {
-	run := PlaybookRun{
+// Start records a new run.
+func (e *PlaybookExecutor) Start(ctx context.Context, pb Playbook, src runSource) (PlaybookRun, error) {
+	return e.store.CreatePlaybookRun(ctx, PlaybookRun{
 		ID:           newID("pbrun"),
-		PlaybookID:   playbook.ID,
-		TenantID:     playbook.TenantID,
-		TriggerEvent: triggerEvent,
-		Status:       "running",
-		ActionsRun:   0,
-	}
+		PlaybookID:   pb.ID,
+		TenantID:     pb.TenantID,
+		TriggerEvent: src.Trigger,
+		Actor:        src.Actor,
+		Status:       runRunning,
+	})
+}
 
-	created, err := e.store.CreatePlaybookRun(ctx, run)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create playbook run record: %w", err)
-	}
-
-	runCtx := RunContext{
-		PlaybookID:   playbook.ID,
-		RunID:        created.ID,
-		TenantID:     playbook.TenantID,
-		TriggerEvent: triggerEvent,
-	}
-
+// Execute runs every action of pb in order, records the outcome on run, and
+// emits one audit event per action and one for the run.
+func (e *PlaybookExecutor) Execute(ctx context.Context, pb Playbook, run PlaybookRun, src runSource) PlaybookRun {
+	rc := RunContext{PlaybookID: pb.ID, RunID: run.ID, TenantID: pb.TenantID}
 	var (
-		results     []ActionResult
-		actionsRun  int
-		hadFailure  bool
-		outputLines []string
+		lines                              []string
+		ran                                int
+		failed, pending, halted, cancelled bool
 	)
-
-	for i, action := range playbook.Actions {
-		// Respect DelaySeconds with context awareness
-		if action.DelaySeconds > 0 {
-			delay := time.Duration(action.DelaySeconds) * time.Second
-			e.logger.Printf("run=%s action[%d]=%s delaying %ds", created.ID, i, action.Type, action.DelaySeconds)
+	for i, a := range pb.Actions {
+		if a.DelaySeconds > 0 {
 			select {
-			case <-time.After(delay):
+			case <-time.After(time.Duration(a.DelaySeconds) * time.Second):
 			case <-ctx.Done():
-				e.logger.Printf("run=%s cancelled during delay for action[%d]", created.ID, i)
-				created.Status = "cancelled"
-				created.ActionsRun = actionsRun
-				created.Output = strings.Join(outputLines, "\n")
-				now := time.Now().UTC()
-				created.CompletedAt = &now
-				_, _ = e.store.UpdatePlaybookRun(ctx, created)
-				return &created, ctx.Err()
+				cancelled = true
 			}
-		}
-
-		start := time.Now()
-		e.logger.Printf("run=%s executing action[%d] type=%s", created.ID, i, action.Type)
-		execErr := e.executeAction(ctx, action, runCtx)
-		elapsed := time.Since(start)
-		actionsRun++
-
-		result := ActionResult{
-			Index:   i + 1,
-			Type:    action.Type,
-			Elapsed: elapsed,
-		}
-
-		if execErr != nil {
-			result.Status = "failed"
-			result.Error = execErr.Error()
-			hadFailure = true
-			outputLines = append(outputLines,
-				fmt.Sprintf("[%d] action=%s status=FAILED error=%q elapsed=%s", i+1, action.Type, execErr.Error(), elapsed.Round(time.Millisecond)))
-			e.logger.Printf("run=%s action[%d]=%s FAILED: %v", created.ID, i, action.Type, execErr)
-
-			// Check for stop_on_failure parameter
-			if action.Parameters["stop_on_failure"] == "true" {
-				outputLines = append(outputLines,
-					fmt.Sprintf("[%d] stop_on_failure=true, halting playbook execution", i+1))
-				e.logger.Printf("run=%s halting: action[%d] has stop_on_failure=true", created.ID, i)
+			if cancelled {
+				lines = append(lines, fmt.Sprintf("[%d] cancelled before %s", i+1, a.Type))
 				break
 			}
-		} else {
-			result.Status = "success"
-			outputLines = append(outputLines,
-				fmt.Sprintf("[%d] action=%s status=OK elapsed=%s", i+1, action.Type, elapsed.Round(time.Millisecond)))
-			e.logger.Printf("run=%s action[%d]=%s OK elapsed=%s", created.ID, i, action.Type, elapsed.Round(time.Millisecond))
 		}
-		results = append(results, result)
+		start := time.Now()
+		outcome, err := e.executeAction(ctx, a, rc)
+		took := time.Since(start).Round(time.Millisecond)
+		ran++
+		e.emitAction(pb, run, src, i, a, outcome, err, took)
+		switch {
+		case err != nil:
+			failed = true
+			lines = append(lines, fmt.Sprintf("[%d] %s FAILED (%s): %s", i+1, a.Type, took, err))
+		case outcome == outcomePendingApproval:
+			pending = true
+			lines = append(lines, fmt.Sprintf("[%d] %s PENDING APPROVAL (%s)", i+1, a.Type, took))
+		default:
+			lines = append(lines, fmt.Sprintf("[%d] %s OK (%s)", i+1, a.Type, took))
+		}
+		if err != nil && a.Parameters["stop_on_failure"] == "true" {
+			halted = true
+			lines = append(lines, fmt.Sprintf("[%d] stop_on_failure: remaining actions skipped", i+1))
+			break
+		}
 	}
 
-	// Determine final status
 	now := time.Now().UTC()
-	created.ActionsRun = actionsRun
-	created.Output = strings.Join(outputLines, "\n")
-	created.CompletedAt = &now
-	if hadFailure && actionsRun < len(playbook.Actions) {
-		created.Status = "failed"
-	} else if hadFailure {
-		created.Status = "partial_failure"
-	} else {
-		created.Status = "completed"
-	}
-
-	updated, err := e.store.UpdatePlaybookRun(ctx, created)
-	if err != nil {
-		e.logger.Printf("run=%s failed to update run record: %v", created.ID, err)
-		return &created, nil
-	}
-
-	_ = e.store.IncrementPlaybookRunCount(ctx, playbook.TenantID, playbook.ID, now)
-
-	// Publish audit event for the completed run
-	if e.audit != nil {
-		_ = e.audit.Emit(ctx, "playbook_executed", pkgaudit.Event{
-			TenantID:   playbook.TenantID,
-			TargetType: "playbook",
-			TargetID:   playbook.ID,
-			Details: map[string]interface{}{
-				"playbook_id":   playbook.ID,
-				"playbook_name": playbook.Name,
-				"run_id":        updated.ID,
-				"status":        updated.Status,
-				"actions_run":   updated.ActionsRun,
-				"trigger_event": triggerEvent,
-			},
-		})
-	}
-
-	return &updated, nil
-}
-
-// executeAction dispatches a single action by type and makes the real HTTP call.
-func (e *PlaybookExecutor) executeAction(ctx context.Context, action PlaybookAction, runCtx RunContext) error {
-	switch action.Type {
-
-	// ── Notification Actions ────────────────────────────────────────────────────
-
-	case "send_slack":
-		return e.actionSendSlack(ctx, action.Parameters)
-	case "send_teams":
-		return e.actionSendTeams(ctx, action.Parameters)
-	case "send_webhook":
-		return e.actionSendWebhook(ctx, action.Parameters)
-	case "send_pagerduty":
-		return e.actionSendPagerDuty(ctx, action.Parameters)
-	case "create_jira_ticket":
-		return e.actionCreateJiraTicket(ctx, action.Parameters)
-	case "create_servicenow_incident":
-		return e.actionCreateServiceNowIncident(ctx, action.Parameters)
-
-	// ── Key Operations ──────────────────────────────────────────────────────────
-
-	case "rotate_key":
-		return e.actionRotateKey(ctx, action.Parameters, runCtx)
-	case "suspend_key":
-		return e.actionSetKeyStatus(ctx, action.Parameters, runCtx, "suspended")
-	case "revoke_key":
-		return e.actionSetKeyStatus(ctx, action.Parameters, runCtx, "revoked")
-	case "enable_key":
-		return e.actionSetKeyStatus(ctx, action.Parameters, runCtx, "active")
-	case "destroy_key":
-		return e.actionDestroyKey(ctx, action.Parameters, runCtx)
-
-	// ── Certificate Actions ─────────────────────────────────────────────────────
-
-	case "renew_certificate":
-		return e.actionRenewCertificate(ctx, action.Parameters, runCtx)
-	case "revoke_certificate":
-		return e.actionRevokeCertificate(ctx, action.Parameters, runCtx)
-
-	// ── Access Control Actions ──────────────────────────────────────────────────
-
-	case "disable_user":
-		return e.actionDisableUser(ctx, action.Parameters, runCtx)
-	case "revoke_api_key":
-		return e.actionRevokeAPIKey(ctx, action.Parameters, runCtx)
-
-	// ── Compliance Actions ──────────────────────────────────────────────────────
-
-	case "trigger_assessment":
-		return e.actionTriggerAssessment(ctx, action.Parameters, runCtx)
-	case "snapshot_posture":
-		return e.actionSnapshotPosture(ctx, action.Parameters, runCtx)
-
-	case "create_audit_event":
-		if e.audit == nil {
-			return errors.New("create_audit_event: audit client not configured")
-		}
-		return e.audit.Emit(ctx, "playbook_action", pkgaudit.Event{
-			TenantID:   runCtx.TenantID,
-			TargetType: "playbook_run",
-			TargetID:   runCtx.RunID,
-			Details: map[string]interface{}{
-				"action":     action.Type,
-				"parameters": action.Parameters,
-				"run_id":     runCtx.RunID,
-			},
-		})
-
+	run.ActionsRun, run.Output, run.CompletedAt = ran, strings.Join(lines, "\n"), &now
+	switch {
+	case cancelled:
+		run.Status = runCancelled
+	case failed && halted:
+		run.Status = runFailed
+	case failed:
+		run.Status = runPartialFailure
+	case pending:
+		run.Status = runPendingApproval
 	default:
-		return fmt.Errorf("unsupported action type: %s", action.Type)
+		run.Status = runCompleted
 	}
+	// The run's context may have expired; the record must still be written.
+	sctx, done := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer done()
+	if updated, err := e.store.UpdatePlaybookRun(sctx, run); err != nil {
+		e.logger.Printf("playbook run=%s: record outcome: %v", run.ID, err)
+	} else {
+		run = updated
+	}
+	if err := e.store.IncrementPlaybookRunCount(sctx, pb.TenantID, pb.ID, now); err != nil {
+		e.logger.Printf("playbook run=%s: count run: %v", run.ID, err)
+	}
+	e.emitRun(pb, run, src)
+	return run
 }
 
-// ── Notification Action Implementations ─────────────────────────────────────
-
-func (e *PlaybookExecutor) actionSendSlack(ctx context.Context, params map[string]string) error {
-	webhookURL := strings.TrimSpace(params["webhook_url"])
-	if webhookURL == "" {
-		return fmt.Errorf("send_slack: missing required param \"webhook_url\"")
-	}
-	message := params["message"]
-	if message == "" {
-		message = "Playbook action triggered"
-	}
-	payload := map[string]interface{}{
-		"text": message,
-		"blocks": []map[string]interface{}{
-			{
-				"type": "section",
-				"text": map[string]string{
-					"type": "mrkdwn",
-					"text": message,
-				},
-			},
-		},
-	}
-	return e.doPost(ctx, webhookURL, payload, nil)
-}
-
-func (e *PlaybookExecutor) actionSendTeams(ctx context.Context, params map[string]string) error {
-	webhookURL := strings.TrimSpace(params["webhook_url"])
-	if webhookURL == "" {
-		return fmt.Errorf("send_teams: missing required param \"webhook_url\"")
-	}
-	message := params["message"]
-	if message == "" {
-		message = "Playbook action triggered"
-	}
-	// Microsoft Teams Adaptive Card format
-	payload := map[string]interface{}{
-		"type": "message",
-		"attachments": []map[string]interface{}{
-			{
-				"contentType": "application/vnd.microsoft.card.adaptive",
-				"content": map[string]interface{}{
-					"$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-					"type":    "AdaptiveCard",
-					"version": "1.4",
-					"body": []map[string]interface{}{
-						{
-							"type": "TextBlock",
-							"text": message,
-							"wrap": true,
-						},
-					},
-				},
-			},
-		},
-	}
-	return e.doPost(ctx, webhookURL, payload, nil)
-}
-
-func (e *PlaybookExecutor) actionSendWebhook(ctx context.Context, params map[string]string) error {
-	targetURL := strings.TrimSpace(params["url"])
-	if targetURL == "" {
-		return fmt.Errorf("send_webhook: missing required param \"url\"")
-	}
-	method := strings.ToUpper(strings.TrimSpace(params["method"]))
-	if method == "" {
-		method = http.MethodPost
-	}
-
-	var bodyReader io.Reader
-	if body := params["body"]; body != "" {
-		bodyReader = strings.NewReader(body)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, targetURL, bodyReader)
-	if err != nil {
-		return fmt.Errorf("send_webhook: failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// Parse custom headers from params["headers"] as JSON object
-	if rawHeaders := params["headers"]; rawHeaders != "" {
-		var headers map[string]string
-		if err := json.Unmarshal([]byte(rawHeaders), &headers); err == nil {
-			for k, v := range headers {
-				req.Header.Set(k, v)
+// executeAction performs one action. A platform call that opens an approval
+// instead of acting returns outcomePendingApproval, never done.
+func (e *PlaybookExecutor) executeAction(ctx context.Context, a PlaybookAction, rc RunContext) (string, error) {
+	p := a.Parameters
+	keyPath := func(op string) string { return "/keys/" + neturl.PathEscape(p["key_id"]) + "/" + op }
+	certPath := func(op string) string { return "/certs/" + neturl.PathEscape(p["cert_id"]) + "/" + op }
+	switch a.Type {
+	case "send_slack":
+		return e.notify(ctx, http.MethodPost, p["webhook_url"], map[string]any{"text": messageOr(p)}, nil)
+	case "send_teams":
+		return e.notify(ctx, http.MethodPost, p["webhook_url"], teamsCard(messageOr(p)), nil)
+	case "send_webhook":
+		headers := map[string]string{}
+		if raw := strings.TrimSpace(p["headers"]); raw != "" {
+			if err := json.Unmarshal([]byte(raw), &headers); err != nil {
+				return "", errors.New("headers must be a JSON object of strings")
 			}
 		}
+		body := json.RawMessage("{}")
+		if b := strings.TrimSpace(p["body"]); b != "" {
+			body = json.RawMessage(b)
+		}
+		return e.notify(ctx, firstNonEmpty(strings.ToUpper(strings.TrimSpace(p["method"])), http.MethodPost), p["url"], body, headers)
+	case "create_jira_ticket":
+		headers := map[string]string{}
+		if t := p["api_token"]; t != "" {
+			headers["Authorization"] = "Basic " + t
+		}
+		return e.notify(ctx, http.MethodPost, strings.TrimRight(p["base_url"], "/")+"/rest/api/2/issue", map[string]any{"fields": map[string]any{
+			"project":     map[string]string{"key": p["project"]},
+			"summary":     p["summary"],
+			"description": p["description"],
+			"issuetype":   map[string]string{"name": firstNonEmpty(p["issuetype"], "Task")},
+		}}, headers)
+	case "create_servicenow_incident":
+		headers := map[string]string{}
+		if t := p["auth_token"]; t != "" {
+			headers["Authorization"] = "Bearer " + t
+		}
+		return e.notify(ctx, http.MethodPost, strings.TrimRight(p["instance_url"], "/")+"/api/now/table/incident", map[string]any{
+			"short_description": p["short_description"],
+			"description":       p["description"],
+			"urgency":           firstNonEmpty(p["urgency"], "2"),
+			"impact":            firstNonEmpty(p["impact"], "2"),
+			"caller_id":         p["caller_id"],
+		}, headers)
+	case "create_audit_event":
+		if e.audit == nil {
+			return "", errors.New("audit pipeline unavailable")
+		}
+		return outcomeDone, e.audit.Emit(ctx, "playbook_action", pkgaudit.Event{
+			TenantID: rc.TenantID, TargetType: "playbook_run", TargetID: rc.RunID, CorrelationID: rc.RunID,
+			Details: map[string]interface{}{"playbook_id": rc.PlaybookID, "run_id": rc.RunID, "message": p["message"]},
+		})
+	case "rotate_key":
+		return e.platformCall(ctx, e.keycoreURL, keyPath("rotate"), rc, map[string]string{"reason": "playbook " + rc.PlaybookID + " run " + rc.RunID})
+	case "disable_key":
+		return e.platformCall(ctx, e.keycoreURL, keyPath("disable"), rc, map[string]string{})
+	case "deactivate_key":
+		return e.platformCall(ctx, e.keycoreURL, keyPath("deactivate"), rc, map[string]string{})
+	case "activate_key":
+		return e.platformCall(ctx, e.keycoreURL, keyPath("activate"), rc, map[string]string{"mode": "immediate"})
+	case "renew_certificate":
+		return e.platformCall(ctx, e.certsURL, certPath("renew"), rc, map[string]string{})
+	case "revoke_certificate":
+		return e.platformCall(ctx, e.certsURL, certPath("revoke"), rc, map[string]string{"reason": firstNonEmpty(p["reason"], "playbook "+rc.PlaybookID)})
+	case "trigger_assessment":
+		if e.ops == nil {
+			return "", errors.New("compliance service not wired")
+		}
+		_, err := e.ops.RunAssessment(ctx, rc.TenantID, "playbook:"+rc.RunID, true, p["template_id"])
+		return outcomeDone, err
+	case "snapshot_posture":
+		if e.ops == nil {
+			return "", errors.New("compliance service not wired")
+		}
+		_, err := e.ops.GetPosture(ctx, rc.TenantID, true)
+		return outcomeDone, err
+	default:
+		return "", actionRemovedError{a.Type}
 	}
+}
 
-	resp, err := e.http.Do(req)
+// actionRemovedError is an action saved before it left the catalogue
+// (destroy_key, send_pagerduty, disable_user, ...).
+type actionRemovedError struct{ action string }
+
+func (e actionRemovedError) Error() string {
+	return fmt.Sprintf("action %q is not supported; edit the playbook", e.action)
+}
+
+// platformCall POSTs to a platform service as the compliance service
+// identity, for the run's tenant.
+func (e *PlaybookExecutor) platformCall(ctx context.Context, base, path string, rc RunContext, body map[string]string) (string, error) {
+	raw, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("send_webhook: request failed: %w", err)
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+path, bytes.NewReader(raw))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Tenant-ID", rc.TenantID)
+	req.Header.Set("X-Correlation-ID", rc.RunID)
+	servicetoken.Authorize(ctx, req)
+	resp, err := e.platform.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("%s unreachable: %w", req.URL.Host, unwrapURLError(err))
 	}
 	defer resp.Body.Close() //nolint:errcheck
+	payload, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
+	var out struct {
+		Status string `json:"status"`
+		Error  struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	_ = json.Unmarshal(payload, &out)
 	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("send_webhook: HTTP %d: %s", resp.StatusCode, string(body))
-	}
-	return nil
-}
-
-func (e *PlaybookExecutor) actionSendPagerDuty(ctx context.Context, params map[string]string) error {
-	routingKey := strings.TrimSpace(params["routing_key"])
-	if routingKey == "" {
-		return fmt.Errorf("send_pagerduty: missing required param \"routing_key\"")
-	}
-	summary := params["summary"]
-	if summary == "" {
-		summary = "KMS playbook alert"
-	}
-	severity := params["severity"]
-	if severity == "" {
-		severity = "critical"
-	}
-	payload := map[string]interface{}{
-		"routing_key":  routingKey,
-		"event_action": "trigger",
-		"payload": map[string]interface{}{
-			"summary":  summary,
-			"severity": severity,
-			"source":   "kms-compliance",
-		},
-	}
-	return e.doPost(ctx, "https://events.pagerduty.com/v2/enqueue", payload, nil)
-}
-
-func (e *PlaybookExecutor) actionCreateJiraTicket(ctx context.Context, params map[string]string) error {
-	baseURL := strings.TrimRight(strings.TrimSpace(params["base_url"]), "/")
-	if baseURL == "" {
-		return fmt.Errorf("create_jira_ticket: missing required param \"base_url\"")
-	}
-	for _, required := range []string{"project", "summary"} {
-		if strings.TrimSpace(params[required]) == "" {
-			return fmt.Errorf("create_jira_ticket: missing required param %q", required)
+		msg := http.StatusText(resp.StatusCode)
+		if out.Error.Code != "" {
+			msg = out.Error.Code + ": " + out.Error.Message
 		}
+		return "", fmt.Errorf("%s HTTP %d %s", req.URL.Host, resp.StatusCode, msg)
 	}
-	issueType := params["issuetype"]
-	if issueType == "" {
-		issueType = "Task"
+	if out.Status == outcomePendingApproval {
+		return outcomePendingApproval, nil
 	}
-	payload := map[string]interface{}{
-		"fields": map[string]interface{}{
-			"project": map[string]string{
-				"key": params["project"],
-			},
-			"summary":     params["summary"],
-			"description": params["description"],
-			"issuetype": map[string]string{
-				"name": issueType,
-			},
-		},
-	}
-	headers := map[string]string{}
-	if auth := params["api_token"]; auth != "" {
-		headers["Authorization"] = "Basic " + auth
-	}
-	return e.doPost(ctx, baseURL+"/rest/api/2/issue", payload, headers)
+	return outcomeDone, nil
 }
 
-func (e *PlaybookExecutor) actionCreateServiceNowIncident(ctx context.Context, params map[string]string) error {
-	instanceURL := strings.TrimRight(strings.TrimSpace(params["instance_url"]), "/")
-	if instanceURL == "" {
-		return fmt.Errorf("create_servicenow_incident: missing required param \"instance_url\"")
+// notify calls an external endpoint. Errors name the host only: a webhook URL
+// (Slack, Teams) is itself a credential.
+func (e *PlaybookExecutor) notify(ctx context.Context, method, rawURL string, payload any, headers map[string]string) (string, error) {
+	u, err := neturl.Parse(strings.TrimSpace(rawURL))
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" {
+		return "", errors.New("endpoint must be an https URL")
 	}
-	shortDesc := params["short_description"]
-	if shortDesc == "" {
-		return fmt.Errorf("create_servicenow_incident: missing required param \"short_description\"")
+	if svctls.IsInternalHost(u.Hostname()) {
+		return "", fmt.Errorf("%s is a platform service, not an external endpoint", u.Hostname())
 	}
-	urgency := params["urgency"]
-	if urgency == "" {
-		urgency = "2"
-	}
-	impact := params["impact"]
-	if impact == "" {
-		impact = "2"
-	}
-	payload := map[string]interface{}{
-		"short_description": shortDesc,
-		"urgency":           urgency,
-		"impact":            impact,
-		"description":       params["description"],
-		"caller_id":         params["caller_id"],
-	}
-	headers := map[string]string{}
-	if auth := params["auth_token"]; auth != "" {
-		headers["Authorization"] = "Bearer " + auth
-	}
-	return e.doPost(ctx, instanceURL+"/api/now/table/incident", payload, headers)
-}
-
-// ── Key Operation Implementations ───────────────────────────────────────────
-
-func (e *PlaybookExecutor) actionRotateKey(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	keyID := strings.TrimSpace(params["key_id"])
-	if keyID == "" {
-		return fmt.Errorf("rotate_key: missing required param \"key_id\"")
-	}
-	url := fmt.Sprintf("%s/keys/%s/rotate", e.keycoreURL, keyID)
-	body := map[string]string{"tenant_id": runCtx.TenantID}
-	return e.doPost(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionSetKeyStatus(ctx context.Context, params map[string]string, runCtx RunContext, status string) error {
-	keyID := strings.TrimSpace(params["key_id"])
-	if keyID == "" {
-		return fmt.Errorf("%s_key: missing required param \"key_id\"", status)
-	}
-	url := fmt.Sprintf("%s/keys/%s/status", e.keycoreURL, keyID)
-	body := map[string]string{"status": status}
-	return e.doPut(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionDestroyKey(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	keyID := strings.TrimSpace(params["key_id"])
-	if keyID == "" {
-		return fmt.Errorf("destroy_key: missing required param \"key_id\"")
-	}
-	url := fmt.Sprintf("%s/keys/%s/destroy", e.keycoreURL, keyID)
-	body := map[string]string{"tenant_id": runCtx.TenantID}
-	return e.doPost(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-// ── Certificate Action Implementations ──────────────────────────────────────
-
-func (e *PlaybookExecutor) actionRenewCertificate(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	certID := strings.TrimSpace(params["cert_id"])
-	if certID == "" {
-		return fmt.Errorf("renew_certificate: missing required param \"cert_id\"")
-	}
-	url := fmt.Sprintf("%s/certificates/%s/renew", e.certsURL, certID)
-	body := map[string]string{"tenant_id": runCtx.TenantID}
-	return e.doPost(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionRevokeCertificate(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	certID := strings.TrimSpace(params["cert_id"])
-	if certID == "" {
-		return fmt.Errorf("revoke_certificate: missing required param \"cert_id\"")
-	}
-	url := fmt.Sprintf("%s/certificates/%s/revoke", e.certsURL, certID)
-	reason := params["reason"]
-	if reason == "" {
-		reason = "playbook_action"
-	}
-	body := map[string]string{"tenant_id": runCtx.TenantID, "reason": reason}
-	return e.doPost(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-// ── Access Control Action Implementations ───────────────────────────────────
-
-func (e *PlaybookExecutor) actionDisableUser(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	userID := strings.TrimSpace(params["user_id"])
-	if userID == "" {
-		return fmt.Errorf("disable_user: missing required param \"user_id\"")
-	}
-	url := fmt.Sprintf("%s/auth/users/%s/status", e.authURL, userID)
-	body := map[string]string{"status": "disabled"}
-	return e.doPut(ctx, url, body, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-func (e *PlaybookExecutor) actionRevokeAPIKey(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	apiKeyID := strings.TrimSpace(params["api_key_id"])
-	if apiKeyID == "" {
-		return fmt.Errorf("revoke_api_key: missing required param \"api_key_id\"")
-	}
-	url := fmt.Sprintf("%s/auth/api-keys/%s", e.authURL, apiKeyID)
-	return e.doDelete(ctx, url, map[string]string{"X-Tenant-ID": runCtx.TenantID})
-}
-
-// ── Compliance Action Implementations ───────────────────────────────────────
-
-// ── Infrastructure Action Implementations ───────────────────────────────────
-
-func (e *PlaybookExecutor) actionTriggerAssessment(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	if e.ops == nil {
-		return errors.New("trigger_assessment: compliance service not wired")
-	}
-	_, err := e.ops.RunAssessment(ctx, runCtx.TenantID, "playbook:"+runCtx.RunID, true, params["template_id"])
-	return err
-}
-
-func (e *PlaybookExecutor) actionSnapshotPosture(ctx context.Context, _ map[string]string, runCtx RunContext) error {
-	if e.ops == nil {
-		return errors.New("snapshot_posture: compliance service not wired")
-	}
-	_, err := e.ops.GetPosture(ctx, runCtx.TenantID, true)
-	return err
-}
-
-// ── HTTP helpers ────────────────────────────────────────────────────────────
-
-func (e *PlaybookExecutor) doPost(ctx context.Context, url string, payload interface{}, headers map[string]string) error {
-	return e.doRequest(ctx, http.MethodPost, url, payload, headers)
-}
-
-func (e *PlaybookExecutor) doPut(ctx context.Context, url string, payload interface{}, headers map[string]string) error {
-	return e.doRequest(ctx, http.MethodPut, url, payload, headers)
-}
-
-func (e *PlaybookExecutor) doDelete(ctx context.Context, url string, headers map[string]string) error {
-	return e.doRequest(ctx, http.MethodDelete, url, nil, headers)
-}
-
-func (e *PlaybookExecutor) doRequest(ctx context.Context, method string, url string, payload interface{}, headers map[string]string) error {
-	var bodyReader io.Reader
-	if payload != nil {
-		raw, err := json.Marshal(payload)
-		if err != nil {
-			return fmt.Errorf("failed to marshal payload: %w", err)
-		}
-		bodyReader = bytes.NewReader(raw)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
+	raw, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return "", errors.New("request body must be valid JSON")
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(raw))
+	if err != nil {
+		return "", errors.New("invalid request")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	// Platform services (keycore, certs, policy, audit, auth) decide access
-	// from a verified token: act as the compliance service identity. Only
-	// there: the service token must never reach a webhook or third party.
-	if req.Header.Get("Authorization") == "" && e.platformTarget(req.URL) {
-		servicetoken.Authorize(ctx, req)
-	}
-
-	resp, err := e.http.Do(req)
+	resp, err := e.outbound.Do(req)
 	if err != nil {
-		return fmt.Errorf("request to %s failed: %w", url, err)
+		return "", fmt.Errorf("%s: %v", u.Hostname(), unwrapURLError(err))
 	}
 	defer resp.Body.Close() //nolint:errcheck
-
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 8192))
 	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, url, string(body))
+		return "", fmt.Errorf("%s answered HTTP %d", u.Hostname(), resp.StatusCode)
 	}
-	return nil
+	return outcomeDone, nil
 }
 
-// platformTarget reports whether u is one of the platform services the
-// executor was wired to: same scheme and host exactly, so a look-alike host
-// ("keycore:8010.example") or any other URL never receives the service token.
-func (e *PlaybookExecutor) platformTarget(u *neturl.URL) bool {
-	for _, base := range []string{e.keycoreURL, e.certsURL, e.policyURL, e.auditURL, e.authURL} {
-		b, err := neturl.Parse(base)
-		if err != nil || b.Host == "" {
-			continue
-		}
-		if strings.EqualFold(u.Scheme, b.Scheme) && strings.EqualFold(u.Host, b.Host) {
-			return true
+// unwrapURLError drops the *url.Error wrapper, which quotes the full URL.
+func unwrapURLError(err error) error {
+	var ue *neturl.Error
+	if errors.As(err, &ue) {
+		return ue.Err
+	}
+	return err
+}
+
+func (e *PlaybookExecutor) emitAction(pb Playbook, run PlaybookRun, src runSource, i int, a PlaybookAction, outcome string, err error, took time.Duration) {
+	result, severity := route.ResultSuccess, "info"
+	if actionByType[a.Type].Permission != "" {
+		severity = "warning"
+	}
+	details := map[string]interface{}{
+		"playbook_id": pb.ID, "playbook_name": pb.Name, "run_id": run.ID,
+		"index": i + 1, "action": a.Type, "trigger": src.Trigger,
+		"authorized_by": src.Actor, "executed_as": "kms-compliance",
+	}
+	for _, k := range []string{"key_id", "cert_id", "template_id"} {
+		if v := a.Parameters[k]; v != "" {
+			details[k] = v
 		}
 	}
-	return false
+	var removed actionRemovedError
+	switch {
+	case errors.As(err, &removed):
+		result, severity = route.ResultRefused, "warning"
+		details["reason"] = reasonActionRemoved
+	case err != nil:
+		result, severity = route.ResultFailure, "warning"
+	case outcome == outcomePendingApproval:
+		result = "pending"
+	}
+	details["outcome"] = firstNonEmpty(outcome, result)
+	details["severity"] = severity
+	evt := pkgaudit.Event{
+		TenantID: pb.TenantID, ActorID: src.Actor, TargetType: "playbook_run", TargetID: run.ID,
+		Result: result, CorrelationID: run.ID, DurationMS: float64(took.Milliseconds()), Details: details,
+	}
+	if err != nil {
+		evt.ErrorMessage = err.Error()
+	}
+	e.emit("playbook_action_executed", evt)
+}
+
+func (e *PlaybookExecutor) emitRun(pb Playbook, run PlaybookRun, src runSource) {
+	result, severity := route.ResultFailure, "warning"
+	switch run.Status {
+	case runCompleted:
+		result, severity = route.ResultSuccess, "info"
+	case runPendingApproval:
+		result, severity = "pending", "info"
+	}
+	e.emit("playbook_run_completed", pkgaudit.Event{
+		TenantID: pb.TenantID, ActorID: src.Actor, TargetType: "playbook", TargetID: pb.ID,
+		Result: result, CorrelationID: run.ID,
+		Details: map[string]interface{}{
+			"playbook_name": pb.Name, "run_id": run.ID, "status": run.Status,
+			"actions_run": run.ActionsRun, "actions_total": len(pb.Actions),
+			"trigger": src.Trigger, "subject": src.Subject, "event_target": src.EventID,
+			"authorized_by": src.Actor, "severity": severity,
+		},
+	})
+}
+
+func (e *PlaybookExecutor) emit(action string, evt pkgaudit.Event) {
+	if e.audit == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := e.audit.Emit(ctx, action, evt); err != nil {
+		e.logger.Printf("playbook: audit %s: %v", action, err)
+	}
+}
+
+func messageOr(p map[string]string) string {
+	return firstNonEmpty(strings.TrimSpace(p["message"]), "KMS playbook triggered")
+}
+
+func teamsCard(message string) map[string]any {
+	return map[string]any{
+		"type": "message",
+		"attachments": []map[string]any{{
+			"contentType": "application/vnd.microsoft.card.adaptive",
+			"content": map[string]any{
+				"$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
+				"type":    "AdaptiveCard",
+				"version": "1.4",
+				"body":    []map[string]any{{"type": "TextBlock", "text": message, "wrap": true}},
+			},
+		}},
+	}
 }

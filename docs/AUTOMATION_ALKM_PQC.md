@@ -36,7 +36,7 @@ configure, observe, or extend the new controllers.
 | Migration planner | `pqc` | `POST /svc/pqc/pqc/migration/plans` |
 | Service heartbeats | every service | `pkg/heartbeat` publisher at boot |
 | Watchdog SLO probe | `watchdog` | subscribes to `health.*.heartbeat` |
-| Playbook engine | `watchdog` | fires per-service playbook on SLO breach |
+| Watchdog incidents | `watchdog` | raises `audit.health.incident` per unhealthy service; compliance playbooks with the `service_health_degraded` trigger respond (the watchdog acts on nothing itself) |
 
 ## Posture toggles
 
@@ -112,7 +112,7 @@ The "Health & Reconciliation" tab in the v3 dashboard surfaces:
 
 - service heartbeats (state, silence-seconds, healthy boolean)
 - per-controller reconciler status (last run, last error)
-- recent playbook incidents (timestamp, service, action)
+- recent watchdog incidents (timestamp, service, recommendation)
 
 The existing "Crypto Agility" tab continues to render the CBOM
 inventory; live data lands via `lib/cbom.ts`.

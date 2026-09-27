@@ -2,190 +2,63 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/route"
 )
 
-// PlaybookTrigger defines the condition that fires a playbook.
+// Playbook permissions. Saving or running a playbook also needs every
+// permission its actions name (ActionSpec.Permission).
+const (
+	permPlaybookRead   = "compliance.playbook.read"
+	permPlaybookWrite  = "compliance.playbook.write"
+	permPlaybookDelete = "compliance.playbook.delete"
+	permPlaybookRun    = "compliance.playbook.run"
+
+	reasonPlaybookInvalid = "playbook_invalid"
+)
+
+// PlaybookTrigger names the catalogue trigger that fires a playbook.
 type PlaybookTrigger struct {
-	Type      string `json:"type"`
-	Threshold int    `json:"threshold"`
-	KeyID     string `json:"key_id,omitempty"`
+	Type string `json:"type"`
 }
 
-// PlaybookAction defines a single response action within a playbook.
+// PlaybookAction is one step of a playbook.
 type PlaybookAction struct {
 	Type         string            `json:"type"`
 	Parameters   map[string]string `json:"parameters"`
 	DelaySeconds int               `json:"delay_seconds"`
 }
 
-// Playbook is an automated KMS response definition.
+// Playbook is an automated response definition. AuthorizedBy is the verified
+// caller who last saved it holding every action permission; automatic runs
+// act on that authority and are refused while it is empty.
 type Playbook struct {
-	ID          string           `json:"id"`
-	TenantID    string           `json:"tenant_id"`
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	Category    string           `json:"category"`
-	Trigger     PlaybookTrigger  `json:"trigger"`
-	Actions     []PlaybookAction `json:"actions"`
-	Enabled     bool             `json:"enabled"`
-	RunCount    int              `json:"run_count"`
-	LastRunAt   *time.Time       `json:"last_run_at,omitempty"`
-	CreatedAt   time.Time        `json:"created_at"`
+	ID           string           `json:"id"`
+	TenantID     string           `json:"tenant_id"`
+	Name         string           `json:"name"`
+	Description  string           `json:"description"`
+	Category     string           `json:"category"`
+	Trigger      PlaybookTrigger  `json:"trigger"`
+	Actions      []PlaybookAction `json:"actions"`
+	Enabled      bool             `json:"enabled"`
+	AuthorizedBy string           `json:"authorized_by"`
+	RunCount     int              `json:"run_count"`
+	LastRunAt    *time.Time       `json:"last_run_at,omitempty"`
+	CreatedAt    time.Time        `json:"created_at"`
 }
 
-// ── Supported Playbook Categories ────────────────────────────────────────────
-// incident_response, key_lifecycle, certificate_management, compliance,
-// access_control, infrastructure, data_protection, operational
-
-// ── Supported Trigger Types ──────────────────────────────────────────────────
-//
-// Incident Response (original):
-//   canary_tripped, risk_score_critical
-//
-// Key Lifecycle:
-//   key_created, key_rotated, key_expired, key_destroyed, key_compromised,
-//   key_import_failed, rotation_overdue, key_expiry_imminent
-//
-// Certificate:
-//   cert_expiring_30d, cert_expiring_7d, cert_expired, cert_revoked,
-//   ca_rotation_due
-//
-// Compliance:
-//   compliance_drop, compliance_score_drop, fips_violation_detected,
-//   policy_violation, audit_gap_detected, framework_assessment_failed
-//
-// Access & Auth:
-//   auth_failure_spike, unauthorized_key_access, privilege_escalation_attempt,
-//   api_key_compromised, session_anomaly
-//
-// Infrastructure:
-//   hsm_health_degraded, cluster_node_down, replication_lag_high,
-//   backup_failed, storage_threshold_exceeded
-//
-// Data Protection:
-//   encryption_failure, decryption_anomaly, data_leak_detected,
-//   dlp_policy_triggered
-//
-// Operational:
-//   rate_limit_exceeded, service_health_degraded, latency_spike,
-//   error_rate_high
-
-// validTriggerTypes enumerates all recognised trigger types.
-var validTriggerTypes = map[string]bool{
-	// Incident Response
-	"canary_tripped":      true,
-	"risk_score_critical": true,
-	// Key Lifecycle
-	"key_created":         true,
-	"key_rotated":         true,
-	"key_expired":         true,
-	"key_destroyed":       true,
-	"key_compromised":     true,
-	"key_import_failed":   true,
-	"rotation_overdue":    true,
-	"key_expiry_imminent": true,
-	// Certificate
-	"cert_expiring_30d": true,
-	"cert_expiring_7d":  true,
-	"cert_expired":      true,
-	"cert_revoked":      true,
-	"ca_rotation_due":   true,
-	// Compliance
-	"compliance_drop":             true,
-	"compliance_score_drop":       true,
-	"fips_violation_detected":     true,
-	"policy_violation":            true,
-	"audit_gap_detected":          true,
-	"framework_assessment_failed": true,
-	// Access & Auth
-	"auth_failure_spike":           true,
-	"unauthorized_key_access":      true,
-	"privilege_escalation_attempt": true,
-	"api_key_compromised":          true,
-	"session_anomaly":              true,
-	// Infrastructure
-	"hsm_health_degraded":        true,
-	"cluster_node_down":          true,
-	"replication_lag_high":       true,
-	"backup_failed":              true,
-	"storage_threshold_exceeded": true,
-	// Data Protection
-	"encryption_failure":   true,
-	"decryption_anomaly":   true,
-	"data_leak_detected":   true,
-	"dlp_policy_triggered": true,
-	// Operational
-	"rate_limit_exceeded":     true,
-	"service_health_degraded": true,
-	"latency_spike":           true,
-	"error_rate_high":         true,
-}
-
-// ── Supported Action Types ───────────────────────────────────────────────────
-//
-// Notification:
-//   send_email, send_slack, send_teams, send_webhook, send_pagerduty,
-//   create_jira_ticket, create_servicenow_incident
-//
-// Key Operations:
-//   rotate_key, suspend_key, revoke_key, destroy_key,
-//   import_replacement_key, enable_key
-//
-// Certificate:
-//   renew_certificate, revoke_certificate, issue_replacement_cert
-//
-// Access Control:
-//   disable_user, revoke_api_key, enforce_mfa, quarantine_tenant,
-//   block_ip_range
-//
-// Compliance:
-//   trigger_assessment, generate_evidence_report, enable_fips_strict,
-//   snapshot_posture
-//
-// Infrastructure:
-//   failover_cluster, scale_service, flush_cache, restart_service
-//
-// Remediation:
-//   run_custom_script, execute_webhook_action, update_policy, create_backup
-
-// validActionTypes is exactly what PlaybookExecutor performs. A playbook
-// can't be saved with anything else. Until 1.26.0-beta the list (and the
-// dashboard) offered actions that did nothing (send_alert, notify_soc,
-// disable_access: logged, reported OK), called endpoints that don't exist
-// (send_email, generate_evidence_report, create_backup) or had no executor
-// at all (quarantine_tenant, failover_cluster, ...).
-var validActionTypes = map[string]bool{
-	"send_slack":                 true,
-	"send_teams":                 true,
-	"send_webhook":               true,
-	"send_pagerduty":             true,
-	"create_jira_ticket":         true,
-	"create_servicenow_incident": true,
-	"create_audit_event":         true,
-	"rotate_key":                 true,
-	"suspend_key":                true,
-	"revoke_key":                 true,
-	"destroy_key":                true,
-	"enable_key":                 true,
-	"renew_certificate":          true,
-	"revoke_certificate":         true,
-	"disable_user":               true,
-	"revoke_api_key":             true,
-	"trigger_assessment":         true,
-	"snapshot_posture":           true,
-}
-
-// PlaybookRun represents a single execution of a playbook.
+// PlaybookRun is one execution. Actor is on whose authority it ran.
 type PlaybookRun struct {
 	ID           string     `json:"id"`
 	PlaybookID   string     `json:"playbook_id"`
 	TenantID     string     `json:"tenant_id"`
 	TriggerEvent string     `json:"trigger_event"`
+	Actor        string     `json:"actor"`
 	Status       string     `json:"status"`
 	ActionsRun   int        `json:"actions_run"`
 	Output       string     `json:"output"`
@@ -193,302 +66,252 @@ type PlaybookRun struct {
 	CompletedAt  *time.Time `json:"completed_at,omitempty"`
 }
 
-// handleListPlaybooks returns all playbooks for the tenant.
-func (h *Handler) handleListPlaybooks(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	playbooks, err := h.svc.store.ListPlaybooks(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": playbooks, "request_id": reqID})
+var playbookCategories = []string{
+	"incident_response", "key_lifecycle", "certificate_management", "compliance",
+	"access_control", "infrastructure", "data_protection", "operational",
 }
 
-// handleCreatePlaybook creates a new playbook.
-func (h *Handler) handleCreatePlaybook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var body Playbook
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
+// playbookInput is what a client may set. Unknown fields (the old trigger
+// threshold, client-chosen IDs, run counters) are rejected by Decode.
+type playbookInput struct {
+	TenantID    string           `json:"tenant_id"` // verified by the kernel
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Category    string           `json:"category"`
+	Trigger     PlaybookTrigger  `json:"trigger"`
+	Actions     []PlaybookAction `json:"actions"`
+	Enabled     *bool            `json:"enabled"`
+}
+
+func (in playbookInput) playbook(tenant, id string) Playbook {
+	p := Playbook{
+		ID: id, TenantID: tenant, Name: strings.TrimSpace(in.Name), Description: in.Description,
+		Category: firstNonEmpty(strings.TrimSpace(in.Category), "incident_response"),
+		Trigger:  in.Trigger, Actions: in.Actions, Enabled: in.Enabled == nil || *in.Enabled,
 	}
-	body.TenantID = firstNonEmpty(body.TenantID,
-		strings.TrimSpace(r.Header.Get("X-Tenant-ID")),
-		strings.TrimSpace(r.URL.Query().Get("tenant_id")))
-	if body.TenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
-		return
-	}
-	if body.Name == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "name is required", reqID, body.TenantID)
-		return
-	}
-	if body.ID == "" {
-		body.ID = newID("pb")
-	}
-	if body.Actions == nil {
-		body.Actions = []PlaybookAction{}
-	}
-	if body.Trigger.Type == "" {
-		body.Trigger.Type = "canary_tripped"
-	}
-	if !validTriggerTypes[body.Trigger.Type] {
-		writeErr(w, http.StatusBadRequest, "bad_request",
-			fmt.Sprintf("unsupported trigger type: %s", body.Trigger.Type), reqID, body.TenantID)
-		return
-	}
-	for _, a := range body.Actions {
-		if !validActionTypes[a.Type] {
-			writeErr(w, http.StatusBadRequest, "bad_request",
-				fmt.Sprintf("unsupported action type: %s", a.Type), reqID, body.TenantID)
-			return
+	for i := range p.Actions {
+		if p.Actions[i].Parameters == nil {
+			p.Actions[i].Parameters = map[string]string{}
 		}
 	}
-	if body.Category == "" {
-		body.Category = "incident_response"
-	}
-	body.Enabled = true
-
-	created, err := h.svc.store.CreatePlaybook(r.Context(), body)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, body.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"data": created, "request_id": reqID})
+	return p
 }
 
-// handleGetPlaybook returns a single playbook.
-func (h *Handler) handleGetPlaybook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
+func (h *Handler) playbookRoutes(rt *route.Router) {
+	read := func(action string) route.Spec {
+		return route.Spec{Action: action, Permission: permPlaybookRead, Resource: "playbook"}
 	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "playbook id is required", reqID, tenantID)
-		return
-	}
-	pb, err := h.svc.store.GetPlaybook(r.Context(), tenantID, id)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": pb, "request_id": reqID})
+	rt.Handle("GET /compliance/playbooks/catalog", route.Spec{Action: "playbook_catalog_read", Permission: permPlaybookRead, Resource: "playbook", Tenancy: route.PlatformScoped}, h.playbookCatalog)
+	rt.Handle("GET /compliance/playbooks/summary", read("playbook_summary_read"), h.playbookSummary)
+	rt.Handle("GET /compliance/playbooks", read("playbooks_listed"), h.listPlaybooks)
+	rt.Handle("POST /compliance/playbooks", route.Spec{Action: "playbook_created", Permission: permPlaybookWrite, Resource: "playbook", Severity: "warning"}, h.createPlaybook)
+	rt.Handle("GET /compliance/playbooks/{id}", route.Spec{Action: "playbook_read", Permission: permPlaybookRead, Resource: "playbook", TargetParam: "id"}, h.getPlaybook)
+	rt.Handle("PUT /compliance/playbooks/{id}", route.Spec{Action: "playbook_updated", Permission: permPlaybookWrite, Resource: "playbook", TargetParam: "id", Severity: "warning"}, h.updatePlaybook)
+	rt.Handle("DELETE /compliance/playbooks/{id}", route.Spec{Action: "playbook_deleted", Permission: permPlaybookDelete, Resource: "playbook", TargetParam: "id", Severity: "warning"}, h.deletePlaybook)
+	rt.Handle("POST /compliance/playbooks/{id}/run", route.Spec{Action: "playbook_run_requested", Permission: permPlaybookRun, Resource: "playbook", TargetParam: "id", Severity: "warning"}, h.runPlaybook)
+	rt.Handle("GET /compliance/playbooks/{id}/runs", route.Spec{Action: "playbook_runs_listed", Permission: permPlaybookRead, Resource: "playbook", TargetParam: "id"}, h.listPlaybookRuns)
 }
 
-// handleUpdatePlaybook updates an existing playbook.
-func (h *Handler) handleUpdatePlaybook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "playbook id is required", reqID, tenantID)
-		return
-	}
-	var body Playbook
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	body.TenantID = tenantID
-	body.ID = id
-	if body.Actions == nil {
-		body.Actions = []PlaybookAction{}
-	}
-	updated, err := h.svc.store.UpdatePlaybook(r.Context(), body)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": updated, "request_id": reqID})
+func (h *Handler) playbookCatalog(c *route.Call) {
+	c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{
+		"triggers": playbookTriggers, "actions": playbookActions, "categories": playbookCategories,
+	}})
 }
 
-// handleDeletePlaybook deletes a playbook.
-func (h *Handler) handleDeletePlaybook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listPlaybooks(c *route.Call) {
+	items, err := h.svc.store.ListPlaybooks(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "internal_error", "list playbooks failed")
 		return
 	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "playbook id is required", reqID, tenantID)
-		return
+	for i := range items {
+		items[i] = redactPlaybook(items[i])
 	}
-	if err := h.svc.store.DeletePlaybook(r.Context(), tenantID, id); err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": map[string]string{"status": "deleted"}, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"data": items})
 }
 
-// handleRunPlaybook manually executes a playbook using the real execution engine.
-// The execution runs asynchronously; the handler returns immediately with the run ID.
-func (h *Handler) handleRunPlaybook(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getPlaybook(c *route.Call) {
+	pb, ok := h.loadPlaybook(c)
+	if !ok {
 		return
 	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "playbook id is required", reqID, tenantID)
-		return
-	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": redactPlaybook(pb)})
+}
 
-	pb, err := h.svc.store.GetPlaybook(r.Context(), tenantID, id)
+func (h *Handler) createPlaybook(c *route.Call) {
+	var in playbookInput
+	if !c.Decode(&in) {
+		return
+	}
+	pb := in.playbook(c.Tenant, newID("pb"))
+	c.Target(pb.ID)
+	if !authorizePlaybook(c, &pb) {
+		return
+	}
+	created, err := h.svc.store.CreatePlaybook(c.R.Context(), pb)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "internal_error", "create playbook failed")
 		return
 	}
+	c.JSON(http.StatusCreated, map[string]interface{}{"data": redactPlaybook(created)})
+}
 
+func (h *Handler) updatePlaybook(c *route.Call) {
+	stored, ok := h.loadPlaybook(c)
+	if !ok {
+		return
+	}
+	var in playbookInput
+	if !c.Decode(&in) {
+		return
+	}
+	pb := in.playbook(c.Tenant, stored.ID)
+	if err := restoreSecrets(pb.Actions, stored.Actions); err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	if !authorizePlaybook(c, &pb) {
+		return
+	}
+	updated, err := h.svc.store.UpdatePlaybook(c.R.Context(), pb)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "internal_error", "update playbook failed")
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": redactPlaybook(updated)})
+}
+
+// authorizePlaybook validates pb and binds it to the caller. An enabled
+// playbook can be saved only by someone who holds every action permission,
+// and it runs on that person's authority. A disabled one may be saved by any
+// playbook writer; it stays unauthorized until someone who holds them saves
+// it enabled.
+func authorizePlaybook(c *route.Call, pb *Playbook) bool {
+	c.Detail("name", pb.Name)
+	c.Detail("trigger", pb.Trigger.Type)
+	c.Detail("actions", actionTypes(pb.Actions))
+	c.Detail("enabled", pb.Enabled)
+	if err := validatePlaybook(*pb); err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return false
+	}
+	if !knownCategory(pb.Category) {
+		c.Error(http.StatusBadRequest, "bad_request", "unknown category "+strconv.Quote(pb.Category))
+		return false
+	}
+	if err := validateOutboundURLs(*pb); err != nil {
+		c.Refuse(http.StatusBadRequest, reasonURLBlocked, err.Error())
+		return false
+	}
+	missing := missingPermissions(c.Claims, pb.Actions)
+	if len(missing) > 0 && pb.Enabled {
+		c.Detail("missing_permissions", missing)
+		c.Refuse(http.StatusForbidden, reasonActionPermission, "enabling this playbook needs "+strings.Join(missing, ", "))
+		return false
+	}
+	pb.AuthorizedBy = ""
+	if len(missing) == 0 {
+		pb.AuthorizedBy = c.Actor()
+	}
+	c.Detail("authorized_by", pb.AuthorizedBy)
+	return true
+}
+
+func (h *Handler) deletePlaybook(c *route.Call) {
+	err := h.svc.store.DeletePlaybook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	switch {
+	case errors.Is(err, errNotFound):
+		c.Error(http.StatusNotFound, "not_found", "playbook not found")
+	case err != nil:
+		c.Error(http.StatusInternalServerError, "internal_error", "delete playbook failed")
+	default:
+		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"status": "deleted"}})
+	}
+}
+
+// runPlaybook starts a manual run on the caller's own authority: the caller
+// must hold every action permission, whoever authorized the playbook.
+func (h *Handler) runPlaybook(c *route.Call) {
+	pb, ok := h.loadPlaybook(c)
+	if !ok {
+		return
+	}
+	c.Detail("actions", actionTypes(pb.Actions))
+	if err := validatePlaybook(pb); err != nil {
+		c.Refuse(http.StatusConflict, reasonPlaybookInvalid, err.Error()+"; edit the playbook")
+		return
+	}
+	if missing := missingPermissions(c.Claims, pb.Actions); len(missing) > 0 {
+		c.Detail("missing_permissions", missing)
+		c.Refuse(http.StatusForbidden, reasonActionPermission, "running this playbook needs "+strings.Join(missing, ", "))
+		return
+	}
 	if h.executor == nil {
-		writeErr(w, http.StatusServiceUnavailable, "unavailable", "playbook executor not initialized", reqID, tenantID)
+		c.Error(http.StatusServiceUnavailable, "unavailable", "playbook executor not initialized")
 		return
 	}
-
-	// Create the run record synchronously so we can return the ID immediately
-	run := PlaybookRun{
-		ID:           newID("pbrun"),
-		PlaybookID:   pb.ID,
-		TenantID:     tenantID,
-		TriggerEvent: "manual",
-		Status:       "running",
-		ActionsRun:   0,
-	}
-	created, err := h.svc.store.CreatePlaybookRun(r.Context(), run)
+	src := runSource{Trigger: "manual", Actor: c.Actor()}
+	run, err := h.executor.Start(c.R.Context(), pb, src)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "internal_error", "start run failed")
 		return
 	}
-
-	// Execute asynchronously — the goroutine updates the run record on completion
-	executor := h.executor
-	pbCopy := pb
-	runCopy := created
-	go func() {
-		execCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	c.Detail("run_id", run.ID)
+	h.dispatch(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
 		defer cancel()
-
-		runCtx := RunContext{
-			PlaybookID:   pbCopy.ID,
-			RunID:        runCopy.ID,
-			TenantID:     tenantID,
-			TriggerEvent: "manual",
-		}
-
-		var (
-			outputLines []string
-			actionsRun  int
-			hadFailure  bool
-		)
-		for i, action := range pbCopy.Actions {
-			// Respect DelaySeconds
-			if action.DelaySeconds > 0 {
-				select {
-				case <-time.After(time.Duration(action.DelaySeconds) * time.Second):
-				case <-execCtx.Done():
-					runCopy.Status = "cancelled"
-					runCopy.ActionsRun = actionsRun
-					runCopy.Output = strings.Join(outputLines, "\n")
-					now := time.Now().UTC()
-					runCopy.CompletedAt = &now
-					_, _ = executor.store.UpdatePlaybookRun(execCtx, runCopy)
-					return
-				}
-			}
-
-			start := time.Now()
-			execErr := executor.executeAction(execCtx, action, runCtx)
-			elapsed := time.Since(start)
-			actionsRun++
-
-			if execErr != nil {
-				hadFailure = true
-				outputLines = append(outputLines,
-					fmt.Sprintf("[%d] action=%s status=FAILED error=%q elapsed=%s", i+1, action.Type, execErr.Error(), elapsed.Round(time.Millisecond)))
-				if action.Parameters["stop_on_failure"] == "true" {
-					outputLines = append(outputLines, fmt.Sprintf("[%d] stop_on_failure=true, halting", i+1))
-					break
-				}
-			} else {
-				outputLines = append(outputLines,
-					fmt.Sprintf("[%d] action=%s status=OK elapsed=%s", i+1, action.Type, elapsed.Round(time.Millisecond)))
-			}
-		}
-
-		now := time.Now().UTC()
-		runCopy.ActionsRun = actionsRun
-		runCopy.Output = strings.Join(outputLines, "\n")
-		runCopy.CompletedAt = &now
-		if hadFailure && actionsRun < len(pbCopy.Actions) {
-			runCopy.Status = "failed"
-		} else if hadFailure {
-			runCopy.Status = "partial_failure"
-		} else {
-			runCopy.Status = "completed"
-		}
-		_, _ = executor.store.UpdatePlaybookRun(execCtx, runCopy)
-		_ = executor.store.IncrementPlaybookRunCount(execCtx, tenantID, pbCopy.ID, now)
-	}()
-
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
-		"data": map[string]interface{}{
-			"run_id":      created.ID,
-			"playbook_id": pb.ID,
-			"status":      "running",
-			"message":     "playbook execution started asynchronously",
-		},
-		"request_id": reqID,
+		h.executor.Execute(ctx, pb, run, src)
 	})
+	c.JSON(http.StatusAccepted, map[string]interface{}{"data": map[string]interface{}{
+		"run_id": run.ID, "playbook_id": pb.ID, "status": runRunning,
+	}})
 }
 
-// handleListPlaybookRuns lists the run history for a playbook.
-func (h *Handler) handleListPlaybookRuns(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listPlaybookRuns(c *route.Call) {
+	limit, _ := strconv.Atoi(c.R.URL.Query().Get("limit"))
+	runs, err := h.svc.store.ListPlaybookRuns(c.R.Context(), c.Tenant, c.R.PathValue("id"), limit)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "internal_error", "list runs failed")
 		return
 	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "playbook id is required", reqID, tenantID)
+	c.JSON(http.StatusOK, map[string]interface{}{"data": runs})
+}
+
+func (h *Handler) playbookSummary(c *route.Call) {
+	summary, err := h.svc.store.GetPlaybookSummary(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "internal_error", "summary failed")
 		return
 	}
-	limitStr := r.URL.Query().Get("limit")
-	limit := 50
-	if limitStr != "" {
-		if v, err := strconv.Atoi(limitStr); err == nil && v > 0 {
-			limit = v
+	c.JSON(http.StatusOK, map[string]interface{}{"data": summary})
+}
+
+func (h *Handler) loadPlaybook(c *route.Call) (Playbook, bool) {
+	pb, err := h.svc.store.GetPlaybook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	switch {
+	case errors.Is(err, errNotFound):
+		c.Error(http.StatusNotFound, "not_found", "playbook not found")
+		return Playbook{}, false
+	case err != nil:
+		c.Error(http.StatusInternalServerError, "internal_error", "read playbook failed")
+		return Playbook{}, false
+	}
+	return pb, true
+}
+
+func actionTypes(actions []PlaybookAction) []string {
+	out := make([]string, len(actions))
+	for i, a := range actions {
+		out[i] = a.Type
+	}
+	return out
+}
+
+func knownCategory(c string) bool {
+	for _, k := range playbookCategories {
+		if k == c {
+			return true
 		}
 	}
-	runs, err := h.svc.store.ListPlaybookRuns(r.Context(), tenantID, id, limit)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": runs, "request_id": reqID})
-}
-
-// handleGetPlaybookSummary returns a summary of playbook activity.
-func (h *Handler) handleGetPlaybookSummary(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	summary, err := h.svc.store.GetPlaybookSummary(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"data": summary, "request_id": reqID})
+	return false
 }

@@ -4,6 +4,85 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.4.0-beta] — 2026-09-28
+
+### Playbooks: real triggers, real actions, and no borrowed authority
+Security fix. Playbook actions run as the compliance service identity, which
+passes every tenant and permission check downstream. Until now:
+- **Any signed-in user could use that identity.** The playbook API checked
+  only that a JWT was valid (no permission), and took the tenant from the
+  request body. A read-only user could create a playbook in another tenant
+  that rotated or disabled its keys when a canary tripped, or run one in their
+  own tenant with permissions they didn't hold.
+- **The routes are now on the `pkg/route` kernel.** The tenant comes from the
+  token. `compliance.playbook.read`, `.write`, `.delete` and `.run` are
+  required. Saving an enabled playbook, or running one, also needs every
+  permission its actions use (`key.rotate`, `key.disable`, `key.deactivate`,
+  `key.activate`, `cert.renew`, `cert.revoke`, `compliance.assessment.run`,
+  `compliance.posture.refresh`). Refusals are audited with
+  `action_permission_denied` and the missing permissions.
+- **Automatic runs act on a named person's authority.** `authorized_by`
+  records who last saved the playbook holding those permissions; runs,
+  records and audit events carry it. **Every playbook saved before 2.4.0-beta
+  is inert until someone with the permissions saves it again** (the
+  dashboard marks it "Not authorized"; the refusal is audited).
+- **`send_webhook` could reach platform services with the compliance mTLS
+  certificate.** Outbound actions now need a public `https` URL, refuse
+  platform hosts and private or metadata addresses (`url_blocked`), and go
+  through `pkg/ssrfguard` (checked at dial time, no redirects, no client
+  certificate). Errors name the host, never the URL.
+- **Secrets** (Slack/Teams webhook URLs, Jira and ServiceNow tokens, webhook
+  headers) are no longer returned by the API or put in audit events.
+
+Honesty fixes (rule 8):
+- **Triggers are real.** 38 of the 40 triggers listened for audit subjects no
+  service emits (`audit.keycore.key_rotated`, `audit.infra.*`, `audit.ops.*`,
+  ...). Only a canary trip could fire a playbook, plus `auth_failure_spike`,
+  which fired on every single failed login because its threshold was never
+  read. The catalogue now holds
+  18 triggers on subjects services really emit, including key rotate, create
+  and destroy, key compromise, threat signals and findings, certificate
+  revocation and renewal misses, login failures and lockouts, and watchdog
+  service incidents (which fire the platform tenant's playbooks).
+  `TestTriggerSubjectsAreEmitted` fails if an emitter goes away.
+- **Actions call endpoints that exist.** Suspend, revoke and enable key called
+  `PUT /keys/{id}/status` and the certificate actions `/certificates/...`,
+  none of which exist. They are now `disable_key`, `deactivate_key`,
+  `activate_key`, `renew_certificate` and `revoke_certificate` on keycore and
+  certs' real routes; saved rows with the old key-action names are read with
+  the new ones.
+- **Removed:** `send_pagerduty` (owner: no one uses it); `destroy_key` (keycore
+  requires a person to acknowledge the irreversible pre-destroy checks, so it
+  always failed, and a playbook must not acknowledge them for someone);
+  `disable_user` and `revoke_api_key` (auth refuses service identities, so
+  they always failed; they return with delegated execution).
+- **An approval is not a success.** When keycore opens a governance approval
+  instead of acting, the action is recorded as `pending_approval` and the run
+  as `pending_approval`, not "OK".
+- **The trigger threshold is gone.** The form offered it, and it was stored,
+  but never evaluated; the API now rejects it. **Category** was shown but
+  never stored; it is now.
+- **One execution path.** Manual runs had their own copy of the executor and
+  emitted no audit event at all. Every run, manual or triggered, now emits
+  `playbook_action_executed` per action and `playbook_run_completed`; every
+  trigger match emits `playbook_triggered` (success, or refused as
+  `playbook_not_authorized`, `cooldown` or `stale_event`). Every route emits
+  its own event (list in `docs/API_REFERENCE.md`).
+- **Cluster-safe.** Triggered runs happen only on the primary, which sees
+  every node's events through the audit relay. Events more than 15 minutes old
+  (a consumer catching up) no longer fire playbooks.
+- **Dashboard.** The Playbooks tab renders the catalogue from
+  `GET /compliance/playbooks/catalog` (nothing hardcoded), shows who
+  authorized each playbook and on whose authority each run acted, the
+  permissions a playbook needs, the subjects each trigger fires on, and
+  per-action parameter help. Parameters are one `key=value` per line, since
+  values may contain commas. Load failures show the error. The overview
+  stopped failing for tenants with no playbooks (a `SUM` over zero rows
+  returned NULL).
+- Migration `005_playbook_authorization.sql` (schema only) adds `category`,
+  `authorized_by` and run `actor`; `TestPlaybookStorePostgres` runs it (twice)
+  on real Postgres with a pre-2.4 row.
+
 ## [2.3.0-beta] — 2026-09-28
 
 ### Operations metrics: cluster view on every node, values for batch calls

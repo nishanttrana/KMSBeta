@@ -213,6 +213,16 @@ an approach, record it here or in the matching doc below.
   vault. A vendor listed in the UI must work through that same path. HSM
   tests run against a real PKCS#11 library (SoftHSM2), never a mock of the
   HSM API.
+- **Playbooks are the platform's response layer** (owner directive,
+  2026-09-28: "playbook should be fundamental part of the KMS for any and
+  every action incident"). An event that signals an incident or a
+  security-relevant change joins the trigger catalogue
+  (`services/compliance/playbook_catalog.go`), with its emitter listed in
+  `TestTriggerSubjectsAreEmitted`. A remediating operation joins as an action
+  that names the permission it needs, tested against the route it calls. A
+  playbook acts only on the authority of someone who holds those permissions
+  (docs/PLATFORM_CONTRACT.md). No PagerDuty integration (owner, 2026-09-28:
+  "no one uses it").
 
 ## Documentation is part of done
 

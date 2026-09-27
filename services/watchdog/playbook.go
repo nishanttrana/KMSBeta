@@ -13,10 +13,10 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 )
 
-// Incident captures one alert produced by the playbook engine. The
-// engine emits an audit event for each incident and keeps a small
-// rolling buffer so the UI can show recent failures without querying
-// the audit chain.
+// Incident captures one alert the watchdog raised. Each is emitted as
+// audit.health.incident, which compliance playbooks with the
+// service_health_degraded trigger respond to, and kept in a small rolling
+// buffer so the UI can show recent failures without querying the audit chain.
 type Incident struct {
 	ID      string `json:"id"`
 	Service string `json:"service"`
@@ -29,9 +29,9 @@ type Incident struct {
 	Timestamp      time.Time `json:"timestamp"`
 }
 
-// playbookEngine periodically inspects the probe's unhealthy list and
-// fires playbooks. The mapping from signal → action is intentionally
-// table-driven so adding a new playbook is a one-line change.
+// playbookEngine periodically inspects the probe's unhealthy list and raises
+// an audited incident per unhealthy service. It acts on nothing itself; the
+// response is a compliance playbook (docs/DECISIONS.md, 2026-09-28).
 type playbookEngine struct {
 	probe  *Probe
 	logger logIface
@@ -62,7 +62,7 @@ func newPlaybookEngine(probe *Probe, l logIface) *playbookEngine {
 }
 
 // Run loops until ctx is cancelled. Each tick (every 30s) checks for
-// unhealthy services and fires the matching playbook.
+// unhealthy services and raises an incident for each.
 func (p *playbookEngine) Run(ctx context.Context) {
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
@@ -79,8 +79,8 @@ func (p *playbookEngine) Run(ctx context.Context) {
 	}
 }
 
-// tick evaluates every unhealthy service and dispatches at most one
-// playbook per service per cool-down window. Without the cool-down a
+// tick evaluates every unhealthy service and raises at most one
+// incident per service per cool-down window. Without the cool-down a
 // flapping service would generate a storm of identical incidents.
 func (p *playbookEngine) tick(ctx context.Context) {
 	const coolDown = 5 * time.Minute

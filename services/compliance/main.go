@@ -95,14 +95,13 @@ func main() {
 	)
 	svc.StartScheduler(ctx)
 
-	// Playbook execution engine
-	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, policyURL, auditURL, auditClient, logger)
+	// Playbooks: one executor for manual and triggered runs.
+	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, auditClient, logger)
 	executor.ops = svc
 
-	handler := NewHandler(svc)
+	handler := NewHandler(svc, auditClient, logger)
 	handler.SetExecutor(executor)
 
-	// Start trigger listener for automatic playbook execution via NATS events
 	triggerListener := NewTriggerListener(store, executor, logger)
 	go triggerListener.StartListening(ctx, jsCtx)
 

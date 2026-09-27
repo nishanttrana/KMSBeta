@@ -4,251 +4,185 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
 
+	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/clusterstate"
 	pkgevents "vecta-kms/pkg/events"
+	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/tenantcheck"
 )
 
-// TriggerListener subscribes to audit events via NATS and triggers matching playbooks.
+const (
+	// triggerCooldown stops one playbook firing again while a burst of the
+	// same event is still arriving.
+	triggerCooldown = 60 * time.Second
+	// maxTriggerAge refuses events replayed long after they happened (a
+	// consumer catching up after downtime): a response to a days-old event
+	// would act on a situation that has moved on.
+	maxTriggerAge = 15 * time.Minute
+	// runTimeout bounds one run, delays included.
+	runTimeout = 10 * time.Minute
+)
+
+// triggersBySubject indexes the catalogue by audit subject.
+var triggersBySubject = map[string][]TriggerSpec{}
+
+func init() {
+	for _, t := range playbookTriggers {
+		for _, s := range t.Subjects {
+			triggersBySubject[s] = append(triggersBySubject[s], t)
+		}
+	}
+}
+
+// TriggerListener fires playbooks from the audit stream.
 type TriggerListener struct {
 	store    Store
 	executor *PlaybookExecutor
 	logger   *log.Logger
+	now      func() time.Time
+	// dispatch runs an execution; tests run it inline.
+	dispatch func(func())
 
-	// dedup tracks recent playbook triggers to prevent re-execution within the cooldown window
 	mu       sync.Mutex
 	lastFire map[string]time.Time
 }
 
-const dedupCooldown = 60 * time.Second
-
 // NewTriggerListener creates a listener wired to the playbook executor.
 func NewTriggerListener(store Store, executor *PlaybookExecutor, logger *log.Logger) *TriggerListener {
 	return &TriggerListener{
-		store:    store,
-		executor: executor,
-		logger:   logger,
-		lastFire: make(map[string]time.Time),
+		store: store, executor: executor, logger: logger, now: time.Now,
+		dispatch: func(f func()) { go f() },
+		lastFire: map[string]time.Time{},
 	}
 }
 
-// StartListening subscribes to all audit events and triggers matching playbooks.
-// It requires a NATS JetStream context; if js is nil, the listener is a no-op.
+// StartListening consumes the audit stream until ctx ends. The durable name
+// is unchanged since before 2.4.0-beta so the consumer resumes where it was
+// rather than replaying the stream.
 func (tl *TriggerListener) StartListening(ctx context.Context, js nats.JetStreamContext) {
 	if js == nil {
-		tl.logger.Printf("trigger-listener: NATS unavailable, playbook triggers disabled")
+		tl.logger.Printf("playbook triggers: NATS unavailable, automatic runs disabled")
 		return
 	}
-
-	sub := pkgevents.NewSubscriber(js)
-
-	// Subscribe to all audit events using wildcard
-	subscription, err := sub.SubscribeDurable("audit.>", "playbook-trigger-listener", func(msg *nats.Msg) {
-		tl.handleAuditEvent(ctx, msg)
+	sub, err := pkgevents.NewSubscriber(js).SubscribeDurable(pkgaudit.SubjectRoot, "playbook-trigger-listener", func(msg *nats.Msg) {
+		tl.handle(ctx, msg.Subject, msg.Data)
 		_ = msg.Ack()
 	})
 	if err != nil {
-		tl.logger.Printf("trigger-listener: failed to subscribe to audit.>: %v", err)
+		tl.logger.Printf("playbook triggers: subscribe: %v", err)
 		return
 	}
-	tl.logger.Printf("trigger-listener: listening on audit.> for playbook triggers")
-
-	// Periodically clean up old dedup entries
-	go tl.dedupCleaner(ctx)
-
-	// Block until context is cancelled, then unsubscribe
+	tl.logger.Printf("playbook triggers: listening on %s", pkgaudit.SubjectRoot)
 	<-ctx.Done()
-	_ = subscription.Unsubscribe()
-	tl.logger.Printf("trigger-listener: stopped")
+	_ = sub.Unsubscribe()
 }
 
-// handleAuditEvent maps a NATS subject to a trigger type and fires matching playbooks.
-func (tl *TriggerListener) handleAuditEvent(ctx context.Context, msg *nats.Msg) {
-	subject := msg.Subject
-
-	triggerType := mapSubjectToTrigger(subject)
-	if triggerType == "" {
+// handle fires every enabled playbook whose trigger matches the event.
+func (tl *TriggerListener) handle(ctx context.Context, subject string, data []byte) {
+	specs := triggersBySubject[subject]
+	if len(specs) == 0 {
 		return
 	}
-
-	// Parse the event payload for context
-	var eventData map[string]interface{}
-	if len(msg.Data) > 0 {
-		_ = json.Unmarshal(msg.Data, &eventData)
-	}
-
-	// Extract tenant_id from the event if present
-	tenantID, _ := eventData["tenant_id"].(string)
-	if tenantID == "" {
-		tenantID, _ = eventData["TenantID"].(string)
-	}
-	if tenantID == "" {
-		// Cannot match playbooks without a tenant
+	// playbook tables are replicated; the primary runs playbooks and sees
+	// every node's events through the audit relay (docs/CLUSTERING.md).
+	if !clusterstate.RunsPrimaryJobs(ctx) {
 		return
 	}
-
-	// List all playbooks for this tenant and find ones matching the trigger
-	playbooks, err := tl.store.ListPlaybooks(ctx, tenantID)
-	if err != nil {
-		tl.logger.Printf("trigger-listener: failed to list playbooks for tenant=%s: %v", tenantID, err)
+	var evt struct {
+		TenantID  string `json:"tenant_id"`
+		Result    string `json:"result"`
+		TargetID  string `json:"target_id"`
+		Timestamp string `json:"timestamp"`
+	}
+	if json.Unmarshal(data, &evt) != nil {
 		return
 	}
-
-	eventJSON, _ := json.Marshal(eventData)
-	triggerEventStr := string(eventJSON)
-
-	for _, pb := range playbooks {
-		if !pb.Enabled {
+	stale := false
+	if ts, err := time.Parse(time.RFC3339Nano, evt.Timestamp); err == nil {
+		stale = tl.now().Sub(ts) > maxTriggerAge
+	}
+	for _, spec := range specs {
+		if spec.SuccessOnly && evt.Result != "" && evt.Result != route.ResultSuccess {
 			continue
 		}
-		if pb.Trigger.Type != triggerType {
+		tenant := evt.TenantID
+		if tenant == "" && spec.Platform {
+			tenant = tenantcheck.InternalServiceTenant()
+		}
+		if tenant == "" {
 			continue
 		}
-
-		// Dedup check: don't re-trigger the same playbook within the cooldown window
-		dedupKey := pb.ID + ":" + triggerType
-		if tl.isRecentlyFired(dedupKey) {
-			tl.logger.Printf("trigger-listener: dedup skip playbook=%s trigger=%s (fired within %s)", pb.ID, triggerType, dedupCooldown)
+		playbooks, err := tl.store.ListPlaybooks(ctx, tenant)
+		if err != nil {
+			tl.logger.Printf("playbook triggers: list playbooks tenant=%s: %v", tenant, err)
 			continue
 		}
-		tl.markFired(dedupKey)
-
-		tl.logger.Printf("trigger-listener: firing playbook=%s name=%q trigger=%s tenant=%s", pb.ID, pb.Name, triggerType, tenantID)
-
-		// Execute in a goroutine so we don't block the NATS handler
-		pbCopy := pb
-		go func() {
-			execCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-			if _, err := tl.executor.ExecutePlaybook(execCtx, pbCopy, triggerEventStr); err != nil {
-				tl.logger.Printf("trigger-listener: playbook=%s execution error: %v", pbCopy.ID, err)
+		for _, pb := range playbooks {
+			if !pb.Enabled || pb.Trigger.Type != spec.Type {
+				continue
 			}
-		}()
-	}
-}
-
-// mapSubjectToTrigger converts a NATS audit subject to a playbook trigger type.
-func mapSubjectToTrigger(subject string) string {
-	// Direct subject-to-trigger mappings
-	subjectMap := map[string]string{
-		// Key Lifecycle
-		"audit.keycore.key_created":      "key_created",
-		"audit.keycore.key_rotated":      "key_rotated",
-		"audit.keycore.key_expired":      "key_expired",
-		"audit.keycore.key_destroyed":    "key_destroyed",
-		"audit.keycore.key_compromised":  "key_compromised",
-		"audit.keycore.key_import_failed": "key_import_failed",
-		"audit.keycore.rotation_overdue": "rotation_overdue",
-		"audit.keycore.key_expiry_imminent": "key_expiry_imminent",
-
-		// Certificate
-		"audit.certs.cert_expiring_30d":  "cert_expiring_30d",
-		"audit.certs.cert_expiring_7d":   "cert_expiring_7d",
-		"audit.certs.cert_expired":       "cert_expired",
-		"audit.certs.cert_revoked":       "cert_revoked",
-		"audit.certs.ca_rotation_due":    "ca_rotation_due",
-
-		// Access & Auth
-		"audit.auth.account_locked":               "auth_failure_spike",
-		"audit.auth.login_failed":                 "auth_failure_spike",
-		"audit.auth.unauthorized_key_access":      "unauthorized_key_access",
-		"audit.auth.privilege_escalation_attempt": "privilege_escalation_attempt",
-		"audit.auth.api_key_compromised":          "api_key_compromised",
-		"audit.auth.session_anomaly":              "session_anomaly",
-
-		// Compliance
-		"audit.compliance.compliance_drop":             "compliance_drop",
-		"audit.compliance.compliance_score_drop":       "compliance_score_drop",
-		"audit.compliance.fips_violation_detected":     "fips_violation_detected",
-		"audit.compliance.policy_violation":            "policy_violation",
-		"audit.compliance.audit_gap_detected":          "audit_gap_detected",
-		"audit.compliance.framework_assessment_failed": "framework_assessment_failed",
-
-		// Infrastructure
-		"audit.infra.hsm_health_degraded":        "hsm_health_degraded",
-		"audit.infra.cluster_node_down":          "cluster_node_down",
-		"audit.infra.replication_lag_high":       "replication_lag_high",
-		"audit.infra.backup_failed":              "backup_failed",
-		"audit.infra.storage_threshold_exceeded": "storage_threshold_exceeded",
-
-		// Data Protection
-		"audit.data.encryption_failure":   "encryption_failure",
-		"audit.data.decryption_anomaly":   "decryption_anomaly",
-		"audit.data.data_leak_detected":   "data_leak_detected",
-		"audit.data.dlp_policy_triggered": "dlp_policy_triggered",
-
-		// Operational
-		"audit.ops.rate_limit_exceeded":     "rate_limit_exceeded",
-		"audit.ops.service_health_degraded": "service_health_degraded",
-		"audit.ops.latency_spike":           "latency_spike",
-		"audit.ops.error_rate_high":         "error_rate_high",
-
-		// Incident Response
-		"audit.canary.tripped":        "canary_tripped",
-		"audit.risk.score_critical":   "risk_score_critical",
-	}
-
-	if trigger, ok := subjectMap[subject]; ok {
-		return trigger
-	}
-
-	// Wildcard matching for compliance sub-events
-	if strings.HasPrefix(subject, "audit.compliance.") {
-		suffix := strings.TrimPrefix(subject, "audit.compliance.")
-		if validTriggerTypes[suffix] {
-			return suffix
-		}
-	}
-
-	// Wildcard matching for keycore sub-events
-	if strings.HasPrefix(subject, "audit.keycore.") {
-		suffix := strings.TrimPrefix(subject, "audit.keycore.")
-		if validTriggerTypes[suffix] {
-			return suffix
-		}
-	}
-
-	return ""
-}
-
-// isRecentlyFired checks if a playbook+trigger combo was fired within the dedup window.
-func (tl *TriggerListener) isRecentlyFired(key string) bool {
-	tl.mu.Lock()
-	defer tl.mu.Unlock()
-	if last, ok := tl.lastFire[key]; ok {
-		return time.Since(last) < dedupCooldown
-	}
-	return false
-}
-
-// markFired records the current time for a playbook+trigger dedup key.
-func (tl *TriggerListener) markFired(key string) {
-	tl.mu.Lock()
-	defer tl.mu.Unlock()
-	tl.lastFire[key] = time.Now()
-}
-
-// dedupCleaner periodically removes expired dedup entries to prevent memory leaks.
-func (tl *TriggerListener) dedupCleaner(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			tl.mu.Lock()
-			now := time.Now()
-			for k, t := range tl.lastFire {
-				if now.Sub(t) > dedupCooldown*2 {
-					delete(tl.lastFire, k)
+			src := runSource{Trigger: spec.Type, Subject: subject, EventID: evt.TargetID, Actor: pb.AuthorizedBy}
+			switch {
+			case pb.AuthorizedBy == "":
+				tl.audit(pb, src, "", reasonNotAuthorized)
+			case stale:
+				tl.audit(pb, src, "", reasonStaleEvent)
+			case !tl.claim(pb.TenantID + "/" + pb.ID):
+				tl.audit(pb, src, "", reasonCooldown)
+			default:
+				run, err := tl.executor.Start(ctx, pb, src)
+				if err != nil {
+					tl.logger.Printf("playbook triggers: start playbook=%s: %v", pb.ID, err)
+					continue
 				}
+				tl.audit(pb, src, run.ID, "")
+				pb := pb
+				tl.dispatch(func() {
+					rctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+					defer cancel()
+					tl.executor.Execute(rctx, pb, run, src)
+				})
 			}
-			tl.mu.Unlock()
 		}
 	}
+}
+
+// claim reserves a playbook for the cooldown window.
+func (tl *TriggerListener) claim(key string) bool {
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	now := tl.now()
+	for k, t := range tl.lastFire {
+		if now.Sub(t) >= triggerCooldown {
+			delete(tl.lastFire, k)
+		}
+	}
+	if _, busy := tl.lastFire[key]; busy {
+		return false
+	}
+	tl.lastFire[key] = now
+	return true
+}
+
+// audit records a trigger decision: a run started, or why it didn't.
+func (tl *TriggerListener) audit(pb Playbook, src runSource, runID, reason string) {
+	result, severity := route.ResultSuccess, "info"
+	details := map[string]interface{}{
+		"trigger": src.Trigger, "subject": src.Subject, "event_target": src.EventID,
+		"playbook_name": pb.Name, "run_id": runID,
+	}
+	if reason != "" {
+		result, severity = route.ResultRefused, "warning"
+		details["reason"] = reason
+	}
+	details["severity"] = severity
+	tl.executor.emit("playbook_triggered", pkgaudit.Event{
+		TenantID: pb.TenantID, ActorID: pb.AuthorizedBy, TargetType: "playbook", TargetID: pb.ID,
+		Result: result, CorrelationID: runID, Details: details,
+	})
 }

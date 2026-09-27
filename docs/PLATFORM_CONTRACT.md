@@ -75,6 +75,16 @@ whose body is the user's data (Vault KV v1). `services/secrets/handler.go` is th
 reference. The migration plan for older services is in
 [ARCHITECTURE_MIGRATION.md](ARCHITECTURE_MIGRATION.md).
 
+**Acting as a service identity on someone's behalf.** A service token passes
+every tenant and permission check downstream. A feature that stores work to
+do later as the service (a playbook, a schedule, an automation) must check,
+when the work is saved and again when a person starts it, that the verified
+caller holds the permission for each operation, and must record who
+authorized it. Otherwise the feature lends the service's reach to anyone
+who can write to it. Playbooks are the reference: `ActionSpec.Permission`,
+`missingPermissions` and `authorized_by` in
+`services/compliance/playbook_catalog.go` (2.4.0-beta).
+
 Rules the conformance check enforces:
 
 1. **Crypto** — only `pkg/crypto` (keygen, sign/verify, hash, HMAC, Seal/Open,

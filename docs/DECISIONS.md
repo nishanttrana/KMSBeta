@@ -7,6 +7,50 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Playbooks run on a person's authority, from a catalogue of real events (2.4.0-beta)
+
+**Decision.** Playbook actions keep running as the compliance service
+identity (keycore and certs admit service principals), but a playbook
+borrows that identity only on the authority of a person who holds the same
+permissions. Saving an enabled playbook, or running one by hand, needs every
+permission its actions use; `authorized_by` records the saver, and automatic
+runs are refused while it is empty. Triggers and actions come from one
+catalogue (`playbook_catalog.go`) that the API validates against, the
+executor runs from and the dashboard renders from `GET .../catalog`. A
+trigger lists only subjects a service emits, checked by
+`TestTriggerSubjectsAreEmitted`.
+
+*Rejected:*
+- **Running actions with the saver's own token.** Tokens expire, and a
+  stored refresh token would be a long-lived user credential at rest. This
+  is the right end state for actions whose target service won't admit a
+  service principal (`disable_user`, `revoke_api_key`); it needs delegated,
+  scoped credentials (step 2), so those actions are removed until then.
+- **Letting auth admit the compliance identity for user and API key
+  changes.** It would give one service account power over every user in
+  every tenant.
+- **Keeping `destroy_key` and ticking keycore's pre-destroy
+  acknowledgements automatically.** Those checks exist so a person confirms
+  an irreversible act; a playbook confirming them defeats them.
+- **Keeping trigger names nothing emits "for later".** A trigger that can't
+  fire is a feature that pretends (rule 8).
+- **Rewriting stored action names in a migration.** The tables are
+  replicated, so a data rewrite would also run on members; names are mapped
+  on read instead.
+- **Re-checking the saver's current grants at trigger time.** It needs a
+  service-side lookup of another user's permissions that auth doesn't offer
+  yet. Until then a playbook keeps its authorization after its author loses
+  the permissions; saving it again, or disabling or deleting it, is the
+  control. Open for step 2.
+
+**Also:** outbound actions go through `pkg/ssrfguard`, not the svctls
+router, so they never present the service's mTLS certificate; triggered runs
+happen on the primary only; events older than 15 minutes don't fire. The
+watchdog raises incidents and acts on nothing; its `audit.health.incident`
+is the `service_health_degraded` trigger.
+
+---
+
 ## 2026-09-28 — Operations metrics: any metered event, cluster-wide on the primary, no backfill (2.2.0-beta)
 
 **Decision.** An event is counted when its details carry
