@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -113,5 +114,38 @@ func TestAlertLifecycleEndpoints(t *testing.T) {
 	}
 	if got.Status != "acknowledged" {
 		t.Fatalf("status=%s", got.Status)
+	}
+}
+
+// An alert records only where it really goes (the dashboard): no email, SMS,
+// paging, SIEM or webhook marked "queued" that nothing sends, and the
+// in-memory channel settings that nothing read are gone.
+func TestAlertRecordsOnlyRealDispatch(t *testing.T) {
+	h, svc, store, _ := newAuditHandler(t, true, false)
+	_, alert, err := svc.ProcessEvent(context.Background(), AuditEvent{
+		TenantID: "t1", Timestamp: time.Now().UTC(), Service: "auth", Action: "audit.auth.login_failed",
+		ActorID: "u1", ActorType: "human", SourceIP: "1.1.1.1", Result: "failure",
+	})
+	if err != nil || alert.ID == "" {
+		t.Fatalf("alert: %+v %v", alert, err)
+	}
+	got, err := store.GetAlert(context.Background(), "t1", alert.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(got.DispatchedChannels, ",") != "dashboard" || len(got.DispatchStatus) != 1 || got.DispatchStatus["dashboard"] != "recorded" {
+		t.Fatalf("dispatch %v %v", got.DispatchedChannels, got.DispatchStatus)
+	}
+	for _, sev := range []string{"CRITICAL", "HIGH", "LOW", ""} {
+		if p := dispatchPlan(sev); strings.Join(p.Channels, ",") != "dashboard" {
+			t.Fatalf("%s: %v", sev, p.Channels)
+		}
+	}
+	for _, rt := range []struct{ method, path string }{{http.MethodGet, "/alerts/channels"}, {http.MethodPut, "/alerts/channels"}, {http.MethodPost, "/alerts/channels/test"}} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path+"?tenant_id=t1", strings.NewReader(`{}`)))
+		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s still served: %d", rt.method, rt.path, rr.Code)
+		}
 	}
 }

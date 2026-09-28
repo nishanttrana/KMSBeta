@@ -18,7 +18,6 @@ type Handler struct {
 	store    Store
 	broker   *StreamBroker
 	cluster  clustersync.Publisher
-	channels map[string]interface{}
 	mux      *http.ServeMux
 }
 
@@ -29,14 +28,6 @@ func NewHandler(svc *Service, store Store) *Handler {
 		svc:    svc,
 		store:  store,
 		broker: broker,
-		channels: map[string]interface{}{
-			"email":     map[string]interface{}{"enabled": true},
-			"sms":       map[string]interface{}{"enabled": true, "min_severity": "CRITICAL"},
-			"pagerduty": map[string]interface{}{"enabled": true, "min_severity": "CRITICAL"},
-			"siem":      map[string]interface{}{"enabled": true},
-			"webhook":   map[string]interface{}{"enabled": true, "min_severity": "MEDIUM"},
-			"dashboard": map[string]interface{}{"enabled": true},
-		},
 	}
 	h.mux = h.routes()
 	return h
@@ -100,9 +91,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /alerts/rules/{id}", h.handleUpdateRule)
 	mux.HandleFunc("DELETE /alerts/rules/{id}", h.handleDeleteRule)
 	mux.HandleFunc("POST /alerts/test-rule", h.handleTestRule)
-	mux.HandleFunc("GET /alerts/channels", h.handleGetChannels)
-	mux.HandleFunc("PUT /alerts/channels", h.handleUpdateChannels)
-	mux.HandleFunc("POST /alerts/channels/test", h.handleTestChannel)
 
 	// Merkle tree integrity routes
 	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
@@ -573,40 +561,6 @@ func (h *Handler) handleTestRule(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "dry-run-ok", "request_id": reqID})
 }
 
-func (h *Handler) handleGetChannels(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"channels": h.channels, "request_id": reqID, "tenant_id": tenantID})
-}
-
-func (h *Handler) handleUpdateChannels(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var body map[string]interface{}
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, tenantID)
-		return
-	}
-	for k, v := range body {
-		h.channels[k] = v
-	}
-	h.publishClusterSync(r, tenantID, "alert_channel_config", tenantID, "channels_updated", map[string]interface{}{
-		"channels": body,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleTestChannel(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "test-sent", "request_id": reqID})
-}
-
 // handleFIPSBoundary returns the FIPS 140-3 module boundary declaration for this service.
 func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
@@ -632,7 +586,7 @@ func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 			"TLS 1.3 transport (AES-256-GCM)",
 		},
 		"services_outside_boundary": []string{
-			"alert dispatch (email/sms/pagerduty — external network)",
+			"event stream delivery through compliance connections (external TLS)",
 			"NATS message transport (relayed from other KMS modules)",
 		},
 		"zeroization_policy":      "Keys are zeroized on process termination via runtime.SetFinalizer and explicit wipe calls",

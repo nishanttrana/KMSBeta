@@ -423,34 +423,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-get-alerts-channels",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /alerts/channels",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/alerts/channels?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/alerts/channels?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-get-alerts-rules",
     "group": "Audit & Alerts (audit)",
     "title": "GET /alerts/rules",
@@ -1235,34 +1207,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-post-alerts-channels-test",
-    "group": "Audit & Alerts (audit)",
-    "title": "POST /alerts/channels/test",
-    "service": "audit",
-    "method": "POST",
-    "pathTemplate": "/alerts/channels/test?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "POST /svc/audit/alerts/channels/test?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-post-alerts-rules",
     "group": "Audit & Alerts (audit)",
     "title": "POST /alerts/rules",
@@ -1580,34 +1524,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "PUT /svc/audit/alerts/{id}/{action}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-put-alerts-channels",
-    "group": "Audit & Alerts (audit)",
-    "title": "PUT /alerts/channels",
-    "service": "audit",
-    "method": "PUT",
-    "pathTemplate": "/alerts/channels?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "PUT /svc/audit/alerts/channels?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -5920,6 +5836,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Compliance service.",
     "requestExample": "POST /svc/compliance/compliance/assessment/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-post-compliance-connections-id-resolve",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/connections/{id}/resolve",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/connections/{id}/resolve?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/connections/{id}/resolve?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-post-compliance-connections-import",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/connections/import",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/connections/import?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/connections/import?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

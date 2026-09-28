@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### "Queued" is a claim, and nothing checked it
+- **What happened:** audit alerts recorded email, SMS, PagerDuty, SIEM and
+  webhook as `queued` on every alert, and audit exposed channel settings
+  and a test route (`test-sent`). There was no sender behind any of them.
+  The earlier PagerDuty cleanup (2.4.0) removed the playbook action and hid
+  reporting's channels, but it didn't find these, because they held the
+  word in a status map and a default config rather than in a delivery
+  function.
+- **Why it slipped through:** the real-capability check looks for
+  `simulate*` / `fake*` functions. A status string is data, and a handler
+  that returns a fixed success body has neither name.
+- **Rule:** a status like `queued`, `sent` or `test-sent` needs code that
+  makes it true. When removing an integration, search for its name in
+  every form (config maps, status keys, UI filters, docs) and add a
+  conformance rule so it can't return (`no-pagerduty`).
+
 ### An unused package can hold the worst code in the repo
 - **What happened:** `pkg/siem` had Splunk, Datadog, Elastic, Sentinel and
   QRadar exporters and a buffered exporter, and nothing imported them. They

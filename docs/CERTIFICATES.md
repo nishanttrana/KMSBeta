@@ -1678,11 +1678,6 @@ curl -X PUT "https://localhost/svc/certs/certs/alert-policy?tenant_id=root" \
         "type": "email",
         "addresses": ["security@acme.com", "pki-admin@acme.com"],
         "severity": ["critical", "high", "medium"]
-      },
-      {
-        "type": "pagerduty",
-        "routing_key": "your-pagerduty-routing-key",
-        "severity": ["critical"]
       }
     ]
   }'

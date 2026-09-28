@@ -239,6 +239,20 @@ else
   echo "PASS [real-capability]"
 fi
 
+# No PagerDuty integration (owner, 2026-09-28: "no one uses it"; removed
+# completely in 2.11.0-beta). Nothing in code, tests, migrations or the
+# dashboard may name it; outbound notification goes through connections
+# (docs/SECURITY/CONNECTIONS.md). Migrations that removed it are exempt.
+pager_hits=$(grep -rniE 'pager[ _-]?duty|send_pager' services pkg web/dashboard/src web/dashboard/tests \
+  --include='*.go' --include='*.ts' --include='*.tsx' --include='*.js' 2>/dev/null || true)
+if [ -n "$pager_hits" ]; then
+  FAIL=1
+  echo "FAIL [no-pagerduty]: PagerDuty was removed; don't add it back"
+  printf '%s\n' "$pager_hits" | sed 's/^/  /'
+else
+  echo "PASS [no-pagerduty]"
+fi
+
 # Rule 6c: every connection is TLS, every internal one mTLS (CLAUDE.md rule
 # 10, docs/SECURITY/INTERNAL_TLS.md). No plain listener, no insecure gRPC
 # credentials, and no http:// to a platform host in code or deployment files.

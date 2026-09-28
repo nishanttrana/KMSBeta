@@ -657,7 +657,7 @@ curl -X POST "https://localhost/svc/governance/governance/policies?tenant_id=roo
     "approver_roles": ["senior_operator", "admin"],
     "timeout_hours": 4,
     "escalation_hours": 2,
-    "notification_channels": ["dashboard", "email", "pagerduty"]
+    "notification_channels": ["dashboard", "email"]
   }'
 
 # Scenario 3: All 3 key custodians required for root CA rotation
@@ -953,7 +953,7 @@ The compliance assessment checks: are any active keys using non-FIPS algorithms?
 | A.8.16 | Monitoring activities | Alert rules, SIEM export |
 | A.5.33 | Protection of records | Immutable audit log, retention policies |
 | A.8.15 | Logging | Full audit event schema |
-| A.6.8 | Information security event reporting | Alert center, PagerDuty integration |
+| A.6.8 | Information security event reporting | Alert center, playbooks (Slack, Teams, SIEM alerts, tickets) |
 
 #### SOC 2 Type II — Trust Service Criteria
 
@@ -1267,7 +1267,7 @@ Alert rules define conditions that, when matched by incoming audit events, trigg
 | `condition` | string | CEL (Common Expression Language) expression evaluated against each incoming event. |
 | `window_seconds` | int | Sliding time window for count-based and rate-based conditions. |
 | `severity` | enum | `critical`, `high`, `warning`, `info`. |
-| `channels` | string[] | Notification channels: `dashboard`, `email`, `slack`, `pagerduty`, `webhook`. |
+| `channels` | string[] | Reporting delivers alerts to the dashboard only (`screen`); any other value is stored as `screen`. To notify people or a SIEM, trigger a playbook on the alert (Slack, Teams, webhook, SIEM alert, Jira, ServiceNow, email). |
 | `cooldown_seconds` | int | Minimum time between repeated alerts for the same rule+actor combination. Prevents alert storms. |
 | `tags` | string[] | Labels for grouping rules (e.g. `["pci-dss", "incident-response"]`). |
 
@@ -1322,7 +1322,7 @@ curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
     "condition": "event.action == \"key.decrypt\" && event.result == \"failure\" && count(events, 300) >= 5",
     "window_seconds": 300,
     "severity": "critical",
-    "channels": ["dashboard", "pagerduty", "slack"],
+    "channels": ["screen"],
     "cooldown_seconds": 600,
     "tags": ["brute-force", "pci-dss", "incident-response"]
   }'
@@ -1336,7 +1336,7 @@ curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
     "enabled": true,
     "condition": "event.action == \"key.export\" && (hour(event.timestamp) < 8 || hour(event.timestamp) > 18)",
     "severity": "high",
-    "channels": ["dashboard", "email", "slack"],
+    "channels": ["screen"],
     "cooldown_seconds": 3600
   }'
 
@@ -1349,7 +1349,7 @@ curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
     "enabled": true,
     "condition": "event.action == \"governance.fips.disabled\"",
     "severity": "critical",
-    "channels": ["dashboard", "pagerduty", "email"],
+    "channels": ["screen"],
     "cooldown_seconds": 0
   }'
 
@@ -1937,9 +1937,7 @@ format (json|jsonl|csv|cef|leef), signing_key_id, limit, offset, sort
 | POST | `/alerts/{id}/resolve` | Resolve alert |
 | POST | `/alerts/{id}/assign` | Assign alert to user |
 | GET | `/metrics` | Get MTTD/MTTR metrics |
-| PUT | `/channels/slack` | Configure Slack channel |
-| PUT | `/channels/pagerduty` | Configure PagerDuty |
-| PUT | `/channels/webhook` | Configure webhook channel |
+| GET/PUT | `/alerts/channels` | Alert channel settings (only `screen`, the dashboard, is delivered; notify through playbooks) |
 
 ---
 

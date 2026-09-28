@@ -298,11 +298,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   },[mttr]);
 
   const enabledChannels=useMemo(()=>{
-    return (Array.isArray(channels)?channels:[]).filter((ch)=>{
-      if(!Boolean(ch?.enabled)) return false;
-      const name=String(ch?.name||"").toLowerCase();
-      return name!=="pager"&&name!=="pagerduty";
-    });
+    return (Array.isArray(channels)?channels:[]).filter((ch)=>Boolean(ch?.enabled));
   },[channels]);
 
   const alertCards=[

@@ -985,19 +985,16 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [ruleWindowSeconds,setRuleWindowSeconds]=useState(300);
   const [ruleExpression,setRuleExpression]=useState("");
   const [ruleChannels,setRuleChannels]=useState<string[]>(["screen"]);
-  const [ruleChannelsAvail,setRuleChannelsAvail]=useState<string[]>(["screen","email","slack","teams","webhook"]);
+  // Reporting delivers alerts only to the dashboard ("screen"); the list comes
+  // from the service. Other notifications go through Playbooks connections.
+  const [ruleChannelsAvail,setRuleChannelsAvail]=useState<string[]>(["screen"]);
   const [ruleSaving,setRuleSaving]=useState(false);
-
-  const isDeprecatedChannel=useCallback((name:string)=>{
-    const n=String(name||"").trim().toLowerCase();
-    return n==="pager"||n==="pagerduty";
-  },[]);
 
   const sanitizeRuleChannels=useCallback((channels:string[])=>{
     return Array.from(new Set((Array.isArray(channels)?channels:[])
       .map((ch)=>String(ch||"").trim().toLowerCase())
-      .filter((ch)=>Boolean(ch)&&!isDeprecatedChannel(ch))));
-  },[isDeprecatedChannel]);
+      .filter((ch)=>ruleChannelsAvail.includes(ch))));
+  },[ruleChannelsAvail]);
 
   const sessionGuard=useCallback((error:unknown)=>{
     const msg=errMsg(error).toLowerCase();
@@ -1037,13 +1034,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       const [rulesOut,channelsOut]=await Promise.all([listReportingRules(session),listReportingChannels(session)]);
       setAlertRules(rulesOut);
       const names=channelsOut
-        .filter((ch)=>ch.enabled&&!isDeprecatedChannel(String(ch.name||"")))
+        .filter((ch)=>ch.enabled)
         .map((ch)=>String(ch.name||"").trim().toLowerCase())
         .filter(Boolean);
       if(names.length) setRuleChannelsAvail(names);
     }catch(error){if(!sessionGuard(error)) onToast(`Alert rules load failed: ${errMsg(error)}`);}
     finally{setAlertRulesLoading(false);}
-  },[session,sessionGuard,onToast,isDeprecatedChannel]);
+  },[session,sessionGuard,onToast]);
 
   const openRuleModal=useCallback((rule?:ReportingAlertRule)=>{
     if(rule){

@@ -497,26 +497,14 @@ func baseRisk(severity string, action string) int {
 	}
 }
 
-func dispatchPlan(severity string) DispatchPlan {
-	s := strings.ToUpper(severity)
-	var channels []string
-	switch s {
-	case "CRITICAL":
-		channels = []string{"email", "sms", "pagerduty", "siem", "dashboard", "webhook"}
-	case "HIGH":
-		channels = []string{"email", "siem", "dashboard", "webhook"}
-	case "MEDIUM":
-		channels = []string{"siem", "dashboard"}
-	case "LOW":
-		channels = []string{"siem", "dashboard"}
-	default:
-		channels = []string{"dashboard", "log"}
-	}
-	status := map[string]interface{}{}
-	for _, c := range channels {
-		status[c] = "queued"
-	}
-	return DispatchPlan{Channels: channels, Status: status}
+// dispatchPlan records where an alert goes: the dashboard, which is the
+// only place the audit service puts it. It used to list email, SMS,
+// a paging service, SIEM and webhook as "queued", but nothing ever sent to them.
+// Alerts reach people through reporting's alert channels, and SIEMs through
+// event streams (Playbooks → Event streaming), and each records its own
+// real deliveries.
+func dispatchPlan(string) DispatchPlan {
+	return DispatchPlan{Channels: []string{"dashboard"}, Status: map[string]interface{}{"dashboard": "recorded"}}
 }
 
 func defaultAlertTitle(action string, targetID string) string {

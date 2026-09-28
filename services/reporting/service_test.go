@@ -95,16 +95,17 @@ func TestServiceCreatesAlertWhenRuleEscalatesInfoEvent(t *testing.T) {
 	}
 }
 
-func TestServiceListChannelsExcludesPagerDuty(t *testing.T) {
+// Only the dashboard feed is listed: reporting delivers nowhere else.
+func TestServiceListChannelsOnlyScreen(t *testing.T) {
 	svc, store, _, _, _, _ := newReportingService(t)
 	tenantID := "tenant-channels"
 	if err := store.UpsertChannel(context.Background(), NotificationChannel{
 		TenantID: tenantID,
-		Name:     "pagerduty",
+		Name:     "slack",
 		Enabled:  true,
 		Config:   map[string]interface{}{"severity_filter": []string{"critical"}},
 	}); err != nil {
-		t.Fatalf("seed pagerduty channel: %v", err)
+		t.Fatalf("seed slack channel: %v", err)
 	}
 	if err := store.UpsertChannel(context.Background(), NotificationChannel{
 		TenantID: tenantID,

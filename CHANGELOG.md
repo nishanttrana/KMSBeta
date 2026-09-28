@@ -4,6 +4,37 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.11.0-beta] — 2026-09-28
+
+### PagerDuty removed completely
+- **Audit alerts record only where they really go.** Every audit alert
+  used to list email, SMS, PagerDuty, SIEM and webhook as "queued" in
+  `dispatched_channels` / `dispatch_status`, and nothing ever sent to any of
+  them. Alerts now record `dashboard: recorded`, the one place the audit
+  service puts them. To notify people or a SIEM, use Playbooks (connections,
+  `send_siem_alert`) or Event streaming.
+- **Removed `GET/PUT /svc/audit/alerts/channels` and
+  `POST /svc/audit/alerts/channels/test`.** They were a process-wide
+  in-memory map, the same for every tenant and lost on restart, that
+  nothing read. The PagerDuty "configuration" lived there, and the test
+  route answered `test-sent` without sending anything. Reporting's
+  `/alerts/channels` (the one the dashboard uses) is unchanged.
+- **Reporting migration 004** deletes retired notification-channel rows
+  (PagerDuty, email, Slack, Teams, webhook, SIEM). They were already hidden
+  and never delivered, but their config could hold a PagerDuty routing key
+  or a webhook URL in plaintext. Only `screen` (the dashboard) remains. If
+  you ever stored a PagerDuty routing key or Slack URL in a reporting
+  channel, revoke it at the provider.
+- **Dashboard:** the PagerDuty filters in the Alert Center and System
+  Administration are gone, and the alert-rule channel picker offers only
+  what reporting delivers (`screen`) instead of email, Slack, Teams and
+  webhook options that were never sent.
+- **Docs:** PagerDuty examples removed from the governance and certificate
+  guides, and the alert-rule examples no longer claim Slack, email or
+  PagerDuty delivery from reporting.
+- **New conformance rule `no-pagerduty`:** `make conformance` fails if
+  PagerDuty appears anywhere in Go, TypeScript or JavaScript code or tests.
+
 ## [2.10.0-beta] — 2026-09-28
 
 ### Webhooks and SIEM are part of Playbooks; one store of outbound credentials

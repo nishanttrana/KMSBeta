@@ -30,35 +30,32 @@ ai-gateway|GET|/ai-gateway/v1/audit/stats,ai-gateway,GET,/ai-gateway/v1/audit/st
 ai-gateway|GET|/ai-gateway/v1/audit/{param},ai-gateway,GET,/ai-gateway/v1/audit/{id},/ai-gateway/v1/audit/{param},,handleGetAudit,services/ai-gateway/handler.go,954,,GetAudit,,,
 ai-gateway|GET|/ai-gateway/v1/health,ai-gateway,GET,/ai-gateway/v1/health,/ai-gateway/v1/health,web/dashboard/src/lib/aigateway.ts:58,handleHealth,services/ai-gateway/handler.go,978,,,,,"context.WithTimeout, time.Now"
 ai-gateway|GET|/ai-gateway/v1/metrics,ai-gateway,GET,/ai-gateway/v1/metrics,/ai-gateway/v1/metrics,,handleMetrics,services/ai-gateway/handler.go,1009,,GetAuditStats,,,fmt.Fprintf
-audit|POST|/audit/publish,audit,POST,/audit/publish,/audit/publish,,handlePublish,services/audit/handler.go,143,"PublishAudit, VerifyChain","QueryEvents, GetEvent, AlertStats, QueryAlerts, GetAlert, UpdateAlertStatus, CreateRule, ListRules, UpdateRule, DeleteRule, BuildMerkleEpoch, ListMerkleEpochs, GetMerkleEpoch, GetEventMerkleProof","h.cluster.Publish, s.wal.Append, s.publisher.Publish","pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce","encoding/json.NewDecoder, encoding/json.NewEncoder, errors.Is, strconv.Atoi, strings.TrimSpace, strings.EqualFold, strings.ToLower, time.Parse, encoding/json.Marshal, errors.New"
-audit|GET|/audit/events,audit,GET,/audit/events,/audit/events,web/dashboard/src/lib/audit.ts:134,handleEvents,services/audit/handler.go,207,,QueryEvents,,,strings.TrimSpace
-audit|GET|/audit/events/{param},audit,GET,/audit/events/{id},/audit/events/{param},web/dashboard/src/lib/audit.ts:139,handleEvent,services/audit/handler.go,235,,GetEvent,,,errors.Is
-audit|GET|/audit/timeline/{param},audit,GET,/audit/timeline/{target_id},/audit/timeline/{param},web/dashboard/src/lib/audit.ts:156,handleTimeline,services/audit/handler.go,253,,QueryEvents,,,
-audit|GET|/audit/session/{param},audit,GET,/audit/session/{session_id},/audit/session/{param},web/dashboard/src/lib/audit.ts:212,handleSession,services/audit/handler.go,271,,QueryEvents,,,
-audit|GET|/audit/correlation/{param},audit,GET,/audit/correlation/{id},/audit/correlation/{param},web/dashboard/src/lib/audit.ts:228,handleCorrelation,services/audit/handler.go,289,,QueryEvents,,,
-audit|POST|/audit/search,audit,POST,/audit/search,/audit/search,,handleSearch,services/audit/handler.go,307,,,,,
-audit|GET|/audit/chain/verify,audit,GET,/audit/chain/verify,/audit/chain/verify,web/dashboard/src/lib/audit.ts:236,handleChainVerify,services/audit/handler.go,312,VerifyChain,,,,
-audit|GET|/audit/stats,audit,GET,/audit/stats,/audit/stats,,handleAuditStats,services/audit/handler.go,326,,AlertStats,,,
+audit|POST|/audit/publish,audit,POST,/audit/publish,/audit/publish,,handlePublish,services/audit/handler.go,131,"PublishAudit, VerifyChain","QueryEvents, GetEvent, AlertStats, QueryAlerts, GetAlert, UpdateAlertStatus, CreateRule, ListRules, UpdateRule, DeleteRule, BuildMerkleEpoch, ListMerkleEpochs, GetMerkleEpoch, GetEventMerkleProof","h.cluster.Publish, s.wal.Append, s.publisher.Publish","pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce","encoding/json.NewDecoder, encoding/json.NewEncoder, errors.Is, strconv.Atoi, strings.TrimSpace, strings.EqualFold, strings.ToLower, time.Parse, encoding/json.Marshal, errors.New"
+audit|GET|/audit/events,audit,GET,/audit/events,/audit/events,web/dashboard/src/lib/audit.ts:134,handleEvents,services/audit/handler.go,195,,QueryEvents,,,strings.TrimSpace
+audit|GET|/audit/events/{param},audit,GET,/audit/events/{id},/audit/events/{param},web/dashboard/src/lib/audit.ts:139,handleEvent,services/audit/handler.go,223,,GetEvent,,,errors.Is
+audit|GET|/audit/timeline/{param},audit,GET,/audit/timeline/{target_id},/audit/timeline/{param},web/dashboard/src/lib/audit.ts:156,handleTimeline,services/audit/handler.go,241,,QueryEvents,,,
+audit|GET|/audit/session/{param},audit,GET,/audit/session/{session_id},/audit/session/{param},web/dashboard/src/lib/audit.ts:212,handleSession,services/audit/handler.go,259,,QueryEvents,,,
+audit|GET|/audit/correlation/{param},audit,GET,/audit/correlation/{id},/audit/correlation/{param},web/dashboard/src/lib/audit.ts:228,handleCorrelation,services/audit/handler.go,277,,QueryEvents,,,
+audit|POST|/audit/search,audit,POST,/audit/search,/audit/search,,handleSearch,services/audit/handler.go,295,,,,,
+audit|GET|/audit/chain/verify,audit,GET,/audit/chain/verify,/audit/chain/verify,web/dashboard/src/lib/audit.ts:236,handleChainVerify,services/audit/handler.go,300,VerifyChain,,,,
+audit|GET|/audit/stats,audit,GET,/audit/stats,/audit/stats,,handleAuditStats,services/audit/handler.go,314,,AlertStats,,,
 audit|GET|/audit/stream,audit,GET,/audit/stream,/audit/stream,,handleStream,services/audit/stream.go,95,,,,,
-audit|GET|/audit/config,audit,GET,/audit/config,/audit/config,web/dashboard/src/lib/audit.ts:248,handleAuditConfig,services/audit/handler.go,340,,,,,strings.TrimSpace
-audit|GET|/alerts,audit,GET,/alerts,/alerts,web/dashboard/src/lib/audit.ts:275,handleAlerts,services/audit/handler.go,357,,QueryAlerts,,,strings.TrimSpace
-audit|GET|/alerts/{param},audit,GET,/alerts/{id},/alerts/{param},,handleAlert,services/audit/handler.go,380,,GetAlert,,,errors.Is
-audit|PUT|/alerts/{param}/{param},audit,PUT,/alerts/{id}/{action},/alerts/{param}/{param},,handleAlertActionPath,services/audit/handler.go,398,,,,,"strings.ToLower, strings.TrimSpace"
-audit|GET|/alerts/stats,audit,GET,/alerts/stats,/alerts/stats,web/dashboard/src/lib/audit.ts:312,handleAlertStats,services/audit/handler.go,450,,AlertStats,,,
+audit|GET|/audit/config,audit,GET,/audit/config,/audit/config,web/dashboard/src/lib/audit.ts:248,handleAuditConfig,services/audit/handler.go,328,,,,,strings.TrimSpace
+audit|GET|/alerts,audit,GET,/alerts,/alerts,web/dashboard/src/lib/audit.ts:275,handleAlerts,services/audit/handler.go,345,,QueryAlerts,,,strings.TrimSpace
+audit|GET|/alerts/{param},audit,GET,/alerts/{id},/alerts/{param},,handleAlert,services/audit/handler.go,368,,GetAlert,,,errors.Is
+audit|PUT|/alerts/{param}/{param},audit,PUT,/alerts/{id}/{action},/alerts/{param}/{param},,handleAlertActionPath,services/audit/handler.go,386,,,,,"strings.ToLower, strings.TrimSpace"
+audit|GET|/alerts/stats,audit,GET,/alerts/stats,/alerts/stats,web/dashboard/src/lib/audit.ts:312,handleAlertStats,services/audit/handler.go,438,,AlertStats,,,
 audit|GET|/alerts/stream,audit,GET,/alerts/stream,/alerts/stream,,handleAlertStream,services/audit/stream.go,104,,,,,
-audit|POST|/alerts/rules,audit,POST,/alerts/rules,/alerts/rules,,handleCreateRule,services/audit/handler.go,464,,CreateRule,,,strings.TrimSpace
-audit|GET|/alerts/rules,audit,GET,/alerts/rules,/alerts/rules,,handleListRules,services/audit/handler.go,495,,ListRules,,,
-audit|PUT|/alerts/rules/{param},audit,PUT,/alerts/rules/{id},/alerts/rules/{param},,handleUpdateRule,services/audit/handler.go,509,,UpdateRule,,,strings.TrimSpace
-audit|DELETE|/alerts/rules/{param},audit,DELETE,/alerts/rules/{id},/alerts/rules/{param},,handleDeleteRule,services/audit/handler.go,544,,DeleteRule,,,strings.TrimSpace
-audit|POST|/alerts/test-rule,audit,POST,/alerts/test-rule,/alerts/test-rule,,handleTestRule,services/audit/handler.go,570,,,,,
-audit|GET|/alerts/channels,audit,GET,/alerts/channels,/alerts/channels,,handleGetChannels,services/audit/handler.go,576,,,,,
-audit|PUT|/alerts/channels,audit,PUT,/alerts/channels,/alerts/channels,,handleUpdateChannels,services/audit/handler.go,585,,,,,
-audit|POST|/alerts/channels/test,audit,POST,/alerts/channels/test,/alerts/channels/test,,handleTestChannel,services/audit/handler.go,605,,,,,
-audit|POST|/audit/merkle/build,audit,POST,/audit/merkle/build,/audit/merkle/build,web/dashboard/src/lib/audit.ts:386,handleMerkleBuild,services/audit/handler.go,739,,BuildMerkleEpoch,,,
-audit|GET|/audit/merkle/epochs,audit,GET,/audit/merkle/epochs,/audit/merkle/epochs,web/dashboard/src/lib/audit.ts:363,handleMerkleEpochs,services/audit/handler.go,768,,ListMerkleEpochs,,,
-audit|GET|/audit/merkle/epochs/{param},audit,GET,/audit/merkle/epochs/{id},/audit/merkle/epochs/{param},,handleMerkleEpoch,services/audit/handler.go,783,,GetMerkleEpoch,,,errors.Is
-audit|GET|/audit/events/{param}/proof,audit,GET,/audit/events/{id}/proof,/audit/events/{param}/proof,web/dashboard/src/lib/audit.ts:374,handleEventProof,services/audit/handler.go,801,,GetEventMerkleProof,,,errors.Is
-audit|POST|/audit/merkle/verify,audit,POST,/audit/merkle/verify,/audit/merkle/verify,web/dashboard/src/lib/audit.ts:398,handleMerkleVerify,services/audit/handler.go,819,,,,,
+audit|POST|/alerts/rules,audit,POST,/alerts/rules,/alerts/rules,,handleCreateRule,services/audit/handler.go,452,,CreateRule,,,strings.TrimSpace
+audit|GET|/alerts/rules,audit,GET,/alerts/rules,/alerts/rules,,handleListRules,services/audit/handler.go,483,,ListRules,,,
+audit|PUT|/alerts/rules/{param},audit,PUT,/alerts/rules/{id},/alerts/rules/{param},,handleUpdateRule,services/audit/handler.go,497,,UpdateRule,,,strings.TrimSpace
+audit|DELETE|/alerts/rules/{param},audit,DELETE,/alerts/rules/{id},/alerts/rules/{param},,handleDeleteRule,services/audit/handler.go,532,,DeleteRule,,,strings.TrimSpace
+audit|POST|/alerts/test-rule,audit,POST,/alerts/test-rule,/alerts/test-rule,,handleTestRule,services/audit/handler.go,558,,,,,
+audit|POST|/audit/merkle/build,audit,POST,/audit/merkle/build,/audit/merkle/build,web/dashboard/src/lib/audit.ts:386,handleMerkleBuild,services/audit/handler.go,693,,BuildMerkleEpoch,,,
+audit|GET|/audit/merkle/epochs,audit,GET,/audit/merkle/epochs,/audit/merkle/epochs,web/dashboard/src/lib/audit.ts:363,handleMerkleEpochs,services/audit/handler.go,722,,ListMerkleEpochs,,,
+audit|GET|/audit/merkle/epochs/{param},audit,GET,/audit/merkle/epochs/{id},/audit/merkle/epochs/{param},,handleMerkleEpoch,services/audit/handler.go,737,,GetMerkleEpoch,,,errors.Is
+audit|GET|/audit/events/{param}/proof,audit,GET,/audit/events/{id}/proof,/audit/events/{param}/proof,web/dashboard/src/lib/audit.ts:374,handleEventProof,services/audit/handler.go,755,,GetEventMerkleProof,,,errors.Is
+audit|POST|/audit/merkle/verify,audit,POST,/audit/merkle/verify,/audit/merkle/verify,web/dashboard/src/lib/audit.ts:398,handleMerkleVerify,services/audit/handler.go,773,,,,,
 audit|POST|/audit/cluster/signing-key/join-key,audit,POST,/audit/cluster/signing-key/join-key,/audit/cluster/signing-key/join-key,,handleClusterKeyJoinKey,services/audit/cluster.go,169,auditCluster,,,,
 audit|POST|/audit/cluster/signing-key/export,audit,POST,/audit/cluster/signing-key/export,/audit/cluster/signing-key/export,,handleClusterKeyExport,services/audit/cluster.go,182,"signing, auditCluster",,,pkg/clusterkey.Seal,strings.TrimSpace
 audit|POST|/audit/cluster/signing-key/import,audit,POST,/audit/cluster/signing-key/import,/audit/cluster/signing-key/import,,handleClusterKeyImport,services/audit/cluster.go,212,"auditCluster, signing",,,"pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize",
@@ -67,7 +64,7 @@ audit|GET|/ops-metrics/timeseries,audit,GET,/ops-metrics/timeseries,/ops-metrics
 audit|GET|/ops-metrics/latency,audit,GET,/ops-metrics/latency,/ops-metrics/latency,web/dashboard/src/lib/opsMetrics.ts:60,handleGetLatencyPercentiles,services/audit/handler_ops_metrics.go,45,,GetLatencyPercentiles,,,
 audit|GET|/ops-metrics/by-service,audit,GET,/ops-metrics/by-service,/ops-metrics/by-service,web/dashboard/src/lib/opsMetrics.ts:65,handleGetServiceStats,services/audit/handler_ops_metrics.go,62,,GetServiceStats,,,
 audit|GET|/ops-metrics/errors,audit,GET,/ops-metrics/errors,/ops-metrics/errors,web/dashboard/src/lib/opsMetrics.ts:70,handleGetErrorBreakdown,services/audit/handler_ops_metrics.go,79,,GetErrorBreakdown,,,
-audit|GET|/audit/fips/boundary,audit,GET,/audit/fips/boundary,/audit/fips/boundary,,handleFIPSBoundary,services/audit/handler.go,611,,,,,
+audit|GET|/audit/fips/boundary,audit,GET,/audit/fips/boundary,/audit/fips/boundary,,handleFIPSBoundary,services/audit/handler.go,565,,,,,
 audit|GET|/audit/cbom/inventory,audit,GET,/audit/cbom/inventory,/audit/cbom/inventory,,handleCBOMInventory,services/audit/handler_cbom.go,17,,CBOMSamples,,"pkg/cbom.Tier, pkg/cbom.Build","strings.ToLower, strings.TrimSpace"
 audit|GET|/audit/cbom/diff,audit,GET,/audit/cbom/diff,/audit/cbom/diff,,handleCBOMDiff,services/audit/handler_cbom.go,51,,CBOMSamples,,"pkg/cbom.Tier, pkg/cbom.Build","strings.ToLower, strings.TrimSpace"
 audit|GET|/metrics,audit,GET,/metrics,/metrics,,handlePrometheusMetrics,services/audit/handler_prometheus.go,14,,GetAllServiceStats,,,"fmt.Sprintf, net/http.Error"

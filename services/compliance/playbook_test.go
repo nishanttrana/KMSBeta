@@ -625,7 +625,7 @@ func TestPlaybookInlineSecretsMigrated(t *testing.T) {
 // Actions that never worked are gone and refused, audited, at run time.
 func TestPlaybookRemovedActionsRefused(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	for _, a := range []string{"destroy_key", "send_pagerduty", "notify_soc", "quarantine_tenant"} {
+	for _, a := range []string{"destroy_key", "notify_soc", "quarantine_tenant"} {
 		if _, ok := actionByType[a]; ok {
 			t.Fatalf("%s is in the catalogue", a)
 		}

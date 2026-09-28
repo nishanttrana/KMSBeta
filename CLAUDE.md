@@ -235,7 +235,9 @@ an approach, record it here or in the matching doc below.
   run. Irreversible or access-removing steps pause for a governance approval
   that the person the playbook acts for can't give. Notification credentials
   live only in sealed connections (`pkg/mek`), never in a playbook. No
-  PagerDuty integration (owner, 2026-09-28: "no one uses it").
+  PagerDuty integration (owner, 2026-09-28: "no one uses it"; "remove
+  pager completely"): conformance `no-pagerduty` fails on any mention in
+  code.
 
 ## Documentation is part of done
 

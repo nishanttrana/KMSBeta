@@ -459,7 +459,7 @@ func (e *PlaybookExecutor) Cancel(ctx context.Context, pb Playbook, run Playbook
 // ---- actions ----
 
 // actionRemovedError is an action saved before it left the catalogue
-// (destroy_key, send_pagerduty, ...).
+// (destroy_key, notify_soc, ...).
 type actionRemovedError struct{ action string }
 
 func (e actionRemovedError) Error() string {
