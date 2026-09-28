@@ -19,6 +19,9 @@ type Handler struct {
 	executor  *PlaybookExecutor
 	triggers  *TriggerListener
 	connVault *connVault
+	// usage finds a connection's users outside playbooks (audit streams,
+	// governance); nil in tests that don't exercise delete.
+	usage ConnectionUsage
 	// dispatch runs a playbook execution; tests run it inline.
 	dispatch func(func())
 }
@@ -88,7 +91,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/risk/keys", h.handleGetKeyRiskRanking)
 	mux.HandleFunc("GET /compliance/risk/summary", h.handleGetDataRiskSummary)
 	mux.HandleFunc("GET /compliance/risk/remediation", h.handleGetRiskRemediation)
-
 
 	return mux
 }

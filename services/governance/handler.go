@@ -168,7 +168,16 @@ func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.TenantID = tenantID
-	if err := h.svc.TestWebhook(r.Context(), body.TenantID, body.Channel, body.WebhookURL); err != nil {
+	if body.WebhookURL != "" {
+		// The test goes through the channel's connection; an ad-hoc URL
+		// would make governance post to an address nothing validated.
+		_ = h.svc.publishAudit(r.Context(), "audit.governance.webhook_tested", body.TenantID, map[string]interface{}{
+			"channel": body.Channel, "result": "refused", "reason": "ad_hoc_url_refused", "severity": "warning",
+		})
+		writeErr(w, http.StatusBadRequest, "bad_request", "webhook_url is no longer accepted: test the channel's connection", reqID, body.TenantID)
+		return
+	}
+	if err := h.svc.TestWebhook(r.Context(), body.TenantID, body.Channel); err != nil {
 		writeErr(w, http.StatusBadRequest, "webhook_test_failed", err.Error(), reqID, body.TenantID)
 		return
 	}
@@ -907,7 +916,10 @@ func (h *Handler) requireSystemAdminTenant(w http.ResponseWriter, r *http.Reques
 // Nothing else is open to a service: backups, restore and the FIPS mode
 // need a root administrator.
 var systemAdminServiceCallers = map[string][]string{
-	"GET /governance/system/state":            {"kms-keycore", "kms-policy"},
+	"GET /governance/system/state": {"kms-keycore", "kms-policy"},
+	// Compliance checks a connection isn't used for approval notices before
+	// deleting it (the response carries connection IDs, no secret).
+	"GET /governance/settings":                {"kms-compliance"},
 	"PUT /governance/system/posture-controls": {"kms-posture"},
 }
 

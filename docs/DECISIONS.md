@@ -7,6 +7,55 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Webhooks and SIEM are Playbooks connections; compliance holds every outbound credential (2.10.0-beta)
+
+**Decision.** The owner asked for webhooks and SIEM inside Playbooks, not a
+separate tab. There is one store of outbound endpoints and credentials:
+compliance's sealed connections. It holds Slack, Teams, webhook, Jira,
+ServiceNow, and the SIEM types from `pkg/siem`. Three things use it:
+
+- playbook actions, including the new `send_siem_alert`;
+- audit event streams, shown under Playbooks → Event streaming;
+- governance approval notices.
+
+The audit service and governance hold a connection ID only. They open the
+connection through `POST /compliance/connections/{id}/resolve`, which
+admits only their service identities and audits every release.
+
+**Why.** The same kind of credential lived in three places with three
+security postures: sealed and exposure-tracked in compliance, sealed
+separately in audit, and plaintext in governance. One store gives one
+validation path, one exposure register, one rotation story and one screen.
+
+**Rejected.**
+- *Continuous SIEM streaming as a playbook action.* A SIEM needs every
+  event, not incidents. As a playbook it would create one run per audit
+  event, and each unattended run re-checks the person's authority with
+  auth. Each delivery also emits an audit event, so a playbook matching
+  every event would trigger itself. Streaming stays in the audit service,
+  which already excludes its own delivery events. Only its credentials and
+  UI moved.
+- *Compliance delivers on the audit service's behalf* (a `deliver` endpoint,
+  so secrets never leave compliance). The kernel audits every call, so each
+  streamed event would add a compliance event, and a `*` stream would loop.
+  It would also add a per-event internal hop. The audit service now opens
+  the connection itself, caches it for 60 seconds, and one
+  `connection_resolved` event covers many deliveries.
+- *Connections owned by the audit service.* Compliance already had the
+  sealed store, tests, exposure register, the jira/servicenow types, and the
+  UI. Moving it would have been the larger migration for the same result.
+
+**Enforced by.**
+- `TestConnectionResolveRestrictedToAuditAndGovernance`: every other
+  caller, admins included, is refused and audited.
+- `TestStreamAPIRequiresConnection`: inline URLs and secrets are refused.
+- `TestGovernanceSettingsRequireNotifyConnection`.
+- The migration tests in audit and governance.
+- The Playwright spec `playbook-streams.spec.ts`: the Webhooks tab is gone,
+  and a stream sends no credential.
+
+---
+
 ## 2026-09-28 — The generated product map is checked, not auto-committed (2.9.0-beta)
 
 **Decision.** `make conformance` runs `generate_product_map.py --check` and

@@ -613,11 +613,16 @@ real outcome. Served by the `pkg/route` kernel.
 
 ---
 
-### Webhooks: /svc/audit/webhooks
+### Event streams: /svc/audit/webhooks
 
-The audit service delivers every persisted audit event whose `action`
-matches one of a webhook's `events` patterns to the tenant's enabled
-webhooks. Delivery runs on the node that ingested the event.
+An event stream delivers every persisted audit event whose `action`
+matches one of its `events` patterns, through a **connection** (Playbooks →
+Connections, `/svc/compliance/compliance/playbooks/connections`). The
+connection holds the endpoint and credentials, sealed in compliance; the
+stream holds only `connection_id` (2.10.0-beta,
+docs/SECURITY/CONNECTIONS.md). Delivery runs on the node that ingested the
+event. The dashboard shows streams under Playbooks → Event streaming; the
+API path keeps its old name.
 
 | Route | Permission | Audit |
 |---|---|---|
@@ -628,41 +633,50 @@ webhooks. Delivery runs on the node that ingested the event.
 | `POST /webhooks/{id}/test` | `audit.webhook.write` | `audit.audit.webhook_tested` |
 | `GET /webhooks/{id}/deliveries` | `audit.webhook.read` | `audit.audit.webhook_deliveries_listed` |
 
+- **Body:** `{"name", "connection_id", "events", "enabled"}`. `url`,
+  `format`, `secret`, `clear_secret` and `headers` are refused (400): streams
+  send through a connection.
+- **`connection_id`:** checked with compliance when saved. Unknown in the
+  tenant: 400. A type that can't carry a stream (Jira, ServiceNow): refused,
+  `reason: connection_not_streamable`. Compliance unreachable: `503
+  connections_unavailable`. The response carries `connection_type`.
+- **What each connection type receives:** `webhook`: `{event_type, event}`,
+  with the connection's `headers`, and
+  `X-KMS-Signature: sha256=<hex HMAC-SHA256(signing_secret, body)>` when it
+  has a signing secret; `slack`: `{text}`; `teams`: an Adaptive Card;
+  `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog`: see
+  **Connections** under Playbooks (`pkg/siem`). HTTP requests also carry
+  `X-KMS-Event-Type` and `X-KMS-Event-ID`.
+- **Opening the connection:** the audit service asks compliance for it
+  (`POST /compliance/connections/{id}/resolve`, callable only by `kms-audit`
+  and `kms-governance`, audited as `audit.compliance.connection_resolved`)
+  and keeps it in memory for 60 seconds. A change in compliance reaches
+  deliveries within that time. If it can't be opened, the delivery is
+  recorded as failed with the reason.
 - **Every delivery,** real or test, emits `audit.audit.webhook_delivered`:
   `result` is `success` or `failure`; details are `event_id`,
-  `event_action`, `http_status`, `attempts`, `latency_ms` and `format`. It
-  is also recorded in the node-local `webhook_deliveries`.
-  `audit.audit.webhook_*` events are never delivered.
-- **`url`:** `https` only. It passes the SSRF guard, and delivery dials the
-  address it checked (no DNS rebinding), with no redirects, no proxy and TLS
-  1.3. A refused URL is audited as `result: refused`, `reason: url_blocked`.
+  `event_action`, `http_status` (0 for syslog), `attempts`, `latency_ms`,
+  `format` (the connection type) and `connection_id`. It is also recorded in
+  the node-local `webhook_deliveries`. `audit.audit.webhook_*` events are
+  never delivered. Errors name the host, never the URL (a Slack or Teams URL
+  is a credential).
 - **`events`:** `*`, a prefix such as `audit.key.*`, or an exact action such
   as `audit.key.rotate`. Older names like `key.created` never matched an
   audit action and are refused.
-- **`format`:**
-  - `json`: `{event_type, event}`
-  - `splunk_hec`: the HEC envelope, `sourcetype` `vecta:audit`
-  - `datadog`: a Logs intake array
-  - `slack`: `{text}`
-
-  `pagerduty` and `generic_siem` are refused: neither was ever produced.
-- **`secret`:** optional, at least 16 characters (HMAC keys under 112 bits
-  are not approved). Each body is signed as
-  `X-KMS-Signature: sha256=<hex HMAC-SHA256(secret, body)>`. Every request
-  also carries `X-KMS-Event-Type` and `X-KMS-Event-ID`.
-- **`headers`:** custom headers, for example `Authorization: Splunk <token>`
-  or `DD-API-KEY`. The platform's own headers can't be overridden.
-- **At rest:** the secret and header values are sealed as one envelope under
-  the audit service master key from keycore (`pkg/mek`,
-  docs/SECURITY/SERVICE_MASTER_KEYS.md). Until that key is open, a create or
-  update carrying credentials returns `503 credentials_key_unavailable`. The
-  master-key routes `GET /svc/audit/mek/exposure` and
-  `POST /svc/audit/mek/exposure/{item_type}/{item_id}/acknowledge` list and
-  acknowledge webhooks whose credentials were once stored in plaintext.
-- **Write-only values:** responses never carry the secret or header values.
-  They show `has_secret` and header names with empty values. On update, a
-  header sent with an empty value keeps its stored value, and
-  `clear_secret: true` removes the secret.
+- **Legacy streams** (`legacy: true`): a stream a release before 2.10.0-beta
+  stored with its own `url`, `format`, secret and headers (sealed under the
+  audit master key). It keeps delivering that way until the primary's
+  migration job moves its credentials into a connection
+  (`audit.audit.webhook_migrated`; any open exposure-register entry moves
+  with them). `json` becomes a `webhook` connection (headers and signing
+  secret kept), `slack` a `slack` one, `splunk_hec` a `splunk_hec` one (token
+  from `Authorization: Splunk <token>`), `datadog` a `datadog` one (key from
+  `DD-API-KEY`). A stream whose headers don't map is left as it is and
+  reported once per process as `audit.audit.webhook_migration_refused`
+  (`reason`: `no_splunk_token_header`, `no_datadog_api_key_header`,
+  `unmapped_headers`, `unknown_format`). Choosing a connection for it
+  (`PATCH` with `connection_id`) drops its own credentials and retires their
+  exposure entry.
 - **Delivery:** three attempts with backoff and a per-webhook circuit
   breaker. The queue holds 4,096 events. A full queue is recorded as a failed
   delivery (`delivery queue full`) and audited; it is never dropped silently.
@@ -1191,6 +1205,22 @@ to 16 KiB), `playbook_run_id`. It sends through the tenant's SMTP settings:
 `409 smtp_not_configured` when there are none, `502 send_failed` naming any
 recipient that failed.
 
+**Approval notices through connections (2.10.0-beta).** Slack and Teams
+approval notices go through a compliance connection. `GET` / `PUT
+/governance/settings` carry `slack_connection_id` and `teams_connection_id`
+(a `slack` / `teams` connection of the tenant, checked with compliance when
+it changes). `slack_webhook_url` and `teams_webhook_url` are no longer
+returned or accepted: those URLs are credentials and were stored in
+plaintext. The primary moves any it finds into connections (recorded as
+exposed in compliance's register; audited
+`audit.governance.notify_connections_migrated`) and clears them; rotate
+those Slack/Teams webhooks. `POST /governance/settings/webhook/test` takes
+`{"channel": "slack"|"teams"}` and sends through the saved connection; a
+`webhook_url` in the body is refused (`audit.governance.webhook_tested`,
+`result: refused`, `reason: ad_hoc_url_refused`). `kms-compliance` may read
+`GET /governance/settings` to check whether a connection it is asked to
+delete is in use.
+
 **Approver roles (1.28.0-beta).** When a request opens, its approvers are the
 policy's `approver_users` plus every active user of the tenant who holds one of
 its `approver_roles`, directly or through a group role binding, minus the
@@ -1439,6 +1469,8 @@ authority of a person:
 | `PUT /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.write` | `connection_updated` |
 | `DELETE /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.delete` | `connection_deleted` |
 | `POST /svc/compliance/compliance/playbooks/connections/{id}/test` | `compliance.playbook.write` | `connection_tested` |
+| `POST /svc/compliance/compliance/connections/{id}/resolve` | `kms-audit` / `kms-governance` service identity | `connection_resolved` |
+| `POST /svc/compliance/compliance/connections/import` | `kms-audit` / `kms-governance` service identity | `connection_imported` |
 | `GET /svc/compliance/mek/exposure` | `compliance.read` | `mek_exposure_listed` (pkg/mek) |
 
 **Playbook body** (unknown fields are rejected with 400):
@@ -1508,7 +1540,10 @@ this.
   `custom_event`.
 - Actions (permission; approval): `send_slack`, `send_teams`,
   `send_webhook`, `create_jira_ticket`, `create_servicenow_incident` (a
-  connection of the matching type), `send_email` (governance sends to this
+  connection of the matching type), `send_siem_alert` (any SIEM connection;
+  optional `title`, `severity` of `info`, `low`, `warning`, `high` (default)
+  or `critical`; sends the playbook, run, authorizing person and triggering
+  event as one `audit.compliance.playbook_alert` record), `send_email` (governance sends to this
   tenant's active users, by email or `role:<name>`), `create_audit_event`;
   `rotate_key` (`key.rotate`), `disable_key` (`key.disable`),
   `deactivate_key` (`key.deactivate`; approval), `activate_key`
@@ -1522,22 +1557,61 @@ this.
   `trigger_assessment` (`compliance.assessment.run`), `snapshot_posture`
   (`compliance.posture.refresh`), `run_posture_scan` (`posture.write`).
 
-**Connections** hold the endpoint and credentials of a notification target:
-`slack` / `teams` (`webhook_url`), `webhook` (`url`, `headers`), `jira`
-(`base_url`, `api_token`), `servicenow` (`instance_url`, `auth_token`).
+**Connections** are the platform's one store of outbound endpoints and
+credentials (docs/SECURITY/CONNECTIONS.md). Playbook actions, event streams
+(`/svc/audit/webhooks`) and governance approval notices all name a
+connection. The catalogue's `connection_types` gives each type's `fields`,
+`optional`, `secrets` (masked in the form), `category` (`notify`,
+`ticketing`, `siem`) and `stream` (can carry an event stream):
+
+| Type | Fields (optional in brackets) | Sends |
+|---|---|---|
+| `slack` / `teams` | `webhook_url` | messages; approval notices; streams |
+| `webhook` | `url` [`headers` JSON, `signing_secret` ≥ 16 chars] | JSON, signed `X-KMS-Signature` when a secret is set |
+| `jira` | `base_url` [`api_token`] | issues |
+| `servicenow` | `instance_url` [`auth_token`] | incidents |
+| `splunk_hec` | `url`, `token` [`index`, `sourcetype`, default `vecta:audit`] | HEC events; a bare host gets `/services/collector/event` |
+| `datadog` | `url` (the Logs intake, e.g. `https://http-intake.logs.datadoghq.com/api/v2/logs`), `api_key` | Logs intake array |
+| `elastic` | `url`, `api_key` (encoded) [`index`, default `vecta-kms-audit`] | Bulk API, `_id` = event ID; a rejected document is a failure |
+| `sentinel` | `dce_url`, `dcr_immutable_id` (`dcr-<32 hex>`), `stream_name` (`Custom-…`), `azure_tenant_id`, `client_id`, `client_secret` | Azure Monitor Logs Ingestion API with an Entra client-credentials token. The DCR stream must declare `TimeGenerated`, `EventId`, `Action`, `TenantId`, `Service`, `Actor`, `TargetType`, `TargetId`, `Result`, `Severity`, `SourceIp`, `Event` (dynamic). The retired HTTP Data Collector API is not used. |
+| `syslog` | `address` (`host:port`, usually 6514) [`ca_pem`, `server_name`] | CEF in RFC 5424 messages over TLS 1.3 (RFC 5425), for QRadar, ArcSight and other collectors. No plain UDP/TCP. Success means written to the TLS session (syslog has no acknowledgement). |
+
 Every field is sealed as one envelope under the compliance master key from
 keycore (`pkg/mek`). The API returns the name, type, endpoint host and the
 names of fields set, never a value. On update, a field sent as `********`
 keeps its stored value. Replacing every field retires an exposure-register
-entry. The endpoint must be public `https`: platform hosts and private or
-metadata addresses are refused (`url_blocked`), and calls go through
-`pkg/ssrfguard`. `POST .../test` makes a real call: a test message for
-Slack, Teams and webhooks, and an authenticated read for Jira and
-ServiceNow. A connection in use can't be deleted (`409 connection_in_use`).
-Credentials that releases before 2.5.0-beta kept inline in actions are moved
-into connections at startup by the primary, audited
-(`playbook_connections_migrated`) and recorded in the exposure register:
-rotate those webhook URLs and tokens.
+entry. The endpoint must be a public address reached over TLS: platform hosts
+and private or metadata addresses are refused (`url_blocked`), and calls go
+through `pkg/ssrfguard` (the syslog address included). SIEM fields are
+checked by building the destination (`pkg/siem`). `POST .../test` makes a
+real call: a test message for Slack, Teams and webhooks, an authenticated
+read for Jira and ServiceNow, and one labelled event
+(`audit.compliance.connection_tested`) for a SIEM.
+
+A connection in use can't be deleted (`409 connection_in_use`, naming the
+playbooks, event streams and governance approval notices that use it).
+Compliance asks the audit service and, for the root tenant, governance, as
+the `kms-compliance` identity; if either can't answer, the delete is refused
+(`503`, `reason: connection_usage_unverified`). Credentials that releases
+before 2.5.0-beta kept inline in actions are moved into connections at
+startup by the primary, audited (`playbook_connections_migrated`) and
+recorded in the exposure register: rotate those webhook URLs and tokens.
+
+**Service routes** (internal mTLS; the kernel audits each call):
+
+| Route | Caller | Audit action |
+|---|---|---|
+| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`) | `connection_resolved` |
+| `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
+
+`resolve` returns `{id, name, type, endpoint, fields}` with the opened
+fields. Any other caller, users and administrators included, is refused
+(`403`, `reason: service_identity_required`); a type the caller can't use is
+refused (`409`, `reason: connection_use_unsupported`). `import` takes
+`{source_id, name, type, fields, exposed}` and creates
+`pbconn_<service>_<source_id>` (the same ID on a retry, answered
+`already_imported`); `exposed: true` records the connection in the exposure
+register (credentials once stored in plaintext).
 
 **Runs.** `POST .../run` (optional body `{"event": {...}}`, recorded as
 supplied by the runner) returns `202 {"run_id"}`. A run record has `status`,
@@ -3084,8 +3158,9 @@ Selected events with dedicated audit classification:
 - `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
-- `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested` (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `cooldown_unavailable` / `stale_event` / `threshold_unavailable`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
+- `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested`, `connection_resolved`, `connection_imported` (2.10.0-beta; refusals `service_identity_required`, `connection_use_unsupported`) (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `connection_usage_unverified`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `cooldown_unavailable` / `stale_event` / `threshold_unavailable`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
 - `audit.auth.delegated_authority_checked`, `audit.auth.delegated_user_disabled`, `audit.auth.delegated_api_key_revoked`, `audit.auth.delegated_client_revoked` (kernel events; `on_behalf_of`, `via: kms-compliance`, `playbook_run_id`; refusals `service_identity_required`, `delegator_unknown`, `delegator_inactive`, `delegator_lacks_permission`, `self_target`, `last_administrator`, `service_identity_protected`): playbook delegated operations (2.5.0-beta)
+- `audit.governance.notify_connections_migrated` (plaintext Slack/Teams approval-notice URLs moved into compliance connections; `connection_ids`), `audit.governance.webhook_sent` / `audit.governance.webhook_failed` (one per approval notice and channel), `audit.governance.webhook_tested` (also `refused` with `reason: ad_hoc_url_refused`) (2.10.0-beta)
 - `audit.governance.notification_email_sent` (kernel event; refusals `service_identity_required`, `recipient_not_tenant_user`; failures `smtp_not_configured`, `send_failed`): playbook email (2.5.0-beta)
 - `audit.reporting.incident_opened` (a new incident: target the incident, `title`, `severity`), `audit.reporting.alert_created` (target the alert; `severity`, `incident_id`, `source_*`): playbook triggers (2.5.0-beta)
 - `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` (kernel events, permission `health.read`; refusals `unauthenticated`, `permission_denied`): platform health reads (1.39.0-beta)
@@ -3099,7 +3174,7 @@ Selected events with dedicated audit classification:
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
-- `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
+- `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.webhook_migrated` / `audit.audit.webhook_migration_refused` (legacy streams moved into compliance connections, 2.10.0-beta; also refused on create/update with `connection_not_streamable`), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
@@ -3509,6 +3584,8 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/cbom/export`
 - `GET /svc/compliance/compliance/cbom/pqc-readiness`
 - `GET /svc/compliance/compliance/cbom/summary`
+- `POST /svc/compliance/compliance/connections/import`
+- `POST /svc/compliance/compliance/connections/{id}/resolve`
 - `GET /svc/compliance/compliance/evidence/export`
 - `GET /svc/compliance/compliance/frameworks`
 - `GET /svc/compliance/compliance/frameworks/{id}/controls`

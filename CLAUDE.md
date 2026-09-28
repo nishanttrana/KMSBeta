@@ -213,6 +213,16 @@ an approach, record it here or in the matching doc below.
   vault. A vendor listed in the UI must work through that same path. HSM
   tests run against a real PKCS#11 library (SoftHSM2), never a mock of the
   HSM API.
+- **Outbound integrations are Playbooks connections** (owner directive,
+  2026-09-28: webhooks and SIEM "should not be separate tab, just part of"
+  Playbooks). Every outbound URL or credential (Slack, Teams, webhook,
+  Jira, ServiceNow, SIEM) lives only in compliance's sealed connections. A
+  new integration is a connection type, and SIEM delivery goes through
+  `pkg/siem`. A service that sends through one holds its ID and opens it
+  with `POST /compliance/connections/{id}/resolve`: add its identity to
+  `connectionUsers`, never a local copy of the credential
+  ([docs/SECURITY/CONNECTIONS.md](docs/SECURITY/CONNECTIONS.md)). The UI for
+  it lives in Playbooks (Connections, Event streaming), not a new tab.
 - **Playbooks are the platform's response layer** (owner directive,
   2026-09-28: "playbook should be fundamental part of the KMS for any and
   every action incident"). An event that signals an incident or a

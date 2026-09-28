@@ -149,25 +149,6 @@ func (v *credVault) Open(wh Webhook) (Webhook, error) {
 	return out, nil
 }
 
-// credsReplaced reports whether an update replaced every credential the old
-// webhook had: its secret set anew or removed, and each header either sent
-// with a new value or dropped (sentHeaders is nil when headers weren't sent).
-// Only then is exposed material retired from the register.
-func credsReplaced(old Webhook, secretSet, secretCleared bool, sentHeaders map[string]string) bool {
-	if old.HasSecret && !secretSet && !secretCleared {
-		return false
-	}
-	for name := range old.Headers {
-		if sentHeaders == nil {
-			return false
-		}
-		if v, kept := sentHeaders[name]; kept && v == "" {
-			return false
-		}
-	}
-	return true
-}
-
 // openCredsKeyring opens the audit service keyring in the background and
 // keeps retrying while keycore is unreachable. A key that doesn't match the
 // stored data stops it: credentials stay unavailable (fail closed) and

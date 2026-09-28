@@ -136,26 +136,32 @@ type ApprovalStatus struct {
 }
 
 type GovernanceSettings struct {
-	TenantID                   string    `json:"tenant_id"`
-	ApprovalExpiryMinutes      int       `json:"approval_expiry_minutes"`
-	ExpiryCheckIntervalSeconds int       `json:"expiry_check_interval_seconds"`
-	ApprovalDeliveryMode       string    `json:"approval_delivery_mode"`
-	SMTPHost                   string    `json:"smtp_host"`
-	SMTPPort                   string    `json:"smtp_port"`
-	SMTPUsername               string    `json:"smtp_username"`
-	SMTPPassword               string    `json:"smtp_password,omitempty"`
-	SMTPFrom                   string    `json:"smtp_from"`
-	SMTPStartTLS               bool      `json:"smtp_starttls"`
-	NotifyDashboard            bool      `json:"notify_dashboard"`
-	NotifyEmail                bool      `json:"notify_email"`
-	NotifySlack                bool      `json:"notify_slack"`
-	NotifyTeams                bool      `json:"notify_teams"`
-	SlackWebhookURL            string    `json:"slack_webhook_url"`
-	TeamsWebhookURL            string    `json:"teams_webhook_url"`
-	DeliveryWebhookTimeoutSec  int       `json:"delivery_webhook_timeout_seconds"`
-	ChallengeResponseEnabled   bool      `json:"challenge_response_enabled"`
-	UpdatedBy                  string    `json:"updated_by"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	TenantID                   string `json:"tenant_id"`
+	ApprovalExpiryMinutes      int    `json:"approval_expiry_minutes"`
+	ExpiryCheckIntervalSeconds int    `json:"expiry_check_interval_seconds"`
+	ApprovalDeliveryMode       string `json:"approval_delivery_mode"`
+	SMTPHost                   string `json:"smtp_host"`
+	SMTPPort                   string `json:"smtp_port"`
+	SMTPUsername               string `json:"smtp_username"`
+	SMTPPassword               string `json:"smtp_password,omitempty"`
+	SMTPFrom                   string `json:"smtp_from"`
+	SMTPStartTLS               bool   `json:"smtp_starttls"`
+	NotifyDashboard            bool   `json:"notify_dashboard"`
+	NotifyEmail                bool   `json:"notify_email"`
+	NotifySlack                bool   `json:"notify_slack"`
+	NotifyTeams                bool   `json:"notify_teams"`
+	// Slack and Teams notices go through compliance connections. The URL
+	// fields are what an earlier release stored in plaintext; they are never
+	// returned or accepted, and the migration moves them into connections
+	// (notify_connections.go).
+	SlackConnectionID         string    `json:"slack_connection_id"`
+	TeamsConnectionID         string    `json:"teams_connection_id"`
+	SlackWebhookURL           string    `json:"-"`
+	TeamsWebhookURL           string    `json:"-"`
+	DeliveryWebhookTimeoutSec int       `json:"delivery_webhook_timeout_seconds"`
+	ChallengeResponseEnabled  bool      `json:"challenge_response_enabled"`
+	UpdatedBy                 string    `json:"updated_by"`
+	UpdatedAt                 time.Time `json:"updated_at"`
 }
 
 // GovernanceSystemState is what System Administration shows. Only runtime

@@ -33,7 +33,6 @@ import {
   Shield,
   ShieldCheck,
   VenetianMask,
-  Webhook,
   Zap,
   CreditCard,
   Users,
@@ -93,7 +92,6 @@ const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ defa
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
-const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
 const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
@@ -195,7 +193,6 @@ const TABS: Record<string, any> = {
   docs: DocsViewTab,
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
-  webhooks: WebhooksTab,
   backup: BackupTab,
   devsecops: DevSecOpsTab,
   ai_gateway: AIGatewayTab,
@@ -235,7 +232,6 @@ const TITLES: Record<string, string> = {
   docs: "Documentation",
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
-  webhooks: "Webhooks & SIEM",
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
   ai_gateway: "AI Security Gateway",
@@ -281,7 +277,6 @@ const NAV = [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
-    { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
     { id: "admin", icon: Settings, label: "Administration" },
     { id: "docs", icon: FileText, label: "Documentation" },
   ]},

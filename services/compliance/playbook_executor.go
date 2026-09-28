@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	neturl "net/url"
 	"sort"
@@ -19,16 +20,19 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/siem"
 	"vecta-kms/pkg/ssrfguard"
 	"vecta-kms/pkg/svctls"
 )
 
 // RunContext carries what every action of one run needs.
 type RunContext struct {
-	PlaybookID string
-	RunID      string
-	TenantID   string
-	Actor      string
+	PlaybookID   string
+	PlaybookName string
+	RunID        string
+	TenantID     string
+	Actor        string
+	Event        RunEvent // what triggered the run (SIEM alerts carry it)
 }
 
 // runSource says why a run starts and on whose authority: the person who ran
@@ -82,11 +86,13 @@ type ActionResult struct {
 // identity; notifications go through sealed connections and a client that
 // reaches only public HTTPS endpoints and presents no client certificate.
 type PlaybookExecutor struct {
-	store     Store
-	urls      platformURLs
-	audit     route.Emitter
-	platform  *http.Client
-	outbound  *http.Client
+	store    Store
+	urls     platformURLs
+	audit    route.Emitter
+	platform *http.Client
+	outbound *http.Client
+	// dial opens TLS syslog connections; nil is ssrfguard.DialContext.
+	dial      func(ctx context.Context, network, addr string) (net.Conn, error)
 	logger    *log.Logger
 	ops       complianceOps
 	vault     *connVault
@@ -149,7 +155,7 @@ func (e *PlaybookExecutor) Execute(ctx context.Context, pb Playbook, run Playboo
 		e.mu.Unlock()
 	}()
 
-	rc := RunContext{PlaybookID: pb.ID, RunID: run.ID, TenantID: pb.TenantID, Actor: run.Actor}
+	rc := RunContext{PlaybookID: pb.ID, PlaybookName: pb.Name, RunID: run.ID, TenantID: pb.TenantID, Actor: run.Actor, Event: run.Context}
 	halted, cancelled := false, false
 	for i := run.ResumeIndex; i < len(pb.Actions); i++ {
 		a := pb.Actions[i]
@@ -487,15 +493,18 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 	}
 	switch typ {
 	case "send_slack":
-		return e.notifyVia(ctx, rc, p["connection_id"], "slack", func(f map[string]string) (string, error) {
+		return e.notifyVia(ctx, rc, p["connection_id"], "slack", func(conn Connection) (string, error) {
+			f := conn.Fields
 			return e.outboundCall(ctx, http.MethodPost, f["webhook_url"], map[string]any{"text": messageOr(p)}, nil)
 		})
 	case "send_teams":
-		return e.notifyVia(ctx, rc, p["connection_id"], "teams", func(f map[string]string) (string, error) {
+		return e.notifyVia(ctx, rc, p["connection_id"], "teams", func(conn Connection) (string, error) {
+			f := conn.Fields
 			return e.outboundCall(ctx, http.MethodPost, f["webhook_url"], teamsCard(messageOr(p)), nil)
 		})
 	case "send_webhook":
-		return e.notifyVia(ctx, rc, p["connection_id"], "webhook", func(f map[string]string) (string, error) {
+		return e.notifyVia(ctx, rc, p["connection_id"], "webhook", func(conn Connection) (string, error) {
+			f := conn.Fields
 			headers := map[string]string{}
 			if raw := strings.TrimSpace(f["headers"]); raw != "" {
 				if err := json.Unmarshal([]byte(raw), &headers); err != nil {
@@ -509,17 +518,26 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, typ string, p map[
 				}
 				body = json.RawMessage(b)
 			}
+			if f["signing_secret"] != "" {
+				headers["X-KMS-Signature"] = signature(f["signing_secret"], body)
+			}
 			return e.outboundCall(ctx, firstNonEmpty(strings.ToUpper(strings.TrimSpace(p["method"])), http.MethodPost), f["url"], body, headers)
 		})
+	case "send_siem_alert":
+		return e.notifyVia(ctx, rc, p["connection_id"], categorySIEM, func(conn Connection) (string, error) {
+			return outcomeDone, e.sendSIEM(ctx, conn, siemAlert(rc, p))
+		})
 	case "create_jira_ticket":
-		return e.notifyVia(ctx, rc, p["connection_id"], "jira", func(f map[string]string) (string, error) {
+		return e.notifyVia(ctx, rc, p["connection_id"], "jira", func(conn Connection) (string, error) {
+			f := conn.Fields
 			return e.outboundCall(ctx, http.MethodPost, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/issue", map[string]any{"fields": map[string]any{
 				"project": map[string]string{"key": p["project"]}, "summary": p["summary"], "description": p["description"],
 				"issuetype": map[string]string{"name": firstNonEmpty(p["issuetype"], "Task")},
 			}}, bearerOrBasic("Basic ", f["api_token"]))
 		})
 	case "create_servicenow_incident":
-		return e.notifyVia(ctx, rc, p["connection_id"], "servicenow", func(f map[string]string) (string, error) {
+		return e.notifyVia(ctx, rc, p["connection_id"], "servicenow", func(conn Connection) (string, error) {
+			f := conn.Fields
 			return e.outboundCall(ctx, http.MethodPost, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident", map[string]any{
 				"short_description": p["short_description"], "description": p["description"],
 				"urgency": firstNonEmpty(p["urgency"], "2"), "impact": firstNonEmpty(p["impact"], "2"), "caller_id": p["caller_id"],
@@ -615,21 +633,55 @@ func (e *PlaybookExecutor) platformCall(ctx context.Context, method, url string,
 	return outcomeDone, nil
 }
 
-// notifyVia opens the named connection (which must be of kind) and sends
+// notifyVia opens the named connection (which must fit kind) and sends
 // through it.
-func (e *PlaybookExecutor) notifyVia(ctx context.Context, rc RunContext, connID, kind string, send func(map[string]string) (string, error)) (string, error) {
+func (e *PlaybookExecutor) notifyVia(ctx context.Context, rc RunContext, connID, kind string, send func(Connection) (string, error)) (string, error) {
 	conn, err := e.store.GetConnection(ctx, rc.TenantID, connID)
 	if err != nil {
 		return "", fmt.Errorf("connection %s: %w", connID, err)
 	}
-	if conn.Type != kind {
+	if !connectionFits(kind, conn.Type) {
 		return "", fmt.Errorf("connection %s is %s, not %s", connID, conn.Type, kind)
 	}
 	opened, err := e.vault.Open(conn)
 	if err != nil {
 		return "", err
 	}
-	return send(opened.Fields)
+	return send(opened)
+}
+
+// sendSIEM delivers events through an opened SIEM connection (pkg/siem),
+// over the outbound client: public HTTPS at TLS 1.3, or TLS syslog.
+func (e *PlaybookExecutor) sendSIEM(ctx context.Context, conn Connection, events ...siem.Event) error {
+	d, err := siem.New(conn.Type, conn.Fields, siem.Options{Client: e.outbound, Dial: e.dial})
+	if err != nil {
+		return err
+	}
+	_, err = d.Send(ctx, events)
+	return err
+}
+
+// siemAlert is the event a send_siem_alert action raises: the playbook, the
+// run and the event that triggered it, at the chosen severity.
+func siemAlert(rc RunContext, p map[string]string) siem.Event {
+	ev := rc.Event
+	title := firstNonEmpty(strings.TrimSpace(p["title"]), "Vecta KMS playbook "+firstNonEmpty(rc.PlaybookName, rc.PlaybookID)+" responded to "+firstNonEmpty(ev.Subject, "a manual run"))
+	severity := firstNonEmpty(strings.ToLower(strings.TrimSpace(p["severity"])), "high")
+	return siem.Event{
+		ID: rc.RunID, Timestamp: time.Now().UTC(), TenantID: rc.TenantID, Service: "compliance", Action: "audit.compliance.playbook_alert",
+		ActorID: rc.Actor, TargetType: firstNonEmpty(ev.TargetType, "playbook_run"), TargetID: firstNonEmpty(ev.TargetID, rc.RunID),
+		Result: "alert", Severity: severity,
+		Record: map[string]any{
+			"title": title, "severity": severity, "playbook_id": rc.PlaybookID, "playbook_name": rc.PlaybookName, "run_id": rc.RunID,
+			"authorized_by": rc.Actor, "trigger_event": ev,
+		},
+	}
+}
+
+// signature is the X-KMS-Signature header for body under a webhook
+// connection's signing secret (HMAC-SHA256 from pkg/crypto).
+func signature(secret string, body json.RawMessage) string {
+	return "sha256=" + hex.EncodeToString(pkgcrypto.HMACSHA256([]byte(secret), body))
 }
 
 // testConnection makes a harmless real call through a connection.
@@ -648,12 +700,26 @@ func (e *PlaybookExecutor) testConnection(ctx context.Context, conn Connection) 
 	case "webhook":
 		headers := map[string]string{}
 		_ = json.Unmarshal([]byte(firstNonEmpty(f["headers"], "{}")), &headers)
-		_, err = e.outboundCall(ctx, http.MethodPost, f["url"], map[string]any{"test": true, "source": "vecta-kms", "message": msg}, headers)
+		body, _ := json.Marshal(map[string]any{"test": true, "source": "vecta-kms", "message": msg})
+		if f["signing_secret"] != "" {
+			headers["X-KMS-Signature"] = signature(f["signing_secret"], body)
+		}
+		_, err = e.outboundCall(ctx, http.MethodPost, f["url"], json.RawMessage(body), headers)
 	case "jira":
 		_, err = e.outboundCall(ctx, http.MethodGet, strings.TrimRight(f["base_url"], "/")+"/rest/api/2/myself", nil, bearerOrBasic("Basic ", f["api_token"]))
 	case "servicenow":
 		_, err = e.outboundCall(ctx, http.MethodGet, strings.TrimRight(f["instance_url"], "/")+"/api/now/table/incident?sysparm_limit=1", nil, bearerOrBasic("Bearer ", f["auth_token"]))
 	default:
+		if connectionByType[conn.Type].Category == categorySIEM {
+			// A real event, labelled as a test, through the same path a
+			// stream or alert uses.
+			err = e.sendSIEM(ctx, opened, siem.Event{
+				ID: newID("conntest"), Timestamp: time.Now().UTC(), TenantID: conn.TenantID, Service: "compliance",
+				Action: "audit.compliance.connection_tested", TargetType: "playbook_connection", TargetID: conn.ID,
+				Result: "success", Severity: "info", Record: map[string]any{"message": msg, "test": true, "connection_id": conn.ID},
+			})
+			break
+		}
 		err = fmt.Errorf("unsupported connection type %q", conn.Type)
 	}
 	return err
@@ -775,7 +841,7 @@ func (e *PlaybookExecutor) checkTarget(ctx context.Context, typ string, p map[st
 		return get(e.urls.Reporting + "/alerts/" + esc(p["alert_id"]))
 	case "set_incident_status", "assign_incident":
 		return get(e.urls.Reporting + "/incidents/" + esc(p["incident_id"]))
-	case "send_slack", "send_teams", "send_webhook", "create_jira_ticket", "create_servicenow_incident":
+	case "send_slack", "send_teams", "send_webhook", "create_jira_ticket", "create_servicenow_incident", "send_siem_alert":
 		conn, err := e.store.GetConnection(ctx, rc.TenantID, p["connection_id"])
 		if err != nil {
 			return "connection not found"

@@ -15,6 +15,8 @@ import {
   voteGovernanceRequest,
   testGovernanceSMTP,
   testGovernanceWebhook,
+  listNotifyConnections,
+  type NotifyConnection,
 } from "../../../lib/governance";
 
 /* ────── Helpers ────── */
@@ -98,8 +100,10 @@ export const GovernanceTab = ({ session, onToast }: any) => {
   const [smtpPass, setSmtpPass] = useState("");
   const [smtpFrom, setSmtpFrom] = useState("");
   const [smtpStarttls, setSmtpStarttls] = useState(true);
-  const [slackUrl, setSlackUrl] = useState("");
-  const [teamsUrl, setTeamsUrl] = useState("");
+  const [slackConn, setSlackConn] = useState("");
+  const [teamsConn, setTeamsConn] = useState("");
+  const [notifyConns, setNotifyConns] = useState<NotifyConnection[] | null>(null);
+  const [notifyConnsErr, setNotifyConnsErr] = useState("");
   const [challengeEnabled, setChallengeEnabled] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState("notify");
   const [notifyDashboard, setNotifyDashboard] = useState(true);
@@ -259,7 +263,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
         approval_delivery_mode: deliveryMode,
         smtp_host: smtpHost, smtp_port: smtpPort, smtp_username: smtpUser, smtp_password: smtpPass, smtp_from: smtpFrom, smtp_starttls: smtpStarttls,
         notify_dashboard: notifyDashboard, notify_email: notifyEmail, notify_slack: notifySlack, notify_teams: notifyTeams,
-        slack_webhook_url: slackUrl, teams_webhook_url: teamsUrl,
+        slack_connection_id: slackConn, teams_connection_id: teamsConn,
         challenge_response_enabled: challengeEnabled,
       });
       onToast?.("Governance settings saved.");
@@ -274,7 +278,8 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       setSmtpHost(settings.smtp_host || ""); setSmtpPort(settings.smtp_port || "587");
       setSmtpUser(settings.smtp_username || ""); setSmtpPass(""); setSmtpFrom(settings.smtp_from || "");
       setSmtpStarttls(settings.smtp_starttls !== false);
-      setSlackUrl(settings.slack_webhook_url || ""); setTeamsUrl(settings.teams_webhook_url || "");
+      setSlackConn(settings.slack_connection_id || ""); setTeamsConn(settings.teams_connection_id || "");
+      listNotifyConnections(session).then((c) => { setNotifyConns(c); setNotifyConnsErr(""); }).catch((e) => { setNotifyConns(null); setNotifyConnsErr(errMsg(e)); });
       setChallengeEnabled(Boolean(settings.challenge_response_enabled));
       setDeliveryMode(settings.approval_delivery_mode || "notify");
       setNotifyDashboard(settings.notify_dashboard !== false);
@@ -596,25 +601,21 @@ export const GovernanceTab = ({ session, onToast }: any) => {
         }}>Test SMTP</Btn>
       </>}
 
-      {notifySlack && <FG label="Slack Webhook URL" hint="Incoming webhook URL for approval notifications">
-        <div style={{ display: "flex", gap: 6 }}>
-          <Inp value={slackUrl} onChange={(e) => setSlackUrl(e.target.value)} placeholder="https://hooks.slack.com/services/..." />
-          <Btn small onClick={async () => {
-            try { await testGovernanceWebhook(session, "slack", slackUrl); onToast?.("Slack test sent."); }
-            catch (e: any) { onToast?.(`Slack test failed: ${errMsg(e)}`); }
-          }}>Test</Btn>
-        </div>
-      </FG>}
-
-      {notifyTeams && <FG label="Teams Webhook URL" hint="Incoming webhook URL for approval notifications">
-        <div style={{ display: "flex", gap: 6 }}>
-          <Inp value={teamsUrl} onChange={(e) => setTeamsUrl(e.target.value)} placeholder="https://outlook.office.com/webhook/..." />
-          <Btn small onClick={async () => {
-            try { await testGovernanceWebhook(session, "teams", teamsUrl); onToast?.("Teams test sent."); }
-            catch (e: any) { onToast?.(`Teams test failed: ${errMsg(e)}`); }
-          }}>Test</Btn>
-        </div>
-      </FG>}
+      {(notifySlack || notifyTeams) && notifyConnsErr && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>Connections unavailable: {notifyConnsErr}</div>}
+      {([["slack", "Slack", notifySlack, slackConn, setSlackConn], ["teams", "Teams", notifyTeams, teamsConn, setTeamsConn]] as const).map(([ch, label, on, value, set]) => on && (
+        <FG key={ch} label={`${label} connection`} hint="Approval notices are sent through this connection; its webhook URL is sealed under Playbooks → Connections">
+          <div style={{ display: "flex", gap: 6 }}>
+            <Sel value={value} onChange={(e) => set(e.target.value)}>
+              <option value="">{(notifyConns || []).some((c) => c.type === ch) ? "choose…" : `no ${label} connection: add one under Playbooks → Connections`}</option>
+              {(notifyConns || []).filter((c) => c.type === ch).map((c) => <option key={c.id} value={c.id}>{c.name} ({c.endpoint})</option>)}
+            </Sel>
+            <Btn small onClick={async () => {
+              try { await testGovernanceWebhook(session, ch); onToast?.(`${label} test sent through the saved connection.`); }
+              catch (e: any) { onToast?.(`${label} test failed: ${errMsg(e)}`); }
+            }}>Test</Btn>
+          </div>
+        </FG>
+      ))}
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
         <Btn small onClick={() => setSettingsModal(false)}>Cancel</Btn>

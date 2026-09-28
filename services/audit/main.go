@@ -113,7 +113,10 @@ func main() {
 	quarantine := NewQuarantineEvaluator(pub)
 	svc.SetDetectors(hndl, quarantine)
 
-	fanout := newWebhookFanout(store, svc.creds, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
+	// Event streams send through compliance connections, opened over
+	// internal mTLS as kms-audit (stream_connections.go).
+	conns := complianceConnections{base: strings.TrimRight(envOr("COMPLIANCE_URL", "https://compliance:8110"), "/"), http: &http.Client{Timeout: 10 * time.Second}}
+	fanout := newWebhookFanout(store, svc.creds, conns, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
 	fanout.Start(ctx)
 	svc.SetWebhookFanout(fanout)
 	handler := NewHandler(svc, store)
@@ -138,6 +141,7 @@ func main() {
 		kernel.MountOn(handler.mux)
 		go k.Watch(ctx, 15*time.Minute)
 		go svc.sealLegacyLoop(ctx, k, clusterstate.RunsPrimaryJobs, auditFn, 15*time.Minute, logger.Printf)
+		go svc.migrateLegacyStreamsLoop(ctx, k, conns, clusterstate.RunsPrimaryJobs, auditFn, 15*time.Minute, logger.Printf)
 	}, logger.Printf)
 	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
 		envOr("CLUSTER_URL", "https://cluster-manager:8210"),

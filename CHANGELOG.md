@@ -4,6 +4,69 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.10.0-beta] — 2026-09-28
+
+### Webhooks and SIEM are part of Playbooks; one store of outbound credentials
+- **No separate "Webhooks & SIEM" tab.** Playbooks now has an **Event
+  streaming** view beside Connections. A stream names the audit actions it
+  carries and a **connection**; the connection holds the endpoint and
+  credentials, sealed under the compliance master key. Playbook actions,
+  event streams and governance approval notices all use the same
+  connections, so each credential is entered, rotated and flagged for
+  exposure in one place (docs/SECURITY/CONNECTIONS.md).
+- **SIEM connection types**, delivered by a rewritten `pkg/siem`: Splunk
+  HTTP Event Collector, Datadog Logs, Elasticsearch (Bulk API; a rejected
+  document is a failed delivery, not a success), Microsoft Sentinel (Azure
+  Monitor Logs Ingestion API with an Entra app; the HTTP Data Collector API
+  was retired by Microsoft on 14 September 2026), and syslog over TLS 1.3
+  carrying CEF for QRadar, ArcSight and other collectors. `pkg/siem` existed
+  before but nothing used it, and it dialled plain UDP/TCP syslog, used a
+  client with no address guard and signed Sentinel requests with
+  `crypto/hmac` directly. It is now wired into event streams and playbooks,
+  and every call is TLS through `pkg/ssrfguard`.
+- **New playbook action `send_siem_alert`**: raises one alert in any SIEM
+  connection with the playbook, run, authorizing person and triggering
+  event, at a chosen severity.
+- **Webhook connections can sign**: an optional `signing_secret` (at least
+  16 characters) signs each body as `X-KMS-Signature: sha256=<HMAC>`, for
+  playbook calls and event streams alike.
+- **API changes (breaking):**
+  - `POST/PATCH /svc/audit/webhooks` take `connection_id`. `url`, `format`,
+    `secret` and `headers` are refused.
+  - `GET/PUT /governance/settings` carry `slack_connection_id` /
+    `teams_connection_id`. `slack_webhook_url` / `teams_webhook_url` are no
+    longer returned or accepted: they were returned in plaintext.
+  - `POST /governance/settings/webhook/test` no longer takes a URL; it tests
+    the saved connection.
+- **New service routes:** `POST /compliance/connections/{id}/resolve` and
+  `POST /compliance/connections/import`, callable only by the `kms-audit` and
+  `kms-governance` identities, audited as `connection_resolved` /
+  `connection_imported`.
+- **Deleting a connection** now also checks event streams and governance
+  approval notices, and is refused when either service can't answer
+  (`connection_usage_unverified`).
+- **Migration:** the primary moves each existing audit stream's own URL and
+  credentials into a connection (`audit.audit.webhook_migrated`). Open
+  exposure-register entries move with them. A stream whose headers don't
+  map keeps working and is reported once (`webhook_migration_refused`).
+  Governance's plaintext Slack/Teams URLs become connections recorded as
+  **exposed** (`audit.governance.notify_connections_migrated`). **Rotate
+  those Slack/Teams webhooks**, then replace the URL on the connection.
+- **Also fixed:** a failed delivery could put the full Slack/Teams URL (a
+  credential) into the delivery log and audit event through Go's
+  `*url.Error`; errors now name the host only. Governance accepted `http://`
+  notification URLs; notices are `https` only.
+- **Docs:** `docs/GOVERNANCE_AND_COMPLIANCE.md` §1.7 described CSV, JSONL,
+  CEF and LEEF exports and webhook options (`min_risk_score`,
+  `retry_attempts`, `X-Vecta-Signature`) that never existed. It now
+  describes event streams as built.
+- **Still open:** a SIEM on a private network can't be a destination (the
+  outbound guard refuses private addresses); streams send one event per
+  request; Sentinel is public Azure cloud only.
+- **Left in place:** `WebhooksTab.tsx` now holds the Event streaming panel
+  (it is no longer a tab), and the old `pkg/siem` files were rewritten in
+  place, not renamed.
+
 ## [2.9.0-beta] — 2026-09-28
 
 ### The generated route and product map can't drift any more

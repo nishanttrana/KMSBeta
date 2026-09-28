@@ -4,87 +4,45 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
-	"time"
+	neturl "net/url"
 )
 
-// SplunkHEC sends audit events to Splunk via the HTTP Event Collector.
-type SplunkHEC struct {
-	hecURL     string
-	token      string
-	index      string
-	sourcetype string
-	httpClient *http.Client
+// splunk sends to the HTTP Event Collector. Several events go in one
+// request as concatenated JSON objects, which HEC accepts.
+type splunk struct {
+	url, token, index, sourcetype string
+	client                        *http.Client
 }
 
-// NewSplunkHEC creates a Splunk HEC destination.
-func NewSplunkHEC(hecURL, token, index, sourcetype string, client *http.Client) *SplunkHEC {
-	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+// newSplunk takes the collector URL as given; a bare host (no path) gets
+// the standard /services/collector/event endpoint.
+func newSplunk(u *neturl.URL, f map[string]string, client *http.Client) *splunk {
+	if u.Path == "" || u.Path == "/" {
+		u.Path = "/services/collector/event"
 	}
-	if sourcetype == "" {
-		sourcetype = "vecta:kms:audit"
+	st := f["sourcetype"]
+	if st == "" {
+		st = "vecta:audit" // what audit streams have always sent
 	}
-	return &SplunkHEC{
-		hecURL:     hecURL,
-		token:      token,
-		index:      index,
-		sourcetype: sourcetype,
-		httpClient: client,
-	}
+	return &splunk{url: u.String(), token: f["token"], index: f["index"], sourcetype: st, client: client}
 }
 
-func (s *SplunkHEC) Name() string { return "splunk_hec" }
-
-// splunkPayload is a single HEC event envelope.
-type splunkPayload struct {
-	Event      interface{} `json:"event"`
-	Index      string      `json:"index,omitempty"`
-	Sourcetype string      `json:"sourcetype,omitempty"`
-	Time       float64     `json:"time"`
-}
-
-// Send posts events to Splunk HEC using newline-delimited JSON for batching.
-func (s *SplunkHEC) Send(ctx context.Context, events []AuditEvent) error {
-	if len(events) == 0 {
-		return nil
-	}
-
+func (s *splunk) Send(ctx context.Context, events []Event) (int, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
-
-	for _, evt := range events {
-		payload := splunkPayload{
-			Event:      evt,
-			Index:      s.index,
-			Sourcetype: s.sourcetype,
-			Time:       float64(evt.Timestamp.Unix()) + float64(evt.Timestamp.Nanosecond())/1e9,
+	for _, e := range events {
+		p := map[string]any{
+			"time": float64(e.Timestamp.UnixMilli()) / 1000, "host": e.NodeID, "source": "vecta-kms",
+			"sourcetype": s.sourcetype, "event": e.record(),
 		}
-		if err := enc.Encode(payload); err != nil {
-			return fmt.Errorf("splunk_hec: marshal event %s: %w", evt.ID, err)
+		if s.index != "" {
+			p["index"] = s.index
+		}
+		if err := enc.Encode(p); err != nil {
+			return 0, err
 		}
 	}
-
-	url := s.hecURL + "/services/collector/event"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
-	if err != nil {
-		return fmt.Errorf("splunk_hec: create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Splunk "+s.token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("splunk_hec: post: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("splunk_hec: unexpected status %d: %s", resp.StatusCode, string(body))
-	}
-
-	return nil
+	status, _, err := post(ctx, s.client, s.url, "application/json", buf.Bytes(), map[string]string{"Authorization": "Splunk " + s.token})
+	return status, err
 }

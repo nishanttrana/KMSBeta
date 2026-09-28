@@ -6,14 +6,21 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
-// Webhook represents a registered webhook endpoint for event delivery.
+// Webhook is an event stream: the tenant's audit events that match Events,
+// delivered through a compliance connection (ConnectionID). URL, Format,
+// Secret, Headers and Sealed are set only on a stream an earlier release
+// stored with its own credentials (Legacy) until the migration job moves
+// them into a connection (stream_migration.go).
 type Webhook struct {
-	ID       string   `json:"id"`
-	TenantID string   `json:"tenant_id"`
-	Name     string   `json:"name"`
-	URL      string   `json:"url"`
-	Format   string   `json:"format"`
-	Events   []string `json:"events"`
+	ID             string   `json:"id"`
+	TenantID       string   `json:"tenant_id"`
+	Name           string   `json:"name"`
+	ConnectionID   string   `json:"connection_id"`
+	ConnectionType string   `json:"connection_type"`
+	Legacy         bool     `json:"legacy"`
+	URL            string   `json:"url,omitempty"`
+	Format         string   `json:"format,omitempty"`
+	Events         []string `json:"events"`
 	// Secret and Headers hold plaintext only in memory, after credVault.Open
 	// (or for a row an earlier release stored in plaintext, until it is
 	// sealed). The store writes header names only and never the secret.
@@ -46,29 +53,32 @@ type WebhookDelivery struct {
 	Attempt        int       `json:"attempt"`
 }
 
-// CreateWebhookRequest is the request body for creating a new webhook.
+// CreateWebhookRequest creates an event stream. URL, Format, Secret and
+// Headers are refused: streams send through a connection.
 type CreateWebhookRequest struct {
-	TenantID string            `json:"tenant_id"` // enforced by the kernel
-	Name     string            `json:"name"`
-	URL      string            `json:"url"`
-	Format   string            `json:"format"`
-	Events   []string          `json:"events"`
-	Secret   string            `json:"secret"`
-	Headers  map[string]string `json:"headers"`
-	Enabled  *bool             `json:"enabled"`
+	TenantID     string            `json:"tenant_id"` // enforced by the kernel
+	Name         string            `json:"name"`
+	ConnectionID string            `json:"connection_id"`
+	URL          string            `json:"url"`
+	Format       string            `json:"format"`
+	Events       []string          `json:"events"`
+	Secret       string            `json:"secret"`
+	Headers      map[string]string `json:"headers"`
+	Enabled      *bool             `json:"enabled"`
 }
 
 // UpdateWebhookRequest is the request body for updating an existing webhook.
 // A header sent with an empty value keeps its stored value (values are never
 // returned); clear_secret removes the signing secret.
 type UpdateWebhookRequest struct {
-	TenantID    string             `json:"tenant_id"` // enforced by the kernel
-	Name        *string            `json:"name"`
-	URL         *string            `json:"url"`
-	Format      *string            `json:"format"`
-	Events      []string           `json:"events"`
-	Secret      *string            `json:"secret"`
-	ClearSecret bool               `json:"clear_secret"`
-	Headers     *map[string]string `json:"headers"`
-	Enabled     *bool              `json:"enabled"`
+	TenantID     string             `json:"tenant_id"` // enforced by the kernel
+	Name         *string            `json:"name"`
+	ConnectionID *string            `json:"connection_id"`
+	URL          *string            `json:"url"`
+	Format       *string            `json:"format"`
+	Events       []string           `json:"events"`
+	Secret       *string            `json:"secret"`
+	ClearSecret  bool               `json:"clear_secret"`
+	Headers      *map[string]string `json:"headers"`
+	Enabled      *bool              `json:"enabled"`
 }

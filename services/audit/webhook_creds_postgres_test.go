@@ -106,4 +106,34 @@ func TestWebhookCredentialsPostgres(t *testing.T) {
 	if e, _ := k2.Exposures(ctx, tenant, true); len(e) != 1 || e[0].ItemID != legacyID {
 		t.Fatalf("exposure %+v", e)
 	}
+
+	// 2.10.0-beta: migration 010 and the move into compliance connections on
+	// Postgres. Both streams map (json → webhook); the exposed one carries
+	// its register entry over and the stream rows keep no credential.
+	conns := &testConns{conns: map[string]streamConnection{}}
+	n, err := svc.migrateLegacyStreams(ctx, k2, conns, &streamMigrator{reported: map[string]bool{}}, func(context.Context) bool { return true }, nil)
+	if err != nil || n < 2 {
+		t.Fatalf("migrate streams: %d %v", n, err)
+	}
+	for _, id := range []string{wh.ID, legacyID} {
+		got, err := store.GetWebhook(ctx, tenant, id)
+		if err != nil || got.ConnectionID != "pbconn_audit_"+id || got.ConnectionType != "webhook" || got.Sealed != nil || got.URL != "" || got.Legacy {
+			t.Fatalf("%s after migration: %+v %v", id, got, err)
+		}
+	}
+	exposed := map[string]bool{}
+	for _, in := range conns.imports {
+		exposed[in.SourceID] = in.Exposed
+	}
+	if !exposed[legacyID] || exposed[wh.ID] {
+		t.Fatalf("exposure carried over wrongly: %v", exposed)
+	}
+	if e, _ := k2.Exposures(ctx, tenant, true); len(e) != 0 {
+		t.Fatalf("audit register still open after the move: %+v", e)
+	}
+	var creds int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM webhooks WHERE tenant_id=$1 AND (creds_wrapped_dek IS NOT NULL OR url <> '')`, tenant).Scan(&creds)
+	if creds != 0 {
+		t.Fatalf("%d stream row(s) still hold their own endpoint or credentials", creds)
+	}
 }

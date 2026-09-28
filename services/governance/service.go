@@ -41,6 +41,9 @@ type Service struct {
 	rewrapper backupRewrapper
 	// hsm wraps HSM-bound backup keys under the tenant key (backup.go).
 	hsm backupHSMBackend
+	// conns opens Slack/Teams connections through compliance
+	// (notify_connections.go).
+	conns notifyConnections
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
@@ -541,6 +544,32 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 	if strings.TrimSpace(settings.SMTPPassword) == "" {
 		settings.SMTPPassword = existing.SMTPPassword
 	}
+	// A plaintext URL an earlier release stored is kept until the migration
+	// moves it, unless the channel now names a connection.
+	if strings.TrimSpace(settings.SlackConnectionID) == "" {
+		settings.SlackWebhookURL = existing.SlackWebhookURL
+	}
+	if strings.TrimSpace(settings.TeamsConnectionID) == "" {
+		settings.TeamsWebhookURL = existing.TeamsWebhookURL
+	}
+	for _, ch := range []struct{ name, id, was string }{
+		{webhookChannelSlack, strings.TrimSpace(settings.SlackConnectionID), existing.SlackConnectionID},
+		{webhookChannelTeams, strings.TrimSpace(settings.TeamsConnectionID), existing.TeamsConnectionID},
+	} {
+		if ch.id == "" || ch.id == ch.was {
+			continue
+		}
+		if s.conns == nil {
+			return GovernanceSettings{}, errors.New("connections are not wired")
+		}
+		typ, _, err := s.conns.Resolve(ctx, settings.TenantID, ch.id)
+		if err != nil {
+			return GovernanceSettings{}, fmt.Errorf("%s_connection_id: %w", ch.name, err)
+		}
+		if typ != ch.name {
+			return GovernanceSettings{}, fmt.Errorf("%s_connection_id names a %s connection", ch.name, typ)
+		}
+	}
 	normalized, err := normalizeGovernanceSettings(settings, true)
 	if err != nil {
 		return GovernanceSettings{}, err
@@ -549,12 +578,15 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 		return GovernanceSettings{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.governance.settings_updated", normalized.TenantID, map[string]interface{}{
-		"smtp_host":       normalized.SMTPHost,
-		"smtp_port":       normalized.SMTPPort,
-		"smtp_from":       normalized.SMTPFrom,
-		"approval_expiry": normalized.ApprovalExpiryMinutes,
-		"notify_email":    normalized.NotifyEmail,
-		"notify_slack":    normalized.NotifySlack,
+		"smtp_host":        normalized.SMTPHost,
+		"smtp_port":        normalized.SMTPPort,
+		"smtp_from":        normalized.SMTPFrom,
+		"approval_expiry":  normalized.ApprovalExpiryMinutes,
+		"notify_email":     normalized.NotifyEmail,
+		"notify_slack":     normalized.NotifySlack,
+		"notify_teams":     normalized.NotifyTeams,
+		"slack_connection": normalized.SlackConnectionID,
+		"teams_connection": normalized.TeamsConnectionID,
 	})
 	return s.GetSettings(ctx, normalized.TenantID)
 }

@@ -1,115 +1,48 @@
 package siem
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"time"
 )
 
-// DatadogExporter sends audit events to Datadog Logs API.
-type DatadogExporter struct {
-	apiKey     string
-	site       string // e.g., "datadoghq.com", "datadoghq.eu", "us5.datadoghq.com"
-	httpClient *http.Client
-	service    string
-	source     string
+type datadog struct {
+	url, apiKey string
+	client      *http.Client
 }
 
-// NewDatadogExporter creates a Datadog logs destination.
-func NewDatadogExporter(apiKey, site string, client *http.Client) *DatadogExporter {
-	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
-	}
-	if site == "" {
-		site = "datadoghq.com"
-	}
-	return &DatadogExporter{
-		apiKey:     apiKey,
-		site:       site,
-		httpClient: client,
-		service:    "vecta-kms",
-		source:     "kms-audit",
-	}
-}
-
-func (d *DatadogExporter) Name() string { return "datadog" }
-
-// datadogLogEntry represents a single log entry in the Datadog Logs API format.
-type datadogLogEntry struct {
-	Ddsource string            `json:"ddsource"`
-	Ddtags   string            `json:"ddtags"`
-	Hostname string            `json:"hostname"`
-	Message  string            `json:"message"`
-	Service  string            `json:"service"`
-	Status   string            `json:"status"`
-	Attrs    map[string]string `json:"attributes,omitempty"`
-}
-
-// Send posts events to the Datadog Logs HTTP intake endpoint.
-func (d *DatadogExporter) Send(ctx context.Context, events []AuditEvent) error {
-	if len(events) == 0 {
-		return nil
-	}
-
-	entries := make([]datadogLogEntry, 0, len(events))
-	for _, evt := range events {
-		status := "info"
-		switch {
-		case evt.Severity >= 8:
-			status = "critical"
-		case evt.Severity >= 6:
-			status = "error"
-		case evt.Severity >= 4:
-			status = "warning"
+// Send posts the batch to the Logs intake (…/api/v2/logs). The message is
+// the full event; tags carry tenant, action and result for faceting.
+func (d *datadog) Send(ctx context.Context, events []Event) (int, error) {
+	entries := make([]map[string]any, 0, len(events))
+	for _, e := range events {
+		msg, err := json.Marshal(e.record())
+		if err != nil {
+			return 0, err
 		}
-
-		msg, _ := json.Marshal(evt)
-
-		entry := datadogLogEntry{
-			Ddsource: d.source,
-			Ddtags:   fmt.Sprintf("tenant:%s,key:%s,action:%s", evt.TenantID, evt.KeyID, evt.Action),
-			Hostname: "vecta-kms",
-			Message:  string(msg),
-			Service:  d.service,
-			Status:   status,
-			Attrs: map[string]string{
-				"tenant_id": evt.TenantID,
-				"key_id":    evt.KeyID,
-				"actor":     evt.Actor,
-				"action":    evt.Action,
-				"outcome":   evt.Outcome,
-			},
-		}
-		entries = append(entries, entry)
+		entries = append(entries, map[string]any{
+			"ddsource": "vecta-kms", "service": e.Service, "hostname": e.NodeID, "status": ddStatus(e.Severity, e.Result),
+			"ddtags":  fmt.Sprintf("tenant:%s,action:%s,result:%s", e.TenantID, e.Action, e.Result),
+			"message": string(msg),
+		})
 	}
-
 	body, err := json.Marshal(entries)
 	if err != nil {
-		return fmt.Errorf("datadog: marshal: %w", err)
+		return 0, err
 	}
+	status, _, err := post(ctx, d.client, d.url, "application/json", body, map[string]string{"DD-API-KEY": d.apiKey})
+	return status, err
+}
 
-	url := fmt.Sprintf("https://http-intake.logs.%s/api/v2/logs", d.site)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("datadog: create request: %w", err)
+func ddStatus(severity, result string) string {
+	switch cefSeverity(severity, result) {
+	case 10:
+		return "critical"
+	case 8:
+		return "error"
+	case 5:
+		return "warning"
 	}
-	req.Header.Set("DD-API-KEY", d.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := d.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("datadog: post: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("datadog: unexpected status %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	return nil
+	return "info"
 }

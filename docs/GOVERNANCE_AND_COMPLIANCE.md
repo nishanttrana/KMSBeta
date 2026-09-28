@@ -494,137 +494,59 @@ This computation can be performed by any party with knowledge of the leaf hash, 
 
 ---
 
-### 1.7 SIEM Export Formats
+### 1.7 SIEM Integration
 
-Vecta supports exporting audit events in multiple formats compatible with common Security Information and Event Management (SIEM) platforms.
+Audit events reach a SIEM through **event streams** (Playbooks → Event
+streaming, API `/svc/audit/webhooks`). A stream names the audit actions it
+carries (`*`, a prefix such as `audit.key.*`, or one action) and a
+**connection** (Playbooks → Connections) that holds the SIEM endpoint and
+credentials, sealed under the compliance master key
+(docs/SECURITY/CONNECTIONS.md). Each matching event is delivered as it is
+recorded, with retries, a per-stream circuit breaker, a delivery log and an
+`audit.audit.webhook_delivered` event for every attempt.
 
-#### CSV Export
-
-The CSV export provides a flat, spreadsheet-compatible view of audit events. Column order is fixed.
-
-**Columns:** `id`, `timestamp`, `service`, `action`, `actor_id`, `actor_type`, `target_type`, `target_id`, `source_ip`, `result`, `status_code`, `risk_score`, `duration_ms`, `node_id`, `fips_compliant`, `correlation_id`, `session_id`, `approval_id`, `chain_hash`
-
-```bash
-# Export last 30 days of keycore events as CSV
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&service=keycore&format=csv&date_from=2024-01-01T00:00:00Z&date_to=2024-01-31T23:59:59Z" \
-  -H "Authorization: Bearer $TOKEN" > keycore-jan-2024.csv
-
-# Signed CSV export (tamper-evident — includes digital signature of file contents)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=csv&signing_key_id=SIGNING_KEY_UUID" \
-  -H "Authorization: Bearer $TOKEN" > audit-signed-export.csv
-# The signing_key_id must reference a KMS key with purpose=sign
-# Signature is embedded in the final row of the CSV: SIGNATURE_ROW,sha256:<hex>,<base64_signature>
-```
-
-#### JSON-Lines Export (for Splunk/Elastic/OpenSearch)
-
-```bash
-# Export as JSON-Lines (one JSON object per line — ideal for log shippers)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=jsonl&limit=10000" \
-  -H "Authorization: Bearer $TOKEN" > audit-export.jsonl
-
-# Pipe directly to Splunk HEC (HTTP Event Collector)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=jsonl" \
-  -H "Authorization: Bearer $TOKEN" | \
-  jq -c '{event: .}' | \
-  curl -X POST "https://splunk:8088/services/collector/event" \
-    -H "Authorization: Splunk $SPLUNK_HEC_TOKEN" \
-    --data-binary @-
-```
-
-#### CEF (Common Event Format) — Splunk / QRadar / ArcSight
-
-CEF is a vendor-neutral syslog-compatible format used by most enterprise SIEM platforms.
-
-**CEF Header format:**
-```
-CEF:0|Vendor|Product|Version|DeviceEventClassID|Name|Severity|Extensions
-```
-
-**Vecta CEF mapping:**
-
-| CEF Field | Source |
+| Connection type | Delivered as |
 |---|---|
-| `Vendor` | `Vecta` |
-| `Product` | `KMS` |
-| `Version` | `1.0` |
-| `DeviceEventClassID` | `action` (e.g. `key.encrypt`) |
-| `Name` | Human-readable description of action |
-| `Severity` | Derived from `risk_score`: 0-19→1, 20-39→3, 40-59→5, 60-79→7, 80-100→10 |
-
-**Extension field mappings:**
-
-| CEF Extension | Vecta Field |
-|---|---|
-| `deviceReceiptTime` | `timestamp` |
-| `src` | `source_ip` |
-| `suser` | `actor_id` |
-| `fname` | `target_id` |
-| `outcome` | `result` |
-| `cn1` / `cn1Label` | `risk_score` / `riskScore` |
-| `requestMethod` | `method` |
-| `request` | `endpoint` |
-| `rt` | `duration_ms` |
-| `cs1` / `cs1Label` | `correlation_id` / `correlationId` |
-| `cs2` / `cs2Label` | `session_id` / `sessionId` |
-| `cs3` / `cs3Label` | `chain_hash` / `chainHash` |
-
-**Example CEF event:**
-
-```
-CEF:0|Vecta|KMS|1.0|key.encrypt|Key encrypt operation|3|
-  deviceReceiptTime=2024-01-15T10:23:45.123456789Z
-  src=192.168.1.100
-  suser=3f4a7b2c-1234-5678-abcd-ef0123456789
-  fname=a1b2c3d4-5678-90ab-cdef-012345678901
-  outcome=success
-  cn1=20 cn1Label=riskScore
-  requestMethod=POST
-  request=/svc/keycore/keys/a1b2c3d4-5678-90ab-cdef-012345678901/encrypt
-  rt=14
-  cs1=99887766-5544-3322-1100-aabbccddeeff cs1Label=correlationId
-  cs3=sha256:4b2a9f3c... cs3Label=chainHash
-```
+| Splunk HTTP Event Collector | HEC events, `sourcetype` `vecta:audit` (configurable), optional `index` |
+| Datadog Logs | Logs intake entries with `tenant`, `action` and `result` tags |
+| Elasticsearch | Bulk API documents, `_id` = event ID (a redelivery overwrites, never duplicates) |
+| Microsoft Sentinel | Azure Monitor Logs Ingestion API rows (DCE + DCR, Entra app credentials) |
+| Syslog over TLS, CEF | RFC 5424 messages carrying CEF over TLS 1.3 (RFC 5425), for QRadar, ArcSight and other collectors |
+| HTTPS webhook | `{event_type, event}`, signed `X-KMS-Signature: sha256=<HMAC-SHA256>` when the connection has a signing secret |
+| Slack / Teams | a one-line message per event |
 
 ```bash
-# Export as CEF (one event per line, syslog-compatible)
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=cef" \
-  -H "Authorization: Bearer $TOKEN" > audit-export.cef
+# 1. The connection (credentials are sealed; the API never returns them)
+curl -X POST "https://localhost/svc/compliance/compliance/playbooks/connections?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name": "SOC Splunk", "type": "splunk_hec",
+       "fields": {"url": "https://splunk.example.com:8088", "token": "'"$SPLUNK_HEC_TOKEN"'"}}'
 
-# Forward CEF events to QRadar via syslog
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=cef" \
-  -H "Authorization: Bearer $TOKEN" | \
-  nc -u qradar.company.internal 514
-```
-
-#### Leef (Log Event Extended Format) — IBM QRadar
-
-```bash
-curl "https://localhost/svc/audit/audit/events?tenant_id=root&format=leef" \
-  -H "Authorization: Bearer $TOKEN" > audit-export.leef
-```
-
-#### Streaming via Webhook Push
-
-Rather than polling, configure a push webhook to receive events in real time:
-
-```bash
-# Configure audit webhook (receives events within ~1 second of occurrence)
+# 2. The stream
 curl -X POST "https://localhost/svc/audit/webhooks?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://siem.company.internal/vecta-ingest",
-    "format": "jsonl",
-    "secret": "hmac-shared-secret",
-    "min_risk_score": 0,
-    "services": ["keycore", "auth", "certs"],
-    "retry_attempts": 5,
-    "retry_backoff_seconds": 30
-  }'
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name": "SIEM feed", "connection_id": "pbconn_...", "events": ["*"]}'
 ```
 
-The webhook delivers a POST with `X-Vecta-Signature: sha256=<hmac>` for receiver authentication.
+**CEF mapping** (syslog connections, `pkg/siem`): header
+`CEF:0|Vecta|KMS||<action>|<action>|<severity>|`, where severity is 10 for
+`critical`, 8 for `high`, 5 for `warning` or a refused/failed result, else 3.
+Extensions: `rt` (ms), `act`, `outcome`, `suser`, `externalId` (event ID),
+`cs1` tenant, `cs2` service, `cs3` target, `src` (when a valid IP) and
+`dvchost` (node).
+
+A playbook can also raise a single alert in a SIEM with the
+`send_siem_alert` action: the playbook, run, authorizing person and the
+event that triggered it, at the severity the action names.
+
+The events API (`GET /svc/audit/audit/events`, section 1.5) returns JSON
+for ad-hoc queries. There is no file export in CSV, CEF or LEEF; earlier
+versions of this guide described one that did not exist.
+
+**Limits:** SIEM endpoints must be reachable at a public address (the
+outbound guard refuses private and loopback addresses), so an on-premises
+collector on a private network can't be a destination yet. Microsoft
+Sentinel uses the public Azure cloud's Entra endpoint.
 
 ---
 
@@ -851,52 +773,21 @@ curl "https://localhost/svc/governance/governance/requests?tenant_id=root&expiri
 
 ### 2.4 Notification Channels Setup
 
-All channel configuration is stored in governance settings. Changes take effect immediately.
+Approval notices go to the dashboard (always), email (the SMTP settings) and
+Slack or Teams. Slack and Teams notices go through a connection of that type
+(Playbooks → Connections); the settings name it, and the webhook URL stays
+sealed there. Governance settings are system administration (root tenant).
 
 ```bash
-# Get current notification settings
-curl "https://localhost/svc/governance/governance/settings?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Configure all channels at once
 curl -X PUT "https://localhost/svc/governance/governance/settings?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "smtp": {
-      "host": "smtp.company.internal",
-      "port": 587,
-      "from": "kms-governance@company.com",
-      "username": "kms-smtp-svc",
-      "password_secret_ref": "smtp-password",
-      "starttls": true,
-      "verify_cert": true
-    },
-    "slack": {
-      "webhook_url": "https://hooks.slack.com/services/T.../B.../...",
-      "channel": "#security-approvals"
-    },
-    "teams": {
-      "webhook_url": "https://outlook.office.com/webhook/..."
-    },
-    "webhook": {
-      "url": "https://jira.company.internal/rest/api/2/issue",
-      "method": "POST",
-      "headers": {
-        "Authorization": "Bearer JIRA_TOKEN",
-        "Content-Type": "application/json"
-      },
-      "body_template": "{\"fields\": {\"project\": {\"key\": \"SEC\"}, \"summary\": \"KMS Approval Required: {{.action}}\", \"issuetype\": {\"name\": \"Task\"}}}"
-    },
-    "pagerduty": {
-      "integration_key": "pd-integration-key-here",
-      "severity_threshold": "high"
-    }
-  }'
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"approval_delivery_mode": "notify", "notify_email": true, "notify_slack": true,
+       "slack_connection_id": "pbconn_...", "smtp_host": "smtp.company.internal", "smtp_port": "587",
+       "smtp_from": "kms-governance@company.com", "smtp_starttls": true}'
 
-# Test email channel
-curl -X POST "https://localhost/svc/governance/governance/settings/smtp/test?tenant_id=root&channel=email" \
-  -H "Authorization: Bearer $TOKEN"
+# Send a test notice through the saved Slack connection
+curl -X POST "https://localhost/svc/governance/governance/settings/webhook/test?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"channel": "slack"}'
 ```
 
 ---
@@ -1957,7 +1848,7 @@ curl "https://localhost/svc/governance/governance/backups?tenant_id=root&date_fr
 | GET | `/merkle/epochs` | List all Merkle epochs |
 | GET | `/merkle/epochs/{epoch_id}` | Get specific epoch with root |
 | POST | `/merkle/verify` | Verify a Merkle inclusion proof |
-| GET/POST | `/svc/audit/webhooks` (no `audit/` prefix) | List or add audit event push webhooks |
+| GET/POST | `/svc/audit/webhooks` (no `audit/` prefix) | List or add event streams (each names a connection) |
 | PATCH/DELETE | `/svc/audit/webhooks/{id}` | Change or remove a webhook |
 | GET | `/svc/audit/webhooks/{id}/deliveries` | Delivery history |
 | POST | `/svc/audit/webhooks/{id}/test` | Send a test delivery |

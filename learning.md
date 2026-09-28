@@ -5,6 +5,54 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### An unused package can hold the worst code in the repo
+- **What happened:** `pkg/siem` had Splunk, Datadog, Elastic, Sentinel and
+  QRadar exporters and a buffered exporter, and nothing imported them. They
+  sent plain UDP/TCP syslog, used `http.Client{}` with no address guard,
+  signed with `crypto/hmac` directly, and called Sentinel's HTTP Data
+  Collector API, which Microsoft retired on 14 September 2026. The Elastic
+  exporter treated a Bulk answer of 200 as success even when every
+  document was rejected.
+- **Why it slipped through:** conformance scans imports and calls, but an
+  unreferenced package never runs, so nothing exercised it. "We have SIEM
+  exporters" rested on files existing.
+- **Rule:** a package counts as a capability only when something wires it
+  and a test drives it against a receiver. Unreferenced code is removed or
+  wired, never left as evidence.
+
+### A credential can hide in a URL, and in the error that quotes it
+- **What happened:** governance stored Slack and Teams incoming-webhook
+  URLs in plaintext and returned them from `GET /governance/settings`. The
+  audit dispatcher returned Go's `*url.Error`, which quotes the full URL,
+  into the delivery log and the audit event.
+- **Why it slipped through:** the fields were named `*_url`, so they read
+  as configuration. For Slack and Teams the URL is the credential.
+- **Rule:** treat a webhook URL as a secret. It lives only in a sealed
+  connection, and outbound errors name the host (`unwrapURLError` in
+  compliance, the dispatcher in audit).
+
+### The same credential in three stores drifts three ways
+- **What happened:** outbound endpoints lived in compliance connections
+  (sealed, exposure-tracked), audit webhooks (sealed separately) and
+  governance settings (plaintext). Each had its own validation, rotation
+  story and UI.
+- **Rule:** one store. A new outbound integration is a connection type, and
+  a service that needs one holds its ID and asks compliance to open it
+  (docs/SECURITY/CONNECTIONS.md).
+
+### A guide can describe a feature that was never built
+- **What happened:** `docs/GOVERNANCE_AND_COMPLIANCE.md` documented CSV,
+  JSONL, CEF and LEEF exports from `/audit/events` with sample output, a
+  QRadar pipe over plain UDP, and webhook fields (`min_risk_score`,
+  `retry_attempts`, `X-Vecta-Signature`). None existed. It also listed a
+  PagerDuty channel for governance.
+- **Why it slipped through:** `check-doc-routes.py` checks that a documented
+  route exists, not what its parameters do. The page used an existing route
+  with invented query values.
+- **Rule:** when changing a feature, re-read every guide that mentions it
+  against the code. Other PagerDuty mentions remain in the reporting
+  sections of that guide and need the same check.
+
 ### A generated file nobody is made to regenerate goes stale
 - **What happened:** `docs/generated/` (routes, request flows, the product
   map) was last regenerated at 2.2.0-beta and missed five releases of

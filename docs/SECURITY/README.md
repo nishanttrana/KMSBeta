@@ -33,6 +33,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [DATAPROTECT_KEY_DERIVATION.md](DATAPROTECT_KEY_DERIVATION.md): dataprotect
   working keys come from keycore key material (service-derive), never from
   identifiers; includes the per-key migration runbook for legacy data.
+- [CONNECTIONS.md](CONNECTIONS.md): every outbound URL and credential
+  (Slack, Teams, webhooks, Jira, ServiceNow, SIEMs) lives only in sealed
+  compliance connections; who can open one, TLS for every call, and the
+  2.10.0-beta migration of the audit and governance copies.
 - [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
 - [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md): the secrets, certs, cloud
   and ekm master keys come from keycore (`pkg/mek`); how data was moved off

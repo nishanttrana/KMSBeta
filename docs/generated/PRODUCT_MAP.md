@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-28T05:07:54Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T08:27:40Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `28`
-- Tab/component mappings: `36`
+- Dashboard navigation items: `27`
+- Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `928` across `30` services
-- Backend routes on the `pkg/route` kernel: `180` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `577`
-- Frontend call sites with exact backend route match: `530`
+- Backend HTTP routes discovered: `930` across `30` services
+- Backend routes on the `pkg/route` kernel: `182` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `578`
+- Frontend call sites with exact backend route match: `531`
 - Frontend call sites needing review or dynamic/runtime confirmation: `47`
-- Clickable controls with static `onClick` handlers: `770`
-- Backend request flows with handler/service/package summaries: `928`
+- Clickable controls with static `onClick` handlers: `766`
+- Backend request flows with handler/service/package summaries: `930`
 
 ## How To Use This For Launch
 
@@ -82,6 +82,7 @@ flowchart LR
   tab_alerts --> svc_reporting
   tab_approvals["Approvals"]
   UI --> tab_approvals
+  tab_approvals --> svc_compliance
   tab_approvals --> svc_governance
   tab_posture["Posture"]
   UI --> tab_posture
@@ -113,9 +114,6 @@ flowchart LR
   tab_backup["Backup & Restore"]
   UI --> tab_backup
   tab_backup --> svc_backup
-  tab_webhooks["Webhooks & SIEM"]
-  UI --> tab_webhooks
-  tab_webhooks --> svc_audit
   tab_byok["byok"]
   UI --> tab_byok
   tab_byok --> svc_cloud
@@ -148,7 +146,7 @@ flowchart LR
   svc_certs["certs (68 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (56 routes)"]
+  svc_compliance["compliance (58 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
@@ -173,7 +171,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 205 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 206 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
@@ -188,7 +186,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | AI Security Gateway | ai_gateway | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | ai, ai-gateway | 26 |
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 16 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 26 |
-| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 23 |
+| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | auth, autokey, certs, compliance, keyaccess, keycore, pqc, reporting, signing, workload | 179 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 16 |
@@ -196,7 +194,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | DevSecOps / IaC | devsecops | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | - | 0 |
-| Platform | Webhooks & SIEM | webhooks | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | audit | 6 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | Platform | Documentation | docs | web/dashboard/src/components/v3/tabs/DocsViewTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
@@ -220,7 +217,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | certs | 68 | 52 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
-| compliance | 56 | 18 |
+| compliance | 58 | 19 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 12 | 6 |
@@ -415,18 +412,18 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
 | cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
 | cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
-| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 48 |
-| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 49 |
-| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 59 |
-| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 63 |
-| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 67 |
-| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 68 |
-| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 70 |
-| compliance | GET | /compliance/sbom | h.handleSBOM |  | services/compliance/handler.go | 73 |
-| compliance | GET | /compliance/sbom/services | h.handleSBOMServices |  | services/compliance/handler.go | 74 |
-| compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService |  | services/compliance/handler.go | 75 |
+| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 63 |
+| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 64 |
+| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 51 |
+| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 52 |
+| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 62 |
+| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 66 |
+| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 70 |
+| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 71 |
+| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 73 |
+| compliance | GET | /compliance/sbom | h.handleSBOM |  | services/compliance/handler.go | 76 |
 
-Showing `120` of `393`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `394`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

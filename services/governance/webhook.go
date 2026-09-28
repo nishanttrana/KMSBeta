@@ -62,8 +62,8 @@ func normalizeGovernanceSettings(in GovernanceSettings, strict bool) (Governance
 	}
 	in.SMTPUsername = strings.TrimSpace(in.SMTPUsername)
 	in.SMTPFrom = strings.TrimSpace(in.SMTPFrom)
-	in.SlackWebhookURL = strings.TrimSpace(in.SlackWebhookURL)
-	in.TeamsWebhookURL = strings.TrimSpace(in.TeamsWebhookURL)
+	in.SlackConnectionID = strings.TrimSpace(in.SlackConnectionID)
+	in.TeamsConnectionID = strings.TrimSpace(in.TeamsConnectionID)
 
 	// Dashboard queue is always enabled because approvals are finalized in KMS.
 	in.NotifyDashboard = true
@@ -81,28 +81,19 @@ func normalizeGovernanceSettings(in GovernanceSettings, strict bool) (Governance
 			// Backward compatibility for older clients that did not send channel settings.
 			in.NotifyEmail = true
 		}
-		if in.NotifySlack && in.SlackWebhookURL == "" {
+		// A channel needs a connection (or, until the migration moves it, the
+		// plaintext URL an earlier release stored).
+		if in.NotifySlack && in.SlackConnectionID == "" && in.SlackWebhookURL == "" {
 			if strict {
-				return GovernanceSettings{}, errors.New("slack_webhook_url is required when Slack notifications are enabled")
+				return GovernanceSettings{}, errors.New("slack_connection_id is required when Slack notifications are enabled")
 			}
 			in.NotifySlack = false
 		}
-		// SSRF protection: validate webhook URLs at save time
-		if in.SlackWebhookURL != "" {
-			if err := ssrfguard.ValidateWebhookURL(in.SlackWebhookURL); err != nil {
-				return GovernanceSettings{}, fmt.Errorf("slack_webhook_url blocked: %w", err)
-			}
-		}
-		if in.NotifyTeams && in.TeamsWebhookURL == "" {
+		if in.NotifyTeams && in.TeamsConnectionID == "" && in.TeamsWebhookURL == "" {
 			if strict {
-				return GovernanceSettings{}, errors.New("teams_webhook_url is required when Teams notifications are enabled")
+				return GovernanceSettings{}, errors.New("teams_connection_id is required when Teams notifications are enabled")
 			}
 			in.NotifyTeams = false
-		}
-		if in.TeamsWebhookURL != "" {
-			if err := ssrfguard.ValidateWebhookURL(in.TeamsWebhookURL); err != nil {
-				return GovernanceSettings{}, fmt.Errorf("teams_webhook_url blocked: %w", err)
-			}
 		}
 		if in.ChallengeResponseEnabled && !in.NotifyEmail {
 			if strict {
@@ -165,19 +156,21 @@ func (s *Service) sendConfiguredWebhooks(ctx context.Context, settings Governanc
 }
 
 func (s *Service) sendSlackApprovalNotification(ctx context.Context, settings GovernanceSettings, req ApprovalRequest, approvers []string) error {
-	if strings.TrimSpace(settings.SlackWebhookURL) == "" {
-		return errors.New("slack webhook is not configured")
+	target, err := s.notifyURL(ctx, settings, webhookChannelSlack)
+	if err != nil {
+		return err
 	}
 	payload := map[string]interface{}{
 		"text":          s.approvalNotificationText(req),
 		"vecta_context": s.approvalNotificationContext(req, approvers),
 	}
-	return s.postWebhookJSON(ctx, settings.SlackWebhookURL, settings.DeliveryWebhookTimeoutSec, payload)
+	return s.postWebhookJSON(ctx, target, settings.DeliveryWebhookTimeoutSec, payload)
 }
 
 func (s *Service) sendTeamsApprovalNotification(ctx context.Context, settings GovernanceSettings, req ApprovalRequest, approvers []string) error {
-	if strings.TrimSpace(settings.TeamsWebhookURL) == "" {
-		return errors.New("teams webhook is not configured")
+	target, err := s.notifyURL(ctx, settings, webhookChannelTeams)
+	if err != nil {
+		return err
 	}
 	ctxData := s.approvalNotificationContext(req, approvers)
 	facts := []map[string]string{
@@ -205,7 +198,7 @@ func (s *Service) sendTeamsApprovalNotification(ctx context.Context, settings Go
 		},
 		"vecta_context": ctxData,
 	}
-	return s.postWebhookJSON(ctx, settings.TeamsWebhookURL, settings.DeliveryWebhookTimeoutSec, payload)
+	return s.postWebhookJSON(ctx, target, settings.DeliveryWebhookTimeoutSec, payload)
 }
 
 func (s *Service) approvalNotificationContext(req ApprovalRequest, approvers []string) map[string]interface{} {
@@ -254,8 +247,8 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 	if err != nil {
 		return fmt.Errorf("invalid webhook URL: %w", err)
 	}
-	if parsed.Scheme != "https" && parsed.Scheme != "http" {
-		return errors.New("webhook URL must use http or https")
+	if parsed.Scheme != "https" {
+		return errors.New("webhook URL must use https")
 	}
 	// SSRF protection: block requests to internal/private IPs and cloud metadata endpoints
 	if err := ssrfguard.ValidateWebhookURL(targetURL); err != nil {
@@ -290,7 +283,9 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 	return nil
 }
 
-func (s *Service) TestWebhook(ctx context.Context, tenantID string, channel string, overrideURL string) error {
+// TestWebhook sends a labelled test notice through the channel's
+// connection, the way an approval notice goes.
+func (s *Service) TestWebhook(ctx context.Context, tenantID string, channel string) error {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return errors.New("tenant_id is required")
@@ -303,15 +298,9 @@ func (s *Service) TestWebhook(ctx context.Context, tenantID string, channel stri
 	if err != nil {
 		return err
 	}
-	targetURL := strings.TrimSpace(overrideURL)
-	switch normalizedChannel {
-	case webhookChannelSlack:
-		targetURL = firstNonEmpty(targetURL, settings.SlackWebhookURL)
-	case webhookChannelTeams:
-		targetURL = firstNonEmpty(targetURL, settings.TeamsWebhookURL)
-	}
-	if strings.TrimSpace(targetURL) == "" {
-		return fmt.Errorf("%s webhook is not configured", normalizedChannel)
+	targetURL, err := s.notifyURL(ctx, settings, normalizedChannel)
+	if err != nil {
+		return err
 	}
 	notification := map[string]interface{}{
 		"event":     "governance.webhook_test",

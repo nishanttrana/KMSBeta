@@ -4,22 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 
 	"vecta-kms/pkg/ssrfguard"
 )
-
-// Webhook formats the audit service really produces. Each is a body shape
-// the receiving system accepts; credentials (Splunk token, Datadog API key)
-// go in custom headers.
-var webhookFormats = map[string]bool{"json": true, "splunk_hec": true, "datadog": true, "slack": true}
-
-// minWebhookSecret: HMAC keys under 112 bits are not approved (SP 800-131A);
-// 16 bytes clears it.
-const minWebhookSecret = 16
 
 var eventPatternRE = regexp.MustCompile(`^audit(\.[a-z0-9_]+)+(\.\*)?$|^audit\.\*$|^\*$`)
 
@@ -74,19 +64,6 @@ func validateWebhookEvents(events []string) error {
 	return nil
 }
 
-func validateWebhookHeaders(h map[string]string) error {
-	for k := range h {
-		name := http.CanonicalHeaderKey(strings.TrimSpace(k))
-		if name == "" || strings.ContainsAny(name, " \t\r\n:") {
-			return fmt.Errorf("invalid header name %q", k)
-		}
-		if reservedWebhookHeaders[name] {
-			return fmt.Errorf("header %s is set by the platform", name)
-		}
-	}
-	return nil
-}
-
 // publicWebhook is the API view: the secret is reduced to has_secret and
 // header values (tokens, API keys) are blanked. Both are write-only.
 func publicWebhook(w Webhook) Webhook {
@@ -116,6 +93,20 @@ func formatWebhookPayload(format string, ev AuditEvent) ([]byte, error) {
 			"ddtags":  fmt.Sprintf("tenant:%s,action:%s,result:%s", ev.TenantID, ev.Action, ev.Result),
 			"message": string(msg),
 		}})
+	case "teams":
+		text, err := formatWebhookPayload("slack", ev)
+		if err != nil {
+			return nil, err
+		}
+		var m map[string]string
+		_ = json.Unmarshal(text, &m)
+		return json.Marshal(map[string]interface{}{"type": "message", "attachments": []map[string]interface{}{{
+			"contentType": "application/vnd.microsoft.card.adaptive",
+			"content": map[string]interface{}{
+				"$schema": "https://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.4",
+				"body": []map[string]interface{}{{"type": "TextBlock", "text": m["text"], "wrap": true}},
+			},
+		}}})
 	case "slack":
 		target := ev.TargetType
 		if ev.TargetID != "" {

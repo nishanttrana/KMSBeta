@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -65,7 +66,16 @@ func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType, 
 	if err := d.validate(wh.URL); err != nil {
 		return 0, 0, err
 	}
-	br := d.breakerFor(wh.ID)
+	return d.Attempt(ctx, wh.ID, hostOf(wh.URL), func(ctx context.Context) (int, error) {
+		return d.doOnce(ctx, wh, eventType, eventID, payload)
+	})
+}
+
+// Attempt runs send with the retry policy behind the stream's breaker (key)
+// and returns the last status, the attempts made and any error. SIEM
+// destinations (pkg/siem) go through it as well as webhooks.
+func (d *WebhookDispatcher) Attempt(ctx context.Context, key, target string, send func(context.Context) (int, error)) (int, int, error) {
+	br := d.breakerFor(key)
 	var status int
 	var lastErr error
 	attempt := 0
@@ -75,17 +85,14 @@ func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType, 
 		var e error
 		_, brErr := br.Execute(func() (any, error) {
 			start := time.Now()
-			s, e = d.doOnce(ctx, wh, eventType, eventID, payload)
+			s, e = send(ctx)
+			if e == nil && s != 0 && (s < 200 || s >= 300) {
+				e = fmt.Errorf("non-2xx response: %d", s)
+			}
 			if d.onEvent != nil {
-				d.onEvent(wh.URL, e == nil && s >= 200 && s < 300, time.Since(start), e)
+				d.onEvent(target, e == nil, time.Since(start), e)
 			}
-			if e != nil {
-				return nil, e
-			}
-			if s < 200 || s >= 300 {
-				return nil, fmt.Errorf("non-2xx response: %d", s)
-			}
-			return nil, nil
+			return nil, e
 		})
 		status = s
 		lastErr = e
@@ -96,9 +103,6 @@ func (d *WebhookDispatcher) Deliver(ctx context.Context, wh Webhook, eventType, 
 	})
 	if err != nil && lastErr == nil {
 		lastErr = err
-	}
-	if lastErr == nil && (status < 200 || status >= 300) {
-		lastErr = fmt.Errorf("non-2xx response: %d", status)
 	}
 	return status, attempt, lastErr
 }
@@ -120,6 +124,12 @@ func (d *WebhookDispatcher) doOnce(ctx context.Context, wh Webhook, eventType, e
 	}
 	resp, err := d.client.Do(req)
 	if err != nil {
+		// *url.Error quotes the full URL; a Slack or Teams URL is itself a
+		// credential and would land in the delivery log and audit.
+		var ue *url.Error
+		if errors.As(err, &ue) {
+			err = fmt.Errorf("%s: %v", req.URL.Hostname(), ue.Err)
+		}
 		return 0, err
 	}
 	defer resp.Body.Close()        //nolint:errcheck

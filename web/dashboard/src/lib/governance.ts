@@ -16,8 +16,10 @@ export type GovernanceSettings = {
   notify_email: boolean;
   notify_slack: boolean;
   notify_teams: boolean;
-  slack_webhook_url: string;
-  teams_webhook_url: string;
+  // Approval notices go through a Slack or Teams connection (Playbooks →
+  // Connections); the webhook URL is sealed there and never shown.
+  slack_connection_id: string;
+  teams_connection_id: string;
   delivery_webhook_timeout_seconds: number;
   challenge_response_enabled: boolean;
   updated_by?: string;
@@ -195,19 +197,26 @@ export async function testGovernanceSMTP(session: AuthSession, to: string): Prom
   });
 }
 
-export async function testGovernanceWebhook(
-  session: AuthSession,
-  channel: "slack" | "teams",
-  webhook_url?: string
-): Promise<void> {
+// testGovernanceWebhook sends a test notice through the channel's saved
+// connection.
+export async function testGovernanceWebhook(session: AuthSession, channel: "slack" | "teams"): Promise<void> {
   await serviceRequest<Record<string, unknown>>(session, "governance", "/governance/settings/webhook/test", {
     method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      channel,
-      webhook_url: webhook_url || ""
-    })
+    body: JSON.stringify({ tenant_id: session.tenantId, channel })
   });
+}
+
+export interface NotifyConnection {
+  id: string;
+  name: string;
+  type: string;
+  endpoint: string;
+}
+
+// listNotifyConnections returns the tenant's Slack and Teams connections.
+export async function listNotifyConnections(session: AuthSession): Promise<NotifyConnection[]> {
+  const res = await serviceRequest<{ data: NotifyConnection[] }>(session, "compliance", "/compliance/playbooks/connections");
+  return (res.data ?? []).filter((c) => c.type === "slack" || c.type === "teams");
 }
 
 export async function createGovernanceBackup(

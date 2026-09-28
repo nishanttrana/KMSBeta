@@ -46,6 +46,8 @@ import {
   testGovernanceSystemSNMP,
   testGovernanceSMTP,
   testGovernanceWebhook,
+  listNotifyConnections,
+  type NotifyConnection,
   updateGovernanceSettings,
   listGovernancePolicies,
   createGovernancePolicy,
@@ -202,8 +204,8 @@ const GOV_DEFAULT={
   smtp_password:"",
   smtp_from:"",
   smtp_starttls:true,
-  slack_webhook_url:"",
-  teams_webhook_url:"",
+  slack_connection_id:"",
+  teams_connection_id:"",
   delivery_webhook_timeout_seconds:10,
   challenge_response_enabled:false
 };
@@ -760,6 +762,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [serviceStatusOverride,setServiceStatusOverride]=useState<Record<string,string>>({});
 
   const [gov,setGov]=useState(GOV_DEFAULT);
+  // Slack/Teams connections approval notices can go through (Playbooks → Connections).
+  const [govConns,setGovConns]=useState<NotifyConnection[]|null>(null);
+  const [govConnsErr,setGovConnsErr]=useState("");
   const [govLoading,setGovLoading]=useState(false);
   const [govSaving,setGovSaving]=useState(false);
   const [smtpTo,setSmtpTo]=useState("");
@@ -1136,6 +1141,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const loadGov=useCallback(async()=>{
     if(!session?.token){setGov(GOV_DEFAULT);return;}
     setGovLoading(true);
+    listNotifyConnections(session).then((c)=>{setGovConns(c);setGovConnsErr("");}).catch((e)=>{setGovConns(null);setGovConnsErr(errMsg(e));});
     try{const s=(await getGovernanceSettings(session)) as GovernanceSettings; setGov({...GOV_DEFAULT,...s,smtp_password:""});}
     catch(error){if(!sessionGuard(error)) onToast(`Governance settings load failed: ${errMsg(error)}`);} 
     finally{setGovLoading(false);} 
@@ -2858,8 +2864,16 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Row2><FG label="SMTP Host"><Inp value={String(gov.smtp_host||"")} onChange={(e)=>setGov((p)=>({...p,smtp_host:e.target.value}))}/></FG><FG label="SMTP Port"><Inp value={String(gov.smtp_port||"")} onChange={(e)=>setGov((p)=>({...p,smtp_port:e.target.value}))}/></FG></Row2>
       <Row2><FG label="SMTP Username"><Inp value={String(gov.smtp_username||"")} onChange={(e)=>setGov((p)=>({...p,smtp_username:e.target.value}))}/></FG><FG label="SMTP Password (optional)"><Inp type="password" value={String(gov.smtp_password||"")} onChange={(e)=>setGov((p)=>({...p,smtp_password:e.target.value}))}/></FG></Row2>
       <Row2><FG label="SMTP From"><Inp value={String(gov.smtp_from||"")} onChange={(e)=>setGov((p)=>({...p,smtp_from:e.target.value}))}/></FG><FG label="SMTP Test Recipient"><div style={{display:"flex",gap:8}}><Inp value={smtpTo} onChange={(e)=>setSmtpTo(e.target.value)} placeholder="admin@domain.tld"/><Btn small onClick={async()=>{if(!session?.token||!String(smtpTo||"").trim()){onToast("Provide SMTP test recipient email."); return;} setSmtpTesting(true); try{await testGovernanceSMTP(session,String(smtpTo||"").trim()); onToast("SMTP test sent.");}catch(error){if(!sessionGuard(error)) onToast(`SMTP test failed: ${errMsg(error)}`);} finally{setSmtpTesting(false);}}} disabled={smtpTesting}>{smtpTesting?"Testing...":"Send"}</Btn></div></FG></Row2>
-      <FG label="Slack Webhook URL"><div style={{display:"flex",gap:8}}><Inp value={String(gov.slack_webhook_url||"")} onChange={(e)=>setGov((p)=>({...p,slack_webhook_url:e.target.value}))}/><Btn small onClick={async()=>{if(!session?.token) return; setWebhookTesting((p)=>({...p,slack:true})); try{await testGovernanceWebhook(session,"slack",String(gov.slack_webhook_url||"")); onToast("SLACK webhook test sent.");}catch(error){if(!sessionGuard(error)) onToast(`SLACK webhook test failed: ${errMsg(error)}`);} finally{setWebhookTesting((p)=>({...p,slack:false}));}}} disabled={webhookTesting.slack}>{webhookTesting.slack?"Testing...":"Test"}</Btn></div></FG>
-      <FG label="Teams Webhook URL"><div style={{display:"flex",gap:8}}><Inp value={String(gov.teams_webhook_url||"")} onChange={(e)=>setGov((p)=>({...p,teams_webhook_url:e.target.value}))}/><Btn small onClick={async()=>{if(!session?.token) return; setWebhookTesting((p)=>({...p,teams:true})); try{await testGovernanceWebhook(session,"teams",String(gov.teams_webhook_url||"")); onToast("TEAMS webhook test sent.");}catch(error){if(!sessionGuard(error)) onToast(`TEAMS webhook test failed: ${errMsg(error)}`);} finally{setWebhookTesting((p)=>({...p,teams:false}));}}} disabled={webhookTesting.teams}>{webhookTesting.teams?"Testing...":"Test"}</Btn></div></FG>
+      {govConnsErr&&<div style={{fontSize:11,color:C.red,marginBottom:8}}>Connections unavailable: {govConnsErr}</div>}
+      {([["slack","Slack","slack_connection_id"],["teams","Teams","teams_connection_id"]] as const).map(([ch,label,field])=>(
+        <FG key={ch} label={`${label} connection`} hint="Approval notices go through this connection; its webhook URL is sealed under Playbooks → Connections"><div style={{display:"flex",gap:8}}>
+          <Sel value={String((gov as any)[field]||"")} onChange={(e)=>setGov((p)=>({...p,[field]:e.target.value}))}>
+            <option value="">{(govConns||[]).some((c)=>c.type===ch)?"none":`no ${label} connection: add one under Playbooks → Connections`}</option>
+            {(govConns||[]).filter((c)=>c.type===ch).map((c)=><option key={c.id} value={c.id}>{c.name} ({c.endpoint})</option>)}
+          </Sel>
+          <Btn small onClick={async()=>{if(!session?.token) return; setWebhookTesting((p)=>({...p,[ch]:true})); try{await testGovernanceWebhook(session,ch); onToast(`${label} test sent through the saved connection.`);}catch(error){if(!sessionGuard(error)) onToast(`${label} test failed: ${errMsg(error)}`);} finally{setWebhookTesting((p)=>({...p,[ch]:false}));}}} disabled={(webhookTesting as any)[ch]}>{(webhookTesting as any)[ch]?"Testing...":"Test"}</Btn>
+        </div></FG>
+      ))}
     </Section>
     </>}
 

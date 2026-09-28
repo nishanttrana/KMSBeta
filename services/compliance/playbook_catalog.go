@@ -95,6 +95,7 @@ var playbookActions = []ActionSpec{
 	{Type: "send_webhook", Label: "Call webhook", Group: "Notification", Connection: "webhook", Required: []string{"connection_id"}, Optional: []string{"method", "body"}},
 	{Type: "create_jira_ticket", Label: "Create Jira issue", Group: "Notification", Connection: "jira", Required: []string{"connection_id", "project", "summary"}, Optional: []string{"description", "issuetype"}},
 	{Type: "create_servicenow_incident", Label: "Create ServiceNow incident", Group: "Notification", Connection: "servicenow", Required: []string{"connection_id", "short_description"}, Optional: []string{"description", "urgency", "impact", "caller_id"}},
+	{Type: "send_siem_alert", Label: "Raise SIEM alert", Group: "Notification", Connection: categorySIEM, Required: []string{"connection_id"}, Optional: []string{"title", "severity"}},
 	{Type: "send_email", Label: "Email tenant users", Group: "Notification", Required: []string{"to", "subject"}, Optional: []string{"body"}},
 	{Type: "create_audit_event", Label: "Record audit event", Group: "Notification", Optional: []string{"message"}},
 	{Type: "rotate_key", Label: "Rotate key", Group: "Keys", Permission: "key.rotate", Required: []string{"key_id"}},
@@ -278,6 +279,10 @@ func validateAction(i int, a PlaybookAction) error {
 		if b := strings.TrimSpace(p["body"]); b != "" && !hasTemplate(b) && !json.Valid([]byte(b)) {
 			return fmt.Errorf("action %d (send_webhook): body must be valid JSON", i+1)
 		}
+	case "send_siem_alert":
+		if sev := strings.ToLower(strings.TrimSpace(p["severity"])); sev != "" && !hasTemplate(sev) && !siemSeverities[sev] {
+			return fmt.Errorf("action %d (send_siem_alert): severity must be info, low, warning, high or critical", i+1)
+		}
 	case "set_incident_status":
 		if s := strings.ToLower(strings.TrimSpace(p["status"])); !hasTemplate(s) && !incidentStatuses[s] {
 			return fmt.Errorf("action %d (set_incident_status): status must be open, investigating, resolved or closed", i+1)
@@ -310,6 +315,8 @@ func validateRecipients(to string) error {
 	}
 	return nil
 }
+
+var siemSeverities = map[string]bool{"info": true, "low": true, "warning": true, "high": true, "critical": true}
 
 // urlError is an outbound endpoint the platform refuses to call.
 type urlError struct{ err error }

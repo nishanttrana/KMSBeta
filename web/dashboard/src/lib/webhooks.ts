@@ -2,21 +2,25 @@ import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
 // Shapes mirror audit services/audit/webhook.go. The audit service delivers
-// every persisted audit event whose action matches a subscription pattern to
-// the tenant's enabled webhooks. The signing secret and header values are
-// write-only: responses carry has_secret and header names only.
+// every persisted audit event whose action matches a stream's patterns
+// through the connection it names; no credential passes through this API.
 
 export type WebhookFormat = "json" | "splunk_hec" | "datadog" | "slack";
 
+// An event stream: matching audit events delivered through a compliance
+// connection (Playbooks → Connections), which holds the endpoint and
+// credentials sealed. A legacy stream still carries the URL and format an
+// earlier release stored, until the migration moves them into a connection.
 export interface Webhook {
   id: string;
   tenant_id: string;
   name: string;
-  url: string;
-  format: WebhookFormat;
+  connection_id: string;
+  connection_type: string;
+  legacy: boolean;
+  url?: string;
+  format?: WebhookFormat;
   events: string[]; // "*", "audit.key.*" or an exact action such as "audit.key.rotate"
-  has_secret: boolean;
-  headers: Record<string, string>; // names only; values are never returned
   enabled: boolean;
   created_at: string;
   last_delivery_at?: string;
@@ -39,12 +43,8 @@ export interface WebhookDelivery {
 
 export interface WebhookInput {
   name: string;
-  url: string;
-  format: WebhookFormat;
+  connection_id: string;
   events: string[];
-  headers: Record<string, string>; // on update, an empty value keeps the stored one
-  secret?: string;
-  clear_secret?: boolean;
   enabled?: boolean;
 }
 

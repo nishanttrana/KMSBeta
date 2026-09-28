@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/fips140"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -175,6 +176,8 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 				notify_teams INTEGER NOT NULL DEFAULT 0,
 				slack_webhook_url TEXT,
 				teams_webhook_url TEXT,
+				slack_connection_id TEXT NOT NULL DEFAULT '',
+				teams_connection_id TEXT NOT NULL DEFAULT '',
 				delivery_webhook_timeout_seconds INTEGER NOT NULL DEFAULT 5,
 				challenge_response_enabled INTEGER NOT NULL DEFAULT 0,
 				updated_by TEXT,
@@ -619,12 +622,13 @@ func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
 	}
 	t.Cleanup(func() { newWebhookHTTPClient = oldFactory })
 
+	svc.conns = &testNotifyConns{conns: map[string][2]string{"pbconn_slack": {"slack", "https://8.8.8.8/slack"}}}
 	_, err = svc.UpdateSettings(context.Background(), GovernanceSettings{
 		TenantID:                  "tw1",
 		ApprovalDeliveryMode:      "notify",
 		NotifyEmail:               false,
 		NotifySlack:               true,
-		SlackWebhookURL:           "http://8.8.8.8/slack",
+		SlackConnectionID:         "pbconn_slack",
 		DeliveryWebhookTimeoutSec: 2,
 		UpdatedBy:                 "admin",
 	})
@@ -652,25 +656,119 @@ func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
 	}
 }
 
-func TestGovernanceSettingsBlocksLocalWebhookURL(t *testing.T) {
+// testNotifyConns stands in for compliance's connection endpoints (tested
+// in services/compliance).
+type testNotifyConns struct {
+	conns   map[string][2]string // id -> type, webhook_url
+	imports []string
+}
+
+func (c *testNotifyConns) Resolve(_ context.Context, _, id string) (string, string, error) {
+	v, ok := c.conns[id]
+	if !ok {
+		return "", "", errors.New("compliance HTTP 404: connection not found")
+	}
+	return v[0], v[1], nil
+}
+
+func (c *testNotifyConns) Import(_ context.Context, tenantID, sourceID, typ, url string) (string, error) {
+	c.imports = append(c.imports, tenantID+"|"+sourceID+"|"+typ+"|"+url)
+	return "pbconn_governance_" + typ, nil
+}
+
+// Slack/Teams notices name a connection of the right type; a URL is no
+// longer accepted, and a connection pointing at a private address is still
+// refused when the notice is sent.
+func TestGovernanceSettingsRequireNotifyConnection(t *testing.T) {
 	store := newGovernanceStore(t)
 	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 	defer server.Close()
+	svc.conns = &testNotifyConns{conns: map[string][2]string{
+		"pbconn_teams": {"teams", "https://8.8.8.8/teams"},
+		"pbconn_local": {"slack", strings.Replace(server.URL, "http://", "https://", 1)},
+	}}
+	base := GovernanceSettings{TenantID: "tw-local", ApprovalDeliveryMode: "notify", NotifySlack: true, DeliveryWebhookTimeoutSec: 2, UpdatedBy: "admin"}
 
-	_, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
-		TenantID:                  "tw-local",
-		ApprovalDeliveryMode:      "notify",
-		NotifyEmail:               false,
-		NotifySlack:               true,
-		SlackWebhookURL:           server.URL,
-		DeliveryWebhookTimeoutSec: 2,
-		UpdatedBy:                 "admin",
-	})
-	if err == nil || !strings.Contains(err.Error(), "slack_webhook_url blocked") {
-		t.Fatalf("expected local webhook URL to be blocked, got %v", err)
+	inline := base
+	inline.SlackWebhookURL = "https://8.8.8.8/slack"
+	if _, err := svc.UpdateSettings(context.Background(), inline); err == nil || !strings.Contains(err.Error(), "slack_connection_id is required") {
+		t.Fatalf("inline URL accepted: %v", err)
+	}
+	wrong := base
+	wrong.SlackConnectionID = "pbconn_teams"
+	if _, err := svc.UpdateSettings(context.Background(), wrong); err == nil || !strings.Contains(err.Error(), "teams connection") {
+		t.Fatalf("teams connection accepted for slack: %v", err)
+	}
+	missing := base
+	missing.SlackConnectionID = "pbconn_gone"
+	if _, err := svc.UpdateSettings(context.Background(), missing); err == nil {
+		t.Fatal("unknown connection accepted")
+	}
+	local := base
+	local.SlackConnectionID = "pbconn_local"
+	if _, err := svc.UpdateSettings(context.Background(), local); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.TestWebhook(context.Background(), "tw-local", "slack"); err == nil || !strings.Contains(err.Error(), "blocked") {
+		t.Fatalf("private address reached through a connection: %v", err)
+	}
+}
+
+// Plaintext Slack/Teams URLs an earlier release stored move into
+// connections (recorded as exposed), the settings name them, the URL column
+// is cleared, the API never returns a URL, and a member leaves it alone.
+func TestGovernanceNotifyURLsMigrateToConnections(t *testing.T) {
+	store := newGovernanceStore(t)
+	pub := &capturePublisher{}
+	svc := NewService(store, pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
+	conns := &testNotifyConns{conns: map[string][2]string{}}
+	svc.conns = conns
+	ctx := context.Background()
+	if _, err := store.db.SQL().Exec(`INSERT INTO governance_settings (tenant_id, approval_expiry_minutes, expiry_check_interval_seconds, notify_slack, notify_teams, slack_webhook_url, teams_webhook_url)
+		VALUES ('tm', 60, 60, 1, 1, 'https://hooks.slack.com/services/T/B/legacy', 'https://contoso.webhook.office.com/legacy')`); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := svc.migrateNotifyURLs(ctx, func(context.Context) bool { return false }); n != 0 || len(conns.imports) != 0 {
+		t.Fatal("a member migrated replicated settings")
+	}
+	n, err := svc.migrateNotifyURLs(ctx, func(context.Context) bool { return true })
+	if err != nil || n != 2 {
+		t.Fatalf("migrated %d: %v", n, err)
+	}
+	if strings.Join(conns.imports, ",") != "tm|governance_slack|slack|https://hooks.slack.com/services/T/B/legacy,tm|governance_teams|teams|https://contoso.webhook.office.com/legacy" {
+		t.Fatalf("imports %v", conns.imports)
+	}
+	got, err := svc.GetSettings(ctx, "tm")
+	if err != nil || got.SlackConnectionID != "pbconn_governance_slack" || got.TeamsConnectionID != "pbconn_governance_teams" || got.SlackWebhookURL != "" || !got.NotifySlack {
+		t.Fatalf("settings after migration %+v %v", got, err)
+	}
+	raw, _ := json.Marshal(got)
+	if strings.Contains(string(raw), "hooks.slack.com") || strings.Contains(string(raw), "webhook_url") {
+		t.Fatalf("settings JSON carries a URL: %s", raw)
+	}
+	if n, _ := svc.migrateNotifyURLs(ctx, func(context.Context) bool { return true }); n != 0 {
+		t.Fatal("migrated twice")
+	}
+	evs := pub.events["audit.governance.notify_connections_migrated"]
+	if len(evs) != 1 || evs[0]["tenant_id"] != "tm" || len(evs[0]["data"].(map[string]interface{})["connection_ids"].([]interface{})) != 2 {
+		t.Fatalf("migration audit %+v", evs)
+	}
+}
+
+// The notice test sends through the saved connection; an ad-hoc URL is
+// refused and the refusal audited.
+func TestGovernanceWebhookTestRefusesAdHocURL(t *testing.T) {
+	h, pub := newAuthTestHandler(t)
+	req := httptest.NewRequest(http.MethodPost, "/governance/settings/webhook/test?tenant_id=root", strings.NewReader(`{"channel":"slack","webhook_url":"https://attacker.example.com/x"}`))
+	req.Header.Set("Authorization", "Bearer valid-root-admin")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("ad-hoc URL: %d %s", rr.Code, rr.Body)
+	}
+	if d := lastRefusal(t, pub, "audit.governance.webhook_tested"); d["reason"] != "ad_hoc_url_refused" {
+		t.Fatalf("refusal %+v", d)
 	}
 }
 

@@ -5,94 +5,65 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"time"
+	neturl "net/url"
+	"strings"
 )
 
-// ElasticExporter sends audit events to Elasticsearch using the Bulk API.
-type ElasticExporter struct {
-	esURL      string
-	apiKey     string
-	index      string
-	httpClient *http.Client
+// elastic indexes events with the Bulk API. The event ID is the document
+// ID, so a redelivered event overwrites itself instead of duplicating.
+type elastic struct {
+	url, apiKey, index string
+	client             *http.Client
 }
 
-// NewElasticExporter creates an Elasticsearch destination.
-func NewElasticExporter(esURL, apiKey, index string, client *http.Client) *ElasticExporter {
-	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+func newElastic(u *neturl.URL, f map[string]string, client *http.Client) *elastic {
+	u.Path = strings.TrimRight(u.Path, "/") + "/_bulk"
+	idx := f["index"]
+	if idx == "" {
+		idx = "vecta-kms-audit"
 	}
-	if index == "" {
-		index = "vecta-kms-audit"
-	}
-	return &ElasticExporter{
-		esURL:      esURL,
-		apiKey:     apiKey,
-		index:      index,
-		httpClient: client,
-	}
+	return &elastic{url: u.String(), apiKey: f["api_key"], index: idx, client: client}
 }
 
-func (e *ElasticExporter) Name() string { return "elasticsearch" }
-
-// bulkActionMeta is the action/metadata line in NDJSON bulk format.
-type bulkActionMeta struct {
-	Index bulkIndexMeta `json:"index"`
-}
-
-type bulkIndexMeta struct {
-	Index string `json:"_index"`
-	ID    string `json:"_id,omitempty"`
-}
-
-// Send posts events to Elasticsearch using the _bulk endpoint with NDJSON format.
-func (e *ElasticExporter) Send(ctx context.Context, events []AuditEvent) error {
-	if len(events) == 0 {
-		return nil
-	}
-
+// Send posts the batch. Bulk answers 200 even when documents are rejected,
+// so the answer's errors flag is checked: a rejected document is a failure.
+func (e *elastic) Send(ctx context.Context, events []Event) (int, error) {
 	var buf bytes.Buffer
-
-	for _, evt := range events {
-		// Action line
-		meta := bulkActionMeta{
-			Index: bulkIndexMeta{Index: e.index, ID: evt.ID},
+	enc := json.NewEncoder(&buf)
+	for _, ev := range events {
+		if err := enc.Encode(map[string]any{"index": map[string]string{"_index": e.index, "_id": ev.ID}}); err != nil {
+			return 0, err
 		}
-		metaJSON, err := json.Marshal(meta)
-		if err != nil {
-			return fmt.Errorf("elasticsearch: marshal meta: %w", err)
+		if err := enc.Encode(ev.record()); err != nil {
+			return 0, err
 		}
-		buf.Write(metaJSON)
-		buf.WriteByte('\n')
-
-		// Document line
-		docJSON, err := json.Marshal(evt)
-		if err != nil {
-			return fmt.Errorf("elasticsearch: marshal event %s: %w", evt.ID, err)
-		}
-		buf.Write(docJSON)
-		buf.WriteByte('\n')
 	}
-
-	url := fmt.Sprintf("%s/%s/_bulk", e.esURL, e.index)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
+	status, raw, err := post(ctx, e.client, e.url, "application/x-ndjson", buf.Bytes(), map[string]string{"Authorization": "ApiKey " + e.apiKey})
 	if err != nil {
-		return fmt.Errorf("elasticsearch: create request: %w", err)
+		return status, err
 	}
-	req.Header.Set("Authorization", "ApiKey "+e.apiKey)
-	req.Header.Set("Content-Type", "application/x-ndjson")
-
-	resp, err := e.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("elasticsearch: post: %w", err)
+	var ans struct {
+		Errors bool `json:"errors"`
+		Items  []map[string]struct {
+			Status int `json:"status"`
+			Error  struct {
+				Type string `json:"type"`
+			} `json:"error"`
+		} `json:"items"`
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("elasticsearch: unexpected status %d: %s", resp.StatusCode, string(body))
+	if json.Unmarshal(raw, &ans) != nil {
+		return status, fmt.Errorf("elasticsearch: unreadable bulk answer")
 	}
-
-	return nil
+	if ans.Errors {
+		for _, item := range ans.Items {
+			for _, r := range item {
+				if r.Status >= 300 {
+					return status, fmt.Errorf("elasticsearch rejected a document: HTTP %d %s", r.Status, r.Error.Type)
+				}
+			}
+		}
+		return status, fmt.Errorf("elasticsearch rejected a document")
+	}
+	return status, nil
 }

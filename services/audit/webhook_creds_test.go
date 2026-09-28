@@ -13,13 +13,9 @@ import (
 // The database holds no credential in plaintext: the secret column is empty,
 // headers_json has names only, and the envelope doesn't contain the values.
 func TestWebhookCredentialsAreSealedAtRest(t *testing.T) {
-	h, _, store, srv, _ := webhookRig(t)
+	_, svc, store, srv, _ := webhookRig(t)
 	secret, token := "sealed-secret-0123456789", "hec-token-not-in-db"
-	_, out := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{
-		"name": "s", "url": srv.URL, "events": []string{"*"}, "secret": secret,
-		"headers": map[string]string{"Authorization": token},
-	})
-	id := out["webhook"].(map[string]any)["id"].(string)
+	id := legacyStream(t, svc, store, Webhook{Name: "s", URL: srv.URL, Format: "json", Secret: secret, Headers: map[string]string{"Authorization": token}}).ID
 	var sec, headers string
 	var ct, wrapped []byte
 	var hasSecret bool
@@ -41,10 +37,9 @@ func TestWebhookCredentialsAreSealedAtRest(t *testing.T) {
 
 // A sealed blob copied onto another webhook does not open there.
 func TestWebhookCredentialsAreBoundToTheirWebhook(t *testing.T) {
-	h, svc, store, srv, _ := webhookRig(t)
+	_, svc, store, srv, _ := webhookRig(t)
 	mk := func(name string) string {
-		_, out := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": name, "url": srv.URL, "events": []string{"*"}, "secret": "secret-for-" + name + "-0123"})
-		return out["webhook"].(map[string]any)["id"].(string)
+		return legacyStream(t, svc, store, Webhook{Name: name, URL: srv.URL, Format: "json", Secret: "secret-for-" + name + "-0123"}).ID
 	}
 	a, b := mk("a"), mk("b")
 	if _, err := store.db.SQL().Exec(`UPDATE webhooks SET creds_ciphertext=(SELECT creds_ciphertext FROM webhooks WHERE id=$1),
@@ -58,23 +53,20 @@ func TestWebhookCredentialsAreBoundToTheirWebhook(t *testing.T) {
 	}
 }
 
-// Until the master key is open, credentials can't be written (503) and a
-// delivery that needs them fails with the reason; webhooks without
-// credentials keep working.
+// Until the master key is open, a legacy stream that needs its own
+// credentials fails with the reason; streams through connections don't
+// depend on the audit master key at all.
 func TestWebhookCredentialsFailClosedWithoutKey(t *testing.T) {
-	h, svc, _, srv, _ := webhookRig(t)
-	_, out := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "sealed", "url": srv.URL, "events": []string{"*"}, "secret": "0123456789abcdef"})
-	sealedID := out["webhook"].(map[string]any)["id"].(string)
+	h, svc, store, srv, _, conns := streamRig(t)
+	sealedID := legacyStream(t, svc, store, Webhook{Name: "sealed", URL: srv.URL, Format: "json", Secret: "0123456789abcdef"}).ID
 	svc.creds = &credVault{}
 	svc.webhooks.creds = svc.creds
 	if rr, res := webhookReq(t, h, http.MethodPost, "/webhooks/"+sealedID+"/test", nil); rr.Code != http.StatusOK || res["success"] != false || res["error"] == "" {
 		t.Fatalf("delivery without the key: %d %v", rr.Code, res)
 	}
-	if rr, _ := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "s", "url": srv.URL, "events": []string{"*"}, "secret": "0123456789abcdef"}); rr.Code != http.StatusServiceUnavailable {
-		t.Fatalf("secret stored without the key: %d", rr.Code)
-	}
-	if rr, _ := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "n", "url": srv.URL, "events": []string{"*"}}); rr.Code != http.StatusCreated {
-		t.Fatalf("webhook without credentials refused: %d %s", rr.Code, rr.Body)
+	conns.add("pbconn_hook", "webhook", map[string]string{"url": srv.URL})
+	if rr, _ := webhookReq(t, h, http.MethodPost, "/webhooks", map[string]any{"name": "n", "connection_id": "pbconn_hook", "events": []string{"*"}}); rr.Code != http.StatusCreated {
+		t.Fatalf("stream through a connection refused without the audit key: %d %s", rr.Code, rr.Body)
 	}
 }
 
@@ -82,7 +74,7 @@ func TestWebhookCredentialsFailClosedWithoutKey(t *testing.T) {
 // recorded in the exposure register and audited; replacing its credentials
 // retires the entry. A member leaves it for the primary.
 func TestPlaintextWebhooksAreSealedAndRegistered(t *testing.T) {
-	h, svc, store, srv, _ := webhookRig(t)
+	_, svc, store, srv, _ := webhookRig(t)
 	ctx := context.Background()
 	if _, err := store.db.SQL().Exec(`INSERT INTO webhooks (id, tenant_id, name, url, format, events_json, secret, headers_json)
 		VALUES ('wh_legacy', 't1', 'legacy', $1, 'json', '["*"]', 'legacy-plain-secret', '{"DD-API-KEY":"legacy-dd-key"}')`, srv.URL); err != nil {
@@ -114,15 +106,8 @@ func TestPlaintextWebhooksAreSealedAndRegistered(t *testing.T) {
 	if e := open(); len(e) != 1 || e[0].ItemID != "wh_legacy" || e[0].Source != "plaintext_storage" {
 		t.Fatalf("exposure %+v", e)
 	}
-	// Rotating only the secret leaves the Datadog key exposed.
-	webhookReq(t, h, http.MethodPatch, "/webhooks/wh_legacy", map[string]any{"secret": "rotated-secret-012345"})
-	if len(open()) != 1 {
-		t.Fatal("partial rotation retired the exposure")
-	}
-	webhookReq(t, h, http.MethodPatch, "/webhooks/wh_legacy", map[string]any{"secret": "rotated-again-012345", "headers": map[string]string{"DD-API-KEY": "new-dd-key"}})
-	if len(open()) != 0 {
-		t.Fatal("full rotation did not retire the exposure")
-	}
+	// Re-pointing it at a connection (TestLegacyStreamRepointedAtConnection)
+	// or migrating it (TestLegacyStreamsMigrateIntoConnections) retires it.
 }
 
 // A plaintext row that can't be registered and sealed is left alone, the

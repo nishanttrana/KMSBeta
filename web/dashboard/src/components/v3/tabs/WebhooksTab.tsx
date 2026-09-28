@@ -13,19 +13,23 @@ import {
   listDeliveries,
   type Webhook,
   type WebhookDelivery,
-  type WebhookFormat,
   type WebhookInput,
 } from "../../../lib/webhooks";
 
-// Every webhook, delivery and count comes from the audit service. When it
-// can't be read the tab says so with the error; it never substitutes sample
-// data or pretends an action succeeded.
+// Event streaming, shown in Playbooks. A stream sends the audit events that
+// match its patterns through a connection (Slack, Teams, HTTPS webhook or a
+// SIEM); the connection holds the endpoint and credentials, sealed in
+// compliance. Every stream, delivery and count comes from the audit service.
+// When it can't be read the panel says so with the error; it never
+// substitutes sample data or pretends an action succeeded.
 
 /* ─── Props ──────────────────────────────────────────────── */
+export interface StreamConnection { id: string; name: string; type: string; endpoint: string }
+export interface StreamConnectionType { type: string; label: string; category: string; stream: boolean }
 interface Props {
   session: any;
-  enabledFeatures?: any;
-  keyCatalog?: any[];
+  connections: StreamConnection[];
+  connectionTypes: StreamConnectionType[];
 }
 
 /* ─── Event subscriptions ───────────────────────────────── */
@@ -45,18 +49,8 @@ const EVENT_PATTERNS: { pattern: string; label: string }[] = [
 ];
 const PATTERN_RE = /^audit(\.[a-z0-9_]+)+(\.\*)?$|^audit\.\*$|^\*$/;
 
-const FORMAT_LABELS: Record<WebhookFormat, string> = {
-  json: "JSON", splunk_hec: "Splunk HEC", datadog: "Datadog Logs", slack: "Slack",
-};
-const FORMAT_COLORS: Record<WebhookFormat, string> = {
-  json: C.blue, splunk_hec: C.orange, datadog: C.purple, slack: C.accent,
-};
-const FORMAT_HINTS: Record<WebhookFormat, string> = {
-  json: "{event_type, event}: the full audit event.",
-  splunk_hec: "HEC event envelope. Add header Authorization: Splunk <token>.",
-  datadog: "Datadog Logs intake array. Add header DD-API-KEY.",
-  slack: "Slack incoming-webhook text message.",
-};
+const CATEGORY_COLORS: Record<string, string> = { notify: C.blue, siem: C.orange };
+const LEGACY_FORMATS: Record<string, string> = { json: "JSON", splunk_hec: "Splunk HEC", datadog: "Datadog Logs", slack: "Slack" };
 
 function errText(e: unknown) {
   return e instanceof Error ? e.message : String(e);
@@ -69,10 +63,6 @@ function relTime(iso: string) {
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
   return `${Math.floor(diff / 86_400_000)}d ago`;
-}
-function shortUrl(url: string) {
-  try { const u = new URL(url); return `${u.host}${u.pathname}`.slice(0, 48) + (u.pathname.length + u.host.length > 48 ? "…" : ""); }
-  catch { return url.slice(0, 48); }
 }
 
 /* ─── Stat Card ──────────────────────────────────────────── */
@@ -89,22 +79,18 @@ function StatCard({ icon, label, value, color = C.accent, bg = C.accentTint }: S
   );
 }
 
-/* ─── Webhook Modal ──────────────────────────────────────── */
-function WebhookModal({ initial, onClose, onSave }: {
+/* ─── Stream Modal ───────────────────────────────────────── */
+function StreamModal({ initial, connections, typeLabel, onClose, onSave }: {
   initial: Webhook | undefined;
+  connections: StreamConnection[];
+  typeLabel: (t: string) => string;
   onClose: () => void;
   onSave: (data: WebhookInput) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [url, setUrl] = useState(initial?.url ?? "");
-  const [format, setFormat] = useState<WebhookFormat>(initial && initial.format in FORMAT_LABELS ? initial.format : "json");
+  const [connectionId, setConnectionId] = useState(initial?.connection_id ?? "");
   const [events, setEvents] = useState<Set<string>>(new Set(initial?.events ?? []));
   const [custom, setCustom] = useState("");
-  const [headers, setHeaders] = useState<{ k: string; v: string }[]>(
-    Object.keys(initial?.headers ?? {}).map(k => ({ k, v: "" }))
-  );
-  const [secret, setSecret] = useState("");
-  const [clearSecret, setClearSecret] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stale = Array.from(events).filter(e => !PATTERN_RE.test(e));
@@ -119,21 +105,12 @@ function WebhookModal({ initial, onClose, onSave }: {
   function toggleEvent(e: string) {
     setEvents(prev => { const n = new Set(prev); if (n.has(e)) n.delete(e); else n.add(e); return n; });
   }
-  function addHeader() { setHeaders(h => [...h, { k: "", v: "" }]); }
-  function removeHeader(i: number) { setHeaders(h => h.filter((_, idx) => idx !== i)); }
-  function setHeader(i: number, field: "k" | "v", val: string) {
-    setHeaders(h => h.map((row, idx) => idx === i ? { ...row, [field]: val } : row));
-  }
 
   async function handleSave() {
     setSaving(true);
     setError(null);
     try {
-      const hdrs = Object.fromEntries(headers.filter(h => h.k.trim()).map(h => [h.k.trim(), h.v]));
-      const data: WebhookInput = { name: name.trim(), url: url.trim(), format, events: Array.from(events).filter(e => PATTERN_RE.test(e)), headers: hdrs };
-      if (secret) data.secret = secret;
-      if (clearSecret) data.clear_secret = true;
-      await onSave(data);
+      await onSave({ name: name.trim(), connection_id: connectionId, events: Array.from(events).filter(e => PATTERN_RE.test(e)) });
       onClose();
     } catch (e) {
       setError(errText(e));
@@ -149,29 +126,24 @@ function WebhookModal({ initial, onClose, onSave }: {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 12, padding: 28, width: 540, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{initial?.id ? "Edit Webhook" : "Add Webhook"}</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{initial?.id ? "Edit event stream" : "New event stream"}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 4 }}><X size={16} /></button>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div><label style={lbl}>Name</label><input style={inp} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Splunk SIEM" /></div>
-          <div><label style={lbl}>Endpoint URL (https only)</label><input style={inp} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" /></div>
+          <div><label style={lbl}>Name</label><input style={inp} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. SOC Splunk" /></div>
           <div>
-            <label style={lbl}>Format</label>
-            <select style={inp} value={format} onChange={e => setFormat(e.target.value as WebhookFormat)}>
-              {(Object.keys(FORMAT_LABELS) as WebhookFormat[]).map(f => <option key={f} value={f}>{FORMAT_LABELS[f]}</option>)}
+            <label style={lbl}>Send through connection</label>
+            <select style={inp} value={connectionId} onChange={e => setConnectionId(e.target.value)}>
+              <option value="">{connections.length ? "choose…" : "no stream-capable connection: add one under Connections"}</option>
+              {connections.map(c => <option key={c.id} value={c.id}>{c.name} — {typeLabel(c.type)} ({c.endpoint})</option>)}
             </select>
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{FORMAT_HINTS[format]}</div>
-          </div>
-          <div>
-            <label style={lbl}>Signing Secret (HMAC-SHA256, X-KMS-Signature, at least 16 characters)</label>
-            <input style={inp} value={secret} onChange={e => setSecret(e.target.value)} type="password"
-              placeholder={initial?.has_secret ? "Set; leave blank to keep it" : "Leave blank to skip signing"} />
-            {initial?.has_secret && (
-              <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: 11, color: C.dim }}>
-                <input type="checkbox" checked={clearSecret} onChange={e => setClearSecret(e.target.checked)} style={{ accentColor: C.accent }} /> Remove the signing secret
-              </label>
+            {initial?.legacy && (
+              <div style={{ fontSize: 10, color: C.amber, marginTop: 4 }}>
+                This stream still uses the URL and credentials an earlier release stored with it. Choosing a connection drops them.
+              </div>
             )}
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>The connection holds the endpoint and credentials, sealed; the stream only names it.</div>
           </div>
 
           <div>
@@ -199,20 +171,6 @@ function WebhookModal({ initial, onClose, onSave }: {
             ))}
             {stale.length > 0 && <div style={{ fontSize: 10, color: C.amber, marginTop: 6 }}>Older event names never matched a real audit action; choose audit prefixes instead.</div>}
           </div>
-
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <label style={{ ...lbl, marginBottom: 0 }}>Custom Headers</label>
-              <button onClick={addHeader} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 5, color: C.dim, fontSize: 11, padding: "3px 8px", cursor: "pointer" }}>+ Add</button>
-            </div>
-            {headers.map((h, i) => (
-              <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                <input style={{ ...inp, flex: 1 }} placeholder="Header name" value={h.k} onChange={e => setHeader(i, "k", e.target.value)} />
-                <input style={{ ...inp, flex: 2 }} type="password" placeholder={initial?.headers && h.k in initial.headers ? "Set; leave blank to keep" : "Value"} value={h.v} onChange={e => setHeader(i, "v", e.target.value)} />
-                <button onClick={() => removeHeader(i)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer", flexShrink: 0 }}><X size={13} /></button>
-              </div>
-            ))}
-          </div>
         </div>
 
         {error && <div style={{ fontSize: 12, color: C.red, marginTop: 14 }}>Not saved: {error}</div>}
@@ -220,10 +178,10 @@ function WebhookModal({ initial, onClose, onSave }: {
           <button onClick={onClose} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.dim, padding: "8px 16px", cursor: "pointer", fontSize: 12 }}>Cancel</button>
           <button
             onClick={handleSave}
-            disabled={saving || !name.trim() || !url.trim() || events.size === 0}
+            disabled={saving || !name.trim() || !connectionId || events.size === 0}
             style={{ background: C.accent, border: "none", borderRadius: 6, color: C.bg, padding: "8px 18px", cursor: saving ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, opacity: saving ? 0.7 : 1 }}
           >
-            {saving ? "Saving…" : initial?.id ? "Save Changes" : "Add Webhook"}
+            {saving ? "Saving…" : initial?.id ? "Save changes" : "Create stream"}
           </button>
         </div>
       </div>
@@ -294,8 +252,11 @@ function DeliveryLog({ webhook, session, onClose }: { webhook: Webhook; session:
 }
 
 /* ─── Webhook Card ───────────────────────────────────────── */
-function WebhookCard({ wh, onToggle, onEdit, onDelete, onTest, onViewLog, logOpen }: {
+function StreamCard({ wh, conn, typeLabel, category, onToggle, onEdit, onDelete, onTest, onViewLog, logOpen }: {
   wh: Webhook;
+  conn: StreamConnection | undefined;
+  typeLabel: string;
+  category: string;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -303,7 +264,7 @@ function WebhookCard({ wh, onToggle, onEdit, onDelete, onTest, onViewLog, logOpe
   onViewLog: () => void;
   logOpen: boolean;
 }) {
-  const fmtColor = FORMAT_COLORS[wh.format] ?? C.dim;
+  const fmtColor = CATEGORY_COLORS[category] ?? C.dim;
   const [testing, setTesting] = useState(false);
 
   async function handleTest() {
@@ -318,12 +279,15 @@ function WebhookCard({ wh, onToggle, onEdit, onDelete, onTest, onViewLog, logOpe
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{wh.name}</span>
-            <span style={{ background: `${fmtColor}18`, color: fmtColor, border: `1px solid ${fmtColor}33`, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>{FORMAT_LABELS[wh.format] ?? `${wh.format} (unsupported)`}</span>
-            {wh.has_secret && <span style={{ color: C.dim, fontSize: 10 }}>signed</span>}
+            <span style={{ background: `${fmtColor}18`, color: fmtColor, border: `1px solid ${fmtColor}33`, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>{typeLabel}</span>
+            {wh.legacy && <span title="Stored with its own URL and credentials by an earlier release; the migration moves them into a connection, or choose one with Edit." style={{ background: C.amberDim, color: C.amber, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Legacy: pick a connection</span>}
+            {!wh.legacy && !conn && <span title="The connection this stream names is not in this tenant's list; deliveries fail until the stream names another." style={{ background: C.redDim, color: C.red, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Connection missing</span>}
             {!wh.enabled && <span style={{ background: C.amberDim, color: C.amber, borderRadius: 5, fontSize: 10, padding: "1px 7px", fontWeight: 600 }}>Disabled</span>}
             {wh.failure_count > 0 && <span style={{ background: C.redDim, color: C.red, borderRadius: 5, fontSize: 10, padding: "1px 7px" }}>{wh.failure_count} failure{wh.failure_count > 1 ? "s" : ""}</span>}
           </div>
-          <div style={{ fontSize: 11, color: C.dim, marginTop: 4, fontFamily: "IBM Plex Mono, monospace" }}>{shortUrl(wh.url)}</div>
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 4, fontFamily: "IBM Plex Mono, monospace" }}>
+            {wh.legacy ? `legacy ${LEGACY_FORMATS[wh.format || ""] || wh.format} stream` : conn ? `${conn.name} → ${conn.endpoint}` : wh.connection_id}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11, color: C.muted, fontFamily: "IBM Plex Mono, monospace" }} title={wh.events.join(", ")}>{wh.events.slice(0, 3).join(", ")}{wh.events.length > 3 ? ` +${wh.events.length - 3}` : ""}</span>
             {wh.last_delivery_at && (
@@ -356,7 +320,7 @@ function WebhookCard({ wh, onToggle, onEdit, onDelete, onTest, onViewLog, logOpe
 }
 
 /* ─── Main Component ─────────────────────────────────────── */
-export function WebhooksTab({ session }: Props) {
+export function EventStreams({ session, connections, connectionTypes }: Props) {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -410,18 +374,20 @@ export function WebhooksTab({ session }: Props) {
     else setError(`${wh.name}: test failed${r.http_status ? ` (HTTP ${r.http_status})` : ""}: ${r.error}`);
   }, "Test not sent");
 
+  const typeOf = (t: string) => connectionTypes.find(ct => ct.type === t);
+  const typeLabel = (t: string) => typeOf(t)?.label || t;
+  const streamable = connections.filter(c => typeOf(c.type)?.stream);
   const activeCount = webhooks.filter(w => w.enabled).length;
   const failingCount = webhooks.filter(w => w.last_delivery_status === "failure").length;
   const failedDeliveries = webhooks.reduce((s, w) => s + w.failure_count, 0);
 
-  const divider: CSSProperties = { borderTop: `1px solid ${C.border}`, margin: "24px 0" };
   const sectionTitle: CSSProperties = { fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 };
 
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320, color: C.dim, fontSize: 13, gap: 10, fontFamily: "IBM Plex Sans, sans-serif" }}>
         <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} />
-        Loading webhooks…
+        Loading event streams…
         <style>{`@keyframes spin { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }`}</style>
       </div>
     );
@@ -429,13 +395,12 @@ export function WebhooksTab({ session }: Props) {
 
   return (
     <div style={{ fontFamily: "IBM Plex Sans, sans-serif", color: C.text, padding: "4px 0" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Webhooks &amp; SIEM</div>
-          <div style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>Matching audit events are delivered as they are recorded, signed with HMAC-SHA256 when a secret is set</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 12 }}>
+        <div style={{ fontSize: 11, color: C.dim, lineHeight: 1.5 }}>
+          Every audit event that matches a stream is delivered as it is recorded, through the stream's connection: Splunk, Datadog, Elasticsearch,
+          Microsoft Sentinel, TLS syslog (CEF), Slack, Teams or an HTTPS webhook (signed with HMAC-SHA256 when the connection has a signing secret).
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
           <button
             onClick={() => load(true)}
             disabled={refreshing}
@@ -447,15 +412,15 @@ export function WebhooksTab({ session }: Props) {
             onClick={() => { setEditTarget(null); setShowModal(true); }}
             style={{ background: C.accent, border: "none", borderRadius: 7, color: C.bg, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}
           >
-            <Plus size={13} /> Add Webhook
+            <Plus size={13} /> New stream
           </button>
         </div>
       </div>
 
       {unavailable && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 24, marginBottom: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Not assessed: webhook configuration is unavailable</div>
-          <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>The audit service did not return webhooks, so none are shown.</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Not assessed: event streams are unavailable</div>
+          <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>The audit service did not return its streams, so none are shown.</div>
           <div style={{ fontSize: 11, color: C.red, marginTop: 8, fontFamily: "IBM Plex Mono, monospace", wordBreak: "break-word" }}>{unavailable}</div>
         </div>
       )}
@@ -465,24 +430,27 @@ export function WebhooksTab({ session }: Props) {
       {!unavailable && <>
       {/* Stat cards */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard icon={<WebhookIcon size={16} />} label="Active Webhooks" value={activeCount} color={C.accent} bg={C.accentTint} />
+        <StatCard icon={<WebhookIcon size={16} />} label="Active streams" value={activeCount} color={C.accent} bg={C.accentTint} />
         <StatCard icon={<XCircle size={16} />} label="Last Delivery Failed" value={failingCount} color={C.amber} bg={C.amberTint} />
         <StatCard icon={<XCircle size={16} />} label="Failed Deliveries (total)" value={failedDeliveries} color={C.red} bg={C.redTint} />
       </div>
 
       {/* Webhooks list */}
-      <div style={sectionTitle}>Configured Webhooks</div>
+      <div style={sectionTitle}>Streams</div>
 
       {webhooks.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 40, textAlign: "center", color: C.muted, fontSize: 13 }}>
-          No webhooks configured. Click "Add Webhook" to get started.
+          No event streams. Add a SIEM or webhook connection under Connections, then create a stream.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {webhooks.map(wh => (
             <div key={wh.id}>
-              <WebhookCard
+              <StreamCard
                 wh={wh}
+                conn={connections.find(c => c.id === wh.connection_id)}
+                typeLabel={wh.legacy ? LEGACY_FORMATS[wh.format || ""] || "Legacy" : typeLabel(wh.connection_type)}
+                category={typeOf(wh.connection_type)?.category || ""}
                 logOpen={openLogId === wh.id}
                 onToggle={() => handleToggle(wh)}
                 onEdit={() => { setEditTarget(wh); setShowModal(true); }}
@@ -502,24 +470,13 @@ export function WebhooksTab({ session }: Props) {
         </div>
       )}
 
-      <div style={divider} />
-
-      {/* Format reference */}
-      <div style={sectionTitle}>Supported Formats</div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {(Object.entries(FORMAT_LABELS) as [WebhookFormat, string][]).map(([fmt, label]) => (
-          <div key={fmt} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: FORMAT_COLORS[fmt], boxShadow: `0 0 6px ${FORMAT_COLORS[fmt]}` }} />
-            <span style={{ fontSize: 12, color: C.text }}>{label}</span>
-          </div>
-        ))}
-      </div>
-
       </>}
 
       {showModal && (
-        <WebhookModal
+        <StreamModal
           initial={editTarget ?? undefined}
+          connections={streamable}
+          typeLabel={typeLabel}
           onClose={() => { setShowModal(false); setEditTarget(null); }}
           onSave={handleSave}
         />

@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/siem"
 )
 
 // webhookFanout delivers persisted audit events to the tenant's enabled
@@ -18,7 +23,8 @@ import (
 // delivered themselves.
 type webhookFanout struct {
 	store   Store
-	creds   *credVault
+	creds   *credVault // legacy streams' own credentials
+	conns   *connCache // connections, opened through compliance
 	disp    *WebhookDispatcher
 	audit   func(ctx context.Context, ev AuditEvent)
 	primary func(context.Context) bool
@@ -40,9 +46,9 @@ const (
 	webhookQueueSize = 4096
 )
 
-func newWebhookFanout(store Store, creds *credVault, audit func(context.Context, AuditEvent), logger *log.Logger) *webhookFanout {
+func newWebhookFanout(store Store, creds *credVault, conns connectionSource, audit func(context.Context, AuditEvent), logger *log.Logger) *webhookFanout {
 	return &webhookFanout{
-		store: store, creds: creds, disp: NewWebhookDispatcher(), audit: audit, primary: clusterstate.RunsPrimaryJobs,
+		store: store, creds: creds, conns: newConnCache(conns), disp: NewWebhookDispatcher(), audit: audit, primary: clusterstate.RunsPrimaryJobs,
 		queue: make(chan AuditEvent, webhookQueueSize), logger: logger,
 		cache: map[string]cachedWebhooks{}, ttl: 15 * time.Second,
 	}
@@ -132,8 +138,69 @@ func (f *webhookFanout) deliverEvent(ctx context.Context, ev AuditEvent) {
 	}
 }
 
-// deliver sends one event to one webhook and records the result.
+// deliver sends one event to one stream and records the result.
 func (f *webhookFanout) deliver(ctx context.Context, wh Webhook, ev AuditEvent) WebhookDelivery {
+	if wh.ConnectionID == "" {
+		return f.deliverLegacy(ctx, wh, ev)
+	}
+	conn, dest, err := f.conns.get(ctx, wh.TenantID, wh.ConnectionID, f.disp.client)
+	if err != nil {
+		return f.record(ctx, wh, ev, 0, 0, 0, "connection "+wh.ConnectionID+": "+err.Error())
+	}
+	start := time.Now()
+	if dest != nil {
+		payload, _ := json.Marshal(ev)
+		status, attempts, err := f.disp.Attempt(ctx, wh.ID, conn.Endpoint, func(ctx context.Context) (int, error) {
+			return dest.Send(ctx, []siem.Event{siemEvent(ev)})
+		})
+		return f.record(ctx, wh, ev, status, attempts, int(time.Since(start).Milliseconds()), errText(err), payload...)
+	}
+	target, format, err := httpTarget(wh, conn)
+	if err != nil {
+		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())
+	}
+	payload, err := formatWebhookPayload(format, ev)
+	if err != nil {
+		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())
+	}
+	status, attempts, derr := f.disp.Deliver(ctx, target, ev.Action, ev.ID, payload)
+	return f.record(ctx, wh, ev, status, attempts, int(time.Since(start).Milliseconds()), errText(derr), payload...)
+}
+
+// httpTarget is the request a webhook, Slack or Teams connection receives:
+// its URL, header values and signing secret, held for this delivery only.
+func httpTarget(wh Webhook, conn streamConnection) (Webhook, string, error) {
+	f := conn.Fields
+	switch conn.Type {
+	case "webhook":
+		headers := map[string]string{}
+		if raw := strings.TrimSpace(f["headers"]); raw != "" {
+			if err := json.Unmarshal([]byte(raw), &headers); err != nil {
+				return Webhook{}, "", errors.New("connection headers are not a JSON object")
+			}
+		}
+		for k := range headers {
+			if reservedWebhookHeaders[http.CanonicalHeaderKey(k)] {
+				delete(headers, k)
+			}
+		}
+		return Webhook{ID: wh.ID, TenantID: wh.TenantID, URL: f["url"], Headers: headers, Secret: f["signing_secret"]}, "json", nil
+	case "slack", "teams":
+		return Webhook{ID: wh.ID, TenantID: wh.TenantID, URL: f["webhook_url"]}, conn.Type, nil
+	}
+	return Webhook{}, "", fmt.Errorf("a %s connection can't carry an event stream", conn.Type)
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+// deliverLegacy sends through a stream's own credentials, for a row an
+// earlier release stored that the migration hasn't moved yet.
+func (f *webhookFanout) deliverLegacy(ctx context.Context, wh Webhook, ev AuditEvent) WebhookDelivery {
 	wh, err := f.creds.Open(wh) // secret and header values, in memory for this delivery only
 	if err != nil {
 		return f.record(ctx, wh, ev, 0, 0, 0, err.Error())
@@ -144,11 +211,7 @@ func (f *webhookFanout) deliver(ctx context.Context, wh Webhook, ev AuditEvent) 
 	}
 	start := time.Now()
 	status, attempts, derr := f.disp.Deliver(ctx, wh, ev.Action, ev.ID, payload)
-	errMsg := ""
-	if derr != nil {
-		errMsg = derr.Error()
-	}
-	return f.record(ctx, wh, ev, status, attempts, int(time.Since(start).Milliseconds()), errMsg, payload...)
+	return f.record(ctx, wh, ev, status, attempts, int(time.Since(start).Milliseconds()), errText(derr), payload...)
 }
 
 func (f *webhookFanout) record(ctx context.Context, wh Webhook, ev AuditEvent, status, attempts, latency int, errMsg string, payload ...byte) WebhookDelivery {
@@ -183,7 +246,7 @@ func (f *webhookFanout) record(ctx context.Context, wh Webhook, ev AuditEvent, s
 			ParentEventID: ev.ID, Timestamp: d.DeliveredAt,
 			Details: map[string]interface{}{
 				"severity": severity, "event_id": ev.ID, "event_action": ev.Action, "delivery_id": d.ID,
-				"format": wh.Format, "http_status": status, "attempts": attempts, "latency_ms": latency,
+				"format": firstNonEmptyString(wh.ConnectionType, wh.Format), "connection_id": wh.ConnectionID, "http_status": status, "attempts": attempts, "latency_ms": latency,
 			},
 		})
 	}

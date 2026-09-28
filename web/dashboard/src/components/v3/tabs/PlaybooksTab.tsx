@@ -3,9 +3,21 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Play, Plus, RefreshCcw, Trash2, Edit2, CheckCircle2, XCircle,
   Zap, Shield, Clock, Activity, ChevronDown, ChevronRight,
-  ToggleLeft, ToggleRight, ListChecks, Link2, AlertTriangle, FlaskConical, Ban, RotateCcw
+  ToggleLeft, ToggleRight, ListChecks, Link2, AlertTriangle, FlaskConical, Ban, RotateCcw, Radio
 } from "lucide-react";
 import { C } from "../../v3/theme";
+import { EventStreams } from "./WebhooksTab";
+
+// Connection field hints (placeholders only; nothing here is a default).
+const FIELD_HINTS: Record<string, string> = {
+  webhook_url: "https://hooks.slack.com/services/…", url: "https://…", base_url: "https://your-org.atlassian.net",
+  instance_url: "https://your-instance.service-now.com", headers: '{"Authorization":"Bearer …"}',
+  signing_secret: "16+ characters; signs each body (X-KMS-Signature)", index: "optional", sourcetype: "vecta:audit",
+  dce_url: "https://<dce>.<region>.ingest.monitor.azure.com", dcr_immutable_id: "dcr-<32 hex>", stream_name: "Custom-VectaKMSAudit_CL",
+  azure_tenant_id: "Entra directory (tenant) ID", client_id: "app registration client ID", address: "siem.example.com:6514",
+  ca_pem: "-----BEGIN CERTIFICATE----- (the collector's CA, if not publicly trusted)", server_name: "name on the collector's certificate",
+};
+const CATEGORY_LABELS: Record<string, string> = { notify: "Notifications", ticketing: "Ticketing", siem: "SIEM" };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -218,6 +230,8 @@ export function PlaybooksTab({ session }: { session: any }) {
   const triggerSpec = (t: string) => catalog?.triggers?.find((x: any) => x.type === t);
   const actionSpec = (a: string) => catalog?.actions?.find((x: any) => x.type === a);
   const connType = (t: string) => catalog?.connection_types?.find((x: any) => x.type === t);
+  // An action names a connection type, or "siem" for any SIEM type.
+  const fits = (want: string, t: string) => want === t || (want === "siem" && connType(t)?.category === "siem");
 
   const emptyForm = () => ({
     name: "", description: "", category: "incident_response", enabled: true,
@@ -429,7 +443,7 @@ export function PlaybooksTab({ session }: { session: any }) {
     );
   };
 
-  const views = [["overview", "Overview", Activity], ["playbooks", "Playbooks", ListChecks], ["runs", "Runs", Zap], ["incidents", "Incidents", AlertTriangle], ["connections", "Connections", Link2]];
+  const views = [["overview", "Overview", Activity], ["playbooks", "Playbooks", ListChecks], ["runs", "Runs", Zap], ["incidents", "Incidents", AlertTriangle], ["connections", "Connections", Link2], ["streams", "Event streaming", Radio]];
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1240, margin: "0 auto" }}>
@@ -447,7 +461,8 @@ export function PlaybooksTab({ session }: { session: any }) {
         </div>
       </div>
       <div style={{ fontSize: 11, color: C.dim, marginBottom: 16, lineHeight: 1.5 }}>
-        A playbook responds to an audited event (or runs by hand): it can notify through sealed connections, act on keys, certificates, users, alerts and incidents, and pause for a governance approval.
+        A playbook responds to an audited event (or runs by hand): it can notify or raise a SIEM alert through sealed connections, act on keys, certificates, users, alerts and incidents, and pause for a governance approval.
+        Event streaming sends every matching audit event to a SIEM or webhook through the same connections.
         Actions run as the compliance service on the authority of the person who last saved the playbook, re-checked with auth before every automatic run.
       </div>
       <Err>{errors.catalog && `Playbook catalogue unavailable: ${errors.catalog}`}</Err>
@@ -605,14 +620,28 @@ export function PlaybooksTab({ session }: { session: any }) {
             <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: C.bg, maxWidth: 560 }}>
               <Inp label="Name" value={connForm.name} onChange={(e: any) => setConnForm((p: any) => ({ ...p, name: e.target.value }))} />
               <Sel label="Type" value={connForm.type} disabled={!!connForm.id} onChange={(e: any) => setConnForm((p: any) => ({ ...p, type: e.target.value, fields: {} }))}>
-                {(catalog?.connection_types || []).map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}
+                {Object.entries(CATEGORY_LABELS).map(([cat, label]) => (
+                  <optgroup key={cat} label={label}>
+                    {(catalog?.connection_types || []).filter((t: any) => t.category === cat).map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}
+                  </optgroup>
+                ))}
               </Sel>
-              {[...(connType(connForm.type)?.fields || []), ...(connType(connForm.type)?.optional || [])].map((f: string) => (
-                <Inp key={f} label={`${f}${(connType(connForm.type)?.fields || []).includes(f) ? " *" : ""}${connForm.id ? " (leave ******** to keep)" : ""}`}
-                  type={f === "headers" ? "text" : "password"} placeholder={f === "headers" ? '{"Authorization":"Bearer ..."}' : f.endsWith("url") ? "https://..." : ""}
-                  value={connForm.fields[f] ?? ""} onChange={(e: any) => setConnForm((p: any) => ({ ...p, fields: { ...p.fields, [f]: e.target.value } }))} />
-              ))}
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>The endpoint must be a public https address; platform services and private addresses are refused.</div>
+              {[...(connType(connForm.type)?.fields || []), ...(connType(connForm.type)?.optional || [])].map((f: string) => {
+                const required = (connType(connForm.type)?.fields || []).includes(f);
+                const secret = (connType(connForm.type)?.secrets || []).includes(f);
+                const props = {
+                  label: `${f}${required ? " *" : ""}${connForm.id ? " (leave ******** to keep)" : ""}`, placeholder: FIELD_HINTS[f] || "",
+                  value: connForm.fields[f] ?? "", onChange: (e: any) => setConnForm((p: any) => ({ ...p, fields: { ...p.fields, [f]: e.target.value } })),
+                };
+                return f === "ca_pem" || f === "headers"
+                  ? <Txt key={f} {...props} rows={f === "ca_pem" ? 4 : 2} style={{ fontFamily: "'JetBrains Mono', monospace" }} />
+                  : <Inp key={f} {...props} type={secret ? "password" : "text"} />;
+              })}
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 10, lineHeight: 1.5 }}>
+                The endpoint must be a public address reached over TLS (https, or syslog over TLS 1.3); platform services and private addresses are refused.
+                {connType(connForm.type)?.category === "siem" && " Test sends one labelled event to the SIEM."}
+                {connForm.type === "sentinel" && " Sentinel uses the Logs Ingestion API: the DCR stream must declare TimeGenerated, EventId, Action, TenantId, Service, Actor, TargetType, TargetId, Result, Severity, SourceIp and Event (dynamic)."}
+              </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <Btn onClick={saveConnection}>Save</Btn><Btn variant="ghost" onClick={() => setConnForm(null)}>Cancel</Btn>
               </div>
@@ -620,13 +649,15 @@ export function PlaybooksTab({ session }: { session: any }) {
           )}
           {connections.length === 0 ? <div style={{ padding: 28, textAlign: "center", color: C.muted, fontSize: 12 }}>No connections.</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><TH>Name</TH><TH>Type</TH><TH>Endpoint</TH><TH>Fields set</TH><TH>Updated</TH><TH></TH></tr></thead>
+              <thead><tr><TH>Name</TH><TH>Type</TH><TH>Used for</TH><TH>Endpoint</TH><TH>Fields set</TH><TH>Updated</TH><TH></TH></tr></thead>
               <tbody>{connections.map((c: any) => (
                 <tr key={c.id}>
                   <TD><span style={{ fontWeight: 600 }}>{c.name}</span>
                     {exposed[c.id] && <span title={`Stored in plaintext before 2.5.0-beta; exposed since ${new Date(exposed[c.id].exposed_since).toLocaleString()}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.red, border: `1px solid ${C.red}`, borderRadius: 4, padding: "0 4px" }}>ROTATE</span>}
                     <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{c.id}</div></TD>
-                  <TD>{connType(c.type)?.label || c.type}</TD><TD mono>{c.endpoint}</TD><TD>{(c.fields_set || []).join(", ")}</TD><TD>{fmtAgo(c.updated_at)}</TD>
+                  <TD>{connType(c.type)?.label || c.type}</TD>
+                  <TD>{["playbooks", connType(c.type)?.stream ? "event streams" : "", ["slack", "teams"].includes(c.type) ? "approval notices" : ""].filter(Boolean).join(", ")}</TD>
+                  <TD mono>{c.endpoint}</TD><TD>{(c.fields_set || []).join(", ")}</TD><TD>{fmtAgo(c.updated_at)}</TD>
                   <TD><div style={{ display: "flex", gap: 6 }}>
                     <Btn variant="ghost" small onClick={() => testConnection(c)}>Test</Btn>
                     <Btn variant="ghost" small onClick={() => setConnForm({ id: c.id, name: c.name, type: c.type, fields: Object.fromEntries((c.fields_set || []).map((f: string) => [f, "********"])) })}><Edit2 size={11} /></Btn>
@@ -637,6 +668,10 @@ export function PlaybooksTab({ session }: { session: any }) {
             </table>
           )}
         </Card>
+      )}
+
+      {view === "streams" && (
+        <EventStreams session={session} connections={connections} connectionTypes={catalog?.connection_types || []} />
       )}
 
       {view === "editor" && catalog && (
@@ -675,7 +710,7 @@ export function PlaybooksTab({ session }: { session: any }) {
             <div style={{ fontSize: 10, color: C.muted, marginBottom: 14 }}>Run in order. Templates: {(catalog.templates || []).join(" ")}</div>
             {form.actions.map((a: any, i: number) => {
               const spec = actionSpec(a.type);
-              const conns = connections.filter((c: any) => c.type === spec?.connection);
+              const conns = connections.filter((c: any) => spec?.connection && fits(spec.connection, c.type));
               return (
                 <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -687,7 +722,7 @@ export function PlaybooksTab({ session }: { session: any }) {
                     {actionGroups.map(g => <optgroup key={g.group} label={g.group}>{g.items.map((t: any) => <option key={t.type} value={t.type}>{t.label}</option>)}</optgroup>)}
                   </Sel>
                   {spec?.connection && (
-                    <Sel label={`${connType(spec.connection)?.label || spec.connection} connection *`} value={a.connection_id} onChange={(e: any) => setAction(i, "connection_id", e.target.value)}>
+                    <Sel label={`${spec.connection === "siem" ? "SIEM" : connType(spec.connection)?.label || spec.connection} connection *`} value={a.connection_id} onChange={(e: any) => setAction(i, "connection_id", e.target.value)}>
                       <option value="">{conns.length ? "choose…" : "no connection of this type: add one under Connections"}</option>
                       {conns.map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.endpoint})</option>)}
                     </Sel>

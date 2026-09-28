@@ -22,14 +22,14 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	"vecta-kms/pkg/clusterstate"
-	"vecta-kms/pkg/mek"
-	"vecta-kms/pkg/route"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/mek"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -109,6 +109,7 @@ func main() {
 
 	handler := NewHandler(svc, auditClient, logger, vault)
 	handler.SetExecutor(executor)
+	handler.usage = platformUsage{auditURL: strings.TrimRight(auditURL, "/"), governanceURL: urls.Governance, http: executor.platform}
 
 	triggerListener := NewTriggerListener(store, executor, logger)
 	handler.triggers = triggerListener

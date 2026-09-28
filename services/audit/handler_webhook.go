@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -53,89 +54,91 @@ func (h *Handler) listWebhooks(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"items": out})
 }
 
-func validateWebhookSecret(s string) bool { return s == "" || len(s) >= minWebhookSecret }
+// errInlineEndpoint: streams send through a connection; the URL and
+// credentials live in compliance's sealed connections, not here.
+const errInlineEndpoint = "event streams send through a connection: create one under Playbooks → Connections and pass connection_id (url, format, secret and headers are no longer accepted)"
 
 func (h *Handler) createWebhook(c *route.Call) {
 	var req CreateWebhookRequest
 	if !c.Decode(&req) {
 		return
 	}
+	if req.URL != "" || req.Format != "" || req.Secret != "" || len(req.Headers) > 0 {
+		c.Error(http.StatusBadRequest, "validation_error", errInlineEndpoint)
+		return
+	}
 	wh := Webhook{
-		TenantID: c.Tenant, Name: strings.TrimSpace(req.Name), URL: strings.TrimSpace(req.URL),
-		Format: strings.TrimSpace(req.Format), Events: req.Events, Secret: req.Secret,
-		Headers: req.Headers, Enabled: req.Enabled == nil || *req.Enabled,
+		TenantID: c.Tenant, Name: strings.TrimSpace(req.Name), Events: req.Events,
+		Headers: map[string]string{}, Enabled: req.Enabled == nil || *req.Enabled,
 	}
-	if wh.Format == "" {
-		wh.Format = "json"
-	}
-	if wh.Headers == nil {
-		wh.Headers = map[string]string{}
-	}
-	if !h.validWebhook(c, wh) {
+	if !h.validStream(c, wh) || !h.attachConnection(c, &wh, req.ConnectionID) {
 		return
 	}
-	wh.ID = newID("wh") // the sealed credentials are bound to it
-	if !h.sealCreds(c, &wh) {
-		return
-	}
+	wh.ID = newID("wh")
 	created, err := h.store.CreateWebhook(c.R.Context(), wh)
 	if err != nil {
-		c.Error(http.StatusInternalServerError, "create_failed", "failed to create webhook")
+		c.Error(http.StatusInternalServerError, "create_failed", "failed to create event stream")
 		return
 	}
 	h.webhookChanged(c, created)
 	c.JSON(http.StatusCreated, map[string]interface{}{"webhook": publicWebhook(created)})
 }
 
-func (h *Handler) validWebhook(c *route.Call, wh Webhook) bool {
-	fail := func(msg string) bool { c.Error(http.StatusBadRequest, "validation_error", msg); return false }
-	switch {
-	case wh.Name == "":
-		return fail("name is required")
-	case !webhookFormats[wh.Format]:
-		return fail("format must be json, splunk_hec, datadog or slack")
-	case !validateWebhookSecret(wh.Secret):
-		return fail("secret must be at least 16 characters (HMAC keys under 112 bits are not approved)")
-	}
-	check := validateWebhookURL
-	if f := h.fanout(); f != nil {
-		check = f.disp.validate // the same check delivery applies
-	}
-	if err := check(wh.URL); err != nil {
-		c.Detail("url_refused", err.Error())
-		c.Refuse(http.StatusBadRequest, "url_blocked", err.Error())
+func (h *Handler) validStream(c *route.Call, wh Webhook) bool {
+	if wh.Name == "" {
+		c.Error(http.StatusBadRequest, "validation_error", "name is required")
 		return false
 	}
 	if err := validateWebhookEvents(wh.Events); err != nil {
-		return fail(err.Error())
+		c.Error(http.StatusBadRequest, "validation_error", err.Error())
+		return false
 	}
-	if err := validateWebhookHeaders(wh.Headers); err != nil {
-		return fail(err.Error())
+	return true
+}
+
+// attachConnection points wh at connection id after compliance confirms it
+// exists in the tenant and can carry a stream. A legacy stream's own URL and
+// credentials are dropped.
+func (h *Handler) attachConnection(c *route.Call, wh *Webhook, id string) bool {
+	id = strings.TrimSpace(id)
+	c.Detail("connection_id", id)
+	if id == "" {
+		c.Error(http.StatusBadRequest, "validation_error", "connection_id is required")
+		return false
 	}
+	f := h.fanout()
+	if f == nil {
+		c.Error(http.StatusServiceUnavailable, "webhooks_unavailable", "event stream delivery is not running")
+		return false
+	}
+	conn, _, err := f.conns.get(c.R.Context(), wh.TenantID, id, f.disp.client)
+	var ce connError
+	switch {
+	case errors.As(err, &ce) && ce.Status == http.StatusNotFound:
+		c.Error(http.StatusBadRequest, "validation_error", "connection "+id+" not found in this tenant")
+		return false
+	case errors.As(err, &ce) && ce.Status == http.StatusConflict:
+		c.Refuse(http.StatusBadRequest, "connection_not_streamable", ce.Error())
+		return false
+	case err != nil:
+		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
+		return false
+	}
+	wh.ConnectionID, wh.ConnectionType, wh.Legacy = conn.ID, conn.Type, false
+	wh.URL, wh.Format, wh.Secret, wh.Headers, wh.Sealed, wh.HasSecret = "", "", "", map[string]string{}, nil, false
 	return true
 }
 
 func (h *Handler) webhookChanged(c *route.Call, wh Webhook) {
 	c.Target(wh.ID)
-	c.Detail("url_host", hostOf(wh.URL))
-	c.Detail("format", wh.Format)
+	c.Detail("connection_id", wh.ConnectionID)
+	c.Detail("connection_type", wh.ConnectionType)
+	c.Detail("legacy", wh.Legacy)
 	c.Detail("events", wh.Events)
 	c.Detail("enabled", wh.Enabled)
-	c.Detail("signed", wh.HasSecret)
-	c.Detail("credentials_sealed", wh.Sealed != nil)
 	if f := h.fanout(); f != nil {
 		f.Invalidate(wh.TenantID)
 	}
-}
-
-// sealCreds seals the secret and header values under the audit master key,
-// answering 503 while the key is unavailable. Nothing is stored in plaintext.
-func (h *Handler) sealCreds(c *route.Call, wh *Webhook) bool {
-	if err := h.svc.creds.Seal(wh); err != nil {
-		c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
-		return false
-	}
-	return true
 }
 
 // retireExposure closes a webhook's exposure register entry (if any) when its
@@ -159,79 +162,57 @@ func (h *Handler) updateWebhook(c *route.Call) {
 	if !c.Decode(&req) {
 		return
 	}
+	if req.URL != nil || req.Format != nil || req.Secret != nil || req.ClearSecret || req.Headers != nil {
+		c.Error(http.StatusBadRequest, "validation_error", errInlineEndpoint)
+		return
+	}
 	stored, err := h.store.GetWebhook(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		c.Error(http.StatusNotFound, "not_found", "webhook not found")
+		c.Error(http.StatusNotFound, "not_found", "event stream not found")
 		return
 	}
-	// Open the stored credentials so values the caller leaves blank are kept.
-	wh, err := h.svc.creds.Open(stored)
-	if err != nil {
-		c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
-		return
-	}
-	var sentHeaders map[string]string
-	if req.Headers != nil {
-		sentHeaders = *req.Headers
-	}
-	replaced := credsReplaced(stored, req.Secret != nil && *req.Secret != "", req.ClearSecret, sentHeaders)
+	wh := stored
 	if req.Name != nil {
 		wh.Name = strings.TrimSpace(*req.Name)
-	}
-	if req.URL != nil {
-		wh.URL = strings.TrimSpace(*req.URL)
-	}
-	if req.Format != nil {
-		wh.Format = strings.TrimSpace(*req.Format)
 	}
 	if req.Events != nil {
 		wh.Events = req.Events
 	}
-	if req.ClearSecret {
-		wh.Secret = ""
-	} else if req.Secret != nil && *req.Secret != "" {
-		wh.Secret = *req.Secret
-	}
-	if req.Headers != nil {
-		next := make(map[string]string, len(*req.Headers))
-		for k, v := range *req.Headers {
-			if v == "" {
-				v = wh.Headers[k] // values are write-only; empty keeps the stored one
-			}
-			next[k] = v
-		}
-		wh.Headers = next
-	}
 	if req.Enabled != nil {
 		wh.Enabled = *req.Enabled
 	}
-	if !h.validWebhook(c, wh) {
+	if !h.validStream(c, wh) {
 		return
 	}
-	if stored.Sealed == nil && hasCredentials(stored.Secret, stored.Headers) {
-		// An earlier release's plaintext row: register the exposure before
-		// sealing, as the startup job would have.
+	repointed := req.ConnectionID != nil && strings.TrimSpace(*req.ConnectionID) != stored.ConnectionID
+	if repointed && !h.attachConnection(c, &wh, *req.ConnectionID) {
+		return
+	}
+	if wh.Legacy && hasCredentials(wh.Secret, wh.Headers) {
+		// An earlier release's plaintext row edited before the startup job
+		// sealed it: register the exposure and seal, as that job would.
 		k, err := h.svc.creds.current()
 		if err == nil {
 			err = k.RecordExposure(c.R.Context(), c.Tenant, webhookCredsItemType, stored.ID, "plaintext_storage")
+		}
+		if err == nil {
+			err = h.svc.creds.Seal(&wh)
 		}
 		if err != nil {
 			c.Error(http.StatusServiceUnavailable, "credentials_key_unavailable", err.Error())
 			return
 		}
 	}
-	if !h.sealCreds(c, &wh) {
-		return
-	}
 	updated, err := h.store.UpdateWebhook(c.R.Context(), c.Tenant, wh.ID, wh)
 	if err != nil {
-		c.Error(http.StatusInternalServerError, "update_failed", "failed to update webhook")
+		c.Error(http.StatusInternalServerError, "update_failed", "failed to update event stream")
 		return
 	}
-	if replaced {
-		h.retireExposure(c, wh.ID, "rotated")
+	if repointed && stored.Legacy {
+		// The platform no longer holds or uses the stream's own credentials.
+		h.retireExposure(c, wh.ID, "replaced_by_connection")
+		c.Detail("legacy_credentials_dropped", true)
 	}
-	c.Detail("credentials_replaced", replaced)
 	h.webhookChanged(c, updated)
 	c.JSON(http.StatusOK, map[string]interface{}{"webhook": publicWebhook(updated)})
 }

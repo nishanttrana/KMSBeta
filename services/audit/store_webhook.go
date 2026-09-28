@@ -14,7 +14,7 @@ import (
 const webhookColumns = `id, tenant_id, name, url, format, events_json, secret, headers_json,
        enabled, failure_count, last_delivery_at, COALESCE(last_delivery_status,''),
        created_at, updated_at, has_secret, creds_ciphertext, creds_data_iv,
-       creds_wrapped_dek, creds_wrapped_dek_iv`
+       creds_wrapped_dek, creds_wrapped_dek_iv, connection_id, connection_type`
 
 // errPlaintextCredentials: credentials reach the store only sealed.
 var errPlaintextCredentials = errors.New("webhook credentials must be sealed before they are stored")
@@ -75,7 +75,7 @@ func (s *SQLStore) CreateWebhook(ctx context.Context, w Webhook) (Webhook, error
 	now := time.Now().UTC()
 	w.CreatedAt = now
 	w.UpdatedAt = now
-	if w.Format == "" {
+	if w.Format == "" && w.ConnectionID == "" {
 		w.Format = "json"
 	}
 	if w.Events == nil {
@@ -91,11 +91,13 @@ func (s *SQLStore) CreateWebhook(ctx context.Context, w Webhook) (Webhook, error
 	}
 	args := append([]interface{}{w.ID, w.TenantID, w.Name, w.URL, w.Format, string(eventsJSON), headersJSON,
 		w.Enabled, w.FailureCount, w.CreatedAt, w.UpdatedAt, w.HasSecret}, creds...)
+	args = append(args, w.ConnectionID, w.ConnectionType)
 	if _, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO webhooks (id, tenant_id, name, url, format, events_json, secret, headers_json,
                       enabled, failure_count, created_at, updated_at, has_secret,
-                      creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv)
-VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+                      creds_ciphertext, creds_data_iv, creds_wrapped_dek, creds_wrapped_dek_iv,
+                      connection_id, connection_type)
+VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 `, args...); err != nil {
 		return Webhook{}, err
 	}
@@ -118,13 +120,14 @@ func (s *SQLStore) UpdateWebhook(ctx context.Context, tenantID, id string, w Web
 	}
 	args := append([]interface{}{w.Name, w.URL, w.Format, string(eventsJSON), headersJSON,
 		w.Enabled, w.UpdatedAt, w.HasSecret}, creds...)
-	args = append(args, tenantID, id)
+	args = append(args, w.ConnectionID, w.ConnectionType, tenantID, id)
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE webhooks
 SET name=$1, url=$2, format=$3, events_json=$4, secret='', headers_json=$5,
     enabled=$6, updated_at=$7, has_secret=$8,
-    creds_ciphertext=$9, creds_data_iv=$10, creds_wrapped_dek=$11, creds_wrapped_dek_iv=$12
-WHERE tenant_id=$13 AND id=$14
+    creds_ciphertext=$9, creds_data_iv=$10, creds_wrapped_dek=$11, creds_wrapped_dek_iv=$12,
+    connection_id=$13, connection_type=$14
+WHERE tenant_id=$15 AND id=$16
 `, args...)
 	if err != nil {
 		return Webhook{}, err
@@ -149,6 +152,26 @@ DELETE FROM webhooks WHERE tenant_id=$1 AND id=$2
 		return errNotFound
 	}
 	return nil
+}
+
+// ListLegacyWebhooks returns streams an earlier release stored with their
+// own URL and credentials (all tenants; the migration job's input).
+func (s *SQLStore) ListLegacyWebhooks(ctx context.Context) ([]Webhook, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+webhookColumns+`
+FROM webhooks WHERE connection_id = '' ORDER BY tenant_id, id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []Webhook
+	for rows.Next() {
+		w, err := scanWebhook(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, w)
+	}
+	return out, rows.Err()
 }
 
 // ListPlaintextWebhooks returns rows an earlier release wrote with the
@@ -282,6 +305,7 @@ func scanWebhook(scanner interface {
 		&eventsRaw, &w.Secret, &headersRaw,
 		&w.Enabled, &w.FailureCount, &lastDeliveryRaw, &w.LastDeliveryStatus,
 		&createdRaw, &updatedRaw, &w.HasSecret, &ct, &dataIV, &wrappedDEK, &wrappedIV,
+		&w.ConnectionID, &w.ConnectionType,
 	)
 	if err != nil {
 		return Webhook{}, err
@@ -292,6 +316,7 @@ func scanWebhook(scanner interface {
 	if w.Secret != "" {
 		w.HasSecret = true // an earlier release's plaintext row, until it is sealed
 	}
+	w.Legacy = w.ConnectionID == ""
 	w.CreatedAt = parseTimeValue(createdRaw)
 	w.UpdatedAt = parseTimeValue(updatedRaw)
 	t := parseTimeValue(lastDeliveryRaw)

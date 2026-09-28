@@ -52,6 +52,7 @@ flowchart LR
   tab_alerts --> svc_reporting
   tab_approvals["Approvals"]
   UI --> tab_approvals
+  tab_approvals --> svc_compliance
   tab_approvals --> svc_governance
   tab_posture["Posture"]
   UI --> tab_posture
@@ -83,9 +84,6 @@ flowchart LR
   tab_backup["Backup & Restore"]
   UI --> tab_backup
   tab_backup --> svc_backup
-  tab_webhooks["Webhooks & SIEM"]
-  UI --> tab_webhooks
-  tab_webhooks --> svc_audit
   tab_byok["byok"]
   UI --> tab_byok
   tab_byok --> svc_cloud
@@ -118,7 +116,7 @@ flowchart LR
   svc_certs["certs (68 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (56 routes)"]
+  svc_compliance["compliance (58 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]

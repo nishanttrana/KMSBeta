@@ -97,7 +97,9 @@ func main() {
 		baseURL,
 		WithCertsURL(certsURL),
 		WithSNMPPublisher(snmpPublisher),
+		WithNotifyConnections(newComplianceConnections(envOr("COMPLIANCE_URL", "https://compliance:8110"))),
 	)
+	go svc.migrateNotifyURLsLoop(ctx, clusterstate.RunsPrimaryJobs, 15*time.Minute, logger.Printf)
 	handler := NewHandler(svc)
 	handler.SetAuditClient(kernelAudit)
 	// Every service reads the platform FIPS mode from this file before any

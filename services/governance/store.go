@@ -46,6 +46,8 @@ type Store interface {
 	ExpirePendingRequests(ctx context.Context, now time.Time) ([]ApprovalRequest, error)
 	GetSettings(ctx context.Context, tenantID string) (GovernanceSettings, error)
 	UpsertSettings(ctx context.Context, s GovernanceSettings) error
+	ListLegacyNotifyURLs(ctx context.Context) ([]GovernanceSettings, error)
+	SetNotifyConnection(ctx context.Context, tenantID, channel, connID string) error
 	GetSystemState(ctx context.Context, tenantID string) (GovernanceSystemState, error)
 	UpsertSystemState(ctx context.Context, state GovernanceSystemState) error
 }
@@ -635,7 +637,7 @@ SELECT tenant_id, approval_expiry_minutes, expiry_check_interval_seconds, COALES
        COALESCE(smtp_from,''), COALESCE(smtp_starttls,true), COALESCE(notify_dashboard,true), COALESCE(notify_email,true),
        COALESCE(notify_slack,false), COALESCE(notify_teams,false), COALESCE(slack_webhook_url,''), COALESCE(teams_webhook_url,''),
        COALESCE(delivery_webhook_timeout_seconds,5), COALESCE(challenge_response_enabled,false),
-       COALESCE(updated_by,''), updated_at
+       COALESCE(updated_by,''), updated_at, COALESCE(slack_connection_id,''), COALESCE(teams_connection_id,'')
 FROM governance_settings
 WHERE tenant_id=$1
 `, tenantID)
@@ -662,6 +664,8 @@ WHERE tenant_id=$1
 		&out.ChallengeResponseEnabled,
 		&out.UpdatedBy,
 		&updatedRaw,
+		&out.SlackConnectionID,
+		&out.TeamsConnectionID,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		// default fallback row when not configured
@@ -704,8 +708,8 @@ func (s *SQLStore) UpsertSettings(ctx context.Context, settings GovernanceSettin
 	    approval_delivery_mode, smtp_host, smtp_port, smtp_username, smtp_password, smtp_from, smtp_starttls,
 	    notify_dashboard, notify_email, notify_slack, notify_teams, slack_webhook_url, teams_webhook_url,
 	    delivery_webhook_timeout_seconds, challenge_response_enabled,
-	    updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP)
+	    updated_by, updated_at, slack_connection_id, teams_connection_id
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP,$20,$21)
 ON CONFLICT (tenant_id) DO UPDATE
 SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     expiry_check_interval_seconds=EXCLUDED.expiry_check_interval_seconds,
@@ -725,13 +729,49 @@ SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     delivery_webhook_timeout_seconds=EXCLUDED.delivery_webhook_timeout_seconds,
     challenge_response_enabled=EXCLUDED.challenge_response_enabled,
     updated_by=EXCLUDED.updated_by,
-    updated_at=CURRENT_TIMESTAMP
+    updated_at=CURRENT_TIMESTAMP,
+    slack_connection_id=EXCLUDED.slack_connection_id,
+    teams_connection_id=EXCLUDED.teams_connection_id
 `, settings.TenantID, settings.ApprovalExpiryMinutes, settings.ExpiryCheckIntervalSeconds,
 		settings.ApprovalDeliveryMode, nullable(settings.SMTPHost), nullable(settings.SMTPPort), nullable(settings.SMTPUsername),
 		nullable(settings.SMTPPassword), nullable(settings.SMTPFrom), settings.SMTPStartTLS,
 		settings.NotifyDashboard, settings.NotifyEmail, settings.NotifySlack, settings.NotifyTeams,
 		nullable(settings.SlackWebhookURL), nullable(settings.TeamsWebhookURL), settings.DeliveryWebhookTimeoutSec,
-		settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy))
+		settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy), settings.SlackConnectionID, settings.TeamsConnectionID)
+	return err
+}
+
+// ListLegacyNotifyURLs returns tenants whose settings still hold a Slack
+// or Teams URL an earlier release stored in plaintext.
+func (s *SQLStore) ListLegacyNotifyURLs(ctx context.Context) ([]GovernanceSettings, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, COALESCE(slack_webhook_url,''), COALESCE(teams_webhook_url,'')
+FROM governance_settings
+WHERE COALESCE(slack_webhook_url,'') <> '' OR COALESCE(teams_webhook_url,'') <> ''
+ORDER BY tenant_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []GovernanceSettings
+	for rows.Next() {
+		var g GovernanceSettings
+		if err := rows.Scan(&g.TenantID, &g.SlackWebhookURL, &g.TeamsWebhookURL); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+// SetNotifyConnection points a channel at a connection and clears the
+// plaintext URL it replaces.
+func (s *SQLStore) SetNotifyConnection(ctx context.Context, tenantID, channel, connID string) error {
+	q := `UPDATE governance_settings SET slack_connection_id=$1, slack_webhook_url=NULL WHERE tenant_id=$2`
+	if channel == webhookChannelTeams {
+		q = `UPDATE governance_settings SET teams_connection_id=$1, teams_webhook_url=NULL WHERE tenant_id=$2`
+	}
+	_, err := s.db.SQL().ExecContext(ctx, q, connID, tenantID)
 	return err
 }
 

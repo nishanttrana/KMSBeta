@@ -17,11 +17,14 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/siem"
 	"vecta-kms/pkg/tenantcheck"
 )
 
-// Connections hold the endpoints and credentials playbooks send through
-// (Slack, Teams, webhooks, Jira, ServiceNow). Every field is sealed as one
+// Connections hold the endpoints and credentials the platform sends through:
+// Slack, Teams, webhooks, Jira, ServiceNow and SIEMs (pkg/siem). They are the
+// only store of them: playbook actions, the audit event stream and
+// governance approval notices all name a connection (docs/SECURITY/CONNECTIONS.md). Every field is sealed as one
 // envelope under the compliance master key from keycore (pkg/mek,
 // docs/SECURITY/SERVICE_MASTER_KEYS.md); only the name, type and endpoint
 // host are stored in plaintext. The API never returns a field value.
@@ -37,15 +40,35 @@ type ConnectionSpec struct {
 	// URLField is the endpoint; its host is shown, and it must be public https.
 	URLField string   `json:"url_field"`
 	Optional []string `json:"optional,omitempty"`
+	// Category groups types: notify, ticketing or siem.
+	Category string `json:"category"`
+	// Secrets are credential fields (the form masks them). No field value
+	// is ever returned, secret or not.
+	Secrets []string `json:"secrets"`
+	// Stream types can carry the audit event stream (audit service).
+	Stream bool `json:"stream"`
 }
 
-var connectionTypes = []ConnectionSpec{
-	{Type: "slack", Label: "Slack incoming webhook", Fields: []string{"webhook_url"}, URLField: "webhook_url"},
-	{Type: "teams", Label: "Microsoft Teams webhook", Fields: []string{"webhook_url"}, URLField: "webhook_url"},
-	{Type: "webhook", Label: "HTTPS webhook", Fields: []string{"url"}, URLField: "url", Optional: []string{"headers"}},
-	{Type: "jira", Label: "Jira", Fields: []string{"base_url"}, URLField: "base_url", Optional: []string{"api_token"}},
-	{Type: "servicenow", Label: "ServiceNow", Fields: []string{"instance_url"}, URLField: "instance_url", Optional: []string{"auth_token"}},
-}
+const (
+	categoryNotify    = "notify"
+	categoryTicketing = "ticketing"
+	categorySIEM      = "siem"
+)
+
+var connectionTypes = func() []ConnectionSpec {
+	out := []ConnectionSpec{
+		{Type: "slack", Label: "Slack incoming webhook", Fields: []string{"webhook_url"}, URLField: "webhook_url", Category: categoryNotify, Secrets: []string{"webhook_url"}, Stream: true},
+		{Type: "teams", Label: "Microsoft Teams webhook", Fields: []string{"webhook_url"}, URLField: "webhook_url", Category: categoryNotify, Secrets: []string{"webhook_url"}, Stream: true},
+		{Type: "webhook", Label: "HTTPS webhook", Fields: []string{"url"}, URLField: "url", Optional: []string{"headers", "signing_secret"}, Category: categoryNotify, Secrets: []string{"headers", "signing_secret"}, Stream: true},
+		{Type: "jira", Label: "Jira", Fields: []string{"base_url"}, URLField: "base_url", Optional: []string{"api_token"}, Category: categoryTicketing, Secrets: []string{"api_token"}},
+		{Type: "servicenow", Label: "ServiceNow", Fields: []string{"instance_url"}, URLField: "instance_url", Optional: []string{"auth_token"}, Category: categoryTicketing, Secrets: []string{"auth_token"}},
+	}
+	for _, s := range siem.Specs {
+		out = append(out, ConnectionSpec{Type: s.Kind, Label: s.Label, Fields: s.Required, URLField: s.URLField, Optional: s.Optional,
+			Category: categorySIEM, Secrets: s.Secrets, Stream: true})
+	}
+	return out
+}()
 
 var connectionByType = map[string]ConnectionSpec{}
 
@@ -54,6 +77,15 @@ func init() {
 		connectionByType[c.Type] = c
 	}
 }
+
+// connectionFits reports whether a connection of type typ serves an action
+// or use that asks for want: the same type, or any SIEM type for "siem".
+func connectionFits(want, typ string) bool {
+	return want == typ || (want == categorySIEM && connectionByType[typ].Category == categorySIEM)
+}
+
+// minSigningSecret: HMAC keys under 112 bits are not approved (SP 800-131A).
+const minSigningSecret = 16
 
 // Connection is a stored connection. Fields hold plaintext only in memory.
 type Connection struct {
@@ -198,7 +230,27 @@ func validateConnection(c Connection) error {
 			return errors.New("headers must be a JSON object of strings")
 		}
 	}
+	if s := c.Fields["signing_secret"]; s != "" && len(s) < minSigningSecret {
+		return errors.New("signing_secret must be at least 16 characters (HMAC keys under 112 bits are not approved)")
+	}
+	if spec.Category == categorySIEM {
+		// Build it: the destination checks its own fields (https, DCR and
+		// stream names, the syslog address and CA).
+		if _, err := siem.New(c.Type, c.Fields, siem.Options{Client: http.DefaultClient}); err != nil {
+			return err
+		}
+		return checkOutboundURL(siem.ValidationURL(c.Type, c.Fields))
+	}
 	return checkOutboundURL(c.Fields[spec.URLField])
+}
+
+// connectionEndpoint is the host shown for a connection.
+func connectionEndpoint(c Connection) string {
+	spec := connectionByType[c.Type]
+	if spec.Category == categorySIEM {
+		return endpointHost(siem.ValidationURL(c.Type, c.Fields))
+	}
+	return endpointHost(c.Fields[spec.URLField])
 }
 
 func endpointHost(raw string) string {
@@ -321,7 +373,7 @@ func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 		}
 		return false
 	}
-	conn.Endpoint = endpointHost(conn.Fields[connectionByType[conn.Type].URLField])
+	conn.Endpoint = connectionEndpoint(*conn)
 	c.Detail("endpoint", conn.Endpoint)
 	if err := h.connVault.Seal(conn); err != nil {
 		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
@@ -346,9 +398,20 @@ func (h *Handler) deleteConnection(c *route.Call) {
 			}
 		}
 	}
+	if h.usage != nil {
+		others, err := h.usage.Users(c.R.Context(), c.Tenant, id)
+		if err != nil {
+			// Fail closed: deleting a connection a stream still uses would
+			// silently stop the tenant's SIEM feed.
+			c.Detail("error", err.Error())
+			c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
+			return
+		}
+		users = append(users, others...)
+	}
 	if len(users) > 0 {
-		c.Detail("playbooks", users)
-		c.Refuse(http.StatusConflict, "connection_in_use", "remove it from these playbooks first: "+strings.Join(users, ", "))
+		c.Detail("used_by", users)
+		c.Refuse(http.StatusConflict, "connection_in_use", "remove it from these first: "+strings.Join(users, ", "))
 		return
 	}
 	switch err := h.svc.store.DeleteConnection(c.R.Context(), c.Tenant, id); {
@@ -468,7 +531,7 @@ func (s *Service) migrateInlineSecrets(ctx context.Context, vault *connVault, pr
 					conn.Fields[to] = v
 				}
 			}
-			conn.Endpoint = endpointHost(conn.Fields[connectionByType[conn.Type].URLField])
+			conn.Endpoint = connectionEndpoint(conn)
 			if err := k.RecordExposure(ctx, pb.TenantID, connectionItemType, conn.ID, "plaintext_storage"); err != nil {
 				failed = append(failed, pb.ID)
 				continue

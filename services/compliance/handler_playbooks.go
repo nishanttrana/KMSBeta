@@ -147,6 +147,7 @@ func (h *Handler) playbookRoutes(rt *route.Router) {
 	rt.Handle("POST /compliance/playbook-runs/{run_id}/cancel", route.Spec{Action: "playbook_run_cancelled", Permission: permPlaybookRun, Resource: "playbook_run", TargetParam: "run_id", Severity: "warning"}, h.cancelRun)
 	rt.Handle("POST /compliance/playbook-runs/{run_id}/retry", route.Spec{Action: "playbook_run_retried", Permission: permPlaybookRun, Resource: "playbook_run", TargetParam: "run_id", Severity: "warning"}, h.retryRun)
 	h.connectionRoutes(rt)
+	h.serviceConnectionRoutes(rt)
 }
 
 func (h *Handler) playbookCatalog(c *route.Call) {
@@ -245,7 +246,7 @@ func (h *Handler) authorizePlaybook(c *route.Call, pb *Playbook) bool {
 			continue
 		}
 		conn, err := h.svc.store.GetConnection(c.R.Context(), c.Tenant, a.Parameters["connection_id"])
-		if err != nil || conn.Type != kind {
+		if err != nil || !connectionFits(kind, conn.Type) {
 			c.Refuse(http.StatusBadRequest, reasonConnectionMismatch, "action "+strconv.Itoa(i+1)+" ("+a.Type+") needs a "+kind+" connection of this tenant")
 			return false
 		}
