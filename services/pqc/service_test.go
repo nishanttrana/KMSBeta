@@ -63,7 +63,9 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("migration report: %v", err)
 	}
-	if report.Inventory.ReadinessScore <= 0 || len(report.TopRisks) == 0 || len(report.Timeline) == 0 {
+	// No plan has a deadline yet, so there is no timeline: the product sets
+	// no dates of its own.
+	if report.Inventory.ReadinessScore <= 0 || len(report.TopRisks) == 0 || len(report.Timeline) != 0 {
 		t.Fatalf("unexpected migration report: %+v", report)
 	}
 
@@ -153,6 +155,9 @@ func TestPQCTimelineAndCBOM(t *testing.T) {
 
 	if _, err := svc.StartReadinessScan(ctx, ScanRequest{TenantID: tenantID, Trigger: "test"}); err != nil {
 		t.Fatalf("start scan: %v", err)
+	}
+	if _, err := svc.CreateMigrationPlan(ctx, PlanRequest{TenantID: tenantID, Deadline: "2028-12-31"}); err != nil {
+		t.Fatalf("plan: %v", err)
 	}
 	milestones, readiness, err := svc.Timeline(ctx, tenantID)
 	if err != nil {

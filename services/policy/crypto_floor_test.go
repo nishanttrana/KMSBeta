@@ -52,10 +52,10 @@ spec:
 `
 }
 
-// The floor compares SP 800-57 strengths from pkg/cryptocatalog. Before
+// The floor compares security strengths from pkg/cryptocatalog. Before
 // 3.2.0-beta RSA-2048 passed a classical-128 floor (it is 112-bit) and
 // HMAC-SHA256 was refused as "deprecated".
-func TestCryptoFloorUsesNISTStrengths(t *testing.T) {
+func TestCryptoFloorUsesSecurityStrengths(t *testing.T) {
 	doc, _, err := parsePolicyYAML(floorPolicy("classical-128"))
 	if err != nil {
 		t.Fatal(err)

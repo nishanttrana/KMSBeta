@@ -26,6 +26,7 @@ func cryptoOpOutcome(err error) (result, reason string) {
 	var (
 		approval approvalRequiredError
 		denied   policyDeniedError
+		cpol     cryptoPolicyRefusal
 		fips     fipsModeViolationError
 		access   *accessRefusal
 		hsm      *hsmRefusal
@@ -37,6 +38,8 @@ func cryptoOpOutcome(err error) (result, reason string) {
 		return "pending_approval", "approval_required"
 	case errors.Is(err, errOpsLimit):
 		return "refused", "ops_limit_reached"
+	case errors.As(err, &cpol):
+		return "refused", cpol.Reason
 	case errors.As(err, &denied):
 		return "refused", "policy_denied"
 	case errors.As(err, &fips):

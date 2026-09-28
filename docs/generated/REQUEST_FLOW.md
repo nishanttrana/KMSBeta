@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-28T19:31:57Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T00:03:40Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `901`
-- Routes with exact frontend call sites: `523`
-- Routes whose handlers call `h.svc.*`: `544`
-- Routes with detected store calls: `643`
+- Backend routes analyzed: `905`
+- Routes with exact frontend call sites: `527`
+- Routes whose handlers call `h.svc.*`: `547`
+- Routes with detected store calls: `645`
 - Routes with detected internal `pkg/*` calls: `159`
 
 ## How To Trace One Frontend Click
@@ -362,10 +362,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/access/interface-ports | GET /access/interface-ports | listInterfacePorts (services/keycore/handler_access.go:294) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1291 |
 | keycore\|POST\|/access/interface-ports | POST /access/interface-ports | upsertInterfacePort (services/keycore/handler_access.go:303) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1325 |
 | keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | deleteInterfacePort (services/keycore/handler_access.go:326) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1337 |
-| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:29) |  | GetAlgorithmDistribution |  |  | web/dashboard/src/lib/cryptoAgility.ts:85 |
-| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:93) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:90 |
-| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:120) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:105 |
-| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:174) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:110 |
+| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:56) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:118 |
+| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:117) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:142 |
+| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:144) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:157 |
+| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:198) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:162 |
+| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:297) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:123 |
+| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:307) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:128 |
+| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:328) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:133 |
+| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:353) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:138 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
@@ -461,12 +465,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:137 |
-| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:142 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:150 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:165 |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:160 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:155 |
+| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
+| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
 | reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
 | reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
@@ -1119,12 +1123,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/access/interface-ports | GET /access/interface-ports | listInterfacePorts (services/keycore/handler_access.go:294) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1291 |
 | keycore\|POST\|/access/interface-ports | POST /access/interface-ports | upsertInterfacePort (services/keycore/handler_access.go:303) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1325 |
 | keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | deleteInterfacePort (services/keycore/handler_access.go:326) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1337 |
-| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:29) |  | GetAlgorithmDistribution |  |  | web/dashboard/src/lib/cryptoAgility.ts:85 |
-| keycore\|GET\|/agility/algorithms | GET /agility/algorithms | getAlgorithmInventory (services/keycore/handler_agility.go:42) |  | GetAlgorithmDistribution |  |  |  |
-| keycore\|GET\|/agility/keys-by-algorithm | GET /agility/keys-by-algorithm | getKeysByAlgorithm (services/keycore/handler_agility.go:52) |  | ListKeysByAlgorithm |  |  |  |
-| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:93) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:90 |
-| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:120) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:105 |
-| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:174) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:110 |
+| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:56) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:118 |
+| keycore\|GET\|/agility/algorithms | GET /agility/algorithms | getAlgorithmInventory (services/keycore/handler_agility.go:68) |  |  |  |  |  |
+| keycore\|GET\|/agility/keys-by-algorithm | GET /agility/keys-by-algorithm | getKeysByAlgorithm (services/keycore/handler_agility.go:76) |  | ListKeysByAlgorithm |  |  |  |
+| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:117) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:142 |
+| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:144) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:157 |
+| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:198) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:162 |
+| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:297) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:123 |
+| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:307) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:128 |
+| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:328) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:133 |
+| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:353) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:138 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
@@ -1307,14 +1315,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:137 |
-| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:142 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:150 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:165 |
+| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
+| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
 | pqc\|GET\|/pqc/scans | GET /pqc/scans | handleListScans (services/pqc/handler.go:111) | ListReadinessScans | ListReadinessScans |  |  |  |
 | pqc\|GET\|/pqc/scans/{param} | GET /pqc/scans/{id} | handleGetScan (services/pqc/handler.go:125) | GetReadinessScan | GetReadinessScan |  |  |  |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:160 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:155 |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
 | pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | handleCreatePlan (services/pqc/handler.go:153) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  |  |
 | pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | handleListPlans (services/pqc/handler.go:183) | ListMigrationPlans | ListMigrationPlans |  |  |  |
 | pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | handleGetPlan (services/pqc/handler.go:197) | GetMigrationPlan | GetMigrationPlan |  |  |  |

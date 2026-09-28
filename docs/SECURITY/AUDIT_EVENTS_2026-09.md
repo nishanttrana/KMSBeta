@@ -357,3 +357,10 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 | `audit.policy.floor_refused` | A policy create or update refused because `spec.minAlgorithmTier` is not a floor (`result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). Before 3.2.0-beta such a policy was stored and its floor enforced nothing | `TestUnknownFloorRefusedAndAudited` |
 | `audit.policy.violated` | A request a policy denies, including by the `crypto-floor` rule: now `result: refused` (was `success`), with `algorithm` and the denying `rules` | `TestCryptoFloorDenialAudited` |
 | `audit.policy.crypto_floor_violation` | A request denied by a policy's `minAlgorithmTier` (`result: refused`, `reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, its `tier`, `message`); HIGH in the audit catalogue. Catalogued and documented for alerting before 3.2.0-beta but never emitted | `TestCryptoFloorDenialAudited` |
+
+## Customer migration policy (5.1.0-beta, docs/SECURITY/ALGORITHM_TRANSITIONS.md)
+
+| Event | When | Test |
+|---|---|---|
+| `audit.key.crypto_policy_refused` | A key operation refused by the tenant's migration policy (`reason` `crypto_policy_decrypt_only` or `crypto_policy_disallowed`, with `rule_id`, `rule_name`, `rule_action`) or minimum algorithm tier (`below_min_algorithm_tier`, `invalid_min_algorithm_tier`); `result: refused`, `operation`, `algorithm`, `key_id`. The operation's own `audit.key.<op>` carries the same `reason`. Playbooks trigger `crypto_policy_refused` | `TestCryptoPolicyEnforcedOnKeyOperations`, `TestTenantMinAlgorithmTierEnforced` |
+| `audit.key.agility_policy_rules_listed`, `agility_policy_rule_created`, `agility_policy_rule_updated`, `agility_policy_rule_deleted` | Kernel events for migration rules (details `name`, `match_kind`, `match_value`, `action`, `effective_date`, `target_algorithm`; refusals `result: refused`). Changes are Playbooks trigger `crypto_policy_changed` | `TestAgilityPolicyRulesValidatedAndAudited`, `TestAgilityRoutesRefusalsAudited` |

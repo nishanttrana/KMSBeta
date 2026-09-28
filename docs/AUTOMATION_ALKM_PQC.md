@@ -47,7 +47,7 @@ governance service, are:
 posture_hndl_detection_enabled
 posture_auto_quarantine_enabled
 posture_auto_migration_enabled
-posture_min_algorithm_tier            // classical-112 | classical-128 | classical-192 | classical-256 | pqc-hybrid | pqc-only (stored; not yet enforced by keycore)
+posture_min_algorithm_tier            // classical-112 | classical-128 | classical-192 | classical-256 | pqc-hybrid | pqc-only (enforced by keycore on new keys and new protection since 5.1.0-beta)
 posture_zeroization_interval_mins
 ```
 
@@ -116,7 +116,7 @@ The "Health & Reconciliation" tab in the v3 dashboard surfaces:
 - recent watchdog incidents (timestamp, service, recommendation)
 
 The "Crypto Agility" tab shows keycore's `GET /agility/posture`: live keys
-against NIST's transition schedule from `pkg/cryptocatalog`
+against the customer's own migration policy rules, which keycore enforces
 (docs/SECURITY/ALGORITHM_TRANSITIONS.md). CBOM tiers use the same catalogue.
 
 ## Caveats and follow-ups

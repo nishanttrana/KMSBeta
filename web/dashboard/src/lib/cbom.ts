@@ -5,8 +5,8 @@
 // by construction — the dashboard does not need to trust any non-audit
 // source for crypto-agility reporting.
 
-// Classical tiers are SP 800-57 security strengths (pkg/cryptocatalog);
-// "deprecated" and "not-assessed" meet no floor.
+// Classical tiers are security strengths (pkg/cryptocatalog); "deprecated"
+// (weak) and "not-assessed" meet no floor.
 export type CBOMTier =
   | "classical-112"
   | "classical-128"

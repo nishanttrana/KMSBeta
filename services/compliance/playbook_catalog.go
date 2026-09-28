@@ -53,6 +53,8 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "key_access_refused", Label: "Key access refused", Group: "Key lifecycle", Subjects: []string{"audit.key.access_refused"}},
 	{Type: "key_request_replay_detected", Label: "Key request replay detected", Group: "Key lifecycle", Subjects: []string{"audit.key.request_replay_detected"}},
 	{Type: "key_hsm_refused", Label: "HSM refused a key operation", Group: "Key lifecycle", Subjects: []string{"audit.key.hsm_refused"}},
+	{Type: "crypto_policy_refused", Label: "Key operation refused by migration policy", Group: "Key lifecycle", Subjects: []string{"audit.key.crypto_policy_refused"}},
+	{Type: "crypto_policy_changed", Label: "Migration policy rule changed", Group: "Key lifecycle", Subjects: []string{"audit.key.agility_policy_rule_created", "audit.key.agility_policy_rule_updated", "audit.key.agility_policy_rule_deleted"}, SuccessOnly: true},
 	{Type: "cert_revoked", Label: "Certificate revoked", Group: "Certificates", Subjects: []string{"audit.cert.revoked"}, SuccessOnly: true},
 	{Type: "cert_renewal_window_missed", Label: "Certificate renewal window missed", Group: "Certificates", Subjects: []string{"audit.cert.renewal_window_missed"}},
 	{Type: "cert_mass_renewal_risk", Label: "Mass renewal risk detected", Group: "Certificates", Subjects: []string{"audit.cert.mass_renewal_risk_detected"}},

@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"vecta-kms/pkg/cryptocatalog"
 	"vecta-kms/pkg/route/routetest"
 )
 
@@ -44,8 +45,11 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 	rr, out := agilityCall(t, h, http.MethodGet, "/agility/posture", "")
 	posture, _ := out["data"].(map[string]any)
 	if rr.Code != http.StatusOK || posture["assessed"] != true || posture["total_keys"] != float64(4) ||
-		posture["quantum_vulnerable_keys"] != float64(2) || posture["not_assessed_keys"] != float64(1) {
+		posture["quantum_vulnerable_keys"] != float64(2) || posture["not_assessed_keys"] != float64(1) || posture["uncovered_keys"] != float64(2) {
 		t.Fatalf("posture: %d %s", rr.Code, rr.Body)
+	}
+	if strings.Contains(rr.Body.String(), "NIST") || strings.Contains(rr.Body.String(), "ipd") {
+		t.Fatalf("posture quotes a standards source: %s", rr.Body)
 	}
 	if e := rec.Last(t); e.Action != "agility_posture_read" || e.Event.Result != "success" || e.Event.Details["quantum_vulnerable_keys"] != 2 {
 		t.Fatalf("posture event %+v", e)
@@ -92,6 +96,7 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 		"/agility/algorithms":                           "agility_inventory_read",
 		"/agility/keys-by-algorithm?algorithm=RSA-2048": "agility_keys_by_algorithm_read",
 		"/agility/migration-plans":                      "agility_migration_plans_listed",
+		"/agility/policy/rules":                         "agility_policy_rules_listed",
 	} {
 		if rr, _ := agilityCall(t, h, http.MethodGet, path, ""); rr.Code != http.StatusOK {
 			t.Fatalf("%s: %d %s", path, rr.Code, rr.Body)
@@ -134,50 +139,199 @@ func TestAgilityPostureNotAssessedWithoutKeys(t *testing.T) {
 	}
 }
 
-// The posture measures live keys against the NIST schedule on a given day.
-// Before 3.2.0-beta RSA-2048 and AES-128-CBC were "legacy", SLH-DSA was not
-// quantum-safe, and a 0-100 score with invented weights stood in for this.
-func TestAgilityPostureAgainstNISTSchedule(t *testing.T) {
-	day := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
+func day(s string) time.Time { t, _ := time.Parse("2006-01-02", s); return t }
+
+// The posture measures live keys against the customer's own rules; the
+// product supplies no dates.
+func TestAgilityPostureAgainstCustomerPolicy(t *testing.T) {
+	now := day("2026-09-29")
+	rules := []AgilityRule{
+		{ID: "r1", Name: "weak out", MatchKind: MatchWeak, Action: ActionDisallowed, EffectiveDate: day("2026-01-01")},
+		{ID: "r2", Name: "RSA read-only", MatchKind: MatchFamily, MatchValue: "RSA", Action: ActionDecryptOnly, EffectiveDate: day("2027-06-30"), TargetAlgorithm: "ML-DSA-65"},
+		{ID: "r3", Name: "RSA flagged", MatchKind: MatchAlgorithm, MatchValue: "RSA-2048", Action: ActionDeprecated, EffectiveDate: day("2026-06-01")},
+	}
 	p := computeAgilityPosture([]AlgorithmUsage{
 		{Algorithm: "RSA-2048", KeyCount: 3},
-		{Algorithm: "AES-128-CBC", KeyCount: 2},
-		{Algorithm: "SLH-DSA-SHA2-128s", KeyCount: 1},
+		{Algorithm: "ECDSA-P256", KeyCount: 2},
 		{Algorithm: "3DES", KeyCount: 1},
+		{Algorithm: "SLH-DSA-SHA2-128s", KeyCount: 1},
 		{Algorithm: "ECDSA", KeyCount: 1},
-	}, day)
-	if !p.Assessed || p.TotalKeys != 8 || p.QuantumVulnerableKeys != 3 || p.PostQuantumKeys != 1 || p.NotAssessedKeys != 1 {
+	}, rules, "classical-128", now)
+	if !p.Assessed || p.TotalKeys != 8 || p.QuantumVulnerableKeys != 5 || p.PostQuantumKeys != 1 || p.WeakKeys != 1 ||
+		p.NotAssessedKeys != 1 || p.UncoveredKeys != 2 || p.PolicyRules != 3 || p.MinAlgorithmTier != "classical-128" {
 		t.Fatalf("posture counts: %+v", p)
 	}
-	if p.StatusCounts[cryptocatalog.Acceptable] != 6 || p.StatusCounts[cryptocatalog.LegacyUse] != 1 {
+	if p.StatusCounts[ActionDisallowed] != 1 || p.StatusCounts[ActionDeprecated] != 3 || p.StatusCounts["allowed"] != 4 {
 		t.Fatalf("status counts: %+v", p.StatusCounts)
 	}
-	byAlg := map[string]AlgorithmUsage{}
+	by := map[string]AlgorithmUsage{}
 	for _, a := range p.Algorithms {
-		byAlg[a.Algorithm] = a
+		by[a.Algorithm] = a
 	}
-	if a := byAlg["RSA-2048"]; a.Status != cryptocatalog.Acceptable || a.SecurityBits != 112 || a.NextChange == nil || a.NextChange.From != "2031-01-01" {
+	if a := by["RSA-2048"]; a.PolicyStatus != ActionDeprecated || a.SecurityBits != 112 || a.NextChange == nil ||
+		a.NextChange.Date != "2027-06-30" || a.NextChange.Action != ActionDecryptOnly || a.TargetAlgorithm != "ML-DSA-65" {
 		t.Fatalf("RSA-2048: %+v", a)
 	}
-	if a := byAlg["SLH-DSA-SHA2-128s"]; !a.PostQuantum || a.QuantumVulnerable || a.PQCCategory != 1 {
-		t.Fatalf("SLH-DSA: %+v", a)
+	if a := by["3DES"]; a.PolicyStatus != ActionDisallowed || !a.Weak || a.PolicyRule != "weak out" {
+		t.Fatalf("3DES: %+v", a)
 	}
-	if a := byAlg["ECDSA"]; a.Assessed || a.Status != "" {
-		t.Fatalf("bare ECDSA must not be assessed: %+v", a)
+	if a := by["ECDSA"]; a.Assessed || a.PolicyStatus != "allowed" {
+		t.Fatalf("bare ECDSA: %+v", a)
 	}
-	if len(p.Milestones) != 2 || p.Milestones[0].Date != "2031-01-01" || p.Milestones[0].KeyCount != 3 ||
-		p.Milestones[1].Date != "2036-01-01" || p.Milestones[1].Citation != "IR 8547 ipd, Tables 2 and 4" {
+	if len(p.Milestones) != 1 || p.Milestones[0].Date != "2027-06-30" || p.Milestones[0].KeyCount != 3 || p.Milestones[0].RuleName != "RSA read-only" {
 		t.Fatalf("milestones: %+v", p.Milestones)
 	}
 	joined := strings.Join(p.Findings, "\n")
-	for _, want := range []string{"no longer allows for new protection: 1 (3DES)", "become disallowed on 2036-01-01 (IR 8547 ipd, Tables 2 and 4): 3 (RSA-2048)", "not assessed: 1 (ECDSA)"} {
+	for _, want := range []string{"Your policy disallows 1 live key (every operation refused): 3DES", "No rule covers 2 live keys on quantum-vulnerable algorithms: ECDSA-P256", "Not assessed (the algorithm name states no parameter set): 1 live key on ECDSA"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("findings missing %q:\n%s", want, joined)
 		}
 	}
-	for _, s := range p.Sources {
-		if s.ID == cryptocatalog.SrcIR8547 && s.Revision != "ipd" {
-			t.Fatalf("IR 8547 must be cited as a draft: %+v", s)
+}
+
+func TestAgilityPolicyRulesValidatedAndAudited(t *testing.T) {
+	h, _ := newHandlerForTest(t)
+	rec := &routetest.Recorder{}
+	h.kernelAudit = rec
+	for body, why := range map[string]string{
+		`{"name":"x","match_kind":"family","action":"disallowed","effective_date":"2027-01-01"}`:                                                 "family without a value",
+		`{"name":"x","match_kind":"weak","action":"forbid","effective_date":"2027-01-01"}`:                                                       "unknown action",
+		`{"name":"x","match_kind":"weak","action":"disallowed"}`:                                                                                 "no effective date",
+		`{"name":"x","match_kind":"below_strength","match_value":"lots","action":"deprecated","effective_date":"2027-01-01"}`:                    "strength not a number",
+		`{"name":"x","match_kind":"family","match_value":"RSA","action":"decrypt_only","effective_date":"2027-01-01","target_algorithm":"3DES"}`: "weak target",
+	} {
+		if rr, _ := agilityCall(t, h, http.MethodPost, "/agility/policy/rules", body); rr.Code != http.StatusBadRequest {
+			t.Errorf("%s accepted: %d %s", why, rr.Code, rr.Body)
 		}
+	}
+	rr, out := agilityCall(t, h, http.MethodPost, "/agility/policy/rules",
+		`{"name":"RSA read-only","match_kind":"family","match_value":"RSA","action":"decrypt_only","effective_date":"2027-06-30","target_algorithm":"ML-DSA-65"}`)
+	rule, _ := out["data"].(map[string]any)
+	if rr.Code != http.StatusCreated || rule["action"] != "decrypt_only" || rule["created_by"] == "" {
+		t.Fatalf("create rule: %d %s", rr.Code, rr.Body)
+	}
+	if e := rec.Last(t); e.Action != "agility_policy_rule_created" || e.Event.TargetID != rule["id"] || e.Event.Details["effective_date"] != "2027-06-30" {
+		t.Fatalf("create event %+v", e)
+	}
+	id := rule["id"].(string)
+	rr, _ = agilityCall(t, h, http.MethodPut, "/agility/policy/rules/"+id,
+		`{"name":"RSA read-only","match_kind":"family","match_value":"RSA","action":"disallowed","effective_date":"2028-01-01"}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("update rule: %d %s", rr.Code, rr.Body)
+	}
+	if e := rec.Last(t); e.Action != "agility_policy_rule_updated" || e.Event.Details["action"] != "disallowed" {
+		t.Fatalf("update event %+v", e)
+	}
+	if rr, _ := agilityCall(t, h, http.MethodDelete, "/agility/policy/rules/"+id, ""); rr.Code != http.StatusOK {
+		t.Fatalf("delete rule: %d", rr.Code)
+	}
+	if e := rec.Last(t); e.Action != "agility_policy_rule_deleted" || e.Event.TargetID != id {
+		t.Fatalf("delete event %+v", e)
+	}
+	if rr, _ := agilityCall(t, h, http.MethodDelete, "/agility/policy/rules/"+id, ""); rr.Code != http.StatusNotFound {
+		t.Fatalf("second delete: %d", rr.Code)
+	}
+}
+
+// The customer's rules are enforced on real key operations, and each
+// refusal is audited with a specific reason.
+func TestCryptoPolicyEnforcedOnKeyOperations(t *testing.T) {
+	store := newStoreForTest(t)
+	pub := &captureKeycorePublisher{}
+	_, svc := newHandlerForTest(t)
+	svc.store, svc.events = store, pub
+	ctx := adminCtx()
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	enc, err := svc.Encrypt(ctx, key.ID, EncryptRequest{TenantID: "t1", PlaintextB64: base64.StdEncoding.EncodeToString([]byte("secret"))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	setRule := func(action, effective string) {
+		svc.invalidateAgilityRules("t1")
+		rules, _ := store.ListAgilityRules(ctx, "t1")
+		for _, r := range rules {
+			_ = store.DeleteAgilityRule(ctx, "t1", r.ID)
+		}
+		if _, err := store.CreateAgilityRule(ctx, AgilityRule{ID: newID("agrule"), TenantID: "t1", Name: "AES-256 " + action,
+			MatchKind: MatchAlgorithm, MatchValue: "AES-256", Action: action, EffectiveDate: day(effective)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	decrypt := func() error {
+		_, err := svc.Decrypt(ctx, key.ID, DecryptRequest{TenantID: "t1", CiphertextB64: enc.CipherB64, IVB64: enc.IVB64})
+		return err
+	}
+	encrypt := func() error {
+		_, err := svc.Encrypt(ctx, key.ID, EncryptRequest{TenantID: "t1", PlaintextB64: base64.StdEncoding.EncodeToString([]byte("more"))})
+		return err
+	}
+
+	setRule(ActionDecryptOnly, "2099-01-01") // not yet in force
+	if err := encrypt(); err != nil {
+		t.Fatalf("a future rule refused an operation: %v", err)
+	}
+
+	setRule(ActionDecryptOnly, "2020-01-01")
+	var refusal cryptoPolicyRefusal
+	var denied policyDeniedError
+	if err := encrypt(); !errors.As(err, &refusal) || refusal.Reason != "crypto_policy_decrypt_only" || !errors.As(err, &denied) {
+		t.Fatalf("encrypt under decrypt_only: %v", err)
+	}
+	if d := pub.details(t, "audit.key.crypto_policy_refused"); d["reason"] != "crypto_policy_decrypt_only" || d["operation"] != "key.encrypt" || d["rule_action"] != "decrypt_only" {
+		t.Fatalf("refusal event %+v", d)
+	}
+	if d := pub.details(t, "audit.key.encrypt"); d["result"] != "refused" || d["reason"] != "crypto_policy_decrypt_only" {
+		t.Fatalf("op event %+v", d)
+	}
+	if err := decrypt(); err != nil {
+		t.Fatalf("decrypt under decrypt_only: %v", err)
+	}
+	if _, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "new", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"}); !errors.As(err, &refusal) {
+		t.Fatalf("new key under decrypt_only: %v", err)
+	}
+
+	setRule(ActionDisallowed, "2020-01-01")
+	if err := decrypt(); !errors.As(err, &refusal) || refusal.Reason != "crypto_policy_disallowed" {
+		t.Fatalf("decrypt under disallowed: %v", err)
+	}
+
+	setRule(ActionDeprecated, "2020-01-01")
+	if err := encrypt(); err != nil {
+		t.Fatalf("deprecated refused: %v", err)
+	}
+}
+
+// The tenant minimum algorithm tier (governance posture) was stored but not
+// enforced before 5.1.0-beta. It now refuses new protection below the floor
+// and fails closed on a floor that isn't a tier.
+func TestTenantMinAlgorithmTierEnforced(t *testing.T) {
+	pub := &captureKeycorePublisher{}
+	_, svc := newHandlerForTest(t)
+	svc.events = pub
+	ctx := adminCtx()
+	create := func(alg string) error {
+		_, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k-" + alg, Algorithm: alg, KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
+		return err
+	}
+	if err := create("AES-128"); err != nil {
+		t.Fatal(err)
+	}
+	svc.SetGovernancePostureControlsProvider(staticPostureControlsProvider{controls: GovernancePostureControls{MinAlgorithmTier: "classical-192"}})
+	var refusal cryptoPolicyRefusal
+	if err := create("AES-128"); !errors.As(err, &refusal) || refusal.Reason != "below_min_algorithm_tier" {
+		t.Fatalf("AES-128 under classical-192: %v", err)
+	}
+	if d := pub.details(t, "audit.key.crypto_policy_refused"); d["reason"] != "below_min_algorithm_tier" {
+		t.Fatalf("refusal event %+v", d)
+	}
+	if err := create("AES-256"); err != nil {
+		t.Fatalf("AES-256 under classical-192: %v", err)
+	}
+	svc.SetGovernancePostureControlsProvider(staticPostureControlsProvider{controls: GovernancePostureControls{MinAlgorithmTier: "bogus"}})
+	if err := create("AES-256"); !errors.As(err, &refusal) || refusal.Reason != "invalid_min_algorithm_tier" {
+		t.Fatalf("invalid floor: %v", err)
 	}
 }

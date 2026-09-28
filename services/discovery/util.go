@@ -234,12 +234,12 @@ func normalizeAlgorithm(v string) string {
 	return strings.ToUpper(strings.TrimSpace(v))
 }
 
-// Algorithm facts come from pkg/cryptocatalog, which cites the NIST table
-// behind each one. Before 3.2.0-beta this service kept its own lists: RSA-4096
+// Algorithm facts come from pkg/cryptocatalog. Before 3.2.0-beta this
+// service kept its own lists: RSA-4096
 // and ECDSA were "strong", SLH-DSA was not post-quantum, and hybrids counted
 // as pure PQC.
 
-// isPQCAlgorithm: a post-quantum scheme (FIPS 203/204/205, SP 800-208) that
+// isPQCAlgorithm: a post-quantum scheme (ML-KEM, ML-DSA, SLH-DSA, LMS/XMSS) that
 // is not a hybrid.
 func isPQCAlgorithm(alg string) bool {
 	e, ok := cryptocatalog.Lookup(alg)
@@ -251,30 +251,29 @@ func isHybridAlgorithm(alg string) bool {
 	return ok && e.Hybrid
 }
 
-// isDeprecatedAlgorithm: NIST no longer allows it for new protection
-// (disallowed, legacy use only, or not approved).
+// isDeprecatedAlgorithm: weak today (broken, below 112 bits, or an unsafe
+// mode).
 func isDeprecatedAlgorithm(alg string) bool {
-	a := cryptocatalog.Assess(alg, time.Now())
-	return a.Assessed && !a.Status.Protects() && a.Status != cryptocatalog.NotTabled
+	e, ok := cryptocatalog.Lookup(alg)
+	return ok && e.Weak
 }
 
-// algorithmQSL is 100 when the algorithm resists a quantum computer and NIST
-// allows it for new protection today, else 0 (including when not assessed).
-// It replaced hand-picked 35-100 scores that had no source.
+// algorithmQSL is 100 when the algorithm is neither weak nor broken by a
+// quantum computer, else 0 (including when not assessed). It replaced
+// hand-picked 35-100 scores that had no basis.
 func algorithmQSL(alg string) float64 {
-	if cryptocatalog.Assess(alg, time.Now()).Ready {
+	if cryptocatalog.Assess(alg).Ready {
 		return 100
 	}
 	return 0
 }
 
-// classifyAlgorithm is vulnerable, weak, strong or unknown
-// (cryptocatalog.Assess).
+// classifyAlgorithm is vulnerable, strong or unknown (cryptocatalog.Assess).
 func classifyAlgorithm(alg string) string {
-	return cryptocatalog.Assess(alg, time.Now()).Class
+	return cryptocatalog.Assess(alg).Class
 }
 
-// strengthBits is the classical security strength (SP 800-57), not the key
+// strengthBits is the classical security strength, not the key
 // or parameter size stored here before 3.2.0-beta; 0 when not assessed.
 func strengthBits(alg string) int {
 	e, _ := cryptocatalog.Lookup(alg)

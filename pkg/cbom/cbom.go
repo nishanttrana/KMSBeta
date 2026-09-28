@@ -2,7 +2,7 @@
 // algorithms, parameter sets, and key counts in active use across the KMS.
 // Auditors and PQC-migration tooling consume the inventory; the policy
 // service compares it against the operator-defined floor and the latest
-// NIST guidance to flag deprecated entries.
+// catalogue facts to flag weak entries.
 package cbom
 
 import (
@@ -15,8 +15,8 @@ import (
 
 // Tier classifies an algorithm or parameter set against the current best-
 // practice posture. Operators set the floor; anything below the floor
-// surfaces in the diff endpoint. Classical tiers are the SP 800-57 security
-// strength from pkg/cryptocatalog.
+// surfaces in the diff endpoint. Classical tiers are the security strength
+// from pkg/cryptocatalog.
 type Tier string
 
 const (
@@ -26,8 +26,8 @@ const (
 	TierClassical256 Tier = "classical-256"
 	TierPQCHybrid    Tier = "pqc-hybrid"
 	TierPQCOnly      Tier = "pqc-only"
-	// TierDeprecated: NIST no longer allows the algorithm for new protection
-	// (disallowed, legacy use only, or not approved), or it is below 112 bits.
+	// TierDeprecated: the algorithm is weak (broken, below 112 bits, or an
+	// unsafe mode such as ECB).
 	TierDeprecated Tier = "deprecated"
 	// TierNotAssessed: the catalogue cannot identify the parameter set.
 	TierNotAssessed Tier = "not-assessed"
@@ -51,8 +51,8 @@ type Entry struct {
 	Tier        Tier      `json:"tier"`
 	FirstSeenAt time.Time `json:"first_seen_at,omitempty"`
 	LastUsedAt  time.Time `json:"last_used_at,omitempty"`
-	// Deprecated flags algorithms that the current NIST guidance no longer
-	// recommends (e.g., SHA-1, RSA-1024, ML-KEM-512 once superseded).
+	// Deprecated flags weak algorithms (broken, below 112 bits, or an unsafe
+	// mode), e.g. SHA-1, RSA-1024, 3DES, AES-ECB.
 	Deprecated bool `json:"deprecated,omitempty"`
 	// Note carries a short human-readable hint that explains why an entry
 	// is flagged, e.g. "below tenant min_algorithm_tier=pqc-hybrid".
@@ -98,9 +98,9 @@ func Build(tenantID string, floor Tier, samples []Entry) Inventory {
 		if e.Tier == "" {
 			e.Tier = ClassifyTier(e.Algorithm, e.Parameters)
 		}
-		if st, ok := statusOf(e.Algorithm); ok && !st.Protects() {
+		if ce, ok := cryptocatalog.Lookup(e.Algorithm); ok && ce.Weak {
 			e.Deprecated = true
-			e.Note = "NIST status: " + string(st)
+			e.Note = "weak algorithm"
 		}
 		if floor != "" && !MeetsFloor(e.Tier, floor) {
 			e.Note = strings.TrimPrefix(e.Note+"; below floor "+string(floor), "; ")
@@ -133,14 +133,6 @@ func Build(tenantID string, floor Tier, samples []Entry) Inventory {
 	}
 }
 
-func statusOf(algorithm string) (cryptocatalog.Status, bool) {
-	e, ok := cryptocatalog.Lookup(algorithm)
-	if !ok {
-		return "", false
-	}
-	return e.StatusAt(time.Now()), true
-}
-
 // ClassifyTier returns the tier of an algorithm from its catalogue entry.
 // Parameters mark a post-quantum algorithm used in a hybrid with "hybrid".
 // An algorithm the catalogue cannot identify is not assessed, and like a
@@ -150,9 +142,8 @@ func ClassifyTier(algorithm, parameters string) Tier {
 	if !ok {
 		return TierNotAssessed
 	}
-	st := e.StatusAt(time.Now())
 	switch {
-	case !st.Protects() && st != cryptocatalog.NotTabled:
+	case e.Weak:
 		return TierDeprecated
 	case e.Hybrid, e.PostQuantum && strings.Contains(strings.ToUpper(parameters), "HYBRID"):
 		return TierPQCHybrid

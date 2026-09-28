@@ -4,6 +4,46 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [5.1.0-beta] — 2026-09-29
+
+### Crypto agility: the customer's migration policy, enforced
+The owner: "avoid quoting direct sources, drafts, references; let customer
+decide when and what he wants to migrate as per his policy".
+
+- **Removed: standards schedules and citations.** `pkg/cryptocatalog` now holds
+  only technical facts (strength, post-quantum category, quantum
+  vulnerability, `weak`: broken, under 112 bits, ECB or FF3). The 3.2.0-beta
+  approval schedules, deadlines, source list and "draft/proposed" labels are
+  gone from the catalogue, the API and the tab.
+- **Added: migration policy rules** (keycore `GET|POST /agility/policy/rules`,
+  `PUT|DELETE /agility/policy/rules/{id}`, table `agility_policy_rules`,
+  migration 028). A rule covers an algorithm, a family, every
+  quantum-vulnerable or weak algorithm, or everything below a strength, and
+  from the customer's `effective_date` makes those keys `deprecated`,
+  `decrypt_only` (new protection refused, existing data still readable) or
+  `disallowed` (every cryptographic operation refused; export and destroy
+  still work), with an optional target algorithm.
+- **Enforced on every key operation** in keycore's `checkPolicy`; a refusal is
+  `403 policy_denied` and `audit.key.crypto_policy_refused` with the rule.
+- **Fixed: the tenant minimum algorithm tier (governance posture) was stored
+  but never enforced.** Keycore now refuses new keys and new protection below
+  it, and fails closed on a value that isn't a tier.
+- **Crypto Agility tab:** your migration policy (add/edit/delete rules, with a
+  live "covers N keys" preview and a warning when a rule takes effect
+  immediately), your migration schedule, the inventory with "your policy
+  today" and the next change, keys no rule covers, and findings. No
+  standards documents or drafts are quoted.
+- **Playbooks:** new triggers `crypto_policy_refused` and
+  `crypto_policy_changed`.
+- **pqc:** the timeline is the customer's plan deadlines (`upcoming`,
+  `due_within_year`, `overdue`, `met`); a plan without a deadline has none
+  (it defaulted to a standards date). Classification is `vulnerable`,
+  `strong` or `unknown`.
+- **Breaking:** `/agility/posture` and `/agility/algorithms` return policy
+  fields (`policy_status`, `policy_rule`, `target_algorithm`, `next_change`,
+  `weak`, `uncovered_keys`, `min_algorithm_tier`) instead of `nist_status`,
+  `schedule` and `sources`. X25519 is no longer tiered `deprecated` (it is a
+  128-bit quantum-vulnerable scheme).
 ## [5.0.0-beta] — 2026-09-29
 
 ### Key visibility: you see the keys you can use (owner decision, option A)

@@ -133,7 +133,7 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 	// is denied with a dedicated outcome that the dashboard can surface as
 	// a crypto-agility violation. The check fires before rule processing
 	// so a permissive rule cannot override the floor. Tiers come from the
-	// NIST catalogue (pkg/cryptocatalog); an algorithm it cannot assess, or
+	// algorithm catalogue (pkg/cryptocatalog); an algorithm it cannot assess, or
 	// a floor it does not know, is denied.
 	if floor := strings.ToLower(strings.TrimSpace(doc.Spec.MinAlgorithmTier)); floor != "" {
 		if alg := strings.TrimSpace(req.Algorithm); alg != "" {

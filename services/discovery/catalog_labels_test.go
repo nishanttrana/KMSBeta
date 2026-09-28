@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// strength_bits is the SP 800-57 security strength, not the key or parameter
+// strength_bits is the security strength, not the key or parameter
 // size (RSA-2048 was stored as 2048, ML-KEM-768 as 768), and classification
 // follows pkg/cryptocatalog (RSA-4096 was "strong").
 func TestDiscoveryLabelsFollowTheCatalogue(t *testing.T) {

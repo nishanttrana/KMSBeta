@@ -91,6 +91,10 @@ type Store interface {
 	ListMigrationPlans(ctx context.Context, tenantID string) ([]MigrationPlan, error)
 	CreateMigrationPlan(ctx context.Context, mp MigrationPlan) (MigrationPlan, error)
 	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string) (MigrationPlan, error)
+	ListAgilityRules(ctx context.Context, tenantID string) ([]AgilityRule, error)
+	CreateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
+	UpdateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
+	DeleteAgilityRule(ctx context.Context, tenantID, id string) error
 
 	// Ceremony
 	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)

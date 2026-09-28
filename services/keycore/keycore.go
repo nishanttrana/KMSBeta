@@ -51,6 +51,7 @@ import (
 )
 
 type Service struct {
+	agilityCache agilityRuleCache
 	clusterMEK   clusterMEKState
 	restartSelf  func()
 	store        Store
@@ -4738,6 +4739,9 @@ func existsToken(tenantID string, keyID string) string {
 }
 
 func (s *Service) checkPolicy(ctx context.Context, req PolicyEvaluateRequest) error {
+	if err := s.enforceCryptoPolicy(ctx, req); err != nil {
+		return err
+	}
 	if s.policy == nil {
 		// Nil evaluator only reaches this path on misconfiguration; under
 		// fail-closed posture treat it as an explicit denial.

@@ -96,6 +96,36 @@ CLAUDE.md points to it.
 
 ---
 
+## 2026-09-29 — Crypto agility: the customer's policy decides; no standards quoted (5.1.0-beta)
+
+**Decision.** The owner: "avoid quoting direct sources, drafts, references
+let customer decide when and what he wants to migrate as per his policy".
+This supersedes the dated schedule of the 3.2.0-beta entry below. The
+catalogue keeps technical facts only (strength, post-quantum category,
+quantum vulnerability, weak). Each tenant writes migration rules (what, from
+when, to what); keycore enforces them on every key operation, and the
+tenant minimum algorithm tier is enforced beside them.
+
+**Why.** Migration timing depends on the customer's risk, data lifetime,
+contracts and regulator, not on the vendor. A product that ships dates makes
+the vendor's reading of a draft the customer's policy.
+
+**Rejected.**
+- *Ship the standards dates as a default rule set.* Still the vendor
+  deciding; the customer starts from an empty policy and adds rules.
+- *Record rules without enforcing them.* A rule that changes nothing is the
+  "stored but never enforced" failure (learning.md 2026-09-29).
+- *Refuse lifecycle operations under `disallowed`.* A key must stay
+  exportable and destroyable so it can be retired.
+
+**Enforced by.** `TestCryptoPolicyEnforcedOnKeyOperations`,
+`TestTenantMinAlgorithmTierEnforced`, `TestAgilityPostureAgainstCustomerPolicy`,
+`TestAgilityPolicyRulesValidatedAndAudited`,
+`TestTimelineIsTheCustomersPlanDeadlines`, and the tab's Playwright spec,
+which fails on any standards reference.
+
+---
+
 ## 2026-09-29 — Crypto agility: one cited NIST catalogue, drafts shown as proposed (3.2.0-beta)
 
 **Decision.** The owner asked for the Crypto Agility tab to follow NIST

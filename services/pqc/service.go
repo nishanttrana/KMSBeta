@@ -82,8 +82,8 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 			classical++
 		}
 
-		if a := cryptocatalog.Assess(alg, s.now()); a.Ready && a.Class == "strong" {
-			continue // quantum-resistant and allowed by NIST today: nothing to migrate
+		if a := cryptocatalog.Assess(alg); a.Ready {
+			continue // neither weak nor quantum-vulnerable: nothing to migrate
 		}
 
 		classification := strings.ToLower(strings.TrimSpace(asset.Classification))
@@ -127,7 +127,7 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 			0.15*pct(hybrid, maxInt(total, 1)),
 	))
 
-	timelineStatus := s.timelineStatusMap(algorithmSummary)
+	timelineStatus := s.timelineStatusMap(ctx, tenantID)
 	scan := ReadinessScan{
 		ID:               newID("scan"),
 		TenantID:         tenantID,
@@ -335,7 +335,7 @@ func (s *Service) GetMigrationReport(ctx context.Context, tenantID string) (PQCM
 	if err != nil {
 		return PQCMigrationReport{}, err
 	}
-	timeline := s.buildTimelineMilestones(readiness.AlgorithmSummary)
+	timeline := s.buildTimelineMilestones(ctx, tenantID)
 	topRisks := readiness.RiskItems
 	if len(topRisks) > 8 {
 		topRisks = topRisks[:8]
@@ -371,14 +371,10 @@ func (s *Service) CreateMigrationPlan(ctx context.Context, req PlanRequest) (Mig
 		req.Name = "PQC migration plan " + s.now().Format("2006-01-02")
 	}
 	targetProfile := defaultString(req.TargetProfile, "hybrid-first")
-	timelineStandard := defaultString(req.TimelineStandard, nistTimelineStandard)
+	// The customer decides when to migrate: the deadline is theirs, and a
+	// plan without one has none.
+	timelineStandard := defaultString(req.TimelineStandard, "customer")
 	deadline := parseTimeString(req.Deadline)
-	if deadline.IsZero() {
-		if timelineStandard != nistTimelineStandard {
-			return MigrationPlan{}, newServiceError(400, "bad_request", "no sourced deadline for timeline_standard "+timelineStandard+": pass deadline")
-		}
-		deadline = nistQuantumDeadline
-	}
 	steps := make([]MigrationStep, 0, len(readiness.RiskItems))
 	phaseCount := map[string]int{}
 	for _, risk := range readiness.RiskItems {
@@ -507,7 +503,7 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 			step.Status = "manual_required"
 			step.Metadata["reason"] = "the KMS cannot change a " + step.AssetType + "; change it at its source"
 			if isKeyAsset(step.AssetType) {
-				step.Metadata["reason"] = "no migration target: " + step.CurrentAlg + " does not name a parameter set NIST tables"
+				step.Metadata["reason"] = "no migration target: " + step.CurrentAlg + " does not name a parameter set"
 			}
 			continue
 		}
@@ -678,7 +674,7 @@ func (s *Service) Timeline(ctx context.Context, tenantID string) ([]TimelineMile
 	if err != nil {
 		return nil, ReadinessScan{}, err
 	}
-	milestones := s.buildTimelineMilestones(readiness.AlgorithmSummary)
+	milestones := s.buildTimelineMilestones(ctx, tenantID)
 	return milestones, readiness, nil
 }
 
@@ -1172,73 +1168,62 @@ func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step 
 	return "successor_created", id, err
 }
 
-// nistTimelineStandard is the only timeline with a sourced default deadline:
-// IR 8547 (ipd) disallows quantum-vulnerable signatures and key
-// establishment after 2035. Before 3.2.0-beta plans defaulted to "cnsa2"
-// with dates (a 2028 hybrid step, an EU 2029 baseline) that no document set.
-const nistTimelineStandard = "nist-ir-8547-ipd"
-
-var nistQuantumDeadline = time.Date(2035, 12, 31, 0, 0, 0, 0, time.UTC)
-
-// buildTimelineMilestones lists the NIST status changes that reach the
-// scanned algorithms (pkg/cryptocatalog), soonest first, with how many assets
-// each one affects.
-func (s *Service) buildTimelineMilestones(algorithmSummary map[string]int) []TimelineMilestone {
-	now := s.now()
-	var entries []cryptocatalog.Entry
-	for alg := range algorithmSummary {
-		if e, ok := cryptocatalog.Lookup(alg); ok {
-			entries = append(entries, e)
-		}
-	}
+// buildTimelineMilestones lists the customer's migration plans that have a
+// deadline, soonest first, with how many of each plan's steps are still
+// open. The product sets no deadlines of its own.
+func (s *Service) buildTimelineMilestones(ctx context.Context, tenantID string) []TimelineMilestone {
 	out := []TimelineMilestone{}
-	for _, m := range cryptocatalog.Milestones(entries, now) {
-		due, _ := time.Parse("2006-01-02", m.Date)
-		affected, algs := 0, []string{}
-		for alg, n := range algorithmSummary {
-			e, ok := cryptocatalog.Lookup(alg)
-			if !ok {
-				continue
-			}
-			for _, st := range e.Schedule {
-				if st.From == m.Date && st.Status == m.Status && st.Source == m.Source {
-					affected += n
-					algs = append(algs, alg)
-					break
-				}
+	plans, err := s.store.ListMigrationPlans(ctx, tenantID, 500, 0)
+	if err != nil {
+		return out
+	}
+	now := s.now()
+	done := map[string]bool{"completed": true, "rotated": true, "successor_created": true}
+	for _, p := range plans {
+		if p.Deadline.IsZero() || p.Status == "rolled_back" {
+			continue
+		}
+		open, algs := 0, map[string]bool{}
+		for _, st := range p.Steps {
+			if !done[st.Status] {
+				open++
+				algs[st.CurrentAlg] = true
 			}
 		}
-		sort.Strings(algs)
-		days := int(due.Sub(now).Hours() / 24)
+		names := make([]string, 0, len(algs))
+		for a := range algs {
+			names = append(names, a)
+		}
+		sort.Strings(names)
+		days := int(p.Deadline.Sub(now).Hours() / 24)
 		status := "upcoming"
-		if days <= 365 {
+		switch {
+		case open == 0:
+			status = "met"
+		case days < 0:
+			status = "overdue"
+		case days <= 365:
 			status = "due_within_year"
 		}
 		out = append(out, TimelineMilestone{
-			ID:             m.Date + "-" + string(m.Status) + "-" + strings.ToLower(m.Source),
-			Standard:       m.Source,
-			Title:          "Becomes " + strings.ReplaceAll(string(m.Status), "_", " "),
-			DueDate:        due,
-			Status:         status,
-			DaysLeft:       days,
-			AffectedAssets: affected,
-			Citation:       cryptocatalog.Cite(m.Source, m.Ref),
-			Description:    strings.Join(algs, ", "),
+			ID: p.ID, Standard: p.TimelineStandard, Title: p.Name, DueDate: p.Deadline,
+			Status: status, DaysLeft: days, AffectedAssets: open, Description: strings.Join(names, ", "),
 		})
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].DueDate.Before(out[j].DueDate) })
 	return out
 }
 
-// timelineStatusMap is the scan's summary of those milestones, keyed by ID.
-func (s *Service) timelineStatusMap(algorithmSummary map[string]int) map[string]interface{} {
+// timelineStatusMap is the scan's summary of those milestones, keyed by plan.
+func (s *Service) timelineStatusMap(ctx context.Context, tenantID string) map[string]interface{} {
 	out := map[string]interface{}{}
-	for _, m := range s.buildTimelineMilestones(algorithmSummary) {
+	for _, m := range s.buildTimelineMilestones(ctx, tenantID) {
 		out[m.ID] = map[string]interface{}{
+			"plan":            m.Title,
 			"deadline":        m.DueDate.Format("2006-01-02"),
 			"status":          m.Status,
 			"days_remaining":  m.DaysLeft,
 			"affected_assets": m.AffectedAssets,
-			"citation":        m.Citation,
 		}
 	}
 	return out
@@ -1263,8 +1248,8 @@ func migrationTarget(alg string, assetType string) string {
 	case e.QuantumVulnerable:
 		// Signatures, and RSA or EC keys whose use the asset doesn't record.
 		return "ML-DSA-65"
-	case !e.StatusAt(time.Now()).Protects():
-		return "AES-256" // disallowed or legacy-use symmetric (3DES, DES, AES-ECB)
+	case e.Weak:
+		return "AES-256" // weak symmetric (3DES, DES, AES-ECB)
 	}
 	return e.Algorithm
 }

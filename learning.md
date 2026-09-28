@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A posture control that is stored but never read is a promise, not a control
+- **What happened:** governance posture's `MinAlgorithmTier` ("the
+  tenant-wide crypto-agility floor") was saved, synced to keycore and shown
+  in the docs, but no keycore code path compared an algorithm with it.
+- **Why it slipped through:** the struct field, the sync and the docs
+  existed, so it looked wired; nothing tested a refusal.
+- **Rule:** a control ships with a test that proves it refuses the bad case
+  (`TestTenantMinAlgorithmTierEnforced`), or it is a labelled preview.
+
+### Dates the vendor picks are the customer's decision
+- **What happened:** 3.2.0-beta put standards-body transition dates into
+  the product as the migration schedule. The owner reversed it: customers
+  migrate on their own policy, and quoting drafts and references in the
+  product is not our place.
+- **Rule:** the product states technical facts and enforces the customer's
+  policy; it doesn't decide dates for them (CLAUDE.md, 2026-09-29).
 ### Closing a hole in two route families left the rest of the mux open
 - **What happened:** 4.0.0-beta put keycore's access and key-management
   routes behind permissions, but the same raw mux still let any verified

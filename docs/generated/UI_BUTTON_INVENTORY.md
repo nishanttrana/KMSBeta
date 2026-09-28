@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-28T19:31:57Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T00:03:40Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -267,11 +267,14 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 326 | - | Btn | void savePolicy()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 432 | - | Btn | void runEvaluation()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 605 | - | Btn | void refresh(false)}>Refresh History |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 111 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 198 | crypto_agility | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 199 | crypto_agility | button | (icon or dynamic label) | handleSave |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 292 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 300 | crypto_agility | button | setShowModal(true)} disabled= style={ } > Create Migration Plan |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 136 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 160 | crypto_agility | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 161 | crypto_agility | button | (icon or dynamic label) | onSave |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 459 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 462 | crypto_agility | button | setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $... |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 465 | crypto_agility | button | setShowPlanModal(true)} disabled= style={ }> Create Migration Plan |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 536 | crypto_agility | button | setRuleModal( )} style= > |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 537 | crypto_agility | button | handleDeleteRule(r)} style= > |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 714 | crypto | button | selectAlgorithmFromRail(String(name),fipsApproved)} disabled= style={{ displa... |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 748 | crypto | button | { if(tabAllowed) }} disabled= style={{ background:op===item.id?C.accent:"tran... |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 870 | crypto | button | {busy?`Execute $ ...`:`Execute $ `} | runOperation |

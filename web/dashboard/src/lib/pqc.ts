@@ -104,18 +104,16 @@ export type PQCReadinessScan = {
   completed_at?: string;
 };
 
-// A NIST status change that reaches scanned assets (pkg/cryptocatalog);
-// standard is the cited source ID, citation the table.
+// A customer migration plan's deadline; standard is the plan's own label.
 export type PQCTimelineMilestone = {
   id: string;
   standard: string;
   title: string;
   due_date: string;
-  status: "upcoming" | "due_within_year" | string;
+  status: "upcoming" | "due_within_year" | "overdue" | "met" | string;
   days_left: number;
-  affected_assets: number;
-  citation: string;
-  description: string;
+  affected_assets: number; // steps still open
+  description: string; // algorithms still to migrate
 };
 
 export type PQCMigrationReport = {

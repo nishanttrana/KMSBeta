@@ -157,11 +157,16 @@ an approach, record it here or in the matching doc below.
   forces less (LDAP/AD, KMIP, Alibaba HMAC-SHA1), add a comment
   `FIPS exception: external protocol mandate` explaining why.
 - Algorithms must be on the approved list in `pkg/fips/fips.go`.
-- What the product says about an algorithm (strength, quantum
-  vulnerability, NIST status and deadlines, CBOM tier) comes only from
-  `pkg/cryptocatalog`, which cites the NIST table behind each fact. No
-  service keeps its own algorithm list or score, a draft's date is shown as
-  proposed, and a name without a parameter set is "not assessed"
+- **The customer decides what to migrate and when** (owner directive,
+  2026-09-29: "avoid quoting direct sources, drafts, references let
+  customer decide when and what he wants to migrate as per his policy").
+  The product states only technical facts about an algorithm (strength,
+  post-quantum category, quantum vulnerability, weak), from
+  `pkg/cryptocatalog` alone; no service keeps its own algorithm list or
+  score, and a name without a parameter set is "not assessed". Migration
+  statuses and dates come only from the tenant's own policy rules, which
+  keycore enforces. No standards citations, draft references or vendor-set
+  deadlines in the UI or API
   ([docs/SECURITY/ALGORITHM_TRANSITIONS.md](docs/SECURITY/ALGORITHM_TRANSITIONS.md)).
 - Key derivation uses HKDF-SHA256 or Argon2id, never a raw hash.
 - Audit records are immutable and tamper-evident: hash chain, per-event HMAC

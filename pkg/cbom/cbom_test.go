@@ -2,10 +2,10 @@ package cbom
 
 import "testing"
 
-// Tiers follow the SP 800-57 strengths in pkg/cryptocatalog. Before
+// Tiers follow the security strengths in pkg/cryptocatalog. Before
 // 3.2.0-beta RSA-2048 was classical-128, RSA-3072 classical-192, RSA-4096
 // and P-384 classical-256, and HMAC, Ed25519 and ECDH fell to "deprecated".
-func TestClassifyTierUsesNISTStrengths(t *testing.T) {
+func TestClassifyTierUsesSecurityStrengths(t *testing.T) {
 	for alg, want := range map[string]Tier{
 		"RSA-2048":          TierClassical112,
 		"RSA-3072":          TierClassical128,
@@ -27,7 +27,7 @@ func TestClassifyTierUsesNISTStrengths(t *testing.T) {
 		"RSA-1024":          TierDeprecated,
 		"SHA-1":             TierDeprecated,
 		"AES-256-ECB":       TierDeprecated,
-		"X25519":            TierDeprecated,
+		"X25519":            TierClassical128,
 		"RSA":               TierNotAssessed,
 		"Brainpool-P256":    TierNotAssessed,
 	} {
@@ -73,7 +73,7 @@ func TestMeetsFloorFailsClosed(t *testing.T) {
 	}
 }
 
-func TestBuildFlagsWhatNISTNoLongerAllows(t *testing.T) {
+func TestBuildFlagsWeakAlgorithms(t *testing.T) {
 	inv := Build("t1", TierClassical128, []Entry{
 		{Algorithm: "3DES", KeyCount: 2},
 		{Algorithm: "RSA-2048", KeyCount: 3},
@@ -83,7 +83,7 @@ func TestBuildFlagsWhatNISTNoLongerAllows(t *testing.T) {
 	for _, e := range inv.Entries {
 		byAlg[e.Algorithm] = e
 	}
-	if e := byAlg["3DES"]; !e.Deprecated || e.Note != "NIST status: legacy_use; below floor classical-128" {
+	if e := byAlg["3DES"]; !e.Deprecated || e.Note != "weak algorithm; below floor classical-128" {
 		t.Errorf("3DES entry = %+v", e)
 	}
 	if e := byAlg["RSA-2048"]; e.Deprecated || e.Note != "below floor classical-128" {

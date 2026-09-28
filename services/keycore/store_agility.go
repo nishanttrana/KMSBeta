@@ -158,3 +158,67 @@ func scanMigrationPlanSingleRow(row *sql.Row) (MigrationPlan, error) {
 	}
 	return mp, nil
 }
+
+// ---- Customer migration policy ----
+
+const agilityRuleColumns = `id, tenant_id, name, match_kind, match_value, action, effective_date,
+       target_algorithm, note, created_by, created_at, updated_at`
+
+func (s *SQLStore) ListAgilityRules(ctx context.Context, tenantID string) ([]AgilityRule, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+agilityRuleColumns+`
+FROM agility_policy_rules WHERE tenant_id = $1 ORDER BY effective_date, name`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []AgilityRule{}
+	for rows.Next() {
+		r, err := scanAgilityRule(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) CreateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error) {
+	return scanAgilityRule(s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO agility_policy_rules
+  (id, tenant_id, name, match_kind, match_value, action, effective_date, target_algorithm, note, created_by, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+RETURNING `+agilityRuleColumns,
+		r.ID, r.TenantID, r.Name, r.MatchKind, r.MatchValue, r.Action, r.EffectiveDate.UTC(), r.TargetAlgorithm, r.Note, r.CreatedBy))
+}
+
+func (s *SQLStore) UpdateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error) {
+	out, err := scanAgilityRule(s.db.SQL().QueryRowContext(ctx, `
+UPDATE agility_policy_rules
+SET name=$3, match_kind=$4, match_value=$5, action=$6, effective_date=$7, target_algorithm=$8, note=$9, updated_at=CURRENT_TIMESTAMP
+WHERE tenant_id=$1 AND id=$2
+RETURNING `+agilityRuleColumns,
+		r.TenantID, r.ID, r.Name, r.MatchKind, r.MatchValue, r.Action, r.EffectiveDate.UTC(), r.TargetAlgorithm, r.Note))
+	if err == sql.ErrNoRows {
+		return AgilityRule{}, errStoreNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) DeleteAgilityRule(ctx context.Context, tenantID, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM agility_policy_rules WHERE tenant_id=$1 AND id=$2`, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errStoreNotFound
+	}
+	return nil
+}
+
+func scanAgilityRule(row interface{ Scan(dest ...any) error }) (AgilityRule, error) {
+	var r AgilityRule
+	err := row.Scan(&r.ID, &r.TenantID, &r.Name, &r.MatchKind, &r.MatchValue, &r.Action, &r.EffectiveDate,
+		&r.TargetAlgorithm, &r.Note, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt)
+	r.EffectiveDate = r.EffectiveDate.UTC()
+	return r, err
+}
