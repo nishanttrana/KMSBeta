@@ -7,6 +7,21 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — The generated product map is checked, not auto-committed (2.9.0-beta)
+
+**Decision.** `make conformance` runs `generate_product_map.py --check` and
+fails when `docs/generated/` is stale. The author reruns the generator and
+commits the result with the change.
+*Rejected:*
+- CI regenerating and committing to `main` (a bot writing to `main`, and a
+  commit that didn't pass the checks run on its parent).
+- Not committing the output (reviewers and other tools read it from the
+  repo).
+- A warning instead of a failure (it drifted for five releases while
+  nothing failed).
+
+---
+
 ## 2026-09-28 — Playbook follow-ups: stored thresholds, required approval policy, tampering on the stream (2.6.0-beta)
 
 - **Threshold counts are stored, in a replicated table the primary

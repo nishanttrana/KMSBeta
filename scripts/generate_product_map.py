@@ -5,6 +5,10 @@ The scanner is intentionally static and dependency-free. It does not prove that
 an interaction succeeds at runtime; it creates an inventory that shows what UI
 modules exist, which services they appear to call, and which backend routes are
 registered in source.
+
+`--check` regenerates into a temporary directory and fails if docs/generated
+differs (ignoring the generation timestamp). make conformance runs it, so
+the committed map can't drift from the source again (2.9.0-beta).
 """
 
 from __future__ import annotations
@@ -14,6 +18,9 @@ import datetime as dt
 import functools
 import json
 import re
+import subprocess
+import sys
+import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -45,7 +52,7 @@ def iter_files(root: Path, suffixes: Sequence[str]) -> Iterable[Path]:
         return
     for path in sorted(root.rglob("*")):
         if path.is_file() and path.suffix in suffixes:
-            if "node_modules" in path.parts or "dist" in path.parts:
+            if "node_modules" in path.parts or "dist" in path.parts or not in_repo(path):
                 continue
             yield path
 
@@ -132,8 +139,28 @@ SPEC_FIELDS = ("Permission", "Action", "Resource", "Public")
 _package_consts: Dict[Path, Dict[str, str]] = {}
 
 
+def _git_files() -> Optional[set]:
+    """Files a commit would carry: tracked, plus untracked but not ignored.
+    Local scratch and build output stay out, so a local run matches CI."""
+    try:
+        out = subprocess.run(
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=REPO_ROOT, capture_output=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return {REPO_ROOT / p for p in out.decode("utf-8", "replace").split("\0") if p}
+
+
+GIT_FILES = _git_files()
+
+
+def in_repo(path: Path) -> bool:
+    return GIT_FILES is None or path in GIT_FILES
+
+
 def go_source_files(directory: Path) -> List[Path]:
-    return [path for path in sorted(directory.glob("*.go")) if not path.name.endswith("_test.go")]
+    return [path for path in sorted(directory.glob("*.go")) if not path.name.endswith("_test.go") and in_repo(path)]
 
 
 def go_package_consts(pkg_dir: Path) -> Dict[str, str]:
@@ -1854,8 +1881,8 @@ def write_visual_graph_html(path: Path, payload: Dict[str, object]) -> None:
     path.write_text(html, encoding="utf-8")
 
 
-def main() -> None:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+def main(out_dir: Path = OUT_DIR, quiet: bool = False) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     backend_routes = extract_backend_routes()
     frontend_calls = extract_frontend_calls()
@@ -2134,19 +2161,19 @@ def main() -> None:
         },
     }
 
-    (OUT_DIR / "PRODUCT_MAP.md").write_text("\n".join(product_map_md) + "\n", encoding="utf-8")
-    (OUT_DIR / "UI_BUTTON_INVENTORY.md").write_text("\n".join(button_md) + "\n", encoding="utf-8")
-    (OUT_DIR / "REQUEST_FLOW.md").write_text("\n".join(request_flow_md) + "\n", encoding="utf-8")
-    write_visual_graph_html(OUT_DIR / "FLOW_GRAPH.html", graph_payload)
-    (OUT_DIR / "product-map.mmd").write_text(mermaid, encoding="utf-8")
-    (OUT_DIR / "product-map.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out_dir / "PRODUCT_MAP.md").write_text("\n".join(product_map_md) + "\n", encoding="utf-8")
+    (out_dir / "UI_BUTTON_INVENTORY.md").write_text("\n".join(button_md) + "\n", encoding="utf-8")
+    (out_dir / "REQUEST_FLOW.md").write_text("\n".join(request_flow_md) + "\n", encoding="utf-8")
+    write_visual_graph_html(out_dir / "FLOW_GRAPH.html", graph_payload)
+    (out_dir / "product-map.mmd").write_text(mermaid, encoding="utf-8")
+    (out_dir / "product-map.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     write_csv(
-        OUT_DIR / "frontend-calls.csv",
+        out_dir / "frontend-calls.csv",
         frontend_calls,
         ["service", "service_key", "method", "path", "normalized_path", "dynamic", "source", "file", "line", "match_key"],
     )
     write_csv(
-        OUT_DIR / "backend-routes.csv",
+        out_dir / "backend-routes.csv",
         backend_routes,
         [
             "service", "method", "path", "normalized_path", "handler", "registration",
@@ -2154,7 +2181,7 @@ def main() -> None:
         ],
     )
     write_csv(
-        OUT_DIR / "request-flows.csv",
+        out_dir / "request-flows.csv",
         flow_csv_rows(request_flows),
         [
             "route_key",
@@ -2174,16 +2201,42 @@ def main() -> None:
         ],
     )
 
-    print(f"Wrote {rel(OUT_DIR / 'PRODUCT_MAP.md')}")
-    print(f"Wrote {rel(OUT_DIR / 'UI_BUTTON_INVENTORY.md')}")
-    print(f"Wrote {rel(OUT_DIR / 'REQUEST_FLOW.md')}")
-    print(f"Wrote {rel(OUT_DIR / 'FLOW_GRAPH.html')}")
-    print(f"Backend routes: {len(backend_routes)}")
-    print(f"Frontend call sites: {len(frontend_calls)}")
-    print(f"Clickable controls: {len(button_inventory)}")
-    print(f"Request flows: {len(request_flows)}")
-    print(f"Unmatched frontend call sites: {len(unmatched_calls)}")
+    if not quiet: print(f"Wrote {rel(out_dir / 'PRODUCT_MAP.md')}")
+    if not quiet: print(f"Wrote {rel(out_dir / 'UI_BUTTON_INVENTORY.md')}")
+    if not quiet: print(f"Wrote {rel(out_dir / 'REQUEST_FLOW.md')}")
+    if not quiet: print(f"Wrote {rel(out_dir / 'FLOW_GRAPH.html')}")
+    if not quiet: print(f"Backend routes: {len(backend_routes)}")
+    if not quiet: print(f"Frontend call sites: {len(frontend_calls)}")
+    if not quiet: print(f"Clickable controls: {len(button_inventory)}")
+    if not quiet: print(f"Request flows: {len(request_flows)}")
+    if not quiet: print(f"Unmatched frontend call sites: {len(unmatched_calls)}")
+
+
+TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+
+
+def check() -> int:
+    """Regenerate into a temporary directory and compare with docs/generated."""
+    with tempfile.TemporaryDirectory() as tmp:
+        fresh = Path(tmp)
+        main(fresh, quiet=True)
+        names = sorted({p.name for p in fresh.iterdir()} | {p.name for p in OUT_DIR.iterdir() if p.is_file()})
+        stale = []
+        for name in names:
+            want, have = fresh / name, OUT_DIR / name
+            if not want.exists() or not have.exists():
+                stale.append(name)
+                continue
+            norm = lambda t: TIMESTAMP_RE.sub("<generated_at>", t)
+            if norm(read_text(want)) != norm(read_text(have)):
+                stale.append(name)
+    if stale:
+        print(f"FAIL [product-map]: docs/generated is out of date ({', '.join(stale)}). "
+              "Run: python3 scripts/generate_product_map.py")
+        return 1
+    print("PASS [product-map]")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(check() if "--check" in sys.argv[1:] else main())

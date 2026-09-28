@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A generated file nobody is made to regenerate goes stale
+- **What happened:** `docs/generated/` (routes, request flows, the product
+  map) was last regenerated at 2.2.0-beta and missed five releases of
+  routes. Regenerating was a manual step no check asked for.
+- **Rule:** generated files that are committed get a freshness check in
+  `make conformance`. A generator used this way needs output that doesn't
+  depend on the machine: sorted walks, git-scoped inputs, and timestamps
+  masked when comparing.
+
+
 ### `@ts-nocheck` hides the one type error that crashes at runtime
 - **What happened:** a scan of the 36 `@ts-nocheck` dashboard files with
   the marker lifted found about 1,300 type errors. All but two were loose

@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.9.0-beta] — 2026-09-28
+
+### The generated route and product map can't drift any more
+- `make conformance` (and CI's conformance step) now fails when
+  `docs/generated/` doesn't match the source. The generator gained
+  `--check`: it regenerates into a temporary directory, compares file by
+  file with the generation timestamp masked, and names the stale files and
+  the command to fix them (`python3 scripts/generate_product_map.py`).
+  It adds about 2.5 s.
+- The generator now reads only files a commit would carry (tracked, or
+  untracked and not ignored), so local scratch and build output can't make
+  a local run differ from CI's. Output is unchanged.
+
 ## [2.8.0-beta] — 2026-09-28
 
 ### Dashboard: undefined-name check for untyped files; three silent UI bugs fixed; route index regenerated

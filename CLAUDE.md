@@ -252,7 +252,10 @@ changes code without touching CHANGELOG.md or learning.md.
   the `pkg/route` kernel, that every shell script parses under macOS
   bash 3.2, and that every route a doc or OpenAPI spec names is registered
   (`scripts/check-doc-routes.py`; `--write-index` refreshes the route index
-  in `docs/API_REFERENCE.md`).
+  in `docs/API_REFERENCE.md`), and that `docs/generated/` (the route and
+  product map) matches the source: after changing routes, handlers or
+  dashboard calls, run `python3 scripts/generate_product_map.py` and commit
+  the result.
 - `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and
   `only`. A test of a non-approved feature calls `fipstest.SkipIfStrict` and
   is paired with a `fipstest.StrictOnly` test proving the clean refusal. Its allowlist only
