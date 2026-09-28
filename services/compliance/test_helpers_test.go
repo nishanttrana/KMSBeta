@@ -302,6 +302,15 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			creds_wrapped_dek_iv BLOB,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		// migration 007
+		`CREATE TABLE compliance_playbook_threshold_hits (
+			tenant_id TEXT NOT NULL,
+			playbook_id TEXT NOT NULL,
+			group_key TEXT NOT NULL,
+			id TEXT NOT NULL,
+			at_ms BIGINT NOT NULL,
+			PRIMARY KEY (tenant_id, playbook_id, group_key, id)
+		);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {

@@ -370,11 +370,11 @@ func (s *Service) VerifyTarget(ctx context.Context, tenantID, targetID string, l
 			breaks = append(breaks, map[string]interface{}{"event_id": e.EventID, "sequence": e.Sequence, "chain_node": e.ChainNode, "reasons": e.Failures})
 		}
 	}
-	_, _, _ = s.ProcessEvent(ctx, AuditEvent{
+	s.reportChainBroken(ctx, AuditEvent{
 		TenantID: tenantID, Service: "audit", Action: "audit.audit.chain_broken",
 		ActorID: "system", ActorType: "system", Result: "failure",
 		TargetType: "audit_trail", TargetID: targetID,
-		Details: map[string]interface{}{"scope": "target", "target_id": targetID, "breaks": breaks},
+		Details: map[string]interface{}{"scope": "target", "target_id": targetID, "break_count": len(breaks), "breaks": breaks},
 	})
 	return res, nil
 }

@@ -176,7 +176,9 @@ stored keys (no backups had been taken on the old version).
   sealed connection at startup (and every 15 minutes) and records it in the
   exposure register (`source: plaintext_storage`,
   `audit.compliance.playbook_connections_migrated`). Rotate those webhook
-  URLs and tokens at the receiver.
+  URLs and tokens at the receiver. Since 2.6.0-beta the Playbooks →
+  Connections view flags each one ROTATE, and the Administration exposure
+  register lists them under "Playbook connections".
 - **Webhook credentials stored before 1.25.0-beta** were plaintext. The
   audit service seals them at startup (and every 15 minutes, which catches
   restored rows) and records each webhook in the exposure register

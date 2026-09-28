@@ -566,6 +566,10 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.UpdatePolicy(r.Context(), p)
+	if errors.Is(err, errBuiltinPolicyRequired) {
+		h.refuseApproval(w, r, reqID, p.TenantID, http.StatusConflict, "builtin_policy", "builtin_policy_required", err.Error())
+		return
+	}
 	if err != nil {
 		code := http.StatusBadRequest
 		if errors.Is(err, errNotFound) {

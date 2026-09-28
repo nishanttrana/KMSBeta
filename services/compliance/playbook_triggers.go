@@ -65,7 +65,6 @@ type TriggerListener struct {
 
 	mu       sync.Mutex
 	lastFire map[string]time.Time
-	counts   map[string][]time.Time
 	cache    map[string]cachedPlaybooks
 }
 
@@ -79,7 +78,7 @@ func NewTriggerListener(store Store, executor *PlaybookExecutor, logger *log.Log
 	return &TriggerListener{
 		store: store, executor: executor, logger: logger, now: time.Now,
 		dispatch: func(f func()) { go f() },
-		lastFire: map[string]time.Time{}, counts: map[string][]time.Time{}, cache: map[string]cachedPlaybooks{},
+		lastFire: map[string]time.Time{}, cache: map[string]cachedPlaybooks{},
 	}
 }
 
@@ -169,7 +168,7 @@ func (tl *TriggerListener) handle(ctx context.Context, subject string, data []by
 		if !triggerMatches(pb.Trigger, specs, ev, tenant == ev.TenantID) || !matchFilters(ev, pb.Trigger.Filters) {
 			continue
 		}
-		if !tl.thresholdReached(pb, ev) {
+		if !tl.thresholdReached(ctx, pb, ev) {
 			continue
 		}
 		tl.fire(ctx, pb, ev)
@@ -196,30 +195,28 @@ func triggerMatches(t PlaybookTrigger, specs []TriggerSpec, ev RunEvent, tenante
 }
 
 // thresholdReached counts matching events for playbooks with a threshold
-// above 1, per group_by value, in a sliding window. Counts live in memory on
-// the primary; a restart or failover starts them again from zero.
-func (tl *TriggerListener) thresholdReached(pb Playbook, ev RunEvent) bool {
+// above 1, per group_by value, in a sliding window. Counts are stored in a
+// replicated table the primary writes, so a failover continues them. When
+// the count can't be read or written the playbook doesn't fire, and the
+// refusal is audited.
+func (tl *TriggerListener) thresholdReached(ctx context.Context, pb Playbook, ev RunEvent) bool {
 	t := pb.Trigger
 	if t.Threshold <= 1 {
 		return true
 	}
-	key := pb.TenantID + "/" + pb.ID + "/" + ev.field(t.GroupBy)
-	now := tl.now()
-	window := time.Duration(t.WindowSeconds) * time.Second
-	tl.mu.Lock()
-	defer tl.mu.Unlock()
-	kept := tl.counts[key][:0]
-	for _, at := range tl.counts[key] {
-		if now.Sub(at) < window {
-			kept = append(kept, at)
-		}
-	}
-	kept = append(kept, now)
-	if len(kept) < t.Threshold {
-		tl.counts[key] = kept
+	group := ev.field(t.GroupBy)
+	n, err := tl.store.CountThresholdHit(ctx, pb.TenantID, pb.ID, group, tl.now(), time.Duration(t.WindowSeconds)*time.Second)
+	if err != nil {
+		tl.logger.Printf("playbook triggers: threshold count playbook=%s: %v", pb.ID, err)
+		tl.audit(pb, ev, "", reasonThresholdUnavailable, "the threshold count could not be stored")
 		return false
 	}
-	delete(tl.counts, key)
+	if n < t.Threshold {
+		return false
+	}
+	if err := tl.store.ResetThresholdHits(ctx, pb.TenantID, pb.ID, group); err != nil {
+		tl.logger.Printf("playbook triggers: threshold reset playbook=%s: %v", pb.ID, err)
+	}
 	return true
 }
 

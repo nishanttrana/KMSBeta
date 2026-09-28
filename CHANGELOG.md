@@ -4,6 +4,44 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.6.0-beta] — 2026-09-28
+
+### Playbooks: tampering trigger, failover-safe thresholds, a policy that can't be switched off, credentials to rotate
+Closes the four follow-ups left open by 2.5.0-beta.
+
+- **Audit tampering starts a playbook.** New trigger `audit_chain_broken`.
+  The audit service used to write `audit.audit.chain_broken` straight into
+  its own chain, so nothing else on the `AUDIT` stream ever saw it. It now
+  publishes the event to the stream, where ingest records it once and
+  playbooks (and any other subscriber) see it. If the stream refuses the
+  publish, the event is still recorded directly. The event also carries
+  `break_count` and `scope` (`chain` or `target`).
+- **Threshold counts survive a failover.** Threshold counts ("5 failed
+  logins for one account in 5 minutes") were kept in memory and restarted
+  from zero on a restart or failover. They are now stored in a new
+  replicated table, `compliance_playbook_threshold_hits` (migration 007),
+  written only by the primary's trigger listener, so a new primary
+  continues the count. Counts reset when a playbook fires, is edited or is
+  deleted. If a count can't be stored the playbook doesn't fire, and the
+  refusal is audited (`playbook_triggered`, `reason:
+  threshold_unavailable`).
+- **The built-in "Playbook actions" approval policy can't be switched
+  off.** Disabling it, or removing `playbook.*` from its actions, is refused
+  with `409 builtin_policy` and audited (`approval_refused`, `reason:
+  builtin_policy_required`). Before, disabling it silently stopped every
+  playbook step that needs approval. Administrators can still change its
+  approvers and quorum. A policy disabled under 2.5.0-beta is switched back
+  on at the next approval request, audited as
+  `audit.governance.builtin_policy_restored`.
+- **Credentials that need rotating are shown.** Playbook webhook URLs and
+  tokens stored in plaintext before 2.5.0-beta are still readable in older
+  database copies and backups. They were already tracked in the exposure
+  register, but the dashboard didn't show them. The Connections view now
+  flags each one ROTATE with a banner explaining what to do, and the
+  Administration exposure register now includes "Playbook connections" and
+  shows how each item was exposed. A flag clears when every field of the
+  connection is replaced (or the connection is deleted).
+
 ## [2.5.0-beta] — 2026-09-28
 
 ### Playbooks become the response layer: incidents, approvals, delegation, sealed connections
@@ -104,7 +142,8 @@ template help.
 
 **Still open:** a paused run waits up to Governance's approval expiry. An
 `audit.audit.chain_broken` trigger isn't possible yet: the audit service
-writes that event to its own chain and doesn't publish it on the stream.
+writes that event to its own chain and doesn't publish it on the stream
+(closed in 2.6.0-beta).
 
 ## [2.4.0-beta] — 2026-09-28
 

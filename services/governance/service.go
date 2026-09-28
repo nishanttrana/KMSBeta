@@ -183,6 +183,9 @@ func (s *Service) UpdatePolicy(ctx context.Context, p ApprovalPolicy) (ApprovalP
 	if p.ID == "" {
 		return ApprovalPolicy{}, errors.New("policy id is required")
 	}
+	if err := checkRequiredBuiltin(p); err != nil {
+		return ApprovalPolicy{}, err
+	}
 	if err := s.store.UpdatePolicy(ctx, p); err != nil {
 		return ApprovalPolicy{}, err
 	}

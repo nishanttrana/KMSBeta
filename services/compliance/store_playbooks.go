@@ -191,11 +191,11 @@ LIMIT 1
 	}
 
 	return map[string]interface{}{
-		"total_playbooks":  total,
-		"enabled_count":    enabled,
-		"runs_today":       runsToday,
-		"last_run_status":  lastRunStatus.String,
-		"last_run_at":      lastRunAtPtr,
+		"total_playbooks": total,
+		"enabled_count":   enabled,
+		"runs_today":      runsToday,
+		"last_run_status": lastRunStatus.String,
+		"last_run_at":     lastRunAtPtr,
 	}, nil
 }
 

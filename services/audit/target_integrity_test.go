@@ -216,7 +216,9 @@ func TestEventMerkleProofUsesSealedRoot(t *testing.T) {
 // The route emits audit.audit.target_integrity_verified with the verdict,
 // and a tampered trail also raises the critical audit.audit.chain_broken.
 func TestTargetIntegrityRouteAudited(t *testing.T) {
-	h, _, store, _ := newAuditHandler(t, false, false)
+	h, svc, store, _ := newAuditHandler(t, false, false)
+	stream := &loopbackPublisher{svc: svc}
+	svc.publisher = stream
 	addMerkleSchemaForTest(t, store)
 	ids := seedKeyTrail(t, store, "t1")
 	rec := &routetest.Recorder{}
@@ -259,6 +261,9 @@ func TestTargetIntegrityRouteAudited(t *testing.T) {
 	}
 	if len(broken) != 1 || broken[0].TargetID != "key-1" || broken[0].Details["scope"] != "target" {
 		t.Fatalf("chain_broken events: %+v", broken)
+	}
+	if len(stream.subjects) != 1 || stream.subjects[0] != "audit.audit.chain_broken" {
+		t.Fatalf("chain_broken was not published to the stream: %v", stream.subjects)
 	}
 }
 

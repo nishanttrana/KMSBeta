@@ -1250,14 +1250,21 @@ returns `items[]`, `request_id`.
 
 **Built-in policies (1.35.0-beta).** When a request's action has no active
 policy, governance creates the built-in policy covering it, once per tenant,
-and audits it as `audit.governance.builtin_policy_created`. Today there is
-one, **Posture escalation (built-in)**:
-- `trigger_actions` `["posture.escalate_remediation"]`
-- `approver_roles` `["admin","tenant-admin"]`, one approval
-- `scope` `posture`
+and audits it as `audit.governance.builtin_policy_created`. There are two:
+- **Posture escalation (built-in):** `trigger_actions`
+  `["posture.escalate_remediation"]`, `approver_roles`
+  `["admin","tenant-admin"]`, one approval, `scope` `posture`. After
+  creation it is an ordinary policy: edit its approvers or quorum, or set it
+  inactive (it is then never recreated).
+- **Playbook actions (built-in):** `trigger_actions` `["playbook.*"]`, the
+  same approvers, `scope` `playbook`. It is **required** (2.6.0-beta):
+  approvers and quorum can change, but `PUT` with a status other than
+  `active`, or without `playbook.*` in `trigger_actions`, is refused with
+  `409 builtin_policy` (`approval_refused`, `reason:
+  builtin_policy_required`). One disabled under 2.5.0-beta is switched back
+  on at the next request (`audit.governance.builtin_policy_restored`).
 
-After creation it is an ordinary policy: edit its approvers or quorum, or
-set it inactive (it is then never recreated). It has a fixed ID per tenant.
+Each has a fixed ID per tenant.
 
 ---
 
@@ -1324,7 +1331,7 @@ Services apply the change by a staggered graceful restart.
 Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
-- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
+- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), `builtin_policy_required` (disabling or narrowing the playbook policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
 - `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
@@ -1460,8 +1467,10 @@ authority of a person:
   plus optional `filters` (`field`, `op` from `eq`, `neq`, `in`, `not_in`,
   `contains`, `prefix`, and `value`). With `threshold` above 1 it fires when
   that many matching events arrive within `window_seconds`, counted per
-  `group_by` value. Counts are held in memory on the cluster primary and
-  start again after a restart or failover.
+  `group_by` value. Counts are stored (`compliance_playbook_threshold_hits`,
+  replicated, written by the primary), so a failover continues them; they
+  reset when the playbook fires, is edited or is deleted. A count that can't
+  be stored refuses the firing (`threshold_unavailable`).
 - **Fields** for filters, conditions and templates: `subject`, `tenant_id`,
   `service`, `result`, `severity`, `target_type`, `target_id`, `actor_id`,
   `actor_type`, `correlation_id`, `details.<key>`.
@@ -1486,6 +1495,7 @@ this.
 - Triggers: `alert_raised` (`audit.reporting.alert_created`),
   `incident_opened` (`audit.reporting.incident_opened`), `canary_tripped`,
   `threat_signal_raised`, `threat_finding_raised`, `key_compromised`,
+  `audit_chain_broken` (`audit.audit.chain_broken`),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
   `key_hsm_refused`, `cert_revoked`, `cert_renewal_window_missed`,
@@ -2648,7 +2658,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
-- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
+- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored): keycore key access
 - `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
@@ -2984,7 +2994,7 @@ labels or QRNG fields; `fips_tls_profile` (`tls13_minimum`), `fips_rng_mode`
 (`ctr_drbg` in FIPS mode, else `os_csprng`) and `fips_entropy_source`
 (`os-csprng`) report the runtime, and `fips_entropy_bits_per_byte` is gone.
 Refusals: `audit.governance.approval_refused`, `audit.governance.link_refused`.
-Built-in approval policies: `audit.governance.builtin_policy_created` (`policy_id`, `name`, `trigger_actions`, `approver_roles`, `trigger`), emitted once per tenant and policy.
+Built-in approval policies: `audit.governance.builtin_policy_created` (`policy_id`, `name`, `trigger_actions`, `approver_roles`, `trigger`), emitted once per tenant and policy; `audit.governance.builtin_policy_restored` (`policy_id`, `name`, `trigger`) when a required policy disabled under 2.5.0-beta is switched back on.
 
 **HYOK.** Crypto routes accept only a verified bearer JWT (no client
 certificate or `X-Client-*` header identity). `auth_mode` is `jwt`; `mtls` is
@@ -3072,7 +3082,7 @@ Selected events with dedicated audit classification:
 - `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
-- `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested` (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `stale_event`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
+- `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested` (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `stale_event` / `threshold_unavailable`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
 - `audit.auth.delegated_authority_checked`, `audit.auth.delegated_user_disabled`, `audit.auth.delegated_api_key_revoked`, `audit.auth.delegated_client_revoked` (kernel events; `on_behalf_of`, `via: kms-compliance`, `playbook_run_id`; refusals `service_identity_required`, `delegator_unknown`, `delegator_inactive`, `delegator_lacks_permission`, `self_target`, `last_administrator`, `service_identity_protected`): playbook delegated operations (2.5.0-beta)
 - `audit.governance.notification_email_sent` (kernel event; refusals `service_identity_required`, `recipient_not_tenant_user`; failures `smtp_not_configured`, `send_failed`): playbook email (2.5.0-beta)
 - `audit.reporting.incident_opened` (a new incident: target the incident, `title`, `severity`), `audit.reporting.alert_created` (target the alert; `severity`, `incident_id`, `source_*`): playbook triggers (2.5.0-beta)
@@ -3085,7 +3095,7 @@ Selected events with dedicated audit classification:
 - Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
-- `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain): audit trail integrity
+- `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine

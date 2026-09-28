@@ -85,6 +85,7 @@ var Replicated = map[string][]string{
 		"compliance_mek_state",
 		"compliance_playbook_connections",
 		"compliance_playbook_runs",
+		"compliance_playbook_threshold_hits",
 		"compliance_playbooks",
 		"compliance_posture_snapshots",
 		"compliance_templates",

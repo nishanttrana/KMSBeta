@@ -5,6 +5,41 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### The service that detects tampering was the one event nobody could hear
+- **What happened:** `audit.audit.chain_broken`, the most critical event on
+  the platform, was written by the audit service straight into its own
+  chain with `ProcessEvent`. Every other service's events reach the chain
+  through the `AUDIT` stream, so only this one never appeared on the stream.
+  Playbooks, SIEM subscribers and anything else listening could not react
+  to tampering.
+- **Why it slipped through:** the event was in the register and had a test,
+  but the test only asked "is it in the chain?". Nobody asked "who else
+  receives it?". Other detectors inside the audit service (quarantine, HNDL)
+  already published to the stream; this one took the shortcut.
+- **Rule:** an event is emitted when it's on the stream, not just stored.
+  A service that records its own events publishes them like any other, and
+  the test proves delivery (`TestChainBrokenPublishedToStream`).
+
+### A safety policy with an off switch is a silent outage
+- **What happened:** 2.5.0-beta's built-in "Playbook actions" approval
+  policy could be disabled like any other policy. Every step that must be
+  approved (deactivating keys, revoking certificates and access) would then
+  fail with "no active approval policy", and nothing warned the admin who
+  switched it off.
+- **Rule:** a policy that other features depend on for dual control is
+  required. Its approvers can change, but disabling or narrowing it is
+  refused and audited.
+
+### An exposure register nobody could see
+- **What happened:** migrating inline playbook credentials recorded each
+  one as exposed, but the dashboard's list of services to query for
+  exposures (`EXPOSURE_SERVICES`) didn't include compliance. The record was
+  real; no screen showed it.
+- **Rule:** when a service starts recording exposures, add it to
+  `web/dashboard/src/lib/mekExposure.ts` in the same change, and show the
+  flag where the item is managed.
+
+
 ### An update that matched nothing reported success (reporting incidents)
 - **What happened:** `PUT /incidents/{id}/status` and `/assign` ran an
   `UPDATE` and returned 200 without checking that a row changed, and stored

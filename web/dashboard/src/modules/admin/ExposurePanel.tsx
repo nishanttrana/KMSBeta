@@ -4,6 +4,7 @@ import { C } from "../../components/v3/theme";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import {
   EXPOSURE_SERVICES,
+  exposureSource,
   acknowledgeExposure,
   listExposureReports,
   summarize,
@@ -11,7 +12,8 @@ import {
   type ExposureReport
 } from "../../lib/mekExposure";
 
-// Items stored under a public development key before 1.2.0-beta. The live data
+// Items once stored under a public development key (before 1.2.0-beta) or in
+// plaintext (playbook connections, before 2.5.0-beta). The live data
 // has been moved to a keycore-held key; this list tracks what an older database
 // copy or backup could still reveal until the material itself is replaced.
 // docs/SECURITY/SERVICE_MASTER_KEYS.md
@@ -63,9 +65,10 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
         {sum.open > 0 ? <B c="red">{`${sum.open} open`}</B> : sum.servicesChecked > 0 ? <B c="green">none open</B> : <B c="amber">not assessed</B>}
       </div>
       <div style={{ fontSize: 10, color: C.dim }}>
-        Before 1.2.0-beta these items were stored under a key published in the source code. They are now under a
-        keycore-held key, but a database copy or backup made earlier can still reveal them. Each closes when its
-        material is replaced; acknowledge only with a recorded reason.
+        These items were once stored where a database copy can reveal them: under a key published in the source code
+        (before 1.2.0-beta) or in plaintext (before 2.5.0-beta). They are now under a keycore-held key, but a copy or
+        backup made earlier still holds the old form. Each closes when its material is replaced; acknowledge only with
+        a recorded reason.
       </div>
       {reports.map((r) => {
         const meta = EXPOSURE_SERVICES.find((s) => s.service === r.service);
@@ -82,7 +85,7 @@ export const ExposurePanel = ({ session, onToast }: Props) => {
             {open.length > 0 && <div style={{ fontSize: 10, color: C.dim }}>{meta?.remedy}</div>}
             {open.map((i) => (
               <div key={i.item_type + i.item_id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 10, color: C.text }}>
-                <span>{i.item_type} <b>{i.item_id}</b> · since {new Date(i.exposed_since).toLocaleString()}</span>
+                <span>{i.item_type} <b>{i.item_id}</b> · {exposureSource(i.source)} · since {new Date(i.exposed_since).toLocaleString()}</span>
                 <Btn small onClick={() => { setAck({ service: r.service, item: i }); setReason(""); }}>Acknowledge</Btn>
               </div>
             ))}

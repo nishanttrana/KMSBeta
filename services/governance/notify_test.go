@@ -110,3 +110,59 @@ func TestBuiltinPlaybookPolicy(t *testing.T) {
 		t.Fatal("no approvers")
 	}
 }
+
+// The built-in playbook policy stays on: disabling it or dropping
+// playbook.* is refused and audited, approvers can still change, and one
+// disabled under 2.5.0-beta is switched back on at the next request.
+func TestBuiltinPlaybookPolicyRequired(t *testing.T) {
+	h, svc, pub := builtinHarness(t)
+	ctx := context.Background()
+	open := func() int {
+		body := `{"tenant_id":"t1","action":"playbook.deactivate_key","target_type":"playbook_action","target_id":"pbrun_1#0",
+			"target_details":{"payload_hash":"h1"},"requester_id":"u-alice"}`
+		return call(h, "posture", http.MethodPost, "/governance/requests", body).Code
+	}
+	if code := open(); code != http.StatusCreated {
+		t.Fatalf("open: %d", code)
+	}
+	id := builtinPolicyID("t1", builtinPolicies[1])
+	put := func(mut func(*ApprovalPolicy)) int {
+		p, err := svc.store.GetPolicy(ctx, "t1", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mut(&p)
+		raw, _ := json.Marshal(p)
+		return call(h, "admin", http.MethodPut, "/governance/policies/"+id+"?tenant_id=t1", string(raw)).Code
+	}
+	for name, mut := range map[string]func(*ApprovalPolicy){
+		"disable": func(p *ApprovalPolicy) { p.Status = "inactive" },
+		"narrow":  func(p *ApprovalPolicy) { p.TriggerActions = []string{"playbook.revoke_certificate"} },
+	} {
+		before := len(pub.events["audit.governance.approval_refused"])
+		if code := put(mut); code != http.StatusConflict {
+			t.Fatalf("%s: %d, want 409", name, code)
+		}
+		refused := pub.events["audit.governance.approval_refused"]
+		if len(refused) != before+1 {
+			t.Fatalf("%s: refusal not audited", name)
+		}
+		if data, _ := refused[len(refused)-1]["data"].(map[string]interface{}); data["reason"] != "builtin_policy_required" || data["result"] != "refused" {
+			t.Fatalf("%s: refusal %+v", name, data)
+		}
+	}
+	if code := put(func(p *ApprovalPolicy) { p.ApproverRoles = []string{"admin"} }); code != http.StatusOK {
+		t.Fatalf("editing approvers: %d", code)
+	}
+
+	// Disabled before 2.6.0: the next request switches it back on.
+	if _, err := svc.store.(*SQLStore).db.SQL().Exec(`UPDATE approval_policies SET status='inactive' WHERE id=$1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if code := open(); code != http.StatusCreated {
+		t.Fatalf("open after legacy disable: %d", code)
+	}
+	if p, _ := svc.store.GetPolicy(ctx, "t1", id); p.Status != "active" || len(pub.events["audit.governance.builtin_policy_restored"]) != 1 {
+		t.Fatalf("status %s, restored events %d", p.Status, len(pub.events["audit.governance.builtin_policy_restored"]))
+	}
+}

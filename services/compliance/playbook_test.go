@@ -339,7 +339,7 @@ func TestPlaybookSaveRequiresActionPermissions(t *testing.T) {
 	}
 	// Bad definitions are rejected, not stored.
 	for name, body := range map[string]map[string]any{
-		"custom without subject": playbookBody(customTrigger, true, rotate),
+		"custom without subject":    playbookBody(customTrigger, true, rotate),
 		"custom on playbook events": {"name": "x", "enabled": true, "trigger": map[string]any{"type": customTrigger, "subject": "audit.compliance.playbook_triggered"}, "actions": []any{rotate}},
 		"threshold without window":  {"name": "x", "enabled": true, "trigger": map[string]any{"type": "login_failed", "threshold": 5}, "actions": []any{rotate}},
 		"unknown filter field":      {"name": "x", "enabled": true, "trigger": map[string]any{"type": "login_failed", "filters": []any{map[string]string{"field": "password", "op": "eq", "value": "x"}}}, "actions": []any{rotate}},
@@ -861,11 +861,11 @@ func TestPlaybookTriggerListener(t *testing.T) {
 	before := len(hs.rec.Events())
 	hs.now = hs.now.Add(2 * triggerCooldown)
 	for subject, extra := range map[string]map[string]interface{}{
-		"audit.key.rotate":               {"actor_id": "kms-compliance"},
-		"audit.cert.revoked":             {"correlation_id": "pbrun_123"},
-		"audit.reporting.alert_created":  {"details": map[string]string{"source_actor_id": "kms-compliance"}},
+		"audit.key.rotate":                    {"actor_id": "kms-compliance"},
+		"audit.cert.revoked":                  {"correlation_id": "pbrun_123"},
+		"audit.reporting.alert_created":       {"details": map[string]string{"source_actor_id": "kms-compliance"}},
 		"audit.compliance.playbook_triggered": {},
-		"audit.keycore.key_rotated":      {},
+		"audit.keycore.key_rotated":           {},
 	} {
 		hs.tl.handle(ctx, subject, hs.event("t1", "success", "k1", hs.now, extra))
 	}
@@ -987,6 +987,7 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.keycore.threat_signal_raised":    {"services/keycore/threat_detection.go", `"audit.keycore.threat_signal_raised"`},
 		"audit.posture.threat_finding_raised":   {"services/posture/threat_findings.go", `"audit.posture.threat_finding_raised"`},
 		"audit.key.compromise_detected":         {"services/keycore/enterprise_audit_service.go", `"audit.key.compromise_detected"`},
+		"audit.audit.chain_broken":              {"services/audit/service.go", `s.publisher.Publish(ctx, evt.Action, payload)`},
 		"audit.key.create":                      {"services/keycore/keycore.go", `"audit.key.create"`},
 		"audit.key.rotate":                      {"services/keycore/keycore.go", `"audit.key.rotate"`},
 		"audit.key.destroyed":                   {"services/keycore/keycore.go", `"audit.key.destroyed"`},
@@ -1036,4 +1037,99 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 			t.Fatalf("governance no longer emits %s", subject)
 		}
 	}
+}
+
+// Threshold counts are stored, not held in memory: a new primary continues
+// the count, events outside the window drop out, and editing the playbook
+// starts it again.
+func TestPlaybookThresholdSurvivesFailover(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	pb := Playbook{ID: "pb-spike", TenantID: "t1", Name: "spike", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "login_failed", Threshold: 3, WindowSeconds: 60, GroupBy: "actor_id"},
+		Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}
+	if _, err := hs.store.CreatePlaybook(ctx, pb); err != nil {
+		t.Fatal(err)
+	}
+	fired := func() int {
+		n := 0
+		for _, e := range events(hs.rec, "playbook_triggered") {
+			if e.Event.TargetID == pb.ID && e.Event.Result == route.ResultSuccess {
+				n++
+			}
+		}
+		return n
+	}
+	fail := func(tl *TriggerListener, at time.Time) {
+		tl.handle(ctx, "audit.auth.login_failed", hs.event("t1", "failure", "", at, map[string]interface{}{"actor_id": "mallory"}))
+	}
+	fail(hs.tl, hs.now)
+	fail(hs.tl, hs.now.Add(time.Second))
+
+	// Failover: a new listener on the same database.
+	next := NewTriggerListener(hs.store, hs.tl.executor, hs.tl.logger)
+	next.now = func() time.Time { return hs.now }
+	next.dispatch = func(f func()) { f() }
+	hs.now = hs.now.Add(2 * time.Second)
+	fail(next, hs.now)
+	if fired() != 1 {
+		t.Fatalf("the new primary lost the count: fired %d", fired())
+	}
+
+	// Events that leave the window don't count.
+	hs.now = hs.now.Add(2 * triggerCooldown)
+	fail(next, hs.now)
+	fail(next, hs.now.Add(time.Second))
+	hs.now = hs.now.Add(2 * time.Minute)
+	fail(next, hs.now)
+	if fired() != 1 {
+		t.Fatalf("events outside the window counted: fired %d", fired())
+	}
+
+	// An edit starts the count again.
+	fail(next, hs.now.Add(time.Second))
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+pb.ID, pbAdmin, map[string]any{"name": "spike", "enabled": true,
+		"trigger": map[string]any{"type": "login_failed", "threshold": 3, "window_seconds": 60, "group_by": "actor_id"},
+		"actions": []any{map[string]any{"type": "create_audit_event", "parameters": map[string]string{}}}}); w.Code != http.StatusOK {
+		t.Fatalf("update: %d %s", w.Code, w.Body.String())
+	}
+	hs.now = hs.now.Add(2 * time.Second)
+	fail(next, hs.now)
+	if fired() != 1 {
+		t.Fatalf("counts survived an edit: fired %d", fired())
+	}
+}
+
+// A broken audit chain starts the response playbook.
+func TestPlaybookFiresOnChainBroken(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-tamper", TenantID: "t1", Name: "tamper", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "audit_chain_broken"}, Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}); err != nil {
+		t.Fatal(err)
+	}
+	hs.tl.handle(ctx, "audit.audit.chain_broken", hs.event("t1", "failure", "", hs.now, map[string]interface{}{"details": map[string]interface{}{"scope": "chain", "break_count": 2}}))
+	ev := events(hs.rec, "playbook_triggered")
+	if len(ev) != 1 || ev[0].Event.TargetID != "pb-tamper" || ev[0].Event.Result != route.ResultSuccess {
+		t.Fatalf("chain_broken: %+v", ev)
+	}
+}
+
+// When the count can't be stored the playbook doesn't fire, and says why.
+func TestPlaybookThresholdUnavailableRefused(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-spike", TenantID: "t1", Name: "spike", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "login_failed", Threshold: 2, WindowSeconds: 60}, Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := hs.store.db.SQL().Exec(`DROP TABLE compliance_playbook_threshold_hits`); err != nil {
+		t.Fatal(err)
+	}
+	hs.tl.handle(ctx, "audit.auth.login_failed", hs.event("t1", "failure", "", hs.now, nil))
+	ev := events(hs.rec, "playbook_triggered")
+	if len(ev) != 1 {
+		t.Fatalf("events: %+v", ev)
+	}
+	wantRefused(t, ev[0], reasonThresholdUnavailable)
 }

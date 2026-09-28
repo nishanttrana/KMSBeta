@@ -202,6 +202,9 @@ export function PlaybooksTab({ session }: { session: any }) {
   const [runFilter, setRunFilter] = useState({ status: "", incident_id: "" });
   const [openRun, setOpenRun] = useState<string>("");
   const [connections, setConnections] = useState<any[]>([]);
+  // Open exposure-register items by connection ID: credentials migrated
+  // from plaintext, still readable in database copies made before.
+  const [exposed, setExposed] = useState<Record<string, any>>({});
   const [incidents, setIncidents] = useState<any[]>([]);
   const [incidentRuns, setIncidentRuns] = useState<Record<string, any[]>>({});
   const [toast, setToast] = useState("");
@@ -226,13 +229,16 @@ export function PlaybooksTab({ session }: { session: any }) {
 
   const load = useCallback(async () => {
     const next: Record<string, string> = {};
-    const [cat, pbs, sum, conns] = await Promise.all([cp("GET", "/playbooks/catalog"), cp("GET", "/playbooks"), cp("GET", "/playbooks/summary"), cp("GET", "/playbooks/connections")]);
+    const [cat, pbs, sum, conns, exp] = await Promise.all([cp("GET", "/playbooks/catalog"), cp("GET", "/playbooks"), cp("GET", "/playbooks/summary"), cp("GET", "/playbooks/connections"), api("compliance", "GET", "/mek/exposure")]);
     if (cat.ok) setCatalog(cat.data.data); else next.catalog = cat.error;
     if (pbs.ok) setPlaybooks(pbs.data.data || []); else next.playbooks = pbs.error;
     if (sum.ok) setSummary(sum.data.data); else next.summary = sum.error;
     if (conns.ok) setConnections(conns.data.data || []); else next.connections = conns.error;
+    if (exp.ok) {
+      setExposed(Object.fromEntries((exp.data.items || []).filter((i: any) => i.item_type === "playbook_connection" && !i.remediated_at).map((i: any) => [i.item_id, i])));
+    } else if (exp.status !== 403) next.exposure = exp.error;
     setErrors(next);
-  }, [cp]);
+  }, [api, cp]);
 
   const loadRuns = useCallback(async () => {
     const q = new URLSearchParams();
@@ -587,6 +593,14 @@ export function PlaybooksTab({ session }: { session: any }) {
         <Card title="Connections (credentials sealed under the compliance master key; never shown again)" icon={<Link2 size={14} color={C.accent} />}
           right={<Btn small disabled={!catalog} onClick={() => setConnForm({ name: "", type: "slack", fields: {} })}><Plus size={11} /> New connection</Btn>}>
           <Err>{errors.connections && <div style={{ padding: 12 }}>Connections unavailable: {errors.connections}</div>}</Err>
+          <Err>{errors.exposure && <div style={{ padding: 12 }}>Exposure register unavailable (which connections need rotating is not assessed): {errors.exposure}</div>}</Err>
+          {Object.keys(exposed).length > 0 && (
+            <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, background: C.redDim, color: C.red, fontSize: 11, lineHeight: 1.5 }}>
+              <b>{Object.keys(exposed).length} connection{Object.keys(exposed).length === 1 ? "" : "s"} to rotate.</b> Their credentials were stored in plaintext before 2.5.0-beta and are
+              still readable in database copies and backups made before then. Rotate each URL or token where it was issued, then edit the connection and
+              enter every new value; the warning clears when all its fields are replaced (or the connection is deleted).
+            </div>
+          )}
           {connForm && (
             <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: C.bg, maxWidth: 560 }}>
               <Inp label="Name" value={connForm.name} onChange={(e: any) => setConnForm((p: any) => ({ ...p, name: e.target.value }))} />
@@ -609,7 +623,9 @@ export function PlaybooksTab({ session }: { session: any }) {
               <thead><tr><TH>Name</TH><TH>Type</TH><TH>Endpoint</TH><TH>Fields set</TH><TH>Updated</TH><TH></TH></tr></thead>
               <tbody>{connections.map((c: any) => (
                 <tr key={c.id}>
-                  <TD><span style={{ fontWeight: 600 }}>{c.name}</span><div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{c.id}</div></TD>
+                  <TD><span style={{ fontWeight: 600 }}>{c.name}</span>
+                    {exposed[c.id] && <span title={`Stored in plaintext before 2.5.0-beta; exposed since ${new Date(exposed[c.id].exposed_since).toLocaleString()}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.red, border: `1px solid ${C.red}`, borderRadius: 4, padding: "0 4px" }}>ROTATE</span>}
+                    <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{c.id}</div></TD>
                   <TD>{connType(c.type)?.label || c.type}</TD><TD mono>{c.endpoint}</TD><TD>{(c.fields_set || []).join(", ")}</TD><TD>{fmtAgo(c.updated_at)}</TD>
                   <TD><div style={{ display: "flex", gap: 6 }}>
                     <Btn variant="ghost" small onClick={() => testConnection(c)}>Test</Btn>

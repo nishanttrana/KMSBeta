@@ -35,7 +35,7 @@ type ConnectionSpec struct {
 	Label  string   `json:"label"`
 	Fields []string `json:"fields"`
 	// URLField is the endpoint; its host is shown, and it must be public https.
-	URLField string `json:"url_field"`
+	URLField string   `json:"url_field"`
 	Optional []string `json:"optional,omitempty"`
 }
 

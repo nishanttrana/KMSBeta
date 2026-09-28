@@ -215,6 +215,8 @@ func (h *Handler) updatePlaybook(c *route.Call) {
 		c.Error(http.StatusInternalServerError, "internal_error", "update playbook failed")
 		return
 	}
+	// Counts taken under the old trigger don't carry over to the new one.
+	_ = h.svc.store.ResetThresholdHits(c.R.Context(), c.Tenant, stored.ID, "*")
 	h.triggers.Invalidate(c.Tenant)
 	c.JSON(http.StatusOK, map[string]interface{}{"data": updated})
 }
@@ -275,6 +277,7 @@ func (h *Handler) deletePlaybook(c *route.Call) {
 	case err != nil:
 		c.Error(http.StatusInternalServerError, "internal_error", "delete playbook failed")
 	default:
+		_ = h.svc.store.ResetThresholdHits(c.R.Context(), c.Tenant, c.R.PathValue("id"), "*")
 		h.triggers.Invalidate(c.Tenant)
 		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]string{"status": "deleted"}})
 	}

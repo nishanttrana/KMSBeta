@@ -712,15 +712,15 @@ func unwrapURLError(err error) error {
 
 // DryRunStep is what a run would do at one action, checked without acting.
 type DryRunStep struct {
-	Index       int               `json:"index"`
-	Type        string            `json:"type"`
-	WouldRun    bool              `json:"would_run"`
-	Reason      string            `json:"reason,omitempty"`
-	Parameters  map[string]string `json:"parameters,omitempty"`
-	Permission  string            `json:"permission,omitempty"`
-	HasPermission bool            `json:"has_permission"`
-	Approval    bool              `json:"approval_required"`
-	TargetCheck string            `json:"target_check"`
+	Index         int               `json:"index"`
+	Type          string            `json:"type"`
+	WouldRun      bool              `json:"would_run"`
+	Reason        string            `json:"reason,omitempty"`
+	Parameters    map[string]string `json:"parameters,omitempty"`
+	Permission    string            `json:"permission,omitempty"`
+	HasPermission bool              `json:"has_permission"`
+	Approval      bool              `json:"approval_required"`
+	TargetCheck   string            `json:"target_check"`
 }
 
 // DryRun resolves every action against ev and checks, by reading the owning

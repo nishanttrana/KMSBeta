@@ -12,7 +12,7 @@ import (
 )
 
 // The playbook store on real Postgres (CI integration-postgres): migrations
-// 004-006 (re-runnable), a row saved before 005 read with its legacy action
+// 004-007 (re-runnable), a row saved before 005 read with its legacy action
 // names mapped, authorization and category round-trips, run actor, and the
 // summary for a tenant with no playbooks (SUM over no rows is NULL).
 func TestPlaybookStorePostgres(t *testing.T) {
@@ -104,6 +104,27 @@ func TestPlaybookStorePostgres(t *testing.T) {
 		t.Fatalf("sealed connection read: %+v %v", got, err)
 	}
 	_, _ = db.Exec(`DELETE FROM compliance_playbook_connections WHERE tenant_id=$1`, tenant)
+
+	// Threshold counts: per group, inside the window, reset per group or all.
+	hitAt := time.Now().UTC()
+	for i, want := range []int{1, 2} {
+		if n, err := store.CountThresholdHit(ctx, tenant, "pb-old", "mallory", hitAt.Add(time.Duration(i)*time.Second), time.Minute); err != nil || n != want {
+			t.Fatalf("threshold hit %d: %d %v", i, n, err)
+		}
+	}
+	if n, err := store.CountThresholdHit(ctx, tenant, "pb-old", "alice", hitAt, time.Minute); err != nil || n != 1 {
+		t.Fatalf("other group: %d %v", n, err)
+	}
+	if n, err := store.CountThresholdHit(ctx, tenant, "pb-old", "mallory", hitAt.Add(2*time.Minute), time.Minute); err != nil || n != 1 {
+		t.Fatalf("outside the window: %d %v", n, err)
+	}
+	if err := store.ResetThresholdHits(ctx, tenant, "pb-old", "*"); err != nil {
+		t.Fatal(err)
+	}
+	var left int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM compliance_playbook_threshold_hits WHERE tenant_id=$1`, tenant).Scan(&left); err != nil || left != 0 {
+		t.Fatalf("after reset: %d %v", left, err)
+	}
 	sum, err = store.GetPlaybookSummary(ctx, tenant)
 	if err != nil || sum["total_playbooks"] != 2 || sum["enabled_count"] != 1 || sum["runs_today"] != 1 || sum["last_run_status"] != runPendingApproval {
 		t.Fatalf("summary: %v %v", sum, err)

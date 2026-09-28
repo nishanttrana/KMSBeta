@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Playbook follow-ups: stored thresholds, required approval policy, tampering on the stream (2.6.0-beta)
+
+- **Threshold counts are stored, in a replicated table the primary
+  writes.** This supersedes 2.5.0's in-memory counts. Only events that
+  match a threshold playbook's trigger and filters are written, not every
+  audit event, which was the cost that earlier decision avoided. Rows older
+  than the window are pruned on each write. *Rejected:* rebuilding counts on
+  a new primary by replaying the stream (the durable consumer has already
+  acknowledged those messages).
+- **The playbook approval policy is required.** Disabling or narrowing it is
+  refused, and a copy disabled under 2.5.0 is switched back on (audited).
+  *Rejected:* letting admins disable it and making gated steps skip
+  approval (that removes dual control without anyone deciding to), and
+  leaving it disableable with a warning (a silent outage of every gated
+  step).
+- **`chain_broken` goes through the stream.** Ingest records it once, the
+  same way every other event is recorded. If the publish fails, it is
+  written directly, so a break is never lost. *Rejected:* recording it
+  directly and also publishing it (ingest would store it twice).
+
+---
+
 ## 2026-09-28 — Playbooks as the response layer (2.5.0-beta)
 
 **Decision.**
@@ -43,8 +65,9 @@ rejected, and how it's enforced.
   tenant. *Rejected:* an SMTP client in compliance (a second mail
   configuration), and arbitrary recipients (a mail relay for anyone who can
   write a playbook).
-- **Thresholds count in memory on the primary.** A lost count after a
-  failover delays a threshold trigger; it never invents one. *Rejected:* a
+- **Thresholds count in memory on the primary** (superseded in 2.6.0-beta:
+  now stored). A lost count after a failover delays a threshold trigger; it
+  never invents one. *Rejected:* a
   replicated counter table written on every audit event.
 - **No chains.** Events whose actor is kms-compliance, correlated to a run,
   or alerts raised from them don't fire playbooks; the per-playbook cooldown

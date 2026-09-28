@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
@@ -241,4 +242,46 @@ func scanConnection(row rowScanner) (Connection, error) {
 		c.Sealed = env
 	}
 	return c, nil
+}
+
+// CountThresholdHit records one matching event for a threshold trigger and
+// returns how many events the group holds inside the window, this one
+// included. Events that left the window are pruned in the same transaction.
+func (s *SQLStore) CountThresholdHit(ctx context.Context, tenantID, playbookID, group string, at time.Time, window time.Duration) (int, error) {
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	since := at.Add(-window).UnixMilli()
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM compliance_playbook_threshold_hits
+WHERE tenant_id=$1 AND playbook_id=$2 AND at_ms <= $3`, tenantID, playbookID, since); err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO compliance_playbook_threshold_hits (tenant_id, playbook_id, group_key, id, at_ms)
+VALUES ($1, $2, $3, $4, $5)`, tenantID, playbookID, group, newID("thit"), at.UnixMilli()); err != nil {
+		return 0, err
+	}
+	var n int
+	if err := tx.QueryRowContext(ctx, `
+SELECT COUNT(*) FROM compliance_playbook_threshold_hits
+WHERE tenant_id=$1 AND playbook_id=$2 AND group_key=$3`, tenantID, playbookID, group).Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, tx.Commit()
+}
+
+// ResetThresholdHits clears a playbook's counts: one group after it fires,
+// or every group (group "*") when the playbook is edited or deleted.
+func (s *SQLStore) ResetThresholdHits(ctx context.Context, tenantID, playbookID, group string) error {
+	if group == "*" {
+		_, err := s.db.SQL().ExecContext(ctx,
+			`DELETE FROM compliance_playbook_threshold_hits WHERE tenant_id=$1 AND playbook_id=$2`, tenantID, playbookID)
+		return err
+	}
+	_, err := s.db.SQL().ExecContext(ctx,
+		`DELETE FROM compliance_playbook_threshold_hits WHERE tenant_id=$1 AND playbook_id=$2 AND group_key=$3`, tenantID, playbookID, group)
+	return err
 }

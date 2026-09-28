@@ -56,6 +56,8 @@ type Store interface {
 	IncrementPlaybookRunCount(ctx context.Context, tenantID, id string, lastRunAt time.Time) error
 	ListPlaybookRuns(ctx context.Context, tenantID string, q RunQuery) ([]PlaybookRun, error)
 	GetPlaybookSummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
+	CountThresholdHit(ctx context.Context, tenantID, playbookID, group string, at time.Time, window time.Duration) (int, error)
+	ResetThresholdHits(ctx context.Context, tenantID, playbookID, group string) error
 
 	// Playbook connections (sealed credentials)
 	ListConnections(ctx context.Context, tenantID string) ([]Connection, error)

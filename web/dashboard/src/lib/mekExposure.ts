@@ -2,11 +2,12 @@ import type { AuthSession } from "./auth";
 import { serviceRequest, serviceRequestRaw } from "./serviceApi";
 
 // Exposure register (pkg/mek, docs/SECURITY/SERVICE_MASTER_KEYS.md): items
-// whose material was stored under a public development key before 1.2.0-beta.
-// The live data is now under a keycore-held key, but a database copy or backup
-// made earlier can still be decrypted, so an item stays listed until its
-// material is replaced (rotated, re-issued, deleted) or an administrator
-// acknowledges it with a reason.
+// whose material was once stored where a database copy can reveal it: under
+// a public development key before 1.2.0-beta, or in plaintext (playbook
+// connection credentials before 2.5.0-beta). The live data is now under a
+// keycore-held key, but a copy or backup made earlier still holds the old
+// form, so an item stays listed until its material is replaced (rotated,
+// re-issued, deleted) or an administrator acknowledges it with a reason.
 
 export type ExposureItem = {
   tenant_id: string;
@@ -35,8 +36,14 @@ export const EXPOSURE_SERVICES: { service: string; label: string; remedy: string
   { service: "certs", label: "CA signing keys", remedy: "Replace the CA: issue a new CA, re-issue its certificates, then delete this CA." },
   { service: "cloud", label: "Cloud credentials", remedy: "Rotate the credentials at the cloud provider, then re-register the account and delete this one." },
   { service: "ekm", label: "BitLocker recovery keys", remedy: "Run a BitLocker rotate job for the volume (or delete the client)." },
-  { service: "audit", label: "Webhook credentials", remedy: "Rotate the signing secret and every header token (Splunk, Datadog) at the receiver, then enter the new values on the webhook (or delete it)." }
+  { service: "audit", label: "Webhook credentials", remedy: "Rotate the signing secret and every header token (Splunk, Datadog) at the receiver, then enter the new values on the webhook (or delete it)." },
+  { service: "compliance", label: "Playbook connections", remedy: "Rotate the webhook URL or token where it was issued (Slack, Teams, Jira, ServiceNow, the receiver), then enter every new value on the connection under Playbooks → Connections (or delete it)." }
 ];
+
+// exposureSource says how an item was exposed.
+export function exposureSource(source: string): string {
+  return source === "plaintext_storage" ? "stored in plaintext before 2.5.0-beta" : "stored under the public development key before 1.2.0-beta";
+}
 
 // reportFrom turns one service's response into a report. A 403 means the
 // user can't see that service's register; a 404/5xx means it isn't deployed or

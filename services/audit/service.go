@@ -300,7 +300,7 @@ func (s *Service) VerifyChain(ctx context.Context, tenantID string) (bool, []map
 		return false, nil, err
 	}
 	if !ok {
-		_, _, _ = s.ProcessEvent(ctx, AuditEvent{
+		s.reportChainBroken(ctx, AuditEvent{
 			TenantID:  tenantID,
 			Service:   "audit",
 			Action:    "audit.audit.chain_broken",
@@ -308,11 +308,28 @@ func (s *Service) VerifyChain(ctx context.Context, tenantID string) (bool, []map
 			ActorType: "system",
 			Result:    "failure",
 			Details: map[string]interface{}{
-				"breaks": breaks,
+				"scope":       "chain",
+				"break_count": len(breaks),
+				"breaks":      breaks,
 			},
 		})
 	}
 	return ok, breaks, nil
+}
+
+// reportChainBroken puts a chain_broken event on the AUDIT stream, where
+// ingest records it in the chain and subscribers (playbooks, SIEM export)
+// see it. Recording it directly would keep it out of the stream. When the
+// stream is unavailable it is recorded directly, so a break is never lost.
+func (s *Service) reportChainBroken(ctx context.Context, evt AuditEvent) {
+	evt.ID = newID("evt")
+	evt.Timestamp = time.Now().UTC()
+	if s.publisher != nil {
+		if payload, err := json.Marshal(evt); err == nil && s.publisher.Publish(ctx, evt.Action, payload) == nil {
+			return
+		}
+	}
+	_, _, _ = s.ProcessEvent(ctx, evt)
 }
 
 // maxAuditPayloadBytes caps each NATS audit event so a malformed or hostile
