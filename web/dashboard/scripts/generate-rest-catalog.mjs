@@ -285,7 +285,7 @@ const ENDPOINT_OVERRIDES = {
   "sbom|POST|/sbom/generate": {
     title: "Generate SBOM Snapshot",
     bodyTemplate: '{\n  "trigger": "manual"\n}',
-    description: "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by history, diff, export, and vulnerability correlation endpoints.",
+    description: "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by the history, diff and export endpoints.",
     responseExample: {
       status: "accepted",
       snapshot: { id: "sbom_20260311_001", created_at: "2026-03-11T09:45:00Z" }
@@ -573,91 +573,6 @@ const ENDPOINT_OVERRIDES = {
         }
       ]
     }
-  },
-  "sbom|GET|/sbom/vulnerabilities": {
-    title: "List SBOM Vulnerabilities",
-    description: "Returns merged vulnerability findings for the latest SBOM snapshot. Results can include Manual OSV advisories for air-gapped use, live OSV package matches, and Trivy repository scan results.",
-    responseExample: {
-      items: [
-        {
-          id: "CVE-2026-1000",
-          source: "OSV",
-          severity: "high",
-          component: "golang.org/x/net",
-          installed_version: "v0.20.0",
-          fixed_version: "v0.35.0",
-          summary: "HTTP issue in golang.org/x/net.",
-          reference: "https://osv.dev/vulnerability/GO-2026-0001"
-        },
-        {
-          id: "CVE-2025-29923",
-          source: "Trivy",
-          severity: "low",
-          component: "github.com/redis/go-redis/v9",
-          installed_version: "v9.7.0",
-          fixed_version: "9.7.3",
-          summary: "go-redis vulnerability",
-          reference: "https://avd.aquasec.com/nvd/cve-2025-29923"
-        }
-      ]
-    },
-    errorCodes: [
-      { code: 401, meaning: "Authentication required or token invalid" },
-      { code: 403, meaning: "Caller lacks SBOM read privilege" },
-      { code: 500, meaning: "Snapshot load or vulnerability provider processing failed" }
-    ]
-  },
-  "sbom|GET|/sbom/advisories": {
-    title: "List Offline Advisories",
-    description: "Lists manually managed offline advisories that are merged into the SBOM vulnerability view before online providers. This supports air-gapped KMS deployments.",
-    responseExample: {
-      items: [
-        {
-          id: "CVE-2026-5000",
-          component: "example/module",
-          ecosystem: "go",
-          introduced_version: "v1.0.0",
-          fixed_version: "v1.3.0",
-          severity: "critical",
-          summary: "Offline advisory",
-          reference: "https://example.test/CVE-2026-5000",
-          created_at: "2026-03-11T09:46:00Z",
-          updated_at: "2026-03-11T09:46:00Z"
-        }
-      ]
-    }
-  },
-  "sbom|POST|/sbom/advisories": {
-    title: "Create or Update Offline Advisory",
-    bodyTemplate: '{\n  "id": "CVE-2026-5000",\n  "component": "example/module",\n  "ecosystem": "go",\n  "introduced_version": "v1.0.0",\n  "fixed_version": "v1.3.0",\n  "severity": "critical",\n  "summary": "Offline advisory for an air-gapped deployment",\n  "reference": "https://example.test/CVE-2026-5000"\n}',
-    description: "Creates or updates a manual advisory record for offline or disconnected environments. These advisories are treated as an internal OSV-style source during vulnerability matching.",
-    responseExample: {
-      item: {
-        id: "CVE-2026-5000",
-        component: "example/module",
-        ecosystem: "go",
-        fixed_version: "v1.3.0",
-        severity: "critical",
-        summary: "Offline advisory for an air-gapped deployment"
-      }
-    },
-    errorCodes: [
-      { code: 400, meaning: "Advisory payload is invalid or required fields are missing" },
-      { code: 401, meaning: "Authentication required or token invalid" },
-      { code: 409, meaning: "Conflicting advisory data prevented save" }
-    ]
-  },
-  "sbom|DELETE|/sbom/advisories/{id}": {
-    title: "Delete Offline Advisory",
-    description: "Deletes a manually managed offline advisory by advisory ID.",
-    requestExample: "DELETE /svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id={{tenant_id}}",
-    responseExample: {
-      status: "deleted"
-    },
-    errorCodes: [
-      { code: 401, meaning: "Authentication required or token invalid" },
-      { code: 404, meaning: "Advisory ID was not found" }
-    ]
   },
   "sbom|POST|/cbom/generate": {
     title: "Generate CBOM Snapshot",

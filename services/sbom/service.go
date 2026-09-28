@@ -27,7 +27,6 @@ type Service struct {
 	certs         CertsClient
 	discovery     DiscoveryClient
 	events        route.Emitter // background events via pkg/audit
-	vulnProvider  VulnerabilityProvider
 	workspaceRoot string
 }
 
@@ -42,7 +41,6 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, discovery
 		certs:         certs,
 		discovery:     discovery,
 		events:        events,
-		vulnProvider:  newDefaultVulnerabilityProvider(store),
 		workspaceRoot: root,
 	}
 }
@@ -127,14 +125,6 @@ func (s *Service) GenerateSBOM(ctx context.Context, trigger string) (SBOMSnapsho
 		"component_count": len(item.Document.Components),
 		"trigger":         defaultString(trigger, "manual"),
 	}
-	// No count when the sources failed: zero would claim a clean result.
-	if matches, err := s.correlateVulnerabilities(ctx, item.Document.Components); err == nil {
-		details["vulnerabilities_assessed"] = true
-		details["vulnerability_cnt"] = len(matches)
-	} else {
-		details["vulnerabilities_assessed"] = false
-		details["vulnerability_error"] = err.Error()
-	}
 	_ = s.publishAudit(ctx, "audit.sbom.generated", "", details)
 	return item, nil
 }
@@ -173,66 +163,6 @@ func (s *Service) GetSBOMByID(ctx context.Context, id string) (SBOMSnapshot, err
 	return s.store.GetSBOMSnapshotByID(ctx, id)
 }
 
-func (s *Service) SBOMVulnerabilities(ctx context.Context) ([]VulnerabilityMatch, error) {
-	item, err := s.GetLatestSBOM(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return s.correlateVulnerabilities(ctx, item.Document.Components)
-}
-
-func (s *Service) ListManualAdvisories(ctx context.Context) ([]ManualAdvisory, error) {
-	return s.store.ListManualAdvisories(ctx)
-}
-
-func (s *Service) SaveManualAdvisory(ctx context.Context, item ManualAdvisory) (ManualAdvisory, error) {
-	item.Component = strings.TrimSpace(item.Component)
-	item.Ecosystem = normalizeManualEcosystem(item.Ecosystem)
-	item.IntroducedVersion = strings.TrimSpace(item.IntroducedVersion)
-	item.FixedVersion = strings.TrimSpace(item.FixedVersion)
-	item.Severity = normalizeSeverity(item.Severity)
-	item.Summary = strings.TrimSpace(item.Summary)
-	item.Reference = strings.TrimSpace(item.Reference)
-	item.ID = strings.TrimSpace(item.ID)
-
-	if item.Component == "" {
-		return ManualAdvisory{}, newServiceError(400, "bad_request", "component is required")
-	}
-	if item.Severity == "unknown" {
-		return ManualAdvisory{}, newServiceError(400, "bad_request", "severity must be low, medium, high, or critical")
-	}
-	if item.Summary == "" {
-		return ManualAdvisory{}, newServiceError(400, "bad_request", "summary is required")
-	}
-	if item.ID == "" {
-		item.ID = newID("osv")
-	}
-	if item.IntroducedVersion != "" && item.FixedVersion != "" && compareSemver(item.IntroducedVersion, item.FixedVersion) >= 0 {
-		return ManualAdvisory{}, newServiceError(400, "bad_request", "introduced_version must be lower than fixed_version")
-	}
-	if err := s.store.UpsertManualAdvisory(ctx, item); err != nil {
-		return ManualAdvisory{}, err
-	}
-	items, err := s.store.ListManualAdvisories(ctx)
-	if err != nil {
-		return ManualAdvisory{}, err
-	}
-	for _, existing := range items {
-		if existing.ID == item.ID {
-			return existing, nil
-		}
-	}
-	return item, nil
-}
-
-func (s *Service) DeleteManualAdvisory(ctx context.Context, id string) error {
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return newServiceError(400, "bad_request", "id is required")
-	}
-	return s.store.DeleteManualAdvisory(ctx, id)
-}
-
 func (s *Service) DiffSBOM(ctx context.Context, fromID string, toID string) (BOMDiff, error) {
 	if strings.TrimSpace(fromID) == "" || strings.TrimSpace(toID) == "" {
 		return BOMDiff{}, newServiceError(400, "bad_request", "from and to snapshot ids are required")
@@ -248,26 +178,7 @@ func (s *Service) DiffSBOM(ctx context.Context, fromID string, toID string) (BOM
 	diff := diffComponents(from.Document.Components, to.Document.Components)
 	diff.FromID = fromID
 	diff.ToID = toID
-	fromMatches, fromErr := s.correlateVulnerabilities(ctx, from.Document.Components)
-	toMatches, toErr := s.correlateVulnerabilities(ctx, to.Document.Components)
-	diff.Metrics["vulnerabilities_assessed"] = fromErr == nil && toErr == nil
-	if fromErr == nil && toErr == nil {
-		diff.Metrics["vulnerability_delta"] = len(toMatches) - len(fromMatches)
-	}
 	return diff, nil
-}
-
-func (s *Service) correlateVulnerabilities(ctx context.Context, components []BOMComponent) ([]VulnerabilityMatch, error) {
-	if s.vulnProvider == nil {
-		return nil, newServiceError(503, "vulnerability_source_unavailable", "no vulnerability source is configured")
-	}
-	items, err := s.vulnProvider.Match(ctx, components)
-	if err != nil {
-		// Never a built-in list: before 1.26.0-beta a two-entry catalogue
-		// with wrong facts answered here, and looked like a real scan.
-		return nil, newServiceError(503, "vulnerability_source_unavailable", err.Error())
-	}
-	return dedupeVulnerabilityMatches(items), nil
 }
 
 func (s *Service) ExportSBOM(ctx context.Context, id string, format string, encoding string) (ExportArtifact, error) {

@@ -20,10 +20,6 @@ service ComplianceService {
   rpc GetAuditCorrelations (GetAuditCorrelationsRequest) returns (AuditCorrelationsResponse);
   rpc GetAuditAnomalies (GetAuditAnomaliesRequest) returns (AuditAnomaliesResponse);
 
-  rpc GenerateSBOM (GenerateSBOMRequest) returns (SBOMResponse);
-  rpc ListSBOMServices (ListSBOMServicesRequest) returns (ListSBOMServicesResponse);
-  rpc GetSBOMService (GetSBOMServiceRequest) returns (SBOMServiceResponse);
-  rpc GetSBOMVulnerabilities (GetSBOMVulnerabilitiesRequest) returns (SBOMVulnerabilitiesResponse);
 
   rpc GenerateCBOM (GenerateCBOMRequest) returns (CBOMResponse);
   rpc GetCBOMSummary (GetCBOMSummaryRequest) returns (CBOMSummaryResponse);
@@ -200,36 +196,6 @@ message GetAuditAnomaliesRequest {
 
 message AuditAnomaliesResponse {
   repeated AnomalyItem items = 1;
-}
-
-message GenerateSBOMRequest {
-  string format = 1;
-}
-
-message SBOMResponse {
-  map<string, string> sbom = 1;
-}
-
-message ListSBOMServicesRequest {}
-
-message ListSBOMServicesResponse {
-  repeated JsonObject items = 1;
-}
-
-message GetSBOMServiceRequest {
-  string name = 1;
-}
-
-message SBOMServiceResponse {
-  map<string, string> item = 1;
-}
-
-message GetSBOMVulnerabilitiesRequest {
-  string tenant_id = 1;
-}
-
-message SBOMVulnerabilitiesResponse {
-  repeated JsonObject items = 1;
 }
 
 message GenerateCBOMRequest {

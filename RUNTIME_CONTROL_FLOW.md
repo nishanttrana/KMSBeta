@@ -158,7 +158,7 @@ flowchart LR
 
 - `compliance`: posture, framework checks, key hygiene, assessment schedule/run.
 - `reporting`: alerts, incidents, alert rules/channels, report generation/download.
-- `sbom`: SBOM/CBOM generation, export, diff, vulnerability views.
+- `sbom`: SBOM/CBOM generation, export, diff.
 - `ai`: query/explain/recommend incident and posture.
 - `discovery`: scan crypto assets, classify, summarize.
 - `pqc`: readiness scans, migration planning/execution.

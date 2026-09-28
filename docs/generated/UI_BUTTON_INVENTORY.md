@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-28T11:05:27Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T17:22:03Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -549,23 +549,19 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 450 | - | Btn | setPolicyModal(false)}>Cancel |  |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 451 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
 | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | 22 | rotation | button | setView(id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, p... |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 640 | sbom | Btn | { void loadData( ).then(() => loadVulnerabilities( )); }} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 749 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 752 | sbom | Btn | void exportSBOMFile("spdx")} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 756 | sbom | Btn | setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 758 | sbom | Btn | } disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 761 | sbom | Btn | } disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 766 | sbom | Btn | void openSBOMDiff()} style={ }>SBOM Diff |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 835 | sbom | Btn | void exportCBOMFile()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 838 | sbom | Btn | void openCBOMDiff()} style={ }>View Diff |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 922 | sbom | Btn | }>Add Offline Advisory |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1014 | sbom | Btn | setAdvisoryModalOpen(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1015 | sbom | Btn | void saveOfflineAdvisory()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1027 | sbom | Btn | void removeOfflineAdvisory(String(item?.id \|\| ""))} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1056 | sbom | Btn | setDiffOpen(false)}>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1090 | sbom | Btn | setSBOMDiffOpen(false)}>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1123 | sbom | Btn | }>Close |  |
-| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 1153 | sbom | Btn | }>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 400 | sbom | Btn | void loadData( )} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 487 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 490 | sbom | Btn | void exportSBOMFile("spdx")} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 494 | sbom | Btn | setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 496 | sbom | Btn | } disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 499 | sbom | Btn | } disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 504 | sbom | Btn | void openSBOMDiff()} style={ }>SBOM Diff |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 563 | sbom | Btn | void exportCBOMFile()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 566 | sbom | Btn | void openCBOMDiff()} style={ }>View Diff |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 658 | sbom | Btn | setDiffOpen(false)}>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 692 | sbom | Btn | setSBOMDiffOpen(false)}>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 720 | sbom | Btn | }>Close |  |
+| web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 750 | sbom | Btn | }>Close |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 133 | - | Btn | void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 137 | - | Btn | void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful"... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 142 | - | Btn | { setConfirmForce(""); void run(i.identity, () => rotateInternalMTLS(session,... |  |

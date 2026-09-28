@@ -85,7 +85,7 @@ learned: CHANGELOG 1.26.0-beta, [learning.md](../../learning.md).
 | Random sources (keycore) | HSM/QKD/QRNG labels on OS CSPRNG bytes | `hsm-trng` from the tenant HSM (`POST /hsm/random`); QKD/QRNG refused (`audit.crypto.random_refused`) |
 | Dashboard fallbacks | `MOCK_*` data on API failure; Webhooks faked failed writes | The error is shown (1.20.0-beta, e3edda730) |
 | Discovery | Hostname byte-sum "scan", invented cloud keys and certificates, secret stored | TLS handshake, cloud service inventory, certs list, code scan with fingerprints only |
-| SBOM | Built-in CVE list on source failure | 503 "not assessed"; composite partial failure is an error |
+| SBOM | Built-in CVE list on source failure; compliance's hard-coded SBOM and a posture score shown as a CVE | 503 "not assessed" (1.26.0-beta); CVE matching and compliance's SBOM removed (2.19.0-beta): the exported SBOM goes to the customer's vulnerability-management tool |
 | PQC migration | Steps "completed" without migrating | Successor keys, `rotated`, `manual_required`; rollback deactivates successors |
 | Feature Forge | No environments; guardrail read 200 as permit; nothing applied | Removed |
 | Compliance playbooks | Log-only "OK" actions; dead endpoints; UI actions with no executor | Only executable actions are accepted; compliance actions run in-process |

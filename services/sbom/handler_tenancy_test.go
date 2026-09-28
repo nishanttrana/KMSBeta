@@ -97,14 +97,12 @@ func TestCBOMGenerateServicePrincipalActsForRequestTenant(t *testing.T) {
 	}
 }
 
-// The platform SBOM and its advisories are shared; another tenant's admin
-// may read them but not change them.
+// The platform SBOM is shared; another tenant's admin may read it but not
+// change it.
 func TestSBOMPlatformWritesRefusedOutsidePlatformTenant(t *testing.T) {
 	h, _, rec := newAuditedSBOMHandler(t)
 	cases := []struct{ method, path, body, action string }{
 		{http.MethodPost, "/sbom/generate", `{}`, "sbom_generate_requested"},
-		{http.MethodPost, "/sbom/advisories", `{"id":"CVE-2026-1","component":"x","severity":"high"}`, "sbom_advisory_saved"},
-		{http.MethodDelete, "/sbom/advisories/CVE-2026-1", ``, "sbom_advisory_deleted"},
 	}
 	for _, tc := range cases {
 		rec.Reset()
@@ -114,7 +112,7 @@ func TestSBOMPlatformWritesRefusedOutsidePlatformTenant(t *testing.T) {
 		}
 		expectRefused(t, rec, tc.action, reasonPlatformTenant)
 	}
-	if rr := serve(h, adminOf("tenant-a"), http.MethodGet, "/sbom/advisories", ``); rr.Code != http.StatusOK {
+	if rr := serve(h, adminOf("tenant-a"), http.MethodGet, "/sbom/history", ``); rr.Code != http.StatusOK {
 		t.Fatalf("read refused: %d %s", rr.Code, rr.Body.String())
 	}
 }
@@ -129,5 +127,23 @@ func TestCBOMHistoryReadWritesNothing(t *testing.T) {
 	}
 	if items, _ := svc.store.ListCBOMSnapshots(context.Background(), "tenant-a", 10); len(items) != 0 {
 		t.Fatalf("a read generated %d snapshot(s)", len(items))
+	}
+}
+
+// Vulnerability matching was removed in 2.19.0-beta: CVE tracking belongs to
+// the customer's vulnerability-management tool, which consumes the exported
+// SBOM. None of its routes may come back.
+func TestSBOMVulnerabilityRoutesRemoved(t *testing.T) {
+	h, _, _ := newAuditedSBOMHandler(t)
+	for _, rt := range []struct{ method, path, body string }{
+		{http.MethodGet, "/sbom/vulnerabilities", ``},
+		{http.MethodGet, "/sbom/advisories", ``},
+		{http.MethodPost, "/sbom/advisories", `{"id":"CVE-2026-1","component":"x","severity":"high","summary":"s"}`},
+		{http.MethodDelete, "/sbom/advisories/CVE-2026-1", ``},
+	} {
+		rr := serve(h, adminOf(tenantcheck.InternalServiceTenant()), rt.method, rt.path, rt.body)
+		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s still served: %d %s", rt.method, rt.path, rr.Code, rr.Body.String())
+		}
 	}
 }

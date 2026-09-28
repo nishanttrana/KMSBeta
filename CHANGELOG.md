@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.19.0-beta] — 2026-09-28
+
+### The KMS no longer tracks vulnerabilities (breaking)
+CVE tracking is the job of a vulnerability-management product, not a key
+manager. The SBOM stays and is the hand-off: export it (CycloneDX or SPDX)
+to your vulnerability-management tool.
+- **Removed from the sbom service:** `GET /svc/sbom/sbom/vulnerabilities`,
+  `GET|POST /svc/sbom/sbom/advisories` and
+  `DELETE /svc/sbom/sbom/advisories/{id}`, the OSV, Trivy and offline
+  advisory matchers, and the `sbom.delete` permission they used. Migration
+  003 drops `sbom_manual_advisories`. `audit.sbom.generated` no longer
+  carries `vulnerabilities_assessed`/`vulnerability_cnt`, and SBOM diffs no
+  longer carry `vulnerability_delta`. Audit subjects
+  `audit.sbom.sbom_vulnerabilities_listed`, `sbom_advisories_listed`,
+  `sbom_advisory_saved` and `sbom_advisory_deleted` are no longer emitted.
+- **Smaller sbom image:** the bundled Trivy binary and its cache are gone,
+  and `install.sh` / `deploy-local.sh` no longer pull `aquasec/trivy`.
+- **Removed compliance's invented SBOM:** `GET /svc/compliance/compliance/sbom`,
+  `/sbom/services`, `/sbom/services/{name}` and `/sbom/vulnerabilities`
+  returned hard-coded versions ("dev", "1.x", "postgresql 16"), a fixed
+  licence list, and a posture score below 60 presented as the vulnerability
+  `CRYPTO-DEPRECATED-ALGO`. The real SBOM is the sbom service's.
+- **Dashboard:** the SBOM / CBOM page loses the Vulnerabilities tab, the
+  offline-advisory dialog, the "Critical CVEs" and "Clean Deps" tiles and the
+  per-component CVE badges. Overview shows dependency categories instead.
+- **Kept, because they are key management:** CBOM and PQC readiness,
+  quantum-vulnerable algorithm classification, and keycore's
+  `POST /compromise/advisories/ingest` (a compromise advisory marks the
+  affected keys). The build pipeline still scans our own images and modules
+  (`govulncheck`, `infra/security/cve-scan.sh`) as release evidence.
+- Tests: `TestSBOMVulnerabilityRoutesRemoved`, `TestComplianceSBOMRoutesRemoved`.
+
 ## [2.18.0-beta] — 2026-09-28
 
 ### Formatting

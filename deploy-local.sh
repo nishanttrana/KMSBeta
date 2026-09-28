@@ -120,8 +120,7 @@ if [[ "${BUILD}" -eq 1 ]]; then
     "vecta-local/golang:1.27.1-alpine|golang:1.27.1-alpine" \
     "vecta-local/alpine:3.24|alpine:3.24" \
     "vecta-local/node:24.21.0-alpine|node:24.21.0-alpine" \
-    "vecta-local/nginx:1.30.5-alpine|nginx:1.30.5-alpine" \
-    "vecta-local/trivy:0.74.0|aquasec/trivy:0.74.0"; do
+    "vecta-local/nginx:1.30.5-alpine|nginx:1.30.5-alpine"; do
     alias_ref="${spec%%|*}"; source_ref="${spec##*|}"
     docker image inspect "${source_ref}" >/dev/null 2>&1 || docker pull -q "${source_ref}" >/dev/null
     docker tag "${source_ref}" "${alias_ref}"

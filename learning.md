@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A feature outside the product's job grows its own fakes
+- **What happened:** the KMS matched its SBOM against OSV, a bundled Trivy
+  and hand-entered "offline advisories". Keeping that honest took a
+  1.26.0-beta fix (a built-in CVE list returned when sources failed), and
+  compliance still had a second SBOM with hard-coded versions and a
+  `/sbom/vulnerabilities` route that turned a posture score below 60 into
+  the "vulnerability" `CRYPTO-DEPRECATED-ALGO`. No screen called it.
+- **Why it slipped through:** the compliance routes were on the legacy mux,
+  so the route kernel's audit and the real-capability checks never looked at
+  them. Their names (`GenerateSBOM`, `SBOMVulnerabilities`) matched none of
+  the `simulate*`/`fake*`/`mock*` patterns conformance searches for.
+- **Rule:** before hardening a feature, ask whether it is the product's job.
+  CVE tracking belongs to vulnerability management; the KMS hands over an
+  SBOM. When a capability is removed, look for a second copy in another
+  service and remove it in the same change.
+
 ### A second store of the same thing outlives its last reader
 - **What happened:** audit wrote an alert row for every event it ingested,
   with its own dedup and escalation, while reporting raised the real alerts

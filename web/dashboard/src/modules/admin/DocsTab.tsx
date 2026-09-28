@@ -1957,9 +1957,8 @@ const SectionApiSbom = () => (
     <P>A Cryptographic Bill of Materials (CBOM) is a specialized inventory of all cryptographic algorithms, protocols, key sizes, and cryptographic libraries used across the platform. While SBOM tells you "what software do I have?", CBOM tells you "what cryptography am I using?" This is critical for post-quantum migration planning — you need to know every place where RSA, ECDSA, or Diffie-Hellman is used before you can plan the migration to quantum-safe alternatives.</P>
 
     <H2>Use Cases</H2>
-    <P>- Supply chain security: Know exactly what's in your KMS deployment. If a CVE is announced for a library, instantly check if you're affected</P>
+    <P>- Supply chain security: Know exactly what's in your KMS deployment. Export the SBOM to your vulnerability-management tool, which tracks CVEs against it (the KMS itself does not)</P>
     <P>- Regulatory compliance: Provide SBOM to auditors as required by EO 14028, NIST SP 800-218, EU CRA</P>
-    <P>- Vulnerability management: Cross-reference SBOM components against CVE databases to find known vulnerabilities</P>
     <P>- Version tracking: Diff SBOM between releases to see exactly what changed (added, removed, updated dependencies)</P>
     <P>- PQC migration planning: Use CBOM to identify all classical cryptographic algorithms that need migration to post-quantum alternatives</P>
     <P>- Procurement: Share SBOM/CBOM with customers who need to validate your security posture before purchasing</P>
@@ -1972,7 +1971,6 @@ const SectionApiSbom = () => (
         ["POST", "/sbom/generate", "Generate a new SBOM from current deployment state"],
         ["GET", "/sbom/latest", "Get the most recently generated SBOM"],
         ["GET", "/sbom/{id}/export", "Export SBOM in CycloneDX or SPDX format"],
-        ["GET", "/sbom/vulnerabilities", "Cross-reference SBOM components against known CVEs"],
         ["GET", "/sbom/diff", "Compare two SBOM versions to see what changed"],
       ]} />
     </Collapse>
@@ -2693,7 +2691,7 @@ const SectionUIMonitoring = () => (
     <H2>SBOM / CBOM Sub-Pane</H2>
     <P>The SBOM/CBOM sub-pane provides software and cryptographic inventory.</P>
     <H3>SBOM (Software Bill of Materials):</H3>
-    <P>Click "Generate" to create a current SBOM. View all components (Go modules, npm packages, Docker images). Check for known vulnerabilities (CVEs). Export in CycloneDX or SPDX format for compliance. Diff between versions to see what changed between releases.</P>
+    <P>Click "Generate" to create a current SBOM. View all components (Go modules, npm packages, Docker images). Export in CycloneDX or SPDX format for compliance and for your vulnerability-management tool. Diff between versions to see what changed between releases.</P>
     <H3>CBOM (Cryptographic Bill of Materials):</H3>
     <P>Click "Generate" to create a CBOM. View all cryptographic algorithms in use with counts and key sizes. Check PQC readiness (which algorithms need migration to quantum-safe alternatives). Export for compliance evidence.</P>
   </div>
@@ -3247,7 +3245,7 @@ const SectionApiOpenAPI = () => {
     },
     sbom: {
       title: "SBOM / CBOM Service",
-      description: "SBOM generation, OSV and Trivy correlation, manual offline advisories, exports, and CBOM PQC readiness.",
+      description: "SBOM generation, history, diff and exports, and CBOM PQC readiness.",
       viewer: "/openapi/sbom.html",
       yaml: "/openapi/sbom.openapi.yaml",
       json: "/openapi/sbom.openapi.json",
@@ -3283,7 +3281,7 @@ const SectionApiOpenAPI = () => {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 14 }}>
         {[
           { id: "ai", label: "AI Service", detail: "Provider config, auth modes, MCP, assistant actions" },
-          { id: "sbom", label: "SBOM / CBOM", detail: "Vulnerability findings, offline advisories, CBOM readiness" },
+          { id: "sbom", label: "SBOM / CBOM", detail: "SBOM exports, diff, CBOM readiness" },
           { id: "posture", label: "Security Posture", detail: "Risk drivers, cockpit groups, blast radius, scenarios" },
           { id: "compliance", label: "Compliance", detail: "Assessments, delta view, templates, posture history" },
           { id: "reporting", label: "Reporting", detail: "Evidence packs, report jobs, MTTD / MTTR statistics" },

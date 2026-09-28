@@ -2847,16 +2847,18 @@ status is then `completed_with_errors`, or `failed` if every source failed.
 
 ## Service 26: SBOM (`/svc/sbom/`)
 
-Software BOM, Cryptographic BOM, vulnerability correlation, offline advisory management.
+Software BOM and Cryptographic BOM: generation, history, diff and export.
+The KMS does not match the SBOM against CVE feeds: export it (CycloneDX or
+SPDX) to your vulnerability-management tool. `GET /sbom/vulnerabilities` and
+`/sbom/advisories` were removed in 2.19.0-beta.
 
 Every route is on the `pkg/route` kernel (since 1.33.0-beta; before it sbom
 verified no token at all): a verified bearer token is required and each request
 emits `audit.sbom.<action>`, refusals included. Permissions: `sbom.read`,
-`sbom.write` (generate, save advisory), `sbom.delete` (delete advisory). CBOM
+`sbom.write` (generate). CBOM
 routes are scoped to the token's tenant (`kms-*` service principals act for the
-tenant they name). The platform SBOM and its advisories are shared by every
-tenant, so `POST /sbom/generate`, `POST /sbom/advisories` and
-`DELETE /sbom/advisories/{id}` also require the platform tenant (or a
+tenant they name). The platform SBOM is shared by every tenant, so
+`POST /sbom/generate` also requires the platform tenant (or a
 tenant-less root token or service principal); anyone else is refused with
 reason `platform_tenant_required`.
 
@@ -2882,82 +2884,6 @@ Generates a fresh software BOM snapshot.
 curl -sk -X POST https://localhost/svc/sbom/sbom/generate \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"trigger":"manual"}'
-```
-
----
-
-### GET /svc/sbom/sbom/vulnerabilities
-
-Returns merged vulnerability findings from OSV online, Trivy, and manual advisories. If any enabled source fails, the response is `503 vulnerability_source_unavailable` (not assessed): there is no built-in fallback list, and partial results are not returned as complete. `OSV_ENABLED=false` disables OSV for air-gapped installs; `TRIVY_ENABLED=false` disables Trivy.
-
-**Response 200**: `items[]` — id (CVE), source (OSV/Trivy/manual), severity, component, installedVersion, fixedVersion, summary, reference
-
-```json
-{
-  "items": [
-    {
-      "id": "CVE-2026-1000",
-      "source": "OSV",
-      "severity": "high",
-      "component": "golang.org/x/net",
-      "installedVersion": "v0.20.0",
-      "fixedVersion": "v0.35.0",
-      "summary": "HTTP issue in golang.org/x/net",
-      "reference": "https://osv.dev/vulnerability/GO-2026-0001"
-    }
-  ]
-}
-```
-
----
-
-### GET /svc/sbom/sbom/vulnerabilities
-
-Vulnerabilities matched to the components of the latest snapshot.
-
----
-
-### GET /svc/sbom/sbom/advisories
-
-Lists manually managed offline advisories for air-gapped environments.
-
----
-
-### POST /svc/sbom/sbom/advisories
-
-Creates or updates a manual offline advisory.
-
-**Request Body**: `id` (CVE ID), `component`, `ecosystem`, `introducedVersion`, `fixedVersion`, `severity`, `summary`, `reference`
-
-```bash
-curl -sk -X POST https://localhost/svc/sbom/sbom/advisories \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"id":"CVE-2026-5000","component":"example/module","ecosystem":"go","introducedVersion":"v1.0.0","fixedVersion":"v1.3.0","severity":"critical","summary":"Offline advisory for air-gapped deployment","reference":"https://example.test/CVE-2026-5000"}'
-```
-
-Response:
-```json
-{
-  "item": {
-    "id": "CVE-2026-5000",
-    "component": "example/module",
-    "ecosystem": "go",
-    "fixedVersion": "v1.3.0",
-    "severity": "critical",
-    "summary": "Offline advisory for air-gapped deployment"
-  }
-}
-```
-
----
-
-### DELETE /svc/sbom/sbom/advisories/{id}
-
-Removes a manual advisory.
-
-```bash
-curl -sk -X DELETE "https://localhost/svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
 ---
@@ -3155,8 +3081,8 @@ Selected events with dedicated audit classification:
 - `audit.crypto.random` (with the source that produced the bytes; `hsm_serial` for `hsm-trng`), `audit.crypto.random_refused` (QKD/QRNG/no HSM)
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
-- `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
-- `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
+- `audit.sbom.generated` (`snapshot_id`, `component_count`, `trigger`), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
+- `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `rule_tested` (2.13.0-beta: `POST /svc/reporting/alerts/rules/test` checks a rule without saving it, with details `valid`, `replay_hours`, `replay_matched`, `replay_fired`; see docs/GOVERNANCE_AND_COMPLIANCE.md §4.1), `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
 - `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested`, `connection_resolved`, `connection_imported` (2.10.0-beta; refusals `service_identity_required`, `connection_use_unsupported`) (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `connection_usage_unverified`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `cooldown_unavailable` / `stale_event` / `threshold_unavailable`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
 - `audit.auth.delegated_authority_checked`, `audit.auth.delegated_user_disabled`, `audit.auth.delegated_api_key_revoked`, `audit.auth.delegated_client_revoked` (kernel events; `on_behalf_of`, `via: kms-compliance`, `playbook_run_id`; refusals `service_identity_required`, `delegator_unknown`, `delegator_inactive`, `delegator_lacks_permission`, `self_target`, `last_administrator`, `service_identity_protected`): playbook delegated operations (2.5.0-beta)
@@ -3604,10 +3530,6 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/risk/keys`
 - `GET /svc/compliance/compliance/risk/remediation`
 - `GET /svc/compliance/compliance/risk/summary`
-- `GET /svc/compliance/compliance/sbom`
-- `GET /svc/compliance/compliance/sbom/services`
-- `GET /svc/compliance/compliance/sbom/services/{name}`
-- `GET /svc/compliance/compliance/sbom/vulnerabilities`
 - `GET /svc/compliance/compliance/templates`
 - `POST /svc/compliance/compliance/templates`
 - `DELETE /svc/compliance/compliance/templates/{id}`
@@ -4157,14 +4079,10 @@ from the code; do not edit by hand.
 - `GET /svc/sbom/cbom/summary`
 - `GET /svc/sbom/cbom/{id}`
 - `GET /svc/sbom/cbom/{id}/export`
-- `GET /svc/sbom/sbom/advisories`
-- `POST /svc/sbom/sbom/advisories`
-- `DELETE /svc/sbom/sbom/advisories/{id}`
 - `GET /svc/sbom/sbom/diff`
 - `POST /svc/sbom/sbom/generate`
 - `GET /svc/sbom/sbom/history`
 - `GET /svc/sbom/sbom/latest`
-- `GET /svc/sbom/sbom/vulnerabilities`
 - `GET /svc/sbom/sbom/{id}`
 - `GET /svc/sbom/sbom/{id}/export`
 

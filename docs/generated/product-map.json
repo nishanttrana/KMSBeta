@@ -4459,68 +4459,8 @@
       "action": "",
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOM",
-      "line": 76,
-      "match_key": "compliance|GET|/compliance/sbom",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom",
-      "path": "/compliance/sbom",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMServices",
-      "line": 77,
-      "match_key": "compliance|GET|/compliance/sbom/services",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services",
-      "path": "/compliance/sbom/services",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMService",
-      "line": 78,
-      "match_key": "compliance|GET|/compliance/sbom/services/{param}",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services/{param}",
-      "path": "/compliance/sbom/services/{name}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMVulnerabilities",
-      "line": 79,
-      "match_key": "compliance|GET|/compliance/sbom/vulnerabilities",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/vulnerabilities",
-      "path": "/compliance/sbom/vulnerabilities",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 81,
+      "line": 76,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -4535,7 +4475,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 82,
+      "line": 77,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -4550,7 +4490,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 83,
+      "line": 78,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -4565,7 +4505,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 84,
+      "line": 79,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -4580,7 +4520,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 85,
+      "line": 80,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -4595,7 +4535,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleEvidenceExport",
-      "line": 88,
+      "line": 83,
       "match_key": "compliance|GET|/compliance/evidence/export",
       "method": "GET",
       "normalized_path": "/compliance/evidence/export",
@@ -4610,7 +4550,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetKeyRiskRanking",
-      "line": 91,
+      "line": 86,
       "match_key": "compliance|GET|/compliance/risk/keys",
       "method": "GET",
       "normalized_path": "/compliance/risk/keys",
@@ -4625,7 +4565,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetDataRiskSummary",
-      "line": 92,
+      "line": 87,
       "match_key": "compliance|GET|/compliance/risk/summary",
       "method": "GET",
       "normalized_path": "/compliance/risk/summary",
@@ -4640,7 +4580,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetRiskRemediation",
-      "line": 93,
+      "line": 88,
       "match_key": "compliance|GET|/compliance/risk/remediation",
       "method": "GET",
       "normalized_path": "/compliance/risk/remediation",
@@ -12275,7 +12215,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.generateSBOM",
-      "line": 53,
+      "line": 52,
       "match_key": "sbom|POST|/sbom/generate",
       "method": "POST",
       "normalized_path": "/sbom/generate",
@@ -12290,7 +12230,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.latestSBOM",
-      "line": 54,
+      "line": 53,
       "match_key": "sbom|GET|/sbom/latest",
       "method": "GET",
       "normalized_path": "/sbom/latest",
@@ -12305,7 +12245,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.sbomHistory",
-      "line": 55,
+      "line": 54,
       "match_key": "sbom|GET|/sbom/history",
       "method": "GET",
       "normalized_path": "/sbom/history",
@@ -12316,71 +12256,11 @@
       "service": "sbom"
     },
     {
-      "action": "sbom_vulnerabilities_listed",
-      "code_scope": "sbom",
-      "file": "services/sbom/handler.go",
-      "handler": "h.sbomVulnerabilities",
-      "line": 56,
-      "match_key": "sbom|GET|/sbom/vulnerabilities",
-      "method": "GET",
-      "normalized_path": "/sbom/vulnerabilities",
-      "path": "/sbom/vulnerabilities",
-      "permission": "sbom.read",
-      "registration": "kernel",
-      "resource": "sbom",
-      "service": "sbom"
-    },
-    {
-      "action": "sbom_advisories_listed",
-      "code_scope": "sbom",
-      "file": "services/sbom/handler.go",
-      "handler": "h.listManualAdvisories",
-      "line": 57,
-      "match_key": "sbom|GET|/sbom/advisories",
-      "method": "GET",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "permission": "sbom.read",
-      "registration": "kernel",
-      "resource": "sbom_advisory",
-      "service": "sbom"
-    },
-    {
-      "action": "sbom_advisory_saved",
-      "code_scope": "sbom",
-      "file": "services/sbom/handler.go",
-      "handler": "h.saveManualAdvisory",
-      "line": 58,
-      "match_key": "sbom|POST|/sbom/advisories",
-      "method": "POST",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "permission": "sbom.write",
-      "registration": "kernel",
-      "resource": "sbom_advisory",
-      "service": "sbom"
-    },
-    {
-      "action": "sbom_advisory_deleted",
-      "code_scope": "sbom",
-      "file": "services/sbom/handler.go",
-      "handler": "h.deleteManualAdvisory",
-      "line": 61,
-      "match_key": "sbom|DELETE|/sbom/advisories/{param}",
-      "method": "DELETE",
-      "normalized_path": "/sbom/advisories/{param}",
-      "path": "/sbom/advisories/{id}",
-      "permission": "sbom.delete",
-      "registration": "kernel",
-      "resource": "sbom_advisory",
-      "service": "sbom"
-    },
-    {
       "action": "sbom_diff_read",
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.sbomDiff",
-      "line": 62,
+      "line": 55,
       "match_key": "sbom|GET|/sbom/diff",
       "method": "GET",
       "normalized_path": "/sbom/diff",
@@ -12395,7 +12275,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.sbomExport",
-      "line": 63,
+      "line": 56,
       "match_key": "sbom|GET|/sbom/{param}/export",
       "method": "GET",
       "normalized_path": "/sbom/{param}/export",
@@ -12410,7 +12290,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.sbomByID",
-      "line": 64,
+      "line": 57,
       "match_key": "sbom|GET|/sbom/{param}",
       "method": "GET",
       "normalized_path": "/sbom/{param}",
@@ -12425,7 +12305,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.generateCBOM",
-      "line": 69,
+      "line": 62,
       "match_key": "sbom|POST|/cbom/generate",
       "method": "POST",
       "normalized_path": "/cbom/generate",
@@ -12440,7 +12320,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.latestCBOM",
-      "line": 70,
+      "line": 63,
       "match_key": "sbom|GET|/cbom/latest",
       "method": "GET",
       "normalized_path": "/cbom/latest",
@@ -12455,7 +12335,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomHistory",
-      "line": 71,
+      "line": 64,
       "match_key": "sbom|GET|/cbom/history",
       "method": "GET",
       "normalized_path": "/cbom/history",
@@ -12470,7 +12350,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomSummary",
-      "line": 72,
+      "line": 65,
       "match_key": "sbom|GET|/cbom/summary",
       "method": "GET",
       "normalized_path": "/cbom/summary",
@@ -12485,7 +12365,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomPQCReadiness",
-      "line": 73,
+      "line": 66,
       "match_key": "sbom|GET|/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/cbom/pqc-readiness",
@@ -12500,7 +12380,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomDiff",
-      "line": 74,
+      "line": 67,
       "match_key": "sbom|GET|/cbom/diff",
       "method": "GET",
       "normalized_path": "/cbom/diff",
@@ -12515,7 +12395,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomExport",
-      "line": 75,
+      "line": 68,
       "match_key": "sbom|GET|/cbom/{param}/export",
       "method": "GET",
       "normalized_path": "/cbom/{param}/export",
@@ -12530,7 +12410,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomByID",
-      "line": 76,
+      "line": 69,
       "match_key": "sbom|GET|/cbom/{param}",
       "method": "GET",
       "normalized_path": "/cbom/{param}",
@@ -15366,68 +15246,8 @@
       "action": "",
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOM",
-      "line": 76,
-      "match_key": "compliance|GET|/compliance/sbom",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom",
-      "path": "/compliance/sbom",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMServices",
-      "line": 77,
-      "match_key": "compliance|GET|/compliance/sbom/services",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services",
-      "path": "/compliance/sbom/services",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMService",
-      "line": 78,
-      "match_key": "compliance|GET|/compliance/sbom/services/{param}",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services/{param}",
-      "path": "/compliance/sbom/services/{name}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
-      "handler": "h.handleSBOMVulnerabilities",
-      "line": 79,
-      "match_key": "compliance|GET|/compliance/sbom/vulnerabilities",
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/vulnerabilities",
-      "path": "/compliance/sbom/vulnerabilities",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "compliance"
-    },
-    {
-      "action": "",
-      "code_scope": "compliance",
-      "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 81,
+      "line": 76,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -15442,7 +15262,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 82,
+      "line": 77,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -15457,7 +15277,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 83,
+      "line": 78,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -15472,7 +15292,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 84,
+      "line": 79,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -15487,7 +15307,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 85,
+      "line": 80,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -18922,7 +18742,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.sbomByID",
-      "line": 64,
+      "line": 57,
       "match_key": "sbom|GET|/sbom/{param}",
       "method": "GET",
       "normalized_path": "/sbom/{param}",
@@ -18937,7 +18757,7 @@
       "code_scope": "sbom",
       "file": "services/sbom/handler.go",
       "handler": "h.cbomByID",
-      "line": 76,
+      "line": 69,
       "match_key": "sbom|GET|/cbom/{param}",
       "method": "GET",
       "normalized_path": "/cbom/{param}",
@@ -24671,8 +24491,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
-      "label": "{ void loadData( ).then(() => loadVulnerabilities( )); }} disabled= >",
-      "line": 640,
+      "label": "void loadData( )} disabled= >",
+      "line": 400,
       "tabs": [
         "sbom"
       ],
@@ -24682,7 +24502,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportSBOMFile(\"cyclonedx\")} disabled= style={ }>",
-      "line": 749,
+      "line": 487,
       "tabs": [
         "sbom"
       ],
@@ -24692,7 +24512,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportSBOMFile(\"spdx\")} disabled= style={ }>",
-      "line": 752,
+      "line": 490,
       "tabs": [
         "sbom"
       ],
@@ -24702,7 +24522,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setExportMenuOpen((prev) => !prev)} disabled= style={ }>Export",
-      "line": 756,
+      "line": 494,
       "tabs": [
         "sbom"
       ],
@@ -24712,7 +24532,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>",
-      "line": 758,
+      "line": 496,
       "tabs": [
         "sbom"
       ],
@@ -24722,7 +24542,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "} disabled= style={ }>",
-      "line": 761,
+      "line": 499,
       "tabs": [
         "sbom"
       ],
@@ -24732,7 +24552,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void openSBOMDiff()} style={ }>SBOM Diff",
-      "line": 766,
+      "line": 504,
       "tabs": [
         "sbom"
       ],
@@ -24742,7 +24562,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void exportCBOMFile()} disabled= style={ }>",
-      "line": 835,
+      "line": 563,
       "tabs": [
         "sbom"
       ],
@@ -24752,47 +24572,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "void openCBOMDiff()} style={ }>View Diff",
-      "line": 838,
-      "tabs": [
-        "sbom"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
-      "handler": "",
-      "label": "}>Add Offline Advisory",
-      "line": 922,
-      "tabs": [
-        "sbom"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
-      "handler": "",
-      "label": "setAdvisoryModalOpen(false)}>Cancel",
-      "line": 1014,
-      "tabs": [
-        "sbom"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
-      "handler": "",
-      "label": "void saveOfflineAdvisory()} disabled= >",
-      "line": 1015,
-      "tabs": [
-        "sbom"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
-      "handler": "",
-      "label": "void removeOfflineAdvisory(String(item?.id || \"\"))} disabled= >",
-      "line": 1027,
+      "line": 566,
       "tabs": [
         "sbom"
       ],
@@ -24802,7 +24582,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setDiffOpen(false)}>Close",
-      "line": 1056,
+      "line": 658,
       "tabs": [
         "sbom"
       ],
@@ -24812,7 +24592,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "setSBOMDiffOpen(false)}>Close",
-      "line": 1090,
+      "line": 692,
       "tabs": [
         "sbom"
       ],
@@ -24822,7 +24602,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "}>Close",
-      "line": 1123,
+      "line": 720,
       "tabs": [
         "sbom"
       ],
@@ -24832,7 +24612,7 @@
       "file": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "handler": "",
       "label": "}>Close",
-      "line": 1153,
+      "line": 750,
       "tabs": [
         "sbom"
       ],
@@ -33257,7 +33037,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"sbom\", \"/sbom/generate\")",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 119,
+      "line": 91,
       "match_key": "sbom|POST|/sbom/generate",
       "method": "POST",
       "normalized_path": "/sbom/generate",
@@ -33270,7 +33050,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 127,
+      "line": 99,
       "match_key": "sbom|GET|/sbom/latest",
       "method": "GET",
       "normalized_path": "/sbom/latest",
@@ -33283,7 +33063,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 132,
+      "line": 104,
       "match_key": "sbom|GET|/sbom/history",
       "method": "GET",
       "normalized_path": "/sbom/history",
@@ -33293,62 +33073,10 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "serviceRequest(\"sbom\", \"/sbom/vulnerabilities\")",
-      "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 141,
-      "match_key": "sbom|GET|/sbom/vulnerabilities",
-      "method": "GET",
-      "normalized_path": "/sbom/vulnerabilities",
-      "path": "/sbom/vulnerabilities",
-      "service": "sbom",
-      "service_key": "sbom",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-      "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 152,
-      "match_key": "sbom|GET|/sbom/advisories",
-      "method": "GET",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "service": "sbom",
-      "service_key": "sbom",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-      "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 157,
-      "match_key": "sbom|POST|/sbom/advisories",
-      "method": "POST",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "service": "sbom",
-      "service_key": "sbom",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"sbom\", `/sbom/advisories/${encodeURIComponent(String(id || \"\").trim())}`)",
-      "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 165,
-      "match_key": "sbom|DELETE|/sbom/advisories/{param}",
-      "method": "DELETE",
-      "normalized_path": "/sbom/advisories/{param}",
-      "path": "/sbom/advisories/{param}",
-      "service": "sbom",
-      "service_key": "sbom",
-      "source": "serviceRequest"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 176,
+      "line": 118,
       "match_key": "sbom|GET|/sbom/{param}/export",
       "method": "GET",
       "normalized_path": "/sbom/{param}/export",
@@ -33361,7 +33089,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 185,
+      "line": 127,
       "match_key": "sbom|POST|/cbom/generate",
       "method": "POST",
       "normalized_path": "/cbom/generate",
@@ -33374,7 +33102,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 193,
+      "line": 135,
       "match_key": "sbom|GET|/cbom/latest",
       "method": "GET",
       "normalized_path": "/cbom/latest",
@@ -33387,7 +33115,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 198,
+      "line": 140,
       "match_key": "sbom|GET|/cbom/history",
       "method": "GET",
       "normalized_path": "/cbom/history",
@@ -33400,7 +33128,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 207,
+      "line": 149,
       "match_key": "sbom|GET|/cbom/summary",
       "method": "GET",
       "normalized_path": "/cbom/summary",
@@ -33413,7 +33141,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 216,
+      "line": 158,
       "match_key": "sbom|GET|/cbom/{param}/export",
       "method": "GET",
       "normalized_path": "/cbom/{param}/export",
@@ -33426,7 +33154,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 225,
+      "line": 167,
       "match_key": "sbom|GET|/cbom/diff",
       "method": "GET",
       "normalized_path": "/cbom/diff",
@@ -33439,7 +33167,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 245,
+      "line": 187,
       "match_key": "sbom|GET|/sbom/diff",
       "method": "GET",
       "normalized_path": "/sbom/diff",
@@ -33452,7 +33180,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/sbom.ts",
-      "line": 254,
+      "line": 196,
       "match_key": "sbom|GET|/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/cbom/pqc-readiness",
@@ -33956,7 +33684,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-28T11:05:27Z",
+  "generated_at": "2026-09-28T17:22:03Z",
   "navigation": [
     {
       "group": "Overview",
@@ -50653,7 +50381,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 98,
+      "handler_line": 93,
       "handler_name": "handlePosture",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50687,7 +50415,7 @@
             "GetLatestPosture"
           ],
           "internal_package_calls": [],
-          "line": 35,
+          "line": 34,
           "name": "GetPosture",
           "receiver_calls": [],
           "store_calls": [
@@ -50714,7 +50442,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 108,
       "handler_name": "handlePostureHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50748,7 +50476,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 158,
+          "line": 157,
           "name": "GetPostureHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -50781,7 +50509,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 128,
+      "handler_line": 123,
       "handler_name": "handlePostureBreakdown",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50803,7 +50531,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 177,
+          "line": 176,
           "name": "GetPostureBreakdown",
           "receiver_calls": [],
           "store_calls": []
@@ -50834,7 +50562,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 142,
+      "handler_line": 137,
       "handler_name": "handleAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50870,7 +50598,7 @@
             "ListAssessmentRuns"
           ],
           "internal_package_calls": [],
-          "line": 215,
+          "line": 214,
           "name": "GetLatestAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -50905,7 +50633,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 157,
+      "handler_line": 152,
       "handler_name": "handleAssessmentDelta",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -50949,7 +50677,7 @@
             "diffConnectorFailures"
           ],
           "internal_package_calls": [],
-          "line": 243,
+          "line": 242,
           "name": "GetAssessmentDelta",
           "receiver_calls": [],
           "store_calls": [
@@ -50988,7 +50716,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 172,
+      "handler_line": 167,
       "handler_name": "handleRunAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51048,7 +50776,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 318,
+          "line": 317,
           "name": "RunAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -51086,7 +50814,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 202,
+      "handler_line": 197,
       "handler_name": "handleAssessmentHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51118,7 +50846,7 @@
             "normalizeTemplateID"
           ],
           "internal_package_calls": [],
-          "line": 234,
+          "line": 233,
           "name": "ListAssessmentRuns",
           "receiver_calls": [],
           "store_calls": [
@@ -51151,7 +50879,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 279,
+      "handler_line": 274,
       "handler_name": "handleAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51183,7 +50911,7 @@
             "normalizeAssessmentFrequency"
           ],
           "internal_package_calls": [],
-          "line": 588,
+          "line": 587,
           "name": "GetAssessmentSchedule",
           "receiver_calls": [],
           "store_calls": [
@@ -51221,7 +50949,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 293,
+      "handler_line": 288,
       "handler_name": "handleUpsertAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51261,7 +50989,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 601,
+          "line": 600,
           "name": "UpsertAssessmentSchedule",
           "receiver_calls": [],
           "store_calls": [
@@ -51296,7 +51024,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 218,
+      "handler_line": 213,
       "handler_name": "handleListComplianceTemplates",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51326,7 +51054,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 652,
+          "line": 651,
           "name": "ListComplianceTemplates",
           "receiver_calls": [],
           "store_calls": [
@@ -51364,7 +51092,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 246,
+      "handler_line": 241,
       "handler_name": "handleUpsertComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51404,7 +51132,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 676,
+          "line": 675,
           "name": "UpsertComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -51432,7 +51160,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 232,
+      "handler_line": 227,
       "handler_name": "handleGetComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51468,7 +51196,7 @@
             "normalizeComplianceTemplate"
           ],
           "internal_package_calls": [],
-          "line": 660,
+          "line": 659,
           "name": "GetComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -51501,7 +51229,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 266,
+      "handler_line": 261,
       "handler_name": "handleDeleteComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51535,7 +51263,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 716,
+          "line": 715,
           "name": "DeleteComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -51566,7 +51294,7 @@
         "ListFrameworks"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 321,
+      "handler_line": 316,
       "handler_name": "handleFrameworks",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51592,7 +51320,7 @@
             "frameworkCatalog"
           ],
           "internal_package_calls": [],
-          "line": 734,
+          "line": 733,
           "name": "ListFrameworks",
           "receiver_calls": [],
           "store_calls": []
@@ -51615,7 +51343,7 @@
         "normalizeFrameworkID"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 326,
+      "handler_line": 321,
       "handler_name": "handleFrameworkControls",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51653,7 +51381,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 738,
+          "line": 737,
           "name": "GetFrameworkControls",
           "receiver_calls": [],
           "store_calls": [
@@ -51686,7 +51414,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 346,
+      "handler_line": 341,
       "handler_name": "handleFrameworkGaps",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51722,7 +51450,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 759,
+          "line": 758,
           "name": "GetFrameworkGaps",
           "receiver_calls": [],
           "store_calls": [
@@ -51755,7 +51483,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 360,
+      "handler_line": 355,
       "handler_name": "handleKeyHygiene",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51785,7 +51513,7 @@
             "computeKeyHygiene"
           ],
           "internal_package_calls": [],
-          "line": 778,
+          "line": 777,
           "name": "GetKeyHygieneReport",
           "receiver_calls": [],
           "store_calls": []
@@ -51807,7 +51535,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 374,
+      "handler_line": 369,
       "handler_name": "handleOrphaned",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51829,7 +51557,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 786,
+          "line": 785,
           "name": "GetOrphanedKeys",
           "receiver_calls": [],
           "store_calls": []
@@ -51851,7 +51579,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 388,
+      "handler_line": 383,
       "handler_name": "handleExpired",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51873,7 +51601,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 794,
+          "line": 793,
           "name": "GetExpiredKeys",
           "receiver_calls": [],
           "store_calls": []
@@ -51896,7 +51624,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 402,
+      "handler_line": 397,
       "handler_name": "handleAuditCorrelations",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -51932,7 +51660,7 @@
             "topActions"
           ],
           "internal_package_calls": [],
-          "line": 802,
+          "line": 801,
           "name": "GetAuditCorrelations",
           "receiver_calls": [],
           "store_calls": []
@@ -51961,7 +51689,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 417,
+      "handler_line": 412,
       "handler_name": "handleAuditAnomalies",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52003,198 +51731,8 @@
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 845,
+          "line": 844,
           "name": "GetAuditAnomalies",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSBOM",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/compliance/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "firstNonEmpty",
-        "GenerateSBOM",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 431,
-      "handler_name": "handleSBOM",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "GenerateSBOM"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/compliance/sbom",
-      "path": "/compliance/sbom",
-      "route_file": "services/compliance/handler.go",
-      "route_line": 76,
-      "service": "compliance",
-      "service_external_package_calls": [
-        "strings.ToLower",
-        "strings.TrimSpace",
-        "time.Now"
-      ],
-      "service_helper_calls": [
-        "newServiceError",
-        "listServiceNames"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.ToLower",
-            "strings.TrimSpace",
-            "time.Now"
-          ],
-          "file": "services/compliance/service.go",
-          "helper_calls": [
-            "newServiceError",
-            "listServiceNames"
-          ],
-          "internal_package_calls": [],
-          "line": 902,
-          "name": "GenerateSBOM",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSBOMServices",
-      "handler_external_package_calls": [],
-      "handler_file": "services/compliance/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "SBOMServices",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 442,
-      "handler_name": "handleSBOMServices",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "SBOMServices"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services",
-      "path": "/compliance/sbom/services",
-      "route_file": "services/compliance/handler.go",
-      "route_line": 77,
-      "service": "compliance",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/compliance/service.go",
-          "helper_calls": [],
-          "internal_package_calls": [],
-          "line": 942,
-          "name": "SBOMServices",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSBOMService",
-      "handler_external_package_calls": [],
-      "handler_file": "services/compliance/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "SBOMService",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 452,
-      "handler_name": "handleSBOMService",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "SBOMService"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/services/{param}",
-      "path": "/compliance/sbom/services/{name}",
-      "route_file": "services/compliance/handler.go",
-      "route_line": 78,
-      "service": "compliance",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/compliance/service.go",
-          "helper_calls": [],
-          "internal_package_calls": [],
-          "line": 955,
-          "name": "SBOMService",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSBOMVulnerabilities",
-      "handler_external_package_calls": [],
-      "handler_file": "services/compliance/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "SBOMVulnerabilities",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 462,
-      "handler_name": "handleSBOMVulnerabilities",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "SBOMVulnerabilities"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/compliance/sbom/vulnerabilities",
-      "path": "/compliance/sbom/vulnerabilities",
-      "route_file": "services/compliance/handler.go",
-      "route_line": 79,
-      "service": "compliance",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/compliance/service.go",
-          "helper_calls": [],
-          "internal_package_calls": [],
-          "line": 970,
-          "name": "SBOMVulnerabilities",
           "receiver_calls": [],
           "store_calls": []
         }
@@ -52215,7 +51753,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 476,
+      "handler_line": 426,
       "handler_name": "handleCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52226,7 +51764,7 @@
       "normalized_path": "/compliance/cbom",
       "path": "/compliance/cbom",
       "route_file": "services/compliance/handler.go",
-      "route_line": 81,
+      "route_line": 76,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -52257,7 +51795,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 986,
+          "line": 901,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -52283,7 +51821,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 490,
+      "handler_line": 440,
       "handler_name": "handleCBOMSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52294,7 +51832,7 @@
       "normalized_path": "/compliance/cbom/summary",
       "path": "/compliance/cbom/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 82,
+      "route_line": 77,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52305,7 +51843,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1014,
+          "line": 929,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -52330,7 +51868,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 504,
+      "handler_line": 454,
       "handler_name": "handleCBOMExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52341,7 +51879,7 @@
       "normalized_path": "/compliance/cbom/export",
       "path": "/compliance/cbom/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 83,
+      "route_line": 78,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -52372,7 +51910,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 986,
+          "line": 901,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -52398,7 +51936,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 526,
+      "handler_line": 476,
       "handler_name": "handleCBOMPQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52409,7 +51947,7 @@
       "normalized_path": "/compliance/cbom/pqc-readiness",
       "path": "/compliance/cbom/pqc-readiness",
       "route_file": "services/compliance/handler.go",
-      "route_line": 84,
+      "route_line": 79,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52420,7 +51958,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1029,
+          "line": 944,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -52445,7 +51983,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 540,
+      "handler_line": 490,
       "handler_name": "handleCBOMDiff",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -52456,7 +51994,7 @@
       "normalized_path": "/compliance/cbom/diff",
       "path": "/compliance/cbom/diff",
       "route_file": "services/compliance/handler.go",
-      "route_line": 85,
+      "route_line": 80,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52467,7 +52005,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1043,
+          "line": 958,
           "name": "CBOMDiff",
           "receiver_calls": [],
           "store_calls": []
@@ -52528,7 +52066,7 @@
       "normalized_path": "/compliance/evidence/export",
       "path": "/compliance/evidence/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 88,
+      "route_line": 83,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -52573,7 +52111,7 @@
             "GetLatestPosture"
           ],
           "internal_package_calls": [],
-          "line": 35,
+          "line": 34,
           "name": "GetPosture",
           "receiver_calls": [],
           "store_calls": [
@@ -52592,7 +52130,7 @@
             "ListAssessmentRuns"
           ],
           "internal_package_calls": [],
-          "line": 215,
+          "line": 214,
           "name": "GetLatestAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -52623,7 +52161,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 318,
+          "line": 317,
           "name": "RunAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -52644,7 +52182,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 738,
+          "line": 737,
           "name": "GetFrameworkControls",
           "receiver_calls": [],
           "store_calls": [
@@ -52663,7 +52201,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 759,
+          "line": 758,
           "name": "GetFrameworkGaps",
           "receiver_calls": [],
           "store_calls": [
@@ -52679,7 +52217,7 @@
             "computeKeyHygiene"
           ],
           "internal_package_calls": [],
-          "line": 778,
+          "line": 777,
           "name": "GetKeyHygieneReport",
           "receiver_calls": [],
           "store_calls": []
@@ -52728,7 +52266,7 @@
       "normalized_path": "/compliance/risk/keys",
       "path": "/compliance/risk/keys",
       "route_file": "services/compliance/handler.go",
-      "route_line": 91,
+      "route_line": 86,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52739,7 +52277,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1390,
+          "line": 1305,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -52783,7 +52321,7 @@
       "normalized_path": "/compliance/risk/summary",
       "path": "/compliance/risk/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 92,
+      "route_line": 87,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -52827,7 +52365,7 @@
       "normalized_path": "/compliance/risk/remediation",
       "path": "/compliance/risk/remediation",
       "route_file": "services/compliance/handler.go",
-      "route_line": 93,
+      "route_line": 88,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -86650,7 +86188,7 @@
         {
           "expression": "serviceRequest(\"sbom\", \"/sbom/generate\")",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 119,
+          "line": 91,
           "source": "serviceRequest"
         }
       ],
@@ -86664,7 +86202,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 96,
+      "handler_line": 89,
       "handler_name": "generateSBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -86675,7 +86213,7 @@
       "normalized_path": "/sbom/generate",
       "path": "/sbom/generate",
       "route_file": "services/sbom/handler.go",
-      "route_line": 53,
+      "route_line": 52,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -86686,8 +86224,6 @@
         "SaveSBOMSnapshot",
         "GetSBOMSnapshotByID",
         "defaultString",
-        "correlateVulnerabilities",
-        "Error",
         "publishAudit"
       ],
       "service_internal_package_calls": [],
@@ -86703,12 +86239,10 @@
             "SaveSBOMSnapshot",
             "GetSBOMSnapshotByID",
             "defaultString",
-            "correlateVulnerabilities",
-            "Error",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 107,
+          "line": 105,
           "name": "GenerateSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86728,7 +86262,7 @@
         {
           "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 127,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -86740,7 +86274,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 114,
+      "handler_line": 107,
       "handler_name": "latestSBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -86751,7 +86285,7 @@
       "normalized_path": "/sbom/latest",
       "path": "/sbom/latest",
       "route_file": "services/sbom/handler.go",
-      "route_line": 54,
+      "route_line": 53,
       "service": "sbom",
       "service_external_package_calls": [
         "errors.Is"
@@ -86772,7 +86306,7 @@
             "GenerateSBOM"
           ],
           "internal_package_calls": [],
-          "line": 142,
+          "line": 132,
           "name": "GetLatestSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86790,7 +86324,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 132,
+          "line": 104,
           "source": "serviceRequest"
         }
       ],
@@ -86803,7 +86337,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 124,
+      "handler_line": 117,
       "handler_name": "sbomHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -86814,7 +86348,7 @@
       "normalized_path": "/sbom/history",
       "path": "/sbom/history",
       "route_file": "services/sbom/handler.go",
-      "route_line": 55,
+      "route_line": 54,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -86831,7 +86365,7 @@
             "GenerateSBOM"
           ],
           "internal_package_calls": [],
-          "line": 153,
+          "line": 143,
           "name": "ListSBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -86847,251 +86381,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"sbom\", \"/sbom/vulnerabilities\")",
-          "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 141,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.sbomVulnerabilities",
-      "handler_external_package_calls": [],
-      "handler_file": "services/sbom/handler.go",
-      "handler_helper_calls": [
-        "SBOMVulnerabilities",
-        "serviceError"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 154,
-      "handler_name": "sbomVulnerabilities",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "SBOMVulnerabilities"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/sbom/vulnerabilities",
-      "path": "/sbom/vulnerabilities",
-      "route_file": "services/sbom/handler.go",
-      "route_line": 56,
-      "service": "sbom",
-      "service_external_package_calls": [],
-      "service_helper_calls": [
-        "GetLatestSBOM",
-        "correlateVulnerabilities"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/sbom/service.go",
-          "helper_calls": [
-            "GetLatestSBOM",
-            "correlateVulnerabilities"
-          ],
-          "internal_package_calls": [],
-          "line": 176,
-          "name": "SBOMVulnerabilities",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-          "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 152,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.listManualAdvisories",
-      "handler_external_package_calls": [],
-      "handler_file": "services/sbom/handler.go",
-      "handler_helper_calls": [
-        "ListManualAdvisories",
-        "serviceError"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 174,
-      "handler_name": "listManualAdvisories",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "ListManualAdvisories"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "route_file": "services/sbom/handler.go",
-      "route_line": 57,
-      "service": "sbom",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/sbom/service.go",
-          "helper_calls": [],
-          "internal_package_calls": [],
-          "line": 184,
-          "name": "ListManualAdvisories",
-          "receiver_calls": [],
-          "store_calls": [
-            "ListManualAdvisories"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "ListManualAdvisories"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-          "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 157,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.saveManualAdvisory",
-      "handler_external_package_calls": [],
-      "handler_file": "services/sbom/handler.go",
-      "handler_helper_calls": [
-        "platformWriter",
-        "SaveManualAdvisory",
-        "serviceError"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 183,
-      "handler_name": "saveManualAdvisory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "SaveManualAdvisory"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/sbom/advisories",
-      "path": "/sbom/advisories",
-      "route_file": "services/sbom/handler.go",
-      "route_line": 58,
-      "service": "sbom",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "normalizeManualEcosystem",
-        "normalizeSeverity",
-        "newServiceError",
-        "newID",
-        "compareSemver",
-        "UpsertManualAdvisory",
-        "ListManualAdvisories"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/sbom/service.go",
-          "helper_calls": [
-            "normalizeManualEcosystem",
-            "normalizeSeverity",
-            "newServiceError",
-            "newID",
-            "compareSemver",
-            "UpsertManualAdvisory",
-            "ListManualAdvisories"
-          ],
-          "internal_package_calls": [],
-          "line": 188,
-          "name": "SaveManualAdvisory",
-          "receiver_calls": [],
-          "store_calls": [
-            "UpsertManualAdvisory",
-            "ListManualAdvisories"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "UpsertManualAdvisory",
-        "ListManualAdvisories"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"sbom\", `/sbom/advisories/${encodeURIComponent(String(id || \"\").trim())}`)",
-          "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 165,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.deleteManualAdvisory",
-      "handler_external_package_calls": [],
-      "handler_file": "services/sbom/handler.go",
-      "handler_helper_calls": [
-        "platformWriter",
-        "DeleteManualAdvisory",
-        "serviceError"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 211,
-      "handler_name": "deleteManualAdvisory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "DeleteManualAdvisory"
-      ],
-      "handler_store_calls": [],
-      "method": "DELETE",
-      "normalized_path": "/sbom/advisories/{param}",
-      "path": "/sbom/advisories/{id}",
-      "route_file": "services/sbom/handler.go",
-      "route_line": 61,
-      "service": "sbom",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "newServiceError"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/sbom/service.go",
-          "helper_calls": [
-            "newServiceError"
-          ],
-          "internal_package_calls": [],
-          "line": 228,
-          "name": "DeleteManualAdvisory",
-          "receiver_calls": [],
-          "store_calls": [
-            "DeleteManualAdvisory"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "DeleteManualAdvisory"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 245,
+          "line": 187,
           "source": "serviceRequest"
         }
       ],
@@ -87105,7 +86397,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 222,
+      "handler_line": 147,
       "handler_name": "sbomDiff",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87116,7 +86408,7 @@
       "normalized_path": "/sbom/diff",
       "path": "/sbom/diff",
       "route_file": "services/sbom/handler.go",
-      "route_line": 62,
+      "route_line": 55,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87124,8 +86416,7 @@
       "service_helper_calls": [
         "newServiceError",
         "GetSBOMSnapshotByID",
-        "diffComponents",
-        "correlateVulnerabilities"
+        "diffComponents"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -87137,11 +86428,10 @@
           "helper_calls": [
             "newServiceError",
             "GetSBOMSnapshotByID",
-            "diffComponents",
-            "correlateVulnerabilities"
+            "diffComponents"
           ],
           "internal_package_calls": [],
-          "line": 236,
+          "line": 166,
           "name": "DiffSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -87159,7 +86449,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 176,
+          "line": 118,
           "source": "serviceRequest"
         }
       ],
@@ -87172,7 +86462,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 142,
+      "handler_line": 135,
       "handler_name": "sbomExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87183,7 +86473,7 @@
       "normalized_path": "/sbom/{param}/export",
       "path": "/sbom/{id}/export",
       "route_file": "services/sbom/handler.go",
-      "route_line": 63,
+      "route_line": 56,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -87200,7 +86490,7 @@
             "exportSBOM"
           ],
           "internal_package_calls": [],
-          "line": 273,
+          "line": 184,
           "name": "ExportSBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -87219,7 +86509,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 133,
+      "handler_line": 126,
       "handler_name": "sbomByID",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87230,7 +86520,7 @@
       "normalized_path": "/sbom/{param}",
       "path": "/sbom/{id}",
       "route_file": "services/sbom/handler.go",
-      "route_line": 64,
+      "route_line": 57,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87251,7 +86541,7 @@
             "GetSBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 168,
+          "line": 158,
           "name": "GetSBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -87269,7 +86559,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 185,
+          "line": 127,
           "source": "serviceRequest"
         }
       ],
@@ -87282,7 +86572,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 235,
+      "handler_line": 160,
       "handler_name": "generateCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87293,7 +86583,7 @@
       "normalized_path": "/cbom/generate",
       "path": "/cbom/generate",
       "route_file": "services/sbom/handler.go",
-      "route_line": 69,
+      "route_line": 62,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87336,7 +86626,7 @@
             "defaultString"
           ],
           "internal_package_calls": [],
-          "line": 281,
+          "line": 192,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -87356,7 +86646,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 193,
+          "line": 135,
           "source": "serviceRequest"
         }
       ],
@@ -87368,7 +86658,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 253,
+      "handler_line": 178,
       "handler_name": "latestCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87379,7 +86669,7 @@
       "normalized_path": "/cbom/latest",
       "path": "/cbom/latest",
       "route_file": "services/sbom/handler.go",
-      "route_line": 70,
+      "route_line": 63,
       "service": "sbom",
       "service_external_package_calls": [
         "errors.Is",
@@ -87404,7 +86694,7 @@
             "GenerateCBOM"
           ],
           "internal_package_calls": [],
-          "line": 317,
+          "line": 228,
           "name": "GetLatestCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -87422,7 +86712,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 198,
+          "line": 140,
           "source": "serviceRequest"
         }
       ],
@@ -87435,7 +86725,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 263,
+      "handler_line": 188,
       "handler_name": "cbomHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87446,7 +86736,7 @@
       "normalized_path": "/cbom/history",
       "path": "/cbom/history",
       "route_file": "services/sbom/handler.go",
-      "route_line": 71,
+      "route_line": 64,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87467,7 +86757,7 @@
             "ListCBOMSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 332,
+          "line": 243,
           "name": "ListCBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -87485,7 +86775,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 207,
+          "line": 149,
           "source": "serviceRequest"
         }
       ],
@@ -87497,7 +86787,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 292,
+      "handler_line": 217,
       "handler_name": "cbomSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87508,7 +86798,7 @@
       "normalized_path": "/cbom/summary",
       "path": "/cbom/summary",
       "route_file": "services/sbom/handler.go",
-      "route_line": 72,
+      "route_line": 65,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -87519,7 +86809,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 366,
+          "line": 277,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -87533,7 +86823,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 254,
+          "line": 196,
           "source": "serviceRequest"
         }
       ],
@@ -87545,7 +86835,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 301,
+      "handler_line": 226,
       "handler_name": "cbomPQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87556,7 +86846,7 @@
       "normalized_path": "/cbom/pqc-readiness",
       "path": "/cbom/pqc-readiness",
       "route_file": "services/sbom/handler.go",
-      "route_line": 73,
+      "route_line": 66,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -87567,7 +86857,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 374,
+          "line": 285,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -87581,7 +86871,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 225,
+          "line": 167,
           "source": "serviceRequest"
         }
       ],
@@ -87595,7 +86885,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 310,
+      "handler_line": 235,
       "handler_name": "cbomDiff",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87606,7 +86896,7 @@
       "normalized_path": "/cbom/diff",
       "path": "/cbom/diff",
       "route_file": "services/sbom/handler.go",
-      "route_line": 74,
+      "route_line": 67,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87629,7 +86919,7 @@
             "diffAssets"
           ],
           "internal_package_calls": [],
-          "line": 388,
+          "line": 299,
           "name": "DiffCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -87647,7 +86937,7 @@
         {
           "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
           "file": "web/dashboard/src/lib/sbom.ts",
-          "line": 216,
+          "line": 158,
           "source": "serviceRequest"
         }
       ],
@@ -87660,7 +86950,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 281,
+      "handler_line": 206,
       "handler_name": "cbomExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87671,7 +86961,7 @@
       "normalized_path": "/cbom/{param}/export",
       "path": "/cbom/{id}/export",
       "route_file": "services/sbom/handler.go",
-      "route_line": 75,
+      "route_line": 68,
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -87688,7 +86978,7 @@
             "exportCBOM"
           ],
           "internal_package_calls": [],
-          "line": 358,
+          "line": 269,
           "name": "ExportCBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -87707,7 +86997,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 272,
+      "handler_line": 197,
       "handler_name": "cbomByID",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87718,7 +87008,7 @@
       "normalized_path": "/cbom/{param}",
       "path": "/cbom/{id}",
       "route_file": "services/sbom/handler.go",
-      "route_line": 76,
+      "route_line": 69,
       "service": "sbom",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87739,7 +87029,7 @@
             "GetCBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 349,
+          "line": 260,
           "name": "GetCBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -92053,7 +91343,7 @@
       "certs": 68,
       "cloud": 14,
       "cluster-manager": 21,
-      "compliance": 58,
+      "compliance": 54,
       "confidential": 7,
       "dataprotect": 50,
       "discovery": 12,
@@ -92070,7 +91360,7 @@
       "pqc": 16,
       "reconciler": 1,
       "reporting": 34,
-      "sbom": 18,
+      "sbom": 14,
       "secrets": 25,
       "signing": 11,
       "watchdog": 2,
@@ -92103,7 +91393,7 @@
       "pqc": 6,
       "reconciler": 1,
       "reporting": 24,
-      "sbom": 16,
+      "sbom": 12,
       "secrets": 10,
       "signing": 9,
       "tfe": 1,
@@ -92297,17 +91587,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 917,
+    "backend_routes": 909,
     "backend_services": 30,
-    "button_inventory": 762,
-    "frontend_call_sites": 573,
-    "matched_frontend_call_sites": 528,
+    "button_inventory": 758,
+    "frontend_call_sites": 569,
+    "matched_frontend_call_sites": 524,
     "nav_items": 27,
-    "request_flows": 917,
-    "request_flows_with_frontend": 535,
+    "request_flows": 909,
+    "request_flows_with_frontend": 531,
     "request_flows_with_internal_package_calls": 159,
-    "request_flows_with_service_calls": 549,
-    "request_flows_with_store_calls": 654,
+    "request_flows_with_service_calls": 541,
+    "request_flows_with_store_calls": 651,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -92609,7 +91899,7 @@
       ]
     },
     {
-      "call_count": 16,
+      "call_count": 12,
       "component": "web/dashboard/src/components/v3/tabs/SBOMTab.tsx",
       "group": "Security & compliance",
       "id": "sbom",
@@ -103165,7 +102455,7 @@
         "frontendSites": [],
         "handler": "handlePosture",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 98,
+        "handlerLine": 93,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103194,7 +102484,7 @@
         "frontendSites": [],
         "handler": "handlePostureHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 113,
+        "handlerLine": 108,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103228,7 +102518,7 @@
         ],
         "handler": "handlePostureBreakdown",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 128,
+        "handlerLine": 123,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103264,7 +102554,7 @@
         ],
         "handler": "handleAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 142,
+        "handlerLine": 137,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103302,7 +102592,7 @@
         ],
         "handler": "handleAssessmentDelta",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 157,
+        "handlerLine": 152,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103340,7 +102630,7 @@
         ],
         "handler": "handleRunAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 172,
+        "handlerLine": 167,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -103378,7 +102668,7 @@
         ],
         "handler": "handleAssessmentHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 202,
+        "handlerLine": 197,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103415,7 +102705,7 @@
         ],
         "handler": "handleAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 279,
+        "handlerLine": 274,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103453,7 +102743,7 @@
         ],
         "handler": "handleUpsertAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 293,
+        "handlerLine": 288,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -103491,7 +102781,7 @@
         ],
         "handler": "handleListComplianceTemplates",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 218,
+        "handlerLine": 213,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103529,7 +102819,7 @@
         ],
         "handler": "handleUpsertComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 246,
+        "handlerLine": 241,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -103560,7 +102850,7 @@
         "frontendSites": [],
         "handler": "handleGetComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 232,
+        "handlerLine": 227,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103596,7 +102886,7 @@
         ],
         "handler": "handleDeleteComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 266,
+        "handlerLine": 261,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -103631,7 +102921,7 @@
         ],
         "handler": "handleFrameworks",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 321,
+        "handlerLine": 316,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103660,7 +102950,7 @@
         "frontendSites": [],
         "handler": "handleFrameworkControls",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 326,
+        "handlerLine": 321,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103696,7 +102986,7 @@
         ],
         "handler": "handleFrameworkGaps",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 346,
+        "handlerLine": 341,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103731,7 +103021,7 @@
         ],
         "handler": "handleKeyHygiene",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 360,
+        "handlerLine": 355,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103757,7 +103047,7 @@
         "frontendSites": [],
         "handler": "handleOrphaned",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 374,
+        "handlerLine": 369,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103782,7 +103072,7 @@
         "frontendSites": [],
         "handler": "handleExpired",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 388,
+        "handlerLine": 383,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103809,7 +103099,7 @@
         "frontendSites": [],
         "handler": "handleAuditCorrelations",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 402,
+        "handlerLine": 397,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -103845,7 +103135,7 @@
         ],
         "handler": "handleAuditAnomalies",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 417,
+        "handlerLine": 412,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103866,110 +103156,6 @@
         ]
       },
       {
-        "complexity": 0,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "strings.ToLower",
-          "time.Now"
-        ],
-        "frontendSites": [],
-        "handler": "handleSBOM",
-        "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 431,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/compliance/sbom",
-        "path": "/compliance/sbom",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "compliance|GET|/compliance/sbom",
-        "sensitive": false,
-        "service": "compliance",
-        "serviceCalls": [
-          "GenerateSBOM"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleSBOMServices",
-        "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 442,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/compliance/sbom/services",
-        "path": "/compliance/sbom/services",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "compliance|GET|/compliance/sbom/services",
-        "sensitive": false,
-        "service": "compliance",
-        "serviceCalls": [
-          "SBOMServices"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleSBOMService",
-        "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 452,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/compliance/sbom/services/{param}",
-        "path": "/compliance/sbom/services/{name}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "compliance|GET|/compliance/sbom/services/{param}",
-        "sensitive": false,
-        "service": "compliance",
-        "serviceCalls": [
-          "SBOMService"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleSBOMVulnerabilities",
-        "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 462,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/compliance/sbom/vulnerabilities",
-        "path": "/compliance/sbom/vulnerabilities",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "compliance|GET|/compliance/sbom/vulnerabilities",
-        "sensitive": false,
-        "service": "compliance",
-        "serviceCalls": [
-          "SBOMVulnerabilities"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
         "complexity": 1,
         "externalPackages": [
           "strings.TrimSpace"
@@ -103977,7 +103163,7 @@
         "frontendSites": [],
         "handler": "handleCBOM",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 476,
+        "handlerLine": 426,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -104004,7 +103190,7 @@
         "frontendSites": [],
         "handler": "handleCBOMSummary",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 490,
+        "handlerLine": 440,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -104032,7 +103218,7 @@
         "frontendSites": [],
         "handler": "handleCBOMExport",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 504,
+        "handlerLine": 454,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -104059,7 +103245,7 @@
         "frontendSites": [],
         "handler": "handleCBOMPQCReadiness",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 526,
+        "handlerLine": 476,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -104086,7 +103272,7 @@
         "frontendSites": [],
         "handler": "handleCBOMDiff",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 540,
+        "handlerLine": 490,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -121651,13 +120837,13 @@
           {
             "expression": "serviceRequest(\"sbom\", \"/sbom/generate\")",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 119,
+            "line": 91,
             "source": "serviceRequest"
           }
         ],
         "handler": "generateSBOM",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 96,
+        "handlerLine": 89,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -121688,13 +120874,13 @@
           {
             "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 127,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
         "handler": "latestSBOM",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 114,
+        "handlerLine": 107,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121722,13 +120908,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/history?limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 132,
+            "line": 104,
             "source": "serviceRequest"
           }
         ],
         "handler": "sbomHistory",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 124,
+        "handlerLine": 117,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121750,145 +120936,6 @@
         ]
       },
       {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"sbom\", \"/sbom/vulnerabilities\")",
-            "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 141,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "sbomVulnerabilities",
-        "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 154,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/sbom/vulnerabilities",
-        "path": "/sbom/vulnerabilities",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "sbom|GET|/sbom/vulnerabilities",
-        "sensitive": false,
-        "service": "sbom",
-        "serviceCalls": [
-          "SBOMVulnerabilities"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "SBOM / CBOM"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-            "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 152,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "listManualAdvisories",
-        "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 174,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/sbom/advisories",
-        "path": "/sbom/advisories",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "sbom|GET|/sbom/advisories",
-        "sensitive": false,
-        "service": "sbom",
-        "serviceCalls": [
-          "ListManualAdvisories"
-        ],
-        "storeCalls": [
-          "ListManualAdvisories"
-        ],
-        "uiLabels": [
-          "SBOM / CBOM"
-        ]
-      },
-      {
-        "complexity": 2,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"sbom\", \"/sbom/advisories\")",
-            "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 157,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "saveManualAdvisory",
-        "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 183,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/sbom/advisories",
-        "path": "/sbom/advisories",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "sbom|POST|/sbom/advisories",
-        "sensitive": false,
-        "service": "sbom",
-        "serviceCalls": [
-          "SaveManualAdvisory"
-        ],
-        "storeCalls": [
-          "UpsertManualAdvisory",
-          "ListManualAdvisories"
-        ],
-        "uiLabels": [
-          "SBOM / CBOM"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"sbom\", `/sbom/advisories/${encodeURIComponent(String(id || \"\").trim())}`)",
-            "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 165,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "deleteManualAdvisory",
-        "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 211,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "DELETE",
-        "normalizedPath": "/sbom/advisories/{param}",
-        "path": "/sbom/advisories/{id}",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "sbom|DELETE|/sbom/advisories/{param}",
-        "sensitive": false,
-        "service": "sbom",
-        "serviceCalls": [
-          "DeleteManualAdvisory"
-        ],
-        "storeCalls": [
-          "DeleteManualAdvisory"
-        ],
-        "uiLabels": [
-          "SBOM / CBOM"
-        ]
-      },
-      {
         "complexity": 1,
         "externalPackages": [
           "strings.TrimSpace"
@@ -121897,13 +120944,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/diff?from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponent(String(toID || \"\").tri...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 245,
+            "line": 187,
             "source": "serviceRequest"
           }
         ],
         "handler": "sbomDiff",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 222,
+        "handlerLine": 147,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121931,13 +120978,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/sbom/${encodeURIComponent(String(id || \"\").trim())}/export?format=${encodeURIComponent(format)}&encoding=${encod...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 176,
+            "line": 118,
             "source": "serviceRequest"
           }
         ],
         "handler": "sbomExport",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 142,
+        "handlerLine": 135,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121964,7 +121011,7 @@
         "frontendSites": [],
         "handler": "sbomByID",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 133,
+        "handlerLine": 126,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -121994,13 +121041,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/generate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 185,
+            "line": 127,
             "source": "serviceRequest"
           }
         ],
         "handler": "generateCBOM",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 235,
+        "handlerLine": 160,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -122032,13 +121079,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/latest?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 193,
+            "line": 135,
             "source": "serviceRequest"
           }
         ],
         "handler": "latestCBOM",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 253,
+        "handlerLine": 178,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122068,13 +121115,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(Number(limit || 20)))}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 198,
+            "line": 140,
             "source": "serviceRequest"
           }
         ],
         "handler": "cbomHistory",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 263,
+        "handlerLine": 188,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122102,13 +121149,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 207,
+            "line": 149,
             "source": "serviceRequest"
           }
         ],
         "handler": "cbomSummary",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 292,
+        "handlerLine": 217,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122134,13 +121181,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/pqc-readiness?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 254,
+            "line": 196,
             "source": "serviceRequest"
           }
         ],
         "handler": "cbomPQCReadiness",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 301,
+        "handlerLine": 226,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122168,13 +121215,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/diff?${tenantQuery(session)}&from=${encodeURIComponent(String(fromID || \"\").trim())}&to=${encodeURIComponen...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 225,
+            "line": 167,
             "source": "serviceRequest"
           }
         ],
         "handler": "cbomDiff",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 310,
+        "handlerLine": 235,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122202,13 +121249,13 @@
           {
             "expression": "serviceRequest(\"sbom\", `/cbom/${encodeURIComponent(String(id || \"\").trim())}/export?${tenantQuery(session)}&format=${encodeURIComponent(f...",
             "file": "web/dashboard/src/lib/sbom.ts",
-            "line": 216,
+            "line": 158,
             "source": "serviceRequest"
           }
         ],
         "handler": "cbomExport",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 281,
+        "handlerLine": 206,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122235,7 +121282,7 @@
         "frontendSites": [],
         "handler": "cbomByID",
         "handlerFile": "services/sbom/handler.go",
-        "handlerLine": 272,
+        "handlerLine": 197,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -124825,7 +123872,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-28T11:05:27Z",
+    "generatedAt": "2026-09-28T17:22:03Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124867,9 +123914,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 917,
-      "frontendBacked": 535,
-      "highRisk": 367,
+      "flows": 909,
+      "frontendBacked": 531,
+      "highRisk": 366,
       "services": 30
     }
   }

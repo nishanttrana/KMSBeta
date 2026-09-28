@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-28T11:05:27Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T17:22:03Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `917` across `30` services
-- Backend routes on the `pkg/route` kernel: `183` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `573`
-- Frontend call sites with exact backend route match: `528`
+- Backend HTTP routes discovered: `909` across `30` services
+- Backend routes on the `pkg/route` kernel: `179` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `569`
+- Frontend call sites with exact backend route match: `524`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `762`
-- Backend request flows with handler/service/package summaries: `917`
+- Clickable controls with static `onClick` handlers: `758`
+- Backend request flows with handler/service/package summaries: `909`
 
 ## How To Use This For Launch
 
@@ -139,7 +139,7 @@ flowchart LR
   svc_certs["certs (68 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (58 routes)"]
+  svc_compliance["compliance (54 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
@@ -149,7 +149,7 @@ flowchart LR
   svc_posture["posture (12 routes)"]
   svc_pqc["pqc (16 routes)"]
   svc_reporting["reporting (34 routes)"]
-  svc_sbom["sbom (18 routes)"]
+  svc_sbom["sbom (14 routes)"]
   svc_secrets["secrets (25 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
@@ -182,7 +182,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 44 |
-| Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 16 |
+| Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
@@ -210,7 +210,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | certs | 68 | 51 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
-| compliance | 58 | 19 |
+| compliance | 54 | 19 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 12 | 6 |
@@ -227,7 +227,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | pqc | 16 | 6 |
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
-| sbom | 18 | 16 |
+| sbom | 14 | 12 |
 | secrets | 25 | 10 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
@@ -400,21 +400,21 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 70 |
 | compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 71 |
 | compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 73 |
-| compliance | GET | /compliance/sbom | h.handleSBOM |  | services/compliance/handler.go | 76 |
-| compliance | GET | /compliance/sbom/services | h.handleSBOMServices |  | services/compliance/handler.go | 77 |
-| compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService |  | services/compliance/handler.go | 78 |
-| compliance | GET | /compliance/sbom/vulnerabilities | h.handleSBOMVulnerabilities |  | services/compliance/handler.go | 79 |
-| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 81 |
-| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 82 |
-| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 83 |
-| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 84 |
-| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 85 |
+| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 76 |
+| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 77 |
+| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 78 |
+| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 79 |
+| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 80 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 | compliance | GET | /compliance/playbooks/summary | h.playbookSummary | compliance.playbook.read | services/compliance/handler_playbooks.go | 136 |
 | compliance | GET | /compliance/playbooks | h.listPlaybooks | compliance.playbook.read | services/compliance/handler_playbooks.go | 137 |
 | compliance | POST | /compliance/playbooks | h.createPlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 138 |
+| compliance | GET | /compliance/playbooks/{id} | h.getPlaybook | compliance.playbook.read | services/compliance/handler_playbooks.go | 139 |
+| compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
+| compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
+| compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
 
-Showing `120` of `382`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `378`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

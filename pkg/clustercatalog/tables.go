@@ -227,7 +227,7 @@ var Replicated = map[string][]string{
 	},
 	"sbom": {
 		"cbom_snapshots",
-		"sbom_manual_advisories",
+		"sbom_manual_advisories", // dropped by sbom migration 003 (2.19.0-beta); 002 still creates it
 		"sbom_snapshots",
 	},
 	"secrets": {

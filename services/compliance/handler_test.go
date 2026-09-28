@@ -83,18 +83,11 @@ func TestHandlerKeyHygieneAndAuditEndpoints(t *testing.T) {
 	}
 }
 
-func TestHandlerSBOMAndCBOMEndpoints(t *testing.T) {
+func TestHandlerCBOMEndpoints(t *testing.T) {
 	h, _, keycore, _, _, _, _ := newComplianceHandler(t)
 	keycore.keys["t3"] = []map[string]interface{}{
 		{"id": "k1", "algorithm": "AES-256", "status": "active"},
 		{"id": "k2", "algorithm": "ML-KEM-768", "status": "active"},
-	}
-
-	sbomReq := httptest.NewRequest(http.MethodGet, "/compliance/sbom?format=spdx", nil)
-	sbomRR := httptest.NewRecorder()
-	h.ServeHTTP(sbomRR, sbomReq)
-	if sbomRR.Code != http.StatusOK {
-		t.Fatalf("sbom status=%d body=%s", sbomRR.Code, sbomRR.Body.String())
 	}
 
 	cbomReq := httptest.NewRequest(http.MethodGet, "/compliance/cbom?tenant_id=t3", nil)
@@ -120,6 +113,21 @@ func TestHandlerSBOMAndCBOMEndpoints(t *testing.T) {
 
 	_ = bytes.NewBuffer(nil)
 	_ = json.RawMessage{}
+}
+
+// Compliance served a second, invented SBOM (hard-coded "dev" versions and
+// a licence list) and turned a low posture score into a "vulnerability".
+// The platform SBOM lives only in the sbom service; CVE tracking belongs to
+// the customer's vulnerability-management tool (2.19.0-beta).
+func TestComplianceSBOMRoutesRemoved(t *testing.T) {
+	h, _, _, _, _, _, _ := newComplianceHandler(t)
+	for _, path := range []string{"/compliance/sbom", "/compliance/sbom/services", "/compliance/sbom/services/keycore", "/compliance/sbom/vulnerabilities"} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path+"?tenant_id=t1", nil))
+		if rr.Code != http.StatusNotFound {
+			t.Fatalf("GET %s still served: %d %s", path, rr.Code, rr.Body.String())
+		}
+	}
 }
 
 func TestHandlerAssessmentRunAndSchedule(t *testing.T) {

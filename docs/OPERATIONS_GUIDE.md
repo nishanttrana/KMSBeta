@@ -25,7 +25,6 @@ Current source and container builds target:
 - Node.js `24` LTS with npm `11` for the dashboard
 - Alpine `3.23` for lightweight service runtime images
 - nginx `1.30.1` for the dashboard runtime image
-- Trivy `0.70.0` for SBOM and vulnerability scanning support
 
 Generated dashboard output under `web/dashboard/dist/` and local Go caches are intentionally ignored. Recreate generated assets with `npm run build` from `web/dashboard` when packaging or testing a release.
 

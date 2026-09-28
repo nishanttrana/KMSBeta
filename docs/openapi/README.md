@@ -6,7 +6,7 @@ Edit the script, never the generated files.
 
 | Spec | Service | Edge base path | Dashboard viewer |
 |---|---|---|---|
-| `sbom.openapi.{yaml,json}` | sbom (SBOM, advisories, CBOM, PQC readiness) | `/svc/sbom` | `/openapi/sbom.html` |
+| `sbom.openapi.{yaml,json}` | sbom (SBOM, CBOM, PQC readiness) | `/svc/sbom` | `/openapi/sbom.html` |
 | `posture.openapi.{yaml,json}` | posture (dashboard, findings, risk, remediation actions) | `/svc/posture` | `/openapi/posture.html` |
 | `compliance.openapi.{yaml,json}` | compliance (posture, assessments, templates) | `/svc/compliance` | `/openapi/compliance.html` |
 | `reporting.openapi.{yaml,json}` | reporting (report jobs, alert MTTD/MTTR stats) | `/svc/reporting` | `/openapi/reporting.html` |

@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — The KMS hands over an SBOM; it does not track vulnerabilities (2.19.0-beta)
+
+**Decision.** The owner: tracking vulnerabilities is "not the job of [an]
+enterprise key management product… it has to be vulnerability management".
+The sbom service keeps generating, diffing and exporting the platform's SBOM
+(CycloneDX, SPDX) and the tenant's CBOM. CVE matching (OSV, Trivy, offline
+advisories), its routes, table, dashboard tab and bundled Trivy binary are
+removed. Compliance's hard-coded `/compliance/sbom*` copy goes with it.
+
+**Why.** A vulnerability feed has to be current, complete and triaged to be
+worth anything. The customer's vulnerability-management tool does that
+across their whole estate; a second, partial feed inside the KMS competes
+with it and gives auditors two answers. The matcher also pulled a scanner
+binary and outbound OSV calls into a FIPS-targeted appliance, and it needed
+repeated fixes to stay honest (see learning.md).
+
+**Kept, because they are key management:** the CBOM and PQC readiness,
+quantum-vulnerable algorithm classification, and keycore's compromise
+advisories (an advisory against an algorithm or key marks the affected keys
+compromised). Scanning our own release (`govulncheck`,
+`infra/security/cve-scan.sh`) is vendor release evidence, not a product
+feature, and stays in CI.
+
+**Rejected.** Keeping the tab as a labelled preview: it would still be a
+capability the product should not have. Keeping offline advisories for
+air-gapped sites: those sites run their own vulnerability tooling offline
+against the exported SBOM.
+
+**Enforced by** `TestSBOMVulnerabilityRoutesRemoved`,
+`TestComplianceSBOMRoutesRemoved`, and the CLAUDE.md rule under "How we
+build".
+
 ## 2026-09-28 — One home per kind of view (2.12.0-beta)
 
 **Decision.** Charts and trends live only in Overview → Analytics (Key
@@ -451,8 +483,8 @@ token, since the kernel verifies it.
 (`/alerts/{id}/resolve`, ...) conflict with `PUT /alerts/rules/{id}` in Go's
 mux (neither is more specific), and moving rule updates would break clients.
 
-**The platform SBOM needs the platform tenant to change.** Snapshots and
-manual advisories are shared by every tenant; a tenant admin elsewhere holds
+**The platform SBOM needs the platform tenant to change.** Snapshots are
+shared by every tenant; a tenant admin elsewhere holds
 `sbom.write` through `*` and must not change what all tenants see. Rejected:
 a new platform-admin permission (no role grants it yet, so it would lock
 everyone out).

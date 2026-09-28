@@ -1011,7 +1011,7 @@ NIS2 (EU 2022/2555) extends NIS to more sectors. Relevant to KMS:
 German BSI C5 (2020) for cloud service providers:
 - OIS-08 (Cryptography and Key Management) → Full key lifecycle management, access controls
 - RB-02 (Logging and monitoring) → Immutable audit log, SIEM export
-- OIS-09 (Vulnerability management) → SBOM/CBOM, CVE exposure tracking
+- OIS-09 (Vulnerability management) → SBOM export (CycloneDX/SPDX) for the customer's vulnerability-management tool; CBOM for cryptographic exposure
 
 ---
 
@@ -1505,27 +1505,26 @@ Drift detection compares the current state of each key and certificate against a
 
 ### Software Bill of Materials (SBOM)
 
-The SBOM (Software Bill of Materials) tracks the software dependency inventory of each Vecta KMS service:
+The SBOM service (`/svc/sbom`) inventories the platform's own dependencies
+(Go modules, npm packages, container images, runtimes):
 
 ```bash
-# Get SBOM for all services
-curl "https://localhost/svc/compliance/compliance/sbom?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
+# Latest snapshot (generated on first read if none exists)
+curl "https://localhost/svc/sbom/sbom/latest" -H "Authorization: Bearer $TOKEN"
 
-# Get SBOM for a specific service
-curl "https://localhost/svc/compliance/compliance/sbom/services/keycore?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Export SBOM in CycloneDX format
-curl "https://localhost/svc/compliance/compliance/sbom?tenant_id=root&format=cyclonedx" \
+# Export a snapshot as CycloneDX or SPDX
+curl "https://localhost/svc/sbom/sbom/$SNAPSHOT_ID/export?format=cyclonedx" \
   -H "Authorization: Bearer $TOKEN" > sbom-cyclonedx.json
-
-# Export SBOM in SPDX format
-curl "https://localhost/svc/compliance/compliance/sbom?tenant_id=root&format=spdx" \
+curl "https://localhost/svc/sbom/sbom/$SNAPSHOT_ID/export?format=spdx" \
   -H "Authorization: Bearer $TOKEN" > sbom-spdx.json
 ```
 
-SBOM fields per component: `name`, `version`, `package_url`, `license`, `cve_count`, `cve_ids`, `last_updated`.
+SBOM fields per component: `name`, `version`, `type`, `purl`, `supplier`,
+`licenses`, `hashes`, `ecosystem`.
+
+The KMS does not track CVEs against its SBOM: feed the export to your
+vulnerability-management tool. Vulnerability correlation, offline advisories
+and compliance's own `/compliance/sbom*` routes were removed in 2.19.0-beta.
 
 ### Cryptographic Bill of Materials (CBOM)
 

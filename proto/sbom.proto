@@ -10,7 +10,6 @@ service SbomService {
   rpc ListSBOMHistory (ListSBOMHistoryRequest) returns (ListSBOMHistoryResponse);
   rpc GetSBOM (GetSBOMRequest) returns (GetSBOMResponse);
   rpc ExportSBOM (ExportSBOMRequest) returns (ExportBOMResponse);
-  rpc GetSBOMVulnerabilities (GetSBOMVulnerabilitiesRequest) returns (GetSBOMVulnerabilitiesResponse);
   rpc DiffSBOM (DiffSBOMRequest) returns (DiffBOMResponse);
 
   rpc GenerateCBOM (GenerateCBOMRequest) returns (GenerateCBOMResponse);
@@ -89,17 +88,6 @@ message CBOMSnapshot {
   map<string, string> summary = 6;
 }
 
-message VulnerabilityMatch {
-  string id = 1;
-  string source = 2;
-  string severity = 3;
-  string component = 4;
-  string installed_version = 5;
-  string fixed_version = 6;
-  string summary = 7;
-  string reference = 8;
-}
-
 message JsonObject {
   map<string, string> fields = 1;
 }
@@ -158,12 +146,6 @@ message ExportBOMResponse {
   string content_type = 2;
   string encoding = 3;
   string content = 4;
-}
-
-message GetSBOMVulnerabilitiesRequest {}
-
-message GetSBOMVulnerabilitiesResponse {
-  repeated VulnerabilityMatch items = 1;
 }
 
 message DiffSBOMRequest {

@@ -24,9 +24,8 @@ type Handler struct {
 
 // Permissions for the sbom domain.
 const (
-	permRead   = "sbom.read"
-	permWrite  = "sbom.write"  // generate snapshots, save advisories
-	permDelete = "sbom.delete" // delete advisories
+	permRead  = "sbom.read"
+	permWrite = "sbom.write" // generate snapshots
 )
 
 // reasonPlatformTenant refuses a platform-wide write (the platform SBOM and
@@ -53,12 +52,6 @@ func (h *Handler) routes() {
 	r.Handle("POST /sbom/generate", platform("sbom_generate_requested", permWrite, "sbom", ""), h.generateSBOM)
 	r.Handle("GET /sbom/latest", platform("sbom_latest_read", permRead, "sbom", ""), h.latestSBOM)
 	r.Handle("GET /sbom/history", platform("sbom_history_listed", permRead, "sbom", ""), h.sbomHistory)
-	r.Handle("GET /sbom/vulnerabilities", platform("sbom_vulnerabilities_listed", permRead, "sbom", ""), h.sbomVulnerabilities)
-	r.Handle("GET /sbom/advisories", platform("sbom_advisories_listed", permRead, "sbom_advisory", ""), h.listManualAdvisories)
-	r.Handle("POST /sbom/advisories", platform("sbom_advisory_saved", permWrite, "sbom_advisory", ""), h.saveManualAdvisory)
-	delAdv := platform("sbom_advisory_deleted", permDelete, "sbom_advisory", "id")
-	delAdv.Severity = "warning"
-	r.Handle("DELETE /sbom/advisories/{id}", delAdv, h.deleteManualAdvisory)
 	r.Handle("GET /sbom/diff", platform("sbom_diff_read", permRead, "sbom", ""), h.sbomDiff)
 	r.Handle("GET /sbom/{id}/export", platform("sbom_exported", permRead, "sbom", "id"), h.sbomExport)
 	r.Handle("GET /sbom/{id}", platform("sbom_read", permRead, "sbom", "id"), h.sbomByID)
@@ -149,74 +142,6 @@ func (h *Handler) sbomExport(c *route.Call) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"export": out})
-}
-
-func (h *Handler) sbomVulnerabilities(c *route.Call) {
-	items, err := h.svc.SBOMVulnerabilities(c.R.Context())
-	if err != nil {
-		h.serviceError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
-}
-
-type manualAdvisoryRequest struct {
-	ID                string `json:"id"`
-	Component         string `json:"component"`
-	Ecosystem         string `json:"ecosystem"`
-	IntroducedVersion string `json:"introduced_version"`
-	FixedVersion      string `json:"fixed_version"`
-	Severity          string `json:"severity"`
-	Summary           string `json:"summary"`
-	Reference         string `json:"reference"`
-}
-
-func (h *Handler) listManualAdvisories(c *route.Call) {
-	items, err := h.svc.ListManualAdvisories(c.R.Context())
-	if err != nil {
-		h.serviceError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
-}
-
-func (h *Handler) saveManualAdvisory(c *route.Call) {
-	if !platformWriter(c) {
-		return
-	}
-	var req manualAdvisoryRequest
-	if !c.Decode(&req) {
-		return
-	}
-	item, err := h.svc.SaveManualAdvisory(c.R.Context(), ManualAdvisory{
-		ID:                req.ID,
-		Component:         req.Component,
-		Ecosystem:         req.Ecosystem,
-		IntroducedVersion: req.IntroducedVersion,
-		FixedVersion:      req.FixedVersion,
-		Severity:          req.Severity,
-		Summary:           req.Summary,
-		Reference:         req.Reference,
-	})
-	if err != nil {
-		h.serviceError(c, err)
-		return
-	}
-	c.Target(item.ID)
-	c.Detail("component", item.Component)
-	c.Detail("advisory_severity", item.Severity)
-	c.JSON(http.StatusAccepted, map[string]interface{}{"item": item})
-}
-
-func (h *Handler) deleteManualAdvisory(c *route.Call) {
-	if !platformWriter(c) {
-		return
-	}
-	if err := h.svc.DeleteManualAdvisory(c.R.Context(), c.R.PathValue("id")); err != nil {
-		h.serviceError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
 func (h *Handler) sbomDiff(c *route.Call) {

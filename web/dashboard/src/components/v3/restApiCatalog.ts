@@ -1949,31 +1949,6 @@ export const REST_API_CATALOG = [
     ]
   },
   {
-    id: "compliance-sbom",
-    group: "Compliance",
-    title: "Software Bill of Materials",
-    service: "compliance",
-    method: "GET",
-    pathTemplate: "/compliance/sbom?tenant_id={{tenant_id}}",
-    bodyTemplate: "",
-    description: "Returns software bill of materials for KMS components.",
-    requestExample: "GET /svc/compliance/compliance/sbom?tenant_id=root",
-    responseExample: {
-      components: [
-        { name: "vecta-keycore", version: "3.2.1", license: "Commercial", vulnerabilities: 0 },
-        { name: "openssl", version: "3.1.4", license: "Apache-2.0", vulnerabilities: 0 },
-        { name: "golang", version: "1.22.1", license: "BSD-3-Clause", vulnerabilities: 0 }
-      ],
-      generated_at: "2026-03-04T12:00:00Z",
-      format: "CycloneDX"
-    },
-    errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks SBOM read privilege" }
-    ]
-  },
-  {
     id: "compliance-cbom-summary",
     group: "Compliance",
     title: "Cryptographic Bill of Materials",

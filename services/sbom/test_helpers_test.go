@@ -83,21 +83,6 @@ func (f *fakeSBOMDiscovery) ListCryptoAssets(_ context.Context, tenantID string,
 	return items, nil
 }
 
-type stubVulnerabilityProvider struct {
-	err error
-	fn  func([]BOMComponent) []VulnerabilityMatch
-}
-
-func (s *stubVulnerabilityProvider) Match(_ context.Context, components []BOMComponent) ([]VulnerabilityMatch, error) {
-	if s.err != nil {
-		return nil, s.err
-	}
-	if s.fn == nil {
-		return []VulnerabilityMatch{}, nil
-	}
-	return s.fn(components), nil
-}
-
 func newSBOMService(t *testing.T) (*Service, *SQLStore, *fakeSBOMKeyCore, *fakeSBOMCerts, *fakeSBOMDiscovery, *nopSBOMPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
@@ -119,7 +104,6 @@ func newSBOMService(t *testing.T) (*Service, *SQLStore, *fakeSBOMKeyCore, *fakeS
 	discovery := &fakeSBOMDiscovery{items: map[string][]map[string]interface{}{}}
 	pub := &nopSBOMPublisher{}
 	svc := NewService(store, keycore, certs, discovery, pub)
-	svc.vulnProvider = &stubVulnerabilityProvider{fn: fixtureVulnerabilities}
 	return svc, store, keycore, certs, discovery, pub
 }
 
@@ -163,18 +147,6 @@ func createSBOMSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
-		`CREATE TABLE sbom_manual_advisories (
-			id TEXT PRIMARY KEY,
-			component TEXT NOT NULL,
-			ecosystem TEXT NOT NULL DEFAULT '',
-			introduced_version TEXT NOT NULL DEFAULT '',
-			fixed_version TEXT NOT NULL DEFAULT '',
-			severity TEXT NOT NULL DEFAULT 'medium',
-			summary TEXT NOT NULL DEFAULT '',
-			reference TEXT NOT NULL DEFAULT '',
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-		);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {
@@ -182,16 +154,4 @@ func createSBOMSchemaForTest(conn *pkgdb.DB) error {
 		}
 	}
 	return nil
-}
-
-// fixtureVulnerabilities is test data: one advisory for golang.org/x/net
-// below v0.33.0, standing in for an OSV/Trivy answer.
-func fixtureVulnerabilities(components []BOMComponent) []VulnerabilityMatch {
-	out := []VulnerabilityMatch{}
-	for _, c := range components {
-		if c.Name == "golang.org/x/net" && compareSemver(c.Version, "v0.33.0") < 0 {
-			out = append(out, VulnerabilityMatch{ID: "TEST-ADVISORY-1", Source: "fixture", Severity: "high", Component: c.Name, InstalledVersion: c.Version, FixedVersion: "v0.33.0"})
-		}
-	}
-	return out
 }

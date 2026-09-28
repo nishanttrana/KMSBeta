@@ -684,7 +684,6 @@ ensure_local_build_base_images() {
 	  "vecta-local/alpine:3.24|alpine:3.24"
 	  "vecta-local/node:24.21.0-alpine|node:24.21.0-alpine"
 	  "vecta-local/nginx:1.30.5-alpine|nginx:1.30.5-alpine"
-	  "vecta-local/trivy:0.74.0|aquasec/trivy:0.74.0"
 	)
 
   local spec alias_ref source_ref

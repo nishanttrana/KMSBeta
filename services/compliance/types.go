@@ -111,16 +111,6 @@ type AnomalyItem struct {
 	DetectedAt  time.Time `json:"detected_at"`
 }
 
-type SBOMDocument struct {
-	Format         string                   `json:"format"`
-	SpecVersion    string                   `json:"spec_version"`
-	GeneratedAt    time.Time                `json:"generated_at"`
-	Appliance      string                   `json:"appliance"`
-	Components     []map[string]interface{} `json:"components"`
-	Infrastructure []map[string]interface{} `json:"infrastructure"`
-	Licenses       []string                 `json:"licenses"`
-}
-
 type CBOMDocument struct {
 	Format              string                   `json:"format"`
 	SpecVersion         string                   `json:"spec_version"`

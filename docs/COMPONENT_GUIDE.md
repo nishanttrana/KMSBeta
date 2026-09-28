@@ -498,7 +498,7 @@ What it does:
 
 Use cases:
 
-- vulnerability and component inventory review
+- component inventory review, exported (CycloneDX/SPDX) to the customer's vulnerability-management tool
 - PQC readiness reporting through CBOM
 - audit evidence on software supply chain state
 

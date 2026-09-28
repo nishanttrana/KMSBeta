@@ -497,23 +497,12 @@ Service prefix:
 
 The SBOM service now supports:
 
-- software BOM generation
-- crypto BOM generation
-- merged vulnerability correlation
-- offline advisory management
-- air-gapped advisory workflows
-- OSV-backed dependency findings
-- Trivy-backed repository findings
+- software BOM generation, history, diff and export (CycloneDX, SPDX)
+- crypto BOM generation and PQC readiness
 
-### Vulnerability Source Order
-
-The vulnerability list returned by `/sbom/vulnerabilities` is assembled from:
-
-1. Manual OSV advisories stored in KMS
-2. OSV online package matches
-3. Trivy repository scan findings
-
-This allows disconnected environments to operate with manually entered advisories while still using richer sources when internet access is available.
+The KMS does not track CVEs. Export the SBOM to your vulnerability-management
+tool; vulnerability correlation and offline advisories were removed in
+2.19.0-beta.
 
 ### POST /sbom/generate
 
@@ -538,112 +527,6 @@ Example response:
   },
   "request_id": "req_200"
 }
-```
-
-### GET /sbom/vulnerabilities
-
-Returns the merged vulnerability findings for the latest SBOM snapshot.
-
-Example response:
-
-```json
-{
-  "items": [
-    {
-      "id": "CVE-2026-1000",
-      "source": "OSV",
-      "severity": "high",
-      "component": "golang.org/x/net",
-      "installed_version": "v0.20.0",
-      "fixed_version": "v0.35.0",
-      "summary": "HTTP issue in golang.org/x/net.",
-      "reference": "https://osv.dev/vulnerability/GO-2026-0001"
-    },
-    {
-      "id": "CVE-2025-29923",
-      "source": "Trivy",
-      "severity": "low",
-      "component": "github.com/redis/go-redis/v9",
-      "installed_version": "v9.7.0",
-      "fixed_version": "9.7.3",
-      "summary": "go-redis vulnerability",
-      "reference": "https://avd.aquasec.com/nvd/cve-2025-29923"
-    }
-  ],
-  "request_id": "req_201"
-}
-```
-
-### GET /sbom/advisories
-
-Lists manually managed offline advisories.
-
-Example response:
-
-```json
-{
-  "items": [
-    {
-      "id": "CVE-2026-5000",
-      "component": "example/module",
-      "ecosystem": "go",
-      "introduced_version": "v1.0.0",
-      "fixed_version": "v1.3.0",
-      "severity": "critical",
-      "summary": "Offline advisory",
-      "reference": "https://example.test/CVE-2026-5000",
-      "created_at": "2026-03-11T09:46:00Z",
-      "updated_at": "2026-03-11T09:46:00Z"
-    }
-  ],
-  "request_id": "req_202"
-}
-```
-
-### POST /sbom/advisories
-
-Creates or updates a manual advisory for offline environments.
-
-Example request:
-
-```json
-{
-  "id": "CVE-2026-5000",
-  "component": "example/module",
-  "ecosystem": "go",
-  "introduced_version": "v1.0.0",
-  "fixed_version": "v1.3.0",
-  "severity": "critical",
-  "summary": "Offline advisory for an air-gapped deployment",
-  "reference": "https://example.test/CVE-2026-5000"
-}
-```
-
-Example response:
-
-```json
-{
-  "item": {
-    "id": "CVE-2026-5000",
-    "component": "example/module",
-    "ecosystem": "go",
-    "fixed_version": "v1.3.0",
-    "severity": "critical",
-    "summary": "Offline advisory for an air-gapped deployment"
-  },
-  "request_id": "req_203"
-}
-```
-
-### DELETE /sbom/advisories/{id}
-
-Deletes a manual advisory by advisory ID.
-
-Example request:
-
-```http
-DELETE /svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id=root
-Authorization: Bearer <jwt>
 ```
 
 ### POST /cbom/generate

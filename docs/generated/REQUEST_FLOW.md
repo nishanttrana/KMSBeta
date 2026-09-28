@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-28T11:05:27Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T17:22:03Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `917`
-- Routes with exact frontend call sites: `535`
-- Routes whose handlers call `h.svc.*`: `549`
-- Routes with detected store calls: `654`
+- Backend routes analyzed: `909`
+- Routes with exact frontend call sites: `531`
+- Routes whose handlers call `h.svc.*`: `541`
+- Routes with detected store calls: `651`
 - Routes with detected internal `pkg/*` calls: `159`
 
 ## How To Trace One Frontend Click
@@ -200,20 +200,20 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cluster-manager\|GET\|/cluster/sync/events | GET /cluster/sync/events | handleListSyncEvents (services/cluster-manager/handler.go:325) | ListSyncEvents | GetNode, ListSyncEvents |  |  | web/dashboard/src/lib/cluster.ts:264 |
 | cluster-manager\|GET\|/cluster/sync/checkpoint | GET /cluster/sync/checkpoint | handleSyncCheckpoint (services/cluster-manager/handler.go:369) | GetSyncCheckpoint | GetSyncCheckpoint |  |  | web/dashboard/src/lib/cluster.ts:274 |
 | cluster-manager\|GET\|/cluster/logs | GET /cluster/logs | handleClusterLogs (services/cluster-manager/handler.go:385) | ListClusterLogs | ListClusterLogs |  |  | web/dashboard/src/lib/cluster.ts:288 |
-| compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:128) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:304 |
-| compliance\|GET\|/compliance/assessment | GET /compliance/assessment | handleAssessment (services/compliance/handler.go:142) | GetLatestAssessment | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:163 |
-| compliance\|GET\|/compliance/assessment/delta | GET /compliance/assessment/delta | handleAssessmentDelta (services/compliance/handler.go:157) | GetAssessmentDelta | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:207 |
-| compliance\|POST\|/compliance/assessment/run | POST /compliance/assessment/run | handleRunAssessment (services/compliance/handler.go:172) | RunAssessment | CreateAssessmentRun, ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:182 |
-| compliance\|GET\|/compliance/assessment/history | GET /compliance/assessment/history | handleAssessmentHistory (services/compliance/handler.go:202) | ListAssessmentRuns | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:198 |
-| compliance\|GET\|/compliance/assessment/schedule | GET /compliance/assessment/schedule | handleAssessmentSchedule (services/compliance/handler.go:279) | GetAssessmentSchedule | GetAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:223 |
-| compliance\|PUT\|/compliance/assessment/schedule | PUT /compliance/assessment/schedule | handleUpsertAssessmentSchedule (services/compliance/handler.go:293) | UpsertAssessmentSchedule | GetAssessmentSchedule, UpsertAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:272 |
-| compliance\|GET\|/compliance/templates | GET /compliance/templates | handleListComplianceTemplates (services/compliance/handler.go:218) | ListComplianceTemplates | ListComplianceTemplates |  |  | web/dashboard/src/lib/compliance.ts:239 |
-| compliance\|POST\|/compliance/templates | POST /compliance/templates | handleUpsertComplianceTemplate (services/compliance/handler.go:246) | UpsertComplianceTemplate | UpsertComplianceTemplate, GetComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:247 |
-| compliance\|DELETE\|/compliance/templates/{param} | DELETE /compliance/templates/{id} | handleDeleteComplianceTemplate (services/compliance/handler.go:266) | DeleteComplianceTemplate | DeleteComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:263 |
-| compliance\|GET\|/compliance/frameworks | GET /compliance/frameworks | handleFrameworks (services/compliance/handler.go:321) | ListFrameworks |  |  |  | web/dashboard/src/lib/compliance.ts:234 |
-| compliance\|GET\|/compliance/frameworks/{param}/gaps | GET /compliance/frameworks/{id}/gaps | handleFrameworkGaps (services/compliance/handler.go:346) | GetFrameworkGaps | ListFrameworkGaps |  |  | web/dashboard/src/lib/compliance.ts:352 |
-| compliance\|GET\|/compliance/keys/hygiene | GET /compliance/keys/hygiene | handleKeyHygiene (services/compliance/handler.go:360) | GetKeyHygieneReport |  |  |  | web/dashboard/src/lib/compliance.ts:329 |
-| compliance\|GET\|/compliance/audit/anomalies | GET /compliance/audit/anomalies | handleAuditAnomalies (services/compliance/handler.go:417) | GetAuditAnomalies |  |  |  | web/dashboard/src/lib/compliance.ts:380 |
+| compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:123) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:304 |
+| compliance\|GET\|/compliance/assessment | GET /compliance/assessment | handleAssessment (services/compliance/handler.go:137) | GetLatestAssessment | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:163 |
+| compliance\|GET\|/compliance/assessment/delta | GET /compliance/assessment/delta | handleAssessmentDelta (services/compliance/handler.go:152) | GetAssessmentDelta | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:207 |
+| compliance\|POST\|/compliance/assessment/run | POST /compliance/assessment/run | handleRunAssessment (services/compliance/handler.go:167) | RunAssessment | CreateAssessmentRun, ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:182 |
+| compliance\|GET\|/compliance/assessment/history | GET /compliance/assessment/history | handleAssessmentHistory (services/compliance/handler.go:197) | ListAssessmentRuns | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:198 |
+| compliance\|GET\|/compliance/assessment/schedule | GET /compliance/assessment/schedule | handleAssessmentSchedule (services/compliance/handler.go:274) | GetAssessmentSchedule | GetAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:223 |
+| compliance\|PUT\|/compliance/assessment/schedule | PUT /compliance/assessment/schedule | handleUpsertAssessmentSchedule (services/compliance/handler.go:288) | UpsertAssessmentSchedule | GetAssessmentSchedule, UpsertAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:272 |
+| compliance\|GET\|/compliance/templates | GET /compliance/templates | handleListComplianceTemplates (services/compliance/handler.go:213) | ListComplianceTemplates | ListComplianceTemplates |  |  | web/dashboard/src/lib/compliance.ts:239 |
+| compliance\|POST\|/compliance/templates | POST /compliance/templates | handleUpsertComplianceTemplate (services/compliance/handler.go:241) | UpsertComplianceTemplate | UpsertComplianceTemplate, GetComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:247 |
+| compliance\|DELETE\|/compliance/templates/{param} | DELETE /compliance/templates/{id} | handleDeleteComplianceTemplate (services/compliance/handler.go:261) | DeleteComplianceTemplate | DeleteComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:263 |
+| compliance\|GET\|/compliance/frameworks | GET /compliance/frameworks | handleFrameworks (services/compliance/handler.go:316) | ListFrameworks |  |  |  | web/dashboard/src/lib/compliance.ts:234 |
+| compliance\|GET\|/compliance/frameworks/{param}/gaps | GET /compliance/frameworks/{id}/gaps | handleFrameworkGaps (services/compliance/handler.go:341) | GetFrameworkGaps | ListFrameworkGaps |  |  | web/dashboard/src/lib/compliance.ts:352 |
+| compliance\|GET\|/compliance/keys/hygiene | GET /compliance/keys/hygiene | handleKeyHygiene (services/compliance/handler.go:355) | GetKeyHygieneReport |  |  |  | web/dashboard/src/lib/compliance.ts:329 |
+| compliance\|GET\|/compliance/audit/anomalies | GET /compliance/audit/anomalies | handleAuditAnomalies (services/compliance/handler.go:412) | GetAuditAnomalies |  |  |  | web/dashboard/src/lib/compliance.ts:380 |
 | compliance\|GET\|/compliance/evidence/export | GET /compliance/evidence/export | handleEvidenceExport (services/compliance/handler_evidence.go:55) | GetPosture, GetLatestAssessment, RunAssessment, GetFrameworkControls, GetFrameworkGaps, GetKeyHygieneReport | GetLatestPosture, ListAssessmentRuns, CreateAssessmentRun, GetFrameworkAssessment, ListFrameworkGaps |  | pkg/httpsanitize.ContentDispositionFilename, pkg/httpsanitize.HeaderValue | web/dashboard/src/lib/compliance.ts:410 |
 | compliance\|GET\|/compliance/risk/keys | GET /compliance/risk/keys | handleGetKeyRiskRanking (services/compliance/handler_dri.go:194) | publishAudit |  |  |  | web/dashboard/src/lib/dri.ts:54 |
 | compliance\|GET\|/compliance/risk/summary | GET /compliance/risk/summary | handleGetDataRiskSummary (services/compliance/handler_dri.go:244) |  |  |  |  | web/dashboard/src/lib/dri.ts:62 |
@@ -498,22 +498,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
 | reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
 | reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:317 |
-| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:96) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:114) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:124) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
-| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | sbomVulnerabilities (services/sbom/handler.go:154) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
-| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | listManualAdvisories (services/sbom/handler.go:174) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
-| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | saveManualAdvisory (services/sbom/handler.go:183) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
-| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | deleteManualAdvisory (services/sbom/handler.go:211) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:222) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:245 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:142) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:235) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:253) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:193 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:263) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:198 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:292) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:207 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:301) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:254 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:310) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:225 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:281) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:216 |
+| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:187 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:118 |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:127 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:135 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:140 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:149 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
 | secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
 | secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
 | secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:161) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:145 |
@@ -840,36 +836,32 @@ This file connects frontend requests to backend Go processing. It is static anal
 | cluster-manager\|GET\|/cluster/replication/status | GET /cluster/replication/status | handleReplicationStatus (services/cluster-manager/handler.go:535) | ReplicationStatus |  | s.replication.WALLevel, s.replication.Publications, s.replication.SubscriptionStatuses |  |  |
 | compliance\|POST\|/compliance/connections/{param}/resolve | POST /compliance/connections/{id}/resolve | resolveConnection (services/compliance/connections_service.go:75) |  | GetConnection | h.connVault.Open |  |  |
 | compliance\|POST\|/compliance/connections/import | POST /compliance/connections/import | importConnection (services/compliance/connections_service.go:118) |  | GetConnection, CreateConnection | h.connVault.current |  |  |
-| compliance\|GET\|/compliance/posture | GET /compliance/posture | handlePosture (services/compliance/handler.go:98) | GetPosture | GetLatestPosture |  |  |  |
-| compliance\|GET\|/compliance/posture/history | GET /compliance/posture/history | handlePostureHistory (services/compliance/handler.go:113) | GetPostureHistory | ListPostureHistory |  |  |  |
-| compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:128) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:304 |
-| compliance\|GET\|/compliance/assessment | GET /compliance/assessment | handleAssessment (services/compliance/handler.go:142) | GetLatestAssessment | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:163 |
-| compliance\|GET\|/compliance/assessment/delta | GET /compliance/assessment/delta | handleAssessmentDelta (services/compliance/handler.go:157) | GetAssessmentDelta | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:207 |
-| compliance\|POST\|/compliance/assessment/run | POST /compliance/assessment/run | handleRunAssessment (services/compliance/handler.go:172) | RunAssessment | CreateAssessmentRun, ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:182 |
-| compliance\|GET\|/compliance/assessment/history | GET /compliance/assessment/history | handleAssessmentHistory (services/compliance/handler.go:202) | ListAssessmentRuns | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:198 |
-| compliance\|GET\|/compliance/assessment/schedule | GET /compliance/assessment/schedule | handleAssessmentSchedule (services/compliance/handler.go:279) | GetAssessmentSchedule | GetAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:223 |
-| compliance\|PUT\|/compliance/assessment/schedule | PUT /compliance/assessment/schedule | handleUpsertAssessmentSchedule (services/compliance/handler.go:293) | UpsertAssessmentSchedule | GetAssessmentSchedule, UpsertAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:272 |
-| compliance\|GET\|/compliance/templates | GET /compliance/templates | handleListComplianceTemplates (services/compliance/handler.go:218) | ListComplianceTemplates | ListComplianceTemplates |  |  | web/dashboard/src/lib/compliance.ts:239 |
-| compliance\|POST\|/compliance/templates | POST /compliance/templates | handleUpsertComplianceTemplate (services/compliance/handler.go:246) | UpsertComplianceTemplate | UpsertComplianceTemplate, GetComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:247 |
-| compliance\|GET\|/compliance/templates/{param} | GET /compliance/templates/{id} | handleGetComplianceTemplate (services/compliance/handler.go:232) | GetComplianceTemplate | GetComplianceTemplate |  |  |  |
-| compliance\|DELETE\|/compliance/templates/{param} | DELETE /compliance/templates/{id} | handleDeleteComplianceTemplate (services/compliance/handler.go:266) | DeleteComplianceTemplate | DeleteComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:263 |
-| compliance\|GET\|/compliance/frameworks | GET /compliance/frameworks | handleFrameworks (services/compliance/handler.go:321) | ListFrameworks |  |  |  | web/dashboard/src/lib/compliance.ts:234 |
-| compliance\|GET\|/compliance/frameworks/{param}/controls | GET /compliance/frameworks/{id}/controls | handleFrameworkControls (services/compliance/handler.go:326) | GetFrameworkControls | GetFrameworkAssessment |  |  |  |
-| compliance\|GET\|/compliance/frameworks/{param}/gaps | GET /compliance/frameworks/{id}/gaps | handleFrameworkGaps (services/compliance/handler.go:346) | GetFrameworkGaps | ListFrameworkGaps |  |  | web/dashboard/src/lib/compliance.ts:352 |
-| compliance\|GET\|/compliance/keys/hygiene | GET /compliance/keys/hygiene | handleKeyHygiene (services/compliance/handler.go:360) | GetKeyHygieneReport |  |  |  | web/dashboard/src/lib/compliance.ts:329 |
-| compliance\|GET\|/compliance/keys/orphaned | GET /compliance/keys/orphaned | handleOrphaned (services/compliance/handler.go:374) | GetOrphanedKeys |  |  |  |  |
-| compliance\|GET\|/compliance/keys/expired | GET /compliance/keys/expired | handleExpired (services/compliance/handler.go:388) | GetExpiredKeys |  |  |  |  |
-| compliance\|GET\|/compliance/audit/correlations | GET /compliance/audit/correlations | handleAuditCorrelations (services/compliance/handler.go:402) | GetAuditCorrelations |  |  |  |  |
-| compliance\|GET\|/compliance/audit/anomalies | GET /compliance/audit/anomalies | handleAuditAnomalies (services/compliance/handler.go:417) | GetAuditAnomalies |  |  |  | web/dashboard/src/lib/compliance.ts:380 |
-| compliance\|GET\|/compliance/sbom | GET /compliance/sbom | handleSBOM (services/compliance/handler.go:431) | GenerateSBOM |  |  |  |  |
-| compliance\|GET\|/compliance/sbom/services | GET /compliance/sbom/services | handleSBOMServices (services/compliance/handler.go:442) | SBOMServices |  |  |  |  |
-| compliance\|GET\|/compliance/sbom/services/{param} | GET /compliance/sbom/services/{name} | handleSBOMService (services/compliance/handler.go:452) | SBOMService |  |  |  |  |
-| compliance\|GET\|/compliance/sbom/vulnerabilities | GET /compliance/sbom/vulnerabilities | handleSBOMVulnerabilities (services/compliance/handler.go:462) | SBOMVulnerabilities |  |  |  |  |
-| compliance\|GET\|/compliance/cbom | GET /compliance/cbom | handleCBOM (services/compliance/handler.go:476) | GenerateCBOM | SaveCBOMSnapshot |  |  |  |
-| compliance\|GET\|/compliance/cbom/summary | GET /compliance/cbom/summary | handleCBOMSummary (services/compliance/handler.go:490) | CBOMSummary |  |  |  |  |
-| compliance\|GET\|/compliance/cbom/export | GET /compliance/cbom/export | handleCBOMExport (services/compliance/handler.go:504) | GenerateCBOM | SaveCBOMSnapshot |  |  |  |
-| compliance\|GET\|/compliance/cbom/pqc-readiness | GET /compliance/cbom/pqc-readiness | handleCBOMPQCReadiness (services/compliance/handler.go:526) | CBOMPQCReadiness |  |  |  |  |
-| compliance\|GET\|/compliance/cbom/diff | GET /compliance/cbom/diff | handleCBOMDiff (services/compliance/handler.go:540) | CBOMDiff |  |  |  |  |
+| compliance\|GET\|/compliance/posture | GET /compliance/posture | handlePosture (services/compliance/handler.go:93) | GetPosture | GetLatestPosture |  |  |  |
+| compliance\|GET\|/compliance/posture/history | GET /compliance/posture/history | handlePostureHistory (services/compliance/handler.go:108) | GetPostureHistory | ListPostureHistory |  |  |  |
+| compliance\|GET\|/compliance/posture/breakdown | GET /compliance/posture/breakdown | handlePostureBreakdown (services/compliance/handler.go:123) | GetPostureBreakdown |  |  |  | web/dashboard/src/lib/compliance.ts:304 |
+| compliance\|GET\|/compliance/assessment | GET /compliance/assessment | handleAssessment (services/compliance/handler.go:137) | GetLatestAssessment | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:163 |
+| compliance\|GET\|/compliance/assessment/delta | GET /compliance/assessment/delta | handleAssessmentDelta (services/compliance/handler.go:152) | GetAssessmentDelta | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:207 |
+| compliance\|POST\|/compliance/assessment/run | POST /compliance/assessment/run | handleRunAssessment (services/compliance/handler.go:167) | RunAssessment | CreateAssessmentRun, ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:182 |
+| compliance\|GET\|/compliance/assessment/history | GET /compliance/assessment/history | handleAssessmentHistory (services/compliance/handler.go:197) | ListAssessmentRuns | ListAssessmentRuns |  |  | web/dashboard/src/lib/compliance.ts:198 |
+| compliance\|GET\|/compliance/assessment/schedule | GET /compliance/assessment/schedule | handleAssessmentSchedule (services/compliance/handler.go:274) | GetAssessmentSchedule | GetAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:223 |
+| compliance\|PUT\|/compliance/assessment/schedule | PUT /compliance/assessment/schedule | handleUpsertAssessmentSchedule (services/compliance/handler.go:288) | UpsertAssessmentSchedule | GetAssessmentSchedule, UpsertAssessmentSchedule |  |  | web/dashboard/src/lib/compliance.ts:272 |
+| compliance\|GET\|/compliance/templates | GET /compliance/templates | handleListComplianceTemplates (services/compliance/handler.go:213) | ListComplianceTemplates | ListComplianceTemplates |  |  | web/dashboard/src/lib/compliance.ts:239 |
+| compliance\|POST\|/compliance/templates | POST /compliance/templates | handleUpsertComplianceTemplate (services/compliance/handler.go:241) | UpsertComplianceTemplate | UpsertComplianceTemplate, GetComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:247 |
+| compliance\|GET\|/compliance/templates/{param} | GET /compliance/templates/{id} | handleGetComplianceTemplate (services/compliance/handler.go:227) | GetComplianceTemplate | GetComplianceTemplate |  |  |  |
+| compliance\|DELETE\|/compliance/templates/{param} | DELETE /compliance/templates/{id} | handleDeleteComplianceTemplate (services/compliance/handler.go:261) | DeleteComplianceTemplate | DeleteComplianceTemplate |  |  | web/dashboard/src/lib/compliance.ts:263 |
+| compliance\|GET\|/compliance/frameworks | GET /compliance/frameworks | handleFrameworks (services/compliance/handler.go:316) | ListFrameworks |  |  |  | web/dashboard/src/lib/compliance.ts:234 |
+| compliance\|GET\|/compliance/frameworks/{param}/controls | GET /compliance/frameworks/{id}/controls | handleFrameworkControls (services/compliance/handler.go:321) | GetFrameworkControls | GetFrameworkAssessment |  |  |  |
+| compliance\|GET\|/compliance/frameworks/{param}/gaps | GET /compliance/frameworks/{id}/gaps | handleFrameworkGaps (services/compliance/handler.go:341) | GetFrameworkGaps | ListFrameworkGaps |  |  | web/dashboard/src/lib/compliance.ts:352 |
+| compliance\|GET\|/compliance/keys/hygiene | GET /compliance/keys/hygiene | handleKeyHygiene (services/compliance/handler.go:355) | GetKeyHygieneReport |  |  |  | web/dashboard/src/lib/compliance.ts:329 |
+| compliance\|GET\|/compliance/keys/orphaned | GET /compliance/keys/orphaned | handleOrphaned (services/compliance/handler.go:369) | GetOrphanedKeys |  |  |  |  |
+| compliance\|GET\|/compliance/keys/expired | GET /compliance/keys/expired | handleExpired (services/compliance/handler.go:383) | GetExpiredKeys |  |  |  |  |
+| compliance\|GET\|/compliance/audit/correlations | GET /compliance/audit/correlations | handleAuditCorrelations (services/compliance/handler.go:397) | GetAuditCorrelations |  |  |  |  |
+| compliance\|GET\|/compliance/audit/anomalies | GET /compliance/audit/anomalies | handleAuditAnomalies (services/compliance/handler.go:412) | GetAuditAnomalies |  |  |  | web/dashboard/src/lib/compliance.ts:380 |
+| compliance\|GET\|/compliance/cbom | GET /compliance/cbom | handleCBOM (services/compliance/handler.go:426) | GenerateCBOM | SaveCBOMSnapshot |  |  |  |
+| compliance\|GET\|/compliance/cbom/summary | GET /compliance/cbom/summary | handleCBOMSummary (services/compliance/handler.go:440) | CBOMSummary |  |  |  |  |
+| compliance\|GET\|/compliance/cbom/export | GET /compliance/cbom/export | handleCBOMExport (services/compliance/handler.go:454) | GenerateCBOM | SaveCBOMSnapshot |  |  |  |
+| compliance\|GET\|/compliance/cbom/pqc-readiness | GET /compliance/cbom/pqc-readiness | handleCBOMPQCReadiness (services/compliance/handler.go:476) | CBOMPQCReadiness |  |  |  |  |
+| compliance\|GET\|/compliance/cbom/diff | GET /compliance/cbom/diff | handleCBOMDiff (services/compliance/handler.go:490) | CBOMDiff |  |  |  |  |
 | compliance\|GET\|/compliance/evidence/export | GET /compliance/evidence/export | handleEvidenceExport (services/compliance/handler_evidence.go:55) | GetPosture, GetLatestAssessment, RunAssessment, GetFrameworkControls, GetFrameworkGaps, GetKeyHygieneReport | GetLatestPosture, ListAssessmentRuns, CreateAssessmentRun, GetFrameworkAssessment, ListFrameworkGaps |  | pkg/httpsanitize.ContentDispositionFilename, pkg/httpsanitize.HeaderValue | web/dashboard/src/lib/compliance.ts:410 |
 | compliance\|GET\|/compliance/risk/keys | GET /compliance/risk/keys | handleGetKeyRiskRanking (services/compliance/handler_dri.go:194) | publishAudit |  |  |  | web/dashboard/src/lib/dri.ts:54 |
 | compliance\|GET\|/compliance/risk/summary | GET /compliance/risk/summary | handleGetDataRiskSummary (services/compliance/handler_dri.go:244) |  |  |  |  | web/dashboard/src/lib/dri.ts:62 |
@@ -1382,24 +1374,20 @@ This file connects frontend requests to backend Go processing. It is static anal
 | reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
 | reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
 | reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:317 |
-| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:96) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:119 |
-| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:114) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:127 |
-| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:124) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:132 |
-| sbom\|GET\|/sbom/vulnerabilities | GET /sbom/vulnerabilities | sbomVulnerabilities (services/sbom/handler.go:154) | SBOMVulnerabilities |  |  |  | web/dashboard/src/lib/sbom.ts:141 |
-| sbom\|GET\|/sbom/advisories | GET /sbom/advisories | listManualAdvisories (services/sbom/handler.go:174) | ListManualAdvisories | ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:152 |
-| sbom\|POST\|/sbom/advisories | POST /sbom/advisories | saveManualAdvisory (services/sbom/handler.go:183) | SaveManualAdvisory | UpsertManualAdvisory, ListManualAdvisories |  |  | web/dashboard/src/lib/sbom.ts:157 |
-| sbom\|DELETE\|/sbom/advisories/{param} | DELETE /sbom/advisories/{id} | deleteManualAdvisory (services/sbom/handler.go:211) | DeleteManualAdvisory | DeleteManualAdvisory |  |  | web/dashboard/src/lib/sbom.ts:165 |
-| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:222) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:245 |
-| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:142) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:176 |
-| sbom\|GET\|/sbom/{param} | GET /sbom/{id} | sbomByID (services/sbom/handler.go:133) | GetSBOMByID | GetSBOMSnapshotByID |  |  |  |
-| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:235) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:185 |
-| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:253) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:193 |
-| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:263) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:198 |
-| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:292) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:207 |
-| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:301) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:254 |
-| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:310) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:225 |
-| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:281) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:216 |
-| sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:272) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
+| sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
+| sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
+| sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |
+| sbom\|GET\|/sbom/diff | GET /sbom/diff | sbomDiff (services/sbom/handler.go:147) | DiffSBOM | GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:187 |
+| sbom\|GET\|/sbom/{param}/export | GET /sbom/{id}/export | sbomExport (services/sbom/handler.go:135) | ExportSBOM |  |  |  | web/dashboard/src/lib/sbom.ts:118 |
+| sbom\|GET\|/sbom/{param} | GET /sbom/{id} | sbomByID (services/sbom/handler.go:126) | GetSBOMByID | GetSBOMSnapshotByID |  |  |  |
+| sbom\|POST\|/cbom/generate | POST /cbom/generate | generateCBOM (services/sbom/handler.go:160) | GenerateCBOM | SaveCBOMSnapshot, GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:127 |
+| sbom\|GET\|/cbom/latest | GET /cbom/latest | latestCBOM (services/sbom/handler.go:178) | GetLatestCBOM | GetLatestCBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:135 |
+| sbom\|GET\|/cbom/history | GET /cbom/history | cbomHistory (services/sbom/handler.go:188) | ListCBOMHistory | ListCBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:140 |
+| sbom\|GET\|/cbom/summary | GET /cbom/summary | cbomSummary (services/sbom/handler.go:217) | CBOMSummary |  |  |  | web/dashboard/src/lib/sbom.ts:149 |
+| sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
+| sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
+| sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
+| sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:197) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
 | secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:121) | CreateSecret | CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:87 |
 | secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:139) | ListSecrets | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:82 |
 | secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:152) | GetSecret | GetSecret |  |  |  |

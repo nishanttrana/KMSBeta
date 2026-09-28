@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -897,90 +896,6 @@ func (s *Service) GetAuditAnomalies(ctx context.Context, tenantID string) ([]Ano
 		})
 	}
 	return out, nil
-}
-
-func (s *Service) GenerateSBOM(_ context.Context, format string) (SBOMDocument, error) {
-	format = strings.ToLower(strings.TrimSpace(format))
-	if format == "" {
-		format = "cyclonedx"
-	}
-	switch format {
-	case "cyclonedx", "spdx":
-	default:
-		return SBOMDocument{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported sbom format")
-	}
-	services := listServiceNames()
-	components := make([]map[string]interface{}, 0, len(services)+2)
-	for _, name := range services {
-		components = append(components, map[string]interface{}{
-			"name":    "vecta/" + name,
-			"type":    "service",
-			"version": "dev",
-		})
-	}
-	components = append(components,
-		map[string]interface{}{"name": "go", "type": "runtime", "version": "1.x"},
-		map[string]interface{}{"name": "postgresql", "type": "infrastructure", "version": "16"},
-	)
-	doc := SBOMDocument{
-		Format:      format,
-		SpecVersion: map[string]string{"cyclonedx": "1.6", "spdx": "2.3"}[format],
-		GeneratedAt: time.Now().UTC(),
-		Appliance:   "vecta-kms",
-		Components:  components,
-		Infrastructure: []map[string]interface{}{
-			{"name": "postgresql", "version": "16"},
-			{"name": "redis", "version": "7"},
-			{"name": "nats", "version": "2.x"},
-			{"name": "envoy", "version": "1.x"},
-		},
-		Licenses: []string{"Apache-2.0", "MIT", "BSD-3-Clause", "ISC", "MPL-2.0"},
-	}
-	return doc, nil
-}
-
-func (s *Service) SBOMServices(_ context.Context) ([]map[string]interface{}, error) {
-	names := listServiceNames()
-	out := make([]map[string]interface{}, 0, len(names))
-	for _, n := range names {
-		out = append(out, map[string]interface{}{
-			"name":             n,
-			"component_count":  1,
-			"format_supported": []string{"cyclonedx", "spdx"},
-		})
-	}
-	return out, nil
-}
-
-func (s *Service) SBOMService(_ context.Context, name string) (map[string]interface{}, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "service name is required")
-	}
-	return map[string]interface{}{
-		"name":            name,
-		"version":         "dev",
-		"language":        "go",
-		"dependencies":    []string{"stdlib"},
-		"licenses":        []string{"Apache-2.0"},
-		"vulnerabilities": []map[string]interface{}{},
-	}, nil
-}
-
-func (s *Service) SBOMVulnerabilities(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
-	posture, err := s.GetPosture(ctx, tenantID, false)
-	if err != nil {
-		return nil, err
-	}
-	vulns := make([]map[string]interface{}, 0)
-	if posture.CryptoPosture < 60 {
-		vulns = append(vulns, map[string]interface{}{
-			"id":          "CRYPTO-DEPRECATED-ALGO",
-			"severity":    "high",
-			"description": "Deprecated cryptographic algorithms detected in key inventory",
-		})
-	}
-	return vulns, nil
 }
 
 func (s *Service) GenerateCBOM(ctx context.Context, tenantID string) (CBOMDocument, error) {
@@ -2282,20 +2197,4 @@ func nextAssessmentRunTime(now time.Time, frequency string) time.Time {
 	default:
 		return base.Add(24 * time.Hour)
 	}
-}
-
-func listServiceNames() []string {
-	entries, err := os.ReadDir("services")
-	if err != nil {
-		return []string{"auth", "keycore", "audit", "policy", "payment", "compliance"}
-	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		out = append(out, e.Name())
-	}
-	sort.Strings(out)
-	return out
 }

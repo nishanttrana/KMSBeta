@@ -48,13 +48,6 @@ func TestServiceSBOMGenerationAndDiff(t *testing.T) {
 		t.Fatalf("expected added components in diff: %+v", diff)
 	}
 
-	vuln, err := svc.correlateVulnerabilities(context.Background(), []BOMComponent{{Name: "golang.org/x/net", Version: "v0.20.0", Type: "library", Ecosystem: "go"}})
-	if err != nil {
-		t.Fatalf("correlate vulnerabilities: %v", err)
-	}
-	if len(vuln) == 0 {
-		t.Fatalf("expected vulnerability match")
-	}
 }
 
 func TestServiceCBOMGenerationAndDiff(t *testing.T) {

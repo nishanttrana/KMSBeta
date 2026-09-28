@@ -5351,118 +5351,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "compliance-get-compliance-sbom",
-    "group": "Compliance (compliance)",
-    "title": "GET /compliance/sbom",
-    "service": "compliance",
-    "method": "GET",
-    "pathTemplate": "/compliance/sbom?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Compliance service.",
-    "requestExample": "GET /svc/compliance/compliance/sbom?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "compliance-get-compliance-sbom-services",
-    "group": "Compliance (compliance)",
-    "title": "GET /compliance/sbom/services",
-    "service": "compliance",
-    "method": "GET",
-    "pathTemplate": "/compliance/sbom/services?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Compliance service.",
-    "requestExample": "GET /svc/compliance/compliance/sbom/services?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "compliance-get-compliance-sbom-services-name",
-    "group": "Compliance (compliance)",
-    "title": "GET /compliance/sbom/services/{name}",
-    "service": "compliance",
-    "method": "GET",
-    "pathTemplate": "/compliance/sbom/services/{name}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Compliance service.",
-    "requestExample": "GET /svc/compliance/compliance/sbom/services/{name}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "compliance-get-compliance-sbom-vulnerabilities",
-    "group": "Compliance (compliance)",
-    "title": "GET /compliance/sbom/vulnerabilities",
-    "service": "compliance",
-    "method": "GET",
-    "pathTemplate": "/compliance/sbom/vulnerabilities?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Compliance service.",
-    "requestExample": "GET /svc/compliance/compliance/sbom/vulnerabilities?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "compliance-get-compliance-templates",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/templates",
@@ -21795,30 +21683,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "sbom-delete-sbom-advisories-id",
-    "group": "SBOM / CBOM (sbom)",
-    "title": "Delete Offline Advisory",
-    "service": "sbom",
-    "method": "DELETE",
-    "pathTemplate": "/sbom/advisories/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Deletes a manually managed offline advisory by advisory ID.",
-    "requestExample": "DELETE /svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "status": "deleted"
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 404,
-        "meaning": "Advisory ID was not found"
-      }
-    ]
-  },
-  {
     "id": "sbom-get-cbom-id",
     "group": "SBOM / CBOM (sbom)",
     "title": "GET /cbom/{id}",
@@ -22086,47 +21950,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "sbom-get-sbom-advisories",
-    "group": "SBOM / CBOM (sbom)",
-    "title": "List Offline Advisories",
-    "service": "sbom",
-    "method": "GET",
-    "pathTemplate": "/sbom/advisories?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Lists manually managed offline advisories that are merged into the SBOM vulnerability view before online providers. This supports air-gapped KMS deployments.",
-    "requestExample": "GET /svc/sbom/sbom/advisories?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "items": [
-        {
-          "id": "CVE-2026-5000",
-          "component": "example/module",
-          "ecosystem": "go",
-          "introduced_version": "v1.0.0",
-          "fixed_version": "v1.3.0",
-          "severity": "critical",
-          "summary": "Offline advisory",
-          "reference": "https://example.test/CVE-2026-5000",
-          "created_at": "2026-03-11T09:46:00Z",
-          "updated_at": "2026-03-11T09:46:00Z"
-        }
-      ]
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "sbom-get-sbom-diff",
     "group": "SBOM / CBOM (sbom)",
     "title": "GET /sbom/diff",
@@ -22211,55 +22034,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "sbom-get-sbom-vulnerabilities",
-    "group": "SBOM / CBOM (sbom)",
-    "title": "List SBOM Vulnerabilities",
-    "service": "sbom",
-    "method": "GET",
-    "pathTemplate": "/sbom/vulnerabilities?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Returns merged vulnerability findings for the latest SBOM snapshot. Results can include Manual OSV advisories for air-gapped use, live OSV package matches, and Trivy repository scan results.",
-    "requestExample": "GET /svc/sbom/sbom/vulnerabilities?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "items": [
-        {
-          "id": "CVE-2026-1000",
-          "source": "OSV",
-          "severity": "high",
-          "component": "golang.org/x/net",
-          "installed_version": "v0.20.0",
-          "fixed_version": "v0.35.0",
-          "summary": "HTTP issue in golang.org/x/net.",
-          "reference": "https://osv.dev/vulnerability/GO-2026-0001"
-        },
-        {
-          "id": "CVE-2025-29923",
-          "source": "Trivy",
-          "severity": "low",
-          "component": "github.com/redis/go-redis/v9",
-          "installed_version": "v9.7.0",
-          "fixed_version": "9.7.3",
-          "summary": "go-redis vulnerability",
-          "reference": "https://avd.aquasec.com/nvd/cve-2025-29923"
-        }
-      ]
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks SBOM read privilege"
-      },
-      {
-        "code": 500,
-        "meaning": "Snapshot load or vulnerability provider processing failed"
-      }
-    ]
-  },
-  {
     "id": "sbom-post-cbom-generate",
     "group": "SBOM / CBOM (sbom)",
     "title": "Generate CBOM Snapshot",
@@ -22293,41 +22067,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "sbom-post-sbom-advisories",
-    "group": "SBOM / CBOM (sbom)",
-    "title": "Create or Update Offline Advisory",
-    "service": "sbom",
-    "method": "POST",
-    "pathTemplate": "/sbom/advisories?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"id\": \"CVE-2026-5000\",\n  \"component\": \"example/module\",\n  \"ecosystem\": \"go\",\n  \"introduced_version\": \"v1.0.0\",\n  \"fixed_version\": \"v1.3.0\",\n  \"severity\": \"critical\",\n  \"summary\": \"Offline advisory for an air-gapped deployment\",\n  \"reference\": \"https://example.test/CVE-2026-5000\"\n}",
-    "description": "Creates or updates a manual advisory record for offline or disconnected environments. These advisories are treated as an internal OSV-style source during vulnerability matching.",
-    "requestExample": "POST /svc/sbom/sbom/advisories?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "item": {
-        "id": "CVE-2026-5000",
-        "component": "example/module",
-        "ecosystem": "go",
-        "fixed_version": "v1.3.0",
-        "severity": "critical",
-        "summary": "Offline advisory for an air-gapped deployment"
-      }
-    },
-    "errorCodes": [
-      {
-        "code": 400,
-        "meaning": "Advisory payload is invalid or required fields are missing"
-      },
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 409,
-        "meaning": "Conflicting advisory data prevented save"
-      }
-    ]
-  },
-  {
     "id": "sbom-post-sbom-generate",
     "group": "SBOM / CBOM (sbom)",
     "title": "Generate SBOM Snapshot",
@@ -22335,7 +22074,7 @@ export const DISCOVERED_REST_API_CATALOG = [
     "method": "POST",
     "pathTemplate": "/sbom/generate?tenant_id={{tenant_id}}",
     "bodyTemplate": "{\n  \"trigger\": \"manual\"\n}",
-    "description": "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by history, diff, export, and vulnerability correlation endpoints.",
+    "description": "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by the history, diff and export endpoints.",
     "requestExample": "POST /svc/sbom/sbom/generate?tenant_id={{tenant_id}}",
     "responseExample": {
       "status": "accepted",

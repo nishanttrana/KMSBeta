@@ -81,7 +81,7 @@ Vecta KMS is organized into five working areas:
 | `posture` | Risk detection and remediation | drift detection, findings, blast radius, actions |
 | `reporting` | Alerts and reports | MTTR/MTTD, incident reporting, scheduled exports |
 | `discovery` | Crypto asset inventory | scan results, asset classification, posture input |
-| `sbom` | SBOM/CBOM and vulnerability context | software inventory, PQC readiness, compliance input |
+| `sbom` | SBOM/CBOM | software inventory and export, PQC readiness, compliance input |
 | `autokey` | Policy-driven key handle provisioning | self-service key requests under central policy |
 | `keyaccess` | External key-use justification policy | HYOK/EKM/cloud decrypt or sign requests with reason codes and approvals |
 | `signing` | Artifact and code signing control plane | Git, blob, and OCI signing with workload or OIDC identity constraints |

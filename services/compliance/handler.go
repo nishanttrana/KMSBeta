@@ -73,11 +73,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/audit/correlations", h.handleAuditCorrelations)
 	mux.HandleFunc("GET /compliance/audit/anomalies", h.handleAuditAnomalies)
 
-	mux.HandleFunc("GET /compliance/sbom", h.handleSBOM)
-	mux.HandleFunc("GET /compliance/sbom/services", h.handleSBOMServices)
-	mux.HandleFunc("GET /compliance/sbom/services/{name}", h.handleSBOMService)
-	mux.HandleFunc("GET /compliance/sbom/vulnerabilities", h.handleSBOMVulnerabilities)
-
 	mux.HandleFunc("GET /compliance/cbom", h.handleCBOM)
 	mux.HandleFunc("GET /compliance/cbom/summary", h.handleCBOMSummary)
 	mux.HandleFunc("GET /compliance/cbom/export", h.handleCBOMExport)
@@ -421,51 +416,6 @@ func (h *Handler) handleAuditAnomalies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, err := h.svc.GetAuditAnomalies(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleSBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	format := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("format")), "cyclonedx")
-	doc, err := h.svc.GenerateSBOM(r.Context(), format)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"sbom": doc, "request_id": reqID})
-}
-
-func (h *Handler) handleSBOMServices(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	items, err := h.svc.SBOMServices(r.Context())
-	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleSBOMService(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	item, err := h.svc.SBOMService(r.Context(), r.PathValue("name"))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, "")
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
-}
-
-func (h *Handler) handleSBOMVulnerabilities(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.svc.SBOMVulnerabilities(r.Context(), tenantID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
