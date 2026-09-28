@@ -11,8 +11,6 @@ BEGIN;
 --                        policy_and_governance, system_administration,
 --                        network_and_access, financial, supply_chain,
 --                        quantum, cloud_integration)
---   3. previous_epoch_root / epoch_hash – cross-epoch Merkle linkage so every
---        epoch cryptographically anchors the prior epoch's root.
 --
 -- All new columns are nullable so existing rows are not affected (new inserts
 -- will always populate them; backfill is optional via ops tooling).
@@ -26,16 +24,7 @@ ALTER TABLE audit_events ADD COLUMN IF NOT EXISTS category_group TEXT;
 CREATE INDEX IF NOT EXISTS idx_audit_category_group
     ON audit_events(tenant_id, category_group, timestamp DESC);
 
--- 2. Cross-epoch Merkle linking
-ALTER TABLE audit_merkle_epochs ADD COLUMN IF NOT EXISTS previous_epoch_root TEXT;
-ALTER TABLE audit_merkle_epochs ADD COLUMN IF NOT EXISTS epoch_hash          TEXT;
--- epoch_hash = SHA256(previous_epoch_root || tree_root)
--- Allows a linear proof chain: epoch 0 → epoch 1 → epoch N
-
-CREATE INDEX IF NOT EXISTS idx_merkle_epochs_chain
-    ON audit_merkle_epochs(tenant_id, epoch_number);
-
--- 3. Extend monthly partitions forward (2026-04 through 2028-12)
+-- 2. Extend monthly partitions forward (2026-04 through 2028-12)
 -- Create only if they don't already exist (idempotent via IF NOT EXISTS)
 DO $$
 DECLARE

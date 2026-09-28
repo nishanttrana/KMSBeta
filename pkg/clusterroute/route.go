@@ -86,9 +86,7 @@ var Local = map[string][]string{
 	"kms-audit": {
 		// Every node appends and verifies its own audit chain; search and
 		// tests only read.
-		"POST /audit/publish", "POST /audit/search",
-		"POST /audit/merkle/build", "POST /audit/merkle/verify",
-		"POST /webhooks/{id}/test",
+		"POST /audit/publish", "POST /audit/search", "POST /webhooks/{id}/test",
 	},
 }
 

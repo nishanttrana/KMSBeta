@@ -25,7 +25,6 @@ func TestChainBrokenPublishedToStream(t *testing.T) {
 	_, svc, store, _ := newAuditHandler(t, false, false)
 	stream := &loopbackPublisher{svc: svc}
 	svc.publisher = stream
-	addMerkleSchemaForTest(t, store)
 	ids := seedKeyTrail(t, store, "t1")
 	mustExec(t, store, `UPDATE audit_events SET actor_id='mallory' WHERE id=$1`, ids[1])
 
@@ -48,7 +47,6 @@ func TestChainBrokenPublishedToStream(t *testing.T) {
 // When the stream refuses the publish, the break is still recorded directly.
 func TestChainBrokenRecordedWhenStreamDown(t *testing.T) {
 	_, svc, store, _ := newAuditHandler(t, false, true)
-	addMerkleSchemaForTest(t, store)
 	ids := seedKeyTrail(t, store, "t1")
 	mustExec(t, store, `UPDATE audit_events SET actor_id='mallory' WHERE id=$1`, ids[1])
 	if ok, _, err := svc.VerifyChain(context.Background(), "t1"); err != nil || ok {

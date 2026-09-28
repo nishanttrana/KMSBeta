@@ -423,6 +423,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-get-audit-checkpoints",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/checkpoints",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/checkpoints?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/checkpoints?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-audit-config",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/config",
@@ -535,34 +563,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-get-audit-events-id-proof",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/events/{id}/proof",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/events/{id}/proof?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/events/{id}/proof?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-get-audit-fips-boundary",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/fips/boundary",
@@ -572,62 +572,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "GET /svc/audit/audit/fips/boundary?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-audit-merkle-epochs",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/merkle/epochs",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/merkle/epochs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/merkle/epochs?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-audit-merkle-epochs-id",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/merkle/epochs/{id}",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/merkle/epochs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/merkle/epochs/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1076,62 +1020,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "POST /svc/audit/audit/cluster/signing-key/join-key?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-post-audit-merkle-build",
-    "group": "Audit & Alerts (audit)",
-    "title": "POST /audit/merkle/build",
-    "service": "audit",
-    "method": "POST",
-    "pathTemplate": "/audit/merkle/build?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "POST /svc/audit/audit/merkle/build?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-post-audit-merkle-verify",
-    "group": "Audit & Alerts (audit)",
-    "title": "POST /audit/merkle/verify",
-    "service": "audit",
-    "method": "POST",
-    "pathTemplate": "/audit/merkle/verify?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "POST /svc/audit/audit/merkle/verify?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -2159,90 +2047,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "certs-get-certs-merkle-epochs",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /certs/merkle/epochs",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/certs/merkle/epochs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/certs/merkle/epochs?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-get-certs-merkle-epochs-id",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /certs/merkle/epochs/{id}",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/certs/merkle/epochs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/certs/merkle/epochs/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-get-certs-merkle-proof-id",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /certs/merkle/proof/{id}",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/certs/merkle/proof/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/certs/merkle/proof/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "certs-get-certs-ocsp",
     "group": "Certificates / PKI (certs)",
     "title": "GET /certs/ocsp",
@@ -2924,62 +2728,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "POST /svc/certs/certs/internal-mtls/rotate-all?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-post-certs-merkle-build",
-    "group": "Certificates / PKI (certs)",
-    "title": "POST /certs/merkle/build",
-    "service": "certs",
-    "method": "POST",
-    "pathTemplate": "/certs/merkle/build?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "POST /svc/certs/certs/merkle/build?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-post-certs-merkle-verify",
-    "group": "Certificates / PKI (certs)",
-    "title": "POST /certs/merkle/verify",
-    "service": "certs",
-    "method": "POST",
-    "pathTemplate": "/certs/merkle/verify?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "POST /svc/certs/certs/merkle/verify?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

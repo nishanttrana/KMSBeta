@@ -619,83 +619,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleMerkleBuild",
-      "line": 84,
-      "match_key": "audit|POST|/audit/merkle/build",
-      "method": "POST",
-      "normalized_path": "/audit/merkle/build",
-      "path": "/audit/merkle/build",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleMerkleEpochs",
-      "line": 85,
-      "match_key": "audit|GET|/audit/merkle/epochs",
-      "method": "GET",
-      "normalized_path": "/audit/merkle/epochs",
-      "path": "/audit/merkle/epochs",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleMerkleEpoch",
-      "line": 86,
-      "match_key": "audit|GET|/audit/merkle/epochs/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/merkle/epochs/{param}",
-      "path": "/audit/merkle/epochs/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleEventProof",
-      "line": 87,
-      "match_key": "audit|GET|/audit/events/{param}/proof",
-      "method": "GET",
-      "normalized_path": "/audit/events/{param}/proof",
-      "path": "/audit/events/{id}/proof",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleMerkleVerify",
-      "line": 88,
-      "match_key": "audit|POST|/audit/merkle/verify",
-      "method": "POST",
-      "normalized_path": "/audit/merkle/verify",
-      "path": "/audit/merkle/verify",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 92,
+      "line": 87,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -710,7 +635,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 93,
+      "line": 88,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -725,7 +650,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 94,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -740,7 +665,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsOverview",
-      "line": 100,
+      "line": 95,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -755,7 +680,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 101,
+      "line": 96,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -770,7 +695,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetLatencyPercentiles",
-      "line": 102,
+      "line": 97,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -785,7 +710,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetServiceStats",
-      "line": 103,
+      "line": 98,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -800,7 +725,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetErrorBreakdown",
-      "line": 104,
+      "line": 99,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -815,7 +740,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 107,
+      "line": 102,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -830,7 +755,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 110,
+      "line": 105,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -845,7 +770,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 111,
+      "line": 106,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -860,7 +785,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 114,
+      "line": 109,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -965,11 +890,26 @@
       "code_scope": "audit",
       "file": "services/audit/target_integrity.go",
       "handler": "h.verifyTargetIntegrity",
-      "line": 385,
+      "line": 350,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
       "path": "/audit/targets/{target_id}/integrity",
+      "permission": "audit.integrity.read",
+      "registration": "kernel",
+      "resource": "audit_trail",
+      "service": "audit"
+    },
+    {
+      "action": "checkpoints_listed",
+      "code_scope": "audit",
+      "file": "services/audit/target_integrity.go",
+      "handler": "h.listCheckpoints",
+      "line": 353,
+      "match_key": "audit|GET|/audit/checkpoints",
+      "method": "GET",
+      "normalized_path": "/audit/checkpoints",
+      "path": "/audit/checkpoints",
       "permission": "audit.integrity.read",
       "registration": "kernel",
       "resource": "audit_trail",
@@ -3199,83 +3139,8 @@
       "action": "",
       "code_scope": "certs",
       "file": "services/certs/handler.go",
-      "handler": "h.handleMerkleBuild",
-      "line": 77,
-      "match_key": "certs|POST|/certs/merkle/build",
-      "method": "POST",
-      "normalized_path": "/certs/merkle/build",
-      "path": "/certs/merkle/build",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
-      "handler": "h.handleMerkleEpochs",
-      "line": 78,
-      "match_key": "certs|GET|/certs/merkle/epochs",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs",
-      "path": "/certs/merkle/epochs",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
-      "handler": "h.handleMerkleEpoch",
-      "line": 79,
-      "match_key": "certs|GET|/certs/merkle/epochs/{param}",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs/{param}",
-      "path": "/certs/merkle/epochs/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
-      "handler": "h.handleCertProof",
-      "line": 80,
-      "match_key": "certs|GET|/certs/merkle/proof/{param}",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/proof/{param}",
-      "path": "/certs/merkle/proof/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
-      "handler": "h.handleMerkleVerify",
-      "line": 81,
-      "match_key": "certs|POST|/certs/merkle/verify",
-      "method": "POST",
-      "normalized_path": "/certs/merkle/verify",
-      "path": "/certs/merkle/verify",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
       "handler": "h.handleACMEDirectory",
-      "line": 83,
+      "line": 76,
       "match_key": "certs|GET|/acme/directory",
       "method": "GET",
       "normalized_path": "/acme/directory",
@@ -3290,7 +3155,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 84,
+      "line": 77,
       "match_key": "certs|HEAD|/acme/new-nonce",
       "method": "HEAD",
       "normalized_path": "/acme/new-nonce",
@@ -3305,7 +3170,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 85,
+      "line": 78,
       "match_key": "certs|POST|/acme/new-nonce",
       "method": "POST",
       "normalized_path": "/acme/new-nonce",
@@ -3320,7 +3185,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENewAccount",
-      "line": 86,
+      "line": 79,
       "match_key": "certs|POST|/acme/new-account",
       "method": "POST",
       "normalized_path": "/acme/new-account",
@@ -3335,7 +3200,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENewOrder",
-      "line": 87,
+      "line": 80,
       "match_key": "certs|POST|/acme/new-order",
       "method": "POST",
       "normalized_path": "/acme/new-order",
@@ -3350,7 +3215,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMERenewalInfo",
-      "line": 88,
+      "line": 81,
       "match_key": "certs|GET|/acme/renewal-info/{param}",
       "method": "GET",
       "normalized_path": "/acme/renewal-info/{param}",
@@ -3365,7 +3230,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEChallengeInfo",
-      "line": 89,
+      "line": 82,
       "match_key": "certs|GET|/acme/challenge/{param}",
       "method": "GET",
       "normalized_path": "/acme/challenge/{param}",
@@ -3380,7 +3245,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEChallenge",
-      "line": 90,
+      "line": 83,
       "match_key": "certs|POST|/acme/challenge/{param}",
       "method": "POST",
       "normalized_path": "/acme/challenge/{param}",
@@ -3395,7 +3260,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEFinalize",
-      "line": 91,
+      "line": 84,
       "match_key": "certs|POST|/acme/finalize/{param}",
       "method": "POST",
       "normalized_path": "/acme/finalize/{param}",
@@ -3410,7 +3275,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMECertDownload",
-      "line": 92,
+      "line": 85,
       "match_key": "certs|GET|/acme/cert/{param}",
       "method": "GET",
       "normalized_path": "/acme/cert/{param}",
@@ -3425,7 +3290,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCACerts",
-      "line": 94,
+      "line": 87,
       "match_key": "certs|GET|/est/.well-known/est/cacerts",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/cacerts",
@@ -3440,7 +3305,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCSRAttrs",
-      "line": 95,
+      "line": 88,
       "match_key": "certs|GET|/est/.well-known/est/csrattrs",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/csrattrs",
@@ -3455,7 +3320,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleEnroll",
-      "line": 96,
+      "line": 89,
       "match_key": "certs|POST|/est/.well-known/est/simpleenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simpleenroll",
@@ -3470,7 +3335,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleReenroll",
-      "line": 97,
+      "line": 90,
       "match_key": "certs|POST|/est/.well-known/est/simplereenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simplereenroll",
@@ -3485,7 +3350,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTServerKeygen",
-      "line": 98,
+      "line": 91,
       "match_key": "certs|POST|/est/.well-known/est/serverkeygen",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/serverkeygen",
@@ -3500,7 +3365,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleSCEPGet",
-      "line": 100,
+      "line": 93,
       "match_key": "certs|GET|/scep/pkiclient.exe",
       "method": "GET",
       "normalized_path": "/scep/pkiclient.exe",
@@ -3515,7 +3380,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleSCEPPKIOperation",
-      "line": 101,
+      "line": 94,
       "match_key": "certs|POST|/scep/pkiclient.exe",
       "method": "POST",
       "normalized_path": "/scep/pkiclient.exe",
@@ -3530,7 +3395,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleCMPv2",
-      "line": 103,
+      "line": 96,
       "match_key": "certs|POST|/cmpv2",
       "method": "POST",
       "normalized_path": "/cmpv2",
@@ -3545,7 +3410,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleCMPv2Confirm",
-      "line": 104,
+      "line": 97,
       "match_key": "certs|POST|/cmpv2/confirm",
       "method": "POST",
       "normalized_path": "/cmpv2/confirm",
@@ -13806,23 +13671,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleMerkleEpoch",
-      "line": 86,
-      "match_key": "audit|GET|/audit/merkle/epochs/{param}",
-      "method": "GET",
-      "normalized_path": "/audit/merkle/epochs/{param}",
-      "path": "/audit/merkle/epochs/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 92,
+      "line": 87,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -13837,7 +13687,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 93,
+      "line": 88,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -13852,7 +13702,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 94,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -13867,7 +13717,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 101,
+      "line": 96,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -13882,7 +13732,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 107,
+      "line": 102,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -13897,7 +13747,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 110,
+      "line": 105,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -13912,7 +13762,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 111,
+      "line": 106,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -13927,7 +13777,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 114,
+      "line": 109,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -14751,23 +14601,8 @@
       "action": "",
       "code_scope": "certs",
       "file": "services/certs/handler.go",
-      "handler": "h.handleMerkleEpoch",
-      "line": 79,
-      "match_key": "certs|GET|/certs/merkle/epochs/{param}",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs/{param}",
-      "path": "/certs/merkle/epochs/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "certs"
-    },
-    {
-      "action": "",
-      "code_scope": "certs",
-      "file": "services/certs/handler.go",
       "handler": "h.handleACMEDirectory",
-      "line": 83,
+      "line": 76,
       "match_key": "certs|GET|/acme/directory",
       "method": "GET",
       "normalized_path": "/acme/directory",
@@ -14782,7 +14617,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 84,
+      "line": 77,
       "match_key": "certs|HEAD|/acme/new-nonce",
       "method": "HEAD",
       "normalized_path": "/acme/new-nonce",
@@ -14797,7 +14632,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 85,
+      "line": 78,
       "match_key": "certs|POST|/acme/new-nonce",
       "method": "POST",
       "normalized_path": "/acme/new-nonce",
@@ -14812,7 +14647,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMERenewalInfo",
-      "line": 88,
+      "line": 81,
       "match_key": "certs|GET|/acme/renewal-info/{param}",
       "method": "GET",
       "normalized_path": "/acme/renewal-info/{param}",
@@ -14827,7 +14662,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleACMECertDownload",
-      "line": 92,
+      "line": 85,
       "match_key": "certs|GET|/acme/cert/{param}",
       "method": "GET",
       "normalized_path": "/acme/cert/{param}",
@@ -14842,7 +14677,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCACerts",
-      "line": 94,
+      "line": 87,
       "match_key": "certs|GET|/est/.well-known/est/cacerts",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/cacerts",
@@ -14857,7 +14692,7 @@
       "code_scope": "certs",
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleReenroll",
-      "line": 97,
+      "line": 90,
       "match_key": "certs|POST|/est/.well-known/est/simplereenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simplereenroll",
@@ -20091,7 +19926,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 482,
+      "line": 443,
       "tabs": [
         "audit"
       ],
@@ -20101,7 +19936,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 483,
+      "line": 444,
       "tabs": [
         "audit"
       ],
@@ -20111,7 +19946,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 486,
+      "line": 447,
       "tabs": [
         "audit"
       ],
@@ -20121,7 +19956,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 577,
+      "line": 538,
       "tabs": [
         "audit"
       ],
@@ -20131,7 +19966,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 578,
+      "line": 539,
       "tabs": [
         "audit"
       ],
@@ -20141,7 +19976,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "loadForensic} disabled={forensicLoading",
       "label": "(icon or dynamic label)",
-      "line": 604,
+      "line": 565,
       "tabs": [
         "audit"
       ],
@@ -20151,7 +19986,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Timeline ( )",
-      "line": 712,
+      "line": 673,
       "tabs": [
         "audit"
       ],
@@ -20161,7 +19996,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Session ( )",
-      "line": 717,
+      "line": 678,
       "tabs": [
         "audit"
       ],
@@ -20171,7 +20006,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Correlation ( )",
-      "line": 722,
+      "line": 683,
       "tabs": [
         "audit"
       ],
@@ -20621,7 +20456,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleCA(caID)} style={ }> {open? : } :",
-      "line": 1471,
+      "line": 1461,
       "tabs": [
         "certs"
       ],
@@ -20631,7 +20466,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actCRL(ca)} disabled= >",
-      "line": 1485,
+      "line": 1475,
       "tabs": [
         "certs"
       ],
@@ -20641,7 +20476,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteCA(ca)} disabled= >",
-      "line": 1486,
+      "line": 1476,
       "tabs": [
         "certs"
       ],
@@ -20651,7 +20486,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "toggleIssued(caID)} style={ }> {issuedOpen? : } Issued Certificates ( )",
-      "line": 1492,
+      "line": 1482,
       "tabs": [
         "certs"
       ],
@@ -20661,7 +20496,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openProtocolModal(meta.name)}> Configure",
-      "line": 1715,
+      "line": 1705,
       "tabs": [
         "certs"
       ],
@@ -20671,7 +20506,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void runProtocolTest(meta.name)} >",
-      "line": 1716,
+      "line": 1706,
       "tabs": [
         "certs"
       ],
@@ -20681,7 +20516,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-wizard\")}> ACME Wizard",
-      "line": 1724,
+      "line": 1714,
       "tabs": [
         "certs"
       ],
@@ -20691,7 +20526,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}> STAR",
-      "line": 1725,
+      "line": 1715,
       "tabs": [
         "certs"
       ],
@@ -20701,7 +20536,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"est-wizard\")}> EST Enroll",
-      "line": 1726,
+      "line": 1716,
       "tabs": [
         "certs"
       ],
@@ -20711,7 +20546,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"scep-wizard\")}> SCEP Enroll",
-      "line": 1727,
+      "line": 1717,
       "tabs": [
         "certs"
       ],
@@ -20721,7 +20556,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cmpv2-wizard\")}> CMPv2 Request",
-      "line": 1728,
+      "line": 1718,
       "tabs": [
         "certs"
       ],
@@ -20731,7 +20566,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"all\")} style={ }>{`All $ `}",
-      "line": 1744,
+      "line": 1734,
       "tabs": [
         "certs"
       ],
@@ -20741,7 +20576,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"active\")} style={ }>{`Active $ `}",
-      "line": 1745,
+      "line": 1735,
       "tabs": [
         "certs"
       ],
@@ -20751,7 +20586,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCAStatusView(\"revoked\")} style={ }>{`Revoked $ `}",
-      "line": 1746,
+      "line": 1736,
       "tabs": [
         "certs"
       ],
@@ -20761,7 +20596,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCAs()} disabled= >",
-      "line": 1747,
+      "line": 1737,
       "tabs": [
         "certs"
       ],
@@ -20771,7 +20606,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"create-ca\")}> Create CA",
-      "line": 1748,
+      "line": 1738,
       "tabs": [
         "certs"
       ],
@@ -20781,7 +20616,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshRenewalIntel()} disabled= >",
-      "line": 1840,
+      "line": 1830,
       "tabs": [
         "certs"
       ],
@@ -20791,7 +20626,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshSTARIntel()} disabled= >",
-      "line": 1866,
+      "line": 1856,
       "tabs": [
         "certs"
       ],
@@ -20801,7 +20636,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"acme-star\")}>New",
-      "line": 1867,
+      "line": 1857,
       "tabs": [
         "certs"
       ],
@@ -20811,7 +20646,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-r...",
-      "line": 1895,
+      "line": 1885,
       "tabs": [
         "certs"
       ],
@@ -20821,7 +20656,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-...",
-      "line": 1896,
+      "line": 1886,
       "tabs": [
         "certs"
       ],
@@ -20831,7 +20666,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"issue\")} style={ }> Issue Certificate",
-      "line": 1923,
+      "line": 1913,
       "tabs": [
         "certs"
       ],
@@ -20841,7 +20676,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"sign-csr\")} style={ }> Sign CSR",
-      "line": 1924,
+      "line": 1914,
       "tabs": [
         "certs"
       ],
@@ -20851,7 +20686,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"upload-3p\")} style={ }> Upload 3rd-Party",
-      "line": 1925,
+      "line": 1915,
       "tabs": [
         "certs"
       ],
@@ -20861,7 +20696,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-alert-policy\")} style={ }> Alert Policy",
-      "line": 1926,
+      "line": 1916,
       "tabs": [
         "certs"
       ],
@@ -20871,37 +20706,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(\"cert-clm-policy\")} style={ }> CLM 47-Day",
-      "line": 1927,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "{ setCTBuilding(true); try{ const res=await buildCertMerkleEpoch(session,500)...",
-      "line": 1935,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "}>Refresh",
-      "line": 1949,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "{ const id=ctProofCertId.trim(); if(!id) try{ const proof=await getCertMerkle...",
-      "line": 1983,
+      "line": 1917,
       "tabs": [
         "certs"
       ],
@@ -20911,7 +20716,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"all\")} style={ }> {`All ($ )`}",
-      "line": 2042,
+      "line": 1932,
       "tabs": [
         "certs"
       ],
@@ -20921,7 +20726,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"active\")} style={ }> {`Active ($ )`}",
-      "line": 2045,
+      "line": 1935,
       "tabs": [
         "certs"
       ],
@@ -20931,7 +20736,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertStatusView(\"revoked\")} style={ }> {`Revoked ($ )`}",
-      "line": 2048,
+      "line": 1938,
       "tabs": [
         "certs"
       ],
@@ -20941,7 +20746,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void refreshCerts()} disabled= >",
-      "line": 2052,
+      "line": 1942,
       "tabs": [
         "certs"
       ],
@@ -20951,7 +20756,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "openCertActionMenu(e,certID)} aria-label=\"Certificate actions\" style={{ backg...",
-      "line": 2083,
+      "line": 1973,
       "tabs": [
         "certs"
       ],
@@ -20961,7 +20766,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} onMouseEnter={(e)=> } onMouseLeave={(e)=> } style={ } > Download",
-      "line": 2115,
+      "line": 2005,
       "tabs": [
         "certs"
       ],
@@ -20971,7 +20776,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`renew-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } st...",
-      "line": 2129,
+      "line": 2019,
       "tabs": [
         "certs"
       ],
@@ -20981,7 +20786,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`revoke-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 2142,
+      "line": 2032,
       "tabs": [
         "certs"
       ],
@@ -20991,7 +20796,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`ocsp-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } sty...",
-      "line": 2155,
+      "line": 2045,
       "tabs": [
         "certs"
       ],
@@ -21001,7 +20806,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "} disabled={busy===`delete-$ `} onMouseEnter={(e)=> } onMouseLeave={(e)=> } s...",
-      "line": 2170,
+      "line": 2060,
       "tabs": [
         "certs"
       ],
@@ -21011,7 +20816,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2206,
+      "line": 2096,
       "tabs": [
         "certs"
       ],
@@ -21021,7 +20826,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled= >Next",
-      "line": 2208,
+      "line": 2098,
       "tabs": [
         "certs"
       ],
@@ -21031,7 +20836,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2262,
+      "line": 2152,
       "tabs": [
         "certs"
       ],
@@ -21041,7 +20846,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateCA()} disabled= >",
-      "line": 2263,
+      "line": 2153,
       "tabs": [
         "certs"
       ],
@@ -21051,7 +20856,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2338,
+      "line": 2228,
       "tabs": [
         "certs"
       ],
@@ -21061,7 +20866,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitIssueCert()} disabled= >",
-      "line": 2339,
+      "line": 2229,
       "tabs": [
         "certs"
       ],
@@ -21071,7 +20876,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2399,
+      "line": 2289,
       "tabs": [
         "certs"
       ],
@@ -21081,7 +20886,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitSignCSR()} disabled= >",
-      "line": 2400,
+      "line": 2290,
       "tabs": [
         "certs"
       ],
@@ -21091,7 +20896,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2429,
+      "line": 2319,
       "tabs": [
         "certs"
       ],
@@ -21101,6 +20906,76 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitDownloadCert()} disabled= >",
+      "line": 2320,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(null)} disabled= >Cancel",
+      "line": 2344,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "void submitUpload()} disabled= >",
+      "line": 2345,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(null)} disabled= >Cancel",
+      "line": 2364,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "void saveAlertPolicy()} disabled= >",
+      "line": 2365,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setModal(null)} disabled= >Cancel",
+      "line": 2403,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "void saveCLMPolicy()} disabled= >",
+      "line": 2404,
+      "tabs": [
+        "certs"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
+      "handler": "",
+      "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
       "line": 2430,
       "tabs": [
         "certs"
@@ -21111,77 +20986,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2454,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "void submitUpload()} disabled= >",
-      "line": 2455,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
-      "line": 2474,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "void saveAlertPolicy()} disabled= >",
-      "line": 2475,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
-      "line": 2513,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "void saveCLMPolicy()} disabled= >",
-      "line": 2514,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolNa...",
-      "line": 2540,
-      "tabs": [
-        "certs"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
-      "line": 2542,
+      "line": 2432,
       "tabs": [
         "certs"
       ],
@@ -21191,7 +20996,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void saveProtocol()} disabled= >",
-      "line": 2543,
+      "line": 2433,
       "tabs": [
         "certs"
       ],
@@ -21201,7 +21006,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 2617,
+      "line": 2507,
       "tabs": [
         "certs"
       ],
@@ -21211,7 +21016,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "void submitCreateSTARSubscription()} disabled= >",
-      "line": 2618,
+      "line": 2508,
       "tabs": [
         "certs"
       ],
@@ -21221,7 +21026,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2661,
+      "line": 2551,
       "tabs": [
         "certs"
       ],
@@ -21231,7 +21036,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const email=String...",
-      "line": 2662,
+      "line": 2552,
       "tabs": [
         "certs"
       ],
@@ -21241,7 +21046,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2727,
+      "line": 2617,
       "tabs": [
         "certs"
       ],
@@ -21251,7 +21056,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session)return; try{ const attrs=await estCSRAttributes(session); onToa...",
-      "line": 2728,
+      "line": 2618,
       "tabs": [
         "certs"
       ],
@@ -21261,7 +21066,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const cn=String((d...",
-      "line": 2735,
+      "line": 2625,
       "tabs": [
         "certs"
       ],
@@ -21271,7 +21076,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2787,
+      "line": 2677,
       "tabs": [
         "certs"
       ],
@@ -21281,7 +21086,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=Stri...",
-      "line": 2788,
+      "line": 2678,
       "tabs": [
         "certs"
       ],
@@ -21291,7 +21096,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2850,
+      "line": 2740,
       "tabs": [
         "certs"
       ],
@@ -21301,7 +21106,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "handler": "",
       "label": "{ if(!session||!activeCA)return; setSubmitting(true); try{ const msgType=Stri...",
-      "line": 2851,
+      "line": 2741,
       "tabs": [
         "certs"
       ],
@@ -26667,7 +26472,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 150,
+      "line": 151,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -26680,7 +26485,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 166,
+      "line": 167,
       "match_key": "audit|GET|/audit/session/{param}",
       "method": "GET",
       "normalized_path": "/audit/session/{param}",
@@ -26693,7 +26498,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 182,
+      "line": 183,
       "match_key": "audit|GET|/audit/correlation/{param}",
       "method": "GET",
       "normalized_path": "/audit/correlation/{param}",
@@ -26706,7 +26511,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 190,
+      "line": 191,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -26719,7 +26524,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 202,
+      "line": 203,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -26730,52 +26535,13 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
+      "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 251,
-      "match_key": "audit|GET|/audit/merkle/epochs",
+      "line": 233,
+      "match_key": "audit|GET|/audit/checkpoints",
       "method": "GET",
-      "normalized_path": "/audit/merkle/epochs",
-      "path": "/audit/merkle/epochs?{param}&limit={param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 262,
-      "match_key": "audit|GET|/audit/events/{param}/proof",
-      "method": "GET",
-      "normalized_path": "/audit/events/{param}/proof",
-      "path": "/audit/events/{param}/proof?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 274,
-      "match_key": "audit|POST|/audit/merkle/build",
-      "method": "POST",
-      "normalized_path": "/audit/merkle/build",
-      "path": "/audit/merkle/build?{param}&max_leaves={param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 286,
-      "match_key": "audit|POST|/audit/merkle/verify",
-      "method": "POST",
-      "normalized_path": "/audit/merkle/verify",
-      "path": "/audit/merkle/verify",
+      "normalized_path": "/audit/checkpoints",
+      "path": "/audit/checkpoints?{param}&limit={param}",
       "service": "audit",
       "service_key": "audit",
       "source": "serviceRequest"
@@ -28433,61 +28199,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
-      "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1095,
-      "match_key": "certs|GET|/certs/merkle/epochs",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs",
-      "path": "/certs/merkle/epochs?{param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
-      "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1106,
-      "match_key": "certs|POST|/certs/merkle/build",
-      "method": "POST",
-      "normalized_path": "/certs/merkle/build",
-      "path": "/certs/merkle/build?tenant_id={param}&max_leaves={param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1117,
-      "match_key": "certs|GET|/certs/merkle/proof/{param}",
-      "method": "GET",
-      "normalized_path": "/certs/merkle/proof/{param}",
-      "path": "/certs/merkle/proof/{param}?tenant_id={param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1127,
-      "match_key": "certs|POST|/certs/merkle/verify",
-      "method": "POST",
-      "normalized_path": "/certs/merkle/verify",
-      "path": "/certs/merkle/verify?tenant_id={param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1187,
+      "line": 1108,
       "match_key": "certs|GET|/certs/internal-mtls",
       "method": "GET",
       "normalized_path": "/certs/internal-mtls",
@@ -28500,7 +28214,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1195,
+      "line": 1116,
       "match_key": "certs|PUT|/certs/internal-mtls/{param}/policy",
       "method": "PUT",
       "normalized_path": "/certs/internal-mtls/{param}/policy",
@@ -28513,7 +28227,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1202,
+      "line": 1123,
       "match_key": "certs|POST|/certs/internal-mtls/{param}/rotate",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/{param}/rotate",
@@ -28526,7 +28240,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1214,
+      "line": 1135,
       "match_key": "certs|POST|/certs/internal-mtls/rotate-all",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/rotate-all",
@@ -33684,7 +33398,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-28T17:22:03Z",
+  "generated_at": "2026-09-28T18:09:56Z",
   "navigation": [
     {
       "group": "Overview",
@@ -35057,23 +34771,13 @@
         "signing",
         "newID",
         "publishClusterSync",
-        "Publish",
-        "handleMerkleBuild",
-        "BuildMerkleEpoch",
-        "handleMerkleEpochs",
-        "ListMerkleEpochs",
-        "handleMerkleEpoch",
-        "GetMerkleEpoch",
-        "handleEventProof",
-        "GetEventMerkleProof",
-        "handleMerkleVerify",
-        "VerifyProof"
+        "Publish"
       ],
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext",
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 119,
+      "handler_line": 114,
       "handler_name": "handlePublish",
       "handler_receiver_calls": [
         "h.cluster.Publish"
@@ -35084,11 +34788,7 @@
       ],
       "handler_store_calls": [
         "QueryEvents",
-        "GetEvent",
-        "BuildMerkleEpoch",
-        "ListMerkleEpochs",
-        "GetMerkleEpoch",
-        "GetEventMerkleProof"
+        "GetEvent"
       ],
       "method": "POST",
       "normalized_path": "/audit/publish",
@@ -35119,7 +34819,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 59,
+          "line": 60,
           "name": "PublishAudit",
           "receiver_calls": [
             "s.wal.Append",
@@ -35169,7 +34869,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 183,
+      "handler_line": 178,
       "handler_name": "handleEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35212,7 +34912,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 211,
+      "handler_line": 206,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35254,7 +34954,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 229,
+      "handler_line": 224,
       "handler_name": "handleTimeline",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35279,7 +34979,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 166,
+          "line": 167,
           "source": "serviceRequest"
         }
       ],
@@ -35296,7 +34996,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 247,
+      "handler_line": 242,
       "handler_name": "handleSession",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35321,7 +35021,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 182,
+          "line": 183,
           "source": "serviceRequest"
         }
       ],
@@ -35338,7 +35038,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 265,
+      "handler_line": 260,
       "handler_name": "handleCorrelation",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35367,7 +35067,7 @@
         "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 283,
+      "handler_line": 278,
       "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35390,7 +35090,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 190,
+          "line": 191,
           "source": "serviceRequest"
         }
       ],
@@ -35406,7 +35106,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 288,
+      "handler_line": 283,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -35471,7 +35171,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 202,
+          "line": 203,
           "source": "serviceRequest"
         }
       ],
@@ -35485,7 +35185,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 302,
+      "handler_line": 297,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35495,208 +35195,6 @@
       "path": "/audit/config",
       "route_file": "services/audit/handler.go",
       "route_line": 81,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 274,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleBuild",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "atoi",
-        "BuildMerkleEpoch",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 445,
-      "handler_name": "handleMerkleBuild",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "BuildMerkleEpoch"
-      ],
-      "method": "POST",
-      "normalized_path": "/audit/merkle/build",
-      "path": "/audit/merkle/build",
-      "route_file": "services/audit/handler.go",
-      "route_line": 84,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 251,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleEpochs",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "atoi",
-        "ListMerkleEpochs",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 474,
-      "handler_name": "handleMerkleEpochs",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListMerkleEpochs"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/merkle/epochs",
-      "path": "/audit/merkle/epochs",
-      "route_file": "services/audit/handler.go",
-      "route_line": 85,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleMerkleEpoch",
-      "handler_external_package_calls": [
-        "errors.Is"
-      ],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetMerkleEpoch",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 489,
-      "handler_name": "handleMerkleEpoch",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetMerkleEpoch"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/merkle/epochs/{param}",
-      "path": "/audit/merkle/epochs/{id}",
-      "route_file": "services/audit/handler.go",
-      "route_line": 86,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 262,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleEventProof",
-      "handler_external_package_calls": [
-        "errors.Is"
-      ],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetEventMerkleProof",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 507,
-      "handler_name": "handleEventProof",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetEventMerkleProof"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/events/{param}/proof",
-      "path": "/audit/events/{id}/proof",
-      "route_file": "services/audit/handler.go",
-      "route_line": 87,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 286,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleVerify",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "VerifyProof",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 525,
-      "handler_name": "handleMerkleVerify",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/audit/merkle/verify",
-      "path": "/audit/merkle/verify",
-      "route_file": "services/audit/handler.go",
-      "route_line": 88,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35730,7 +35228,7 @@
       "normalized_path": "/audit/cluster/signing-key/join-key",
       "path": "/audit/cluster/signing-key/join-key",
       "route_file": "services/audit/handler.go",
-      "route_line": 92,
+      "route_line": 87,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35784,7 +35282,7 @@
       "normalized_path": "/audit/cluster/signing-key/export",
       "path": "/audit/cluster/signing-key/export",
       "route_file": "services/audit/handler.go",
-      "route_line": 93,
+      "route_line": 88,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35847,7 +35345,7 @@
       "normalized_path": "/audit/cluster/signing-key/import",
       "path": "/audit/cluster/signing-key/import",
       "route_file": "services/audit/handler.go",
-      "route_line": 94,
+      "route_line": 89,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35909,7 +35407,7 @@
       "normalized_path": "/ops-metrics/overview",
       "path": "/ops-metrics/overview",
       "route_file": "services/audit/handler.go",
-      "route_line": 100,
+      "route_line": 95,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35943,7 +35441,7 @@
       "normalized_path": "/ops-metrics/timeseries",
       "path": "/ops-metrics/timeseries",
       "route_file": "services/audit/handler.go",
-      "route_line": 101,
+      "route_line": 96,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35984,7 +35482,7 @@
       "normalized_path": "/ops-metrics/latency",
       "path": "/ops-metrics/latency",
       "route_file": "services/audit/handler.go",
-      "route_line": 102,
+      "route_line": 97,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36025,7 +35523,7 @@
       "normalized_path": "/ops-metrics/by-service",
       "path": "/ops-metrics/by-service",
       "route_file": "services/audit/handler.go",
-      "route_line": 103,
+      "route_line": 98,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36066,7 +35564,7 @@
       "normalized_path": "/ops-metrics/errors",
       "path": "/ops-metrics/errors",
       "route_file": "services/audit/handler.go",
-      "route_line": 104,
+      "route_line": 99,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36086,7 +35584,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 317,
+      "handler_line": 312,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36095,7 +35593,7 @@
       "normalized_path": "/audit/fips/boundary",
       "path": "/audit/fips/boundary",
       "route_file": "services/audit/handler.go",
-      "route_line": 107,
+      "route_line": 102,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36134,7 +35632,7 @@
       "normalized_path": "/audit/cbom/inventory",
       "path": "/audit/cbom/inventory",
       "route_file": "services/audit/handler.go",
-      "route_line": 110,
+      "route_line": 105,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36173,7 +35671,7 @@
       "normalized_path": "/audit/cbom/diff",
       "path": "/audit/cbom/diff",
       "route_file": "services/audit/handler.go",
-      "route_line": 111,
+      "route_line": 106,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36206,7 +35704,7 @@
       "normalized_path": "/metrics",
       "path": "/metrics",
       "route_file": "services/audit/handler.go",
-      "route_line": 114,
+      "route_line": 109,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36471,7 +35969,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 150,
+          "line": 151,
           "source": "serviceRequest"
         }
       ],
@@ -36486,7 +35984,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 391,
+      "handler_line": 359,
       "handler_name": "verifyTargetIntegrity",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -36497,7 +35995,7 @@
       "normalized_path": "/audit/targets/{param}/integrity",
       "path": "/audit/targets/{target_id}/integrity",
       "route_file": "services/audit/target_integrity.go",
-      "route_line": 385,
+      "route_line": 350,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -36512,7 +36010,7 @@
             "reportChainBroken"
           ],
           "internal_package_calls": [],
-          "line": 362,
+          "line": 326,
           "name": "VerifyTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -36523,6 +36021,63 @@
       "service_receiver_calls": [],
       "service_store_calls": [
         "VerifyTarget"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
+          "file": "web/dashboard/src/lib/audit.ts",
+          "line": 233,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listCheckpoints",
+      "handler_external_package_calls": [],
+      "handler_file": "services/audit/checkpoint.go",
+      "handler_helper_calls": [
+        "ListCheckpoints",
+        "atoi",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 526,
+      "handler_name": "listCheckpoints",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ListCheckpoints"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/audit/checkpoints",
+      "path": "/audit/checkpoints",
+      "route_file": "services/audit/target_integrity.go",
+      "route_line": 353,
+      "service": "audit",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "reportChainBroken"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/audit/checkpoint.go",
+          "helper_calls": [
+            "reportChainBroken"
+          ],
+          "internal_package_calls": [],
+          "line": 505,
+          "name": "ListCheckpoints",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListCheckpoints"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListCheckpoints"
       ]
     },
     {
@@ -41851,7 +41406,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 111,
+      "handler_line": 104,
       "handler_name": "handleCreateCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42072,7 +41627,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 126,
+      "handler_line": 119,
       "handler_name": "handleListCAs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42144,7 +41699,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 133,
       "handler_name": "handleDeleteCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42248,7 +41803,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 158,
+      "handler_line": 151,
       "handler_name": "handleIssueCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42395,7 +41950,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 177,
+      "handler_line": 170,
       "handler_name": "handleSignCSR",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42542,7 +42097,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 202,
+      "handler_line": 195,
       "handler_name": "handleListCerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42603,7 +42158,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 220,
+      "handler_line": 213,
       "handler_name": "handleGetCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42667,7 +42222,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 311,
+      "handler_line": 304,
       "handler_name": "handleDeleteCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42747,7 +42302,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 238,
+      "handler_line": 231,
       "handler_name": "handleDownloadCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42838,7 +42393,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 268,
+      "handler_line": 261,
       "handler_name": "handleRenewCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42911,7 +42466,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 290,
+      "handler_line": 283,
       "handler_name": "handleRevokeCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42978,7 +42533,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 328,
+      "handler_line": 321,
       "handler_name": "handleCreateProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43060,7 +42615,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 343,
+      "handler_line": 336,
       "handler_name": "handleListProfiles",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43121,7 +42676,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 357,
+      "handler_line": 350,
       "handler_name": "handleGetProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43189,7 +42744,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 375,
+      "handler_line": 368,
       "handler_name": "handleCRL",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43527,7 +43082,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 398,
+      "handler_line": 391,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43871,7 +43426,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 398,
+      "handler_line": 391,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -44217,7 +43772,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 440,
+      "handler_line": 433,
       "handler_name": "handleInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -44282,7 +43837,7 @@
         "SecurityStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 454,
+      "handler_line": 447,
       "handler_name": "handleSecurityStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -44346,7 +43901,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 462,
+      "handler_line": 455,
       "handler_name": "handleGetAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -44412,7 +43967,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 476,
+      "handler_line": 469,
       "handler_name": "handleUpsertAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45379,7 +44934,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 505,
+      "handler_line": 498,
       "handler_name": "handleListProtocolConfigs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45444,7 +44999,7 @@
         "ListProtocolSchemas"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 548,
+      "handler_line": 541,
       "handler_name": "handleListProtocolSchemas",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45501,7 +45056,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 519,
+      "handler_line": 512,
       "handler_name": "handleUpsertProtocolConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45577,7 +45132,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 556,
+      "handler_line": 549,
       "handler_name": "handleUploadThirdPartyCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45657,210 +45212,6 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
-          "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1106,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleBuild",
-      "handler_external_package_calls": [
-        "strconv.Atoi"
-      ],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "BuildCertMerkleEpoch",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 1341,
-      "handler_name": "handleMerkleBuild",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "BuildCertMerkleEpoch"
-      ],
-      "method": "POST",
-      "normalized_path": "/certs/merkle/build",
-      "path": "/certs/merkle/build",
-      "route_file": "services/certs/handler.go",
-      "route_line": 77,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
-          "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1095,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleEpochs",
-      "handler_external_package_calls": [
-        "strconv.Atoi"
-      ],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListCertMerkleEpochs",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 1365,
-      "handler_name": "handleMerkleEpochs",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListCertMerkleEpochs"
-      ],
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs",
-      "path": "/certs/merkle/epochs",
-      "route_file": "services/certs/handler.go",
-      "route_line": 78,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleMerkleEpoch",
-      "handler_external_package_calls": [
-        "errors.Is"
-      ],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetCertMerkleEpoch",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 1388,
-      "handler_name": "handleMerkleEpoch",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetCertMerkleEpoch"
-      ],
-      "method": "GET",
-      "normalized_path": "/certs/merkle/epochs/{param}",
-      "path": "/certs/merkle/epochs/{id}",
-      "route_file": "services/certs/handler.go",
-      "route_line": 79,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1117,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleCertProof",
-      "handler_external_package_calls": [
-        "errors.Is"
-      ],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetCertMerkleProof",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 1407,
-      "handler_name": "handleCertProof",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetCertMerkleProof"
-      ],
-      "method": "GET",
-      "normalized_path": "/certs/merkle/proof/{param}",
-      "path": "/certs/merkle/proof/{id}",
-      "route_file": "services/certs/handler.go",
-      "route_line": 80,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1127,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleMerkleVerify",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "VerifyProof",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 1426,
-      "handler_name": "handleMerkleVerify",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/certs/merkle/verify",
-      "path": "/certs/merkle/verify",
-      "route_file": "services/certs/handler.go",
-      "route_line": 81,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
       "frontend_call_sites": [],
       "handler": "h.handleACMEDirectory",
       "handler_external_package_calls": [
@@ -45874,7 +45225,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 571,
+      "handler_line": 564,
       "handler_name": "handleACMEDirectory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45885,7 +45236,7 @@
       "normalized_path": "/acme/directory",
       "path": "/acme/directory",
       "route_file": "services/certs/handler.go",
-      "route_line": 83,
+      "route_line": 76,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -45920,7 +45271,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 603,
+      "handler_line": 596,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45931,7 +45282,7 @@
       "normalized_path": "/acme/new-nonce",
       "path": "/acme/new-nonce",
       "route_file": "services/certs/handler.go",
-      "route_line": 84,
+      "route_line": 77,
       "service": "certs",
       "service_external_package_calls": [
         "time.Now"
@@ -45974,7 +45325,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 603,
+      "handler_line": 596,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -45985,7 +45336,7 @@
       "normalized_path": "/acme/new-nonce",
       "path": "/acme/new-nonce",
       "route_file": "services/certs/handler.go",
-      "route_line": 85,
+      "route_line": 78,
       "service": "certs",
       "service_external_package_calls": [
         "time.Now"
@@ -46044,7 +45395,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 610,
+      "handler_line": 603,
       "handler_name": "handleACMENewAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46057,7 +45408,7 @@
       "normalized_path": "/acme/new-account",
       "path": "/acme/new-account",
       "route_file": "services/certs/handler.go",
-      "route_line": 86,
+      "route_line": 79,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -46163,7 +45514,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 638,
+      "handler_line": 631,
       "handler_name": "handleACMENewOrder",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46176,7 +45527,7 @@
       "normalized_path": "/acme/new-order",
       "path": "/acme/new-order",
       "route_file": "services/certs/handler.go",
-      "route_line": 87,
+      "route_line": 80,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -46303,7 +45654,7 @@
       "normalized_path": "/acme/renewal-info/{param}",
       "path": "/acme/renewal-info/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 88,
+      "route_line": 81,
       "service": "certs",
       "service_external_package_calls": [
         "errors.Is"
@@ -46356,7 +45707,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 678,
+      "handler_line": 671,
       "handler_name": "handleACMEChallengeInfo",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46367,7 +45718,7 @@
       "normalized_path": "/acme/challenge/{param}",
       "path": "/acme/challenge/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 89,
+      "route_line": 82,
       "service": "certs",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -46430,7 +45781,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 700,
+      "handler_line": 693,
       "handler_name": "handleACMEChallenge",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46441,7 +45792,7 @@
       "normalized_path": "/acme/challenge/{param}",
       "path": "/acme/challenge/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 90,
+      "route_line": 83,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -46508,7 +45859,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 718,
+      "handler_line": 711,
       "handler_name": "handleACMEFinalize",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46521,7 +45872,7 @@
       "normalized_path": "/acme/finalize/{param}",
       "path": "/acme/finalize/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 91,
+      "route_line": 84,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -46624,7 +45975,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 742,
+      "handler_line": 735,
       "handler_name": "handleACMECertDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46635,7 +45986,7 @@
       "normalized_path": "/acme/cert/{param}",
       "path": "/acme/cert/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 92,
+      "route_line": 85,
       "service": "certs",
       "service_external_package_calls": [
         "crypto/x509.MarshalPKIXPublicKey",
@@ -46707,7 +46058,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 761,
+      "handler_line": 754,
       "handler_name": "handleESTCACerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46718,7 +46069,7 @@
       "normalized_path": "/est/.well-known/est/cacerts",
       "path": "/est/.well-known/est/cacerts",
       "route_file": "services/certs/handler.go",
-      "route_line": 94,
+      "route_line": 87,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -46773,7 +46124,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 775,
+      "handler_line": 768,
       "handler_name": "handleESTCSRAttrs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46784,7 +46135,7 @@
       "normalized_path": "/est/.well-known/est/csrattrs",
       "path": "/est/.well-known/est/csrattrs",
       "route_file": "services/certs/handler.go",
-      "route_line": 95,
+      "route_line": 88,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -46850,7 +46201,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 789,
+      "handler_line": 782,
       "handler_name": "handleESTSimpleEnroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46861,7 +46212,7 @@
       "normalized_path": "/est/.well-known/est/simpleenroll",
       "path": "/est/.well-known/est/simpleenroll",
       "route_file": "services/certs/handler.go",
-      "route_line": 96,
+      "route_line": 89,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -46922,7 +46273,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 844,
+      "handler_line": 837,
       "handler_name": "handleESTSimpleReenroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -46933,7 +46284,7 @@
       "normalized_path": "/est/.well-known/est/simplereenroll",
       "path": "/est/.well-known/est/simplereenroll",
       "route_file": "services/certs/handler.go",
-      "route_line": 97,
+      "route_line": 90,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -46998,7 +46349,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 898,
+      "handler_line": 891,
       "handler_name": "handleESTServerKeygen",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47009,7 +46360,7 @@
       "normalized_path": "/est/.well-known/est/serverkeygen",
       "path": "/est/.well-known/est/serverkeygen",
       "route_file": "services/certs/handler.go",
-      "route_line": 98,
+      "route_line": 91,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New"
@@ -47073,7 +46424,7 @@
         "CACertBundle"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 913,
+      "handler_line": 906,
       "handler_name": "handleSCEPGet",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47086,7 +46437,7 @@
       "normalized_path": "/scep/pkiclient.exe",
       "path": "/scep/pkiclient.exe",
       "route_file": "services/certs/handler.go",
-      "route_line": 100,
+      "route_line": 93,
       "service": "certs",
       "service_external_package_calls": [
         "strings.ToLower",
@@ -47203,7 +46554,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 958,
+      "handler_line": 951,
       "handler_name": "handleSCEPPKIOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47217,7 +46568,7 @@
       "normalized_path": "/scep/pkiclient.exe",
       "path": "/scep/pkiclient.exe",
       "route_file": "services/certs/handler.go",
-      "route_line": 101,
+      "route_line": 94,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -47307,7 +46658,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1090,
+      "handler_line": 1083,
       "handler_name": "handleCMPv2",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47318,7 +46669,7 @@
       "normalized_path": "/cmpv2",
       "path": "/cmpv2",
       "route_file": "services/certs/handler.go",
-      "route_line": 103,
+      "route_line": 96,
       "service": "certs",
       "service_external_package_calls": [
         "encoding/json.Unmarshal",
@@ -47396,7 +46747,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1151,
+      "handler_line": 1144,
       "handler_name": "handleCMPv2Confirm",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47408,7 +46759,7 @@
       "normalized_path": "/cmpv2/confirm",
       "path": "/cmpv2/confirm",
       "route_file": "services/certs/handler.go",
-      "route_line": 104,
+      "route_line": 97,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -47469,7 +46820,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1187,
+          "line": 1108,
           "source": "serviceRequest"
         }
       ],
@@ -47505,7 +46856,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1195,
+          "line": 1116,
           "source": "serviceRequest"
         }
       ],
@@ -47544,7 +46895,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1202,
+          "line": 1123,
           "source": "serviceRequest"
         }
       ],
@@ -47583,7 +46934,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1214,
+          "line": 1135,
           "source": "serviceRequest"
         }
       ],
@@ -74847,7 +74198,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 619,
+          "line": 620,
           "name": "BuildEnterpriseComplianceDashboard",
           "receiver_calls": [],
           "store_calls": [
@@ -74921,7 +74272,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 677,
+          "line": 678,
           "name": "BuildEnterpriseCostOptimization",
           "receiver_calls": [],
           "store_calls": [
@@ -74997,7 +74348,7 @@
             "statusCodeForStatus"
           ],
           "internal_package_calls": [],
-          "line": 574,
+          "line": 575,
           "name": "VerifyKeyMaterialFingerprint",
           "receiver_calls": [],
           "store_calls": []
@@ -91336,11 +90687,11 @@
   "service_counts": {
     "backend_routes": {
       "ai-gateway": 31,
-      "audit": 37,
+      "audit": 33,
       "auth": 86,
       "autokey": 15,
       "backup": 11,
-      "certs": 68,
+      "certs": 63,
       "cloud": 14,
       "cluster-manager": 21,
       "compliance": 54,
@@ -91370,12 +90721,12 @@
       "$dynamic-service": 2,
       "ai": 3,
       "ai-gateway": 23,
-      "audit": 23,
+      "audit": 20,
       "auth": 45,
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 51,
+      "certs": 47,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 19,
@@ -91587,17 +90938,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 909,
+    "backend_routes": 900,
     "backend_services": 30,
-    "button_inventory": 758,
-    "frontend_call_sites": 569,
-    "matched_frontend_call_sites": 524,
+    "button_inventory": 755,
+    "frontend_call_sites": 562,
+    "matched_frontend_call_sites": 517,
     "nav_items": 27,
-    "request_flows": 909,
-    "request_flows_with_frontend": 531,
+    "request_flows": 900,
+    "request_flows_with_frontend": 524,
     "request_flows_with_internal_package_calls": 159,
-    "request_flows_with_service_calls": 541,
-    "request_flows_with_store_calls": 651,
+    "request_flows_with_service_calls": 542,
+    "request_flows_with_store_calls": 644,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -91634,7 +90985,7 @@
       ]
     },
     {
-      "call_count": 203,
+      "call_count": 196,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -91723,7 +91074,7 @@
       ]
     },
     {
-      "call_count": 104,
+      "call_count": 100,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "PKI & certificates",
       "id": "certs",
@@ -91817,7 +91168,7 @@
       ]
     },
     {
-      "call_count": 12,
+      "call_count": 9,
       "component": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "group": "Security & compliance",
       "id": "audit",
@@ -92057,7 +91408,7 @@
       ]
     },
     {
-      "call_count": 110,
+      "call_count": 106,
       "component": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "group": "UNLISTED",
       "id": "restapi",
@@ -93630,7 +92981,7 @@
         ]
       },
       {
-        "complexity": 11,
+        "complexity": 7,
         "externalPackages": [
           "encoding/json.NewDecoder",
           "encoding/json.NewEncoder",
@@ -93645,7 +92996,7 @@
         "frontendSites": [],
         "handler": "handlePublish",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 119,
+        "handlerLine": 114,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -93669,11 +93020,7 @@
         ],
         "storeCalls": [
           "QueryEvents",
-          "GetEvent",
-          "BuildMerkleEpoch",
-          "ListMerkleEpochs",
-          "GetMerkleEpoch",
-          "GetEventMerkleProof"
+          "GetEvent"
         ],
         "uiLabels": [
           "API only"
@@ -93694,7 +93041,7 @@
         ],
         "handler": "handleEvents",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 183,
+        "handlerLine": 178,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93729,7 +93076,7 @@
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 211,
+        "handlerLine": 206,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93762,7 +93109,7 @@
         ],
         "handler": "handleTimeline",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 229,
+        "handlerLine": 224,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93789,13 +93136,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 166,
+            "line": 167,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSession",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 247,
+        "handlerLine": 242,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93822,13 +93169,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 182,
+            "line": 183,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCorrelation",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 265,
+        "handlerLine": 260,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93854,7 +93201,7 @@
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 283,
+        "handlerLine": 278,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -93878,13 +93225,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 190,
+            "line": 191,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 288,
+        "handlerLine": 283,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93936,13 +93283,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 202,
+            "line": 203,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 302,
+        "handlerLine": 297,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93951,165 +93298,6 @@
         "receiverCalls": [],
         "risk": "low",
         "routeKey": "audit|GET|/audit/config",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 274,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleBuild",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 445,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/audit/merkle/build",
-        "path": "/audit/merkle/build",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "audit|POST|/audit/merkle/build",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "BuildMerkleEpoch"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 251,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleEpochs",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 474,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/merkle/epochs",
-        "path": "/audit/merkle/epochs",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/merkle/epochs",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListMerkleEpochs"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
-        "frontendSites": [],
-        "handler": "handleMerkleEpoch",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 489,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/merkle/epochs/{param}",
-        "path": "/audit/merkle/epochs/{id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/merkle/epochs/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetMerkleEpoch"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 262,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleEventProof",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 507,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/events/{param}/proof",
-        "path": "/audit/events/{id}/proof",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/events/{param}/proof",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetEventMerkleProof"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 286,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleVerify",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 525,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/audit/merkle/verify",
-        "path": "/audit/merkle/verify",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "audit|POST|/audit/merkle/verify",
         "sensitive": false,
         "service": "audit",
         "serviceCalls": [],
@@ -94362,7 +93550,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 317,
+        "handlerLine": 312,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94677,13 +93865,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 150,
+            "line": 151,
             "source": "serviceRequest"
           }
         ],
         "handler": "verifyTargetIntegrity",
         "handlerFile": "services/audit/target_integrity.go",
-        "handlerLine": 391,
+        "handlerLine": 359,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94699,6 +93887,41 @@
         ],
         "storeCalls": [
           "VerifyTarget"
+        ],
+        "uiLabels": [
+          "Operations",
+          "Audit Log"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
+            "file": "web/dashboard/src/lib/audit.ts",
+            "line": 233,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listCheckpoints",
+        "handlerFile": "services/audit/checkpoint.go",
+        "handlerLine": 526,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/audit/checkpoints",
+        "path": "/audit/checkpoints",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "audit|GET|/audit/checkpoints",
+        "sensitive": false,
+        "service": "audit",
+        "serviceCalls": [
+          "ListCheckpoints"
+        ],
+        "storeCalls": [
+          "ListCheckpoints"
         ],
         "uiLabels": [
           "Operations",
@@ -98549,7 +97772,7 @@
         ],
         "handler": "handleCreateCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 111,
+        "handlerLine": 104,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98605,7 +97828,7 @@
         ],
         "handler": "handleListCAs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 126,
+        "handlerLine": 119,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98650,7 +97873,7 @@
         ],
         "handler": "handleDeleteCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 140,
+        "handlerLine": 133,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -98704,7 +97927,7 @@
         ],
         "handler": "handleIssueCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 158,
+        "handlerLine": 151,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98753,7 +97976,7 @@
         ],
         "handler": "handleSignCSR",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 177,
+        "handlerLine": 170,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98796,7 +98019,7 @@
         ],
         "handler": "handleListCerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 202,
+        "handlerLine": 195,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98829,7 +98052,7 @@
         "frontendSites": [],
         "handler": "handleGetCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 220,
+        "handlerLine": 213,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98870,7 +98093,7 @@
         ],
         "handler": "handleDeleteCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 311,
+        "handlerLine": 304,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -98919,7 +98142,7 @@
         ],
         "handler": "handleDownloadCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 238,
+        "handlerLine": 231,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98959,7 +98182,7 @@
         ],
         "handler": "handleRenewCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 268,
+        "handlerLine": 261,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98999,7 +98222,7 @@
         ],
         "handler": "handleRevokeCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 290,
+        "handlerLine": 283,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -99032,7 +98255,7 @@
         "frontendSites": [],
         "handler": "handleCreateProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 328,
+        "handlerLine": 321,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -99070,7 +98293,7 @@
         ],
         "handler": "handleListProfiles",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 343,
+        "handlerLine": 336,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99103,7 +98326,7 @@
         "frontendSites": [],
         "handler": "handleGetProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 357,
+        "handlerLine": 350,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -99155,7 +98378,7 @@
         ],
         "handler": "handleCRL",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 375,
+        "handlerLine": 368,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -99249,7 +98472,7 @@
         ],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 398,
+        "handlerLine": 391,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -99336,7 +98559,7 @@
         "frontendSites": [],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 398,
+        "handlerLine": 391,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -99412,7 +98635,7 @@
         ],
         "handler": "handleInventory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 440,
+        "handlerLine": 433,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99450,7 +98673,7 @@
         ],
         "handler": "handleSecurityStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 454,
+        "handlerLine": 447,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99490,7 +98713,7 @@
         ],
         "handler": "handleGetAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 462,
+        "handlerLine": 455,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99533,7 +98756,7 @@
         ],
         "handler": "handleUpsertAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 476,
+        "handlerLine": 469,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -100013,7 +99236,7 @@
         ],
         "handler": "handleListProtocolConfigs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 505,
+        "handlerLine": 498,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100049,7 +99272,7 @@
         ],
         "handler": "handleListProtocolSchemas",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 548,
+        "handlerLine": 541,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100086,7 +99309,7 @@
         ],
         "handler": "handleUpsertProtocolConfig",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 519,
+        "handlerLine": 512,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -100128,7 +99351,7 @@
         ],
         "handler": "handleUploadThirdPartyCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 556,
+        "handlerLine": 549,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100154,173 +99377,6 @@
         ]
       },
       {
-        "complexity": 1,
-        "externalPackages": [
-          "strconv.Atoi"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
-            "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1106,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleBuild",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1341,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/certs/merkle/build",
-        "path": "/certs/merkle/build",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/certs/merkle/build",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "BuildCertMerkleEpoch"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Certificates / PKI",
-          "restapi"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strconv.Atoi"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
-            "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1095,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleEpochs",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1365,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/certs/merkle/epochs",
-        "path": "/certs/merkle/epochs",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/certs/merkle/epochs",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListCertMerkleEpochs"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Certificates / PKI",
-          "restapi"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
-        "frontendSites": [],
-        "handler": "handleMerkleEpoch",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1388,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/certs/merkle/epochs/{param}",
-        "path": "/certs/merkle/epochs/{id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/certs/merkle/epochs/{param}",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetCertMerkleEpoch"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1117,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleCertProof",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1407,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/certs/merkle/proof/{param}",
-        "path": "/certs/merkle/proof/{id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/certs/merkle/proof/{param}",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetCertMerkleProof"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Certificates / PKI",
-          "restapi"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1127,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleMerkleVerify",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1426,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/certs/merkle/verify",
-        "path": "/certs/merkle/verify",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/certs/merkle/verify",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "Operations",
-          "Certificates / PKI",
-          "restapi"
-        ]
-      },
-      {
         "complexity": 0,
         "externalPackages": [
           "strings.TrimSpace"
@@ -100328,7 +99384,7 @@
         "frontendSites": [],
         "handler": "handleACMEDirectory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 571,
+        "handlerLine": 564,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100355,7 +99411,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 603,
+        "handlerLine": 596,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "HEAD",
@@ -100385,7 +99441,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 603,
+        "handlerLine": 596,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -100426,7 +99482,7 @@
         ],
         "handler": "handleACMENewAccount",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 610,
+        "handlerLine": 603,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100477,7 +99533,7 @@
         ],
         "handler": "handleACMENewOrder",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 638,
+        "handlerLine": 631,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100555,7 +99611,7 @@
         ],
         "handler": "handleACMEChallengeInfo",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 678,
+        "handlerLine": 671,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100594,7 +99650,7 @@
         ],
         "handler": "handleACMEChallenge",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 700,
+        "handlerLine": 693,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100637,7 +99693,7 @@
         ],
         "handler": "handleACMEFinalize",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 718,
+        "handlerLine": 711,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100682,7 +99738,7 @@
         "frontendSites": [],
         "handler": "handleACMECertDownload",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 742,
+        "handlerLine": 735,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100712,7 +99768,7 @@
         "frontendSites": [],
         "handler": "handleESTCACerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 761,
+        "handlerLine": 754,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -100749,7 +99805,7 @@
         ],
         "handler": "handleESTCSRAttrs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 775,
+        "handlerLine": 768,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100789,7 +99845,7 @@
         ],
         "handler": "handleESTSimpleEnroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 789,
+        "handlerLine": 782,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100820,7 +99876,7 @@
         "frontendSites": [],
         "handler": "handleESTSimpleReenroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 844,
+        "handlerLine": 837,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -100856,7 +99912,7 @@
         ],
         "handler": "handleESTServerKeygen",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 898,
+        "handlerLine": 891,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100895,7 +99951,7 @@
         ],
         "handler": "handleSCEPGet",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 913,
+        "handlerLine": 906,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100942,7 +99998,7 @@
         ],
         "handler": "handleSCEPPKIOperation",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 958,
+        "handlerLine": 951,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -100990,7 +100046,7 @@
         ],
         "handler": "handleCMPv2",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1090,
+        "handlerLine": 1083,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101031,7 +100087,7 @@
         ],
         "handler": "handleCMPv2Confirm",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1151,
+        "handlerLine": 1144,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101062,7 +100118,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1187,
+            "line": 1108,
             "source": "serviceRequest"
           }
         ],
@@ -101096,7 +100152,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1195,
+            "line": 1116,
             "source": "serviceRequest"
           }
         ],
@@ -101130,7 +100186,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/${encodeURIComponent(identity)}/rotate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1202,
+            "line": 1123,
             "source": "serviceRequest"
           }
         ],
@@ -101164,7 +100220,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/internal-mtls/rotate-all?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1214,
+            "line": 1135,
             "source": "serviceRequest"
           }
         ],
@@ -123872,7 +122928,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-28T17:22:03Z",
+    "generatedAt": "2026-09-28T18:09:56Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123914,8 +122970,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 909,
-      "frontendBacked": 531,
+      "flows": 900,
+      "frontendBacked": 524,
       "highRisk": 366,
       "services": 30
     }

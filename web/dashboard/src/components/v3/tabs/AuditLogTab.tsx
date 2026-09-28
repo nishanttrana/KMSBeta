@@ -12,15 +12,11 @@ import {
   getAuditConfig,
   exportEventsAsCSV,
   exportEventsAsCEF,
-  listMerkleEpochs,
-  getEventMerkleProof,
-  verifyMerkleProof,
-  buildMerkleEpoch,
+  listAuditCheckpoints,
   type AuditEvent,
   type AuditConfig,
-  type ChainVerifyResult,
-  type MerkleEpoch,
-  type MerkleProofResponse
+  type AuditCheckpoint,
+  type ChainVerifyResult
 } from "../../../lib/audit";
 
 /* ── constants ── */
@@ -136,152 +132,117 @@ const TD: React.CSSProperties = {
 
 /* ── main component ── */
 
-// ── Merkle Tree Integrity Section ────────────────────────────
+// ── Signed checkpoints ───────────────────────────────────────
 
-const MerkleSection = ({ session }: { session: any }) => {
-  const [epochs, setEpochs] = useState<MerkleEpoch[]>([]);
+const CHECKPOINT_STATUS: Record<string, { label: string; color: string }> = {
+  verified: { label: "VERIFIED", color: C.green },
+  key_unknown: { label: "KEY NOT TRUSTED", color: C.red },
+  signature_invalid: { label: "SIGNATURE INVALID", color: C.red },
+  head_mismatch: { label: "HISTORY CHANGED", color: C.red },
+};
+
+const CheckpointsSection = ({ session }: { session: any }) => {
+  const [items, setItems] = useState<AuditCheckpoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [building, setBuilding] = useState(false);
-  const [proofResult, setProofResult] = useState<{ eventId: string; proof?: MerkleProofResponse; verified?: boolean; error?: string } | null>(null);
-  const [proofEventId, setProofEventId] = useState("");
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState<AuditCheckpoint | null>(null);
 
-  const loadEpochs = async () => {
+  const load = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const items = await listMerkleEpochs(session, 50);
-      setEpochs(items);
-    } catch { /* ignore */ } finally { setLoading(false); }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
-  useEffect(() => { loadEpochs(); }, []);
-
-  const handleBuild = async () => {
-    try {
-      setBuilding(true);
-      const result = await buildMerkleEpoch(session, 1000);
-      if (result.epoch) {
-        loadEpochs();
-      }
-    } catch { /* ignore */ } finally { setBuilding(false); }
-  };
-
-  const handleVerifyEvent = async () => {
-    const id = proofEventId.trim();
-    if (!id) return;
-    try {
-      const proof = await getEventMerkleProof(session, id);
-      const result = await verifyMerkleProof(session, {
-        leaf_hash: proof.leaf_hash,
-        leaf_index: proof.leaf_index,
-        siblings: proof.siblings,
-        root: proof.root,
-      });
-      setProofResult({ eventId: id, proof, verified: result.valid });
+      setItems(await listAuditCheckpoints(session, 50));
+      setError("");
     } catch (e) {
-      setProofResult({ eventId: id, error: errMsg(e) });
+      setItems([]);
+      setError(errMsg(e));
+    } finally {
+      setLoading(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
+  useEffect(() => { load(); }, []);
+
+  const failed = items.filter((c) => c.status !== "verified").length;
+  const mono = { fontFamily: "monospace", fontSize: 10 };
+
   return (
     <div>
-      <Section t="Merkle Tree Integrity" act={
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn l={building ? "Building..." : "Build Epoch"} c={C.green} click={handleBuild} />
-          <Btn l="Refresh" c={C.cyan} click={loadEpochs} />
-        </div>
-      }>
+      <Section t="Signed Checkpoints" act={<Btn l={loading ? "Verifying..." : "Re-verify"} c={C.cyan} click={load} />}>
         <Card>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
-            Merkle trees are built over batches of audit events (epochs). Each epoch produces a root hash that
-            cryptographically commits to all events in the batch. Any single event can be verified with an O(log N)
-            inclusion proof — no need to replay the full chain.
+            Every 10 minutes each node signs the head of each chain it writes (sequence and chain hash) with an
+            ECDSA-P384 key held only in memory. The chain hash commits to every earlier event, so a verified
+            checkpoint proves nothing before it has changed since. Keys and checkpoints are audit events, so they
+            also reach your event streams. Listing re-verifies each signature and the stored head.
           </div>
-
-          {/* Epoch table */}
-          {epochs.length === 0 && !loading ? (
+          {error ? (
+            <div style={{ color: C.red, padding: 12 }}>Checkpoints unavailable: {error}</div>
+          ) : items.length === 0 && !loading ? (
             <div style={{ color: C.dim, padding: 16, textAlign: "center" }}>
-              No Merkle epochs built yet. Click "Build Epoch" to create the first one from existing audit events.
+              No checkpoints yet. The first is signed within 10 minutes of audit activity.
             </div>
           ) : (
-            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim, textAlign: "left" }}>
-                  <th style={{ padding: "6px" }}>Epoch</th>
-                  <th style={{ padding: "6px" }}>Seq Range</th>
-                  <th style={{ padding: "6px" }}>Leaves</th>
-                  <th style={{ padding: "6px" }}>Root Hash</th>
-                  <th style={{ padding: "6px" }}>Built</th>
-                </tr>
-              </thead>
-              <tbody>
-                {epochs.map((e) => (
-                  <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}10` }}>
-                    <td style={{ padding: "6px", color: C.cyan, fontWeight: 600 }}>#{e.epoch_number}</td>
-                    <td style={{ padding: "6px", color: C.fg }}>{e.seq_from} — {e.seq_to}</td>
-                    <td style={{ padding: "6px" }}>{e.leaf_count}</td>
-                    <td style={{ padding: "6px", fontFamily: "monospace", fontSize: 10, color: C.green }}>
-                      {e.tree_root.slice(0, 16)}...{e.tree_root.slice(-8)}
-                    </td>
-                    <td style={{ padding: "6px", color: C.dim, fontSize: 10 }}>
-                      {e.created_at ? new Date(e.created_at).toLocaleString() : "--"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-      </Section>
-
-      {/* Event Proof Verification */}
-      <Section t="Event Inclusion Proof">
-        <Card>
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <Inp l="Event ID" v={proofEventId} set={setProofEventId} placeholder="evt_..." />
-            </div>
-            <Btn l="Verify" c={C.cyan} click={handleVerifyEvent} />
-          </div>
-
-          {proofResult && (
-            <div style={{ padding: 12, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 11 }}>
-              {proofResult.error ? (
-                <div style={{ color: C.red }}>{proofResult.error}</div>
-              ) : proofResult.proof ? (
-                <div>
-                  <div style={{ marginBottom: 8 }}>
-                    <span style={{ fontWeight: 600, color: proofResult.verified ? C.green : C.red }}>
-                      {proofResult.verified ? "VERIFIED" : "VERIFICATION FAILED"}
-                    </span>
-                    {" — "}Event <span style={{ color: C.cyan }}>{proofResult.eventId}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, color: C.dim }}>
-                    <div>Epoch: <span style={{ color: C.fg }}>{proofResult.proof.epoch_id.slice(0, 12)}</span></div>
-                    <div>Leaf Index: <span style={{ color: C.fg }}>{proofResult.proof.leaf_index}</span></div>
-                    <div>Sequence: <span style={{ color: C.fg }}>{proofResult.proof.sequence}</span></div>
-                    <div>Proof Steps: <span style={{ color: C.fg }}>{proofResult.proof.siblings.length}</span></div>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Root Hash</div>
-                    <div style={{ fontFamily: "monospace", fontSize: 10, color: C.green, wordBreak: "break-all" }}>
-                      {proofResult.proof.root}
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Inclusion Path</div>
-                    {proofResult.proof.siblings.map((s, i) => (
-                      <div key={i} style={{ fontFamily: "monospace", fontSize: 10, color: C.dim, marginBottom: 2 }}>
-                        [{i}] {s.position.toUpperCase()}: {s.hash.slice(0, 24)}...
-                      </div>
-                    ))}
-                  </div>
+            <>
+              {failed > 0 && (
+                <div style={{ color: C.red, fontSize: 11, marginBottom: 8 }}>
+                  {failed} checkpoint(s) failed verification. A critical chain_broken audit event was raised.
                 </div>
-              ) : null}
-            </div>
+              )}
+              <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim, textAlign: "left" }}>
+                    <th style={{ padding: "6px" }}>Status</th>
+                    <th style={{ padding: "6px" }}>Head</th>
+                    <th style={{ padding: "6px" }}>Chain</th>
+                    <th style={{ padding: "6px" }}>Chain hash</th>
+                    <th style={{ padding: "6px" }}>Key</th>
+                    <th style={{ padding: "6px" }}>Signed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((c) => {
+                    const st = CHECKPOINT_STATUS[c.status] || { label: c.status, color: C.amber };
+                    return (
+                      <tr key={c.event_id} style={{ borderBottom: `1px solid ${C.border}10`, cursor: "pointer" }} onClick={() => setOpen(c)}>
+                        <td style={{ padding: "6px", color: st.color, fontWeight: 600 }}>{st.label}</td>
+                        <td style={{ padding: "6px", color: C.cyan }}>#{c.sequence}</td>
+                        <td style={{ padding: "6px" }}>{c.chain_node || "local"}</td>
+                        <td style={{ padding: "6px", ...mono, color: C.fg }}>{c.chain_hash.slice(0, 16)}…</td>
+                        <td style={{ padding: "6px", ...mono, color: C.dim }}>{c.key_id.slice(0, 12)}…</td>
+                        <td style={{ padding: "6px", color: C.dim, fontSize: 10 }}>{c.signed_at ? new Date(c.signed_at).toLocaleString() : "--"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
           )}
         </Card>
       </Section>
+
+      {open && (
+        <Modal open wide title={`Checkpoint #${open.sequence}`} onClose={() => setOpen(null)}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+            Verify outside the KMS: save the message exactly (no trailing newline), the base64-decoded signature
+            (DER) and the public key, then
+            run <span style={mono}>openssl dgst -sha384 -verify key.pem -signature sig.der message.json</span>.
+          </div>
+          {[
+            ["Status", (CHECKPOINT_STATUS[open.status] || { label: open.status }).label],
+            ["Algorithm", open.algorithm],
+            ["Key ID", open.key_id],
+            ["Signed message", open.message],
+            ["Signature (base64 DER)", open.signature],
+            ["Public key", open.public_key_pem || "not available: the key is not trusted"],
+          ].map(([k, v]) => (
+            <div key={k} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6 }}>{k}</div>
+              <div style={{ ...mono, color: C.fg, wordBreak: "break-all", whiteSpace: "pre-wrap" }}>{v}</div>
+            </div>
+          ))}
+        </Modal>
+      )}
     </div>
   );
 };
@@ -757,18 +718,18 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   return (
     <div>
       <IntegrityBar />
-      <Tabs tabs={["Events", "Forensics", "Merkle"]} active={subTab} onChange={setSubTab} />
+      <Tabs tabs={["Events", "Forensics", "Checkpoints"]} active={subTab} onChange={setSubTab} />
 
       {subTab === "Events" && renderEvents()}
       {subTab === "Forensics" && renderForensics()}
-      {subTab === "Merkle" && <MerkleSection session={session} />}
+      {subTab === "Checkpoints" && <CheckpointsSection session={session} />}
 
       {renderEventModal()}
 
       {/* audit integration note */}
       <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 9, color: C.muted }}>
-        Every service publishes to the single audit stream. Events are hash-chained (SHA-256), sealed into Merkle
-        epochs and stored append-only; a fail-closed WAL covers outages. Charts are under Overview → Analytics →
+        Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
+        by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Overview → Analytics →
         Audit activity; alerts raised from these events are triaged in the Alert Center.
       </div>
     </div>

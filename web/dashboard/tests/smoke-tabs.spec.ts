@@ -137,7 +137,7 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   const nav = (label: string) => page.getByText(label, { exact: true }).first().click();
 
   await nav("Audit Log");
-  for (const t of ["Events", "Forensics", "Merkle"]) {
+  for (const t of ["Events", "Forensics", "Checkpoints"]) {
     await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
   }
   for (const t of ["Analytics", "Alerts"]) {

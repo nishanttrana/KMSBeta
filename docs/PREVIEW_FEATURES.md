@@ -40,12 +40,13 @@ reflects it:
     AES-256-GCM artifacts, a separate key package, restore with tamper and
     scope (AAD) checks. Integration-tested against Postgres.
 - **Audit-chain anchors:**
-  - **What they did:** reported a `merkle_root` computed from
+  - **What they did:** reported a tree root computed from
     tenant/type/reference/time, with status `anchored`.
-  - **Now:** they report no Merkle root and status `recorded`. Existing rows
-    are relabelled (keycore migration 018). The platform's actual audit tamper
-    evidence is the audit service's hash chain, per-event HMAC and Merkle
-    epochs.
+  - **Now:** they report status `recorded` and carry no root (the column was
+    dropped in keycore migration 027, 3.0.0-beta). Existing rows are
+    relabelled (keycore migration 018). The platform's actual audit tamper
+    evidence is the audit service's hash chain, per-event HMAC and signed
+    checkpoints ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
 
 ## Leaving preview
 

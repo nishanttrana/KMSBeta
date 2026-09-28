@@ -14,7 +14,7 @@ Vecta KMS ships a full-stack Public Key Infrastructure engine. It issues, renews
 6. [Enrollment Protocols](#6-enrollment-protocols)
 7. [STAR Subscriptions](#7-star-subscriptions-short-term-auto-renewal--rfc-8739)
 8. [Renewal Intelligence (ARI)](#8-renewal-intelligence-ari--rfc-draft)
-9. [Certificate Transparency (Merkle Proofs)](#9-certificate-transparency-merkle-proofs)
+9. [Issuance Evidence](#9-issuance-evidence)
 10. [CRL and OCSP](#10-crl-and-ocsp)
 11. [Certificate Security Status](#11-certificate-security-status)
 12. [Use Cases](#12-use-cases)
@@ -1360,148 +1360,23 @@ Bucket 6: certs expiring June 20 (actual expiry — do not miss this)
 
 ---
 
-## 9. Certificate Transparency (Merkle Proofs)
+## 9. Issuance Evidence
 
-### 9.1 Purpose
-
-Certificate Transparency (CT) in Vecta's internal PKI provides:
-
-- **Tamper evidence** — An append-only Merkle tree records every certificate issuance. If the log is tampered with, the root hash changes and the mismatch is detectable.
-- **Audit trail** — Any party with access to the log can verify that a certificate was issued at a specific time.
-- **Non-repudiation** — The CA cannot deny having issued a certificate if an inclusion proof exists for it.
-
-This is analogous to the public Certificate Transparency logs used in the browser ecosystem (RFC 6962), but for internal PKI.
-
-### 9.2 Merkle Tree Structure
-
-```
-                    Root Hash (epoch root)
-                   /                       \
-           H(L + R)                       H(L + R)
-          /         \                    /         \
-      H(L+R)       H(L+R)           H(L+R)       H(L+R)
-      /    \       /    \           /    \       /    \
-   Leaf0  Leaf1 Leaf2  Leaf3    Leaf4  Leaf5 Leaf6  Leaf7
-
-Each leaf = SHA-256(cert_id | serial | subject | not_before | not_after | fingerprint)
-```
-
-- **Epoch:** A completed batch of up to N leaves. Once an epoch is sealed, its root hash is immutable.
-- **Leaf index:** Zero-based position of the certificate in the epoch.
-- **Siblings:** The hash values needed to reconstruct the path from leaf to root.
-- **Inclusion proof:** (leaf_hash, leaf_index, siblings[], root) — proves the leaf is in the tree at the given index.
-
-### 9.3 Building and Querying Epochs
+Every issuance, renewal, revocation and CA change is an audit event, so its
+evidence is the audit log: a SHA-256 hash chain, a per-event HMAC under a key
+derived from the audit master key, and ECDSA-P384 signed checkpoints of each
+chain head ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)). To
+prove a certificate's history, verify its audit trail:
 
 ```bash
-# Build a Merkle epoch (seal pending certs into an immutable batch)
-curl -X POST "https://localhost/svc/certs/certs/merkle/build?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "max_leaves": 10000,
-    "description": "Daily batch 2026-03-22"
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "epoch_id": "epoch_01HXYZ...",
-  "leaf_count": 2847,
-  "root_hash": "a1b2c3d4e5f6...",
-  "sealed_at": "2026-03-22T23:59:59Z",
-  "status": "sealed"
-}
-```
-
-```bash
-# List epochs
-curl "https://localhost/svc/certs/certs/merkle/epochs?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Get inclusion proof for a certificate
-curl "https://localhost/svc/certs/certs/merkle/proof/{CERT_ID}?tenant_id=root" \
+curl -sk "https://localhost/svc/audit/audit/targets/{CERT_ID}/integrity?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Inclusion proof response:**
-
-```json
-{
-  "cert_id": "cert_01HXYZ...",
-  "epoch_id": "epoch_01HABC...",
-  "leaf_hash": "3f4a5b...",
-  "leaf_index": 42,
-  "tree_size": 2847,
-  "siblings": [
-    "hash_of_leaf_43",
-    "hash_of_pair_44_45",
-    "hash_of_group_46_47_48_49",
-    "hash_of_right_subtree"
-  ],
-  "root": "a1b2c3d4e5f6...",
-  "epoch_sealed_at": "2026-03-22T23:59:59Z"
-}
-```
-
-### 9.4 Verifying an Inclusion Proof
-
-```bash
-# Verify proof
-curl -X POST "https://localhost/svc/certs/certs/merkle/verify" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "cert_id": "cert_01HXYZ...",
-    "leaf_hash": "3f4a5b...",
-    "leaf_index": 42,
-    "siblings": ["hash_of_leaf_43", "hash_of_pair_44_45", "..."],
-    "root": "a1b2c3d4e5f6..."
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "valid": true,
-  "recomputed_root": "a1b2c3d4e5f6...",
-  "matches_epoch_root": true,
-  "verification_time": "2026-03-22T15:30:00Z"
-}
-```
-
-### 9.5 Verification Algorithm (Client-Side)
-
-```python
-import hashlib
-
-def verify_inclusion(leaf_hash: str, leaf_index: int, siblings: list[str], root: str) -> bool:
-    """
-    Verify a Merkle inclusion proof.
-    leaf_hash: hex-encoded SHA-256 of the leaf
-    leaf_index: 0-based position in the tree
-    siblings: list of hex-encoded sibling hashes (bottom to top)
-    root: expected root hash
-    """
-    current = bytes.fromhex(leaf_hash)
-    index = leaf_index
-
-    for sibling in siblings:
-        sibling_bytes = bytes.fromhex(sibling)
-        if index % 2 == 0:
-            # Current is left child
-            combined = current + sibling_bytes
-        else:
-            # Current is right child
-            combined = sibling_bytes + current
-        current = hashlib.sha256(combined).digest()
-        index //= 2
-
-    return current.hex() == root
-```
+The certs service kept its own hash-tree "transparency" log until
+2.20.0-beta. No root ever left the service and its verify endpoint accepted
+any root the caller sent, so it proved nothing; it was removed in
+3.0.0-beta. This is not a public Certificate Transparency (RFC 6962) log.
 
 ---
 
@@ -2086,15 +1961,6 @@ Every operation generates an audit log entry:
 | `GET` | `/svc/certs/certs/crl` | Download CRL |
 | `GET` | `/svc/certs/certs/ocsp` | OCSP request (GET) |
 | `POST` | `/svc/certs/certs/ocsp` | OCSP request (POST) |
-
-### Merkle / Transparency Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/svc/certs/certs/merkle/build` | Build epoch |
-| `GET` | `/svc/certs/certs/merkle/epochs` | List epochs |
-| `GET` | `/svc/certs/certs/merkle/proof/{certId}` | Get inclusion proof |
-| `POST` | `/svc/certs/certs/merkle/verify` | Verify proof |
 
 ### Security Status Endpoints
 

@@ -534,12 +534,13 @@ func (s *Service) refuseKDF(ctx context.Context, req KDFDeriveRequest, algorithm
 
 func (s *Service) AnchorEnterpriseAuditChain(ctx context.Context, tenantID, anchorType, externalRef string, metadata map[string]any) (AuditChainAnchor, error) {
 	if strings.TrimSpace(anchorType) == "" {
-		anchorType = "internal_merkle"
+		anchorType = "local"
 	}
 	// Preview (pkg/features "keycore.audit_chain_anchor"): this records an
 	// external reference in a local hash chain of anchor records. It used to
-	// report a "merkle_root" computed from tenant/type/reference/time and the
-	// status "anchored"; neither was true, so neither is claimed any more.
+	// report a tree root computed from tenant/type/reference/time and the
+	// status "anchored"; neither was true, so neither is claimed any more
+	// (the root column was dropped in migration 027).
 	now := time.Now().UTC()
 	anchors, _ := s.store.ListAuditChainAnchors(ctx, tenantID, 1)
 	previous := ""

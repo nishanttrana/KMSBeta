@@ -14,7 +14,7 @@ function integrityNote(r: AuditEventIntegrity | undefined): { text: string; colo
   if (!r) return null;
   if (r.failures?.length) return { text: `FAILED: ${r.failures.join(", ")}`, color: C.red };
   const sig = r.signature === "verified" ? "HMAC ok" : r.signature === "unsigned" ? "unsigned" : "HMAC not checked";
-  const seal = r.seal === "sealed" ? `sealed in epoch ${r.epoch_number}` : "awaiting next Merkle epoch";
+  const seal = r.seal === "sealed" ? `covered by signed checkpoint at #${r.checkpoint_sequence}` : "awaiting next signed checkpoint";
   return { text: `chain ok, ${sig}, ${seal}`, color: r.seal === "sealed" && r.signature === "verified" ? C.green : C.amber };
 }
 
@@ -83,7 +83,7 @@ export function KeyHistoryPanel({ session, keyID }: { session: AuthSession | nul
             ? `Tampering detected: ${proof.failed} of ${proof.events_checked} events failed verification. A critical chain_broken audit event was raised.`
             : proof.verdict === "no_events"
               ? "No audit events name this key."
-              : `Intact: ${proof.events_checked} events recomputed from storage and chained; ${proof.sealed} proven against sealed Merkle roots, ${proof.pending} awaiting the next epoch.`}
+              : `Intact: ${proof.events_checked} events recomputed from storage and chained; ${proof.sealed} proven against signed checkpoints, ${proof.pending} awaiting the next checkpoint.`}
           {!proof.signing_key_configured && <span style={{ color: C.amber }}> HMAC signatures not checked: this node holds no audit signing key.</span>}
           {proof.unsigned > 0 && <span style={{ color: C.amber }}> {proof.unsigned} events carry no HMAC.</span>}
           {proof.truncated && <span style={{ color: C.amber }}> Only the newest {proof.events_checked} events were checked.</span>}

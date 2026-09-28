@@ -130,7 +130,7 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 | `keycore` | `/svc/keycore/` | Key lifecycle, crypto operations, access policy |
 | `auth` | `/svc/auth/` | Authentication, users, tenants, clients, IdP, SCIM |
 | `certs` | `/svc/certs/` | PKI, certificate lifecycle, enrollment protocols |
-| `audit` | `/svc/audit/` | Audit log, alert management, Merkle proofs |
+| `audit` | `/svc/audit/` | Audit log, signed checkpoints, integrity verification |
 | `governance` | `/svc/governance/` | Governance policies, approvals, backups, system state |
 | `reporting` | `/svc/reporting/` | Alert rules, reports, scheduled reports |
 | `compliance` | `/svc/compliance/` | Framework scoring, assessment, posture |

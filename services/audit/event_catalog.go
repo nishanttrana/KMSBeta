@@ -31,6 +31,10 @@ func buildAuditEventCatalog() map[string]EventMeta {
 
 	overrides := map[string]EventMeta{
 		"audit.audit.chain_broken":                   {Severity: "CRITICAL"},
+		"audit.audit.checkpoint_signed":              {Severity: "LOW"},
+		"audit.audit.checkpoint_key_created":         {Severity: "MEDIUM"},
+		"audit.audit.checkpoint_refused":             {Severity: "HIGH"},
+		"audit.audit.event_hmac_key_installed":       {Severity: "MEDIUM"},
 		"audit.auth.mfa_failed":                      {Severity: "HIGH"},
 		"audit.auth.client_token_issued":             {Severity: "LOW"},
 		"audit.auth.mtls_binding_failed":             {Severity: "HIGH"},

@@ -7,6 +7,45 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Audit integrity: sign the chain head, no Merkle trees (3.0.0-beta)
+
+**Decision.** The owner: "let go off the merkle tree and sign the logs",
+"remove every instance of merkle". Audit tamper evidence is the hash chain,
+a per-event HMAC under a key derived from the audit master key, and signed
+checkpoints: every 10 minutes each node signs `{tenant, chain, sequence,
+chain_hash, signed_at}` of each chain it writes with ECDSA-P384. The Merkle
+epochs (audit), the certificate tree (certs) and the anchor's `merkle_root`
+(keycore) are removed.
+
+**Why.** The chain hash already commits to every earlier event, so one
+signature over the head proves the same thing a Merkle root did, with no
+extra tables. The Merkle layer added nothing: no root left the database,
+and verify trusted the caller's root. Nobody used inclusion proofs.
+
+**Rejected.**
+- *Signing each event, or signing with the root key.* The owner first
+  suggested the root key. A key that protects other keys must not sit on a
+  path used thousands of times a day in a network-facing service, and key
+  separation (one key, one purpose) is what a FIPS reviewer checks.
+- *A checkpoint key stored in keycore or sealed under the MEK.* Nothing
+  needs the private key after the process ends; storing it only creates
+  something to steal and to re-wrap on rotation. The key lives in memory
+  and its public key is an audit event, trusted only while that event's
+  hash and HMAC verify.
+- *Keeping `AUDIT_EVENT_SIGNING_KEY_B64` and generating it in installers.*
+  Rule 6 keeps service keys out of the environment; the MEK already exists,
+  is keycore-protected and is the same on every cluster node.
+- *Fixing the Merkle tree* (RFC 6962 hashing, consistency proofs, root
+  export). More code for a property the signed head already gives.
+
+**Enforced by** `TestVerifyChainCatchesRewriteWithHMACKey`,
+`TestTargetIntegrityRejectsTampering`, `TestCheckpointKeyTrustedOnlyThroughRegistration`,
+`TestCheckpointVerifiesOutsideTheService`,
+`TestEventHMACKeyFromMasterKeySurvivesRestart`. **Open:** the tail after the
+latest checkpoint (up to 10 minutes), and a full rewrite by someone with the
+HMAC key and database access, are caught only by the copies in the
+customer's SIEM ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
+
 ## 2026-09-28 — The KMS hands over an SBOM; it does not track vulnerabilities (2.19.0-beta)
 
 **Decision.** The owner: tracking vulnerabilities is "not the job of [an]

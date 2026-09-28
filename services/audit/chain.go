@@ -64,19 +64,6 @@ func chainHash(previous string, input []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// epochHash computes SHA256(previousEpochRoot || treeRoot) for cross-epoch linking.
-// If previousEpochRoot is empty (epoch 0), uses "EPOCH_GENESIS" as the prefix.
-func epochHash(previousEpochRoot, treeRoot string) string {
-	prefix := previousEpochRoot
-	if prefix == "" {
-		prefix = "EPOCH_GENESIS"
-	}
-	h := sha256.New()
-	_, _ = h.Write([]byte(prefix))
-	_, _ = h.Write([]byte(treeRoot))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 // categoryGroupForService maps a service name to a FIPS 140-3 functional category.
 func categoryGroupForService(service string) CategoryGroup {
 	switch strings.ToLower(strings.TrimSpace(service)) {

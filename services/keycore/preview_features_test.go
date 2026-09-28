@@ -45,7 +45,7 @@ func TestEnterpriseControlsCarryFeatureStatus(t *testing.T) {
 	}
 }
 
-// The audit-chain anchor must not claim a Merkle root or external anchoring.
+// The audit-chain anchor must not claim external anchoring.
 func TestAuditChainAnchorClaimsNothingFalse(t *testing.T) {
 	h, _ := newHandlerForTest(t)
 	raw, _ := json.Marshal(map[string]any{"anchor_type": "external", "external_reference": "ticket-42"})
@@ -58,7 +58,7 @@ func TestAuditChainAnchorClaimsNothingFalse(t *testing.T) {
 		Anchor AuditChainAnchor `json:"anchor"`
 	}
 	_ = json.Unmarshal(rr.Body.Bytes(), &out)
-	if out.Anchor.MerkleRoot != "" || out.Anchor.Status != "recorded" || out.Anchor.FeatureStatus != features.StatusPreview ||
+	if out.Anchor.Status != "recorded" || out.Anchor.FeatureStatus != features.StatusPreview ||
 		rr.Header().Get(features.HeaderStatus) != features.StatusPreview {
 		t.Fatalf("anchor must be an honest preview record: %+v", out.Anchor)
 	}

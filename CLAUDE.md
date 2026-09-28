@@ -158,8 +158,10 @@ an approach, record it here or in the matching doc below.
   `FIPS exception: external protocol mandate` explaining why.
 - Algorithms must be on the approved list in `pkg/fips/fips.go`.
 - Key derivation uses HKDF-SHA256 or Argon2id, never a raw hash.
-- Audit records are immutable and tamper-evident (hash chain, per-event HMAC,
-  Merkle epochs).
+- Audit records are immutable and tamper-evident: hash chain, per-event HMAC
+  under a key derived from the audit master key, and ECDSA-P384 signed
+  checkpoints of each chain head
+  ([docs/SECURITY/AUDIT_INTEGRITY.md](docs/SECURITY/AUDIT_INTEGRITY.md)).
 - Every HTTP response carries `pkg/securityheaders`.
 
 ## How we build

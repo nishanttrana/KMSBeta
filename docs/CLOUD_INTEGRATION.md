@@ -1166,7 +1166,7 @@ payload is given, that it matches what was signed.
 Every signature is stored as a record (`GET /svc/signing/signing/records`)
 with a per-tenant sequence number (`transparency_index`) and a hash over the
 payload and signature (`transparency_hash`). This is an append-only record in
-the KMS, not a public transparency log: there is no Merkle tree, inclusion
+the KMS, not a public transparency log: there is no hash tree, inclusion
 proof or Rekor-compatible API.
 
 ### 5.8 Security Considerations for Signing

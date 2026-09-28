@@ -116,7 +116,7 @@ export async function getAuditTimeline(
 
 // GET /audit/targets/{id}/integrity: each of the target's audit events
 // recomputed from the stored row and checked against its chain links, its
-// HMAC and the Merkle root sealed with its epoch.
+// HMAC and the chain head signed by the checkpoint that covers it.
 export type AuditEventIntegrity = {
   event_id: string;
   sequence: number;
@@ -127,8 +127,9 @@ export type AuditEventIntegrity = {
   content: "intact" | "altered";
   link: "linked" | "genesis" | "anchor" | "broken" | "predecessor_missing";
   signature: "verified" | "unsigned" | "not_checked" | "mismatch" | "key_unknown";
-  seal: "sealed" | "pending" | "leaf_mismatch" | "root_mismatch" | "epoch_unlinked";
-  epoch_number?: number;
+  seal: "sealed" | "pending" | "key_unknown" | "signature_invalid" | "head_mismatch";
+  checkpoint_id?: string;
+  checkpoint_sequence?: number;
   failures?: string[];
 };
 
@@ -210,89 +211,30 @@ export async function getAuditConfig(session: AuthSession): Promise<AuditConfig>
   };
 }
 
-// ── Merkle Tree Types & API ─────────────────────────────────
-
-export type MerkleEpoch = {
-  id: string;
-  tenant_id: string;
-  epoch_number: number;
-  seq_from: number;
-  seq_to: number;
-  leaf_count: number;
-  tree_root: string;
-  created_at: string;
-};
-
-export type MerkleProofSibling = {
-  hash: string;
-  position: "left" | "right";
-};
-
-export type MerkleProofResponse = {
+// GET /audit/checkpoints: the tenant's newest signed checkpoints. Each one
+// is an ECDSA-P384 signature over the chain head (message), verified by the
+// service against a trusted key and the stored row. message, signature
+// (base64 DER) and public_key_pem are all an outside verifier needs.
+export type AuditCheckpoint = {
   event_id: string;
+  chain_node?: string;
   sequence: number;
-  epoch_id: string;
-  leaf_hash: string;
-  leaf_index: number;
-  siblings: MerkleProofSibling[];
-  root: string;
+  chain_hash: string;
+  signed_at: string;
+  key_id: string;
+  algorithm: string;
+  message: string;
+  signature: string;
+  public_key_pem?: string;
+  status: "verified" | "key_unknown" | "signature_invalid" | "head_mismatch";
 };
 
-export type MerkleVerifyResult = {
-  valid: boolean;
-  root: string;
-  request_id: string;
-};
-
-export async function listMerkleEpochs(
-  session: AuthSession,
-  limit = 50
-): Promise<MerkleEpoch[]> {
-  const out = await serviceRequest<{ items?: MerkleEpoch[] }>(
+export async function listAuditCheckpoints(session: AuthSession, limit = 50): Promise<AuditCheckpoint[]> {
+  const out = await serviceRequest<{ items?: AuditCheckpoint[] }>(
     session, "audit",
-    `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`
+    `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`
   );
   return Array.isArray(out?.items) ? out.items : [];
-}
-
-export async function getEventMerkleProof(
-  session: AuthSession,
-  eventId: string
-): Promise<MerkleProofResponse> {
-  const out = await serviceRequest<{ proof?: MerkleProofResponse }>(
-    session, "audit",
-    `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`
-  );
-  if (!out?.proof) throw new Error("Proof not available (event may not be in a Merkle epoch yet)");
-  return out.proof;
-}
-
-export async function buildMerkleEpoch(
-  session: AuthSession,
-  maxLeaves = 1000
-): Promise<{ epoch?: MerkleEpoch; leaves?: number; status?: string }> {
-  const out = await serviceRequest<{ epoch?: MerkleEpoch; leaves?: number; status?: string }>(
-    session, "audit",
-    `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`,
-    { method: "POST" }
-  );
-  return out || {};
-}
-
-export async function verifyMerkleProof(
-  session: AuthSession,
-  proof: { leaf_hash: string; leaf_index: number; siblings: MerkleProofSibling[]; root: string }
-): Promise<MerkleVerifyResult> {
-  const out = await serviceRequest<MerkleVerifyResult>(
-    session, "audit",
-    `/audit/merkle/verify`,
-    { method: "POST", body: JSON.stringify(proof) }
-  );
-  return {
-    valid: Boolean(out?.valid),
-    root: String(out?.root || ""),
-    request_id: String(out?.request_id || ""),
-  };
 }
 
 function downloadBlob(content: string, filename: string, mimeType: string): void {

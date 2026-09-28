@@ -89,7 +89,6 @@ type AuditChainAnchor struct {
 	AnchorID          string         `json:"anchor_id"`
 	TenantID          string         `json:"tenant_id"`
 	AnchorType        string         `json:"anchor_type"`
-	MerkleRoot        string         `json:"merkle_root"`
 	PreviousHash      string         `json:"previous_hash,omitempty"`
 	AnchorHash        string         `json:"anchor_hash"`
 	ExternalReference string         `json:"external_reference,omitempty"`

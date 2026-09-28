@@ -64,7 +64,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func isAuditEventPath(path string) bool {
 	return strings.HasPrefix(path, "/audit/events") ||
 		strings.HasPrefix(path, "/audit/chain") ||
-		strings.HasPrefix(path, "/audit/merkle/epochs")
+		strings.HasPrefix(path, "/audit/checkpoints")
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -80,12 +80,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /audit/stream", h.handleStream)
 	mux.HandleFunc("GET /audit/config", h.handleAuditConfig)
 
-	// Merkle tree integrity routes
-	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
-	mux.HandleFunc("GET /audit/merkle/epochs", h.handleMerkleEpochs)
-	mux.HandleFunc("GET /audit/merkle/epochs/{id}", h.handleMerkleEpoch)
-	mux.HandleFunc("GET /audit/events/{id}/proof", h.handleEventProof)
-	mux.HandleFunc("POST /audit/merkle/verify", h.handleMerkleVerify)
+	// Per-target integrity and signed checkpoints (target_integrity.go, checkpoint.go)
 	h.integrityRouter(selfEmitter{h.svc}).MountOn(mux)
 
 	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
@@ -322,6 +317,7 @@ func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 		"boundary_version": "1.0",
 		"approved_algorithms": []string{
 			"HMAC-SHA-256",
+			"ECDSA-P384",
 			"SHA-256",
 			"SHA-384",
 			"SHA-512",
@@ -329,11 +325,12 @@ func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 			"TLS 1.3",
 		},
 		"non_approved_algorithms": []string{},
-		"approved_key_sizes":      map[string]int{"HMAC-SHA-256": 256, "AES": 256},
+		"approved_key_sizes":      map[string]int{"HMAC-SHA-256": 256, "AES": 256, "ECDSA": 384},
 		"services_in_boundary": []string{
 			"audit event ingestion",
 			"audit chain HMAC signing (HMAC-SHA-256)",
-			"Merkle tree construction (SHA-256)",
+			"hash chain (SHA-256)",
+			"signed chain checkpoints (ECDSA-P384 over SHA-384)",
 			"WAL integrity (HMAC-SHA-256)",
 			"TLS 1.3 transport (AES-256-GCM)",
 		},
@@ -346,7 +343,7 @@ func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 		"kdf_used":                "HKDF-SHA-256 (event signing key derivation where applicable)",
 		"self_test_on_startup":    true,
 		"continuous_health_test":  true,
-		"tamper_evidence":         "HMAC-SHA-256 per event + Merkle epoch chain with cross-epoch SHA-256 linkage",
+		"tamper_evidence":         "SHA-256 hash chain + HMAC-SHA-256 per event + ECDSA-P384 signed chain-head checkpoints",
 		"request_id":              reqID,
 	})
 }
@@ -437,113 +434,5 @@ func (h *Handler) publishClusterSync(r *http.Request, tenantID string, entityTyp
 		EntityID:   entityID,
 		Operation:  operation,
 		Payload:    payload,
-	})
-}
-
-// ── Merkle Tree Handlers ─────────────────────────────────────
-
-func (h *Handler) handleMerkleBuild(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	maxLeaves := atoi(r.URL.Query().Get("max_leaves"))
-	if maxLeaves <= 0 {
-		maxLeaves = 1000
-	}
-	result, err := h.store.BuildMerkleEpoch(r.Context(), tenantID, maxLeaves)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "build_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	if result == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"status":     "no_new_events",
-			"request_id": reqID,
-		})
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"epoch":      result.Epoch,
-		"leaves":     result.Leaves,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleMerkleEpochs(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	limit := atoi(r.URL.Query().Get("limit"))
-	items, err := h.store.ListMerkleEpochs(r.Context(), tenantID, limit)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleMerkleEpoch(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	epoch, err := h.store.GetMerkleEpoch(r.Context(), tenantID, r.PathValue("id"))
-	if errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusNotFound, "not_found", "epoch not found", reqID, tenantID)
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"epoch": epoch, "request_id": reqID})
-}
-
-func (h *Handler) handleEventProof(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	proof, err := h.store.GetEventMerkleProof(r.Context(), tenantID, r.PathValue("id"))
-	if errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusNotFound, "not_found", "event not in any merkle epoch", reqID, tenantID)
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "proof_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"proof": proof, "request_id": reqID})
-}
-
-func (h *Handler) handleMerkleVerify(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var req struct {
-		LeafHash  string         `json:"leaf_hash"`
-		LeafIndex int            `json:"leaf_index"`
-		Siblings  []ProofSibling `json:"siblings"`
-		Root      string         `json:"root"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	proof := MerkleProof{
-		LeafHash:  req.LeafHash,
-		LeafIndex: req.LeafIndex,
-		Siblings:  req.Siblings,
-		Root:      req.Root,
-	}
-	valid := VerifyProof(proof)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"valid":      valid,
-		"root":       req.Root,
-		"request_id": reqID,
 	})
 }

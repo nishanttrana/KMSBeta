@@ -17,7 +17,7 @@ Implemented Tier 1 capabilities:
 | Key Health Scoring and Monitoring | Implemented | 0-100 health score, backup status, expiry/rotation warnings, recommendations |
 | Key Inventory and Dependency Mapping | Implemented | Key inventory sync, dependency records, orphaned key and duplicate KCV detection |
 
-Tier 2-4 items remain documented roadmap/foundation items. Existing platform foundations already cover parts of scheduling, Merkle audit, KDF, key verification, compliance, binding, edge agents, sharing, metadata, and threat protection.
+Tier 2-4 items remain documented roadmap/foundation items. Existing platform foundations already cover parts of scheduling, signed audit checkpoints, KDF, key verification, compliance, binding, edge agents, sharing, metadata, and threat protection.
 
 ## Data Model
 
@@ -527,7 +527,7 @@ curl -X POST "$BASE/enterprise/audit-chain/anchors?tenant_id=$TENANT" \
   -d '{"anchor_type":"external_notary","external_reference":"notary://2026-06-09/root"}'
 ```
 
-> **Preview:** an anchor is a local record with status `recorded`: the previous anchor hash, the anchor hash (a hash chain over anchor records), and your external reference. It has **no Merkle root** and nothing is published externally. Until 2026-09-25 anchors reported a "merkle_root" that was not computed from audit events; those rows were relabelled (keycore migration 018). The audit service's hash chain, per-event HMAC and Merkle epochs are the tamper evidence.
+> **Preview:** an anchor is a local record with status `recorded`: the previous anchor hash, the anchor hash (a hash chain over anchor records), and your external reference. It has **no tree root** and nothing is published externally. Until 2026-09-25 anchors reported a root that was not computed from audit events; those rows were relabelled (keycore migration 018) and the column was dropped in 3.0.0-beta (migration 027). The audit service's hash chain, per-event HMAC and signed checkpoints are the tamper evidence ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
 
 ### Key Material Verification
 

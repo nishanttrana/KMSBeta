@@ -125,10 +125,11 @@ func main() {
 	// background: the audit pipeline never waits on keycore (webhook_creds.go).
 	selfAudit := selfEmitter{svc}
 	auditFn := func(ctx context.Context, ev AuditEvent) { _, _ = svc.ProcessEvent(ctx, ev) }
+	mekSource := mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["audit"])
 	go svc.openCredsKeyring(ctx, func(ctx context.Context) (*mek.Keyring, error) {
 		return mek.Open(ctx, mek.Options{
 			Tables: mek.Catalog["audit"],
-			Source: mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["audit"]),
+			Source: mekSource,
 			DB:     dbConn.SQL(),
 			Audit:  selfAudit,
 			Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
@@ -136,6 +137,14 @@ func main() {
 			Wait:   10 * time.Minute,
 		})
 	}, func(k *mek.Keyring) {
+		// The event HMAC key comes from the master key (event_hmac_key.go);
+		// checkpoints start only once events are signed with it, so their
+		// key registrations stay verifiable across restarts.
+		if err := svc.installEventHMACKeys(ctx, k, mekSource.Derive); err != nil {
+			logger.Printf("audit event HMAC key: %v", err)
+		} else {
+			go svc.checkpointLoop(ctx, logger.Printf)
+		}
 		kernel := route.New("audit", selfAudit, logger)
 		k.Routes(kernel, "audit")
 		kernel.MountOn(handler.mux)
@@ -234,33 +243,6 @@ func main() {
 		}
 	}()
 
-	// Merkle epoch builder — builds epochs every hour or when 1000+ events accumulate
-	go func() {
-		t := time.NewTicker(1 * time.Hour)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				rows, err := dbConn.SQL().QueryContext(ctx, `SELECT DISTINCT tenant_id FROM audit_events`)
-				if err != nil {
-					continue
-				}
-				for rows.Next() {
-					var tenantID string
-					if err := rows.Scan(&tenantID); err == nil {
-						if result, err := store.BuildMerkleEpoch(ctx, tenantID, 1000); err == nil && result != nil {
-							logger.Printf("merkle epoch built: tenant=%s epoch=%d root=%s leaves=%d",
-								tenantID, result.Epoch.EpochNumber, result.Epoch.TreeRoot, result.Leaves)
-						}
-					}
-				}
-				rows.Close() //nolint:errcheck
-			}
-		}
-	}()
-
 	httpPort := envOr("HTTP_PORT", "8070")
 	authedHandler := pkgjwtauth.MustWrap("AUDIT", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, pub, "logger"))
@@ -309,7 +291,7 @@ func loadAuditConfig() AuditConfig {
 		WALPath:         envOr("AUDIT_WAL_PATH", filepath.Join("var", "audit-wal", "buffer.log")),
 		WALMaxSizeMB:    int64(envInt("AUDIT_WAL_MAX_SIZE_MB", 512)),
 		WALHMACKey:      loadKey32("AUDIT_WAL_HMAC_KEY_B64"),
-		EventSigningKey: loadKey32("AUDIT_EVENT_SIGNING_KEY_B64"),
+		EventSigningKey: legacyEventKey(),
 	}
 }
 

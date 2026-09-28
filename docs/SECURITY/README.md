@@ -49,6 +49,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [HSM_INTEGRATION.md](HSM_INTEGRATION.md): customer HSMs through their own
   PKCS#11 library (hsm-connector); a per-tenant key in the HSM for new keys,
   and per-key HSM-resident keys. There is no Vecta HSM.
+- [AUDIT_INTEGRITY.md](AUDIT_INTEGRITY.md): how the audit log is
+  tamper-evident: hash chain, per-event HMAC under a key derived from the
+  audit master key, and ECDSA-P384 signed checkpoints of each chain head;
+  what each proves, how to verify outside the KMS, and what is still open.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.

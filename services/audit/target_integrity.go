@@ -13,10 +13,11 @@ import (
 
 // Per-target audit integrity: the proof the key "History & usage" panel
 // shows for one key's audit trail. Every check recomputes from what is
-// stored now (the row, its neighbours, the epoch's leaves) and compares with
-// an independent record: the chain link, the HMAC, the root sealed with the
-// epoch. Nothing is compared with a value derived from itself (learning.md
-// 2026-09-27: the lineage "tamper check" did exactly that and always passed).
+// stored now (the row, its neighbours, the rows up to a signed checkpoint)
+// and compares with an independent record: the chain link, the HMAC, the
+// head a checkpoint signed. Nothing is compared with a value derived from
+// itself (learning.md 2026-09-27: the lineage "tamper check" did exactly
+// that and always passed).
 
 const maxTargetIntegrityEvents = 500
 
@@ -37,28 +38,26 @@ const (
 	integrityKeyUnknown         = "key_unknown"
 	integritySealed             = "sealed"
 	integrityPending            = "pending"
-	integrityLeafMismatch       = "leaf_mismatch"
-	integrityRootMismatch       = "root_mismatch"
-	integrityEpochUnlinked      = "epoch_unlinked"
 )
 
 // EventIntegrity is the verification of one audit event.
 type EventIntegrity struct {
-	EventID     string       `json:"event_id"`
-	Sequence    int64        `json:"sequence"`
-	ChainNode   string       `json:"chain_node,omitempty"`
-	Timestamp   time.Time    `json:"timestamp"`
-	Action      string       `json:"action"`
-	ActorID     string       `json:"actor_id"`
-	Result      string       `json:"result"`
-	Content     string       `json:"content"`   // intact | altered
-	Link        string       `json:"link"`      // linked | genesis | anchor | broken | predecessor_missing
-	Signature   string       `json:"signature"` // verified | unsigned | not_checked | mismatch | key_unknown
-	Seal        string       `json:"seal"`      // sealed | pending | leaf_mismatch | root_mismatch | epoch_unlinked
-	EpochID     string       `json:"epoch_id,omitempty"`
-	EpochNumber int          `json:"epoch_number,omitempty"`
-	Proof       *MerkleProof `json:"proof,omitempty"`
-	Failures    []string     `json:"failures,omitempty"`
+	EventID   string    `json:"event_id"`
+	Sequence  int64     `json:"sequence"`
+	ChainNode string    `json:"chain_node,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	Action    string    `json:"action"`
+	ActorID   string    `json:"actor_id"`
+	Result    string    `json:"result"`
+	Content   string    `json:"content"`   // intact | altered
+	Link      string    `json:"link"`      // linked | genesis | anchor | broken | predecessor_missing
+	Signature string    `json:"signature"` // verified | unsigned | not_checked | mismatch | key_unknown
+	// Seal: sealed (covered by a verified checkpoint) | pending (no
+	// checkpoint yet) | key_unknown | signature_invalid | head_mismatch
+	Seal               string   `json:"seal"`
+	CheckpointID       string   `json:"checkpoint_id,omitempty"`
+	CheckpointSequence int64    `json:"checkpoint_sequence,omitempty"`
+	Failures           []string `json:"failures,omitempty"`
 }
 
 // TargetIntegrity is the verification of every audit event naming a target.
@@ -76,18 +75,10 @@ type TargetIntegrity struct {
 	Events               []EventIntegrity `json:"events"`
 }
 
-type sealedEpoch struct {
-	number   int
-	tree     MerkleTree
-	rootOK   bool
-	linkedOK bool
-	root     string
-}
-
 // VerifyTarget checks the newest limit audit events whose target_id is
 // targetID: each row's content against its chain hash, its links to both
-// neighbours in its chain, its HMAC, and, once sealed, its inclusion in the
-// epoch root stored at sealing time.
+// neighbours in its chain, its HMAC, and, once a checkpoint covers it, that
+// its row is in the history the checkpoint's signed head commits to.
 func (s *SQLStore) VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error) {
 	if limit <= 0 || limit > maxTargetIntegrityEvents {
 		limit = maxTargetIntegrityEvents
@@ -121,12 +112,17 @@ LIMIT $3
 	}
 
 	self := s.chainNode(ctx)
-	epochs := map[string]*sealedEpoch{}
 	for _, ev := range events {
-		r, err := s.verifyEvent(ctx, tenantID, self, ev, epochs)
+		r, err := s.verifyEvent(ctx, tenantID, self, ev)
 		if err != nil {
 			return out, err
 		}
+		out.Events = append(out.Events, r)
+	}
+	if err := s.sealWithCheckpoints(ctx, tenantID, self, events, out.Events); err != nil {
+		return out, err
+	}
+	for _, r := range out.Events {
 		if len(r.Failures) > 0 {
 			out.Failed++
 		}
@@ -139,7 +135,6 @@ LIMIT $3
 		if r.Signature == integrityUnsigned {
 			out.Unsigned++
 		}
-		out.Events = append(out.Events, r)
 	}
 	out.EventsChecked = len(out.Events)
 	switch {
@@ -153,7 +148,7 @@ LIMIT $3
 	return out, nil
 }
 
-func (s *SQLStore) verifyEvent(ctx context.Context, tenantID, self string, ev AuditEvent, epochs map[string]*sealedEpoch) (EventIntegrity, error) {
+func (s *SQLStore) verifyEvent(ctx context.Context, tenantID, self string, ev AuditEvent) (EventIntegrity, error) {
 	r := EventIntegrity{
 		EventID: ev.ID, Sequence: ev.Sequence, ChainNode: ev.ChainNode, Timestamp: ev.Timestamp,
 		Action: ev.Action, ActorID: ev.ActorID, Result: ev.Result,
@@ -199,44 +194,71 @@ func (s *SQLStore) verifyEvent(ctx context.Context, tenantID, self string, ev Au
 		}
 	}
 
-	// Seal: the recomputed hash, walked up the epoch's tree, must reach the
-	// root stored when the epoch was sealed.
-	var epochID string
-	var leafIndex int
-	var leafHash string
-	err = s.db.SQL().QueryRowContext(ctx, `
-SELECT epoch_id, leaf_index, leaf_hash FROM audit_merkle_leaves WHERE tenant_id=$1 AND event_id=$2
-`, tenantID, ev.ID).Scan(&epochID, &leafIndex, &leafHash)
-	if errors.Is(err, sql.ErrNoRows) {
-		r.Seal = integrityPending
-		return r, nil
-	}
-	if err != nil {
-		return r, err
-	}
-	ep, err := s.loadSealedEpoch(ctx, tenantID, epochID, epochs)
-	if err != nil {
-		return r, err
-	}
-	r.EpochID, r.EpochNumber = epochID, ep.number
-	r.Seal = integritySealed
-	proof, ok := GenerateProof(ep.tree, leafIndex)
-	if ok {
-		proof.LeafHash, proof.Root = recomputed, ep.root
-		r.Proof = &proof
-	}
-	switch {
-	case leafHash != recomputed:
-		r.Seal = integrityLeafMismatch
-		fail("merkle_leaf_mismatch")
-	case !ep.rootOK || !ok || !VerifyProof(proof):
-		r.Seal = integrityRootMismatch
-		fail("merkle_root_mismatch")
-	case !ep.linkedOK:
-		r.Seal = integrityEpochUnlinked
-		fail("merkle_epoch_unlinked")
-	}
 	return r, nil
+}
+
+// sealWithCheckpoints sets each event's seal. An event is sealed when the
+// first checkpoint of its chain at or after it verifies under a trusted key,
+// and the stored rows from the event to the signed head are contiguous,
+// linked, and end at the signed chain hash. With the content check, that
+// ties the event's stored fields to the signature. Events under one
+// checkpoint share one walk from the lowest of them.
+func (s *SQLStore) sealWithCheckpoints(ctx context.Context, tenantID, self string, events []AuditEvent, results []EventIntegrity) error {
+	type group struct {
+		cp    checkpoint
+		nodes []interface{}
+		from  int64
+		idx   []int
+	}
+	groups := map[string]*group{}
+	var order []string
+	for i, ev := range events {
+		nodes := chainNodes(ev.ChainNode, self)
+		cp, ok, err := s.coveringCheckpoint(ctx, tenantID, nodes, ev.Sequence)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			results[i].Seal = integrityPending
+			continue
+		}
+		g := groups[cp.EventID]
+		if g == nil {
+			g = &group{cp: cp, nodes: nodes, from: ev.Sequence}
+			groups[cp.EventID] = g
+			order = append(order, cp.EventID)
+		}
+		if ev.Sequence < g.from {
+			g.from = ev.Sequence
+		}
+		g.idx = append(g.idx, i)
+	}
+	for _, id := range order {
+		g := groups[id]
+		status, err := s.verifyCheckpointSignature(ctx, g.cp)
+		if err != nil {
+			return err
+		}
+		if status == checkpointVerified {
+			linked, err := s.segmentLinked(ctx, tenantID, g.nodes, g.from, g.cp.Head.Sequence, g.cp.Head.ChainHash)
+			if err != nil {
+				return err
+			}
+			if !linked {
+				status = checkpointHeadMismatch
+			}
+		}
+		for _, i := range g.idx {
+			r := &results[i]
+			r.CheckpointID, r.CheckpointSequence = g.cp.EventID, g.cp.Head.Sequence
+			r.Seal = integritySealed
+			if status != checkpointVerified {
+				r.Seal = status
+				r.Failures = append(r.Failures, "checkpoint_"+status)
+			}
+		}
+	}
+	return nil
 }
 
 // checkLinks verifies ev against its neighbours in its own chain (this
@@ -299,64 +321,6 @@ SELECT COUNT(*) FROM audit_events WHERE tenant_id=$1 AND sequence<$2 AND chain_n
 	return link, nil
 }
 
-// loadSealedEpoch rebuilds an epoch's tree from its stored leaves and checks
-// it against the stored root, the stored epoch hash, and the next epoch's
-// link back to it.
-func (s *SQLStore) loadSealedEpoch(ctx context.Context, tenantID, epochID string, cache map[string]*sealedEpoch) (*sealedEpoch, error) {
-	if ep, ok := cache[epochID]; ok {
-		return ep, nil
-	}
-	var (
-		ep                        sealedEpoch
-		prevRoot, epHash, chainNd string
-	)
-	if err := s.db.SQL().QueryRowContext(ctx, `
-SELECT epoch_number, tree_root, COALESCE(previous_epoch_root,''), COALESCE(epoch_hash,''), chain_node
-FROM audit_merkle_epochs WHERE tenant_id=$1 AND id=$2
-`, tenantID, epochID).Scan(&ep.number, &ep.root, &prevRoot, &epHash, &chainNd); err != nil {
-		return nil, err
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT leaf_hash FROM audit_merkle_leaves WHERE tenant_id=$1 AND epoch_id=$2 ORDER BY leaf_index ASC
-`, tenantID, epochID)
-	if err != nil {
-		return nil, err
-	}
-	var hashes []string
-	for rows.Next() {
-		var h string
-		if err := rows.Scan(&h); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		hashes = append(hashes, h)
-	}
-	_ = rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	ep.tree = BuildMerkleTree(hashes)
-	ep.rootOK = ep.tree.Root() == ep.root && (epHash == "" || epHash == epochHash(prevRoot, ep.root))
-
-	// The next epoch in this chain carries this root forward; rewriting this
-	// epoch's root alone breaks that link.
-	var nextPrev string
-	err = s.db.SQL().QueryRowContext(ctx, `
-SELECT COALESCE(previous_epoch_root,'') FROM audit_merkle_epochs
-WHERE tenant_id=$1 AND chain_node=$2 AND epoch_number=$3
-`, tenantID, chainNd, ep.number+1).Scan(&nextPrev)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		ep.linkedOK = true
-	case err != nil:
-		return nil, err
-	default:
-		ep.linkedOK = nextPrev == ep.root
-	}
-	cache[epochID] = &ep
-	return &ep, nil
-}
-
 // VerifyTarget verifies a target's audit trail. A failure is itself a
 // critical audit.audit.chain_broken event, as a whole-chain break is.
 func (s *Service) VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error) {
@@ -379,12 +343,16 @@ func (s *Service) VerifyTarget(ctx context.Context, tenantID, targetID string, l
 	return res, nil
 }
 
-// integrityRouter serves per-target verification through the route kernel.
+// integrityRouter serves per-target verification and the signed
+// checkpoints through the route kernel.
 func (h *Handler) integrityRouter(audit route.Emitter) *route.Router {
 	r := route.New("audit", audit, nil)
 	r.Handle("GET /audit/targets/{target_id}/integrity", route.Spec{
 		Action: "target_integrity_verified", Permission: "audit.integrity.read", Resource: "audit_trail", TargetParam: "target_id",
 	}, h.verifyTargetIntegrity)
+	r.Handle("GET /audit/checkpoints", route.Spec{
+		Action: "checkpoints_listed", Permission: "audit.integrity.read", Resource: "audit_trail",
+	}, h.listCheckpoints)
 	return r
 }
 

@@ -824,7 +824,7 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | GET | `/svc/keycore/enterprise/dspm/events` | Export DSPM/posture-compatible normalized events. |
 | POST | `/svc/keycore/enterprise/kdf/derive` | Derive key material with HKDF-SHA256, PBKDF2-SHA256, Scrypt, or Argon2id. |
 | GET | `/svc/keycore/enterprise/audit-chain/anchors` | List audit-chain anchors. |
-| POST | `/svc/keycore/enterprise/audit-chain/anchors` | Create a Merkle-style audit-chain anchor with optional external reference. |
+| POST | `/svc/keycore/enterprise/audit-chain/anchors` | Preview: record a local audit-chain anchor with an optional external reference (`anchor_type` defaults to `local`; no tree root since 3.0.0-beta). |
 | GET | `/svc/keycore/enterprise/compliance/dashboard` | KeyCore enterprise compliance score and evidence summary. |
 | GET | `/svc/keycore/enterprise/cost/optimization` | Usage-cost estimate and optimization recommendations. |
 | POST | `/svc/keycore/enterprise/verification/fingerprint` | Verify a key KCV/fingerprint using constant-time comparison. |
@@ -1078,11 +1078,11 @@ Fields: name, type (server/client/code_signing/email/ca), keyUsage[], extendedKe
 
 ## Service 4: Audit (`/svc/audit/`)
 
-Immutable, Merkle-chained audit log with SIEM export.
+Immutable audit log: SHA-256 hash chain, per-event HMAC and signed checkpoints ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)), with SIEM export.
 
 ### AuditEvent Object
 
-id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorName, actorIp, resourceType, resourceId, resourceName, outcome (success/failure/denied), errorCode, requestId, merkleHash, prevHash, metadata
+id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorName, actorIp, resourceType, resourceId, resourceName, outcome (success/failure/denied), errorCode, requestId, chain_hash, previous_hash, hmac_sig, metadata
 
 ---
 
@@ -1115,8 +1115,8 @@ Response:
     "outcome": "failure",
     "errorCode": "UNAUTHORIZED",
     "requestId": "req-01ARZ3NDEKTSV4RRFFQ69G5FAV",
-    "merkleHash": "sha256:aabbccddeeff...",
-    "prevHash": "sha256:001122334455..."
+    "chain_hash": "aabbccddeeff...",
+    "previous_hash": "001122334455..."
   }],
   "nextPageToken": null,
   "totalCount": 1
@@ -1153,17 +1153,6 @@ Single event.
 
 ---
 
-### GET /svc/audit/audit/events/{id}/proof
-
-Merkle inclusion proof for a sealed event. Response `proof`: `event_id`,
-`sequence`, `epoch_id`, `leaf_hash`, `leaf_index`, `siblings[]` (`hash`,
-`position`) and `root`. Since 1.38.0-beta `root` is the root stored when the
-epoch was sealed, not the root of a tree rebuilt from the current leaves, so
-a proof over an altered leaf no longer verifies. `404` until the event is in
-an epoch.
-
----
-
 ### GET /svc/audit/audit/targets/{target_id}/integrity
 
 Permission `audit.integrity.read`; kernel event
@@ -1176,17 +1165,38 @@ what is stored now and compares with an independent record:
 |---|---|---|
 | `content` | the row's fields reproduce its `chain_hash` | `intact`, `altered` |
 | `link` | the predecessor's `chain_hash` is this row's `previous_hash`, and the successor's `previous_hash` is this row's `chain_hash` | `linked`, `genesis`, `anchor` (a replicated chain's first row here), `broken`, `predecessor_missing` |
-| `signature` | per-event HMAC over the chain hash, under the audit signing key | `verified`, `unsigned`, `not_checked` (no key on this node), `mismatch`, `key_unknown` |
-| `seal` | the recomputed hash, walked up its epoch's tree, reaches the root stored at sealing; the epoch hash and the next epoch's link agree | `sealed`, `pending` (not yet in an epoch), `leaf_mismatch`, `root_mismatch`, `epoch_unlinked` |
+| `signature` | per-event HMAC over the chain hash, under a key derived from the audit master key | `verified`, `unsigned`, `not_checked` (no key on this node), `mismatch`, `key_unknown` |
+| `seal` | the first checkpoint of the event's chain at or after it verifies under a trusted key, and the stored rows from the event to the signed head are contiguous, linked and end at the signed chain hash | `sealed`, `pending` (no checkpoint yet), `key_unknown`, `signature_invalid`, `head_mismatch` |
 
 Response `integrity`: `verdict` (`intact`, `tampered`, `no_events`),
 `events_checked`, `failed`, `sealed`, `pending`, `unsigned`, `truncated`,
 `signing_key_configured`, `verified_at`, and `events[]` with the fields above,
-`failures[]` and, when sealed, `epoch_number` and `proof` (`leaf_hash`,
-`leaf_index`, `siblings`, `root`). A `tampered` verdict also raises the
+`failures[]` and, once a checkpoint covers the event, `checkpoint_id` and
+`checkpoint_sequence`. A `tampered` verdict also raises the
 critical `audit.audit.chain_broken` (details `scope: target`, `target_id`,
 `breaks`). The Keys detail view's **History & usage** panel calls this from
 **Verify integrity**.
+
+---
+
+### GET /svc/audit/audit/checkpoints
+
+Permission `audit.integrity.read`; kernel event
+`audit.audit.checkpoints_listed` (details `checkpoints`, `failed`). Query
+`limit` (default 50, max 200). Returns `items[]`, newest first, each
+re-verified now: `event_id`, `chain_node`, `sequence` (the signed head),
+`chain_hash`, `signed_at`, `key_id`, `algorithm` (`ECDSA-P384`), `message`
+(the exact signed bytes), `signature` (base64 DER), `public_key_pem` (when
+the key is trusted) and `status` (`verified`, `key_unknown`,
+`signature_invalid`, `head_mismatch`). Any failure also raises the critical
+`audit.audit.chain_broken` (`scope: checkpoints`). Checkpoints are signed
+every 10 minutes for each chain that moved; see
+[SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md) for trust rules
+and how to verify with openssl.
+
+`GET /svc/audit/audit/chain/verify` also checks every checkpoint; its break
+reasons add `checkpoint_key_unknown`, `checkpoint_signature_invalid` and
+`checkpoint_head_mismatch`.
 
 ---
 
@@ -2672,7 +2682,7 @@ routes each request with `pkg/clusterroute.Decide`:
   encrypt, decrypt, sign, verify, mac, wrap, derive, service-derive, attest,
   hash, random; dataprotect fpe, mask, redact, `/app/*`); logins and token
   issuance (auth); this node's system settings (governance); audit publish,
-  search and Merkle operations; the cluster services themselves.
+  search and webhook tests; the cluster services themselves.
 - **Forwarded to the primary:** every other write. The response comes back
   unchanged, with the header `X-Vecta-Forwarded-To: <primary node id>`.
 - **Refused** with `409 primary_write_required`: a write to a service the
@@ -3098,6 +3108,7 @@ Selected events with dedicated audit classification:
 - Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
+- `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.webhook_migrated` / `audit.audit.webhook_migration_refused` (legacy streams moved into compliance connections, 2.10.0-beta; also refused on create/update with `connection_not_streamable`), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
@@ -3223,6 +3234,7 @@ from the code; do not edit by hand.
 - `GET /svc/audit/audit/cbom/diff`
 - `GET /svc/audit/audit/cbom/inventory`
 - `GET /svc/audit/audit/chain/verify`
+- `GET /svc/audit/audit/checkpoints`
 - `POST /svc/audit/audit/cluster/signing-key/export`
 - `POST /svc/audit/audit/cluster/signing-key/import`
 - `POST /svc/audit/audit/cluster/signing-key/join-key`
@@ -3230,12 +3242,7 @@ from the code; do not edit by hand.
 - `GET /svc/audit/audit/correlation/{id}`
 - `GET /svc/audit/audit/events`
 - `GET /svc/audit/audit/events/{id}`
-- `GET /svc/audit/audit/events/{id}/proof`
 - `GET /svc/audit/audit/fips/boundary`
-- `POST /svc/audit/audit/merkle/build`
-- `GET /svc/audit/audit/merkle/epochs`
-- `GET /svc/audit/audit/merkle/epochs/{id}`
-- `POST /svc/audit/audit/merkle/verify`
 - `POST /svc/audit/audit/publish`
 - `POST /svc/audit/audit/search`
 - `GET /svc/audit/audit/session/{session_id}`
@@ -3404,11 +3411,6 @@ from the code; do not edit by hand.
 - `PUT /svc/certs/certs/internal-mtls/{identity}/policy`
 - `POST /svc/certs/certs/internal-mtls/{identity}/rotate`
 - `GET /svc/certs/certs/inventory`
-- `POST /svc/certs/certs/merkle/build`
-- `GET /svc/certs/certs/merkle/epochs`
-- `GET /svc/certs/certs/merkle/epochs/{id}`
-- `GET /svc/certs/certs/merkle/proof/{id}`
-- `POST /svc/certs/certs/merkle/verify`
 - `GET /svc/certs/certs/ocsp`
 - `POST /svc/certs/certs/ocsp`
 - `GET /svc/certs/certs/profiles`

@@ -173,7 +173,7 @@ const SectionOverview = () => (
         ["Post-Quantum", "PQC algorithms (ML-KEM, ML-DSA, SLH-DSA), migration planning, CBOM"],
         ["MPC", "Distributed key generation, threshold signing, multi-party decryption"],
         ["Governance", "Multi-party approval workflows, policy enforcement, compliance frameworks"],
-        ["Audit", "Immutable audit trail with Merkle tree verification; alerts are raised from it by reporting"],
+        ["Audit", "Immutable audit trail: hash chain, per-event HMAC and signed checkpoints; alerts are raised from it by reporting"],
         ["Cluster", "Multi-node clustering with etcd consensus, sync replication, role management"],
       ].map(([t, d]) => (
         <Card key={t} style={{ padding: 10 }}>
@@ -183,7 +183,7 @@ const SectionOverview = () => (
       ))}
     </div>
     <H2>Supported Standards</H2>
-    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), ACME Renewal Information (RFC 9773), ACME STAR (RFC 8739), EST (RFC 7030), SCEP, CMPv2, SPIFFE, X.509-SVID, JWT-SVID, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
+    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), ACME Renewal Information (RFC 9773), ACME STAR (RFC 8739), EST (RFC 7030), SCEP, CMPv2, SPIFFE, X.509-SVID, JWT-SVID, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, CycloneDX SBOM/CBOM, SPDX.</P>
   </div>
 );
 
@@ -326,7 +326,7 @@ const SectionArchitecture = () => (
       ["kms-auth", "8001 / 18001", "Authentication, RBAC, tenant management, SSO, API keys"],
       ["kms-keycore", "8010 / 18010", "Key lifecycle, cryptographic operations, access policies"],
       ["kms-policy", "8040 / 18040", "Policy decision point, permission evaluation"],
-      ["kms-audit", "8070 / 18070", "Immutable audit trail, Merkle integrity"],
+      ["kms-audit", "8070 / 18070", "Immutable audit trail, signed checkpoints"],
       ["dashboard", "5173", "Web management UI (React/Vite)"],
       ["envoy", "80/443/5696", "Edge proxy, TLS termination, routing"],
       ["postgres", "5432", "Primary database (PostgreSQL 16)"],
@@ -781,14 +781,6 @@ const SectionApiCerts = () => (
         ["POST", "/certs/ocsp", "OCSP responder for real-time revocation checking"],
       ]} />
     </Collapse>
-    <Collapse title="Merkle Transparency">
-      <EndpointTable rows={[
-        ["POST", "/certs/merkle/build", "Build a Merkle epoch for certificate transparency logging"],
-        ["GET", "/certs/merkle/epochs", "List Merkle transparency epochs"],
-        ["GET", "/certs/merkle/proof/{id}", "Get cryptographic proof that a certificate was properly logged"],
-        ["POST", "/certs/merkle/verify", "Verify a Merkle inclusion proof"],
-      ]} />
-    </Collapse>
 
     <H2>Example: Create CA and Issue Certificate</H2>
     <Code>{`# Step 1: Create a root CA
@@ -828,18 +820,16 @@ const SectionApiAudit = () => (
         ["POST", "/audit/publish", "Publish audit event (internal)"],
         ["GET", "/audit/events", "Query audit events (filterable)"],
         ["GET", "/audit/events/{id}", "Get specific event details"],
-        ["GET", "/audit/events/{id}/proof", "Get Merkle proof for event"],
         ["GET", "/audit/timeline/{target_id}", "Get event timeline for a resource"],
         ["POST", "/audit/search", "Advanced event search"],
         ["GET", "/audit/stats", "Get audit statistics"],
       ]} />
     </Collapse>
-    <Collapse title="Merkle Chain Verification">
+    <Collapse title="Integrity Verification">
       <EndpointTable rows={[
-        ["GET", "/audit/chain/verify", "Verify audit chain integrity"],
-        ["POST", "/audit/merkle/build", "Build Merkle epoch"],
-        ["GET", "/audit/merkle/epochs", "List Merkle epochs"],
-        ["POST", "/audit/merkle/verify", "Verify Merkle tree"],
+        ["GET", "/audit/chain/verify", "Verify the whole chain: links, hashes, HMACs and every signed checkpoint"],
+        ["GET", "/audit/checkpoints", "List signed checkpoints, each re-verified (message, signature, public key)"],
+        ["GET", "/audit/targets/{target_id}/integrity", "Verify one target's audit trail against its covering checkpoints"],
       ]} />
     </Collapse>
     <Collapse title="Alert Management">
@@ -2377,8 +2367,8 @@ const SectionUICerts = () => (
     <P>- SCEP: Legacy protocol for MDM platforms (Intune, Jamf) and network equipment (Cisco, Juniper)</P>
     <P>- CMPv2: Full-featured protocol for telecom and high-security PKI environments</P>
 
-    <H2>Merkle Transparency</H2>
-    <P>Provides cryptographic proof that certificates were properly issued and logged. Build Merkle epochs periodically, then request inclusion proofs for any certificate. Auditors can verify that no rogue certificates were issued outside the logging system.</P>
+    <H2>Issuance Evidence</H2>
+    <P>Every issuance, renewal and revocation is an audit event, so it is protected by the audit chain, its HMACs and signed checkpoints (Audit Log → Checkpoints).</P>
   </div>
 );
 
@@ -2659,13 +2649,13 @@ const SectionUIMonitoring = () => (
     <P>Trends (severity mix, daily volume, MTTD/MTTR, top sources) are under Overview → Analytics → Alerts. The Alert Center is the only place alerts are triaged.</P>
 
     <H2>Audit Log Sub-Pane</H2>
-    <P>Every operation in the KMS is recorded in an append-only, hash-chained audit trail sealed into Merkle epochs. The Audit Log has three tabs: Events, Forensics and Merkle. Charts of audit activity are under Overview → Analytics → Audit activity.</P>
+    <P>Every operation in the KMS is recorded in an append-only, hash-chained, HMAC-signed audit trail covered by signed checkpoints. The Audit Log has three tabs: Events, Forensics and Checkpoints. Charts of audit activity are under Overview → Analytics → Audit activity.</P>
     <H3>Events Tab:</H3>
     <P>Search and filter audit events by service (keycore, auth, secrets, certs, etc.), result (success, failure, denied), severity, time range, and user. Each event shows who did what, when, from where, and the result. Export events as CSV or CEF for SIEM integration.</P>
     <H3>Forensics Tab:</H3>
     <P>Reconstruct what happened to a target (timeline), within a session, or across one correlation ID.</P>
-    <H3>Merkle Tab:</H3>
-    <P>The audit log uses Merkle hash trees to guarantee immutability. Build Merkle epochs (periodic hash checkpoints), request inclusion proofs for any event (prove an event was logged and hasn't been tampered with), and verify the entire chain integrity. This is critical for regulatory audits that require provable, tamper-evident logging.</P>
+    <H3>Checkpoints Tab:</H3>
+    <P>Every 10 minutes each node signs the head of each audit chain it writes (sequence and chain hash) with an ECDSA-P384 key that exists only in memory; its public key is itself an audit event. Because the chain hash commits to every earlier event, a verified checkpoint proves that nothing before it has changed, even against someone holding the HMAC key. Each checkpoint shows the signed message, signature and public key, so an auditor can verify it with openssl outside the KMS.</P>
 
     <H2>Posture Sub-Pane</H2>
     <P>The Posture sub-pane gives you a CISO-level dashboard of cryptographic security health.</P>

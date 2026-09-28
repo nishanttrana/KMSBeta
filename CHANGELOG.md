@@ -4,6 +4,56 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [3.0.0-beta] — 2026-09-28
+
+### Audit integrity: signed checkpoints replace Merkle trees (breaking)
+- **Removed:** the audit service's hourly Merkle epochs and the certs
+  service's certificate "transparency" tree, with their routes
+  (`POST /audit/merkle/build`, `GET /audit/merkle/epochs[/{id}]`,
+  `POST /audit/merkle/verify`, `GET /audit/events/{id}/proof`,
+  `POST /certs/merkle/build`, `GET /certs/merkle/epochs[/{id}]`,
+  `GET /certs/merkle/proof/{id}`, `POST /certs/merkle/verify`), tables (audit
+  migration 013, certs migration 014; the creating migrations 002 and 006
+  are deleted) and dashboard views (Audit Log → Merkle, Certificates →
+  Certificate Transparency). They proved nothing: no root ever left the
+  database, both verify endpoints checked a proof against the root the
+  caller sent, and the tree duplicated odd leaves without domain separation.
+- **Added: signed checkpoints.** Every 10 minutes each node signs the head of
+  each tenant chain it writes (`{tenant, chain, sequence, chain_hash,
+  signed_at}`) with ECDSA-P384, using a key generated in memory at start and
+  never stored. The public key is the audit event
+  `audit.audit.checkpoint_key_created`; each checkpoint is
+  `audit.audit.checkpoint_signed`; failures are
+  `audit.audit.checkpoint_refused`. All reach event streams (SIEM).
+  `GET /audit/checkpoints` lists them re-verified, with the exact signed
+  message, signature and public key for verification with openssl. The
+  Audit Log's new **Checkpoints** tab shows them.
+- **Verification uses them:** `GET /audit/chain/verify` checks every
+  checkpoint (new break reasons `checkpoint_key_unknown`,
+  `checkpoint_signature_invalid`, `checkpoint_head_mismatch`), and
+  `GET /audit/targets/{id}/integrity` seals each event against its covering
+  checkpoint (`seal`: `sealed`, `pending`, `key_unknown`,
+  `signature_invalid`, `head_mismatch`; `checkpoint_id`,
+  `checkpoint_sequence` replace `epoch_number` and `proof`). A rewrite by
+  someone holding the HMAC key is now detected.
+- **Fixed: the event HMAC key was random on every start.** No installer set
+  `AUDIT_EVENT_SIGNING_KEY_B64`, so each restart made a new key and every
+  earlier event became `hmac_key_unknown`. The key is now derived
+  (HKDF-SHA256) from the audit master key (`pkg/mek`, keycore), for every
+  MEK version, so it survives restarts and matches across a cluster
+  (`audit.audit.event_hmac_key_installed`). Events written before the
+  master key opens are stored unsigned. The environment variable is read
+  only if set, to verify events earlier releases signed with it. HMACs of
+  events from before this release that used a lost random key stay
+  unverifiable.
+- **Keycore anchor preview:** the `merkle_root` field and column are gone
+  (keycore migration 027); the default `anchor_type` is `local`.
+- **Also:** `pkg/clusterroute` and `pkg/clustercatalog` drop the removed
+  routes and tables; the FIPS boundary lists ECDSA-P384.
+- Docs: [docs/SECURITY/AUDIT_INTEGRITY.md](docs/SECURITY/AUDIT_INTEGRITY.md)
+  (new), AUDIT_EVENTS_2026-09.md, API_REFERENCE.md, CERTIFICATES.md §9,
+  GOVERNANCE_AND_COMPLIANCE.md §1.6, DECISIONS.md.
+
 ## [2.20.0-beta] — 2026-09-28
 
 ### Cluster routing: drop audit routes that no longer exist

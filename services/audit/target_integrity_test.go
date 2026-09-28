@@ -16,24 +16,9 @@ import (
 	"vecta-kms/pkg/route/routetest"
 )
 
-func addMerkleSchemaForTest(t *testing.T, s *SQLStore) {
-	t.Helper()
-	for _, stmt := range []string{
-		`CREATE TABLE audit_merkle_epochs (id TEXT NOT NULL, tenant_id TEXT NOT NULL, epoch_number INTEGER NOT NULL, seq_from INTEGER NOT NULL,
-			seq_to INTEGER NOT NULL, leaf_count INTEGER NOT NULL, tree_root TEXT NOT NULL, previous_epoch_root TEXT, epoch_hash TEXT,
-			chain_node TEXT NOT NULL DEFAULT '', created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
-		`CREATE TABLE audit_merkle_leaves (epoch_id TEXT NOT NULL, tenant_id TEXT NOT NULL, leaf_index INTEGER NOT NULL, event_id TEXT NOT NULL,
-			sequence INTEGER NOT NULL, leaf_hash TEXT NOT NULL, chain_node TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, epoch_id, leaf_index));`,
-	} {
-		if _, err := s.db.SQL().Exec(stmt); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-// seedKeyTrail writes, for tenant: other, key, key, other, key (sealed in
-// one epoch), then one more key event after the epoch (pending). It returns
-// the key's event IDs in write order.
+// seedKeyTrail writes, for tenant: other, key, key, other, key (covered by
+// one signed checkpoint), then one more key event after it (pending). It
+// returns the key's event IDs in write order.
 func seedKeyTrail(t *testing.T, s *SQLStore, tenant string) []string {
 	t.Helper()
 	ctx := context.Background()
@@ -58,8 +43,8 @@ func seedKeyTrail(t *testing.T, s *SQLStore, tenant string) []string {
 	write(2, "key-1", "audit.key.encrypt")
 	write(3, "key-other", "audit.key.encrypt")
 	write(4, "key-1", "audit.key.rotate")
-	if res, err := s.BuildMerkleEpoch(ctx, tenant, 100); err != nil || res == nil {
-		t.Fatalf("seal epoch: %v %v", res, err)
+	if n, err := NewService(s, AuditConfig{}, nil, nil).SignCheckpoints(ctx); err != nil || n == 0 {
+		t.Fatalf("sign checkpoint: %d %v", n, err)
 	}
 	write(5, "key-1", "audit.key.decrypt")
 	return ids
@@ -90,8 +75,8 @@ func checkIntactTrail(t *testing.T, s *SQLStore, tenant string) []string {
 		if e.Content != integrityIntact || e.Signature != integrityVerified {
 			t.Fatalf("event %s: %+v", e.EventID, e)
 		}
-		if e.Seal == integritySealed && (e.Proof == nil || !VerifyProof(*e.Proof)) {
-			t.Fatalf("sealed event %s has no valid proof: %+v", e.EventID, e.Proof)
+		if e.Seal == integritySealed && (e.CheckpointID == "" || e.CheckpointSequence < e.Sequence) {
+			t.Fatalf("sealed event %s names no covering checkpoint: %+v", e.EventID, e)
 		}
 	}
 	if first := eventResult(t, res, ids[0]); first.Link != integrityLinked {
@@ -102,7 +87,6 @@ func checkIntactTrail(t *testing.T, s *SQLStore, tenant string) []string {
 
 func TestTargetIntegrityIntactTrail(t *testing.T) {
 	s := newAuditStore(t)
-	addMerkleSchemaForTest(t, s)
 	checkIntactTrail(t, s, "t1")
 }
 
@@ -121,7 +105,7 @@ func TestTargetIntegrityRejectsTampering(t *testing.T) {
 				mustExec(t, s, `UPDATE audit_events SET actor_id='mallory' WHERE id=$1`, ids[1])
 				return ids[1]
 			},
-			reasons: []string{"content_altered", "merkle_leaf_mismatch"},
+			reasons: []string{"content_altered"},
 		},
 		{
 			name: "row rewritten with a fresh chain hash",
@@ -132,7 +116,17 @@ func TestTargetIntegrityRejectsTampering(t *testing.T) {
 					chainHash(ev.PreviousHash, eventHashInput(ev)), ids[1])
 				return ids[1]
 			},
-			reasons: []string{"link_broken", "hmac_mismatch", "merkle_leaf_mismatch"},
+			reasons: []string{"link_broken", "hmac_mismatch", "checkpoint_head_mismatch"},
+		},
+		{
+			// An attacker holding the HMAC key rewrites the row and every
+			// later hash and HMAC: links and HMACs pass, the signed head doesn't.
+			name: "history rewritten with the HMAC key",
+			tamper: func(t *testing.T, s *SQLStore, ids []string) string {
+				rewriteChainFrom(t, s, "t1", ids[1], "mallory")
+				return ids[1]
+			},
+			reasons: []string{"checkpoint_head_mismatch"},
 		},
 		{
 			name: "pending row edited",
@@ -143,20 +137,20 @@ func TestTargetIntegrityRejectsTampering(t *testing.T) {
 			reasons: []string{"content_altered"},
 		},
 		{
-			name: "merkle leaf replaced",
+			name: "checkpoint signature replaced",
 			tamper: func(t *testing.T, s *SQLStore, ids []string) string {
-				mustExec(t, s, `UPDATE audit_merkle_leaves SET leaf_hash=$1 WHERE event_id=$2`, strings.Repeat("0", 64), ids[0])
+				setCheckpointDetail(t, s, "signature", "MEUCIQDmallorymallorymallorymallorymallorymallorymalloryAAAA")
 				return ids[0]
 			},
-			reasons: []string{"merkle_leaf_mismatch"},
+			reasons: []string{"checkpoint_signature_invalid"},
 		},
 		{
-			name: "sealed root replaced",
+			name: "checkpoint names an unregistered key",
 			tamper: func(t *testing.T, s *SQLStore, ids []string) string {
-				mustExec(t, s, `UPDATE audit_merkle_epochs SET tree_root=$1`, strings.Repeat("f", 64))
+				setCheckpointDetail(t, s, "key_id", strings.Repeat("A", 64))
 				return ids[0]
 			},
-			reasons: []string{"merkle_root_mismatch"},
+			reasons: []string{"checkpoint_key_unknown"},
 		},
 		{
 			name: "preceding event deleted",
@@ -170,7 +164,6 @@ func TestTargetIntegrityRejectsTampering(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := newAuditStore(t)
-			addMerkleSchemaForTest(t, s)
 			ids := seedKeyTrail(t, s, "t1")
 			victim := tc.tamper(t, s, ids)
 			res, err := s.VerifyTarget(context.Background(), "t1", "key-1", 0)
@@ -190,26 +183,28 @@ func TestTargetIntegrityRejectsTampering(t *testing.T) {
 	}
 }
 
-// A proof served for an event must fail once its leaf is altered: the root
-// comes from the sealed epoch, not from a tree rebuilt from the altered leaves.
-func TestEventMerkleProofUsesSealedRoot(t *testing.T) {
+// After a restart the store holds no key in memory: a checkpoint key is
+// trusted only through its registration event, and only while that event's
+// content and HMAC verify.
+func TestCheckpointKeyTrustedOnlyThroughRegistration(t *testing.T) {
 	s := newAuditStore(t)
-	addMerkleSchemaForTest(t, s)
 	ids := seedKeyTrail(t, s, "t1")
-	proof, err := s.GetEventMerkleProof(context.Background(), "t1", ids[0])
+	restarted := func() *SQLStore {
+		r := NewSQLStore(s.db)
+		r.SetEventSigningKey([]byte("0123456789abcdef0123456789abcdef"))
+		return r
+	}
+	res, err := restarted().VerifyTarget(context.Background(), "t1", "key-1", 0)
+	if err != nil || res.Verdict != "intact" || res.Sealed != 3 {
+		t.Fatalf("after restart: %+v %v", res, err)
+	}
+	mustExec(t, s, `UPDATE audit_events SET hmac_sig=$1 WHERE action=$2`, strings.Repeat("0", 64), actionCheckpointKeyCreated)
+	res, err = restarted().VerifyTarget(context.Background(), "t1", "key-1", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !VerifyProof(MerkleProof{LeafHash: proof.LeafHash, LeafIndex: proof.LeafIndex, Siblings: proof.Siblings, Root: proof.Root}) {
-		t.Fatal("untouched proof does not verify")
-	}
-	mustExec(t, s, `UPDATE audit_merkle_leaves SET leaf_hash=$1 WHERE event_id=$2`, strings.Repeat("0", 64), ids[0])
-	proof, err = s.GetEventMerkleProof(context.Background(), "t1", ids[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if VerifyProof(MerkleProof{LeafHash: proof.LeafHash, LeafIndex: proof.LeafIndex, Siblings: proof.Siblings, Root: proof.Root}) {
-		t.Fatal("proof over an altered leaf verified")
+	if got := eventResult(t, res, ids[0]); got.Seal != checkpointKeyUnknown || !containsString(got.Failures, "checkpoint_key_unknown") {
+		t.Fatalf("key with a forged registration was trusted: %+v", got)
 	}
 }
 
@@ -219,7 +214,6 @@ func TestTargetIntegrityRouteAudited(t *testing.T) {
 	h, svc, store, _ := newAuditHandler(t, false, false)
 	stream := &loopbackPublisher{svc: svc}
 	svc.publisher = stream
-	addMerkleSchemaForTest(t, store)
 	ids := seedKeyTrail(t, store, "t1")
 	rec := &routetest.Recorder{}
 	router := h.integrityRouter(rec)
@@ -346,4 +340,57 @@ func containsString(list []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// rewriteChainFrom sets actor_id on row id and recomputes the chain hash and
+// HMAC of it and every later row of the tenant's chain, as an attacker
+// holding the HMAC key could.
+func rewriteChainFrom(t *testing.T, s *SQLStore, tenant, id, actor string) {
+	t.Helper()
+	rows, err := s.db.SQL().Query(`SELECT `+chainRowColumns+` FROM audit_events WHERE tenant_id=$1 ORDER BY sequence ASC`, tenant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evs []AuditEvent
+	for rows.Next() {
+		ev, err := scanChainRow(rows, tenant)
+		if err != nil {
+			t.Fatal(err)
+		}
+		evs = append(evs, ev)
+	}
+	_ = rows.Close()
+	started, prev := false, ""
+	for _, ev := range evs {
+		if ev.ID == id {
+			started = true
+			ev.ActorID = actor
+		} else if started {
+			ev.PreviousHash = prev
+		}
+		if !started {
+			continue
+		}
+		ev.ChainHash = chainHash(ev.PreviousHash, eventHashInput(ev))
+		sig, _ := s.keys.sign(ev.ChainHash)
+		mustExec(t, s, `UPDATE audit_events SET actor_id=$1, previous_hash=$2, chain_hash=$3, hmac_sig=$4 WHERE id=$5`,
+			ev.ActorID, ev.PreviousHash, ev.ChainHash, sig, ev.ID)
+		prev = ev.ChainHash
+	}
+}
+
+// setCheckpointDetail edits one detail of tenant t1's checkpoint event.
+func setCheckpointDetail(t *testing.T, s *SQLStore, key string, value interface{}) {
+	t.Helper()
+	var id string
+	if err := s.db.SQL().QueryRow(`SELECT id FROM audit_events WHERE tenant_id='t1' AND action=$1`, actionCheckpointSigned).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	ev := loadRow(t, s, id)
+	ev.Details[key] = value
+	raw, err := json.Marshal(ev.Details)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustExec(t, s, `UPDATE audit_events SET details=$1 WHERE id=$2`, string(raw), id)
 }

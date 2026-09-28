@@ -241,7 +241,6 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			anchor_id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,
 			anchor_type TEXT NOT NULL,
-			merkle_root TEXT NOT NULL,
 			previous_hash TEXT,
 			anchor_hash TEXT NOT NULL,
 			external_reference TEXT,
@@ -494,7 +493,7 @@ func TestEnterpriseAuditStoreOperations(t *testing.T) {
 	}
 
 	anchor, err := s.RecordAuditChainAnchor(ctx, AuditChainAnchor{
-		AnchorID: "anch-1", TenantID: "t1", AnchorType: "internal_merkle", MerkleRoot: "sha256:abc",
+		AnchorID: "anch-1", TenantID: "t1", AnchorType: "external",
 		AnchorHash: "sha256:def", ExternalReference: "notary://example/1", Status: "anchored",
 	})
 	if err != nil {

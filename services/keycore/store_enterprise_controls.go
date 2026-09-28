@@ -203,22 +203,21 @@ func (s *SQLStore) RecordAuditChainAnchor(ctx context.Context, anchor AuditChain
 	metadata, _ := json.Marshal(nonNilMap(anchor.Metadata))
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO key_audit_chain_anchors (
-	anchor_id, tenant_id, anchor_type, merkle_root, previous_hash, anchor_hash,
+	anchor_id, tenant_id, anchor_type, previous_hash, anchor_hash,
 	external_reference, status, metadata_json, anchored_at, verified_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 ON CONFLICT (tenant_id, anchor_id) DO UPDATE SET
 	anchor_type = EXCLUDED.anchor_type,
-	merkle_root = EXCLUDED.merkle_root,
 	previous_hash = EXCLUDED.previous_hash,
 	anchor_hash = EXCLUDED.anchor_hash,
 	external_reference = EXCLUDED.external_reference,
 	status = EXCLUDED.status,
 	metadata_json = EXCLUDED.metadata_json,
 	verified_at = EXCLUDED.verified_at
-RETURNING anchor_id, tenant_id, anchor_type, merkle_root, COALESCE(previous_hash,''),
+RETURNING anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
           anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
           anchored_at, verified_at
-`, anchor.AnchorID, anchor.TenantID, anchor.AnchorType, anchor.MerkleRoot,
+`, anchor.AnchorID, anchor.TenantID, anchor.AnchorType,
 		nullable(anchor.PreviousHash), anchor.AnchorHash, nullable(anchor.ExternalReference),
 		anchor.Status, metadata, anchor.AnchoredAt, nullableTime(anchor.VerifiedAt))
 	return scanAuditChainAnchor(row)
@@ -226,7 +225,7 @@ RETURNING anchor_id, tenant_id, anchor_type, merkle_root, COALESCE(previous_hash
 
 func (s *SQLStore) GetAuditChainAnchor(ctx context.Context, tenantID, anchorID string) (AuditChainAnchor, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT anchor_id, tenant_id, anchor_type, merkle_root, COALESCE(previous_hash,''),
+SELECT anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
        anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
        anchored_at, verified_at
 FROM key_audit_chain_anchors
@@ -244,7 +243,7 @@ WHERE tenant_id=$1 AND anchor_id=$2
 
 func (s *SQLStore) ListAuditChainAnchors(ctx context.Context, tenantID string, limit int) ([]AuditChainAnchor, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT anchor_id, tenant_id, anchor_type, merkle_root, COALESCE(previous_hash,''),
+SELECT anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
        anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
        anchored_at, verified_at
 FROM key_audit_chain_anchors
@@ -313,7 +312,7 @@ func scanAuditChainAnchor(scanner interface{ Scan(...any) error }) (AuditChainAn
 		verifiedAt sql.NullTime
 	)
 	if err := scanner.Scan(
-		&item.AnchorID, &item.TenantID, &item.AnchorType, &item.MerkleRoot,
+		&item.AnchorID, &item.TenantID, &item.AnchorType,
 		&item.PreviousHash, &item.AnchorHash, &item.ExternalReference, &item.Status,
 		&rawJSON, &item.AnchoredAt, &verifiedAt,
 	); err != nil {

@@ -194,7 +194,7 @@ func (h *Handler) handleClusterKeyExport(w http.ResponseWriter, r *http.Request)
 	}
 	key, _ := h.svc.signing().current()
 	if len(key) == 0 {
-		writeErr(w, http.StatusConflict, "no_signing_key", "this node has no audit signing key (AUDIT_EVENT_SIGNING_KEY_B64)", requestID(r), "")
+		writeErr(w, http.StatusConflict, "no_signing_key", "this node has no audit signing key yet: the audit master key is not open", requestID(r), "")
 		return
 	}
 	sealed, fp, err := clusterkey.Seal(req.EncapsulationKey, key, req.Context, auditKeyLabel)

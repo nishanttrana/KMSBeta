@@ -63,8 +63,6 @@ var Replicated = map[string][]string{
 		"cert_internal_mtls_policy",
 		"cert_mek_exposure",
 		"cert_mek_state",
-		"cert_merkle_epochs",
-		"cert_merkle_leaves",
 		"cert_profiles",
 		"cert_protocol_configs",
 		"cert_renewal_intelligence",
@@ -312,7 +310,5 @@ var NodeLocal = map[string]string{
 // slice. Until then they stay local to each node.
 var SharedAppend = map[string]string{
 	"audit_events":        "append-only; every node writes its own chain",
-	"audit_merkle_epochs": "per-node Merkle epochs of the audit chain",
-	"audit_merkle_leaves": "per-node Merkle leaves of the audit chain",
 	"auth_login_attempts": "login failures and successes from every node, so lockout counts cluster-wide",
 }

@@ -5,6 +5,37 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A tamper-evidence layer that never leaves the database proves nothing extra
+- **What happened:** the audit and certs services built Merkle epochs for
+  releases. Both `…/merkle/verify` endpoints recomputed a proof and compared
+  it with the root **in the request**, so any self-built proof passed, and
+  no root was ever exported, so anyone able to rewrite events could rewrite
+  the epochs too. The tree also duplicated odd leaves with no leaf/node
+  domain separation (the CVE-2012-2459 shape).
+- **Why it slipped through:** the feature had the right vocabulary (roots,
+  inclusion proofs, epochs) and a passing verify test; nobody asked what
+  independent value the verifier compared against. 1.38.0-beta fixed the
+  proof endpoint for the same reason but left `verify` taking the root from
+  the caller.
+- **Rule:** for every integrity check, name the trusted input that the
+  attacker can't write (a key they don't hold, a copy outside their reach).
+  If there is none, the check is decoration: remove it. Signed checkpoints
+  replace it (docs/SECURITY/AUDIT_INTEGRITY.md).
+
+### A key that silently falls back to random is lost at every restart
+- **What happened:** the audit event HMAC key came from
+  `AUDIT_EVENT_SIGNING_KEY_B64` via `pkgcrypto.LoadKey32`, which generates an
+  ephemeral key when the variable is unset. No installer or compose file
+  set it, so every deployment signed with a new random key after each
+  restart and every earlier event verified as `hmac_key_unknown`.
+- **Why it slipped through:** tests always installed a fixed key, and the
+  fallback only logs a warning. Found while checking what the new
+  checkpoints' key trust depended on.
+- **Rule:** a key that must verify data later can't have a random fallback.
+  Derive it from the service master key (`pkg/mek`) or fail; grep
+  `LoadKey32` for other keys with the same shape (the audit WAL HMAC key is
+  one: still open).
+
 ### Removing a route means removing it from the cluster routing table too
 - **What happened:** 2.14.0-beta and 2.16.0-beta removed audit's alert-rule
   and channel routes, but `pkg/clusterroute.Local` kept listing two of them.

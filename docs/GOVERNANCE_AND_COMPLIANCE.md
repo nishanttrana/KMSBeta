@@ -12,7 +12,7 @@
    - 1.3 [Event Schema](#13-event-schema-all-fields-explained)
    - 1.4 [Complete Action Taxonomy](#14-complete-action-taxonomy)
    - 1.5 [Querying the Audit Log](#15-querying-the-audit-log)
-   - 1.6 [Merkle Proof Verification](#16-merkle-proof-verification)
+   - 1.6 [Signed Checkpoints](#16-signed-checkpoints)
    - 1.7 [SIEM Export Formats](#17-siem-export-formats)
 2. [Governance & Approvals](#2-governance--approvals)
    - 2.1 [Multi-Quorum Governance Model](#21-multi-quorum-governance-model)
@@ -51,18 +51,18 @@ Audit logging in Vecta KMS is not an afterthought — it is a first-class securi
 | Framework | Relevant Requirement | Vecta Control |
 |---|---|---|
 | PCI DSS v4.0 | Req 10: Log and monitor all access to system components and cardholder data | Immutable chained event log with chain hash verification |
-| PCI DSS v4.0 | Req 10.3.2: Audit log files are protected from destruction and unauthorized modifications | Merkle tree sealing, tamper-evident chain |
+| PCI DSS v4.0 | Req 10.3.2: Audit log files are protected from destruction and unauthorized modifications | Append-only storage, hash chain, per-event HMAC, signed checkpoints |
 | SOC 2 CC6.1 | Logical access controls and authentication events logged | Full authentication event capture |
 | SOC 2 CC7.2 | Anomalies and incidents detected and monitored | Alert rules with CEL expressions |
 | HIPAA §164.312(b) | Audit controls: hardware, software, and procedural mechanisms to record activity | Nanosecond-precision event recording |
 | GDPR Art. 30 | Records of processing activities | Actor, action, target, timestamp captured for every operation |
 | NIST SP 800-92 | Guide to Computer Security Log Management | Structured JSON events, SIEM export, retention policies |
-| ISO 27001 A.12.4 | Event logging and protection of log information | Chain integrity, Merkle proof, signed export |
+| ISO 27001 A.12.4 | Event logging and protection of log information | Chain integrity, signed checkpoints, per-target integrity proof |
 | DORA Art. 10 | ICT-related incident management | Correlation ID grouping, timeline views, incident evidence packages |
 
 **Forensic investigation.** When a security incident occurs — unauthorized key access, privilege escalation, data exfiltration — the audit log provides the evidence trail needed to reconstruct what happened, who did it, when, from where, and what the outcome was. Every API call that touches a key, certificate, user, or policy is recorded with full context.
 
-**Non-repudiation.** Because events are cryptographically chained (SHA-256 chain hash) and can be sealed into Merkle trees with inclusion proofs, no actor can later deny that an operation occurred. The chain hash scheme makes it mathematically detectable if any historical record is altered, deleted, or inserted.
+**Non-repudiation.** Because events are cryptographically chained (SHA-256 chain hash), HMAC-signed and covered by signed checkpoints, no actor can later deny that an operation occurred. The chain hash scheme makes it mathematically detectable if any historical record is altered, deleted, or inserted.
 
 **Operational visibility.** Beyond compliance, the audit log enables operational monitoring: detect unusual usage patterns, identify service accounts making unexpected calls, track the drift of key usage across environments, and feed real-time dashboards.
 
@@ -129,9 +129,9 @@ If tampering is detected, `valid` is `false` and `broken_at_sequence` identifies
 
 In addition to the hash chain, every event carries a `sequence` number that is strictly monotonically increasing per tenant. Gaps in the sequence (e.g. sequence jumps from 1000 to 1002 with no 1001) indicate deletion. The verification endpoint checks both the hash chain and sequence continuity.
 
-#### Epoch Sealing
+#### Signed Checkpoints
 
-At regular intervals (or on demand), the current head of the chain is sealed into a **Merkle epoch**. The Merkle root is an immutable commitment to the entire batch of events. Once sealed, the epoch root can be stored externally (in a notary service, a blockchain, or a hardware security module) to provide a second, independent proof layer.
+Every 10 minutes each node signs the current head of each chain it writes (sequence and chain hash) with an ECDSA-P384 key held only in memory. Because the chain hash commits to every earlier event, one signature covers the whole history before it. Checkpoints and the public keys are themselves audit events, so they also reach your SIEM, which gives an independent copy. See [1.6](#16-signed-checkpoints).
 
 ---
 
@@ -384,113 +384,25 @@ curl "https://localhost/svc/audit/audit/events?tenant_id=root&tag=env:production
 
 ---
 
-### 1.6 Merkle Proof Verification
+### 1.6 Signed Checkpoints
 
-Merkle tree sealing provides a second layer of tamper evidence beyond the hash chain. While the chain hash detects modification of individual events, Merkle proofs provide **non-interactive inclusion proofs**: a third party can verify that a specific event was recorded in a specific epoch without access to the full event log.
-
-#### How Merkle Epochs Work
-
-1. A **Merkle epoch** is a snapshot of a batch of audit events (up to `max_leaves` events).
-2. Each event is hashed (SHA-256 of its canonical bytes) to form a **leaf**.
-3. Leaves are combined in pairs up the tree to form a **binary Merkle tree**.
-4. The **Merkle root** is a single hash that commits to the entire batch.
-5. The root is stored durably (and optionally exported to an external notary service).
-
-#### Inclusion Proof
-
-For any event in an epoch, Vecta can generate an **inclusion proof**: the set of sibling hashes along the path from the event's leaf to the root. A verifier recomputes the path and checks that it produces the known root — without needing any other events.
-
-This is particularly powerful for:
-
-- **Regulatory evidence packages**: Submit event + proof to an auditor. They verify independently without accessing your KMS.
-- **Court admissibility**: Chain + Merkle proof constitutes cryptographic evidence of a specific log entry at a specific time.
-- **External notarization**: Publish epoch roots to a trusted timestamping authority (RFC 3161) or a public blockchain.
-
-#### Merkle Operations
+The hash chain detects an edited, inserted or removed event unless every later hash is recomputed; the per-event HMAC stops that for anyone without the HMAC key. Signed checkpoints close the remaining gap: a rewrite by someone who holds the HMAC key no longer ends at the head a checkpoint signed. Full design, trust rules and limits: [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md).
 
 ```bash
-# Build a new Merkle epoch (seal current events)
-curl -X POST "https://localhost/svc/audit/audit/merkle/build?tenant_id=root&max_leaves=50000" \
+# Newest checkpoints, each re-verified now (message, signature, public key, status)
+curl "https://localhost/svc/audit/audit/checkpoints?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Response:
-# {
-#   "epoch_id": "epoch-uuid",
-#   "root": "sha256:abc123...",
-#   "leaf_count": 50000,
-#   "first_sequence": 1,
-#   "last_sequence": 50000,
-#   "built_at": "2024-03-15T00:00:00Z"
-# }
-
-# List all epochs
-curl "https://localhost/svc/audit/audit/merkle/epochs?tenant_id=root" \
+# Whole chain: links, hashes, HMACs and every checkpoint
+curl "https://localhost/svc/audit/audit/chain/verify?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
-# Get Merkle inclusion proof for a specific event
-curl "https://localhost/svc/audit/audit/events/EVENT_UUID/proof?tenant_id=root" \
+# One resource's trail, each event tied to its covering checkpoint
+curl "https://localhost/svc/audit/audit/targets/KEY_ID/integrity?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
-
-# Response:
-# {
-#   "event_id": "EVENT_UUID",
-#   "epoch_id": "epoch-uuid",
-#   "leaf_index": 42,
-#   "leaf_hash": "sha256:def456...",
-#   "siblings": [
-#     {"index": 43, "hash": "sha256:ghi789..."},
-#     {"index": 21, "hash": "sha256:jkl012..."},
-#     {"index": 11, "hash": "sha256:mno345..."}
-#   ],
-#   "root": "sha256:pqr678...",
-#   "tree_depth": 16
-# }
-
-# Verify a proof (can be done by any party with this endpoint)
-curl -X POST "https://localhost/svc/audit/audit/merkle/verify" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_id": "EVENT_UUID",
-    "leaf_hash": "sha256:def456...",
-    "leaf_index": 42,
-    "siblings": [
-      {"index": 43, "hash": "sha256:ghi789..."},
-      {"index": 21, "hash": "sha256:jkl012..."},
-      {"index": 11, "hash": "sha256:mno345..."}
-    ],
-    "root": "sha256:pqr678...",
-    "epoch_id": "epoch-uuid"
-  }'
-
-# Response:
-# {
-#   "valid": true,
-#   "computed_root": "sha256:pqr678...",
-#   "provided_root": "sha256:pqr678...",
-#   "root_matches": true
-# }
 ```
 
-#### Verification Algorithm (Step by Step)
-
-Given an event with leaf index `i`, leaf hash `h`, and sibling list `[(i1, h1), (i2, h2), ...]`:
-
-```
-current_hash = h
-current_index = i
-
-for each sibling (sibling_index, sibling_hash):
-    if current_index is even:
-        current_hash = SHA-256(current_hash || sibling_hash)
-    else:
-        current_hash = SHA-256(sibling_hash || current_hash)
-    current_index = current_index / 2
-
-assert current_hash == known_root
-```
-
-This computation can be performed by any party with knowledge of the leaf hash, the sibling list, and the expected root — no access to the event store is required.
+An auditor can verify a checkpoint without the KMS: save its `message` byte for byte, base64-decode its `signature` to `sig.der`, save `public_key_pem` to `key.pem`, and run `openssl dgst -sha384 -verify key.pem -signature sig.der message.json`. For independence, pin the public keys delivered to your SIEM as `audit.audit.checkpoint_key_created` rather than the ones the API returns.
 
 ---
 
@@ -916,7 +828,7 @@ The most operationally relevant framework for organisations that handle payment 
 | Req 3.7.3 | Retired or replaced cryptographic keys not used for encryption | Key state lifecycle enforcement |
 | Req 3.7.4 | Key management procedures documented and implemented | Compliance template assessment |
 | Req 10.2 | Audit log events implemented | Immutable audit chain, all events captured |
-| Req 10.3.2 | Audit logs protected from modification | Hash chain, Merkle sealing |
+| Req 10.3.2 | Audit logs protected from modification | Hash chain, per-event HMAC, signed checkpoints |
 | Req 10.5.1 | Retain audit logs for at least 12 months | Retention policy enforcement |
 | Req 12.3.2 | Targeted risk analysis for each PCI DSS requirement | Compliance posture scores, gap findings |
 
@@ -1598,10 +1510,10 @@ curl "https://localhost/svc/compliance/compliance/cbom/pqc-readiness?tenant_id=r
      -H "Authorization: Bearer $TOKEN" > pci-audit-evidence.csv
    ```
 
-3. **Generate Merkle inclusion proofs** for sampled events to prove non-tamperability:
+3. **Export the signed checkpoints** covering the period, for the assessor to verify with openssl:
    ```bash
-   curl "https://localhost/svc/audit/audit/events/SAMPLE_EVENT_UUID/proof?tenant_id=root" \
-     -H "Authorization: Bearer $TOKEN" > merkle-proof-sample.json
+   curl "https://localhost/svc/audit/audit/checkpoints?tenant_id=root&limit=200" \
+     -H "Authorization: Bearer $TOKEN" > audit-checkpoints.json
    ```
 
 4. **Generate key inventory report** showing all CDE (Cardholder Data Environment) keys with rotation history:
@@ -1786,15 +1698,12 @@ curl "https://localhost/svc/governance/governance/backups?tenant_id=root&date_fr
 |---|---|---|
 | GET | `/events` | List audit events with filters |
 | GET | `/events/{id}` | Get single event by ID |
-| GET | `/events/{id}/proof` | Get Merkle inclusion proof for event |
 | GET | `/timeline/{resource_id}` | All events for a specific resource |
 | GET | `/session/{session_id}` | All events in a session |
 | GET | `/correlation/{correlation_id}` | All events in a correlation group |
 | GET | `/chain/verify` | Verify entire audit chain integrity |
-| POST | `/merkle/build` | Build new Merkle epoch |
-| GET | `/merkle/epochs` | List all Merkle epochs |
-| GET | `/merkle/epochs/{epoch_id}` | Get specific epoch with root |
-| POST | `/merkle/verify` | Verify a Merkle inclusion proof |
+| GET | `/checkpoints` | Signed checkpoints, each re-verified |
+| GET | `/targets/{target_id}/integrity` | Verify one resource's audit trail |
 | GET/POST | `/svc/audit/webhooks` (no `audit/` prefix) | List or add event streams (each names a connection) |
 | PATCH/DELETE | `/svc/audit/webhooks/{id}` | Change or remove a webhook |
 | GET | `/svc/audit/webhooks/{id}/deliveries` | Delivery history |

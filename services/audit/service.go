@@ -13,16 +13,17 @@ import (
 )
 
 type Service struct {
-	store      Store
-	cfg        AuditConfig
-	wal        *WALBuffer
-	publisher  EventPublisher
-	broker     *StreamBroker
-	hndl       *HNDLDetector
-	quarantine *QuarantineEvaluator
-	cluster    clusterKeyState
-	webhooks   *webhookFanout
-	creds      *credVault // webhook credentials under the audit master key
+	store       Store
+	cfg         AuditConfig
+	wal         *WALBuffer
+	publisher   EventPublisher
+	broker      *StreamBroker
+	hndl        *HNDLDetector
+	quarantine  *QuarantineEvaluator
+	cluster     clusterKeyState
+	webhooks    *webhookFanout
+	creds       *credVault      // webhook credentials under the audit master key
+	checkpoints checkpointState // this process's checkpoint signer (checkpoint.go)
 }
 
 // SetWebhookFanout wires delivery of persisted events to webhooks.
@@ -110,8 +111,7 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
 	enriched := s.classifyAndCorrelate(ctx, event)
 	// Side-effecting detectors run before persistence so a sustained-
-	// risk-score signal lands in the chain in the same epoch as the
-	// triggering event.
+	// risk-score signal lands in the chain next to the triggering event.
 	s.runDetectors(ctx, enriched)
 
 	evt, err := s.store.PersistEvent(ctx, enriched)

@@ -48,7 +48,6 @@ CREATE TABLE IF NOT EXISTS key_audit_chain_anchors (
     anchor_id          TEXT NOT NULL,
     tenant_id          TEXT NOT NULL,
     anchor_type        TEXT NOT NULL,
-    merkle_root        TEXT NOT NULL,
     previous_hash      TEXT,
     anchor_hash        TEXT NOT NULL,
     external_reference TEXT,

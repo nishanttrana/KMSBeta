@@ -21,14 +21,9 @@ type Store interface {
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
 	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
+	ListCheckpoints(ctx context.Context, tenantID string, limit int) ([]CheckpointStatus, error)
 
 	CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error)
-
-	// Merkle tree operations
-	BuildMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*MerkleEpochResult, error)
-	ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error)
-	GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error)
-	GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error)
 
 	// Webhook operations
 	ListWebhooks(ctx context.Context, tenantID string) ([]Webhook, error)
@@ -62,7 +57,8 @@ type Store interface {
 type SQLStore struct {
 	db         *pkgdb.DB
 	isPostgres bool
-	keys       *signingKeys // HMAC-SHA256 keys for per-event signatures
+	keys       *signingKeys    // HMAC-SHA256 keys for per-event signatures
+	cpKeys     *checkpointKeys // trusted checkpoint public keys (checkpoint.go)
 	// chainNode returns the chain this node appends to (clusterstate
 	// ChainNode): "" while standalone.
 	chainNode func(context.Context) string
@@ -73,6 +69,7 @@ func NewSQLStore(db *pkgdb.DB) *SQLStore {
 		db:         db,
 		isPostgres: detectPostgresDriver(db),
 		keys:       &signingKeys{},
+		cpKeys:     &checkpointKeys{},
 		chainNode:  func(context.Context) string { return "" },
 	}
 }
@@ -293,6 +290,39 @@ func scanChainRow(rows interface {
 }
 
 func (s *SQLStore) VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error) {
+	self := s.chainNode(ctx)
+	chainOf := func(node string) string {
+		if node == "" {
+			return self
+		}
+		return node
+	}
+	var breaks []map[string]interface{}
+	brk := func(seq int64, id, node, reason string) {
+		breaks = append(breaks, map[string]interface{}{"sequence": seq, "event_id": id, "chain_node": node, "reason": reason})
+	}
+
+	// Every checkpoint must verify under a trusted key, and the row at the
+	// head it signed must still carry the signed chain hash (checked in the
+	// walk below). A rewrite that recomputes every later hash and HMAC still
+	// changes that row.
+	cps, err := s.loadCheckpoints(ctx, tenantID, 0)
+	if err != nil {
+		return false, nil, err
+	}
+	heads := map[string]checkpoint{}
+	for _, cp := range cps {
+		status, err := s.verifyCheckpointSignature(ctx, cp)
+		if err != nil {
+			return false, nil, err
+		}
+		if status != checkpointVerified {
+			brk(cp.Head.Sequence, cp.EventID, cp.Head.ChainNode, "checkpoint_"+status)
+			continue
+		}
+		heads[fmt.Sprintf("%s|%d", chainOf(cp.Head.ChainNode), cp.Head.Sequence)] = cp
+	}
+
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT `+chainRowColumns+`
 FROM audit_events
@@ -308,19 +338,14 @@ ORDER BY sequence ASC
 	// GENESIS ('' rows continue into its clustered rows). Another node's
 	// chain arrives from the point that node was clustered, so its first row
 	// here anchors it; from there every link and hash is checked.
-	self := s.chainNode(ctx)
 	prevByChain := map[string]string{}
-	var breaks []map[string]interface{}
 	for rows.Next() {
 		ev, err := scanChainRow(rows, tenantID)
 		if err != nil {
 			return false, nil, err
 		}
 
-		chain := ev.ChainNode
-		if chain == "" {
-			chain = self
-		}
+		chain := chainOf(ev.ChainNode)
 		prevHash, seen := prevByChain[chain]
 		if !seen {
 			prevHash = "GENESIS"
@@ -328,27 +353,38 @@ ORDER BY sequence ASC
 				prevHash = ev.PreviousHash // anchor of a replicated chain
 			}
 		}
-		brk := func(reason string) {
-			breaks = append(breaks, map[string]interface{}{"sequence": ev.Sequence, "event_id": ev.ID, "chain_node": ev.ChainNode, "reason": reason})
-		}
 		if ev.PreviousHash != prevHash {
-			brk("previous_hash_mismatch")
+			brk(ev.Sequence, ev.ID, ev.ChainNode, "previous_hash_mismatch")
 		}
 		expected := chainHash(prevHash, eventHashInput(ev))
 		if ev.ChainHash != expected {
-			brk("chain_hash_mismatch")
+			brk(ev.Sequence, ev.ID, ev.ChainNode, "chain_hash_mismatch")
 		}
 		if ev.HMACSig != "" && s.keys.configured() {
 			switch ok, known := s.keys.verify(ev.ChainHash, ev.HMACSig, ev.HMACKeyID); {
 			case !known:
-				brk("hmac_key_unknown")
+				brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_key_unknown")
 			case !ok:
-				brk("hmac_mismatch")
+				brk(ev.Sequence, ev.ID, ev.ChainNode, "hmac_mismatch")
 			}
+		}
+		key := fmt.Sprintf("%s|%d", chain, ev.Sequence)
+		if cp, ok := heads[key]; ok {
+			if ev.ChainHash != cp.Head.ChainHash {
+				brk(ev.Sequence, ev.ID, ev.ChainNode, "checkpoint_head_mismatch")
+			}
+			delete(heads, key)
 		}
 		prevByChain[chain] = ev.ChainHash
 	}
-	return len(breaks) == 0, breaks, rows.Err()
+	if err := rows.Err(); err != nil {
+		return false, nil, err
+	}
+	// A signed head with no row: the row was removed.
+	for _, cp := range heads {
+		brk(cp.Head.Sequence, cp.EventID, cp.Head.ChainNode, "checkpoint_head_mismatch")
+	}
+	return len(breaks) == 0, breaks, nil
 }
 
 func (s *SQLStore) CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error) {
@@ -431,7 +467,7 @@ func parseTimeValue(v interface{}) time.Time {
 	}
 }
 
-// ── Merkle Tree Store Methods ─────────────────────────────────
+// ── Store helpers ─────────────────────────────────────────────
 
 func detectPostgresDriver(db *pkgdb.DB) bool {
 	if db == nil || db.SQL() == nil {
@@ -479,247 +515,6 @@ func (s *SQLStore) ensureAuditPartition(ctx context.Context, tx *sql.Tx, ts time
 	)
 	_, err := tx.ExecContext(ctx, stmt)
 	return err
-}
-
-func (s *SQLStore) BuildMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*MerkleEpochResult, error) {
-	if maxLeaves <= 0 {
-		maxLeaves = 1000
-	}
-
-	// Epochs cover this node's own chain; other nodes' epochs replicate in.
-	self := s.chainNode(ctx)
-
-	// Find the last epoch's seq_to and tree_root for cross-epoch linking.
-	var lastSeqTo int64
-	var lastEpochRoot string
-	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT COALESCE(MAX(seq_to), 0), COALESCE((SELECT tree_root FROM audit_merkle_epochs
- WHERE tenant_id=$1 AND chain_node IN ('', $2) ORDER BY epoch_number DESC LIMIT 1), '')
-FROM audit_merkle_epochs WHERE tenant_id=$1 AND chain_node IN ('', $2)
-`, tenantID, self).Scan(&lastSeqTo, &lastEpochRoot)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
-	}
-
-	// Fetch next batch of events after the last epoch
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, sequence, chain_hash FROM audit_events
-WHERE tenant_id=$1 AND chain_node IN ('', $4) AND sequence > $2
-ORDER BY sequence ASC
-LIMIT $3
-`, tenantID, lastSeqTo, maxLeaves, self)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	type leaf struct {
-		eventID   string
-		sequence  int64
-		chainHash string
-	}
-	var leaves []leaf
-	for rows.Next() {
-		var l leaf
-		if err := rows.Scan(&l.eventID, &l.sequence, &l.chainHash); err != nil {
-			return nil, err
-		}
-		leaves = append(leaves, l)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if len(leaves) == 0 {
-		return nil, nil // nothing to build
-	}
-
-	// Build Merkle tree from chain_hash values
-	hashes := make([]string, len(leaves))
-	for i, l := range leaves {
-		hashes[i] = l.chainHash
-	}
-	tree := BuildMerkleTree(hashes)
-	root := tree.Root()
-
-	// Get next epoch number
-	var epochNum int
-	err = s.db.SQL().QueryRowContext(ctx, `
-SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_id=$1 AND chain_node IN ('', $2)
-`, tenantID, self).Scan(&epochNum)
-	if err != nil {
-		return nil, err
-	}
-
-	epochID := newID("mke")
-	seqFrom := leaves[0].sequence
-	seqTo := leaves[len(leaves)-1].sequence
-
-	// Compute cross-epoch tamper-evident hash.
-	prevEpochRoot := lastEpochRoot
-	epHash := epochHash(prevEpochRoot, root)
-
-	// Insert epoch + leaves in a transaction
-	tx, err := s.db.SQL().BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.ExecContext(ctx, `
-INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, previous_epoch_root, epoch_hash, chain_node, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root, nullable(prevEpochRoot), epHash, self)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, l := range leaves {
-		_, err = tx.ExecContext(ctx, `
-INSERT INTO audit_merkle_leaves (epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash, chain_node)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-`, epochID, tenantID, i, l.eventID, l.sequence, hashes[i], self)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	epoch := MerkleEpoch{
-		ID:                epochID,
-		TenantID:          tenantID,
-		EpochNumber:       epochNum,
-		SeqFrom:           seqFrom,
-		SeqTo:             seqTo,
-		LeafCount:         len(leaves),
-		TreeRoot:          root,
-		PreviousEpochRoot: prevEpochRoot,
-		EpochHash:         epHash,
-		ChainNode:         self,
-	}
-	return &MerkleEpochResult{Epoch: epoch, Leaves: len(leaves)}, nil
-}
-
-func scanMerkleEpoch(rows interface {
-	Scan(dest ...interface{}) error
-}) (MerkleEpoch, error) {
-	var e MerkleEpoch
-	var createdRaw interface{}
-	if err := rows.Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount,
-		&e.TreeRoot, &e.PreviousEpochRoot, &e.EpochHash, &createdRaw); err != nil {
-		return MerkleEpoch{}, err
-	}
-	e.CreatedAt = parseTimeValue(createdRaw)
-	return e, nil
-}
-
-func (s *SQLStore) ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root,
-       COALESCE(previous_epoch_root,''), COALESCE(epoch_hash,''), created_at
-FROM audit_merkle_epochs
-WHERE tenant_id=$1
-ORDER BY epoch_number DESC
-LIMIT $2
-`, tenantID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []MerkleEpoch
-	for rows.Next() {
-		e, err := scanMerkleEpoch(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, e)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root,
-       COALESCE(previous_epoch_root,''), COALESCE(epoch_hash,''), created_at
-FROM audit_merkle_epochs
-WHERE tenant_id=$1 AND id=$2
-`, tenantID, epochID)
-	e, err := scanMerkleEpoch(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return MerkleEpoch{}, errNotFound
-	}
-	return e, err
-}
-
-func (s *SQLStore) GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error) {
-	// Find which epoch contains this event
-	var leaf MerkleLeaf
-	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash
-FROM audit_merkle_leaves
-WHERE tenant_id=$1 AND event_id=$2
-`, tenantID, eventID).Scan(&leaf.EpochID, &leaf.TenantID, &leaf.LeafIndex, &leaf.EventID, &leaf.Sequence, &leaf.LeafHash)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch all leaves for this epoch to rebuild the tree
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT leaf_hash FROM audit_merkle_leaves
-WHERE tenant_id=$1 AND epoch_id=$2
-ORDER BY leaf_index ASC
-`, tenantID, leaf.EpochID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var hashes []string
-	for rows.Next() {
-		var h string
-		if err := rows.Scan(&h); err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, h)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	// The proof's root is the root stored when the epoch was sealed, never
-	// the root of the tree just rebuilt from the same leaves: that one
-	// matches by construction, so an altered leaf would still "verify".
-	var storedRoot string
-	if err := s.db.SQL().QueryRowContext(ctx,
-		`SELECT tree_root FROM audit_merkle_epochs WHERE tenant_id=$1 AND id=$2`,
-		tenantID, leaf.EpochID).Scan(&storedRoot); err != nil {
-		return nil, err
-	}
-	tree := BuildMerkleTree(hashes)
-	proof, ok := GenerateProof(tree, leaf.LeafIndex)
-	if !ok {
-		return nil, fmt.Errorf("failed to generate proof for leaf %d", leaf.LeafIndex)
-	}
-	proof.Root = storedRoot
-
-	return &MerkleProofResponse{
-		EventID:   leaf.EventID,
-		Sequence:  leaf.Sequence,
-		EpochID:   leaf.EpochID,
-		LeafHash:  leaf.LeafHash,
-		LeafIndex: leaf.LeafIndex,
-		Siblings:  proof.Siblings,
-		Root:      proof.Root,
-	}, nil
 }
 
 func parseTimeString(v string) time.Time {
