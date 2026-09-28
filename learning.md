@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### Removing a route means removing it from the cluster routing table too
+- **What happened:** 2.14.0-beta and 2.16.0-beta removed audit's alert-rule
+  and channel routes, but `pkg/clusterroute.Local` kept listing two of them.
+  `TestLocalRoutesExist` caught it, yet both changes were pushed with only the
+  touched packages tested, so `make test-fips-modes` was red on `main` for
+  three releases.
+- **Rule:** when you remove a route, grep for its path across `pkg/` (the
+  cluster routing table, the playbook action catalogue, docs), and run the full
+  `make test-fips-modes` before pushing, not just the service's own tests.
+
 ### A feature outside the product's job grows its own fakes
 - **What happened:** the KMS matched its SBOM against OSV, a bundled Trivy
   and hand-entered "offline advisories". Keeping that honest took a

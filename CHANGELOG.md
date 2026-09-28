@@ -4,6 +4,15 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.20.0-beta] — 2026-09-28
+
+### Cluster routing: drop audit routes that no longer exist
+- `pkg/clusterroute.Local` still listed `POST /alerts/test-rule` and
+  `POST /alerts/channels/test` for `kms-audit`. Both were removed with
+  audit's own alert rules (2.14.0-beta) and alert store (2.16.0-beta), so
+  `TestLocalRoutesExist` failed and `make test-fips-modes` stopped there.
+  No routing behaviour changes: the routes are not served.
+
 ## [2.19.0-beta] — 2026-09-28
 
 ### The KMS no longer tracks vulnerabilities (breaking)
