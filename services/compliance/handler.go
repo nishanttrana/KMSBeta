@@ -13,18 +13,20 @@ import (
 )
 
 type Handler struct {
-	svc      *Service
-	mux      *http.ServeMux
-	router   *route.Router
-	executor *PlaybookExecutor
+	svc       *Service
+	mux       *http.ServeMux
+	router    *route.Router
+	executor  *PlaybookExecutor
+	triggers  *TriggerListener
+	connVault *connVault
 	// dispatch runs a playbook execution; tests run it inline.
 	dispatch func(func())
 }
 
 // NewHandler builds the compliance API. Playbook routes are on the route
 // kernel; the rest of compliance is still on the burn-down list.
-func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
-	h := &Handler{svc: svc, dispatch: func(f func()) { go f() }}
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, vault *connVault) *Handler {
+	h := &Handler{svc: svc, connVault: vault, dispatch: func(f func()) { go f() }}
 	h.router = route.New("compliance", audit, logger)
 	h.playbookRoutes(h.router)
 	h.mux = h.routes()

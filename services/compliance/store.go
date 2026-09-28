@@ -48,11 +48,21 @@ type Store interface {
 	GetPlaybook(ctx context.Context, tenantID, id string) (Playbook, error)
 	UpdatePlaybook(ctx context.Context, p Playbook) (Playbook, error)
 	DeletePlaybook(ctx context.Context, tenantID, id string) error
+	ListAllPlaybooks(ctx context.Context) ([]Playbook, error)
 	CreatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error)
 	UpdatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error)
+	GetPlaybookRun(ctx context.Context, tenantID, id string) (PlaybookRun, error)
+	GetPlaybookRunByApproval(ctx context.Context, tenantID, approvalID string) (PlaybookRun, error)
 	IncrementPlaybookRunCount(ctx context.Context, tenantID, id string, lastRunAt time.Time) error
-	ListPlaybookRuns(ctx context.Context, tenantID, playbookID string, limit int) ([]PlaybookRun, error)
+	ListPlaybookRuns(ctx context.Context, tenantID string, q RunQuery) ([]PlaybookRun, error)
 	GetPlaybookSummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
+
+	// Playbook connections (sealed credentials)
+	ListConnections(ctx context.Context, tenantID string) ([]Connection, error)
+	GetConnection(ctx context.Context, tenantID, id string) (Connection, error)
+	CreateConnection(ctx context.Context, c Connection) (Connection, error)
+	UpdateConnection(ctx context.Context, c Connection) (Connection, error)
+	DeleteConnection(ctx context.Context, tenantID, id string) error
 }
 
 type SQLStore struct {

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/route"
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -35,6 +36,7 @@ type Handler struct {
 	logger        *log.Logger
 	healthChecker *SystemHealthChecker
 	mux           *http.ServeMux
+	kernelAudit   route.Emitter
 }
 
 func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *metering.Meter, logger *log.Logger, healthChecker ...*SystemHealthChecker) *Handler {
@@ -51,6 +53,7 @@ func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *met
 		healthChecker: checker,
 	}
 	h.mux = h.routes()
+	h.mountKernel(h.mux, h.delegatedRouter())
 	return h
 }
 

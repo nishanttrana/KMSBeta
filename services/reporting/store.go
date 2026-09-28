@@ -416,24 +416,35 @@ LIMIT $2 OFFSET $3
 }
 
 func (s *SQLStore) UpdateIncidentStatus(ctx context.Context, tenantID string, id string, status string, notes string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
+	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE reporting_incidents
 SET status = $1,
 	notes = CASE WHEN $2 = '' THEN notes ELSE $2 END,
 	updated_at = CURRENT_TIMESTAMP
 WHERE tenant_id = $3 AND id = $4
 `, strings.ToLower(strings.TrimSpace(status)), notes, tenantID, id)
-	return err
+	return rowsOrNotFound(res, err)
+}
+
+// rowsOrNotFound turns an update that matched no row into errNotFound.
+func rowsOrNotFound(res sql.Result, err error) error {
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) AssignIncident(ctx context.Context, tenantID string, id string, assignedTo string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
+	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE reporting_incidents
 SET assigned_to = $1,
 	updated_at = CURRENT_TIMESTAMP
 WHERE tenant_id = $2 AND id = $3
 `, assignedTo, tenantID, id)
-	return err
+	return rowsOrNotFound(res, err)
 }
 
 func (s *SQLStore) CreateRule(ctx context.Context, item AlertRule) error {

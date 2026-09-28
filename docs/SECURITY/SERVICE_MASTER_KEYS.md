@@ -5,7 +5,7 @@ master encryption key (MEK) from keycore through `pkg/mek`. No environment
 variable, no fallback, and never a value derived from a string in the repo
 (CLAUDE.md rules 3 and 6; `make conformance` rule `no-literal-key-material`).
 
-Five services store envelope-encrypted data. Each value has its own data key
+Six services store envelope-encrypted data. Each value has its own data key
 (DEK), and the service's MEK wraps it:
 
 | Service | What it protects | Table |
@@ -15,6 +15,7 @@ Five services store envelope-encrypted data. Each value has its own data key
 | cloud | cloud provider credentials | `cloud_accounts` |
 | ekm | BitLocker recovery keys | `ekm_bitlocker_recovery_keys` |
 | audit | webhook signing secrets and custom header values (Splunk HEC tokens, Datadog API keys), sealed together per webhook | `webhooks` (`creds_wrapped_dek` set) |
+| compliance | playbook connection credentials (Slack/Teams webhook URLs, webhook URLs and headers, Jira and ServiceNow tokens), sealed together per connection (2.5.0-beta) | `compliance_playbook_connections` |
 
 ## What was wrong (found 2026-09-26)
 
@@ -122,6 +123,7 @@ the material. So each item found under a public key is recorded in
 | cloud | the account is deleted (rotate at the provider, re-register, delete) |
 | ekm | a `rotate` job escrows a new recovery key for the volume, or the client is deleted |
 | audit | every credential the webhook had is replaced in one or more updates (a new or removed secret, and each header sent with a new value or dropped), or the webhook is deleted |
+| compliance | every field of the connection is sent anew in one update, or the connection is deleted |
 
 An administrator can also close an entry with a reason of at least 10
 characters (`POST /mek/exposure/{item_type}/{item_id}/acknowledge`,
@@ -166,7 +168,15 @@ stored keys (no backups had been taken on the old version).
   `RewrapLegacyCASigners`) are still the same private keys, so their entries
   stay open until the CA is replaced.
 - **Keycore is a startup dependency** of secrets, certs, cloud and ekm. For
-  audit it gates webhook credentials only.
+  audit it gates webhook credentials only; for compliance, playbook
+  connections only (until the key opens, connection writes return 503 and
+  notification steps fail with the reason).
+- **Playbook credentials stored before 2.5.0-beta** were plaintext, inline
+  in each playbook action. Compliance's primary moves each set into a
+  sealed connection at startup (and every 15 minutes) and records it in the
+  exposure register (`source: plaintext_storage`,
+  `audit.compliance.playbook_connections_migrated`). Rotate those webhook
+  URLs and tokens at the receiver.
 - **Webhook credentials stored before 1.25.0-beta** were plaintext. The
   audit service seals them at startup (and every 15 minutes, which catches
   restored rows) and records each webhook in the exposure register

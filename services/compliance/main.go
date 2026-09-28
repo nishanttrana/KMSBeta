@@ -21,6 +21,9 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/mek"
+	"vecta-kms/pkg/route"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -95,15 +98,43 @@ func main() {
 	)
 	svc.StartScheduler(ctx)
 
-	// Playbooks: one executor for manual and triggered runs.
-	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, auditClient, logger)
+	// Playbooks: one executor for manual, triggered and resumed runs.
+	// Connection credentials are sealed under the compliance master key from
+	// keycore (pkg/mek), opened in the background.
+	vault := &connVault{}
+	urls := platformURLsFromEnv()
+	urls.Keycore, urls.Certs = keycoreURL, certsURL
+	executor := NewPlaybookExecutor(store, urls, auditClient, vault, logger)
 	executor.ops = svc
 
-	handler := NewHandler(svc, auditClient, logger)
+	handler := NewHandler(svc, auditClient, logger, vault)
 	handler.SetExecutor(executor)
 
 	triggerListener := NewTriggerListener(store, executor, logger)
+	handler.triggers = triggerListener
 	go triggerListener.StartListening(ctx, jsCtx)
+
+	var mekAudit mek.Emitter
+	if auditClient != nil {
+		mekAudit = auditClient
+	}
+	go openConnectionKeyring(ctx, vault, func(ctx context.Context) (*mek.Keyring, error) {
+		return mek.Open(ctx, mek.Options{
+			Tables: mek.Catalog["compliance"],
+			Source: mek.NewKeycoreSource(keycoreURL, mek.Catalog["compliance"]),
+			DB:     dbConn.SQL(),
+			Audit:  mekAudit,
+			Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
+			Logf:   logger.Printf,
+			Wait:   10 * time.Minute,
+		})
+	}, func(k *mek.Keyring) {
+		kernel := route.New("compliance", auditClient, logger)
+		k.Routes(kernel, "compliance")
+		kernel.MountOn(handler.mux)
+		go k.Watch(ctx, 15*time.Minute)
+		go svc.migrateInlineSecretsLoop(ctx, vault, executor, 15*time.Minute, logger.Printf)
+	}, logger.Printf)
 
 	httpPort := envOr("HTTP_PORT", "8110")
 	authedHandler := pkgjwtauth.MustWrap("COMPLIANCE", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)

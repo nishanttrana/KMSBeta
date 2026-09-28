@@ -90,6 +90,15 @@ var Catalog = map[string]ServiceTables{
 			Where: "creds_wrapped_dek IS NOT NULL",
 		}},
 	},
+	"compliance": {
+		Service: "compliance", ClientID: "kms-compliance",
+		StateTable: "compliance_mek_state", ExposureTable: "compliance_mek_exposure",
+		Tables: []Table{{
+			Name: "compliance_playbook_connections", Keys: []string{"tenant_id", "id"}, Tenant: "tenant_id",
+			Item: "id", ItemType: "playbook_connection", WrappedDEK: "creds_wrapped_dek", WrappedIV: "creds_wrapped_dek_iv",
+			Where: "creds_wrapped_dek IS NOT NULL",
+		}},
+	},
 	"certs": {
 		Service: "cert", ClientID: "kms-certs",
 		StateTable: "cert_mek_state", ExposureTable: "cert_mek_exposure",

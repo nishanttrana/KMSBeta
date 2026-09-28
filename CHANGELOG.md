@@ -4,6 +4,108 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.5.0-beta] — 2026-09-28
+
+### Playbooks become the response layer: incidents, approvals, delegation, sealed connections
+Playbooks can now respond to any audited event and to every incident, act on
+what triggered them, and pause for dual control. They keep acting only on
+the current authority of a named person.
+
+**Triggers**
+- **Alerts and incidents.** `alert_raised` (every Alert Center alert, with
+  its severity, source actor and target) and `incident_opened`: reporting
+  now emits `audit.reporting.incident_opened` when an incident opens.
+- **More built-in triggers:** `key_exported`, `key_hsm_refused`,
+  `fips_mode_changed`, `backup_restored`, `cluster_member_joined`.
+- **Custom triggers:** any audit subject you name (exact or `audit.cert.*`),
+  labelled as firing only if a service emits it.
+- **Filters** on event fields (`severity`, `result`, `actor_id`,
+  `target_id`, `details.<key>`, ...) with `eq`, `neq`, `in`, `not_in`,
+  `contains`, `prefix`.
+- **Real thresholds:** N matching events within a window, counted per
+  `group_by` value (for example five failed logins for one account in five
+  minutes). Counted in memory on the cluster primary; a failover starts
+  them again.
+
+**Actions**
+- **Act on what fired:** parameters take `{{event.target_id}}`,
+  `{{event.details.<key>}}`, `{{run.id}}` and more. A value that resolves
+  empty fails the step rather than calling with nothing. Per-step
+  conditions skip a step when the event doesn't match.
+- **New actions:** `send_email` (to the tenant's own users or a role,
+  through Governance's SMTP), `acknowledge_alert`, `resolve_alert`,
+  `set_incident_status`, `assign_incident`, `generate_report`,
+  `run_posture_scan`, `trigger_rotation_policy`, and, back and real,
+  `disable_user`, `revoke_api_key` and a new `revoke_client`. These three are
+  performed by auth on the authorizing person's behalf: auth re-checks the
+  person's permission, and never touches the person themself, the last full
+  administrator or a platform service identity.
+- **Approval gate:** `deactivate_key`, `revoke_certificate` and the
+  delegated actions always pause for a governance approval, and any step can
+  opt in. A built-in "Playbook actions" policy lets any tenant administrator
+  except the person the playbook acts for approve. A run resumes only after
+  compliance reads the request back from Governance: it must be approved,
+  name this action and requester, and carry the hash of the action as the
+  playbook now defines it. Editing the step while it waits voids the
+  approval.
+
+**Authority**
+- **Re-checked on every unattended run.** Before an automatic run (and a
+  resume) compliance asks auth whether the authorizing user is still active
+  and still holds the permissions. If not, or if auth can't answer, the run
+  doesn't start (`authority_revoked` / `authority_unverified`, audited).
+  This closes the gap 2.4.0-beta left open.
+- **A person authorizes.** An API client can no longer enable a playbook
+  (`user_required`): only a user's grants can be re-checked.
+
+**Credentials**
+- **Connections:** Slack, Teams, webhook, Jira and ServiceNow endpoints and
+  tokens are defined once as connections, sealed under the compliance master
+  key from keycore (`pkg/mek`). Only the name, type and endpoint host are
+  stored in plaintext; values are never returned. Actions name a
+  `connection_id`. A real test call is available, and a connection in use
+  can't be deleted.
+- **Existing inline credentials** are moved into connections at startup by
+  the primary, audited, and recorded in the exposure register. **Rotate
+  those webhook URLs and tokens:** earlier database copies hold them in
+  plaintext.
+
+**Runs**
+- **Run records** keep the event they answered, one result per step, the
+  incident they belong to, and the approval they're waiting on.
+- **Dry run** resolves every step against an event and reads each target
+  (key, certificate, alert, incident, connection) from its owning service
+  without changing anything.
+- **Cancel** stops a running run, or ends a paused one and withdraws its
+  approval request.
+- **Retry** re-runs from the first step that didn't complete, on the
+  caller's authority.
+- **No chains:** events caused by a playbook (actor `kms-compliance`, a run
+  correlation ID, or an alert raised from such an event) don't fire
+  playbooks.
+
+**Dashboard.** The Playbooks tab has Overview (with runs awaiting approval),
+Playbooks (dry run, run with an event), Runs (filter by status or incident,
+per-step results, cancel and retry), Incidents (every Alert Center incident
+with the playbook runs that answered it; incidents weren't shown anywhere
+before) and Connections. The editor adds a filter builder, threshold and
+grouping, a connection picker, per-step conditions and approval, and
+template help.
+
+**Fixes found on the way**
+- Reporting's `PUT /incidents/{id}/status` and `/assign` answered 200 for
+  incidents that don't exist, and accepted any status. They now return 404
+  and accept only `open`, `investigating`, `resolved` and `closed`.
+- `alert_created` now names the alert as its target, with severity,
+  incident and source fields.
+- Migration `006_playbook_response.sql` adds the run columns, connections
+  and the compliance master-key tables. `TestPlaybookStorePostgres` runs
+  004-006 twice on real Postgres.
+
+**Still open:** a paused run waits up to Governance's approval expiry. An
+`audit.audit.chain_broken` trigger isn't possible yet: the audit service
+writes that event to its own chain and doesn't publish it on the stream.
+
 ## [2.4.0-beta] — 2026-09-28
 
 ### Playbooks: real triggers, real actions, and no borrowed authority

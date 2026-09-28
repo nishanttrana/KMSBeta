@@ -71,9 +71,11 @@ func main() {
 	}
 
 	var auditPublisher AuditPublisher
+	var kernelAudit *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		auditPublisher = pkgevents.NewPublisher(js, 3, "audit.auth.dead_letter")
+		kernelAudit, _ = pkgaudit.NewClient(js, "auth")
 	} else {
 		logger.Printf("nats unavailable, audit publish is disabled: %v", err)
 	}
@@ -106,6 +108,7 @@ func main() {
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
+	handler.SetAuditClient(kernelAudit)
 	revokeRetiredCLIPasswords(ctx, store, logger, auditPublisher, handler.lockCLISSHPassword)
 
 	httpPort := envOr("HTTP_PORT", "8001")

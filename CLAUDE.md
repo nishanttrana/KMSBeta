@@ -221,8 +221,11 @@ an approach, record it here or in the matching doc below.
   `TestTriggerSubjectsAreEmitted`. A remediating operation joins as an action
   that names the permission it needs, tested against the route it calls. A
   playbook acts only on the authority of someone who holds those permissions
-  (docs/PLATFORM_CONTRACT.md). No PagerDuty integration (owner, 2026-09-28:
-  "no one uses it").
+  (docs/PLATFORM_CONTRACT.md), re-checked with auth before every unattended
+  run. Irreversible or access-removing steps pause for a governance approval
+  that the person the playbook acts for can't give. Notification credentials
+  live only in sealed connections (`pkg/mek`), never in a playbook. No
+  PagerDuty integration (owner, 2026-09-28: "no one uses it").
 
 ## Documentation is part of done
 

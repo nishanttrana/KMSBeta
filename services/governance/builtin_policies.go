@@ -23,6 +23,13 @@ var builtinPolicies = []ApprovalPolicy{{
 	TriggerActions: []string{"posture.escalate_remediation"},
 	QuorumMode:     "threshold",
 	ApproverRoles:  []string{"admin", "tenant-admin"},
+}, {
+	Name:           "Playbook actions (built-in)",
+	Description:    "Created by the platform for playbook steps that need approval: deactivating keys, revoking certificates, disabling users, revoking API keys and clients, and any step marked for approval. Any tenant administrator other than the person the playbook acts for may approve. Edit the approvers or disable this policy in Governance (disabling it stops those steps from running).",
+	Scope:          "playbook",
+	TriggerActions: []string{"playbook.*"},
+	QuorumMode:     "threshold",
+	ApproverRoles:  []string{"admin", "tenant-admin"},
 }}
 
 // builtinPolicyID is the policy's ID in a tenant: fixed, so a disabled

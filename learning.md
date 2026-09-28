@@ -5,6 +5,37 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### An update that matched nothing reported success (reporting incidents)
+- **What happened:** `PUT /incidents/{id}/status` and `/assign` ran an
+  `UPDATE` and returned 200 without checking that a row changed, and stored
+  any status string. A playbook step "set incident status" would have
+  succeeded against an incident that doesn't exist.
+- **Why it slipped through:** nothing but a human in the dashboard called
+  these routes, and the dashboard never did: reporting incidents weren't
+  shown anywhere in the UI. Wiring playbooks to them was the first real
+  caller, and its test asked for a 404.
+- **Rule:** a write reports what it changed. Check `RowsAffected` (or read
+  back) and return 404 for nothing, and validate enumerated values at the
+  service, not in a UI.
+
+### A "catalogue" that lists what could exist, not what does (audit events)
+- **What happened:** looking for a list of real audit subjects to offer as
+  custom playbook triggers, the audit service's `event_catalog.go` turned out
+  to be every service crossed with every verb (`audit.qrng.rotated`, ...):
+  hundreds of subjects nothing emits. And `audit.audit.chain_broken`, a real
+  event, never reaches the stream: the audit service writes it straight into
+  its chain.
+- **Rule:** a list offered to users as "events" comes from emitters
+  (`TestTriggerSubjectsAreEmitted` names the file of each). A custom subject
+  is labelled as firing only if something emits it.
+
+### Authority checked once is authority kept forever (playbooks, 2.4.0-beta)
+- **What happened:** 2.4.0-beta checked the saver's permissions when a
+  playbook was saved, and an automatic run then acted on them indefinitely,
+  including after the person left or lost the role.
+- **Rule:** unattended work re-checks the person's authority when it runs,
+  with the service that owns it (auth), and fails closed when it can't ask.
+
 ### A trigger map that listened for subjects nobody sends (playbooks)
 - **What happened:** the playbook listener mapped 40 trigger types to audit
   subjects like `audit.keycore.key_rotated`, `audit.infra.cluster_node_down`

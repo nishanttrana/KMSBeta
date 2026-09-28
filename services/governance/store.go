@@ -39,6 +39,7 @@ type Store interface {
 	CountPendingByApprover(ctx context.Context, tenantID string, approverEmail string) (int, error)
 	ConsumeToken(ctx context.Context, requestID string, tokenRaw string, expectedAction string) (ApprovalToken, error)
 	UserEmail(ctx context.Context, tenantID string, userID string) (string, error)
+	IsActiveUserEmail(ctx context.Context, tenantID string, email string) (bool, error)
 	RequestApprovers(ctx context.Context, requestID string) ([]string, error)
 	RoleHolderEmails(ctx context.Context, tenantID string, roles []string) ([]string, error)
 	ApplyVote(ctx context.Context, req ApprovalRequest, policy ApprovalPolicy, vote ApprovalVote) (ApprovalRequest, error)
@@ -343,6 +344,18 @@ LIMIT 1
 		return ApprovalToken{}, errors.New("token action mismatch")
 	}
 	return tok, nil
+}
+
+// IsActiveUserEmail reports whether email belongs to an active user of the
+// tenant (auth service's users table, same database).
+func (s *SQLStore) IsActiveUserEmail(ctx context.Context, tenantID string, email string) (bool, error) {
+	var n int
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM auth_users
+WHERE tenant_id=$1 AND LOWER(COALESCE(email,''))=$2 AND LOWER(COALESCE(status,'active'))='active'
+`, strings.TrimSpace(tenantID), strings.ToLower(strings.TrimSpace(email))).Scan(&n)
+	return n > 0, err
 }
 
 // UserEmail returns the email of an active user from the auth service's

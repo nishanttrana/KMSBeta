@@ -81,9 +81,14 @@ do later as the service (a playbook, a schedule, an automation) must check,
 when the work is saved and again when a person starts it, that the verified
 caller holds the permission for each operation, and must record who
 authorized it. Otherwise the feature lends the service's reach to anyone
-who can write to it. Playbooks are the reference: `ActionSpec.Permission`,
-`missingPermissions` and `authorized_by` in
-`services/compliance/playbook_catalog.go` (2.4.0-beta).
+who can write to it. Work that runs later, unattended, must re-check that
+authority when it runs: ask auth (`POST /auth/delegated/authority`) whether
+the authorizing user is still active and still holds the permissions. An
+operation the target service won't take from a service identity (users, API
+keys, clients) goes through auth's delegated routes, which re-check the
+person themselves. Playbooks are the reference: `ActionSpec.Permission`,
+`missingPermissions`, `authorized_by` and `checkAuthority` in
+`services/compliance` (2.4.0-beta, re-checks since 2.5.0-beta).
 
 Rules the conformance check enforces:
 

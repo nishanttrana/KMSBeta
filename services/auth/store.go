@@ -63,6 +63,7 @@ type Store interface {
 	CreateAPIKey(ctx context.Context, k APIKey) error
 	MarkNodeLocal(ctx context.Context, tenantID string, usernames []string, clientIDs []string) error
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
+	GetAPIKeyByID(ctx context.Context, tenantID string, keyID string) (APIKey, error)
 	DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error)
 
 	CreateSession(ctx context.Context, s Session) error
@@ -1077,17 +1078,30 @@ WHERE tenant_id=$3 AND id=$4
 	return nil
 }
 
+// GetAPIKeyByID reads one API key of the tenant.
+func (s *SQLStore) GetAPIKeyByID(ctx context.Context, tenantID string, keyID string) (APIKey, error) {
+	return s.scanAPIKey(s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, user_id, client_id, key_hash, name, permissions, expires_at, created_at
+FROM auth_api_keys
+WHERE tenant_id=$1 AND id=$2
+`, tenantID, keyID))
+}
+
 func (s *SQLStore) GetAPIKeyByHash(ctx context.Context, tenantID string, keyHash []byte) (APIKey, error) {
+	return s.scanAPIKey(s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, user_id, client_id, key_hash, name, permissions, expires_at, created_at
+FROM auth_api_keys
+WHERE tenant_id=$1 AND key_hash=$2
+`, tenantID, keyHash))
+}
+
+func (s *SQLStore) scanAPIKey(row *sql.Row) (APIKey, error) {
 	var out APIKey
 	var userID sql.NullString
 	var clientID sql.NullString
 	var permsRaw []byte
 	var expiresAt sql.NullTime
-	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, user_id, client_id, key_hash, name, permissions, expires_at, created_at
-FROM auth_api_keys
-WHERE tenant_id=$1 AND key_hash=$2
-`, tenantID, keyHash).Scan(
+	err := row.Scan(
 		&out.ID,
 		&out.TenantID,
 		&userID,

@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"sync"
@@ -194,11 +195,17 @@ func (s *Service) ingestAuditEvent(ctx context.Context, tenantID string, ev map[
 	}
 	alert, _ = s.store.GetAlert(ctx, tenantID, alert.ID)
 	s.hub.Publish(tenantID, alert)
-	_ = s.publishAudit(ctx, "audit.reporting.alert_created", tenantID, map[string]interface{}{
-		"alert_id":     alert.ID,
-		"audit_action": alert.AuditAction,
-		"severity":     alert.Severity,
-	})
+	if s.events != nil {
+		_ = s.events.Emit(ctx, "alert_created", pkgaudit.Event{
+			TenantID: tenantID, ActorID: "kms-reporting", ActorType: "service", Result: "success",
+			TargetType: "alert", TargetID: alert.ID, CorrelationID: alert.CorrelationID,
+			Details: map[string]interface{}{
+				"alert_id": alert.ID, "audit_action": alert.AuditAction, "severity": alert.Severity,
+				"category": alert.Category, "incident_id": alert.IncidentID, "source_target_type": alert.TargetType,
+				"source_target_id": alert.TargetID, "source_actor_id": alert.ActorID, "source_service": alert.Service,
+			},
+		})
+	}
 	return alert, nil
 }
 
@@ -489,7 +496,21 @@ func (s *Service) attachIncident(ctx context.Context, tenantID string, title str
 	if err := s.store.CreateIncident(ctx, item); err != nil {
 		return "", err
 	}
+	s.emitIncidentOpened(ctx, item)
 	return item.ID, nil
+}
+
+// emitIncidentOpened announces a new incident on the audit stream, where
+// compliance playbooks with the incident_opened trigger respond to it.
+func (s *Service) emitIncidentOpened(ctx context.Context, inc Incident) {
+	if s.events == nil {
+		return
+	}
+	_ = s.events.Emit(ctx, "incident_opened", pkgaudit.Event{
+		TenantID: inc.TenantID, ActorID: "kms-reporting", ActorType: "service", Result: "success",
+		TargetType: "incident", TargetID: inc.ID,
+		Details: map[string]interface{}{"incident_id": inc.ID, "title": inc.Title, "severity": inc.Severity},
+	})
 }
 
 func (s *Service) ListAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error) {
@@ -558,7 +579,14 @@ func (s *Service) GetIncident(ctx context.Context, tenantID string, id string) (
 	return inc, items, nil
 }
 
+// incidentStatuses are the states an incident can be set to.
+var incidentStatuses = map[string]bool{"open": true, "investigating": true, "resolved": true, "closed": true}
+
 func (s *Service) UpdateIncidentStatus(ctx context.Context, tenantID string, id string, status string, notes string) error {
+	status = strings.ToLower(strings.TrimSpace(status))
+	if !incidentStatuses[status] {
+		return newServiceError(http.StatusBadRequest, "bad_request", "status must be open, investigating, resolved or closed")
+	}
 	return s.store.UpdateIncidentStatus(ctx, tenantID, id, status, notes)
 }
 

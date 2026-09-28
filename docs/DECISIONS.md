@@ -7,6 +7,51 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — Playbooks as the response layer (2.5.0-beta)
+
+**Decision.**
+- **Incidents stay in reporting.** Playbooks respond to its
+  `incident_opened` and `alert_created` events, act on incidents and alerts
+  through its routes, and record the incident on the run. The dashboard
+  joins them (incident → runs). *Rejected:* a playbook-owned incident
+  record, which would be a second, competing incident list.
+- **Authority is re-checked by auth at run time.** Auth owns users and roles
+  (`POST /auth/delegated/authority`, kms-compliance only), and an
+  unreachable auth fails the run closed. *Rejected:* storing the saver's
+  token or a refresh token (a long-lived user credential at rest), and
+  copying role data into compliance.
+- **Delegated operations** (disable user, revoke API key or client) are
+  auth routes that only kms-compliance may call, naming the person. Auth
+  verifies that person now, and never targets the person themself, the last
+  full administrator or a platform identity. The person is a delegation
+  auth verifies, not an identity it trusts: the caller's identity is its
+  verified token (CLAUDE.md rule 4). *Rejected:* letting auth admit the
+  compliance identity on its admin routes (power over every user in every
+  tenant).
+- **Approvals are governance requests, resumed from governance's own
+  events.** `quorum_reached` only prompts compliance to read the request
+  back; the run continues if it is approved and bound (target, action,
+  requester, payload hash of the action as now defined). *Rejected:*
+  governance callbacks that execute on approval (the approver's vote would
+  become the executor), and polling.
+- **Credentials live in connections under the compliance MEK** (`pkg/mek`,
+  like audit webhooks), and existing inline values are migrated and
+  recorded as exposed. *Rejected:* sealing values in place inside
+  `actions_json` (every playbook edit would handle secrets), and dropping
+  existing values (a silent outage).
+- **Email goes through governance's SMTP**, only to active users of the
+  tenant. *Rejected:* an SMTP client in compliance (a second mail
+  configuration), and arbitrary recipients (a mail relay for anyone who can
+  write a playbook).
+- **Thresholds count in memory on the primary.** A lost count after a
+  failover delays a threshold trigger; it never invents one. *Rejected:* a
+  replicated counter table written on every audit event.
+- **No chains.** Events whose actor is kms-compliance, correlated to a run,
+  or alerts raised from them don't fire playbooks; the per-playbook cooldown
+  is the backstop for legacy emitters that carry neither.
+
+---
+
 ## 2026-09-28 — Playbooks run on a person's authority, from a catalogue of real events (2.4.0-beta)
 
 **Decision.** Playbook actions keep running as the compliance service
@@ -41,7 +86,7 @@ trigger lists only subjects a service emits, checked by
   service-side lookup of another user's permissions that auth doesn't offer
   yet. Until then a playbook keeps its authorization after its author loses
   the permissions; saving it again, or disabling or deleting it, is the
-  control. Open for step 2.
+  control. Closed in 2.5.0-beta: auth re-checks the person before every automatic run.
 
 **Also:** outbound actions go through `pkg/ssrfguard`, not the svctls
 router, so they never present the service's mTLS certificate; triggered runs

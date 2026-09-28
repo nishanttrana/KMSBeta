@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 )
 
 // The playbook store on real Postgres (CI integration-postgres): migrations
-// 004 + 005 (re-runnable), a row saved before 005 read with its legacy action
+// 004-006 (re-runnable), a row saved before 005 read with its legacy action
 // names mapped, authorization and category round-trips, run actor, and the
 // summary for a tenant with no playbooks (SUM over no rows is NULL).
 func TestPlaybookStorePostgres(t *testing.T) {
@@ -69,18 +70,40 @@ func TestPlaybookStorePostgres(t *testing.T) {
 		t.Fatalf("update: %+v %v", pb, err)
 	}
 
-	run, err := store.CreatePlaybookRun(ctx, PlaybookRun{ID: "pbrun-pg", PlaybookID: "pb-new", TenantID: tenant, TriggerEvent: "manual", Actor: "u-admin", Status: runRunning})
-	if err != nil || run.Actor != "u-admin" {
+	run, err := store.CreatePlaybookRun(ctx, PlaybookRun{ID: "pbrun-pg", PlaybookID: "pb-new", TenantID: tenant, TriggerEvent: "incident_opened", Actor: "u-admin", ActorType: "user", Status: runRunning,
+		Context: RunEvent{Subject: "audit.reporting.incident_opened", TargetType: "incident", TargetID: "inc_pg", Details: map[string]string{"severity": "high"}}, IncidentID: "inc_pg", ApprovedIndex: -1})
+	if err != nil || run.Actor != "u-admin" || run.Context.Details["severity"] != "high" || run.ApprovedIndex != -1 {
 		t.Fatalf("run: %+v %v", run, err)
 	}
 	now := time.Now().UTC()
-	run.Status, run.ActionsRun, run.CompletedAt = runPendingApproval, 1, &now
-	if run, err = store.UpdatePlaybookRun(ctx, run); err != nil || run.Status != runPendingApproval || run.Actor != "u-admin" {
+	run.Status, run.ApprovalRequestID, run.ResumeIndex = runAwaitingApproval, "apr_pg", 1
+	run.Results = []ActionResult{{Index: 1, Type: "rotate_key", Status: outcomeDone, At: now}}
+	if run, err = store.UpdatePlaybookRun(ctx, run); err != nil || len(run.Results) != 1 || run.ResumeIndex != 1 {
 		t.Fatalf("run update: %+v %v", run, err)
 	}
-	if runs, err := store.ListPlaybookRuns(ctx, tenant, "pb-new", 5); err != nil || len(runs) != 1 {
-		t.Fatalf("runs: %v %v", runs, err)
+	if got, err := store.GetPlaybookRunByApproval(ctx, tenant, "apr_pg"); err != nil || got.ID != run.ID {
+		t.Fatalf("run by approval: %+v %v", got, err)
 	}
+	run.Status, run.ApprovalRequestID, run.CompletedAt = runPendingApproval, "", &now
+	if run, err = store.UpdatePlaybookRun(ctx, run); err != nil || run.Status != runPendingApproval {
+		t.Fatalf("run finish: %+v %v", run, err)
+	}
+	for _, q := range []RunQuery{{PlaybookID: "pb-new"}, {IncidentID: "inc_pg"}, {Status: runPendingApproval}} {
+		if runs, err := store.ListPlaybookRuns(ctx, tenant, q); err != nil || len(runs) != 1 {
+			t.Fatalf("runs %+v: %v %v", q, runs, err)
+		}
+	}
+
+	// A sealed connection round-trips through BYTEA.
+	env := &pkgcrypto.EnvelopeCiphertext{Ciphertext: []byte{1, 2}, DataIV: []byte{3}, WrappedDEK: []byte{4, 5}, WrappedDEKIV: []byte{6}}
+	stored, err := store.CreateConnection(ctx, Connection{ID: "pbconn-pg", TenantID: tenant, Name: "soc", Type: "slack", Endpoint: "hooks.slack.com", FieldSet: []string{"webhook_url"}, Sealed: env})
+	if err != nil || stored.Endpoint != "hooks.slack.com" || stored.Sealed != nil {
+		t.Fatalf("connection: %+v %v", stored, err)
+	}
+	if got, err := store.GetConnection(ctx, tenant, "pbconn-pg"); err != nil || got.Sealed == nil || string(got.Sealed.WrappedDEK) != string(env.WrappedDEK) {
+		t.Fatalf("sealed connection read: %+v %v", got, err)
+	}
+	_, _ = db.Exec(`DELETE FROM compliance_playbook_connections WHERE tenant_id=$1`, tenant)
 	sum, err = store.GetPlaybookSummary(ctx, tenant)
 	if err != nil || sum["total_playbooks"] != 2 || sum["enabled_count"] != 1 || sum["runs_today"] != 1 || sum["last_run_status"] != runPendingApproval {
 		t.Fatalf("summary: %v %v", sum, err)

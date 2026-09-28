@@ -102,6 +102,25 @@ Authentication, session management, users, tenants, API clients, IdP integration
 
 ---
 
+### Delegated operations (2.5.0-beta)
+
+Route kernel routes that only the `kms-compliance` service identity may call
+(anyone else: `403 service_identity_required`), for the tenant in
+`X-Tenant-ID`. Body: `on_behalf_of` (a user ID), `reason`,
+`playbook_run_id`. Auth checks the named user now: they must exist in the
+tenant, be active, and hold the operation's permission. Otherwise the
+request is refused (`403` with `delegator_unknown`, `delegator_inactive` or
+`delegator_lacks_permission`).
+
+| Route | Needs (of `on_behalf_of`) | Audit action | Also refused |
+|---|---|---|---|
+| `POST /svc/auth/auth/delegated/authority` (body `user_id`, `permissions[]`; returns `active`, `missing[]`) | none | `delegated_authority_checked` | none |
+| `POST /svc/auth/auth/delegated/users/{id}/disable` | `auth.user.write` | `delegated_user_disabled` | `self_target`, `last_administrator` (409) |
+| `POST /svc/auth/auth/delegated/api-keys/{id}/revoke` | `auth.api_key.write` | `delegated_api_key_revoked` | `service_identity_protected` (409) |
+| `POST /svc/auth/auth/delegated/clients/{id}/revoke` | `auth.client.write` | `delegated_client_revoked` | `service_identity_protected` (409) |
+
+---
+
 ### POST /svc/auth/auth/login
 
 **Authentication**: None (public)
@@ -1159,6 +1178,19 @@ critical `audit.audit.chain_broken` (details `scope: target`, `target_id`,
 
 ## Service 5: Governance (`/svc/governance/`)
 
+**Playbook approvals and email (2.5.0-beta).** A built-in policy,
+"Playbook actions (built-in)", covers `playbook.*`. It is created on first
+use, and its approvers are admins and tenant admins other than the person
+the playbook acts for. Disabling it stops approval-gated playbook steps.
+`POST /svc/governance/governance/notify/email` (route kernel, audited
+`notification_email_sent`) is callable only by `kms-compliance`, for a
+playbook's `send_email`. Body: `to[]` (emails of the tenant's active users,
+or `role:<name>`; anything else is refused with
+`recipient_not_tenant_user`), `subject` (up to 200 characters), `body` (up
+to 16 KiB), `playbook_run_id`. It sends through the tenant's SMTP settings:
+`409 smtp_not_configured` when there are none, `502 send_failed` naming any
+recipient that failed.
+
 **Approver roles (1.28.0-beta).** When a request opens, its approvers are the
 policy's `approver_users` plus every active user of the tenant who holds one of
 its `approver_roles`, directly or through a group role binding, minus the
@@ -1349,93 +1381,172 @@ Body: `frameworkId`, `templateId`, `scope`, `recompute`. Response 202: assessmen
 
 ---
 
-### Playbooks (route kernel, 2.4.0-beta)
+### Playbooks (route kernel; response layer since 2.5.0-beta)
 
-A playbook runs its actions when its trigger event is audited, or when a
-person runs it. Actions act as the compliance service identity, so every
-route below takes the tenant from the verified token (a body or header
-`tenant_id` must match it) and checks two permissions: the route's own, and,
-for saving an enabled playbook or running one, **every permission its
-actions name**. Automatic runs act on the authority of `authorized_by`, the
-caller who last saved the playbook holding those permissions. They are
-refused (`audit.compliance.playbook_triggered`, `reason:
-playbook_not_authorized`) while it is empty, which is the case for every
-playbook saved before 2.4.0-beta.
+A playbook responds to an audited event, or runs by hand. It can notify
+through sealed connections, act on keys, certificates, users, API keys,
+clients, alerts and incidents, run assessments and scans, and pause for a
+governance approval. Actions run as the compliance service identity, on the
+authority of a person:
+
+- **Saving an enabled playbook** needs every permission its actions use, and
+  a user (not an API client): `authorized_by` records them. A disabled
+  playbook may be saved by any `compliance.playbook.write` holder and stays
+  unauthorized.
+- **Every automatic run** first asks auth whether `authorized_by` is still
+  active and still holds those permissions (`POST /auth/delegated/authority`).
+  If not, or if auth can't be reached, the run doesn't start
+  (`playbook_triggered`, `refused`, `authority_revoked` /
+  `authority_unverified`).
+- **Manual runs, retries and cancels** need the caller to hold every action
+  permission.
+- **Delegated actions** (`disable_user`, `revoke_api_key`, `revoke_client`)
+  are performed by auth, which re-checks the person's permission.
+- **Approval-gated steps** (`deactivate_key`, `revoke_certificate` and the
+  delegated actions always; any step with `require_approval`) pause the run.
+  Governance opens a request under the built-in "Playbook actions" policy,
+  and the person the playbook acts for can't approve. The run resumes on
+  `audit.governance.quorum_reached` only after compliance reads the request
+  back from governance. It must be approved, name this run's action and
+  requester, and carry the hash of the action as the playbook now defines
+  it. The person's authority is then re-checked.
 
 | Route | Permission | Audit action |
 |---|---|---|
 | `GET /svc/compliance/compliance/playbooks/catalog` | `compliance.playbook.read` | `playbook_catalog_read` |
 | `GET /svc/compliance/compliance/playbooks/summary` | `compliance.playbook.read` | `playbook_summary_read` |
 | `GET /svc/compliance/compliance/playbooks` | `compliance.playbook.read` | `playbooks_listed` |
-| `POST /svc/compliance/compliance/playbooks` | `compliance.playbook.write` + action permissions if enabled | `playbook_created` |
+| `POST /svc/compliance/compliance/playbooks` | `compliance.playbook.write` (+ action permissions if enabled) | `playbook_created` |
 | `GET /svc/compliance/compliance/playbooks/{id}` | `compliance.playbook.read` | `playbook_read` |
-| `PUT /svc/compliance/compliance/playbooks/{id}` | `compliance.playbook.write` + action permissions if enabled | `playbook_updated` |
+| `PUT /svc/compliance/compliance/playbooks/{id}` | `compliance.playbook.write` (+ action permissions if enabled) | `playbook_updated` |
 | `DELETE /svc/compliance/compliance/playbooks/{id}` | `compliance.playbook.delete` | `playbook_deleted` |
 | `POST /svc/compliance/compliance/playbooks/{id}/run` | `compliance.playbook.run` + every action permission | `playbook_run_requested` |
+| `POST /svc/compliance/compliance/playbooks/{id}/dry-run` | `compliance.playbook.run` | `playbook_dry_run` |
 | `GET /svc/compliance/compliance/playbooks/{id}/runs` | `compliance.playbook.read` | `playbook_runs_listed` |
+| `GET /svc/compliance/compliance/playbook-runs?status=&incident_id=` | `compliance.playbook.read` | `playbook_runs_searched` |
+| `GET /svc/compliance/compliance/playbook-runs/{run_id}` | `compliance.playbook.read` | `playbook_run_read` |
+| `POST /svc/compliance/compliance/playbook-runs/{run_id}/cancel` | `compliance.playbook.run` + every action permission | `playbook_run_cancelled` |
+| `POST /svc/compliance/compliance/playbook-runs/{run_id}/retry` | `compliance.playbook.run` + every action permission | `playbook_run_retried` |
+| `GET /svc/compliance/compliance/playbooks/connections` | `compliance.playbook.read` | `connections_listed` |
+| `POST /svc/compliance/compliance/playbooks/connections` | `compliance.playbook.write` | `connection_created` |
+| `PUT /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.write` | `connection_updated` |
+| `DELETE /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.delete` | `connection_deleted` |
+| `POST /svc/compliance/compliance/playbooks/connections/{id}/test` | `compliance.playbook.write` | `connection_tested` |
+| `GET /svc/compliance/mek/exposure` | `compliance.read` | `mek_exposure_listed` (pkg/mek) |
 
-**Body** (create and update; unknown fields are rejected with 400, including
-the old `trigger.threshold`):
+**Playbook body** (unknown fields are rejected with 400):
 
 ```json
 {
-  "name": "Rotate on canary trip",
-  "description": "",
-  "category": "incident_response",
-  "trigger": {"type": "canary_tripped"},
+  "name": "Lock out a brute-forced account",
+  "category": "access_control",
   "enabled": true,
+  "trigger": {
+    "type": "login_failed",
+    "filters": [{"field": "details.reason", "op": "neq", "value": "mfa_required"}],
+    "threshold": 5, "window_seconds": 300, "group_by": "target_id"
+  },
   "actions": [
-    {"type": "rotate_key", "delay_seconds": 0, "parameters": {"key_id": "key_123", "stop_on_failure": "true"}},
-    {"type": "send_slack", "parameters": {"webhook_url": "https://hooks.slack.com/services/...", "message": "canary tripped"}}
+    {"type": "send_slack", "parameters": {"connection_id": "pbconn_...", "message": "5 failed logins for {{event.target_id}}"}},
+    {"type": "disable_user", "parameters": {"user_id": "{{event.target_id}}"},
+     "condition": [{"field": "severity", "op": "in", "value": "high,critical"}]},
+    {"type": "send_email", "parameters": {"to": "role:admin", "subject": "Account {{event.target_id}} disabled", "body": "Run {{run.id}}"}}
   ]
 }
 ```
 
-**Catalogue.** `GET .../playbooks/catalog` returns `triggers` (type, label,
-group, the audit `subjects` that fire it, `success_only`, `platform`),
-`actions` (type, label, `permission`, `required` / `optional` / `secrets`
-parameters, `url_param`) and `categories`. The dashboard renders only this.
+- **Trigger:** a catalogue `type`, or `custom_event` with `subject` (an
+  audit subject, exact or ending in `.*`; never a playbook's own events),
+  plus optional `filters` (`field`, `op` from `eq`, `neq`, `in`, `not_in`,
+  `contains`, `prefix`, and `value`). With `threshold` above 1 it fires when
+  that many matching events arrive within `window_seconds`, counted per
+  `group_by` value. Counts are held in memory on the cluster primary and
+  start again after a restart or failover.
+- **Fields** for filters, conditions and templates: `subject`, `tenant_id`,
+  `service`, `result`, `severity`, `target_type`, `target_id`, `actor_id`,
+  `actor_type`, `correlation_id`, `details.<key>`.
+- **Templates** in parameters: `{{event.<field>}}`, `{{run.id}}`,
+  `{{playbook.id}}`, `{{playbook.name}}`, `{{trigger}}`. A required
+  parameter that resolves empty fails the step (it never calls with
+  nothing). `connection_id` can't be templated.
+- **Action options:** `condition` (filters; the step is skipped and audited
+  `skipped` when they don't match), `require_approval`, `delay_seconds`
+  (0-3600), and `stop_on_failure=true` in parameters.
+- **Events playbooks don't react to:** their own events, events whose actor
+  is `kms-compliance`, events correlated to a run (`pbrun_...`), and alerts
+  raised from such events. Also refused: events more than 15 minutes old,
+  and a second firing of the same playbook within 60 s (`cooldown`).
 
-- Triggers: `canary_tripped`, `threat_signal_raised`, `threat_finding_raised`,
-  `key_compromised`, `key_created`, `key_rotated`, `key_destroyed`
-  (success only), `key_access_refused`, `key_request_replay_detected`,
-  `cert_revoked` (success only), `cert_renewal_window_missed`,
+**Catalogue** (`GET .../playbooks/catalog`): `triggers`, `actions` (with
+`permission`, `required` / `optional` parameters, `connection`, `approval`,
+`delegated`), `categories`, `connection_types`, `event_fields`,
+`filter_ops`, `templates`, `incident_statuses`. The dashboard renders only
+this.
+
+- Triggers: `alert_raised` (`audit.reporting.alert_created`),
+  `incident_opened` (`audit.reporting.incident_opened`), `canary_tripped`,
+  `threat_signal_raised`, `threat_finding_raised`, `key_compromised`,
+  `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
+  only), `key_access_refused`, `key_request_replay_detected`,
+  `key_hsm_refused`, `cert_revoked`, `cert_renewal_window_missed`,
   `cert_mass_renewal_risk`, `crl_generation_failed`, `login_failed`,
   `account_locked`, `dpop_replay_detected`, `posture_changed`,
-  `service_health_degraded` (watchdog `audit.health.incident`; fires the
-  platform tenant's playbooks).
-- Actions and the permission each needs: `rotate_key` (`key.rotate`),
-  `disable_key` (`key.disable`), `deactivate_key` (`key.deactivate`),
-  `activate_key` (`key.activate`), `renew_certificate` (`cert.renew`),
-  `revoke_certificate` (`cert.revoke`), `trigger_assessment`
-  (`compliance.assessment.run`), `snapshot_posture`
-  (`compliance.posture.refresh`); `send_slack`, `send_teams`, `send_webhook`,
-  `create_jira_ticket`, `create_servicenow_incident`, `create_audit_event`
-  need none beyond `compliance.playbook.write`.
-- Removed in 2.4.0-beta: `destroy_key`, `send_pagerduty`, `disable_user`,
-  `revoke_api_key`. `suspend_key`, `revoke_key` and `enable_key` rows are read
-  as `disable_key`, `deactivate_key` and `activate_key`.
+  `fips_mode_changed`, `backup_restored`, `cluster_member_joined`,
+  `service_health_degraded` (fires the platform tenant's playbooks), and
+  `custom_event`.
+- Actions (permission; approval): `send_slack`, `send_teams`,
+  `send_webhook`, `create_jira_ticket`, `create_servicenow_incident` (a
+  connection of the matching type), `send_email` (governance sends to this
+  tenant's active users, by email or `role:<name>`), `create_audit_event`;
+  `rotate_key` (`key.rotate`), `disable_key` (`key.disable`),
+  `deactivate_key` (`key.deactivate`; approval), `activate_key`
+  (`key.activate`), `trigger_rotation_policy` (`key.rotation.write`),
+  `renew_certificate` (`cert.renew`), `revoke_certificate` (`cert.revoke`;
+  approval), `disable_user` (`auth.user.write`; approval, delegated),
+  `revoke_api_key` (`auth.api_key.write`; approval, delegated),
+  `revoke_client` (`auth.client.write`; approval, delegated),
+  `acknowledge_alert`, `resolve_alert`, `set_incident_status`,
+  `assign_incident`, `generate_report` (`reporting.write`),
+  `trigger_assessment` (`compliance.assessment.run`), `snapshot_posture`
+  (`compliance.posture.refresh`), `run_posture_scan` (`posture.write`).
 
-**Outbound endpoints** (`webhook_url`, `url`, `base_url`, `instance_url`) must
-be public `https` URLs. A platform service host or a private, loopback,
-link-local or metadata address is refused (`400`, audited `reason:
-url_blocked`), and the call goes through `pkg/ssrfguard` (no redirects, no
-client certificate, address checked at dial time).
+**Connections** hold the endpoint and credentials of a notification target:
+`slack` / `teams` (`webhook_url`), `webhook` (`url`, `headers`), `jira`
+(`base_url`, `api_token`), `servicenow` (`instance_url`, `auth_token`).
+Every field is sealed as one envelope under the compliance master key from
+keycore (`pkg/mek`). The API returns the name, type, endpoint host and the
+names of fields set, never a value. On update, a field sent as `********`
+keeps its stored value. Replacing every field retires an exposure-register
+entry. The endpoint must be public `https`: platform hosts and private or
+metadata addresses are refused (`url_blocked`), and calls go through
+`pkg/ssrfguard`. `POST .../test` makes a real call: a test message for
+Slack, Teams and webhooks, and an authenticated read for Jira and
+ServiceNow. A connection in use can't be deleted (`409 connection_in_use`).
+Credentials that releases before 2.5.0-beta kept inline in actions are moved
+into connections at startup by the primary, audited
+(`playbook_connections_migrated`) and recorded in the exposure register:
+rotate those webhook URLs and tokens.
 
-**Secrets** (`webhook_url` for Slack and Teams, `headers`, `api_token`,
-`auth_token`) are returned as `********`. Send `********` back to keep the
-stored value.
-
-**Runs.** `POST .../run` returns `202 {"run_id", "playbook_id", "status":
-"running"}`. A run record's `status` is `completed`, `pending_approval` (an
-action opened a governance approval instead of acting), `partial_failure`,
-`failed` (a `stop_on_failure` action failed) or `cancelled`; `actor` is on
-whose authority it ran; `output` has one line per action.
+**Runs.** `POST .../run` (optional body `{"event": {...}}`, recorded as
+supplied by the runner) returns `202 {"run_id"}`. A run record has `status`,
+`context` (the event), `results` (one per action: `done`, `skipped`,
+`pending_approval`, `awaiting_approval`, `failed`, `refused`, with target
+and error), `actor`, `incident_id`, `approval_request_id` while paused, and
+`retry_of`. Status is one of: `running`, `awaiting_approval`, `completed`,
+`pending_approval` (a platform service opened its own approval),
+`partial_failure`, `failed` (a `stop_on_failure` step failed), `cancelled`,
+`approval_denied` or `approval_expired`. Cancel stops a running run at its
+next step, or ends a paused one and withdraws its governance request. Retry
+starts a new run with the same event, on the caller's authority, from the
+first step that didn't complete. `POST .../dry-run` resolves every step and
+reads each target from its owning service (key, certificate, alert,
+incident, connection). It changes nothing and sends nothing.
 
 **Refusals:** `tenant_mismatch`, `tenant_conflict`, `permission_denied`,
 `unauthenticated` (kernel); `action_permission_denied` (403, with
-`missing_permissions`), `url_blocked` (400), `playbook_invalid` (409, a run of
-a stored playbook that names a removed action or trigger).
+`missing_permissions`), `user_required` (403), `url_blocked` (400),
+`connection_invalid` (400), `playbook_invalid` (409), `connection_in_use`,
+`run_not_cancellable`, `run_not_retryable` (409).
 
 ---
 
@@ -1565,6 +1676,16 @@ batch. Response `200`: `inserted`, `request_id`.
 ## Service 8: Reporting (`/svc/reporting/`)
 
 Alert rules, alert history, report generation, scheduled delivery.
+
+**Incidents and playbooks (2.5.0-beta).** A new incident emits
+`audit.reporting.incident_opened` (target the incident; `title`,
+`severity`), and each alert emits `audit.reporting.alert_created`, with the
+alert as target and `severity`, `incident_id`, `source_actor_id`,
+`source_target_id` and `source_service` in details. Compliance playbooks
+trigger on both. `PUT /incidents/{id}/status` accepts only `open`,
+`investigating`, `resolved` and `closed` (otherwise 400).
+`PUT /incidents/{id}/status` and `/assign` return 404 for an incident that
+doesn't exist; until 2.5.0-beta they answered 200.
 
 Every route is on the `pkg/route` kernel (since 1.33.0-beta): a verified bearer
 token is required, the tenant is the token's (a `tenant_id` in the query,
@@ -2951,7 +3072,10 @@ Selected events with dedicated audit classification:
 - `audit.sbom.generated` (`vulnerabilities_assessed: false` and `vulnerability_error` when sources failed; no count), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_vulnerabilities_listed`, `sbom_advisories_listed`, `sbom_advisory_saved`, `sbom_advisory_deleted`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
-- `audit.compliance.*` playbook events (2.4.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_runs_listed` (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `url_blocked`, `playbook_invalid`). Engine: `playbook_triggered` (a trigger matched: `result: success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `cooldown` / `stale_event`), `playbook_action_executed` (one per action: `success`, `pending` with `outcome: pending_approval`, `failure`, or `refused` with `reason: action_removed`; `action`, `key_id` / `cert_id`, `authorized_by`, `executed_as`), `playbook_run_completed` (`status`, `actions_run`, `trigger`, `subject`), `playbook_action` (the `create_audit_event` action). `playbook_executed` is no longer emitted
+- `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested` (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `stale_event`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
+- `audit.auth.delegated_authority_checked`, `audit.auth.delegated_user_disabled`, `audit.auth.delegated_api_key_revoked`, `audit.auth.delegated_client_revoked` (kernel events; `on_behalf_of`, `via: kms-compliance`, `playbook_run_id`; refusals `service_identity_required`, `delegator_unknown`, `delegator_inactive`, `delegator_lacks_permission`, `self_target`, `last_administrator`, `service_identity_protected`): playbook delegated operations (2.5.0-beta)
+- `audit.governance.notification_email_sent` (kernel event; refusals `service_identity_required`, `recipient_not_tenant_user`; failures `smtp_not_configured`, `send_failed`): playbook email (2.5.0-beta)
+- `audit.reporting.incident_opened` (a new incident: target the incident, `title`, `severity`), `audit.reporting.alert_created` (target the alert; `severity`, `incident_id`, `source_*`): playbook triggers (2.5.0-beta)
 - `audit.watchdog.heartbeats_listed`, `audit.watchdog.incidents_listed`, `audit.reconciler.status_read` (kernel events, permission `health.read`; refusals `unauthenticated`, `permission_denied`): platform health reads (1.39.0-beta)
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.wrap`, `audit.key.unwrap`, `audit.key.sign`, `audit.key.verify`, `audit.key.mac`, `audit.key.derive`, `audit.key.kem_encapsulate`, `audit.key.kem_decapsulate`: every key operation, named after the operation that ran, with `duration_ms` and `result` `success` / `refused` (`reason`) / `failure` / `pending_approval` (2.1.0-beta; these feed the Operations metrics)
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`
@@ -3149,6 +3273,10 @@ from the code; do not edit by hand.
 - `POST /svc/auth/auth/clients/{id}/revoke`
 - `POST /svc/auth/auth/clients/{id}/rotate-key`
 - `POST /svc/auth/auth/cluster/mint`
+- `POST /svc/auth/auth/delegated/api-keys/{id}/revoke`
+- `POST /svc/auth/auth/delegated/authority`
+- `POST /svc/auth/auth/delegated/clients/{id}/revoke`
+- `POST /svc/auth/auth/delegated/users/{id}/disable`
 - `GET /svc/auth/auth/groups/roles`
 - `DELETE /svc/auth/auth/groups/{id}/role`
 - `PUT /svc/auth/auth/groups/{id}/role`
@@ -3376,13 +3504,23 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/keys/expired`
 - `GET /svc/compliance/compliance/keys/hygiene`
 - `GET /svc/compliance/compliance/keys/orphaned`
+- `GET /svc/compliance/compliance/playbook-runs`
+- `GET /svc/compliance/compliance/playbook-runs/{run_id}`
+- `POST /svc/compliance/compliance/playbook-runs/{run_id}/cancel`
+- `POST /svc/compliance/compliance/playbook-runs/{run_id}/retry`
 - `GET /svc/compliance/compliance/playbooks`
 - `POST /svc/compliance/compliance/playbooks`
 - `GET /svc/compliance/compliance/playbooks/catalog`
+- `GET /svc/compliance/compliance/playbooks/connections`
+- `POST /svc/compliance/compliance/playbooks/connections`
+- `DELETE /svc/compliance/compliance/playbooks/connections/{id}`
+- `PUT /svc/compliance/compliance/playbooks/connections/{id}`
+- `POST /svc/compliance/compliance/playbooks/connections/{id}/test`
 - `GET /svc/compliance/compliance/playbooks/summary`
 - `DELETE /svc/compliance/compliance/playbooks/{id}`
 - `GET /svc/compliance/compliance/playbooks/{id}`
 - `PUT /svc/compliance/compliance/playbooks/{id}`
+- `POST /svc/compliance/compliance/playbooks/{id}/dry-run`
 - `POST /svc/compliance/compliance/playbooks/{id}/run`
 - `GET /svc/compliance/compliance/playbooks/{id}/runs`
 - `GET /svc/compliance/compliance/posture`
@@ -3556,6 +3694,7 @@ from the code; do not edit by hand.
 - `GET /svc/governance/governance/backups/{id}/key`
 - `POST /svc/governance/governance/key-approval`
 - `GET /svc/governance/governance/key-approval/{id}/status`
+- `POST /svc/governance/governance/notify/email`
 - `GET /svc/governance/governance/policies`
 - `POST /svc/governance/governance/policies`
 - `DELETE /svc/governance/governance/policies/{id}`

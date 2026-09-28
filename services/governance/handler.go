@@ -7,20 +7,23 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"vecta-kms/pkg/route"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc        *Service
-	mux        *http.ServeMux
-	parseToken func(string) (*pkgauth.Claims, error)
+	svc         *Service
+	mux         *http.ServeMux
+	parseToken  func(string) (*pkgauth.Claims, error)
+	kernelAudit route.Emitter
 }
 
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
 	h.mux = h.routes()
+	h.mountKernel(h.mux, h.notifyRouter())
 	return h
 }
 

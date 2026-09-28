@@ -36,6 +36,30 @@ ORDER BY created_at DESC
 	return out, rows.Err()
 }
 
+// ListAllPlaybooks returns every tenant's playbooks (the credential
+// migration, primary only).
+func (s *SQLStore) ListAllPlaybooks(ctx context.Context) ([]Playbook, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, name, description, category, trigger_json, actions_json,
+       enabled, authorized_by, run_count, last_run_at, created_at
+FROM compliance_playbooks
+ORDER BY tenant_id, id
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []Playbook
+	for rows.Next() {
+		p, err := scanPlaybookRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLStore) CreatePlaybook(ctx context.Context, p Playbook) (Playbook, error) {
 	triggerJSON, err := json.Marshal(p.Trigger)
 	if err != nil {
@@ -117,33 +141,7 @@ func (s *SQLStore) DeletePlaybook(ctx context.Context, tenantID, id string) erro
 	return nil
 }
 
-// ---- Playbook Runs ----
-
-func (s *SQLStore) CreatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO compliance_playbook_runs
-  (id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP)
-RETURNING id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
-`, run.ID, run.PlaybookID, run.TenantID, run.TriggerEvent, run.Actor,
-		run.Status, run.ActionsRun, run.Output)
-	return scanPlaybookRunRow(row)
-}
-
-func (s *SQLStore) UpdatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-UPDATE compliance_playbook_runs
-SET status=$3, actions_run=$4, output=$5, completed_at=$6
-WHERE tenant_id=$1 AND id=$2
-RETURNING id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
-`, run.TenantID, run.ID, run.Status, run.ActionsRun, run.Output, nullableTimePtr(run.CompletedAt))
-	pr, err := scanPlaybookRunRow(row)
-	if err == sql.ErrNoRows {
-		return PlaybookRun{}, errNotFound
-	}
-	return pr, err
-}
-
+// IncrementPlaybookRunCount counts a finished run.
 func (s *SQLStore) IncrementPlaybookRunCount(ctx context.Context, tenantID, id string, lastRunAt time.Time) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 UPDATE compliance_playbooks
@@ -151,36 +149,6 @@ SET run_count = run_count + 1, last_run_at = $3
 WHERE tenant_id=$1 AND id=$2
 `, tenantID, id, lastRunAt)
 	return err
-}
-
-func (s *SQLStore) ListPlaybookRuns(ctx context.Context, tenantID, playbookID string, limit int) ([]PlaybookRun, error) {
-	if limit <= 0 || limit > 500 {
-		limit = 50
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, playbook_id, tenant_id, trigger_event, actor, status, actions_run, output, started_at, completed_at
-FROM compliance_playbook_runs
-WHERE tenant_id=$1 AND playbook_id=$2
-ORDER BY started_at DESC
-LIMIT $3
-`, tenantID, playbookID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-
-	var out []PlaybookRun
-	for rows.Next() {
-		pr, err := scanPlaybookRunRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, pr)
-	}
-	if out == nil {
-		out = []PlaybookRun{}
-	}
-	return out, rows.Err()
 }
 
 func (s *SQLStore) GetPlaybookSummary(ctx context.Context, tenantID string) (map[string]interface{}, error) {
@@ -271,23 +239,6 @@ func scanPlaybookRow(row rowScanner) (Playbook, error) {
 		}
 	}
 	return p, nil
-}
-
-func scanPlaybookRunRow(row rowScanner) (PlaybookRun, error) {
-	var pr PlaybookRun
-	var completedAt sql.NullTime
-	if err := row.Scan(
-		&pr.ID, &pr.PlaybookID, &pr.TenantID, &pr.TriggerEvent, &pr.Actor,
-		&pr.Status, &pr.ActionsRun, &pr.Output, &pr.StartedAt, &completedAt,
-	); err != nil {
-		return PlaybookRun{}, err
-	}
-	pr.StartedAt = pr.StartedAt.UTC()
-	if completedAt.Valid {
-		t := completedAt.Time.UTC()
-		pr.CompletedAt = &t
-	}
-	return pr, nil
 }
 
 // nullableTimePtr converts a *time.Time to a driver value.

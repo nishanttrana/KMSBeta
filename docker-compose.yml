@@ -1052,6 +1052,10 @@ services:
       AUDIT_URL: https://audit:8070
       POLICY_URL: https://policy:8040
       CERTS_URL: https://certs:8030
+      AUTH_URL: https://auth:8001
+      GOVERNANCE_URL: https://governance:8050
+      REPORTING_URL: https://reporting:8140
+      POSTURE_URL: https://posture:8220
       HTTP_PORT: "8110"
       GRPC_PORT: "18110"
     ports:

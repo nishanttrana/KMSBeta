@@ -157,7 +157,7 @@ func newComplianceService(t *testing.T) (*Service, *SQLStore, *fakeComplianceKey
 func newComplianceHandler(t *testing.T) (*Handler, *Service, *fakeComplianceKeyCore, *fakeCompliancePolicy, *fakeComplianceAudit, *fakeComplianceCerts, *nopCompliancePublisher) {
 	t.Helper()
 	svc, _, keycore, policy, audit, certs, pub := newComplianceService(t)
-	return NewHandler(svc, nil, nil), svc, keycore, policy, audit, certs, pub
+	return NewHandler(svc, nil, nil, &connVault{}), svc, keycore, policy, audit, certs, pub
 }
 
 func createComplianceSchemaForTest(conn *pkgdb.DB) error {
@@ -275,6 +275,31 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			completed_at TIMESTAMP,
 			actor TEXT NOT NULL DEFAULT '',
+			actor_type TEXT NOT NULL DEFAULT 'user',
+			context_json TEXT NOT NULL DEFAULT '{}',
+			results_json TEXT NOT NULL DEFAULT '[]',
+			resume_index INT NOT NULL DEFAULT 0,
+			approved_index INT NOT NULL DEFAULT -1,
+			approval_request_id TEXT NOT NULL DEFAULT '',
+			incident_id TEXT NOT NULL DEFAULT '',
+			retry_of TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (tenant_id, id)
+		);`,
+		// migration 006
+		`CREATE TABLE compliance_playbook_connections (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			endpoint TEXT NOT NULL DEFAULT '',
+			fields_set TEXT NOT NULL DEFAULT '[]',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			creds_ciphertext BLOB,
+			creds_data_iv BLOB,
+			creds_wrapped_dek BLOB,
+			creds_wrapped_dek_iv BLOB,
 			PRIMARY KEY (tenant_id, id)
 		);`,
 	}

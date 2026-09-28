@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/mek/mektest"
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/route/routetest"
 	"vecta-kms/pkg/servicetoken"
@@ -25,61 +28,152 @@ import (
 var (
 	pbAdmin  = &pkgauth.Claims{UserID: "u-admin", TenantID: "t1", Role: "admin", Permissions: []string{"*"}}
 	pbWriter = &pkgauth.Claims{UserID: "u-writer", TenantID: "t1", Role: "ops", Permissions: []string{permPlaybookRead, permPlaybookWrite, permPlaybookRun}}
+	pbClient = &pkgauth.Claims{ClientID: "ci-bot", TenantID: "t1", Role: "client-service", Permissions: []string{"*"}}
 )
 
-// platformRecorder stands in for keycore and certs: it records each call and
-// answers with the configured status and body.
+// platformCall is one request a platform stand-in received.
+type platformCall struct {
+	Method, Path, Tenant, Correlation, Auth string
+	Body                                    map[string]interface{}
+}
+
+// platformRecorder stands in for keycore, certs, auth, governance, reporting
+// and posture: it records each call and answers with the configured status.
 type platformRecorder struct {
 	mu     sync.Mutex
-	calls  []*http.Request
+	calls  []platformCall
 	status int
 	body   string
 }
 
 func (p *platformRecorder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	raw, _ := io.ReadAll(r.Body)
+	var body map[string]interface{}
+	_ = json.Unmarshal(raw, &body)
 	p.mu.Lock()
-	p.calls = append(p.calls, r.Clone(context.Background()))
-	status, body := p.status, p.body
+	p.calls = append(p.calls, platformCall{Method: r.Method, Path: r.URL.Path, Tenant: r.Header.Get("X-Tenant-ID"), Correlation: r.Header.Get("X-Correlation-ID"), Auth: r.Header.Get("Authorization"), Body: body})
+	status, resp := p.status, p.body
 	p.mu.Unlock()
 	if status == 0 {
-		status, body = http.StatusOK, `{"status":"ok"}`
+		status, resp = http.StatusOK, `{"status":"ok"}`
 	}
 	w.WriteHeader(status)
-	_, _ = w.Write([]byte(body))
+	_, _ = w.Write([]byte(resp))
 }
 
-func (p *platformRecorder) paths() []string {
+func (p *platformRecorder) reset(status int, body string) {
+	p.mu.Lock()
+	p.calls, p.status, p.body = nil, status, body
+	p.mu.Unlock()
+}
+
+func (p *platformRecorder) all() []platformCall {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	var out []string
-	for _, r := range p.calls {
-		out = append(out, r.URL.Path)
+	return append([]platformCall(nil), p.calls...)
+}
+
+func (p *platformRecorder) writes() []platformCall {
+	var out []platformCall
+	for _, c := range p.all() {
+		if c.Method != http.MethodGet {
+			out = append(out, c)
+		}
 	}
 	return out
 }
 
+type fakeAuthority struct {
+	mu      sync.Mutex
+	active  bool
+	missing []string
+	err     error
+	calls   int
+}
+
+func (f *fakeAuthority) Authority(_ context.Context, _, _ string, _ []string) (Authority, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	return Authority{Active: f.active, Missing: f.missing}, f.err
+}
+
+type fakeApprovals struct {
+	mu        sync.Mutex
+	requests  map[string]ApprovalRequestInput
+	status    map[string]string
+	cancelled []string
+	err       error
+}
+
+func (f *fakeApprovals) RequestApproval(_ context.Context, in ApprovalRequestInput) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return "", f.err
+	}
+	id := fmt.Sprintf("apr_%d", len(f.requests)+1)
+	f.requests[id] = in
+	return id, nil
+}
+
+func (f *fakeApprovals) GetApproval(_ context.Context, _, id string) (GovernanceApproval, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	in, ok := f.requests[id]
+	if !ok {
+		return GovernanceApproval{}, errors.New("not found")
+	}
+	return GovernanceApproval{ID: id, Action: in.Action, TargetType: in.TargetType, TargetID: in.TargetID, TargetDetails: in.TargetDetails, RequesterID: in.RequesterID, Status: firstNonEmpty(f.status[id], "approved")}, nil
+}
+
+func (f *fakeApprovals) CancelApproval(_ context.Context, _, id, _ string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cancelled = append(f.cancelled, id)
+	return nil
+}
+
 type playbookHarness struct {
-	h        *Handler
-	store    *SQLStore
-	rec      *routetest.Recorder
-	exec     *PlaybookExecutor
-	platform *platformRecorder
+	h         *Handler
+	store     *SQLStore
+	rec       *routetest.Recorder
+	exec      *PlaybookExecutor
+	tl        *TriggerListener
+	platform  *platformRecorder
+	authority *fakeAuthority
+	approvals *fakeApprovals
+	vault     *connVault
+	now       time.Time
 }
 
 func newPlaybookHarness(t *testing.T) *playbookHarness {
 	t.Helper()
 	svc, store, _, _, _, _, _ := newComplianceService(t)
+	mektest.ApplySchema(t, store.db.SQL(), "compliance")
+	vault := &connVault{}
+	vault.set(mektest.Open(t, store.db.SQL(), "compliance", mektest.NewKeycore(t)))
 	rec := &routetest.Recorder{}
 	logger := log.New(io.Discard, "", 0)
 	platform := &platformRecorder{}
 	srv := httptest.NewServer(platform)
 	t.Cleanup(srv.Close)
-	exec := NewPlaybookExecutor(store, srv.URL, srv.URL, rec, logger)
+	urls := platformURLs{Keycore: srv.URL, Certs: srv.URL, Auth: srv.URL, Governance: srv.URL, Reporting: srv.URL, Posture: srv.URL}
+	exec := NewPlaybookExecutor(store, urls, rec, vault, logger)
 	exec.ops = svc
-	h := NewHandler(svc, rec, logger)
+	authority := &fakeAuthority{active: true}
+	approvals := &fakeApprovals{requests: map[string]ApprovalRequestInput{}, status: map[string]string{}}
+	exec.authority, exec.approvals = authority, approvals
+	h := NewHandler(svc, rec, logger, vault)
 	h.dispatch = func(f func()) { f() }
 	h.SetExecutor(exec)
-	return &playbookHarness{h: h, store: store, rec: rec, exec: exec, platform: platform}
+	hs := &playbookHarness{h: h, store: store, rec: rec, exec: exec, platform: platform, authority: authority, approvals: approvals, vault: vault,
+		now: time.Now().UTC()}
+	tl := NewTriggerListener(store, exec, logger)
+	tl.now = func() time.Time { return hs.now }
+	tl.dispatch = func(f func()) { f() }
+	h.triggers, hs.tl = tl, tl
+	return hs
 }
 
 func (hs *playbookHarness) do(t *testing.T, method, path string, claims *pkgauth.Claims, body any) *httptest.ResponseRecorder {
@@ -98,6 +192,29 @@ func (hs *playbookHarness) do(t *testing.T, method, path string, claims *pkgauth
 	return w
 }
 
+// conn stores a sealed connection directly (the API refuses private
+// addresses such as a test server's).
+func (hs *playbookHarness) conn(t *testing.T, typ string, fields map[string]string) string {
+	t.Helper()
+	c := Connection{ID: newID("pbconn"), TenantID: "t1", Name: typ + " test", Type: typ, Fields: fields, Endpoint: "test"}
+	if err := hs.vault.Seal(&c); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := hs.store.CreateConnection(context.Background(), c); err != nil {
+		t.Fatal(err)
+	}
+	return c.ID
+}
+
+func (hs *playbookHarness) event(tenant, result, target string, at time.Time, extra map[string]interface{}) []byte {
+	m := map[string]interface{}{"tenant_id": tenant, "result": result, "target_id": target, "timestamp": at.Format(time.RFC3339Nano)}
+	for k, v := range extra {
+		m[k] = v
+	}
+	raw, _ := json.Marshal(m)
+	return raw
+}
+
 func events(rec *routetest.Recorder, action string) []routetest.Recorded {
 	var out []routetest.Recorded
 	for _, e := range rec.Events() {
@@ -112,7 +229,7 @@ func lastEvent(t *testing.T, rec *routetest.Recorder, action string) routetest.R
 	t.Helper()
 	ev := events(rec, action)
 	if len(ev) == 0 {
-		t.Fatalf("no %s event (have %v)", action, rec.Events())
+		t.Fatalf("no %s event", action)
 	}
 	return ev[len(ev)-1]
 }
@@ -120,15 +237,16 @@ func lastEvent(t *testing.T, rec *routetest.Recorder, action string) routetest.R
 func wantRefused(t *testing.T, ev routetest.Recorded, reason string) {
 	t.Helper()
 	if ev.Event.Result != route.ResultRefused || ev.Event.Details["reason"] != reason {
-		t.Fatalf("%s: result=%s reason=%v, want refused %s", ev.Action, ev.Event.Result, ev.Event.Details["reason"], reason)
+		t.Fatalf("%s: result=%s reason=%v, want refused %s (%v)", ev.Action, ev.Event.Result, ev.Event.Details["reason"], reason, ev.Event.Details)
 	}
 }
 
-func rotatePlaybook(enabled bool) map[string]any {
-	return map[string]any{
-		"name": "rotate on canary", "trigger": map[string]string{"type": "canary_tripped"}, "enabled": enabled,
-		"actions": []map[string]any{{"type": "rotate_key", "parameters": map[string]string{"key_id": "k1"}}},
-	}
+func playbookBody(trigger string, enabled bool, actions ...map[string]any) map[string]any {
+	return map[string]any{"name": "pb " + trigger, "trigger": map[string]any{"type": trigger}, "enabled": enabled, "actions": actions}
+}
+
+func act(typ string, params map[string]string) map[string]any {
+	return map[string]any{"type": typ, "parameters": params}
 }
 
 func createdID(t *testing.T, w *httptest.ResponseRecorder) string {
@@ -143,151 +261,187 @@ func createdID(t *testing.T, w *httptest.ResponseRecorder) string {
 	return out.Data.ID
 }
 
-// Every playbook route refuses an anonymous caller, a caller without the
-// route permission and a caller naming another tenant, and audits each.
+func runOf(t *testing.T, hs *playbookHarness, runID string) PlaybookRun {
+	t.Helper()
+	run, err := hs.store.GetPlaybookRun(context.Background(), "t1", runID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return run
+}
+
+func startedRun(t *testing.T, w *httptest.ResponseRecorder) string {
+	t.Helper()
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("run: %d %s", w.Code, w.Body.String())
+	}
+	var out struct {
+		Data struct {
+			RunID string `json:"run_id"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	return out.Data.RunID
+}
+
+var rotate = act("rotate_key", map[string]string{"key_id": "k1"})
+
+// Every playbook, run and connection route refuses an anonymous caller, a
+// caller without the route permission and a caller naming another tenant,
+// and audits each.
 func TestPlaybookRoutesRefusalsAudited(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	routetest.RefusalsAudited(t, hs.h.router, hs.rec)
 }
 
-// Before 2.4.0-beta the tenant came from the request body: any caller could
-// plant a playbook in another tenant.
+// Before 2.4.0-beta the tenant came from the request body.
 func TestPlaybookCreateTakesTenantFromToken(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	body := rotatePlaybook(true)
+	body := playbookBody("canary_tripped", true, rotate)
 	body["tenant_id"] = "victim"
-	w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body)
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("cross-tenant create: %d %s", w.Code, w.Body.String())
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body); w.Code != http.StatusForbidden {
+		t.Fatalf("cross-tenant create: %d", w.Code)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "playbook_created"), route.ReasonTenantMismatch)
 	if pbs, _ := hs.store.ListPlaybooks(context.Background(), "victim"); len(pbs) != 0 {
-		t.Fatalf("playbook written into another tenant: %+v", pbs)
+		t.Fatal("playbook written into another tenant")
 	}
 }
 
-// Saving an enabled playbook needs every permission its actions use; the
-// executor's service identity must not lend its reach to a playbook writer.
+// Saving an enabled playbook needs every action permission and a person.
 func TestPlaybookSaveRequiresActionPermissions(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbWriter, rotatePlaybook(true))
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("writer without key.rotate: %d %s", w.Code, w.Body.String())
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbWriter, playbookBody("canary_tripped", true, rotate)); w.Code != http.StatusForbidden {
+		t.Fatalf("writer without key.rotate: %d", w.Code)
 	}
-	ev := lastEvent(t, hs.rec, "playbook_created")
-	wantRefused(t, ev, reasonActionPermission)
-	if missing, _ := ev.Event.Details["missing_permissions"].([]string); len(missing) != 1 || missing[0] != "key.rotate" {
-		t.Fatalf("missing_permissions = %v", ev.Event.Details["missing_permissions"])
-	}
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_created"), reasonActionPermission)
 
-	// Disabled, it saves, unauthorized.
-	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbWriter, rotatePlaybook(false)))
-	pb, _ := hs.store.GetPlaybook(context.Background(), "t1", id)
-	if pb.AuthorizedBy != "" || pb.Enabled {
-		t.Fatalf("disabled save by writer: authorized_by=%q enabled=%v", pb.AuthorizedBy, pb.Enabled)
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbWriter, playbookBody("canary_tripped", false, rotate)))
+	if pb, _ := hs.store.GetPlaybook(context.Background(), "t1", id); pb.AuthorizedBy != "" || pb.Enabled {
+		t.Fatalf("disabled save by writer: %+v", pb)
 	}
-	// The writer can't enable it.
-	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbWriter, rotatePlaybook(true)); w.Code != http.StatusForbidden {
-		t.Fatalf("writer enabling: %d %s", w.Code, w.Body.String())
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbWriter, playbookBody("canary_tripped", true, rotate)); w.Code != http.StatusForbidden {
+		t.Fatalf("writer enabling: %d", w.Code)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "playbook_updated"), reasonActionPermission)
-	// An admin can, and it runs on the admin's authority.
-	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, rotatePlaybook(true)); w.Code != http.StatusOK {
+
+	// An API client holds the permissions but is not a person.
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbClient, playbookBody("canary_tripped", true, rotate)); w.Code != http.StatusForbidden {
+		t.Fatalf("client enabling: %d", w.Code)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_created"), reasonUserRequired)
+
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, playbookBody("canary_tripped", true, rotate)); w.Code != http.StatusOK {
 		t.Fatalf("admin enabling: %d %s", w.Code, w.Body.String())
 	}
-	pb, _ = hs.store.GetPlaybook(context.Background(), "t1", id)
-	if pb.AuthorizedBy != "u-admin" || !pb.Enabled {
-		t.Fatalf("admin save: authorized_by=%q enabled=%v", pb.AuthorizedBy, pb.Enabled)
+	if pb, _ := hs.store.GetPlaybook(context.Background(), "t1", id); pb.AuthorizedBy != "u-admin" || !pb.Enabled {
+		t.Fatalf("admin save: %+v", pb)
 	}
-	if ev := lastEvent(t, hs.rec, "playbook_updated"); ev.Event.Result != route.ResultSuccess || ev.Event.Details["authorized_by"] != "u-admin" {
-		t.Fatalf("playbook_updated: %+v", ev.Event)
-	}
-	// Legacy fields are rejected, not ignored.
-	legacy := rotatePlaybook(true)
-	legacy["trigger"] = map[string]any{"type": "canary_tripped", "threshold": 5}
-	if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, legacy); w.Code != http.StatusBadRequest {
-		t.Fatalf("threshold accepted: %d", w.Code)
+	// Bad definitions are rejected, not stored.
+	for name, body := range map[string]map[string]any{
+		"custom without subject": playbookBody(customTrigger, true, rotate),
+		"custom on playbook events": {"name": "x", "enabled": true, "trigger": map[string]any{"type": customTrigger, "subject": "audit.compliance.playbook_triggered"}, "actions": []any{rotate}},
+		"threshold without window":  {"name": "x", "enabled": true, "trigger": map[string]any{"type": "login_failed", "threshold": 5}, "actions": []any{rotate}},
+		"unknown filter field":      {"name": "x", "enabled": true, "trigger": map[string]any{"type": "login_failed", "filters": []any{map[string]string{"field": "password", "op": "eq", "value": "x"}}}, "actions": []any{rotate}},
+		"unknown template":          playbookBody("canary_tripped", true, act("rotate_key", map[string]string{"key_id": "{{secret.value}}"})),
+		"email outside tenant form": playbookBody("canary_tripped", true, act("send_email", map[string]string{"to": "not an address", "subject": "x"})),
+		"bad incident status":       playbookBody("incident_opened", true, act("set_incident_status", map[string]string{"incident_id": "i1", "status": "deleted"})),
+		"connection of other type":  playbookBody("canary_tripped", true, act("send_slack", map[string]string{"connection_id": hs.conn(t, "teams", map[string]string{"webhook_url": "https://1.1.1.1/x"})})),
+	} {
+		if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body); w.Code != http.StatusBadRequest {
+			t.Fatalf("%s accepted: %d %s", name, w.Code, w.Body.String())
+		}
 	}
 }
 
 // A manual run acts on the runner's authority and is audited per action.
 func TestPlaybookRunRequiresActionPermissionsAndAuditsEachAction(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, rotatePlaybook(true)))
-
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, rotate)))
 	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbWriter, nil); w.Code != http.StatusForbidden {
-		t.Fatalf("writer run: %d %s", w.Code, w.Body.String())
+		t.Fatalf("writer run: %d", w.Code)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "playbook_run_requested"), reasonActionPermission)
-	if len(hs.platform.paths()) != 0 {
+	if len(hs.platform.all()) != 0 {
 		t.Fatal("refused run reached keycore")
 	}
-
-	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, nil); w.Code != http.StatusAccepted {
-		t.Fatalf("admin run: %d %s", w.Code, w.Body.String())
-	}
-	if got := hs.platform.paths(); len(got) != 1 || got[0] != "/keys/k1/rotate" {
-		t.Fatalf("keycore calls = %v", got)
-	}
-	if tenant := hs.platform.calls[0].Header.Get("X-Tenant-ID"); tenant != "t1" {
-		t.Fatalf("keycore tenant = %q", tenant)
+	runID := startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, nil))
+	calls := hs.platform.all()
+	if len(calls) != 1 || calls[0].Path != "/keys/k1/rotate" || calls[0].Tenant != "t1" || calls[0].Correlation != runID {
+		t.Fatalf("keycore calls = %+v", calls)
 	}
 	act := lastEvent(t, hs.rec, "playbook_action_executed")
-	if act.Event.Result != route.ResultSuccess || act.Event.Details["action"] != "rotate_key" || act.Event.Details["key_id"] != "k1" || act.Event.ActorID != "u-admin" {
+	if act.Event.Result != route.ResultSuccess || act.Event.Details["action"] != "rotate_key" || act.Event.Details["target"] != "key_id=k1" || act.Event.ActorID != "u-admin" {
 		t.Fatalf("playbook_action_executed: %+v", act.Event)
 	}
-	done := lastEvent(t, hs.rec, "playbook_run_completed")
-	if done.Event.Result != route.ResultSuccess || done.Event.Details["status"] != runCompleted || done.Event.Details["trigger"] != "manual" {
+	if done := lastEvent(t, hs.rec, "playbook_run_completed"); done.Event.Result != route.ResultSuccess || done.Event.Details["status"] != runCompleted {
 		t.Fatalf("playbook_run_completed: %+v", done.Event)
 	}
-	runs, _ := hs.store.ListPlaybookRuns(context.Background(), "t1", id, 10)
-	if len(runs) != 1 || runs[0].Status != runCompleted || runs[0].Actor != "u-admin" {
-		t.Fatalf("runs = %+v", runs)
+	if run := runOf(t, hs, runID); run.Status != runCompleted || run.Actor != "u-admin" || len(run.Results) != 1 || !run.Context.Supplied {
+		t.Fatalf("run = %+v", run)
 	}
 }
 
-// A platform call that opens an approval is recorded as pending, never done.
+// A platform call that opens an approval is pending, never done.
 func TestPlaybookPendingApprovalIsNotSuccess(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	hs.platform.status, hs.platform.body = http.StatusAccepted, `{"status":"pending_approval","approval_request_id":"ap1"}`
-	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, rotatePlaybook(true)))
-	hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, nil)
-	act := lastEvent(t, hs.rec, "playbook_action_executed")
-	if act.Event.Result != "pending" || act.Event.Details["outcome"] != outcomePendingApproval {
-		t.Fatalf("pending action audited as %s/%v", act.Event.Result, act.Event.Details["outcome"])
+	hs.platform.reset(http.StatusAccepted, `{"status":"pending_approval"}`)
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, rotate)))
+	runID := startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, nil))
+	if a := lastEvent(t, hs.rec, "playbook_action_executed"); a.Event.Result != "pending" || a.Event.Details["outcome"] != outcomePendingApproval {
+		t.Fatalf("pending action audited as %s", a.Event.Result)
 	}
-	if done := lastEvent(t, hs.rec, "playbook_run_completed"); done.Event.Details["status"] != runPendingApproval {
-		t.Fatalf("run status %v", done.Event.Details["status"])
+	if run := runOf(t, hs, runID); run.Status != runPendingApproval {
+		t.Fatalf("run status %s", run.Status)
 	}
 }
 
-// Each key and certificate action calls the endpoint that exists. Until
-// 2.4.0-beta suspend/revoke/enable called PUT /keys/{id}/status and the
-// certificate actions /certificates/..., none of which exist.
+// Every platform action calls the endpoint that exists, as the compliance
+// service for the run's tenant; delegated actions name the person.
 func TestPlaybookPlatformActionsCallRealEndpoints(t *testing.T) {
 	hs := newPlaybookHarness(t)
+	p := map[string]string{
+		"key_id": "k1", "cert_id": "c1", "policy_id": "rp1", "user_id": "u9", "api_key_id": "ak1", "client_id": "cl1",
+		"alert_id": "al1", "incident_id": "in1", "status": "investigating", "assigned_to": "u-oncall", "template_id": "evidence_pack",
+		"to": "soc@example.com,role:admin", "subject": "canary",
+	}
 	want := map[string]string{
-		"rotate_key": "/keys/k1/rotate", "disable_key": "/keys/k1/disable", "deactivate_key": "/keys/k1/deactivate",
-		"activate_key": "/keys/k1/activate", "renew_certificate": "/certs/c1/renew", "revoke_certificate": "/certs/c1/revoke",
+		"rotate_key": "POST /keys/k1/rotate", "disable_key": "POST /keys/k1/disable", "deactivate_key": "POST /keys/k1/deactivate",
+		"activate_key": "POST /keys/k1/activate", "trigger_rotation_policy": "POST /rotation/policies/rp1/trigger",
+		"renew_certificate": "POST /certs/c1/renew", "revoke_certificate": "POST /certs/c1/revoke",
+		"disable_user": "POST /auth/delegated/users/u9/disable", "revoke_api_key": "POST /auth/delegated/api-keys/ak1/revoke",
+		"revoke_client": "POST /auth/delegated/clients/cl1/revoke", "acknowledge_alert": "PUT /alerts/al1/acknowledge",
+		"resolve_alert": "PUT /alerts/al1/resolve", "set_incident_status": "PUT /incidents/in1/status",
+		"assign_incident": "PUT /incidents/in1/assign", "generate_report": "POST /reports/generate",
+		"run_posture_scan": "POST /posture/scan", "send_email": "POST /governance/notify/email",
 	}
-	for action, path := range want {
-		hs.platform.calls = nil
-		outcome, err := hs.exec.executeAction(context.Background(), PlaybookAction{Type: action, Parameters: map[string]string{"key_id": "k1", "cert_id": "c1"}}, RunContext{TenantID: "t1", RunID: "r1"})
-		if err != nil || outcome != outcomeDone {
-			t.Fatalf("%s: %s %v", action, outcome, err)
+	for _, spec := range playbookActions {
+		w, ok := want[spec.Type]
+		if !ok {
+			continue
 		}
-		if got := hs.platform.paths(); len(got) != 1 || got[0] != path || hs.platform.calls[0].Method != http.MethodPost {
-			t.Fatalf("%s called %v, want POST %s", action, got, path)
+		hs.platform.reset(0, "")
+		outcome, err := hs.exec.executeAction(context.Background(), spec.Type, p, RunContext{TenantID: "t1", RunID: "pbrun_1", Actor: "u-admin", PlaybookID: "pb1"})
+		calls := hs.platform.all()
+		if err != nil || outcome != outcomeDone || len(calls) != 1 || calls[0].Method+" "+calls[0].Path != w || calls[0].Tenant != "t1" {
+			t.Fatalf("%s: %s %v called %+v, want %s", spec.Type, outcome, err, calls, w)
 		}
+		if spec.Delegated && calls[0].Body["on_behalf_of"] != "u-admin" {
+			t.Fatalf("%s: delegation %v", spec.Type, calls[0].Body)
+		}
+		delete(want, spec.Type)
 	}
-	hs.platform.status, hs.platform.body = http.StatusNotFound, `{"error":{"code":"not_found","message":"key not found"}}`
-	if _, err := hs.exec.executeAction(context.Background(), PlaybookAction{Type: "rotate_key", Parameters: map[string]string{"key_id": "gone"}}, RunContext{TenantID: "t1"}); err == nil || !strings.Contains(err.Error(), "not_found") {
-		t.Fatalf("missing key reported %v", err)
+	if len(want) != 0 {
+		t.Fatalf("not in the catalogue: %v", want)
+	}
+	hs.platform.reset(http.StatusNotFound, `{"error":{"code":"not_found","message":"key not found"}}`)
+	if _, err := hs.exec.executeAction(context.Background(), "rotate_key", map[string]string{"key_id": "gone"}, RunContext{TenantID: "t1"}); err == nil || !strings.Contains(err.Error(), "not_found") {
+		t.Fatalf("missing key: %v", err)
 	}
 }
 
-// Keycore refuses anonymous callers, so key actions carry the compliance
-// service token; outbound notifications never do.
+// Keycore refuses anonymous callers, so platform actions carry the
+// compliance service token; outbound notifications never do.
 func TestPlaybookSendsServiceTokenOnlyToPlatformServices(t *testing.T) {
 	auth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "svc-jwt", "expires_at": "2099-01-01T00:00:00Z"})
@@ -299,13 +453,12 @@ func TestPlaybookSendsServiceTokenOnlyToPlatformServices(t *testing.T) {
 	t.Cleanup(func() { servicetoken.SetDefault(nil) })
 
 	hs := newPlaybookHarness(t)
-	if _, err := hs.exec.executeAction(context.Background(), PlaybookAction{Type: "rotate_key", Parameters: map[string]string{"key_id": "k1"}}, RunContext{TenantID: "t1"}); err != nil {
+	if _, err := hs.exec.executeAction(context.Background(), "rotate_key", map[string]string{"key_id": "k1"}, RunContext{TenantID: "t1"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := hs.platform.calls[0].Header.Get("Authorization"); got != "Bearer svc-jwt" {
+	if got := hs.platform.all()[0].Auth; got != "Bearer svc-jwt" {
 		t.Fatalf("keycore call carried %q", got)
 	}
-
 	var mu sync.Mutex
 	seen := map[string]string{}
 	ext := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -315,111 +468,168 @@ func TestPlaybookSendsServiceTokenOnlyToPlatformServices(t *testing.T) {
 	}))
 	defer ext.Close()
 	hs.exec.outbound = ext.Client()
-	for _, a := range []PlaybookAction{
-		{Type: "send_webhook", Parameters: map[string]string{"url": ext.URL + "/hook"}},
-		{Type: "create_servicenow_incident", Parameters: map[string]string{"instance_url": ext.URL, "short_description": "x"}},
-		{Type: "create_jira_ticket", Parameters: map[string]string{"base_url": ext.URL, "project": "SEC", "summary": "x", "api_token": "dG9rZW4="}},
+	rc := RunContext{TenantID: "t1"}
+	for typ, fields := range map[string]map[string]string{
+		"send_webhook":               {"url": ext.URL + "/hook"},
+		"create_servicenow_incident": {"instance_url": ext.URL},
+		"create_jira_ticket":         {"base_url": ext.URL, "api_token": "dG9rZW4="},
 	} {
-		if _, err := hs.exec.executeAction(context.Background(), a, RunContext{TenantID: "t1"}); err != nil {
-			t.Fatalf("%s: %v", a.Type, err)
+		connID := hs.conn(t, actionConnectionType[typ], fields)
+		p := map[string]string{"connection_id": connID, "project": "SEC", "summary": "x", "short_description": "x"}
+		if _, err := hs.exec.executeAction(context.Background(), typ, p, rc); err != nil {
+			t.Fatalf("%s: %v", typ, err)
 		}
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	if seen["/hook"] != "" || seen["/api/now/table/incident"] != "" {
-		t.Fatalf("service token reached an external endpoint: %v", seen)
-	}
-	if seen["/rest/api/2/issue"] != "Basic dG9rZW4=" {
-		t.Fatalf("jira auth = %q", seen["/rest/api/2/issue"])
+	if seen["/hook"] != "" || seen["/api/now/table/incident"] != "" || seen["/rest/api/2/issue"] != "Basic dG9rZW4=" {
+		t.Fatalf("outbound auth: %v", seen)
 	}
 }
 
-// A playbook can't call a platform service or a private address: the
+// A connection can't point at a platform service or a private address: the
 // executor's mTLS identity would be presented to it (SSRF).
 func TestPlaybookOutboundCannotReachPlatformOrPrivateHosts(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	for _, u := range []string{"https://keycore:8010/keys/k1/destroy", "http://1.1.1.1/hook", "https://127.0.0.1/hook", "https://169.254.169.254/latest"} {
-		body := map[string]any{
-			"name": "exfil", "trigger": map[string]string{"type": "canary_tripped"},
-			"actions": []map[string]any{{"type": "send_webhook", "parameters": map[string]string{"url": u}}},
-		}
-		if w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body); w.Code != http.StatusBadRequest {
+		body := map[string]any{"name": "exfil", "type": "webhook", "fields": map[string]string{"url": u}}
+		if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, body); w.Code != http.StatusBadRequest {
 			t.Fatalf("%s accepted: %d", u, w.Code)
 		}
-		wantRefused(t, lastEvent(t, hs.rec, "playbook_created"), reasonURLBlocked)
+		wantRefused(t, lastEvent(t, hs.rec, "connection_created"), reasonURLBlocked)
 	}
-	// At run time too: a stored row can't be pointed at the platform, and
-	// the default client refuses private addresses at dial time. Errors name
-	// the host, never the URL (a webhook URL is a credential).
-	if _, err := hs.exec.notify(context.Background(), http.MethodPost, "https://keycore:8010/keys/k1/destroy", map[string]string{}, nil); err == nil {
-		t.Fatal("notify reached a platform host")
+	if _, err := hs.exec.outboundCall(context.Background(), http.MethodPost, "https://keycore:8010/keys/k1/destroy", map[string]string{}, nil); err == nil {
+		t.Fatal("outbound call reached a platform host")
 	}
 	ext := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	defer ext.Close()
-	_, err := hs.exec.notify(context.Background(), http.MethodPost, ext.URL+"/services/T0/B0/sekret", map[string]string{}, nil)
-	if err == nil || strings.Contains(err.Error(), "sekret") {
-		t.Fatalf("private address: err=%v", err)
+	if _, err := hs.exec.outboundCall(context.Background(), http.MethodPost, ext.URL+"/services/T0/B0/sekret", map[string]string{}, nil); err == nil || strings.Contains(err.Error(), "sekret") {
+		t.Fatalf("private address: %v", err)
 	}
 }
 
-// Secret parameters never come back from the API; the redaction marker keeps
-// the stored value on update.
-func TestPlaybookSecretsNeverReturned(t *testing.T) {
+// Connection credentials are sealed at rest, never returned, kept with the
+// marker on update, and a connection in use can't be deleted.
+func TestPlaybookConnectionsSealedAndNeverReturned(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	secret := "https://1.1.1.1/services/T0/B0/sekret"
-	body := map[string]any{
-		"name": "notify", "trigger": map[string]string{"type": "canary_tripped"},
-		"actions": []map[string]any{{"type": "send_slack", "parameters": map[string]string{"webhook_url": secret}}},
+	w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": "soc", "type": "slack", "fields": map[string]string{"webhook_url": secret}})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create connection: %d %s", w.Code, w.Body.String())
 	}
-	w := hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body)
-	id := createdID(t, w)
-	for _, resp := range []*httptest.ResponseRecorder{w, hs.do(t, http.MethodGet, "/compliance/playbooks/"+id, pbAdmin, nil), hs.do(t, http.MethodGet, "/compliance/playbooks", pbAdmin, nil)} {
-		if strings.Contains(resp.Body.String(), "sekret") || !strings.Contains(resp.Body.String(), redactedParam) {
-			t.Fatalf("secret returned: %s", resp.Body.String())
+	var out struct {
+		Data Connection `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	id := out.Data.ID
+	for _, resp := range []*httptest.ResponseRecorder{w, hs.do(t, http.MethodGet, "/compliance/playbooks/connections", pbAdmin, nil)} {
+		if strings.Contains(resp.Body.String(), "sekret") || !strings.Contains(resp.Body.String(), "1.1.1.1") {
+			t.Fatalf("connection response: %s", resp.Body.String())
 		}
+	}
+	var dump bytes.Buffer
+	rows, _ := hs.store.db.SQL().Query(`SELECT name, type, endpoint, fields_set, creds_ciphertext FROM compliance_playbook_connections`)
+	for rows.Next() {
+		var a, b, c, d string
+		var e []byte
+		_ = rows.Scan(&a, &b, &c, &d, &e)
+		dump.WriteString(a + b + c + d + string(e))
+	}
+	_ = rows.Close()
+	if strings.Contains(dump.String(), "sekret") {
+		t.Fatal("credential stored in plaintext")
 	}
 	for _, e := range hs.rec.Events() {
 		if raw, _ := json.Marshal(e.Event); strings.Contains(string(raw), "sekret") {
 			t.Fatalf("secret in audit event %s", e.Action)
 		}
 	}
-	body["actions"] = []map[string]any{{"type": "send_slack", "parameters": map[string]string{"webhook_url": redactedParam, "message": "hi"}}}
-	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, body); w.Code != http.StatusOK {
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/connections/"+id, pbAdmin, map[string]any{"name": "soc2", "type": "slack", "fields": map[string]string{"webhook_url": keepField}}); w.Code != http.StatusOK {
 		t.Fatalf("update with marker: %d %s", w.Code, w.Body.String())
 	}
-	pb, _ := hs.store.GetPlaybook(context.Background(), "t1", id)
-	if pb.Actions[0].Parameters["webhook_url"] != secret || pb.Actions[0].Parameters["message"] != "hi" {
-		t.Fatalf("stored params = %v", pb.Actions[0].Parameters)
+	stored, _ := hs.store.GetConnection(context.Background(), "t1", id)
+	if opened, err := hs.vault.Open(stored); err != nil || opened.Fields["webhook_url"] != secret || opened.Name != "soc2" {
+		t.Fatalf("stored connection: %+v %v", opened, err)
 	}
-	// A marker with nothing stored behind it is refused.
-	body["actions"] = []map[string]any{
-		{"type": "send_slack", "parameters": map[string]string{"webhook_url": redactedParam}},
-		{"type": "send_teams", "parameters": map[string]string{"webhook_url": redactedParam}},
+	createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, act("send_slack", map[string]string{"connection_id": id}))))
+	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+id, pbAdmin, nil); w.Code != http.StatusConflict {
+		t.Fatalf("delete in use: %d", w.Code)
 	}
-	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, body); w.Code != http.StatusBadRequest {
-		t.Fatalf("unbacked marker: %d", w.Code)
+	wantRefused(t, lastEvent(t, hs.rec, "connection_deleted"), "connection_in_use")
+
+	// The test call is real: it reaches the endpoint.
+	hit := make(chan string, 1)
+	ext := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { hit <- r.URL.Path }))
+	defer ext.Close()
+	hs.exec.outbound = ext.Client()
+	testID := hs.conn(t, "slack", map[string]string{"webhook_url": ext.URL + "/services/test"})
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections/"+testID+"/test", pbAdmin, nil); w.Code != http.StatusOK || <-hit != "/services/test" {
+		t.Fatalf("connection test: %d %s", w.Code, w.Body.String())
+	}
+	if ev := lastEvent(t, hs.rec, "connection_tested"); ev.Event.Result != route.ResultSuccess {
+		t.Fatalf("connection_tested: %+v", ev.Event)
 	}
 }
 
-// Actions that never worked are gone from the catalogue, can't be saved, and
-// a stored row that still names one is refused, audited, at run time.
+// Credentials earlier releases kept inline in actions move into sealed
+// connections, recorded in the exposure register; the API hides them until
+// then.
+func TestPlaybookInlineSecretsMigrated(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	secret := "https://1.1.1.1/services/T0/B0/legacy"
+	if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-old", TenantID: "t1", Name: "old", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "canary_tripped"}, Actions: []PlaybookAction{{Type: "send_slack", Parameters: map[string]string{"webhook_url": secret, "message": "hi"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if w := hs.do(t, http.MethodGet, "/compliance/playbooks/pb-old", pbAdmin, nil); strings.Contains(w.Body.String(), "legacy") {
+		t.Fatalf("inline secret returned: %s", w.Body.String())
+	}
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/pb-old/run", pbAdmin, nil); w.Code != http.StatusConflict {
+		t.Fatalf("run before migration: %d", w.Code)
+	}
+	var emitted []map[string]interface{}
+	n, err := hs.h.svc.migrateInlineSecrets(ctx, hs.vault, func(context.Context) bool { return true }, func(_ string, d map[string]interface{}, _ string) { emitted = append(emitted, d) })
+	if err != nil || n != 1 || len(emitted) != 1 {
+		t.Fatalf("migrate: %d %v %v", n, err, emitted)
+	}
+	pb, _ := hs.store.GetPlaybook(ctx, "t1", "pb-old")
+	connID := pb.Actions[0].Parameters["connection_id"]
+	if connID == "" || pb.Actions[0].Parameters["webhook_url"] != "" || pb.Actions[0].Parameters["message"] != "hi" || pb.AuthorizedBy != "u-admin" {
+		t.Fatalf("migrated action: %+v", pb.Actions[0])
+	}
+	stored, _ := hs.store.GetConnection(ctx, "t1", connID)
+	if opened, err := hs.vault.Open(stored); err != nil || opened.Fields["webhook_url"] != secret {
+		t.Fatalf("migrated connection: %v", err)
+	}
+	k, _ := hs.vault.current()
+	if ex, err := k.Exposures(ctx, "t1", true); err != nil || len(ex) != 1 || ex[0].ItemID != connID {
+		t.Fatalf("exposure register: %+v %v", ex, err)
+	}
+	if n, _ := hs.h.svc.migrateInlineSecrets(ctx, hs.vault, func(context.Context) bool { return true }, func(string, map[string]interface{}, string) {}); n != 0 {
+		t.Fatal("migration is not idempotent")
+	}
+	if n, _ := hs.h.svc.migrateInlineSecrets(ctx, hs.vault, func(context.Context) bool { return false }, func(string, map[string]interface{}, string) {}); n != 0 {
+		t.Fatal("a member migrated")
+	}
+}
+
+// Actions that never worked are gone and refused, audited, at run time.
 func TestPlaybookRemovedActionsRefused(t *testing.T) {
 	hs := newPlaybookHarness(t)
-	for _, a := range []string{"destroy_key", "send_pagerduty", "disable_user", "revoke_api_key", "send_email", "notify_soc", "quarantine_tenant"} {
+	for _, a := range []string{"destroy_key", "send_pagerduty", "notify_soc", "quarantine_tenant"} {
 		if _, ok := actionByType[a]; ok {
-			t.Fatalf("%s is still in the catalogue", a)
+			t.Fatalf("%s is in the catalogue", a)
 		}
 		var removed actionRemovedError
-		if _, err := hs.exec.executeAction(context.Background(), PlaybookAction{Type: a, Parameters: map[string]string{"key_id": "k1"}}, RunContext{TenantID: "t1"}); !asRemoved(err, &removed) {
+		if _, err := hs.exec.executeAction(context.Background(), a, map[string]string{}, RunContext{TenantID: "t1"}); !errors.As(err, &removed) {
 			t.Fatalf("%s: %v", a, err)
 		}
 	}
 	ctx := context.Background()
-	stored, err := hs.store.CreatePlaybook(ctx, Playbook{
-		ID: "pb-legacy", TenantID: "t1", Name: "legacy", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+	stored, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-legacy", TenantID: "t1", Name: "legacy", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
 		Trigger: PlaybookTrigger{Type: "canary_tripped"},
-		Actions: []PlaybookAction{{Type: "suspend_key", Parameters: map[string]string{"key_id": "k1"}}, {Type: "destroy_key", Parameters: map[string]string{"key_id": "k1"}}},
-	})
+		Actions: []PlaybookAction{{Type: "suspend_key", Parameters: map[string]string{"key_id": "k1"}}, {Type: "destroy_key", Parameters: map[string]string{"key_id": "k1"}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -427,115 +637,343 @@ func TestPlaybookRemovedActionsRefused(t *testing.T) {
 		t.Fatalf("legacy suspend_key read as %s", stored.Actions[0].Type)
 	}
 	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/pb-legacy/run", pbAdmin, nil); w.Code != http.StatusConflict {
-		t.Fatalf("run with removed action: %d %s", w.Code, w.Body.String())
+		t.Fatalf("run with removed action: %d", w.Code)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "playbook_run_requested"), reasonPlaybookInvalid)
-	// A triggered run still meets it: that action is refused and audited.
 	run, _ := hs.exec.Start(ctx, stored, runSource{Trigger: "canary_tripped", Actor: "u-admin"})
-	if got := hs.exec.Execute(ctx, stored, run, runSource{Trigger: "canary_tripped", Actor: "u-admin"}); got.Status != runPartialFailure {
+	if got := hs.exec.Execute(ctx, stored, run); got.Status != runPartialFailure {
 		t.Fatalf("run status %s", got.Status)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "playbook_action_executed"), reasonActionRemoved)
 }
 
-func asRemoved(err error, target *actionRemovedError) bool {
-	r, ok := err.(actionRemovedError)
-	if ok {
-		*target = r
-	}
-	return ok
-}
-
 func TestPlaybookCatalogServedFromBackend(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	w := hs.do(t, http.MethodGet, "/compliance/playbooks/catalog", pbWriter, nil)
-	if w.Code != http.StatusOK {
-		t.Fatalf("catalog: %d %s", w.Code, w.Body.String())
-	}
 	var out struct {
 		Data struct {
-			Triggers []TriggerSpec `json:"triggers"`
-			Actions  []ActionSpec  `json:"actions"`
+			Triggers    []TriggerSpec    `json:"triggers"`
+			Actions     []ActionSpec     `json:"actions"`
+			Connections []ConnectionSpec `json:"connection_types"`
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(w.Body.Bytes(), &out)
-	if len(out.Data.Triggers) != len(playbookTriggers) || len(out.Data.Actions) != len(playbookActions) {
-		t.Fatalf("catalog: %d triggers, %d actions", len(out.Data.Triggers), len(out.Data.Actions))
+	if w.Code != http.StatusOK || len(out.Data.Triggers) != len(playbookTriggers) || len(out.Data.Actions) != len(playbookActions) || len(out.Data.Connections) != len(connectionTypes) {
+		t.Fatalf("catalog: %d %s", w.Code, w.Body.String())
 	}
 	if ev := lastEvent(t, hs.rec, "playbook_catalog_read"); ev.Event.Result != route.ResultSuccess {
 		t.Fatalf("catalog event %+v", ev.Event)
 	}
 }
 
-// Automatic runs: only authorized playbooks, only on the primary, one per
-// cooldown, never for stale or refused events; every decision is audited.
+// Parameters template from the event; conditions skip steps; a template
+// that resolves empty fails the step rather than calling with nothing.
+func TestPlaybookTemplatesAndConditions(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	body := playbookBody("canary_tripped", true,
+		map[string]any{"type": "rotate_key", "parameters": map[string]string{"key_id": "{{event.target_id}}"}},
+		map[string]any{"type": "disable_key", "parameters": map[string]string{"key_id": "{{event.details.key_id}}"}, "condition": []map[string]string{{"field": "severity", "op": "eq", "value": "critical"}}},
+		map[string]any{"type": "activate_key", "parameters": map[string]string{"key_id": "{{event.details.missing}}"}},
+	)
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body))
+	runID := startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, map[string]any{"event": map[string]any{"target_id": "key-9", "severity": "high", "details": map[string]string{"key_id": "key-7"}}}))
+	calls := hs.platform.writes()
+	if len(calls) != 1 || calls[0].Path != "/keys/key-9/rotate" {
+		t.Fatalf("templated calls: %+v", calls)
+	}
+	run := runOf(t, hs, runID)
+	if len(run.Results) != 3 || run.Results[1].Status != resultSkipped || run.Results[2].Status != resultFailed || !strings.Contains(run.Results[2].Error, "resolved empty") {
+		t.Fatalf("results: %+v", run.Results)
+	}
+	if ev := events(hs.rec, "playbook_action_executed"); ev[1].Event.Result != "skipped" {
+		t.Fatalf("skipped step audited as %s", ev[1].Event.Result)
+	}
+}
+
+// A gated action pauses the run for a governance approval bound to the
+// resolved action; the run resumes only on a verified approval, with the
+// authorizing person's authority re-checked.
+func TestPlaybookApprovalGate(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	body := playbookBody("canary_tripped", true, act("deactivate_key", map[string]string{"key_id": "{{event.target_id}}"}), act("create_audit_event", map[string]string{"message": "done"}))
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body))
+	start := func() PlaybookRun {
+		hs.tl.lastFire = map[string]time.Time{}
+		hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "key-5", hs.now, nil))
+		runID, _ := lastEvent(t, hs.rec, "playbook_triggered").Event.Details["run_id"].(string)
+		return runOf(t, hs, runID)
+	}
+	decide := func(run PlaybookRun, subject string) {
+		raw, _ := json.Marshal(map[string]interface{}{"tenant_id": "t1", "result": "success", "timestamp": hs.now.Format(time.RFC3339Nano), "data": map[string]string{"request_id": run.ApprovalRequestID}})
+		hs.tl.handle(ctx, subject, raw)
+	}
+
+	run := start()
+	if run.Status != runAwaitingApproval || run.ApprovalRequestID == "" || len(hs.platform.writes()) != 0 {
+		t.Fatalf("gated run: %+v calls=%v", run, hs.platform.writes())
+	}
+	req := hs.approvals.requests[run.ApprovalRequestID]
+	if req.Action != "playbook.deactivate_key" || req.RequesterID != "u-admin" || req.TargetID != run.ID+"#0" || req.TargetDetails["payload_hash"] == "" {
+		t.Fatalf("approval request: %+v", req)
+	}
+	if ev := lastEvent(t, hs.rec, "playbook_approval_requested"); ev.Event.Details["approval_request_id"] != run.ApprovalRequestID {
+		t.Fatalf("approval_requested: %+v", ev.Event)
+	}
+	decide(run, "audit.governance.quorum_reached")
+	if calls := hs.platform.writes(); len(calls) != 1 || calls[0].Path != "/keys/key-5/deactivate" {
+		t.Fatalf("after approval: %+v", calls)
+	}
+	if got := runOf(t, hs, run.ID); got.Status != runCompleted || len(got.Results) != 3 {
+		t.Fatalf("resumed run: %+v", got)
+	}
+	lastEvent(t, hs.rec, "playbook_approval_granted")
+
+	// Denied and expired requests end the run without acting.
+	hs.platform.reset(0, "")
+	run = start()
+	decide(run, "audit.governance.quorum_denied")
+	if got := runOf(t, hs, run.ID); got.Status != runApprovalDenied || len(hs.platform.writes()) != 0 {
+		t.Fatalf("denied: %s %v", got.Status, hs.platform.writes())
+	}
+	run = start()
+	decide(run, "audit.governance.request_expired")
+	if got := runOf(t, hs, run.ID); got.Status != runApprovalExpired {
+		t.Fatalf("expired: %s", got.Status)
+	}
+
+	// An event claiming approval is checked against governance.
+	run = start()
+	hs.approvals.status[run.ApprovalRequestID] = "pending"
+	decide(run, "audit.governance.quorum_reached")
+	if got := runOf(t, hs, run.ID); got.Status != runFailed || len(hs.platform.writes()) != 0 {
+		t.Fatalf("unapproved resume: %s", got.Status)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_action_executed"), "approval_mismatch")
+
+	// Editing the action while it waits voids the approval.
+	run = start()
+	edited := playbookBody("canary_tripped", true, act("deactivate_key", map[string]string{"key_id": "other-key"}), act("create_audit_event", nil))
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, edited); w.Code != http.StatusOK {
+		t.Fatal(w.Body.String())
+	}
+	decide(run, "audit.governance.quorum_reached")
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_action_executed"), "definition_changed")
+
+	// The authorizing person must still hold the permissions.
+	if w := hs.do(t, http.MethodPut, "/compliance/playbooks/"+id, pbAdmin, body); w.Code != http.StatusOK {
+		t.Fatal(w.Body.String())
+	}
+	run = start()
+	hs.authority.missing = []string{"key.deactivate"}
+	decide(run, "audit.governance.quorum_reached")
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_action_executed"), reasonAuthorityRevoked)
+	if len(hs.platform.writes()) != 0 {
+		t.Fatal("acted without authority")
+	}
+}
+
+// Automatic runs: catalogue and custom triggers, filters, thresholds per
+// group, cooldown, stale events, authority, platform events, cluster role,
+// and no chains of playbooks.
 func TestPlaybookTriggerListener(t *testing.T) {
 	hs := newPlaybookHarness(t)
 	ctx := context.Background()
-	now := time.Date(2026, 9, 28, 12, 0, 0, 0, time.UTC)
-	tl := NewTriggerListener(hs.store, hs.exec, log.New(io.Discard, "", 0))
-	tl.now = func() time.Time { return now }
-	tl.dispatch = func(f func()) { f() }
-	mk := func(id, tenant, trigger, authorizedBy string) {
-		if _, err := hs.store.CreatePlaybook(ctx, Playbook{
-			ID: id, TenantID: tenant, Name: id, Category: "incident_response", Enabled: true, AuthorizedBy: authorizedBy,
-			Trigger: PlaybookTrigger{Type: trigger},
-			Actions: []PlaybookAction{{Type: "rotate_key", Parameters: map[string]string{"key_id": "k1"}}},
-		}); err != nil {
+	mk := func(id, tenant, authorizedBy string, trig PlaybookTrigger) {
+		if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: id, TenantID: tenant, Name: id, Category: "incident_response", Enabled: true, AuthorizedBy: authorizedBy,
+			Trigger: trig, Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}); err != nil {
 			t.Fatal(err)
 		}
+		hs.tl.Invalidate(tenant)
 	}
-	mk("pb-rotated", "t1", "key_rotated", "u-admin")
-	mk("pb-canary", "t1", "canary_tripped", "")
-	mk("pb-health", "root", "service_health_degraded", "u-root")
-	event := func(tenant, result string, at time.Time) []byte {
-		raw, _ := json.Marshal(map[string]string{"tenant_id": tenant, "result": result, "target_id": "k9", "timestamp": at.Format(time.RFC3339Nano)})
-		return raw
+	triggered := func(pb string) []routetest.Recorded {
+		var out []routetest.Recorded
+		for _, e := range events(hs.rec, "playbook_triggered") {
+			if e.Event.TargetID == pb {
+				out = append(out, e)
+			}
+		}
+		return out
 	}
-	triggered := func() []routetest.Recorded { return events(hs.rec, "playbook_triggered") }
-
-	tl.handle(ctx, "audit.key.rotate", event("t1", "success", now))
-	if ev := triggered(); len(ev) != 1 || ev[0].Event.Result != route.ResultSuccess || ev[0].Event.TargetID != "pb-rotated" || ev[0].Event.Details["run_id"] == "" {
+	mk("pb-rotated", "t1", "u-admin", PlaybookTrigger{Type: "key_rotated"})
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k9", hs.now, nil))
+	if ev := triggered("pb-rotated"); len(ev) != 1 || ev[0].Event.Result != route.ResultSuccess || ev[0].Event.Details["run_id"] == "" {
 		t.Fatalf("first trigger: %+v", ev)
 	}
-	if got := hs.platform.paths(); len(got) != 1 || got[0] != "/keys/k1/rotate" {
-		t.Fatalf("triggered run called %v", got)
-	}
-	if done := lastEvent(t, hs.rec, "playbook_run_completed"); done.Event.ActorID != "u-admin" || done.Event.Details["subject"] != "audit.key.rotate" {
-		t.Fatalf("run completed: %+v", done.Event)
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k9", hs.now, nil))
+	wantRefused(t, triggered("pb-rotated")[1], reasonCooldown)
+	hs.now = hs.now.Add(2 * triggerCooldown)
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "refused", "k9", hs.now, nil))
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k9", hs.now.Add(-time.Hour), nil))
+	if ev := triggered("pb-rotated"); len(ev) != 3 {
+		t.Fatalf("refused rotate fired, or stale not refused: %d", len(ev))
+	} else {
+		wantRefused(t, ev[2], reasonStaleEvent)
 	}
 
-	tl.handle(ctx, "audit.key.rotate", event("t1", "success", now))
-	wantRefused(t, triggered()[1], reasonCooldown)
-
-	now = now.Add(2 * triggerCooldown)
-	tl.handle(ctx, "audit.key.rotate", event("t1", "refused", now))
-	if len(triggered()) != 2 {
-		t.Fatal("a refused rotate fired key_rotated")
+	// Custom subject with a filter.
+	mk("pb-custom", "t1", "u-admin", PlaybookTrigger{Type: customTrigger, Subject: "audit.cert.*", Filters: []EventFilter{{Field: "details.issuer", Op: "eq", Value: "corp-ca"}}})
+	hs.tl.handle(ctx, "audit.cert.issued", hs.event("t1", "success", "c1", hs.now, map[string]interface{}{"details": map[string]string{"issuer": "other"}}))
+	hs.tl.handle(ctx, "audit.cert.issued", hs.event("t1", "success", "c1", hs.now, map[string]interface{}{"details": map[string]string{"issuer": "corp-ca"}}))
+	if ev := triggered("pb-custom"); len(ev) != 1 || ev[0].Event.Result != route.ResultSuccess {
+		t.Fatalf("custom trigger: %+v", ev)
 	}
-	tl.handle(ctx, "audit.key.rotate", event("t1", "success", now.Add(-time.Hour)))
-	wantRefused(t, triggered()[2], reasonStaleEvent)
 
-	tl.handle(ctx, "audit.keycore.canary_tripped", event("t1", "success", now))
-	wantRefused(t, triggered()[3], reasonNotAuthorized)
+	// Threshold per actor within a window.
+	mk("pb-spike", "t1", "u-admin", PlaybookTrigger{Type: "login_failed", Threshold: 3, WindowSeconds: 60, GroupBy: "actor_id"})
+	for i, actor := range []string{"mallory", "mallory", "alice", "mallory"} {
+		hs.tl.handle(ctx, "audit.auth.login_failed", hs.event("t1", "failure", "", hs.now.Add(time.Duration(i)*time.Second), map[string]interface{}{"actor_id": actor}))
+	}
+	if ev := triggered("pb-spike"); len(ev) != 1 {
+		t.Fatalf("threshold fired %d times", len(ev))
+	}
+
+	// Authority: revoked or unverifiable, the run doesn't start.
+	mk("pb-canary", "t1", "u-admin", PlaybookTrigger{Type: "canary_tripped"})
+	hs.authority.missing = []string{"x"}
+	hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "k1", hs.now, nil))
+	wantRefused(t, triggered("pb-canary")[0], reasonAuthorityRevoked)
+	hs.authority.missing, hs.authority.err = nil, errors.New("auth unreachable")
+	hs.tl.lastFire = map[string]time.Time{}
+	hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "k1", hs.now, nil))
+	wantRefused(t, triggered("pb-canary")[1], reasonAuthorityUnknown)
+	hs.authority.err = nil
+
+	mk("pb-unauth", "t1", "", PlaybookTrigger{Type: "account_locked"})
+	hs.tl.handle(ctx, "audit.auth.account_locked", hs.event("t1", "success", "u1", hs.now, nil))
+	wantRefused(t, triggered("pb-unauth")[0], reasonNotAuthorized)
 
 	// Watchdog incidents carry no tenant: the platform tenant's playbooks fire.
-	tl.handle(ctx, "audit.health.incident", []byte(`{"result":"warning","target_id":"keycore","timestamp":"`+now.Format(time.RFC3339Nano)+`"}`))
-	if ev := triggered()[4]; ev.Event.TargetID != "pb-health" || ev.Event.TenantID != "root" || ev.Event.Result != route.ResultSuccess {
-		t.Fatalf("health incident: %+v", ev.Event)
+	mk("pb-health", "root", "u-root", PlaybookTrigger{Type: "service_health_degraded"})
+	hs.tl.handle(ctx, "audit.health.incident", []byte(`{"result":"warning","target_id":"keycore","timestamp":"`+hs.now.Format(time.RFC3339Nano)+`"}`))
+	if ev := triggered("pb-health"); len(ev) != 1 || ev[0].Event.TenantID != "root" {
+		t.Fatalf("health incident: %+v", ev)
 	}
 
-	// Subjects nothing emits (the pre-2.4.0 map) fire nothing.
+	// Incidents link the run.
+	mk("pb-incident", "t1", "u-admin", PlaybookTrigger{Type: "incident_opened"})
+	hs.tl.handle(ctx, "audit.reporting.incident_opened", hs.event("t1", "success", "inc_1", hs.now, map[string]interface{}{"target_type": "incident"}))
+	if w := hs.do(t, http.MethodGet, "/compliance/playbook-runs?incident_id=inc_1", pbAdmin, nil); !strings.Contains(w.Body.String(), "pb-incident") {
+		t.Fatalf("runs by incident: %s", w.Body.String())
+	}
+
+	// No chains, no own events, no members.
 	before := len(hs.rec.Events())
-	tl.handle(ctx, "audit.keycore.key_rotated", event("t1", "success", now))
-	// Members never run playbooks; the primary sees their events by relay.
+	hs.now = hs.now.Add(2 * triggerCooldown)
+	for subject, extra := range map[string]map[string]interface{}{
+		"audit.key.rotate":               {"actor_id": "kms-compliance"},
+		"audit.cert.revoked":             {"correlation_id": "pbrun_123"},
+		"audit.reporting.alert_created":  {"details": map[string]string{"source_actor_id": "kms-compliance"}},
+		"audit.compliance.playbook_triggered": {},
+		"audit.keycore.key_rotated":      {},
+	} {
+		hs.tl.handle(ctx, subject, hs.event("t1", "success", "k1", hs.now, extra))
+	}
 	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{NodeID: "n2", Role: clusterstate.RoleFollower, PrimaryURL: "https://primary:8443", ForwardCredential: "cred"}))
 	t.Cleanup(func() { clusterstate.SetDefault(nil) })
-	now = now.Add(2 * triggerCooldown)
-	tl.handle(ctx, "audit.key.rotate", event("t1", "success", now))
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k9", hs.now, nil))
 	if len(hs.rec.Events()) != before {
-		t.Fatalf("dead subject or member fired: %v", hs.rec.Events()[before:])
+		t.Fatalf("fired: %v", hs.rec.Events()[before:])
 	}
+}
+
+// Cancel stops a running or paused run; retry resumes from the first step
+// that did not complete, on the caller's authority.
+func TestPlaybookCancelAndRetry(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+
+	// A paused run is cancelled at once and its approval withdrawn.
+	gatedID := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, act("revoke_certificate", map[string]string{"cert_id": "c1"}))))
+	runID := startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+gatedID+"/run", pbAdmin, nil))
+	if w := hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+runID+"/cancel", pbAdmin, nil); w.Code != http.StatusOK {
+		t.Fatalf("cancel paused: %d %s", w.Code, w.Body.String())
+	}
+	if got := runOf(t, hs, runID); got.Status != runCancelled || len(hs.approvals.cancelled) != 1 {
+		t.Fatalf("cancelled paused run: %s %v", got.Status, hs.approvals.cancelled)
+	}
+	if w := hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+runID+"/cancel", pbAdmin, nil); w.Code != http.StatusConflict {
+		t.Fatalf("cancel twice: %d", w.Code)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "playbook_run_cancelled"), reasonRunNotCancellable)
+
+	// A running run stops at its next step.
+	slowID := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, map[string]any{"type": "rotate_key", "delay_seconds": 30, "parameters": map[string]string{"key_id": "k1"}})))
+	hs.h.dispatch = func(f func()) { go f() }
+	runID = startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+slowID+"/run", pbAdmin, nil))
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		hs.exec.mu.Lock()
+		_, running := hs.exec.running[runID]
+		hs.exec.mu.Unlock()
+		if running || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if w := hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+runID+"/cancel", pbAdmin, nil); w.Code != http.StatusOK {
+		t.Fatalf("cancel running: %d %s", w.Code, w.Body.String())
+	}
+	for time.Now().Before(deadline.Add(2 * time.Second)) {
+		if runOf(t, hs, runID).Status == runCancelled {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got := runOf(t, hs, runID); got.Status != runCancelled || len(hs.platform.writes()) != 0 {
+		t.Fatalf("cancelled running run: %s", got.Status)
+	}
+	hs.h.dispatch = func(f func()) { f() }
+
+	// Retry from the failed step.
+	hs.platform.reset(http.StatusInternalServerError, `{"error":{"code":"hsm_unavailable","message":"down"}}`)
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true, act("create_audit_event", nil), rotate)))
+	runID = startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/run", pbAdmin, nil))
+	if got := runOf(t, hs, runID); got.Status != runPartialFailure {
+		t.Fatalf("first run: %s", got.Status)
+	}
+	hs.platform.reset(0, "")
+	if w := hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+runID+"/retry", pbWriter, nil); w.Code != http.StatusForbidden {
+		t.Fatalf("retry without permission: %d", w.Code)
+	}
+	retryID := startedRun(t, hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+runID+"/retry", pbAdmin, nil))
+	got := runOf(t, hs, retryID)
+	if got.RetryOf != runID || got.TriggerEvent != "retry" || got.Status != runCompleted || len(got.Results) != 1 || got.Results[0].Type != "rotate_key" {
+		t.Fatalf("retry run: %+v", got)
+	}
+	if ev := lastEvent(t, hs.rec, "playbook_run_retried"); ev.Event.Details["resume_from"] != 2 {
+		t.Fatalf("retry event: %+v", ev.Event.Details)
+	}
+	if w := hs.do(t, http.MethodPost, "/compliance/playbook-runs/"+retryID+"/retry", pbAdmin, nil); w.Code != http.StatusConflict {
+		t.Fatalf("retry of a completed run: %d", w.Code)
+	}
+	_ = ctx
+}
+
+// A dry run resolves every step and reads each target from its owning
+// service; it changes nothing.
+func TestPlaybookDryRun(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, playbookBody("canary_tripped", true,
+		act("rotate_key", map[string]string{"key_id": "{{event.target_id}}"}),
+		map[string]any{"type": "resolve_alert", "parameters": map[string]string{"alert_id": "al1"}, "condition": []map[string]string{{"field": "severity", "op": "eq", "value": "critical"}}},
+	)))
+	hs.platform.reset(http.StatusNotFound, `{"error":{"code":"not_found","message":"no such key"}}`)
+	w := hs.do(t, http.MethodPost, "/compliance/playbooks/"+id+"/dry-run", pbWriter, map[string]any{"event": map[string]any{"target_id": "key-3", "severity": "high"}})
+	var out struct {
+		Data struct {
+			Steps []DryRunStep `json:"steps"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	s := out.Data.Steps
+	if w.Code != http.StatusOK || len(s) != 2 || s[0].Parameters["key_id"] != "key-3" || s[0].HasPermission || !strings.HasPrefix(s[0].TargetCheck, "not found") || s[1].WouldRun {
+		t.Fatalf("dry run: %d %s", w.Code, w.Body.String())
+	}
+	if len(hs.platform.writes()) != 0 {
+		t.Fatalf("dry run wrote: %+v", hs.platform.writes())
+	}
+	lastEvent(t, hs.rec, "playbook_dry_run")
 }
 
 // Every trigger subject is emitted by a service. The table names where; it
@@ -543,6 +981,8 @@ func TestPlaybookTriggerListener(t *testing.T) {
 // needs an entry.
 func TestTriggerSubjectsAreEmitted(t *testing.T) {
 	emitters := map[string][2]string{
+		"audit.reporting.alert_created":         {"services/reporting/service.go", `Emit(ctx, "alert_created"`},
+		"audit.reporting.incident_opened":       {"services/reporting/service.go", `Emit(ctx, "incident_opened"`},
 		"audit.keycore.canary_tripped":          {"services/keycore/threat_detection.go", `"audit.keycore.canary_tripped"`},
 		"audit.keycore.threat_signal_raised":    {"services/keycore/threat_detection.go", `"audit.keycore.threat_signal_raised"`},
 		"audit.posture.threat_finding_raised":   {"services/posture/threat_findings.go", `"audit.posture.threat_finding_raised"`},
@@ -550,8 +990,10 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.key.create":                      {"services/keycore/keycore.go", `"audit.key.create"`},
 		"audit.key.rotate":                      {"services/keycore/keycore.go", `"audit.key.rotate"`},
 		"audit.key.destroyed":                   {"services/keycore/keycore.go", `"audit.key.destroyed"`},
+		"audit.key.export":                      {"services/keycore/keycore.go", `"audit.key.export"`},
 		"audit.key.access_refused":              {"services/keycore/access_control.go", `"audit.key.access_refused"`},
 		"audit.key.request_replay_detected":     {"services/keycore/handler.go", `"audit.key.request_replay_detected"`},
+		"audit.key.hsm_refused":                 {"services/keycore/hsm.go", `"audit.key.hsm_refused"`},
 		"audit.cert.revoked":                    {"services/certs/service.go", `"audit.cert.revoked"`},
 		"audit.cert.renewal_window_missed":      {"services/certs/service_renewal.go", `"audit.cert.renewal_window_missed"`},
 		"audit.cert.mass_renewal_risk_detected": {"services/certs/service_renewal.go", `"audit.cert.mass_renewal_risk_detected"`},
@@ -560,6 +1002,9 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.auth.account_locked":             {"services/auth/handler.go", `"audit.auth.account_locked"`},
 		"audit.auth.dpop_replay_detected":       {"services/auth/handler.go", `"audit.auth.dpop_replay_detected"`},
 		"audit.compliance.posture_changed":      {"services/compliance/service.go", `"audit.compliance.posture_changed"`},
+		"audit.governance.fips_mode_changed":    {"services/governance/fips_mode.go", `"audit.governance.fips_mode_changed"`},
+		"audit.governance.backup_restored":      {"services/governance/backup.go", `"audit.governance.backup_restored"`},
+		"audit.cluster.member_joined":           {"services/cluster-manager/join.go", `"audit.cluster.member_joined"`},
 		"audit.health.incident":                 {"services/watchdog/playbook.go", `Emit(ctx, "incident"`},
 	}
 	root := filepath.Join("..", "..")
@@ -575,8 +1020,20 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 			}
 		}
 	}
-	watchdog, _ := os.ReadFile(filepath.Join(root, "services/watchdog/playbook.go"))
-	if !bytes.Contains(watchdog, []byte(`NewClient(js, "health")`)) {
-		t.Fatal("watchdog incidents are no longer audit.health.*")
+	for file, client := range map[string]string{
+		"services/watchdog/playbook.go": `NewClient(js, "health")`,
+		"services/reporting/main.go":    `"reporting"`,
+	} {
+		src, _ := os.ReadFile(filepath.Join(root, file))
+		if !bytes.Contains(src, []byte(client)) {
+			t.Fatalf("%s no longer emits under %s", file, client)
+		}
+	}
+	// Governance decisions that resume paused runs.
+	gov, _ := os.ReadFile(filepath.Join(root, "services/governance/service.go"))
+	for subject := range governanceDecisions {
+		if !bytes.Contains(gov, []byte(`"`+subject+`"`)) {
+			t.Fatalf("governance no longer emits %s", subject)
+		}
 	}
 }

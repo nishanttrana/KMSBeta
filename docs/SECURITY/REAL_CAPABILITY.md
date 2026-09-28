@@ -89,6 +89,7 @@ learned: CHANGELOG 1.26.0-beta, [learning.md](../../learning.md).
 | PQC migration | Steps "completed" without migrating | Successor keys, `rotated`, `manual_required`; rollback deactivates successors |
 | Feature Forge | No environments; guardrail read 200 as permit; nothing applied | Removed |
 | Compliance playbooks | Log-only "OK" actions; dead endpoints; UI actions with no executor | Only executable actions are accepted; compliance actions run in-process |
+| Reporting incidents (2.5.0-beta) | Status and assignment updates answered 200 for incidents that don't exist and accepted any status | 404 and a fixed status set; a playbook step can't succeed on nothing |
 | Compliance playbooks (2.4.0-beta) | 38 of 40 triggers listened for subjects nothing emits; 5 key/cert actions called routes that don't exist; `destroy_key` and `disable_user`/`revoke_api_key` always refused; trigger threshold and category shown but never used or stored; approvals reported as success | Trigger catalogue of emitted subjects (`TestTriggerSubjectsAreEmitted`); actions call real endpoints or are removed; `pending_approval` is its own outcome; catalogue served to the UI |
 | Watchdog | Published actions nothing performed | `action: alert` + labelled `recommendation` |
 | Confidential compute | "Attested key release" released nothing; generic evidence trusted | Verdict (`allow`/`review`/`deny`) labelled as such; generic evidence never allowed |

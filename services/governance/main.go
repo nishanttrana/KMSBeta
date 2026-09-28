@@ -73,9 +73,11 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var kernelAudit *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.governance.dead_letter")
+		kernelAudit, _ = pkgaudit.NewClient(js, "governance")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -97,6 +99,7 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 	)
 	handler := NewHandler(svc)
+	handler.SetAuditClient(kernelAudit)
 	// Every service reads the platform FIPS mode from this file before any
 	// cryptography (pkg/config): the database needs internal mTLS first.
 	go svc.SyncPlatformFIPSModeFile(ctx, envOr("VECTA_PLATFORM_FIPS_MODE_FILE", "/run/vecta/platform/fips-mode"), 5*time.Second)

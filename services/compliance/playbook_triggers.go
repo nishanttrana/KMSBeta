@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +24,14 @@ const (
 	// consumer catching up after downtime): a response to a days-old event
 	// would act on a situation that has moved on.
 	maxTriggerAge = 15 * time.Minute
-	// runTimeout bounds one run, delays included.
+	// runTimeout bounds one run segment, delays included.
 	runTimeout = 10 * time.Minute
+	// playbookCacheTTL bounds how stale the listener's view of a tenant's
+	// playbooks can be; saves on this node invalidate it at once.
+	playbookCacheTTL = 30 * time.Second
+	// executorClientID is the compliance service identity. Events it caused
+	// never fire playbooks (no chains of playbooks triggering each other).
+	executorClientID = "kms-compliance"
 )
 
 // triggersBySubject indexes the catalogue by audit subject.
@@ -39,7 +45,16 @@ func init() {
 	}
 }
 
-// TriggerListener fires playbooks from the audit stream.
+// governanceDecisions are the governance events that resolve a paused run.
+var governanceDecisions = map[string]string{
+	"audit.governance.quorum_reached":    "quorum_reached",
+	"audit.governance.quorum_denied":     "quorum_denied",
+	"audit.governance.request_expired":   "request_expired",
+	"audit.governance.request_cancelled": "request_cancelled",
+}
+
+// TriggerListener fires playbooks from the audit stream and resumes runs
+// paused for approval.
 type TriggerListener struct {
 	store    Store
 	executor *PlaybookExecutor
@@ -50,6 +65,13 @@ type TriggerListener struct {
 
 	mu       sync.Mutex
 	lastFire map[string]time.Time
+	counts   map[string][]time.Time
+	cache    map[string]cachedPlaybooks
+}
+
+type cachedPlaybooks struct {
+	at    time.Time
+	items []Playbook
 }
 
 // NewTriggerListener creates a listener wired to the playbook executor.
@@ -57,7 +79,7 @@ func NewTriggerListener(store Store, executor *PlaybookExecutor, logger *log.Log
 	return &TriggerListener{
 		store: store, executor: executor, logger: logger, now: time.Now,
 		dispatch: func(f func()) { go f() },
-		lastFire: map[string]time.Time{},
+		lastFire: map[string]time.Time{}, counts: map[string][]time.Time{}, cache: map[string]cachedPlaybooks{},
 	}
 }
 
@@ -82,74 +104,184 @@ func (tl *TriggerListener) StartListening(ctx context.Context, js nats.JetStream
 	_ = sub.Unsubscribe()
 }
 
-// handle fires every enabled playbook whose trigger matches the event.
-func (tl *TriggerListener) handle(ctx context.Context, subject string, data []byte) {
-	specs := triggersBySubject[subject]
-	if len(specs) == 0 {
+// Invalidate drops a tenant's cached playbooks after a save or delete.
+func (tl *TriggerListener) Invalidate(tenant string) {
+	if tl == nil {
 		return
 	}
-	// playbook tables are replicated; the primary runs playbooks and sees
+	tl.mu.Lock()
+	delete(tl.cache, tenant)
+	tl.mu.Unlock()
+}
+
+func (tl *TriggerListener) playbooks(ctx context.Context, tenant string) ([]Playbook, error) {
+	tl.mu.Lock()
+	c, ok := tl.cache[tenant]
+	tl.mu.Unlock()
+	if ok && tl.now().Sub(c.at) < playbookCacheTTL {
+		return c.items, nil
+	}
+	items, err := tl.store.ListPlaybooks(ctx, tenant)
+	if err != nil {
+		return nil, err
+	}
+	enabled := items[:0]
+	for _, pb := range items {
+		if pb.Enabled {
+			enabled = append(enabled, pb)
+		}
+	}
+	tl.mu.Lock()
+	tl.cache[tenant] = cachedPlaybooks{at: tl.now(), items: enabled}
+	tl.mu.Unlock()
+	return enabled, nil
+}
+
+// handle processes one audit event.
+func (tl *TriggerListener) handle(ctx context.Context, subject string, data []byte) {
+	if ownSubject(subject) {
+		return
+	}
+	// Playbook tables are replicated; the primary runs playbooks and sees
 	// every node's events through the audit relay (docs/CLUSTERING.md).
 	if !clusterstate.RunsPrimaryJobs(ctx) {
 		return
 	}
-	var evt struct {
-		TenantID  string `json:"tenant_id"`
-		Result    string `json:"result"`
-		TargetID  string `json:"target_id"`
-		Timestamp string `json:"timestamp"`
-	}
-	if json.Unmarshal(data, &evt) != nil {
+	ev, ok := parseEvent(subject, data)
+	if !ok {
 		return
 	}
+	if decision, ok := governanceDecisions[subject]; ok {
+		tl.resolveApproval(ctx, ev, decision)
+		return
+	}
+	if ev.ActorID == executorClientID || ev.Details["source_actor_id"] == executorClientID || strings.HasPrefix(ev.CorrelationID, "pbrun_") {
+		return
+	}
+	tenant := firstNonEmpty(ev.TenantID, tenantcheck.InternalServiceTenant())
+	specs := triggersBySubject[subject]
+	pbs, err := tl.playbooks(ctx, tenant)
+	if err != nil {
+		tl.logger.Printf("playbook triggers: list playbooks tenant=%s: %v", tenant, err)
+		return
+	}
+	for _, pb := range pbs {
+		if !triggerMatches(pb.Trigger, specs, ev, tenant == ev.TenantID) || !matchFilters(ev, pb.Trigger.Filters) {
+			continue
+		}
+		if !tl.thresholdReached(pb, ev) {
+			continue
+		}
+		tl.fire(ctx, pb, ev)
+	}
+}
+
+// triggerMatches reports whether t fires on ev. Catalogue triggers match
+// their subjects (success only where marked; platform triggers only on
+// tenant-less events); custom triggers match their subject pattern.
+func triggerMatches(t PlaybookTrigger, specs []TriggerSpec, ev RunEvent, tenanted bool) bool {
+	if t.Type == customTrigger {
+		return subjectMatches(t.Subject, ev.Subject)
+	}
+	for _, s := range specs {
+		if s.Type != t.Type {
+			continue
+		}
+		if s.SuccessOnly && ev.Result != "" && ev.Result != route.ResultSuccess {
+			return false
+		}
+		return tenanted || s.Platform
+	}
+	return false
+}
+
+// thresholdReached counts matching events for playbooks with a threshold
+// above 1, per group_by value, in a sliding window. Counts live in memory on
+// the primary; a restart or failover starts them again from zero.
+func (tl *TriggerListener) thresholdReached(pb Playbook, ev RunEvent) bool {
+	t := pb.Trigger
+	if t.Threshold <= 1 {
+		return true
+	}
+	key := pb.TenantID + "/" + pb.ID + "/" + ev.field(t.GroupBy)
+	now := tl.now()
+	window := time.Duration(t.WindowSeconds) * time.Second
+	tl.mu.Lock()
+	defer tl.mu.Unlock()
+	kept := tl.counts[key][:0]
+	for _, at := range tl.counts[key] {
+		if now.Sub(at) < window {
+			kept = append(kept, at)
+		}
+	}
+	kept = append(kept, now)
+	if len(kept) < t.Threshold {
+		tl.counts[key] = kept
+		return false
+	}
+	delete(tl.counts, key)
+	return true
+}
+
+func (tl *TriggerListener) fire(ctx context.Context, pb Playbook, ev RunEvent) {
+	src := runSource{Trigger: pb.Trigger.Type, Actor: pb.AuthorizedBy, ActorType: "user", Event: ev}
 	stale := false
-	if ts, err := time.Parse(time.RFC3339Nano, evt.Timestamp); err == nil {
+	if ts, err := time.Parse(time.RFC3339Nano, ev.Timestamp); err == nil {
 		stale = tl.now().Sub(ts) > maxTriggerAge
 	}
-	for _, spec := range specs {
-		if spec.SuccessOnly && evt.Result != "" && evt.Result != route.ResultSuccess {
-			continue
-		}
-		tenant := evt.TenantID
-		if tenant == "" && spec.Platform {
-			tenant = tenantcheck.InternalServiceTenant()
-		}
-		if tenant == "" {
-			continue
-		}
-		playbooks, err := tl.store.ListPlaybooks(ctx, tenant)
-		if err != nil {
-			tl.logger.Printf("playbook triggers: list playbooks tenant=%s: %v", tenant, err)
-			continue
-		}
-		for _, pb := range playbooks {
-			if !pb.Enabled || pb.Trigger.Type != spec.Type {
-				continue
-			}
-			src := runSource{Trigger: spec.Type, Subject: subject, EventID: evt.TargetID, Actor: pb.AuthorizedBy}
-			switch {
-			case pb.AuthorizedBy == "":
-				tl.audit(pb, src, "", reasonNotAuthorized)
-			case stale:
-				tl.audit(pb, src, "", reasonStaleEvent)
-			case !tl.claim(pb.TenantID + "/" + pb.ID):
-				tl.audit(pb, src, "", reasonCooldown)
-			default:
-				run, err := tl.executor.Start(ctx, pb, src)
-				if err != nil {
-					tl.logger.Printf("playbook triggers: start playbook=%s: %v", pb.ID, err)
-					continue
-				}
-				tl.audit(pb, src, run.ID, "")
-				pb := pb
-				tl.dispatch(func() {
-					rctx, cancel := context.WithTimeout(context.Background(), runTimeout)
-					defer cancel()
-					tl.executor.Execute(rctx, pb, run, src)
-				})
-			}
-		}
+	switch {
+	case pb.AuthorizedBy == "":
+		tl.audit(pb, ev, "", reasonNotAuthorized, "")
+		return
+	case stale:
+		tl.audit(pb, ev, "", reasonStaleEvent, "")
+		return
+	case !tl.claim(pb.TenantID + "/" + pb.ID):
+		tl.audit(pb, ev, "", reasonCooldown, "")
+		return
 	}
+	if reason, msg := tl.executor.checkAuthority(ctx, pb.TenantID, pb.AuthorizedBy, requiredPermissions(pb.Actions)); reason != "" {
+		tl.audit(pb, ev, "", reason, msg)
+		return
+	}
+	run, err := tl.executor.Start(ctx, pb, src)
+	if err != nil {
+		tl.logger.Printf("playbook triggers: start playbook=%s: %v", pb.ID, err)
+		return
+	}
+	tl.audit(pb, ev, run.ID, "", "")
+	tl.dispatch(func() {
+		rctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+		defer cancel()
+		tl.executor.Execute(rctx, pb, run)
+	})
+}
+
+// resolveApproval continues or ends a run paused on the governance request
+// the event names.
+func (tl *TriggerListener) resolveApproval(ctx context.Context, ev RunEvent, decision string) {
+	id := ev.Details["request_id"]
+	if id == "" || ev.TenantID == "" {
+		return
+	}
+	run, err := tl.store.GetPlaybookRunByApproval(ctx, ev.TenantID, id)
+	if err != nil || run.Status != runAwaitingApproval {
+		return
+	}
+	pb, err := tl.store.GetPlaybook(ctx, run.TenantID, run.PlaybookID)
+	if err != nil {
+		tl.logger.Printf("playbook triggers: approval %s: playbook %s: %v", id, run.PlaybookID, err)
+		return
+	}
+	run, cont := tl.executor.Resolve(ctx, run, pb, decision)
+	if !cont {
+		return
+	}
+	tl.dispatch(func() {
+		rctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+		defer cancel()
+		tl.executor.Execute(rctx, pb, run)
+	})
 }
 
 // claim reserves a playbook for the cooldown window.
@@ -170,15 +302,18 @@ func (tl *TriggerListener) claim(key string) bool {
 }
 
 // audit records a trigger decision: a run started, or why it didn't.
-func (tl *TriggerListener) audit(pb Playbook, src runSource, runID, reason string) {
+func (tl *TriggerListener) audit(pb Playbook, ev RunEvent, runID, reason, msg string) {
 	result, severity := route.ResultSuccess, "info"
 	details := map[string]interface{}{
-		"trigger": src.Trigger, "subject": src.Subject, "event_target": src.EventID,
+		"trigger": pb.Trigger.Type, "subject": ev.Subject, "event_target": ev.TargetID,
 		"playbook_name": pb.Name, "run_id": runID,
 	}
 	if reason != "" {
 		result, severity = route.ResultRefused, "warning"
 		details["reason"] = reason
+		if msg != "" {
+			details["detail"] = msg
+		}
 	}
 	details["severity"] = severity
 	tl.executor.emit("playbook_triggered", pkgaudit.Event{
