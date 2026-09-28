@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.17.0-beta] — 2026-09-28
+
+### Audit and dashboard clean-up after the alert-store removal
+- **Audit event catalogue:** dropped the per-event `Category` and
+  `classifyCategory`. They only set the category of audit's own alerts,
+  removed in 2.16.0-beta; the catalogue now holds severity only. Events keep
+  their FIPS 140-3 `category_group`, which is unchanged.
+- **Dashboard:** the audit config client read `wal_path`, which the audit
+  service deliberately never returns (it masks the path). It now reads the
+  real `wal_configured` flag. Nothing displayed the old field.
+
 ## [2.16.0-beta] — 2026-09-28
 
 ### Audit keeps no alert store; alerts live only in reporting (breaking)

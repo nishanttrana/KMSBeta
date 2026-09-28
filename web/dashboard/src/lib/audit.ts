@@ -59,7 +59,7 @@ export type ChainVerifyResult = {
 
 export type AuditConfig = {
   fail_closed: boolean;
-  wal_path: string;
+  wal_configured: boolean;
   wal_max_size_mb: number;
 };
 
@@ -205,7 +205,7 @@ export async function getAuditConfig(session: AuthSession): Promise<AuditConfig>
   );
   return {
     fail_closed: Boolean(out?.fail_closed),
-    wal_path: String(out?.wal_path || ""),
+    wal_configured: Boolean(out?.wal_configured),
     wal_max_size_mb: Math.max(0, Number(out?.wal_max_size_mb || 0))
   };
 }

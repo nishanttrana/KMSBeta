@@ -426,18 +426,6 @@ func classifySeverity(action string, result string) string {
 	}
 }
 
-func classifyCategory(action string) string {
-	a := strings.ToLower(action)
-	if meta, ok := auditEventCatalog[a]; ok && meta.Category != "" {
-		return meta.Category
-	}
-	parts := strings.Split(a, ".")
-	if len(parts) > 1 {
-		return parts[1]
-	}
-	return "audit"
-}
-
 func baseRisk(severity string, action string) int {
 	switch severity {
 	case "CRITICAL":
