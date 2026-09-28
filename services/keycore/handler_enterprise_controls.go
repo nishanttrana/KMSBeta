@@ -174,45 +174,6 @@ func (h *Handler) handleEnterpriseKDFDerive(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"result": resp, "request_id": reqID})
 }
 
-func (h *Handler) handleCreateAuditChainAnchor(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req struct {
-		AnchorType        string         `json:"anchor_type"`
-		ExternalReference string         `json:"external_reference"`
-		Metadata          map[string]any `json:"metadata"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	anchor, err := h.svc.AnchorEnterpriseAuditChain(r.Context(), tenantID, req.AnchorType, req.ExternalReference, req.Metadata)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "audit_anchor_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	features.MarkPreview(w, "keycore.audit_chain_anchor")
-	writeJSON(w, http.StatusCreated, map[string]any{"anchor": anchor, "request_id": reqID})
-}
-
-func (h *Handler) handleListAuditChainAnchors(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	features.MarkPreview(w, "keycore.audit_chain_anchor")
-	items, err := h.svc.store.ListAuditChainAnchors(r.Context(), tenantID, limitQuery(r, 100))
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "audit_anchor_list_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
-}
-
 func (h *Handler) handleEnterpriseComplianceDashboard(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)

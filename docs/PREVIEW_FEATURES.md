@@ -22,7 +22,6 @@ reflects it:
 | `keycore.metadata_profile` | Key metadata profiles | Stored only; key creation does not apply or validate them. |
 | `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
-| `keycore.audit_chain_anchor` | External audit-chain anchors | Records an external reference in a local hash chain; nothing is anchored externally. |
 | `backup.scheduler` | Backup policies, runs and restore points (Backup tab) | Policies are stored but no backup is executed or restored. |
 
 ## Corrections made on 2026-09-25
@@ -42,11 +41,10 @@ reflects it:
 - **Audit-chain anchors:**
   - **What they did:** reported a tree root computed from
     tenant/type/reference/time, with status `anchored`.
-  - **Now:** they report status `recorded` and carry no root (the column was
-    dropped in keycore migration 027, 3.0.0-beta). Existing rows are
-    relabelled (keycore migration 018). The platform's actual audit tamper
-    evidence is the audit service's hash chain, per-event HMAC and signed
-    checkpoints ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
+  - **Then:** relabelled `recorded`, root dropped (3.0.0-beta).
+  - **Now:** removed in 3.1.0-beta (routes, table via keycore migration 027).
+    The audit service's signed checkpoints are the real tamper evidence
+    ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
 
 ## Leaving preview
 

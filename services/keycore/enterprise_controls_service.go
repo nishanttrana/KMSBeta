@@ -532,46 +532,6 @@ func (s *Service) refuseKDF(ctx context.Context, req KDFDeriveRequest, algorithm
 	return err
 }
 
-func (s *Service) AnchorEnterpriseAuditChain(ctx context.Context, tenantID, anchorType, externalRef string, metadata map[string]any) (AuditChainAnchor, error) {
-	if strings.TrimSpace(anchorType) == "" {
-		anchorType = "local"
-	}
-	// Preview (pkg/features "keycore.audit_chain_anchor"): this records an
-	// external reference in a local hash chain of anchor records. It used to
-	// report a tree root computed from tenant/type/reference/time and the
-	// status "anchored"; neither was true, so neither is claimed any more
-	// (the root column was dropped in migration 027).
-	now := time.Now().UTC()
-	anchors, _ := s.store.ListAuditChainAnchors(ctx, tenantID, 1)
-	previous := ""
-	if len(anchors) > 0 {
-		previous = anchors[0].AnchorHash
-	}
-	anchorHash := sha256Hex([]byte(fmt.Sprintf("%s|%s|%s|%s|%d", previous, tenantID, anchorType, externalRef, now.UnixNano())))
-	anchor, err := s.store.RecordAuditChainAnchor(ctx, AuditChainAnchor{
-		TenantID:          tenantID,
-		AnchorType:        anchorType,
-		PreviousHash:      previous,
-		AnchorHash:        "sha256:" + anchorHash,
-		ExternalReference: externalRef,
-		Status:            "recorded",
-		Metadata:          metadata,
-		AnchoredAt:        now,
-	})
-	if err != nil {
-		return AuditChainAnchor{}, err
-	}
-	anchor.FeatureStatus = features.StatusPreview
-	_ = s.publishAudit(ctx, "audit.key.audit_chain_anchored", tenantID, map[string]any{
-		"anchor_id":          anchor.AnchorID,
-		"anchor_type":        anchor.AnchorType,
-		"anchor_hash":        anchor.AnchorHash,
-		"feature_status":     "preview",
-		"external_reference": anchor.ExternalReference,
-	})
-	return anchor, nil
-}
-
 func (s *Service) VerifyKeyMaterialFingerprint(ctx context.Context, tenantID, keyID, fingerprint string) (EnterpriseControlRecord, error) {
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {

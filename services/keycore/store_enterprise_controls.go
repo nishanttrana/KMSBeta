@@ -186,87 +186,6 @@ LIMIT $7 OFFSET $8
 	return out, rows.Err()
 }
 
-func (s *SQLStore) RecordAuditChainAnchor(ctx context.Context, anchor AuditChainAnchor) (AuditChainAnchor, error) {
-	now := time.Now().UTC()
-	if strings.TrimSpace(anchor.AnchorID) == "" {
-		anchor.AnchorID = newID("anch")
-	}
-	if anchor.Metadata == nil {
-		anchor.Metadata = map[string]any{}
-	}
-	if anchor.AnchoredAt.IsZero() {
-		anchor.AnchoredAt = now
-	}
-	if strings.TrimSpace(anchor.Status) == "" {
-		anchor.Status = "anchored"
-	}
-	metadata, _ := json.Marshal(nonNilMap(anchor.Metadata))
-	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO key_audit_chain_anchors (
-	anchor_id, tenant_id, anchor_type, previous_hash, anchor_hash,
-	external_reference, status, metadata_json, anchored_at, verified_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-ON CONFLICT (tenant_id, anchor_id) DO UPDATE SET
-	anchor_type = EXCLUDED.anchor_type,
-	previous_hash = EXCLUDED.previous_hash,
-	anchor_hash = EXCLUDED.anchor_hash,
-	external_reference = EXCLUDED.external_reference,
-	status = EXCLUDED.status,
-	metadata_json = EXCLUDED.metadata_json,
-	verified_at = EXCLUDED.verified_at
-RETURNING anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
-          anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
-          anchored_at, verified_at
-`, anchor.AnchorID, anchor.TenantID, anchor.AnchorType,
-		nullable(anchor.PreviousHash), anchor.AnchorHash, nullable(anchor.ExternalReference),
-		anchor.Status, metadata, anchor.AnchoredAt, nullableTime(anchor.VerifiedAt))
-	return scanAuditChainAnchor(row)
-}
-
-func (s *SQLStore) GetAuditChainAnchor(ctx context.Context, tenantID, anchorID string) (AuditChainAnchor, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
-       anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
-       anchored_at, verified_at
-FROM key_audit_chain_anchors
-WHERE tenant_id=$1 AND anchor_id=$2
-`, strings.TrimSpace(tenantID), strings.TrimSpace(anchorID))
-	item, err := scanAuditChainAnchor(row)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return AuditChainAnchor{}, errStoreNotFound
-		}
-		return AuditChainAnchor{}, err
-	}
-	return item, nil
-}
-
-func (s *SQLStore) ListAuditChainAnchors(ctx context.Context, tenantID string, limit int) ([]AuditChainAnchor, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT anchor_id, tenant_id, anchor_type, COALESCE(previous_hash,''),
-       anchor_hash, COALESCE(external_reference,''), status, COALESCE(metadata_json,'{}'),
-       anchored_at, verified_at
-FROM key_audit_chain_anchors
-WHERE tenant_id=$1
-ORDER BY anchored_at DESC
-LIMIT $2
-`, strings.TrimSpace(tenantID), clampAuditLimit(limit, 100))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-
-	out := make([]AuditChainAnchor, 0)
-	for rows.Next() {
-		item, err := scanAuditChainAnchor(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, item)
-	}
-	return out, rows.Err()
-}
-
 func scanEnterpriseControlRecord(scanner interface{ Scan(...any) error }) (EnterpriseControlRecord, error) {
 	var (
 		item      EnterpriseControlRecord
@@ -302,25 +221,6 @@ func scanDSPMFinding(scanner interface{ Scan(...any) error }) (DSPMFinding, erro
 	item.Evidence = parseMap(rawJSON)
 	item.CreatedAt = item.CreatedAt.UTC()
 	item.UpdatedAt = item.UpdatedAt.UTC()
-	return item, nil
-}
-
-func scanAuditChainAnchor(scanner interface{ Scan(...any) error }) (AuditChainAnchor, error) {
-	var (
-		item       AuditChainAnchor
-		rawJSON    string
-		verifiedAt sql.NullTime
-	)
-	if err := scanner.Scan(
-		&item.AnchorID, &item.TenantID, &item.AnchorType,
-		&item.PreviousHash, &item.AnchorHash, &item.ExternalReference, &item.Status,
-		&rawJSON, &item.AnchoredAt, &verifiedAt,
-	); err != nil {
-		return AuditChainAnchor{}, err
-	}
-	item.Metadata = parseMap(rawJSON)
-	item.VerifiedAt = nullTimePtr(verifiedAt)
-	item.AnchoredAt = item.AnchoredAt.UTC()
 	return item, nil
 }
 

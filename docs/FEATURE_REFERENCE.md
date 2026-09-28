@@ -25,7 +25,7 @@ Enterprise Key Audit adds an operating layer for the highest-value KMS gaps:
 - inventory sync, dependency records, orphan detection, and duplicate KCV detection
 - statistical anomaly detection with DSPM findings
 - orchestration runs, KDF, fingerprint verification, and threat signals
-- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): federation, audit-chain anchors, edge, sharing, metadata, binding, advanced-encryption modes
+- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): federation, edge, sharing, metadata, binding, advanced-encryption modes
 
 ### Why Teams Use It
 
@@ -62,7 +62,6 @@ Use this feature when:
 - `GET /svc/keycore/enterprise/dspm/findings`
 - `GET /svc/keycore/enterprise/dspm/events`
 - `POST /svc/keycore/enterprise/kdf/derive`
-- `POST /svc/keycore/enterprise/audit-chain/anchors`
 - `POST /svc/keycore/enterprise/orchestration/runs`
 
 ### Operational Outcome

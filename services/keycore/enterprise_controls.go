@@ -85,21 +85,6 @@ type DSPMFindingQuery struct {
 	Offset      int
 }
 
-type AuditChainAnchor struct {
-	AnchorID          string         `json:"anchor_id"`
-	TenantID          string         `json:"tenant_id"`
-	AnchorType        string         `json:"anchor_type"`
-	PreviousHash      string         `json:"previous_hash,omitempty"`
-	AnchorHash        string         `json:"anchor_hash"`
-	ExternalReference string         `json:"external_reference,omitempty"`
-	Status            string         `json:"status"`
-	Metadata          map[string]any `json:"metadata,omitempty"`
-	AnchoredAt        time.Time      `json:"anchored_at"`
-	// Preview: anchors are local records, not external anchoring.
-	FeatureStatus string     `json:"feature_status"`
-	VerifiedAt    *time.Time `json:"verified_at,omitempty"`
-}
-
 type KDFDeriveRequest struct {
 	TenantID     string `json:"tenant_id"`
 	KeyID        string `json:"key_id,omitempty"`

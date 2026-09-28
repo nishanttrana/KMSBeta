@@ -163,7 +163,6 @@ var Replicated = map[string][]string{
 		"key_access_group_members",
 		"key_access_groups",
 		"key_access_policy_settings",
-		"key_audit_chain_anchors",
 		"key_binding_configs",
 		"key_dependencies",
 		"key_dspm_findings",

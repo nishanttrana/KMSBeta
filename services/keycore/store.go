@@ -138,9 +138,6 @@ type Store interface {
 	ListEnterpriseControlRecords(ctx context.Context, tenantID string, q EnterpriseControlQuery) ([]EnterpriseControlRecord, error)
 	UpsertDSPMFinding(ctx context.Context, finding DSPMFinding) (DSPMFinding, error)
 	ListDSPMFindings(ctx context.Context, tenantID string, q DSPMFindingQuery) ([]DSPMFinding, error)
-	RecordAuditChainAnchor(ctx context.Context, anchor AuditChainAnchor) (AuditChainAnchor, error)
-	GetAuditChainAnchor(ctx context.Context, tenantID, anchorID string) (AuditChainAnchor, error)
-	ListAuditChainAnchors(ctx context.Context, tenantID string, limit int) ([]AuditChainAnchor, error)
 
 	// Advanced Scheduling Jobs
 	ListSchedulingJobs(ctx context.Context, tenantID string) ([]KeySchedulingJob, error)

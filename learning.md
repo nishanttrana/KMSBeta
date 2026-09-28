@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A preview named after a guarantee outlives the real thing
+- **What happened:** keycore's "External audit-chain anchors" preview kept
+  a hash chain of its own anchor records and a free-text reference. It was
+  labelled preview in 1.x after it was caught reporting a fake root, but
+  stayed after 3.0.0-beta shipped real signed checkpoints, so the product
+  offered two "audit anchoring" features, one of them hollow.
+- **Why it slipped through:** a preview label makes a hollow feature
+  honest, so nobody revisits it; and it lived in keycore, not in audit, so
+  the audit work didn't find it until the owner asked.
+- **Rule:** when a real capability lands, grep for previews and roadmap rows
+  that promise the same thing and remove them in the same release.
+
 ### A tamper-evidence layer that never leaves the database proves nothing extra
 - **What happened:** the audit and certs services built Merkle epochs for
   releases. Both `…/merkle/verify` endpoints recomputed a proof and compared

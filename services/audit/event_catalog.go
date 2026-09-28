@@ -172,7 +172,6 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.key.dspm_finding_upserted":         {Severity: "HIGH"},
 		"audit.key.kdf_derived":                   {Severity: "MEDIUM"},
 		"audit.governance.backup_key_split":       {Severity: "HIGH"},
-		"audit.key.audit_chain_anchored":          {Severity: "MEDIUM"},
 		"audit.key.material_fingerprint_verified": {Severity: "HIGH"},
 		"audit.key.searchable_token_generated":    {Severity: "MEDIUM"},
 		"audit.key.compliance_dashboard_viewed":   {Severity: "LOW"},

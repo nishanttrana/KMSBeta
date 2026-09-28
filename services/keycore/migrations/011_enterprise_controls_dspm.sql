@@ -44,26 +44,8 @@ CREATE INDEX IF NOT EXISTS idx_key_dspm_findings_type ON key_dspm_findings(tenan
 CREATE INDEX IF NOT EXISTS idx_key_dspm_findings_risk ON key_dspm_findings(tenant_id, risk_score DESC, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_key_dspm_findings_key ON key_dspm_findings(tenant_id, key_id) WHERE key_id IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS key_audit_chain_anchors (
-    anchor_id          TEXT NOT NULL,
-    tenant_id          TEXT NOT NULL,
-    anchor_type        TEXT NOT NULL,
-    previous_hash      TEXT,
-    anchor_hash        TEXT NOT NULL,
-    external_reference TEXT,
-    status             TEXT NOT NULL DEFAULT 'anchored',
-    metadata_json      JSONB NOT NULL DEFAULT '{}',
-    anchored_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    verified_at        TIMESTAMPTZ,
-    PRIMARY KEY (tenant_id, anchor_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_key_audit_anchors_time ON key_audit_chain_anchors(tenant_id, anchored_at DESC);
-CREATE INDEX IF NOT EXISTS idx_key_audit_anchors_hash ON key_audit_chain_anchors(tenant_id, anchor_hash);
-
 ALTER TABLE enterprise_control_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE key_dspm_findings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE key_audit_chain_anchors ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
@@ -72,9 +54,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_key_dspm_findings') THEN
         EXECUTE 'CREATE POLICY tenant_isolation_key_dspm_findings ON key_dspm_findings USING (tenant_id = current_setting(''app.tenant_id'', true))';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_key_audit_chain_anchors') THEN
-        EXECUTE 'CREATE POLICY tenant_isolation_key_audit_chain_anchors ON key_audit_chain_anchors USING (tenant_id = current_setting(''app.tenant_id'', true))';
     END IF;
 END $$;
 

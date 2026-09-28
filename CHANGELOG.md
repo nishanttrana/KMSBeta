@@ -4,6 +4,22 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [3.1.0-beta] — 2026-09-28
+
+### Removed: the keycore audit-chain anchor preview
+- `GET|POST /svc/keycore/enterprise/audit-chain/anchors`, the
+  `key_audit_chain_anchors` table (keycore migration 027 drops it; the 3.0.0
+  migration of the same number that only dropped a column is replaced, and
+  018 is removed), the `keycore.audit_chain_anchor` preview entry (backend
+  and dashboard catalogue), the `audit.key.audit_chain_anchored` event and
+  the "Blockchain-Backed Audit Chain" roadmap row. It stored a reference in
+  a local chain of its own records and anchored nothing.
+- The real mechanism is the audit service's ECDSA-P384 signed checkpoints
+  (3.0.0-beta, [docs/SECURITY/AUDIT_INTEGRITY.md](docs/SECURITY/AUDIT_INTEGRITY.md)).
+  Exporting checkpoints to an RFC 3161 timestamp authority or WORM storage
+  is listed as open in RECOMMENDED_FEATURES.md.
+- Recoverable from git history before this commit.
+
 ## [3.0.0-beta] — 2026-09-28
 
 ### Audit integrity: signed checkpoints replace Merkle trees (breaking)

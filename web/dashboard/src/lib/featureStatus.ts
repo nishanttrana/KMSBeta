@@ -11,7 +11,6 @@ export const PREVIEW_FEATURES: PreviewFeature[] = [
   { id: "keycore.metadata_profile", name: "Key metadata profiles", limitation: "Stored only; key creation does not apply or validate them." },
   { id: "keycore.edge", name: "Edge & IoT agents, leases and receipts", limitation: "Stored only; there is no edge runtime." },
   { id: "keycore.advanced_encryption_modes", name: "Homomorphic / functional encryption modes", limitation: "Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available." },
-  { id: "keycore.audit_chain_anchor", name: "External audit-chain anchors", limitation: "Records an external reference in a local hash chain; nothing is anchored externally. Audit tamper evidence comes from the audit service." },
   { id: "backup.scheduler", name: "Backup policies, runs and restore points (Backup tab)", limitation: "Policies are stored but no backup is executed or restored. Real encrypted backups: System Administration > Backups." },
 ];
 

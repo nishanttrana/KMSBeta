@@ -517,17 +517,9 @@ Minimums:
 
 The standalone Shamir split/verify endpoints and the escrow workflow were removed in 1.4.0-beta. To split recovery material among guardians, split a backup's key when creating the backup: [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 
-### Audit Chain Anchoring
+### Audit Chain Anchoring (removed)
 
-Create an internal anchor with an optional external reference:
-
-```bash
-curl -X POST "$BASE/enterprise/audit-chain/anchors?tenant_id=$TENANT" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d '{"anchor_type":"external_notary","external_reference":"notary://2026-06-09/root"}'
-```
-
-> **Preview:** an anchor is a local record with status `recorded`: the previous anchor hash, the anchor hash (a hash chain over anchor records), and your external reference. It has **no tree root** and nothing is published externally. Until 2026-09-25 anchors reported a root that was not computed from audit events; those rows were relabelled (keycore migration 018) and the column was dropped in 3.0.0-beta (migration 027). The audit service's hash chain, per-event HMAC and signed checkpoints are the tamper evidence ([SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md)).
+The anchor-record preview (`/enterprise/audit-chain/anchors`) was removed in 3.1.0-beta: it recorded references in a local chain and anchored nothing. Audit tamper evidence is the audit service's hash chain, per-event HMAC and ECDSA-P384 signed checkpoints, which reach your SIEM as audit events: [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md).
 
 ### Key Material Verification
 
@@ -611,7 +603,6 @@ The implementation emits these KeyCore audit subjects:
 | `audit.key.anomaly_scan_completed` | Enterprise anomaly scan completed. |
 | `audit.key.dspm_finding_upserted` | KeyCore DSPM finding created or updated. |
 | `audit.key.kdf_derived` | Enterprise KDF operation completed without persisting secret material. |
-| `audit.key.audit_chain_anchored` | Audit chain anchor persisted. |
 | `audit.key.material_fingerprint_verified` | KCV/fingerprint verification completed. |
 | `audit.key.searchable_token_generated` | Searchable HMAC token generated. |
 | `audit.key.enterprise.*.upserted` | Enterprise control record created or updated. |

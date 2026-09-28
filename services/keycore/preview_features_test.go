@@ -44,22 +44,3 @@ func TestEnterpriseControlsCarryFeatureStatus(t *testing.T) {
 		t.Fatalf("threat signal intake is a real capability and must not be labelled preview: %+v", out.Control)
 	}
 }
-
-// The audit-chain anchor must not claim external anchoring.
-func TestAuditChainAnchorClaimsNothingFalse(t *testing.T) {
-	h, _ := newHandlerForTest(t)
-	raw, _ := json.Marshal(map[string]any{"anchor_type": "external", "external_reference": "ticket-42"})
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/enterprise/audit-chain/anchors?tenant_id=t1", bytes.NewReader(raw)))
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("%d %s", rr.Code, rr.Body.String())
-	}
-	var out struct {
-		Anchor AuditChainAnchor `json:"anchor"`
-	}
-	_ = json.Unmarshal(rr.Body.Bytes(), &out)
-	if out.Anchor.Status != "recorded" || out.Anchor.FeatureStatus != features.StatusPreview ||
-		rr.Header().Get(features.HeaderStatus) != features.StatusPreview {
-		t.Fatalf("anchor must be an honest preview record: %+v", out.Anchor)
-	}
-}

@@ -823,8 +823,6 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/dspm/findings` | Upsert a KeyCore DSPM finding. |
 | GET | `/svc/keycore/enterprise/dspm/events` | Export DSPM/posture-compatible normalized events. |
 | POST | `/svc/keycore/enterprise/kdf/derive` | Derive key material with HKDF-SHA256, PBKDF2-SHA256, Scrypt, or Argon2id. |
-| GET | `/svc/keycore/enterprise/audit-chain/anchors` | List audit-chain anchors. |
-| POST | `/svc/keycore/enterprise/audit-chain/anchors` | Preview: record a local audit-chain anchor with an optional external reference (`anchor_type` defaults to `local`; no tree root since 3.0.0-beta). |
 | GET | `/svc/keycore/enterprise/compliance/dashboard` | KeyCore enterprise compliance score and evidence summary. |
 | GET | `/svc/keycore/enterprise/cost/optimization` | Usage-cost estimate and optimization recommendations. |
 | POST | `/svc/keycore/enterprise/verification/fingerprint` | Verify a key KCV/fingerprint using constant-time comparison. |
@@ -3138,7 +3136,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
-- `audit.key.service_derive`, `audit.key.service_derive_refused`, `audit.key.audit_chain_anchored` (preview), enterprise control upserts carry `feature_status` / `feature_id`
+- `audit.key.service_derive`, `audit.key.service_derive_refused`, enterprise control upserts carry `feature_status` / `feature_id`
 - Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
@@ -3806,8 +3804,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/enterprise/advanced-encryption/modes`
 - `POST /svc/keycore/enterprise/advanced-encryption/search-token`
 - `POST /svc/keycore/enterprise/anomaly/scan`
-- `GET /svc/keycore/enterprise/audit-chain/anchors`
-- `POST /svc/keycore/enterprise/audit-chain/anchors`
 - `POST /svc/keycore/enterprise/binding/policies`
 - `GET /svc/keycore/enterprise/compliance/dashboard`
 - `GET /svc/keycore/enterprise/controls`

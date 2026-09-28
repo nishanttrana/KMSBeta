@@ -29,7 +29,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Advanced Key Scheduling & Orchestration | Implemented | `/enterprise/orchestration/workflows`, `/enterprise/orchestration/runs`, executable batch rotation |
 | Key Federation & Multi-KMS Orchestration | **Preview**: records only; no replication or failover | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
 | Enhanced Key Recovery & Escrow | **Removed** (1.4.0-beta): the general escrow workflow only kept records. Backup keys can be split M-of-N among guardians instead | System Administration > Backups, `key_split` on `POST /svc/governance/governance/backups` |
-| Blockchain-Backed Audit Chain | **Preview**: local anchor records; nothing is anchored externally (tamper evidence is the audit service's hash chain, per-event HMAC and signed checkpoints) | `/enterprise/audit-chain/anchors`, external-reference anchoring |
+| Blockchain-Backed Audit Chain | **Replaced** (3.1.0-beta): the anchor-record preview is removed; the audit service signs each chain head (ECDSA-P384) and the checkpoints reach SIEM | `GET /svc/audit/audit/checkpoints`, [SECURITY/AUDIT_INTEGRITY.md](SECURITY/AUDIT_INTEGRITY.md) |
 | Key Derivation Functions | Implemented | `/enterprise/kdf/derive` for HKDF, PBKDF2, Scrypt, Argon2id |
 | Key Material Verification | Implemented | `/enterprise/verification/fingerprint`, constant-time KCV compare |
 | Regulatory Compliance Dashboard | Implemented | `/enterprise/compliance/dashboard` |
@@ -197,9 +197,9 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 #### 10. **Blockchain-Backed Audit Chain** ⭐⭐⭐
 **Gap**: No external anchor for audit immutability
 **Recommendation**:
-- Blockchain-backed audit chain (optional)
 - Signed chain-head checkpoints (done in 3.0.0-beta: audit service)
-- External chain anchoring
+- External anchoring of checkpoints (RFC 3161 timestamps or WORM storage): open
+- Blockchain-backed audit chain (optional)
 - Consensus-based operations
 - Smart contract integration
 - **Impact**: Medium (compliance edge)

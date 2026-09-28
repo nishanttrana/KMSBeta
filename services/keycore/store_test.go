@@ -237,19 +237,6 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, finding_id)
 		);`,
-		`CREATE TABLE key_audit_chain_anchors (
-			anchor_id TEXT NOT NULL,
-			tenant_id TEXT NOT NULL,
-			anchor_type TEXT NOT NULL,
-			previous_hash TEXT,
-			anchor_hash TEXT NOT NULL,
-			external_reference TEXT,
-			status TEXT NOT NULL DEFAULT 'anchored',
-			metadata_json BLOB DEFAULT '{}',
-			anchored_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			verified_at TIMESTAMP,
-			PRIMARY KEY (tenant_id, anchor_id)
-		);`,
 		`CREATE TABLE canary_keys (
 			id TEXT PRIMARY KEY,
 			tenant_id TEXT NOT NULL,
@@ -492,23 +479,6 @@ func TestEnterpriseAuditStoreOperations(t *testing.T) {
 		t.Fatalf("unexpected dspm findings: %+v", findings)
 	}
 
-	anchor, err := s.RecordAuditChainAnchor(ctx, AuditChainAnchor{
-		AnchorID: "anch-1", TenantID: "t1", AnchorType: "external",
-		AnchorHash: "sha256:def", ExternalReference: "notary://example/1", Status: "anchored",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if anchor.AnchorHash != "sha256:def" {
-		t.Fatalf("unexpected anchor: %+v", anchor)
-	}
-	anchors, err := s.ListAuditChainAnchors(ctx, "t1", 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(anchors) != 1 || anchors[0].AnchorID != "anch-1" {
-		t.Fatalf("unexpected anchors: %+v", anchors)
-	}
 }
 
 func TestStoreRunCryptoTxOpsLimit(t *testing.T) {

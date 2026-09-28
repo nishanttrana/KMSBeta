@@ -238,8 +238,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /enterprise/dspm/findings", h.handleUpsertKeyDSPMFinding)
 	mux.HandleFunc("GET /enterprise/dspm/events", h.handleExportKeyDSPMEvents)
 	mux.HandleFunc("POST /enterprise/kdf/derive", h.handleEnterpriseKDFDerive)
-	mux.HandleFunc("GET /enterprise/audit-chain/anchors", h.handleListAuditChainAnchors)
-	mux.HandleFunc("POST /enterprise/audit-chain/anchors", h.handleCreateAuditChainAnchor)
 	mux.HandleFunc("GET /enterprise/compliance/dashboard", h.handleEnterpriseComplianceDashboard)
 	mux.HandleFunc("GET /enterprise/cost/optimization", h.handleEnterpriseCostOptimization)
 	mux.HandleFunc("POST /enterprise/verification/fingerprint", h.handleVerifyKeyFingerprint)
