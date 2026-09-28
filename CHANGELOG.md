@@ -4,6 +4,61 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [5.0.0-beta] — 2026-09-29
+
+### Key visibility: you see the keys you can use (owner decision, option A)
+- `GET /keys` lists, and every per-key read (`GET /keys/{id}`, versions,
+  KCV, usage, approval, IV log, rotation metrics, health, consumers, access
+  policy, HSM inspect, and the fingerprint check) returns, only keys the
+  caller can see: keys they created, keys an active grant gives them
+  (directly or through a group), keys their workload is bound to, or every
+  key for tenant admins, service identities and holders of the new
+  **`key.inventory.read`** permission (for auditors). The filter runs in the
+  database query, so pages stay full and cursors reach every visible key.
+- A hidden key answers exactly like a missing one (`404 not_found`), and the
+  refusal is audited as `audit.key.access_refused` with `operation: read`,
+  `reason: not_visible`. Another tenant's key is refused as a tenant
+  mismatch before any lookup.
+- Grants accept a new **`read`** operation (dashboard: "Read (view only)"):
+  the key is visible, and no operation on it is allowed.
+- Tenant-wide views over every key need `key.inventory.read`:
+  `/inventory/keys|orphans|duplicates|dependencies`, `/rotation/analytics`
+  and `/overdue`, `/enterprise/summary`, `/health/summary`,
+  `/compromise/events` (GET), `/analytics/usage|hotspots|trends`,
+  `/enterprise/dspm/findings|events`, `/enterprise/compliance/dashboard`,
+  `/enterprise/cost/optimization`.
+
+### Security: keycore's remaining writes required no permission
+- 4.0.0-beta put keycore's access and key-management routes on the route
+  kernel. The rest still took any verified token: reporting a compromise
+  (which suspends the key), rotating any key through `POST
+  /enterprise/orchestration/runs`, reading another key's KCV through `POST
+  /enterprise/verification/fingerprint`, ceremonies, scheduling jobs,
+  enterprise controls, inventory and analytics writes, attestation,
+  integrity checks and the FIPS self-test.
+- They now go through the kernel with `key.ceremony.read|write|share`,
+  `key.compromise`, `key.rotate` (orchestration runs), `key.enterprise.read|
+  write`, `key.scheduling.read|write`, `key.inventory.write`,
+  `key.analytics.write`, `key.health.write`, `key.rotation.write`,
+  `key.usage.meter`, `key.attest`, `key.integrity.verify` and
+  `key.fips.selftest`; per-key ones also require the key to be visible.
+  Each emits `audit.key.<action>`, refusals included. Left on the legacy
+  mux, each guarded another way: crypto operations (per-key grants), the
+  cluster master-key transfer (cluster-manager identity), and the token-only
+  reads of the attestation public key, RNG health, tags and algorithm
+  benchmarks, plus hash and random.
+
+### Docs
+- `docs/generated/` lists keycore's routes again: 4.0.0-beta registered 19
+  of them through a helper the product-map generator doesn't read. Every
+  kernel route is now a literal `r.Handle(...)` line.
+
+### Breaking
+- Non-admin users stop seeing keys they neither created nor hold a grant
+  on. Give auditors `key.inventory.read`; share a key view-only with a
+  `read` grant. Custom roles need the permissions above for the routes they
+  use.
+
 ## [4.0.0-beta] — 2026-09-29
 
 ### Security: keycore management routes required no token and no permission

@@ -5,6 +5,55 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### Closing a hole in two route families left the rest of the mux open
+- **What happened:** 4.0.0-beta put keycore's access and key-management
+  routes behind permissions, but the same raw mux still let any verified
+  token report a compromise (which suspends the key), rotate any key through
+  `POST /enterprise/orchestration/runs`, read another key's KCV through the
+  fingerprint check, and run ceremonies, scheduling and enterprise controls.
+  They were found only while mapping reads for key visibility, and fixed in
+  5.0.0-beta.
+- **Why it slipped through:** the 4.0.0 fix was scoped to what the probe had
+  shown, and "rotate" was fixed on `/keys/{id}/rotate` without asking what
+  else calls `RotateKey`.
+- **Rule:** when a route layer is found without permission checks, list
+  every route on it (`grep HandleFunc`) and account for each one in the same
+  change: moved to the kernel, or guarded another way and saying how. For a
+  sensitive operation, grep for every caller of the service method, not just
+  the obvious route.
+
+### A hidden resource has to look exactly like a missing one
+- **What happened:** building key visibility, three easy versions would each
+  have confirmed that a hidden key exists: answering `403`; answering `404`
+  with a different error code from the handler's own not-found; and looking
+  the key up before checking the tenant (another tenant's existing key gave
+  404, a non-existent one 403).
+- **Rule:** the wrapper answers both "missing" and "hidden" itself with one
+  response, checks the tenant before any lookup, and a test compares the two
+  responses byte for byte on the error code.
+
+### A route-registration helper hid routes from the product map
+- **What happened:** 4.0.0-beta registered keycore's key-management routes
+  through a local `add(...)` helper. `scripts/generate_product_map.py`
+  recognises only literal `x.Handle(...)` / `x.HandleFunc(...)` calls, so 19
+  routes (rotate, destroy, export policy, ...) silently vanished from
+  `docs/generated/`; 5.0.0-beta's first draft would have dropped 60 more.
+  Noticed because "unmatched frontend call sites" rose from 58 to 80.
+- **Why it slipped through:** conformance `product-map` checks that the map
+  matches the source, not that the source's routes are all in it.
+- **Rule:** register every route with a literal `r.Handle("METHOD /path",
+  route.Spec{...}, fn)` line (wrap legacy handlers with `legacy(...)`), and
+  after regenerating, compare the service's route count with the previous
+  map.
+
+### SQLite can't prove a (created_at, id) cursor
+- **What happened:** a scoped cursor-paging test repeated rows on SQLite.
+  keycore's `created_at` there is second-resolution text, so `(created_at,
+  id) < (?, ?)` against a Go time parameter doesn't order rows; the query is
+  correct on Postgres.
+- **Rule:** test cursor paging on Postgres (`VECTA_TEST_POSTGRES_DSN`,
+  `TestKeyVisibilityPostgres`); on SQLite, page by offset.
+
 ### Key access overhaul: build it to the model, strictly
 - **What happened:** the owner asked for CipherTrust-level key granularity
   (per-key matrix, label-selector policies, KMIP properties, full key usage,

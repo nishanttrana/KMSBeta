@@ -161,6 +161,10 @@ func normalizeAccessOperation(raw string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "*", "all":
 		return "all", nil
+	case "read":
+		// Visibility only (KEY_ACCESS_MODEL.md section 8): the key is listed
+		// and its metadata readable; no operation on it is allowed.
+		return "read", nil
 	case "encrypt":
 		return "encrypt", nil
 	case "decrypt":

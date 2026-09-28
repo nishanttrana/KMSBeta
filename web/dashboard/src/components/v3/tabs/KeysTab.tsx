@@ -2647,7 +2647,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                 <Btn danger small onClick={()=>removePolicyGrant(subjectType,subjectID)}>Remove</Btn>
               </div>;
             })}
-            {!Array.isArray(policyGrants)||!policyGrants.length?<div style={{fontSize:10,color:C.dim}}>No assignments yet. Unassigned keys are usable by creator/admin only.</div>:null}
+            {!Array.isArray(policyGrants)||!policyGrants.length?<div style={{fontSize:10,color:C.dim}}>No assignments yet. Only the creator, tenant admins and holders of key.inventory.read can see or use this key.</div>:null}
           </div>
         </>}
       </FG>

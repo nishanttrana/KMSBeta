@@ -43,7 +43,7 @@ func TestKeyConsumersFromUsageTrail(t *testing.T) {
 	router := h.keyConsumersRouter(rec)
 	get := func(id string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, "/keys/"+id+"/consumers?tenant_id=t1", nil)
-		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{UserID: "u1", TenantID: "t1", Permissions: []string{"key.usage.read"}}))
+		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), &pkgauth.Claims{UserID: "tester", TenantID: "t1", Permissions: []string{"key.usage.read"}}))
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		return w

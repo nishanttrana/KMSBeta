@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -607,4 +608,61 @@ WHERE tenant_id=$7 AND id=$8
 		}
 		return nil
 	})
+}
+
+func (s *SQLStore) ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string) (map[string][]KeyAccessGrant, error) {
+	out := map[string][]KeyAccessGrant{}
+	args := []any{tenantID}
+	marks := func(values []string, lower bool) string {
+		m := make([]string, 0, len(values))
+		for _, v := range values {
+			if lower {
+				v = strings.ToLower(v)
+			}
+			args = append(args, v)
+			m = append(m, fmt.Sprintf("$%d", len(args)))
+		}
+		return strings.Join(m, ",")
+	}
+	var match []string
+	if len(users) > 0 {
+		match = append(match, "(subject_type='user' AND LOWER(subject_id) IN ("+marks(users, true)+"))")
+	}
+	if len(groups) > 0 {
+		match = append(match, "(subject_type='group' AND subject_id IN ("+marks(groups, false)+"))")
+	}
+	if len(match) == 0 {
+		return out, nil
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT key_id, operations, not_before, expires_at
+FROM key_access_grants
+WHERE tenant_id=$1 AND (`+strings.Join(match, " OR ")+`)`, args...)
+	if err != nil {
+		if isMissingKeyAccessTableError(err) {
+			return out, nil
+		}
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	for rows.Next() {
+		var keyID string
+		var rawOps []byte
+		var notBefore, expiresAt sql.NullTime
+		if err := rows.Scan(&keyID, &rawOps, &notBefore, &expiresAt); err != nil {
+			return nil, err
+		}
+		g := KeyAccessGrant{}
+		_ = json.Unmarshal(rawOps, &g.Operations)
+		if notBefore.Valid {
+			v := notBefore.Time.UTC()
+			g.NotBefore = &v
+		}
+		if expiresAt.Valid {
+			v := expiresAt.Time.UTC()
+			g.ExpiresAt = &v
+		}
+		out[keyID] = append(out[keyID], g)
+	}
+	return out, rows.Err()
 }

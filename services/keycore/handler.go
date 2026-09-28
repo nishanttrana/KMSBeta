@@ -147,18 +147,17 @@ func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	h.keyAdminRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys", h.handleListKeys)
-	mux.HandleFunc("GET /keys/{id}", h.handleGetKey)
+	mux.HandleFunc("GET /keys/{id}", h.visibleKeyRoute(h.handleGetKey))
 	mux.HandleFunc("POST /keys/{id}/export", h.handleExportKey)
-	mux.HandleFunc("GET /keys/{id}/versions", h.handleListVersions)
-	mux.HandleFunc("GET /keys/{id}/versions/{ver}", h.handleGetVersion)
-	mux.HandleFunc("GET /keys/{id}/kcv", h.handleGetKCV)
+	mux.HandleFunc("GET /keys/{id}/versions", h.visibleKeyRoute(h.handleListVersions))
+	mux.HandleFunc("GET /keys/{id}/versions/{ver}", h.visibleKeyRoute(h.handleGetVersion))
+	mux.HandleFunc("GET /keys/{id}/kcv", h.visibleKeyRoute(h.handleGetKCV))
 
-	mux.HandleFunc("GET /keys/{id}/usage", h.handleGetUsage)
-	mux.HandleFunc("POST /keys/{id}/usage/meter", h.handleMeterUsage)
-	mux.HandleFunc("GET /keys/{id}/approval", h.handleGetApproval)
+	mux.HandleFunc("GET /keys/{id}/usage", h.visibleKeyRoute(h.handleGetUsage))
+	mux.HandleFunc("GET /keys/{id}/approval", h.visibleKeyRoute(h.handleGetApproval))
 	h.accessRouter(kernelEmitter{h}).MountOn(mux)
-	mux.HandleFunc("GET /keys/{id}/iv-log", h.handleGetIVLog)
-	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.handleGetIVByRef)
+	mux.HandleFunc("GET /keys/{id}/iv-log", h.visibleKeyRoute(h.handleGetIVLog))
+	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.visibleKeyRoute(h.handleGetIVByRef))
 	mux.HandleFunc("GET /tags", h.handleListTags)
 
 	mux.HandleFunc("POST /keys/{id}/encrypt", h.handleEncrypt)
@@ -187,90 +186,27 @@ func (h *Handler) routes() *http.ServeMux {
 
 	h.agilityRouter(kernelEmitter{h}).MountOn(mux)
 
-	// Ceremony routes
-	mux.HandleFunc("GET /ceremony/guardians", h.handleListGuardians)
-	mux.HandleFunc("POST /ceremony/guardians", h.handleCreateGuardian)
-	mux.HandleFunc("DELETE /ceremony/guardians/{id}", h.handleDeleteGuardian)
-	mux.HandleFunc("GET /ceremony", h.handleListCeremonies)
-	mux.HandleFunc("GET /ceremony/{id}", h.handleGetCeremony)
-	mux.HandleFunc("POST /ceremony", h.handleCreateCeremony)
-	mux.HandleFunc("POST /ceremony/{id}/shares", h.handleSubmitShare)
-	mux.HandleFunc("POST /ceremony/{id}/complete", h.handleCompleteCeremony)
-	mux.HandleFunc("POST /ceremony/{id}/abort", h.handleAbortCeremony)
+	// Ceremonies, compromise, inventory/analytics writes, enterprise controls,
+	// scheduling, attestation and integrity checks (handler_key_ops.go).
+	h.keyOpsRouter(kernelEmitter{h}).MountOn(mux)
 
 	// Rotation routes
 	h.rotationRouter(kernelEmitter{h}).MountOn(mux)
-	mux.HandleFunc("GET /rotation/analytics", h.handleGetRotationAnalytics)
-	mux.HandleFunc("GET /rotation/analytics/overdue", h.handleListOverdueRotationMetrics)
-	mux.HandleFunc("GET /keys/{id}/rotation-metrics", h.handleListKeyRotationMetrics)
-	mux.HandleFunc("POST /keys/{id}/rotation-metrics", h.handleRecordKeyRotationMetric)
+	h.inventoryRouter(kernelEmitter{h}).MountOn(mux)
+	mux.HandleFunc("GET /keys/{id}/rotation-metrics", h.visibleKeyRoute(h.handleListKeyRotationMetrics))
 
 	// Enterprise key audit, analytics, health, inventory, and compromise response
-	mux.HandleFunc("GET /enterprise/summary", h.handleGetEnterpriseAuditSummary)
-	mux.HandleFunc("GET /keys/{id}/health", h.handleGetKeyHealth)
-	mux.HandleFunc("POST /keys/{id}/health/recalculate", h.handleRecalculateKeyHealth)
-	mux.HandleFunc("GET /health/summary", h.handleGetHealthSummary)
-	mux.HandleFunc("GET /inventory/keys", h.handleListInventory)
-	mux.HandleFunc("POST /inventory/sync", h.handleSyncInventory)
-	mux.HandleFunc("GET /inventory/orphans", h.handleListOrphanedInventory)
-	mux.HandleFunc("GET /inventory/duplicates", h.handleListDuplicateKeys)
-	mux.HandleFunc("GET /inventory/dependencies", h.handleListKeyDependencies)
-	mux.HandleFunc("POST /inventory/dependencies", h.handleUpsertKeyDependencyRecord)
-	mux.HandleFunc("GET /compromise/events", h.handleListCompromiseEvents)
-	mux.HandleFunc("POST /compromise/events", h.handleReportCompromiseEvent)
-	mux.HandleFunc("POST /compromise/events/{id}/status", h.handleUpdateCompromiseEventStatus)
-	mux.HandleFunc("POST /compromise/advisories/ingest", h.handleIngestCompromiseAdvisories)
-	mux.HandleFunc("POST /analytics/metrics", h.handleRecordKeyAnalyticsMetric)
-	mux.HandleFunc("GET /analytics/usage", h.handleGetKeyUsageMetrics)
-	mux.HandleFunc("GET /analytics/hotspots", h.handleListKeyHotspots)
-	mux.HandleFunc("GET /analytics/trends", h.handleGetKeyTrend)
+	mux.HandleFunc("GET /keys/{id}/health", h.visibleKeyRoute(h.handleGetKeyHealth))
 	mux.HandleFunc("GET /analytics/algorithms", h.handleGetAlgorithmBenchmarks)
-	mux.HandleFunc("GET /enterprise/controls", h.handleListEnterpriseControls)
-	mux.HandleFunc("POST /enterprise/controls", h.handleUpsertEnterpriseControl)
-	mux.HandleFunc("GET /enterprise/controls/{category}/{id}", h.handleGetEnterpriseControl)
-	mux.HandleFunc("POST /enterprise/anomaly/scan", h.handleRunEnterpriseAnomalyScan)
-	mux.HandleFunc("GET /enterprise/dspm/findings", h.handleListKeyDSPMFindings)
-	mux.HandleFunc("POST /enterprise/dspm/findings", h.handleUpsertKeyDSPMFinding)
-	mux.HandleFunc("GET /enterprise/dspm/events", h.handleExportKeyDSPMEvents)
-	mux.HandleFunc("POST /enterprise/kdf/derive", h.handleEnterpriseKDFDerive)
-	mux.HandleFunc("GET /enterprise/compliance/dashboard", h.handleEnterpriseComplianceDashboard)
-	mux.HandleFunc("GET /enterprise/cost/optimization", h.handleEnterpriseCostOptimization)
-	mux.HandleFunc("POST /enterprise/verification/fingerprint", h.handleVerifyKeyFingerprint)
-	mux.HandleFunc("POST /enterprise/advanced-encryption/search-token", h.handleCreateSearchableToken)
-	mux.HandleFunc("POST /enterprise/advanced-encryption/modes", h.handleUpsertEnterpriseControlCategory(controlCategoryAdvancedEncryption))
-	mux.HandleFunc("POST /enterprise/orchestration/workflows", h.handleUpsertEnterpriseControlCategory(controlCategoryOrchestrationWorkflow))
-	mux.HandleFunc("POST /enterprise/orchestration/runs", h.handleTriggerOrchestrationRun)
-	mux.HandleFunc("POST /enterprise/federation/providers", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationProvider))
-	mux.HandleFunc("POST /enterprise/federation/mappings", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationMapping))
-	mux.HandleFunc("POST /enterprise/federation/failovers", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationFailover))
-	mux.HandleFunc("POST /enterprise/binding/policies", h.handleUpsertEnterpriseControlCategory(controlCategoryBindingPolicy))
-	mux.HandleFunc("POST /enterprise/edge/agents", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeAgent))
-	mux.HandleFunc("POST /enterprise/edge/leases", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease))
-	mux.HandleFunc("POST /enterprise/edge/receipts", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt))
-	mux.HandleFunc("POST /enterprise/sharing/grants", h.handleUpsertEnterpriseControlCategory(controlCategorySharingGrant))
-	mux.HandleFunc("POST /enterprise/metadata/profiles", h.handleUpsertEnterpriseControlCategory(controlCategoryMetadataProfile))
-	mux.HandleFunc("POST /enterprise/threat/signals", h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))
 
-	// Advanced Scheduling Jobs
-	mux.HandleFunc("GET /scheduling/jobs", h.handleListSchedulingJobs)
-	mux.HandleFunc("POST /scheduling/jobs", h.handleCreateSchedulingJob)
-	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
-	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
-
-	// Key Attestation (signed, verifiable statement + integrity check)
-	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)
+	// Attestation public key (token required; not secret)
 	mux.HandleFunc("GET /attestation/public-key", h.handleAttestationPublicKey)
-
-	// Key Material Verification (real integrity check)
-	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 
 	// Canary (decoy) keys
 	h.canaryRouter(kernelEmitter{h}).MountOn(mux)
 
-	// FIPS 140-3 self-test and zeroization verification
-	mux.HandleFunc("POST /fips/self-test", h.handleFIPSSelfTest)
+	// FIPS RNG health (token required)
 	mux.HandleFunc("GET /fips/rng-health", h.handleRNGHealth)
-	mux.HandleFunc("POST /keys/{id}/zeroize-verify", h.handleZeroizeVerify)
 
 	// Reconciler-driven endpoints. These are service-to-service only —
 	// internalauth.RequireToken gates each one against the shared
@@ -528,6 +464,11 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return
 	}
+	view, err := h.svc.keyViewFor(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	rawIncludeDeleted := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_deleted")))
@@ -542,7 +483,7 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "bad_request", "invalid after_created_at (use RFC3339)", reqID, tenantID)
 			return
 		}
-		keys, err := h.svc.ListKeysCursor(r.Context(), tenantID, limit, &t, afterID, includeDeleted)
+		keys, err := h.svc.ListKeysCursor(r.Context(), tenantID, view, limit, &t, afterID, includeDeleted)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 			return
@@ -560,7 +501,7 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	keys, err := h.svc.ListKeys(r.Context(), tenantID, limit, offset, includeDeleted)
+	keys, err := h.svc.ListKeys(r.Context(), tenantID, view, limit, offset, includeDeleted)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 		return

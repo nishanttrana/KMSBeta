@@ -155,6 +155,9 @@ func (h *Handler) keyConsumersRouter(audit route.Emitter) *route.Router {
 }
 
 func (h *Handler) getKeyConsumers(c *route.Call) {
+	if !h.visibleKey(c) {
+		return
+	}
 	out, err := h.svc.KeyConsumers(c.R.Context(), c.Tenant, strings.TrimSpace(c.R.PathValue("id")))
 	switch {
 	case errors.Is(err, errStoreNotFound):

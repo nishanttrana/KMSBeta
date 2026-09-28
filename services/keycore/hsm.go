@@ -610,6 +610,9 @@ func (h *Handler) listHSMObjects(c *route.Call) {
 }
 
 func (h *Handler) inspectHSMKey(c *route.Call) {
+	if !h.visibleKey(c) {
+		return
+	}
 	out, err := h.svc.InspectHSMKey(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	var refused *hsmRefusal
 	switch {

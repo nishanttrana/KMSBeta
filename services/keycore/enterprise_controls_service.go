@@ -537,6 +537,10 @@ func (s *Service) VerifyKeyMaterialFingerprint(ctx context.Context, tenantID, ke
 	if err != nil {
 		return EnterpriseControlRecord{}, err
 	}
+	// The record carries the key's actual KCV: only for a key the caller sees.
+	if err := s.ensureKeyVisible(ctx, key); err != nil {
+		return EnterpriseControlRecord{}, err
+	}
 	expected := strings.ToUpper(strings.TrimSpace(fingerprint))
 	actual := strings.ToUpper(hex.EncodeToString(key.KCV))
 	status := "verified"

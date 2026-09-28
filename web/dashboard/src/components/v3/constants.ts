@@ -27,6 +27,8 @@ export const DEFAULT_KEY_COLUMN_VISIBILITY = {
 };
 
 export const KEY_ACCESS_OPERATION_OPTIONS = [
+  // "read" makes the key visible to the grantee without allowing any use.
+  { id: "read", label: "Read (view only)" },
   { id: "encrypt", label: "Encrypt" },
   { id: "decrypt", label: "Decrypt" },
   { id: "wrap", label: "Wrap" },

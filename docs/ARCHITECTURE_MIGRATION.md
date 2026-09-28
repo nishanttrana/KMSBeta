@@ -105,9 +105,14 @@ and the largest last:
    4.0.0-beta refuses every tokenless keycore request and put the
    access-management routes (`handler_access.go`, fully migrated) and the
    key-management writes (`handler_key_admin.go`, through a thin adapter
-   over the legacy handlers) on the kernel. Still to do: move those handler
-   bodies onto `route.Call` and delete the service-layer request events,
-   then the read and crypto routes; the model is
+   over the legacy handlers) on the kernel; 5.0.0-beta did the same for
+   every other non-crypto write and the tenant-wide views
+   (`handler_key_ops.go`, `key_visibility.go`). Left on the raw mux, each
+   guarded another way: crypto operations (per-key grants), per-key reads
+   (key visibility), cluster master-key transfer (cluster-manager identity),
+   the internal-token routes, and token-only reads. Still to do: move the
+   adapted handler bodies onto `route.Call` and delete the service-layer
+   request events, then the crypto routes; the model is
    [SECURITY/KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md).
 
 **Definition of done for each service:**

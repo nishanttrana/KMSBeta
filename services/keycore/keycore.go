@@ -1950,11 +1950,18 @@ func (s *Service) reconcileLifecycle(ctx context.Context, tenantID string) error
 	return nil
 }
 
-func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offset int, includeDeleted bool) ([]Key, error) {
+// ListKeys lists the keys in view (all of them, or a restricted caller's).
+func (s *Service) ListKeys(ctx context.Context, tenantID string, view keyView, limit int, offset int, includeDeleted bool) ([]Key, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
 		return nil, err
 	}
-	keys, err := s.store.ListKeys(ctx, tenantID, limit, offset)
+	var keys []Key
+	var err error
+	if view.all {
+		keys, err = s.store.ListKeys(ctx, tenantID, limit, offset)
+	} else {
+		keys, err = s.store.ListKeysScoped(ctx, tenantID, view.scope, limit, offset, nil, "")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1974,11 +1981,17 @@ func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offs
 	return out, nil
 }
 
-func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) ([]Key, error) {
+func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, view keyView, limit int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) ([]Key, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
 		return nil, err
 	}
-	keys, err := s.store.ListKeysCursor(ctx, tenantID, limit, afterCreatedAt, afterID)
+	var keys []Key
+	var err error
+	if view.all {
+		keys, err = s.store.ListKeysCursor(ctx, tenantID, limit, afterCreatedAt, afterID)
+	} else {
+		keys, err = s.store.ListKeysScoped(ctx, tenantID, view.scope, limit, 0, afterCreatedAt, afterID)
+	}
 	if err != nil {
 		return nil, err
 	}

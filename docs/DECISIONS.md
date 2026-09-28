@@ -7,6 +7,47 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Key visibility: see only the keys you can use (5.0.0-beta)
+
+**Decision.** The owner chose option A: a key is listed and readable only by
+its creator, holders of an active grant on it (directly or through a group,
+including a new view-only `read` grant), workloads bound to it, tenant
+admins, service identities, and holders of `key.inventory.read`, a
+permission for auditors who need the full inventory. Tenant-wide inventory
+and analytics views need `key.inventory.read`.
+
+**Why.** Access already worked this way: a user without a grant couldn't use
+a key, so listing it only leaked names that often reveal systems, customers
+or data sets. Deny-by-default is the repo's secure-default rule, and it
+matches how CipherTrust scopes keys to groups.
+
+**How.** The filter is a condition in the list query (creator or one of the
+granted key IDs), not a filter over a fetched page, so restricted callers
+get full pages and cursors reach every visible key. A hidden key answers
+exactly like a missing one, and the tenant is checked before any lookup, so
+the response never confirms that a key exists. Refusals are audited
+(`reason: not_visible`).
+
+**Rejected.**
+- *Option B, tenant-wide by default with per-key restriction.* It keeps the
+  leak for every key nobody remembered to restrict.
+- *403 for a hidden key.* It confirms the key exists; a 404 identical to a
+  missing key's doesn't.
+- *Filtering the page after the query.* It returns short or empty pages to
+  restricted users and breaks cursor paging.
+- *Making `Service.GetKey` itself visibility-aware.* Background jobs
+  (rotation, reconciler, lifecycle) call it with no user; the check belongs
+  on the read routes.
+
+**Enforced by.** `TestKeyListShowsOnlyVisibleKeys`,
+`TestScopedKeyListPagesFully`, `TestHiddenKeyReadsLookMissingAndAreAudited`,
+`TestReadGrantIsViewOnly`, `TestHiddenKeyCheckNeverCrossesTenants`,
+`TestInventoryViewsNeedInventoryPermission`,
+`TestFingerprintCheckRespectsVisibility`, and on real Postgres
+`TestKeyVisibilityPostgres` (group grants, cursor paging).
+
+---
+
 ## 2026-09-29 — Key access: one decision, four layers, enforced usage (4.0.0-beta)
 
 **Decision.** The owner asked for CipherTrust-level key granularity ("not

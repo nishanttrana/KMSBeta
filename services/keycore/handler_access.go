@@ -66,6 +66,9 @@ func storeErr(c *route.Call, err error, status int, code string) {
 }
 
 func (h *Handler) getKeyAccessPolicy(c *route.Call) {
+	if !h.visibleKey(c) {
+		return
+	}
 	policy, err := h.svc.GetKeyAccessPolicy(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
 		storeErr(c, err, http.StatusInternalServerError, "key_access_policy_failed")

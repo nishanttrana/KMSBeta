@@ -176,8 +176,17 @@ KMIP needs `AddAttribute`, `ModifyAttribute` and `DeleteAttribute` (only
 - **Label policies** (`key_policies`): a label selector, subjects with
   operations and conditions, and whether a change needs approval. Every
   policy change runs a dry run that lists the keys the selector matches.
-- **Visibility:** a key is listed and readable only by callers who hold
-  `read` on it through a grant or policy, its owner, and tenant admins.
+- **Visibility** (owner decision 2026-09-29, option A; built in
+  5.0.0-beta, `services/keycore/key_visibility.go`): a key is listed and
+  readable only by its creator, holders of an active grant on it (any
+  operation, including the view-only `read`), directly or through a group,
+  workloads bound to it, tenant admins, service identities and holders of
+  `key.inventory.read` (auditors). The filter runs in the database query.
+  A hidden key answers exactly like a missing one (`404`), audited as
+  `audit.key.access_refused` (`operation: read`, `reason: not_visible`), and
+  the tenant is checked before the key is looked up. Tenant-wide inventory
+  and analytics views need `key.inventory.read`. When owners and label
+  policies land (phases 1-2), they join the same view.
 - **Separation of duties:** `manage-access` is distinct from using the key.
   An owner can't grant `export` to themselves. Grant changes on keys whose
   labels mark them high-value go through governance approval, which the
@@ -205,6 +214,9 @@ as `audit.key.request_refused` (`reason: unauthenticated`).
 | export policy, approval, usage limit and reset | `key.export_policy_update`, `key.approval_update`, `key.usage_limit_update` | |
 | tag writes | `key.tags.write` | |
 | crypto operations | any verified identity | the per-key decision (section 3) |
+| `GET /keys` and per-key reads | any verified identity | the key must be visible (section 8) |
+| tenant-wide inventory and analytics views | `key.inventory.read` | |
+| ceremonies, compromise, enterprise controls, scheduling, inventory/analytics writes, attestation, integrity checks, FIPS self-test (5.0.0-beta) | `key.ceremony.*`, `key.compromise`, `key.enterprise.*`, `key.scheduling.*`, `key.inventory.write`, `key.analytics.write`, `key.health.write`, `key.rotation.write`, `key.usage.meter`, `key.attest`, `key.integrity.verify`, `key.fips.selftest`; orchestration runs `key.rotate` | per-key routes: the key must be visible |
 
 Built-in `admin` / `tenant-admin` hold `*`. Other roles get these permissions
 explicitly. Service principals pass the permission check and act for the
@@ -227,8 +239,10 @@ Every slice of this work meets all of these, or it isn't done:
    router.
 5. **Every change and every refusal is audited** under its own subject, with
    a test named in `docs/SECURITY/AUDIT_EVENTS_2026-09.md`.
-6. **Deny wins, default closed.** No grant means no access (except admin and
-   owner as today, until visibility lands). Explicit deny beats any allow.
+6. **Deny wins, default closed.** No grant means no access and no
+   visibility (only the creator, tenant admins, service identities and
+   `key.inventory.read` holders see an ungranted key). Explicit deny beats
+   any allow.
 7. **Migrations are per record** and recorded (purpose to usage mask, keycore
    groups to auth groups, tags to labels). No silent switch.
 8. **Clustering.** New tables are classified in
@@ -258,7 +272,8 @@ Every slice of this work meets all of these, or it isn't done:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Tokenless refusal; access and key-management routes on the kernel with permissions; owner-or-admin for grant changes; actor from token | **done, 4.0.0-beta** |
-| 0 | Enforce the declared usage; delegated usage with the user's token for dataprotect, payment, certs; step-up from a verified MFA claim; key visibility | open |
+| 0 | Key visibility (option A, `key.inventory.read`, `read` grants); every remaining keycore write on the kernel | **done, 5.0.0-beta** |
+| 0 | Enforce the declared usage; delegated usage with the user's token for dataprotect, payment, certs; step-up from a verified MFA claim | open |
 | 1 | Usage-mask column (full vocabulary, per-key migration, KMIP mask kept); owner and change-owner; subjects from auth; explicit deny | open |
 | 2 | Label policies, cache with NATS invalidation, explainers, dry run; tags into labels | open |
 | 3 | Enforced dates; aliases; links; section 6 properties; KMIP Add/Modify/DeleteAttribute | open |
@@ -267,7 +282,6 @@ Every slice of this work meets all of these, or it isn't done:
 
 ## 13. Open decisions (owner)
 
-1. Default key visibility: owner and admins only, or tenant-wide read unless
-   restricted. Section 8 assumes the first.
+1. ~~Default key visibility~~: decided 2026-09-29, option A (section 8).
 2. Retire keycore's own groups into auth groups.
 3. Label policies in keycore (recommended) or in `services/policy`.

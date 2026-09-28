@@ -26,6 +26,10 @@ type Store interface {
 	CreateKeyWithVersion(ctx context.Context, key Key, ver KeyVersion) error
 	ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error)
 	ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
+	ListKeysScoped(ctx context.Context, tenantID string, scope KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
+	// ListGrantedKeyIDs returns, per key, the grants held by any of the user
+	// subjects (matched case-insensitively) or groups.
+	ListGrantedKeyIDs(ctx context.Context, tenantID string, users []string, groups []string) (map[string][]KeyAccessGrant, error)
 	GetKey(ctx context.Context, tenantID string, keyID string) (Key, error)
 	UpdateKeyMetadata(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error
 	UpdateIVMode(ctx context.Context, tenantID string, keyID string, ivMode string) error
@@ -331,56 +335,69 @@ INSERT INTO key_versions (
 }
 
 func (s *SQLStore) ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error) {
+	return s.listKeys(ctx, tenantID, nil, limit, offset, nil, "")
+}
+
+func (s *SQLStore) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
+	return s.listKeys(ctx, tenantID, nil, limit, 0, afterCreatedAt, afterID)
+}
+
+// ListKeysScoped lists only the keys in scope, in the database, so a caller
+// who sees few keys still gets full pages (KEY_ACCESS_MODEL.md section 8).
+func (s *SQLStore) ListKeysScoped(ctx context.Context, tenantID string, scope KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
+	return s.listKeys(ctx, tenantID, &scope, limit, offset, afterCreatedAt, afterID)
+}
+
+// KeyScope is a restricted caller's view: keys they created, and keys named
+// by an active grant or their workload binding.
+type KeyScope struct {
+	CreatedBy []string // lower-cased user ID and username
+	KeyIDs    []string
+}
+
+func (s *SQLStore) listKeys(ctx context.Context, tenantID string, scope *KeyScope, limit int, offset int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 100
+	}
+	args := []any{tenantID}
+	arg := func(v any) string {
+		args = append(args, v)
+		return fmt.Sprintf("$%d", len(args))
+	}
+	in := func(values []string) string {
+		marks := make([]string, len(values))
+		for i, v := range values {
+			marks[i] = arg(v)
+		}
+		return strings.Join(marks, ",")
+	}
+	where := "tenant_id=$1"
+	if scope != nil {
+		var either []string
+		if len(scope.CreatedBy) > 0 {
+			either = append(either, "LOWER(created_by) IN ("+in(scope.CreatedBy)+")")
+		}
+		if len(scope.KeyIDs) > 0 {
+			either = append(either, "id IN ("+in(scope.KeyIDs)+")")
+		}
+		if len(either) == 0 {
+			return nil, nil
+		}
+		where += " AND (" + strings.Join(either, " OR ") + ")"
+	}
+	page := " LIMIT " + arg(limit)
+	if afterCreatedAt != nil && afterID != "" {
+		where += " AND (created_at, id) < (" + arg(afterCreatedAt.UTC()) + ", " + arg(afterID) + ")"
+	} else if offset > 0 {
+		page += " OFFSET " + arg(offset)
 	}
 	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
        COALESCE(approval_policy_id,''), created_by, created_at, updated_at
-FROM keys WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
-`, tenantID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []Key
-	for rows.Next() {
-		k, err := scanKey(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, k)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 100
-	}
-	var rows *sql.Rows
-	var err error
-	if afterCreatedAt != nil && afterID != "" {
-		rows, err = s.db.ROSQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
-       owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
-       ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
-FROM keys WHERE tenant_id=$1 AND (created_at, id) < ($2, $3)
-ORDER BY created_at DESC, id DESC LIMIT $4
-`, tenantID, afterCreatedAt.UTC(), afterID, limit)
-	} else {
-		rows, err = s.db.ROSQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
-       owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
-       ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
-       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
-FROM keys WHERE tenant_id=$1
-ORDER BY created_at DESC, id DESC LIMIT $2
-`, tenantID, limit)
-	}
+FROM keys WHERE `+where+`
+ORDER BY created_at DESC, id DESC`+page, args...)
 	if err != nil {
 		return nil, err
 	}

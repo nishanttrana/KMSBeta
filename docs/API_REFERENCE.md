@@ -905,6 +905,37 @@ roles need the permission named here. Service principals are allowed.
 | `PUT /keys/{id}/usage/limit`, `POST /keys/{id}/usage/reset` | `key.usage_limit_update` | `usage_limit_update_requested`, `usage_reset_requested` |
 | `POST /tags`, `DELETE /tags/{name}` | `key.tags.write` | `tag_upsert_requested`, `tag_delete_requested` |
 
+| `GET /inventory/keys`, `/inventory/orphans`, `/inventory/duplicates`, `/inventory/dependencies`, `/rotation/analytics`, `/rotation/analytics/overdue`, `/enterprise/summary`, `/health/summary`, `/compromise/events`, `/analytics/usage`, `/analytics/hotspots`, `/analytics/trends`, `/enterprise/dspm/findings`, `/enterprise/dspm/events`, `/enterprise/compliance/dashboard`, `/enterprise/cost/optimization` (5.0.0-beta) | `key.inventory.read` | `inventory_keys_read`, ... (AUDIT_EVENTS_2026-09.md) |
+| `GET /ceremony`, `GET /ceremony/{id}`, `GET /ceremony/guardians` | `key.ceremony.read` | `ceremonies_listed`, `ceremony_read`, `ceremony_guardians_listed` |
+| `POST /ceremony`, `POST /ceremony/{id}/complete`, `POST /ceremony/{id}/abort`, `POST /ceremony/guardians`, `DELETE /ceremony/guardians/{id}` | `key.ceremony.write` | `ceremony_created`, `ceremony_completed`, `ceremony_aborted`, `ceremony_guardian_created`, `ceremony_guardian_deleted` |
+| `POST /ceremony/{id}/shares` | `key.ceremony.share` | `ceremony_share_submitted` |
+| `POST /compromise/events`, `POST /compromise/events/{id}/status`, `POST /compromise/advisories/ingest` | `key.compromise` | `compromise_reported`, `compromise_status_updated`, `compromise_advisories_ingested` |
+| `POST /enterprise/orchestration/runs` | `key.rotate` | `orchestration_run_requested` |
+| `GET /enterprise/controls`, `GET /enterprise/controls/{category}/{id}` | `key.enterprise.read` | `enterprise_controls_listed`, `enterprise_control_read` |
+| `POST /enterprise/controls`, `POST /enterprise/anomaly/scan`, `POST /enterprise/dspm/findings`, `POST /enterprise/kdf/derive`, `POST /enterprise/verification/fingerprint` (key must be visible), `POST /enterprise/advanced-encryption/search-token`, and the `POST /enterprise/{area}/{kind}` control upserts | `key.enterprise.write` | `enterprise_control_upserted`, `enterprise_anomaly_scan`, `dspm_finding_upserted`, `enterprise_kdf_derive`, `fingerprint_verified`, `search_token_created`, `enterprise_<category>_upserted` |
+| `GET /scheduling/jobs` | `key.scheduling.read` | `scheduling_jobs_listed` |
+| `POST /scheduling/jobs`, `PATCH /scheduling/jobs/{id}`, `DELETE /scheduling/jobs/{id}` | `key.scheduling.write` | `scheduling_job_created`, `scheduling_job_updated`, `scheduling_job_deleted` |
+| `POST /inventory/sync`, `POST /inventory/dependencies` | `key.inventory.write` | `inventory_synced`, `inventory_dependency_upserted` |
+| `POST /analytics/metrics` | `key.analytics.write` | `analytics_metric_recorded` |
+| `POST /keys/{id}/health/recalculate` | `key.health.write` (key must be visible) | `health_recalculated` |
+| `POST /keys/{id}/rotation-metrics` | `key.rotation.write` (key must be visible) | `rotation_metric_recorded` |
+| `POST /keys/{id}/usage/meter` | `key.usage.meter` (and the per-key grant) | `usage_meter_requested` |
+| `POST /keys/{id}/attest` | `key.attest` (key must be visible) | `attest_requested` |
+| `POST /keys/{id}/verify-material`, `POST /keys/{id}/zeroize-verify` | `key.integrity.verify` (key must be visible) | `verify_material_requested`, `zeroize_verify_requested` |
+| `POST /fips/self-test` | `key.fips.selftest` | `fips_self_test_requested` |
+
+**Key visibility (5.0.0-beta).** `GET /keys` and every per-key read
+(`GET /keys/{id}`, `/versions`, `/versions/{ver}`, `/kcv`, `/usage`,
+`/approval`, `/iv-log`, `/iv-log/{ref}`, `/rotation-metrics`, `/health`,
+`/consumers`, `/access-policy`, `/hsm`) return only keys the caller can
+see: keys they created, keys an active grant gives them (directly or through
+a group; any operation, including the view-only `read`), keys their
+workload is bound to, or every key for tenant admins, service identities
+and holders of `key.inventory.read`. A hidden key gets the same `404
+not_found` as a missing one and emits `audit.key.access_refused`
+(`operation: read`, `reason: not_visible`). Grants accept the operation
+`read`, which allows no use of the key.
+
 The actor is the verified token's. `updated_by` in `PUT
 /keys/{id}/access-policy` and `created_by` in `POST /access/groups` are
 rejected with `400` (they were trusted before 4.0.0-beta), and the
