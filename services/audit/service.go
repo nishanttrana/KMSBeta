@@ -230,19 +230,9 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (A
 	}
 	event.RiskScore = risk
 
+	// Alert rules live in reporting (/svc/reporting/alerts/rules); audit's
+	// own rule matcher was removed in 2.14.0-beta.
 	title := defaultAlertTitle(event.Action, event.TargetID)
-	rules, err := s.store.ListRules(ctx, event.TenantID)
-	if err == nil {
-		for _, r := range rules {
-			if ruleMatches(r, event) {
-				severity = strings.ToUpper(strings.TrimSpace(r.Severity))
-				if strings.TrimSpace(r.Title) != "" {
-					title = renderRuleTitle(r.Title, event)
-				}
-				break
-			}
-		}
-	}
 	alert := Alert{
 		ID:            newID("alr"),
 		TenantID:      event.TenantID,
@@ -524,57 +514,6 @@ func serviceFromAction(action string) string {
 		return parts[1]
 	}
 	return "unknown"
-}
-
-func ruleMatches(rule AlertRule, event AuditEvent) bool {
-	cond := strings.ToLower(strings.TrimSpace(rule.Condition))
-	if cond == "" {
-		return false
-	}
-	if strings.Contains(cond, "event.action ==") {
-		q := betweenQuotes(cond)
-		return q != "" && strings.EqualFold(q, event.Action)
-	}
-	if strings.Contains(cond, "event.tags contains") {
-		q := betweenQuotes(cond)
-		for _, t := range event.Tags {
-			if strings.EqualFold(strings.TrimSpace(t), q) {
-				return true
-			}
-		}
-	}
-	if strings.Contains(cond, "event.source_ip.country") {
-		q := betweenQuotes(cond)
-		if q == "" {
-			return false
-		}
-		if strings.Contains(cond, "!=") {
-			return !strings.EqualFold(event.CountryCode, q)
-		}
-		return strings.EqualFold(event.CountryCode, q)
-	}
-	return false
-}
-
-func renderRuleTitle(tmpl string, event AuditEvent) string {
-	out := strings.ReplaceAll(tmpl, "{event.actor_id}", event.ActorID)
-	out = strings.ReplaceAll(out, "{event.action}", event.Action)
-	if v, ok := event.Details["batch_size"]; ok {
-		out = strings.ReplaceAll(out, "{event.details.batch_size}", str(v))
-	}
-	return out
-}
-
-func betweenQuotes(s string) string {
-	start := strings.Index(s, "'")
-	if start < 0 {
-		return ""
-	}
-	end := strings.Index(s[start+1:], "'")
-	if end < 0 {
-		return ""
-	}
-	return s[start+1 : start+1+end]
 }
 
 func appendIfMissing(in []string, item string) []string {

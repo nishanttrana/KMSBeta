@@ -4,6 +4,24 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.14.0-beta] — 2026-09-28
+
+### One alert-rule engine: audit's own rules removed
+- **Removed `GET/POST /svc/audit/alerts/rules` and
+  `PUT/DELETE /svc/audit/alerts/rules/{id}`**, the matcher behind them, and
+  the `alert_rules` table (audit migration 011). They were a second rule
+  system: a substring matcher that recognised three phrases
+  (`event.action == '…'`, `event.tags contains '…'`,
+  `event.source_ip.country …`) and only changed the severity and title of
+  audit's own alerts, which no screen shows since 2.12.0-beta. The
+  dashboard never used it.
+- **Alert rules live only in reporting** (`/svc/reporting/alerts/rules`):
+  a real expression parser, thresholds, and the test/replay route from
+  2.13.0-beta. The Alert Center reads them.
+- **Breaking:** rules created through the audit API are deleted with the
+  table. Recreate any you need as reporting rules; test them first with
+  **Test rule**. A country condition has no reporting equivalent yet.
+
 ## [2.13.0-beta] — 2026-09-28
 
 ### Test an alert rule before saving it

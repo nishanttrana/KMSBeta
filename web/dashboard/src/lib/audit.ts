@@ -70,14 +70,6 @@ export type AuditAlertStats = {
   total_resolved: number;
 };
 
-export type AuditAlertRule = {
-  id: string;
-  name: string;
-  condition: string;
-  severity: string;
-  title: string;
-};
-
 export type AuditEventQuery = {
   action?: string;
   // Actions starting with any of these, e.g. ["audit.hsm.", "audit.key.hsm_"] (at most 5).

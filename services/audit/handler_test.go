@@ -149,3 +149,30 @@ func TestAlertRecordsOnlyRealDispatch(t *testing.T) {
 		}
 	}
 }
+
+// Audit's own alert-rule routes are gone (2.14.0-beta): rules live in
+// reporting. An alert still records with audit's default severity and title.
+func TestAuditAlertRuleRoutesRemoved(t *testing.T) {
+	h, svc, store, _ := newAuditHandler(t, true, false)
+	for _, rt := range []struct{ method, path string }{
+		{http.MethodGet, "/alerts/rules"}, {http.MethodPost, "/alerts/rules"},
+		{http.MethodPut, "/alerts/rules/r1"}, {http.MethodDelete, "/alerts/rules/r1"},
+	} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path+"?tenant_id=t1", strings.NewReader(`{"condition":"event.action == 'audit.auth.login_failed'","severity":"CRITICAL"}`)))
+		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s still served: %d", rt.method, rt.path, rr.Code)
+		}
+	}
+	_, alert, err := svc.ProcessEvent(context.Background(), AuditEvent{
+		TenantID: "t1", Timestamp: time.Now().UTC(), Service: "auth", Action: "audit.auth.login_failed",
+		ActorID: "u1", ActorType: "human", SourceIP: "1.1.1.1", Result: "failure",
+	})
+	if err != nil || alert.ID == "" {
+		t.Fatalf("alert: %+v %v", alert, err)
+	}
+	got, err := store.GetAlert(context.Background(), "t1", alert.ID)
+	if err != nil || got.Title != defaultAlertTitle("audit.auth.login_failed", "") {
+		t.Fatalf("alert %+v %v", got, err)
+	}
+}

@@ -14,7 +14,7 @@ var Replicated = map[string][]string{
 		"ai_gateway_providers",
 	},
 	"audit": {
-		"alert_rules",
+		"alert_rules", // dropped by migration 011 (2.14.0-beta); 001 still creates it first
 		"audit_mek_exposure",
 		"audit_mek_state",
 		"webhooks",

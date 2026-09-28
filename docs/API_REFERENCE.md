@@ -3295,10 +3295,6 @@ from the code; do not edit by hand.
 ### audit (`/svc/audit/`)
 
 - `GET /svc/audit/alerts`
-- `GET /svc/audit/alerts/rules`
-- `POST /svc/audit/alerts/rules`
-- `DELETE /svc/audit/alerts/rules/{id}`
-- `PUT /svc/audit/alerts/rules/{id}`
 - `GET /svc/audit/alerts/stats`
 - `GET /svc/audit/alerts/stream`
 - `GET /svc/audit/alerts/{id}`

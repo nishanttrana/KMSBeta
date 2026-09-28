@@ -27,11 +27,6 @@ type Store interface {
 	UpdateAlertStatus(ctx context.Context, tenantID string, id string, action string, actor string, note string, suppressUntil *time.Time) error
 	AlertStats(ctx context.Context, tenantID string) (AlertStats, error)
 
-	CreateRule(ctx context.Context, tenantID string, rule AlertRule) error
-	ListRules(ctx context.Context, tenantID string) ([]AlertRule, error)
-	UpdateRule(ctx context.Context, tenantID string, rule AlertRule) error
-	DeleteRule(ctx context.Context, tenantID string, id string) error
-
 	CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error)
 
 	// Merkle tree operations
@@ -566,65 +561,6 @@ GROUP BY severity
 	_ = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM alerts WHERE tenant_id=$1 AND status='acknowledged'`, tenantID).Scan(&stats.TotalAck)
 	_ = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM alerts WHERE tenant_id=$1 AND status='resolved'`, tenantID).Scan(&stats.TotalResolved)
 	return stats, nil
-}
-
-func (s *SQLStore) CreateRule(ctx context.Context, tenantID string, rule AlertRule) error {
-	if rule.ID == "" {
-		rule.ID = newID("rule")
-	}
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO alert_rules (id, tenant_id, name, condition_expr, severity, title, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-`, rule.ID, tenantID, rule.Name, rule.Condition, rule.Severity, rule.Title)
-	return err
-}
-
-func (s *SQLStore) ListRules(ctx context.Context, tenantID string) ([]AlertRule, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, name, condition_expr, severity, title
-FROM alert_rules
-WHERE tenant_id=$1 OR tenant_id='*'
-ORDER BY created_at DESC
-`, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []AlertRule
-	for rows.Next() {
-		var r AlertRule
-		if err := rows.Scan(&r.ID, &r.Name, &r.Condition, &r.Severity, &r.Title); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) UpdateRule(ctx context.Context, tenantID string, rule AlertRule) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
-UPDATE alert_rules
-SET name=$1, condition_expr=$2, severity=$3, title=$4, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$5 AND id=$6
-`, rule.Name, rule.Condition, rule.Severity, rule.Title, tenantID, rule.ID)
-	if err != nil {
-		return err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return errNotFound
-	}
-	return nil
-}
-
-func (s *SQLStore) DeleteRule(ctx context.Context, tenantID string, id string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM alert_rules WHERE tenant_id=$1 AND id=$2`, tenantID, id)
-	if err != nil {
-		return err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return errNotFound
-	}
-	return nil
 }
 
 func (s *SQLStore) CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error) {

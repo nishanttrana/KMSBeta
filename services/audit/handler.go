@@ -86,10 +86,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /alerts/{id}/{action}", h.handleAlertActionPath)
 	mux.HandleFunc("GET /alerts/stats", h.handleAlertStats)
 	mux.HandleFunc("GET /alerts/stream", h.handleAlertStream)
-	mux.HandleFunc("POST /alerts/rules", h.handleCreateRule)
-	mux.HandleFunc("GET /alerts/rules", h.handleListRules)
-	mux.HandleFunc("PUT /alerts/rules/{id}", h.handleUpdateRule)
-	mux.HandleFunc("DELETE /alerts/rules/{id}", h.handleDeleteRule)
 
 	// Merkle tree integrity routes
 	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
@@ -446,112 +442,6 @@ func (h *Handler) handleAlertStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"stats": stats, "request_id": reqID})
-}
-
-func (h *Handler) handleCreateRule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var rule AlertRule
-	if err := decodeJSON(r, &rule); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	rule.ID = strings.TrimSpace(rule.ID)
-	if rule.ID == "" {
-		rule.ID = newID("rule")
-	}
-	if err := h.store.CreateRule(r.Context(), tenantID, rule); err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	h.publishClusterSync(r, tenantID, "alert_rule", rule.ID, "rule_created", map[string]interface{}{
-		"rule_id":    rule.ID,
-		"name":       rule.Name,
-		"severity":   rule.Severity,
-		"title":      rule.Title,
-		"condition":  rule.Condition,
-		"tenant_id":  tenantID,
-		"request_id": reqID,
-	})
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleListRules(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.store.ListRules(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var rule AlertRule
-	if err := decodeJSON(r, &rule); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	rule.ID = strings.TrimSpace(r.PathValue("id"))
-	if rule.ID == "" {
-		rule.ID = strings.TrimSpace(r.URL.Query().Get("id"))
-	}
-	if rule.ID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "rule id is required", reqID, tenantID)
-		return
-	}
-	if err := h.store.UpdateRule(r.Context(), tenantID, rule); err != nil {
-		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	h.publishClusterSync(r, tenantID, "alert_rule", rule.ID, "rule_updated", map[string]interface{}{
-		"rule_id":    rule.ID,
-		"name":       rule.Name,
-		"severity":   rule.Severity,
-		"title":      rule.Title,
-		"condition":  rule.Condition,
-		"tenant_id":  tenantID,
-		"request_id": reqID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleDeleteRule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		id = strings.TrimSpace(r.URL.Query().Get("id"))
-	}
-	if id == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "rule id is required", reqID, tenantID)
-		return
-	}
-	if err := h.store.DeleteRule(r.Context(), tenantID, id); err != nil {
-		writeErr(w, http.StatusInternalServerError, "delete_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	h.publishClusterSync(r, tenantID, "alert_rule", id, "rule_deleted", map[string]interface{}{
-		"rule_id":    id,
-		"tenant_id":  tenantID,
-		"request_id": reqID,
-	})
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
 // handleFIPSBoundary returns the FIPS 140-3 module boundary declaration for this service.

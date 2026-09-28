@@ -106,14 +106,6 @@ type AlertStats struct {
 	TotalResolved  int            `json:"total_resolved"`
 }
 
-type AlertRule struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Condition string `json:"condition"`
-	Severity  string `json:"severity"`
-	Title     string `json:"title"`
-}
-
 type DispatchPlan struct {
 	Channels []string               `json:"channels"`
 	Status   map[string]interface{} `json:"status"`

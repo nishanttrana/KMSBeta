@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### Two engines for one job: only one is ever maintained
+- **What happened:** audit and reporting each had alert rules. Reporting's
+  got the parser, thresholds, UI and now a test route. Audit's kept a
+  three-phrase substring matcher, a stub test route, and an effect (alert
+  severity) that no screen showed.
+- **Rule:** when two services grow the same feature, pick the one the UI
+  uses and remove the other in the same change that makes it redundant,
+  with a migration for its table and a test that its routes are gone.
+
 ### A rule language documented from a different product
 - **What happened:** the alert-rule guide described CEL (`&&`, `count()`,
   `hour()`, `is_new_source_ip()`) and built-in templates. Reporting's
