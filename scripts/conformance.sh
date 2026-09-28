@@ -228,7 +228,10 @@ rand_hits=$(grep -rnE 'Math\.random\(\)[[:space:]]*\*[[:space:]]*256|nonce-\$\{D
 # MOCK_WEBHOOKS, MOCK_TARGETS...) presents invented rows as the customer's
 # own. Such constants, or mock/demo/fake/dummy data variables, fail outside
 # tests; a failed fetch renders "not assessed / unavailable" with the error.
-sample_hits=$(grep -rnE '\b(MOCK|DEMO|SAMPLE|FAKE|DUMMY)_[A-Z0-9_]+\b|\b(const|let|var)[[:space:]]+(mock|demo|fake|dummy)[A-Z][A-Za-z0-9]*[[:space:]]*[:=]' services pkg web/dashboard/src \
+# 2026-09-28: also any variable named simulat*/synthetic* (a `let simulation`
+# timer pushed invented audit.dashboard.heartbeat events into the live audit
+# feed whenever the stream failed); a real replay says so (`replayed`).
+sample_hits=$(grep -rnE '\b(MOCK|DEMO|SAMPLE|FAKE|DUMMY)_[A-Z0-9_]+\b|\b(const|let|var)[[:space:]]+(mock|demo|fake|dummy)[A-Z][A-Za-z0-9]*[[:space:]]*[:=]|\b(const|let|var)[[:space:]]+(simulat|synthetic)[A-Za-z0-9]*\b|\b(simulat|synthetic)[A-Za-z0-9]*[[:space:]]*:=' services pkg web/dashboard/src \
   --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null \
   | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
 if [ -n "$fake_hits$rand_hits$sample_hits" ]; then

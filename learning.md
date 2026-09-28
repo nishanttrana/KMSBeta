@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A fallback that invents events hides that the real path never worked
+- **What happened:** the dashboard's live feed opened WebSockets to
+  `/alerts/stream` and `/audit/stream` at the site root. Envoy sent those to
+  nginx, and the audit service speaks SSE, not WebSocket, so every connection
+  failed. The error handler started a `simulation` interval that pushed an
+  invented `audit.dashboard.heartbeat` audit event every 20 seconds. Nothing
+  read the store, so nobody noticed either problem.
+- **Why it slipped through:** conformance matched `simulateX(` functions and
+  `mockX` variables, not a variable called `simulation`. The fallback made a
+  dead path look alive, and no test asserted a real event arrived. The CSP
+  kept `ws: wss:` open for it.
+- **Rule:** when a data path fails, show that it failed; never fill it. A
+  client and server must agree on path, route and protocol, checked end to
+  end. Code with no reader gets removed, not kept "for later". Conformance
+  now fails on any `simulat*` or `synthetic*` variable outside tests.
+
 ### Two engines for one job: only one is ever maintained
 - **What happened:** audit and reporting each had alert rules. Reporting's
   got the parser, thresholds, UI and now a test route. Audit's kept a

@@ -84,7 +84,7 @@ func categoryGroupForService(service string) CategoryGroup {
 		return CatAuthentication
 	case "key", "keycore", "autokey", "keyaccess":
 		return CatKeyManagement
-	case "pqc", "mpc":
+	case "pqc":
 		return CatCryptographicOps
 	case "secrets", "dataprotect":
 		return CatDataProtection
@@ -94,14 +94,12 @@ func categoryGroupForService(service string) CategoryGroup {
 		return CatPolicyAndGovernance
 	case "audit", "cluster", "reporting", "discovery", "sbom":
 		return CatSystemAdministration
-	case "hyok", "ekm", "workload", "confidential", "tfe", "dam":
+	case "hyok", "ekm", "workload", "confidential":
 		return CatNetworkAndAccess
 	case "payment", "kmip":
 		return CatFinancial
 	case "byok", "cloud":
 		return CatCloudIntegration
-	case "qkd", "qrng":
-		return CatQuantum
 	case "ai", "ai-gateway":
 		return CatSystemAdministration
 	default:

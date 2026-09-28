@@ -102,8 +102,6 @@ const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m =>
 type Props = {
   session: AuthSession;
   enabledFeatures: Set<FeatureKey>;
-  alerts: any[];
-  audit: any[];
   unreadAlerts: number;
   onLogout: () => void;
   markAlertsRead: () => void;
@@ -342,7 +340,7 @@ const SUB_PANES: Record<string, any[]> = {
 const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "key_analytics" };
 
 export default function VectaDashboardV3Shell(props: Props) {
-  const { session: sessionBase, enabledFeatures, alerts, audit, unreadAlerts, onLogout, markAlertsRead } = props;
+  const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
     try {
       const saved = window.location.hash.replace("#", "") || localStorage.getItem(TAB_STORAGE_KEY);
@@ -1188,8 +1186,6 @@ export default function VectaDashboardV3Shell(props: Props) {
                   setKeyCatalog={setKeyCatalog}
                   tagCatalog={tagCatalog}
                   setTagCatalog={setTagCatalog}
-                  alerts={alerts}
-                  audit={audit}
                   onToast={setToast}
                   onLogout={onLogout}
                   fipsMode={fipsMode}

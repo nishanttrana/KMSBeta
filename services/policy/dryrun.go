@@ -21,24 +21,24 @@ type DryRunRequest struct {
 // proposed policy. OldDecision is what the policy engine returned at the
 // time; NewDecision is what the proposed policy would return now.
 type DryRunFinding struct {
-	OccurredAt   time.Time `json:"occurred_at"`
-	Operation    string    `json:"operation"`
-	KeyID        string    `json:"key_id,omitempty"`
-	Algorithm    string    `json:"algorithm,omitempty"`
-	OldDecision  Decision  `json:"old_decision"`
-	NewDecision  Decision  `json:"new_decision"`
-	Reason       string    `json:"reason,omitempty"`
+	OccurredAt  time.Time `json:"occurred_at"`
+	Operation   string    `json:"operation"`
+	KeyID       string    `json:"key_id,omitempty"`
+	Algorithm   string    `json:"algorithm,omitempty"`
+	OldDecision Decision  `json:"old_decision"`
+	NewDecision Decision  `json:"new_decision"`
+	Reason      string    `json:"reason,omitempty"`
 }
 
 // DryRunReport is the summary returned to the operator. It contains
 // counts plus a bounded sample of findings; the full set would be too
 // large for a synchronous response.
 type DryRunReport struct {
-	TotalEvaluated int            `json:"total_evaluated"`
-	Changed        int            `json:"changed"`
-	NewDenies      int            `json:"new_denies"`
-	NewAllows      int            `json:"new_allows"`
-	NewApprovals   int            `json:"new_approvals"`
+	TotalEvaluated int             `json:"total_evaluated"`
+	Changed        int             `json:"changed"`
+	NewDenies      int             `json:"new_denies"`
+	NewAllows      int             `json:"new_allows"`
+	NewApprovals   int             `json:"new_approvals"`
 	Findings       []DryRunFinding `json:"findings"`
 	LintFindings   []LintFinding   `json:"lint_findings,omitempty"`
 }
@@ -74,12 +74,12 @@ func DryRun(ctx context.Context, src DryRunSource, req DryRunRequest) (DryRunRep
 	report := DryRunReport{LintFindings: LintPolicy(doc)}
 	for _, rec := range records {
 		report.TotalEvaluated++
-		simulated := evaluatePolicy(doc, "dry-run", 0, evaluateRequestFromRecord(rec))
-		if simulated.Decision == rec.Decision {
+		replayed := evaluatePolicy(doc, "dry-run", 0, evaluateRequestFromRecord(rec))
+		if replayed.Decision == rec.Decision {
 			continue
 		}
 		report.Changed++
-		switch simulated.Decision {
+		switch replayed.Decision {
 		case DecisionDeny:
 			report.NewDenies++
 		case DecisionRequireApproval:
@@ -96,13 +96,13 @@ func DryRun(ctx context.Context, src DryRunSource, req DryRunRequest) (DryRunRep
 				Operation:   rec.Operation,
 				KeyID:       rec.KeyID,
 				OldDecision: rec.Decision,
-				NewDecision: simulated.Decision,
+				NewDecision: replayed.Decision,
 			}
 			if alg, ok := rec.Request["algorithm"].(string); ok {
 				f.Algorithm = alg
 			}
-			if len(simulated.Outcomes) > 0 {
-				f.Reason = simulated.Outcomes[0].Message
+			if len(replayed.Outcomes) > 0 {
+				f.Reason = replayed.Outcomes[0].Message
 			}
 			report.Findings = append(report.Findings, f)
 		}

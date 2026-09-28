@@ -12,10 +12,9 @@ var auditEventCatalog = buildAuditEventCatalog()
 func buildAuditEventCatalog() map[string]EventMeta {
 	services := []string{
 		"auth", "key", "keycore", "secrets", "certs", "policy", "governance", "pqc", "audit", "byok", "ai",
-		"discovery", "compliance", "hyok", "ekm", "reporting", "qkd", "cluster", "payment", "sbom",
+		"discovery", "compliance", "hyok", "ekm", "reporting", "cluster", "payment", "sbom",
 		"workload", "confidential", "autokey", "signing", "keyaccess",
-		"mpc", "dataprotect", "kmip",
-		"tfe", "dam", "qrng", "cloud",
+		"dataprotect", "kmip", "cloud",
 	}
 	verbs := []string{
 		"created", "imported", "rotated", "deactivated", "destroyed", "exported",
@@ -106,24 +105,6 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.signing.records_viewed":               {Severity: "LOW", Category: "signing"},
 		"audit.signing.artifact_signed":              {Severity: "HIGH", Category: "signing"},
 		"audit.signing.artifact_verified":            {Severity: "MEDIUM", Category: "signing"},
-		"audit.mpc.dkg_initiated":                    {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.dkg_completed":                    {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.threshold_sign_initiated":         {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.threshold_sign_completed":         {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.threshold_sign_failed":            {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.threshold_decrypt_initiated":      {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.threshold_decrypt_completed":      {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.share_refreshed":                  {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.share_backed_up":                  {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.key_rotated":                      {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.participant_registered":           {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.participant_updated":              {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.participant_deleted":              {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.policy_created":                   {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.policy_updated":                   {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.policy_deleted":                   {Severity: "MEDIUM", Category: "mpc"},
-		"audit.mpc.key_revoked":                      {Severity: "HIGH", Category: "mpc"},
-		"audit.mpc.key_group_set":                    {Severity: "MEDIUM", Category: "mpc"},
 		"audit.cert.renewal_schedule_viewed":         {Severity: "LOW", Category: "certs"},
 		"audit.cert.renewal_window_missed":           {Severity: "HIGH", Category: "certs"},
 		"audit.cert.emergency_rotation_started":      {Severity: "HIGH", Category: "certs"},
@@ -155,25 +136,6 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.pqc.migration_report_viewed":          {Severity: "LOW", Category: "pqc"},
 		"audit.reporting.evidence_pack_requested":    {Severity: "MEDIUM", Category: "reporting"},
 		"audit.reporting.mttd_stats_viewed":          {Severity: "LOW", Category: "reporting"},
-
-		// tfe (Transparent File Encryption)
-		"audit.tfe.agent_registered":         {Severity: "MEDIUM", Category: "tfe"},
-		"audit.tfe.agent_heartbeat":          {Severity: "LOW", Category: "tfe"},
-		"audit.tfe.policy_created":           {Severity: "MEDIUM", Category: "tfe"},
-		"audit.tfe.policy_updated":           {Severity: "MEDIUM", Category: "tfe"},
-		"audit.tfe.policy_deleted":           {Severity: "MEDIUM", Category: "tfe"},
-		"audit.tfe.agent_package_downloaded": {Severity: "MEDIUM", Category: "tfe"},
-		"audit.tfe.file_encrypt_agent_run":   {Severity: "LOW", Category: "tfe"},
-
-		// dam (Data Activity Monitoring)
-		"audit.dam.critical_event": {Severity: "CRITICAL", Category: "dam"},
-
-		// qrng (Quantum Random Number Generator)
-		"audit.qrng.source_registered": {Severity: "MEDIUM", Category: "qrng"},
-		"audit.qrng.source_updated":    {Severity: "MEDIUM", Category: "qrng"},
-		"audit.qrng.source_deleted":    {Severity: "MEDIUM", Category: "qrng"},
-		"audit.qrng.entropy_ingested":  {Severity: "LOW", Category: "qrng"},
-		"audit.qrng.entropy_drawn":     {Severity: "LOW", Category: "qrng"},
 
 		// cloud (BYOK/cloud connector sync)
 		"audit.cloud.connector_configured": {Severity: "MEDIUM", Category: "cloud"},

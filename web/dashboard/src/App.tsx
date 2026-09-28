@@ -23,11 +23,9 @@ import {
 } from "./lib/auth";
 import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAdmin";
 import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
-import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
 // eslint-disable-next-line no-restricted-imports -- intentional: legacy direct call, refactor to typed client tracked separately
 import { getGlobalInFlightRequestCount, setOnUnauthorizedHandler, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
-import { useLiveStore } from "./store/live";
 
 const FEATURE_KEYS: FeatureKey[] = [
   "secrets",
@@ -351,7 +349,6 @@ export default function App() {
   const [inFlightRequests, setInFlightRequests] = useState<number>(getGlobalInFlightRequestCount());
   const [showBrandedLoader, setShowBrandedLoader] = useState(false);
   const visibleSinceRef = useRef<number>(0);
-  const { alerts, audit, pushAlert, pushAudit } = useLiveStore();
 
   const deploymentQuery = useQuery({
     queryKey: ["deployment-config"],
@@ -432,75 +429,6 @@ export default function App() {
       }
     };
   }, [inFlightRequests, showBrandedLoader]);
-
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-    const rawAlertsURL = import.meta.env.VITE_WS_ALERTS_URL || wsBaseURL("/alerts/stream");
-    const rawAuditURL  = import.meta.env.VITE_WS_AUDIT_URL  || wsBaseURL("/audit/stream");
-    // Enforce wss:// in production to prevent downgrade to plaintext ws://
-    const enforceSecureWS = (url: string) => {
-      if (window.location.protocol === "https:" && url.startsWith("ws://")) {
-        console.warn("[ws] Upgrading insecure ws:// to wss://");
-        return url.replace(/^ws:\/\//, "wss://");
-      }
-      return url;
-    };
-    const alertsURL = enforceSecureWS(rawAlertsURL);
-    const auditURL  = enforceSecureWS(rawAuditURL);
-
-    const alertSocket = new WebSocket(alertsURL);
-    const auditSocket = new WebSocket(auditURL);
-    let simulation: number | undefined;
-
-    alertSocket.onmessage = (event) => {
-      try {
-        const payload = parseWSMessage(event.data);
-        if (!payload) return;
-        pushAlert(mapToLiveEvent(payload, "alert.stream"));
-      } catch (err) {
-        console.error("[ws/alerts] Failed to process message", err);
-      }
-    };
-    auditSocket.onmessage = (event) => {
-      try {
-        const payload = parseWSMessage(event.data);
-        if (!payload) return;
-        pushAudit(mapToLiveEvent(payload, "audit.stream"));
-      } catch (err) {
-        console.error("[ws/audit] Failed to process message", err);
-      }
-    };
-
-    const fallback = () => {
-      simulation = window.setInterval(() => {
-        pushAudit(
-          mapToLiveEvent(
-            {
-              event: "audit.dashboard.heartbeat",
-              message: "Live stream heartbeat from UI fallback channel",
-              severity: "info",
-              source: "ui",
-              timestamp: new Date().toISOString()
-            },
-            "audit.stream"
-          )
-        );
-      }, 20_000);
-    };
-
-    alertSocket.onerror = fallback;
-    auditSocket.onerror = fallback;
-
-    return () => {
-      alertSocket.close();
-      auditSocket.close();
-      if (simulation) {
-        window.clearInterval(simulation);
-      }
-    };
-  }, [session, pushAlert, pushAudit]);
 
   useEffect(() => {
     if (!session) {
@@ -672,8 +600,6 @@ export default function App() {
       <VectaDashboardV3
         session={session}
         enabledFeatures={featureSet}
-        alerts={alerts}
-        audit={audit}
         unreadAlerts={unreadAlerts}
         markAlertsRead={() => undefined}
         onLogout={handleLogout}

@@ -10,46 +10,45 @@ import "time"
 type CategoryGroup = string
 
 const (
-	CatAuthentication         CategoryGroup = "authentication"
-	CatKeyManagement          CategoryGroup = "key_management"
-	CatCryptographicOps       CategoryGroup = "cryptographic_operations"
-	CatDataProtection         CategoryGroup = "data_protection"
-	CatCertificateManagement  CategoryGroup = "certificate_management"
-	CatPolicyAndGovernance    CategoryGroup = "policy_and_governance"
-	CatSystemAdministration   CategoryGroup = "system_administration"
-	CatNetworkAndAccess       CategoryGroup = "network_and_access"
-	CatFinancial              CategoryGroup = "financial"
-	CatSupplyChain            CategoryGroup = "supply_chain"
-	CatQuantum                CategoryGroup = "quantum"
-	CatCloudIntegration       CategoryGroup = "cloud_integration"
+	CatAuthentication        CategoryGroup = "authentication"
+	CatKeyManagement         CategoryGroup = "key_management"
+	CatCryptographicOps      CategoryGroup = "cryptographic_operations"
+	CatDataProtection        CategoryGroup = "data_protection"
+	CatCertificateManagement CategoryGroup = "certificate_management"
+	CatPolicyAndGovernance   CategoryGroup = "policy_and_governance"
+	CatSystemAdministration  CategoryGroup = "system_administration"
+	CatNetworkAndAccess      CategoryGroup = "network_and_access"
+	CatFinancial             CategoryGroup = "financial"
+	CatSupplyChain           CategoryGroup = "supply_chain"
+	CatCloudIntegration      CategoryGroup = "cloud_integration"
 )
 
 type AuditEvent struct {
-	ID            string                 `json:"id"`
-	TenantID      string                 `json:"tenant_id"`
-	Sequence      int64                  `json:"sequence"`
-	ChainHash     string                 `json:"chain_hash"`
-	PreviousHash  string                 `json:"previous_hash"`
+	ID           string `json:"id"`
+	TenantID     string `json:"tenant_id"`
+	Sequence     int64  `json:"sequence"`
+	ChainHash    string `json:"chain_hash"`
+	PreviousHash string `json:"previous_hash"`
 	// HMACSig is HMAC-SHA256(chain_hash, service_signing_key).
 	// Provides event authenticity in addition to hash-chain integrity.
-	HMACSig       string                 `json:"hmac_sig,omitempty"`
+	HMACSig string `json:"hmac_sig,omitempty"`
 	// HMACKeyID names the signing key behind HMACSig (see signingKeys).
 	HMACKeyID string `json:"hmac_key_id,omitempty"`
 	// ChainNode is the cluster node whose chain holds the event ("" before
 	// the node was clustered). Set by the store, not by publishers.
 	ChainNode string `json:"chain_node,omitempty"`
 	// CategoryGroup is the FIPS 140-3 aligned functional category.
-	CategoryGroup string                 `json:"category_group,omitempty"`
-	Timestamp     time.Time              `json:"timestamp"`
-	Service       string                 `json:"service"`
-	Action        string                 `json:"action"`
-	ActorID       string                 `json:"actor_id"`
-	ActorType     string                 `json:"actor_type"`
-	TargetType    string                 `json:"target_type"`
-	TargetID      string                 `json:"target_id"`
-	Method        string                 `json:"method"`
-	Endpoint      string                 `json:"endpoint"`
-	SourceIP      string                 `json:"source_ip"`
+	CategoryGroup string    `json:"category_group,omitempty"`
+	Timestamp     time.Time `json:"timestamp"`
+	Service       string    `json:"service"`
+	Action        string    `json:"action"`
+	ActorID       string    `json:"actor_id"`
+	ActorType     string    `json:"actor_type"`
+	TargetType    string    `json:"target_type"`
+	TargetID      string    `json:"target_id"`
+	Method        string    `json:"method"`
+	Endpoint      string    `json:"endpoint"`
+	SourceIP      string    `json:"source_ip"`
 	// CountryCode is the ISO 3166-1 alpha-2 country resolved from SourceIP.
 	// "internal" for RFC-private ranges; "" when resolution is unavailable.
 	CountryCode   string                 `json:"country_code,omitempty"`
@@ -112,10 +111,10 @@ type DispatchPlan struct {
 }
 
 type AuditConfig struct {
-	FailClosed          bool
-	WALPath             string
-	WALMaxSizeMB        int64
-	WALHMACKey          []byte
+	FailClosed   bool
+	WALPath      string
+	WALMaxSizeMB int64
+	WALHMACKey   []byte
 	// EventSigningKey is a 32-byte HMAC-SHA256 key used to sign each audit event.
 	// Loaded from AUDIT_EVENT_SIGNING_KEY_B64 env var; auto-generated if missing.
 	EventSigningKey     []byte
@@ -127,13 +126,13 @@ type AuditConfig struct {
 // ── Merkle Tree Types ───────────────────────────────────────
 
 type MerkleEpoch struct {
-	ID          string    `json:"id"`
-	TenantID    string    `json:"tenant_id"`
-	EpochNumber int       `json:"epoch_number"`
-	SeqFrom     int64     `json:"seq_from"`
-	SeqTo       int64     `json:"seq_to"`
-	LeafCount   int       `json:"leaf_count"`
-	TreeRoot    string    `json:"tree_root"`
+	ID          string `json:"id"`
+	TenantID    string `json:"tenant_id"`
+	EpochNumber int    `json:"epoch_number"`
+	SeqFrom     int64  `json:"seq_from"`
+	SeqTo       int64  `json:"seq_to"`
+	LeafCount   int    `json:"leaf_count"`
+	TreeRoot    string `json:"tree_root"`
 	// PreviousEpochRoot is the tree_root of epoch N-1, enabling linear proof chain.
 	PreviousEpochRoot string `json:"previous_epoch_root,omitempty"`
 	// EpochHash = SHA256(previous_epoch_root || tree_root) — tamper-evident linkage.

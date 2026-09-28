@@ -4,6 +4,34 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.15.0-beta] — 2026-09-28
+
+### Dashboard: dead live feed and its invented audit events removed
+- **Removed the header's live WebSocket feed.** It opened `wss://<host>/alerts/stream`
+  and `/audit/stream`, which Envoy routes to the dashboard's nginx rather than
+  to any service, and audit serves those streams as Server-Sent Events, not
+  WebSockets. The sockets always failed. On failure a `simulation` timer
+  pushed an invented `audit.dashboard.heartbeat` event ("Live stream heartbeat
+  from UI fallback channel") into the live audit list every 20 seconds.
+  Nothing displayed the list, so no user saw it, but it was synthetic audit
+  data. `lib/liveFeed.ts`, `store/live.ts` and the unused `alerts`/`audit`
+  tab props are gone. The Alert Center and the header bell already read
+  reporting over authenticated HTTPS.
+- **Dashboard CSP:** `connect-src 'self' ws: wss:` becomes `connect-src 'self'`.
+  The old value allowed WebSocket connections to any host, including
+  plaintext `ws:`, and nothing in the dashboard uses a socket any more.
+- **Audit event catalogue:** removed the services this product doesn't have
+  (`mpc`, `tfe`, `dam`, `qrng`, `qkd`) from the severity catalogue and from
+  `categoryGroupForService`, and dropped the unused `quantum` category.
+  Nothing emits those events. An unknown event still gets the default
+  severity and the system-administration category, as before.
+- **Conformance `real-capability`** now also fails on a variable named
+  `simulat*` or `synthetic*` outside tests. The policy dry-run's re-evaluation
+  of real past decisions is renamed `replayed`, which is what it does.
+- **Still open:** audit's own alert table and routes (`/svc/audit/alerts`,
+  `/alerts/stats`, `/alerts/stream`) remain. No screen reads them since
+  2.12.0-beta; they should be retired in favour of reporting's alerts.
+
 ## [2.14.0-beta] — 2026-09-28
 
 ### One alert-rule engine: audit's own rules removed
