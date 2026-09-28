@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A rule language documented from a different product
+- **What happened:** the alert-rule guide described CEL (`&&`, `count()`,
+  `hour()`, `is_new_source_ip()`) and built-in templates. Reporting's
+  engine is a small language with `AND`/`OR` and seven fields. The
+  dashboard's example patterns used `auth.login_failed`, which never
+  matches the real `audit.auth.login_failed`. A rule written from the guide
+  would fail to save, and one written from the examples would save and
+  silently never fire.
+- **Why it slipped through:** nothing let anyone run a rule before relying
+  on it, and audit's `test-rule` returned `dry-run-ok` for any input.
+- **Rule:** a detection feature ships with a way to check it against real
+  data (`POST /alerts/rules/test` replays recent audit events), and examples
+  in docs and UI use real action names.
+
 ### A card that renders zeros for a service that doesn't exist looks healthy
 - **What happened:** Posture and Compliance each had a "Threshold Signing /
   FROST" card fed by `Promise.resolve(null)`. No MPC service exists, so it

@@ -4,6 +4,35 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.13.0-beta] — 2026-09-28
+
+### Test an alert rule before saving it
+- **New `POST /svc/reporting/alerts/rules/test`** and a **Test rule** button
+  in System Administration → Alert Rules. It checks a rule without saving
+  it, using the same matcher live alerting uses:
+  - whether the rule is valid, with the reason if not;
+  - for a supplied event, whether it matches and would fire now;
+  - a replay over the tenant's real audit events from the last 1 hour to
+    7 days: how many matched, how many times it would have fired, and
+    sample events.
+  If audit events can't be read, the result says the replay wasn't
+  assessed; it never shows zero. Audited as `audit.reporting.rule_tested`.
+- **Removed `POST /svc/audit/alerts/test-rule`.** It answered `dry-run-ok`
+  without evaluating anything. Rules live in reporting, which the dashboard
+  uses.
+- **Docs:** `docs/GOVERNANCE_AND_COMPLIANCE.md` §4 described CEL
+  expressions with `&&`, `count()`, `hour()` and `is_new_source_ip()`, 14
+  built-in rule templates, alert snooze, and an `/svc/alerting` service.
+  None of them exist. The section now documents the real rule language
+  (`AND`, `OR`, `==`, `!=`, `contains`, `startsWith`, `matches` on seven
+  fields), threshold rules, the test route and the real alert endpoints.
+  The editor's example patterns (`auth.login_failed`) could never match,
+  because real actions are `audit.auth.login_failed`; they are corrected.
+- **Still open:** audit keeps a second, older rule system
+  (`/svc/audit/alerts/rules`, a substring matcher that only sets audit
+  alerts' severity and title). The dashboard doesn't use it. It should be
+  folded into reporting's rules or removed.
+
 ## [2.12.0-beta] — 2026-09-28
 
 ### Dashboard: one home per view; Compliance shows only what it assesses

@@ -107,6 +107,7 @@ func (h *Handler) routes() {
 	r.Handle("GET /alerts/rules", spec("rules_listed", permRead, "alert_rule", ""), h.listRules)
 	r.Handle("POST /alerts/rules", spec("rule_created", permWrite, "alert_rule", ""), h.createRule)
 	r.Handle("PUT /alerts/rules/{id}", spec("rule_updated", permWrite, "alert_rule", "id"), h.updateRule)
+	r.Handle("POST /alerts/rules/test", spec("rule_tested", permRead, "alert_rule", ""), h.testRule)
 	delRule := spec("rule_deleted", permDelete, "alert_rule", "id")
 	delRule.Severity = "warning"
 	r.Handle("DELETE /alerts/rules/{id}", delRule, h.deleteRule)
@@ -348,6 +349,24 @@ func (h *Handler) createRule(c *route.Call) {
 	c.Target(item.ID)
 	c.Detail("name", item.Name)
 	c.JSON(http.StatusCreated, map[string]interface{}{"item": item})
+}
+
+// testRule checks a rule without saving it: validity, one supplied event,
+// and a replay of the tenant's recent audit events (rule_check.go).
+func (h *Handler) testRule(c *route.Call) {
+	var body RuleCheckInput
+	if !c.Decode(&body) {
+		return
+	}
+	res := h.svc.CheckRule(c.R.Context(), c.Tenant, body)
+	c.Detail("condition", body.Rule.Condition)
+	c.Detail("valid", res.Valid)
+	if res.Replay != nil {
+		c.Detail("replay_hours", res.Replay.Hours)
+		c.Detail("replay_matched", res.Replay.Matched)
+		c.Detail("replay_fired", res.Replay.Fired)
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"result": res})
 }
 
 func (h *Handler) updateRule(c *route.Call) {

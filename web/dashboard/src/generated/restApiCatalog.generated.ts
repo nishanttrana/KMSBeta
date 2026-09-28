@@ -1235,34 +1235,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-post-alerts-test-rule",
-    "group": "Audit & Alerts (audit)",
-    "title": "POST /alerts/test-rule",
-    "service": "audit",
-    "method": "POST",
-    "pathTemplate": "/alerts/test-rule?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "POST /svc/audit/alerts/test-rule?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-post-audit-cluster-signing-key-export",
     "group": "Audit & Alerts (audit)",
     "title": "POST /audit/cluster/signing-key/export",
@@ -21804,6 +21776,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Reporting service.",
     "requestExample": "POST /svc/reporting/alerts/rules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "reporting-post-alerts-rules-test",
+    "group": "Reporting (reporting)",
+    "title": "POST /alerts/rules/test",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/alerts/rules/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "POST /svc/reporting/alerts/rules/test?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

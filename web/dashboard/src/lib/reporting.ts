@@ -207,6 +207,33 @@ export async function listReportingRules(session: AuthSession): Promise<Reportin
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+// RuleCheck is reporting's answer to POST /alerts/rules/test: the rule is
+// validated, decided for one event, and replayed over recent audit events,
+// without being saved.
+export type RuleCheck = {
+  valid: boolean;
+  error?: string;
+  event?: { action: string; matched: boolean; fires_now: boolean; in_window?: number };
+  replay?: {
+    hours: number; from: string; to: string; events_scanned: number; matched: number; fired: number;
+    truncated: boolean; basis: string;
+    samples: { event_id: string; action: string; actor_id: string; timestamp: string }[];
+  };
+  replay_error?: string;
+};
+
+export async function testReportingRule(
+  session: AuthSession,
+  rule: ReportingAlertRule,
+  opts: { event?: Record<string, unknown>; replayHours?: number } = {}
+): Promise<RuleCheck> {
+  const out = await serviceRequest<{ result: RuleCheck }>(session, "reporting", `/alerts/rules/test?${tenantQuery(session)}`, {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, rule, event: opts.event, replay_hours: opts.replayHours ?? 24 })
+  });
+  return out.result;
+}
+
 export async function createReportingRule(session: AuthSession, rule: ReportingAlertRule): Promise<ReportingAlertRule> {
   const out = await serviceRequest<RulesResponse>(session, "reporting", `/alerts/rules?${tenantQuery(session)}`, {
     method: "POST",

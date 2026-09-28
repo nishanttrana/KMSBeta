@@ -127,10 +127,7 @@ func (s *Service) ingestAuditEvent(ctx context.Context, tenantID string, ev map[
 			return existing, nil
 		}
 	}
-	action := strings.ToLower(firstString(ev["action"], ev["audit_action"], ev["subject"]))
-	if action == "" {
-		action = "unknown.action"
-	}
+	action := eventAction(ev)
 	targetID := firstString(ev["target_id"], ev["resource_id"])
 
 	dedup, err := s.store.FindRecentDedupAlert(ctx, tenantID, action, targetID, 60*time.Second)
@@ -304,49 +301,74 @@ func (s *Service) evaluateAlertRules(ctx context.Context, tenantID string, actio
 		if !rule.Enabled {
 			continue
 		}
-		switch strings.ToLower(strings.TrimSpace(rule.Condition)) {
-		case "threshold":
-			if !matchPattern(action, rule.EventPattern) {
-				continue
-			}
-			if rule.Threshold <= 1 {
-				return true, rule.ID, normalizeSeverity(rule.Severity)
-			}
-			window := time.Duration(rule.WindowSecond) * time.Second
-			if window <= 0 {
-				window = 5 * time.Minute
-			}
-			count, cerr := s.store.CountRecentAlerts(ctx, tenantID, rule.EventPattern, "", "", window)
-			if cerr != nil {
-				continue
-			}
-			if count+1 >= rule.Threshold {
-				return true, rule.ID, normalizeSeverity(rule.Severity)
-			}
-		case "expression":
-			expr := strings.TrimSpace(rule.Expression)
-			if expr == "" {
-				continue
-			}
-			fields := map[string]string{
-				"action":      action,
-				"severity":    strings.ToLower(firstString(ev["severity"])),
-				"actor_id":    firstString(ev["actor_id"], ev["user_id"]),
-				"source_ip":   firstString(ev["source_ip"], ev["ip"]),
-				"service":     firstString(ev["service"]),
-				"target_type": firstString(ev["target_type"], ev["resource_type"]),
-				"target_id":   firstString(ev["target_id"], ev["resource_id"]),
-			}
-			result, eerr := EvaluateExpression(expr, fields)
-			if eerr != nil {
-				continue
-			}
-			if result {
-				return true, rule.ID, normalizeSeverity(rule.Severity)
-			}
+		if fires, _, err := s.ruleFires(ctx, tenantID, rule, action, ev); err == nil && fires {
+			return true, rule.ID, normalizeSeverity(rule.Severity)
 		}
 	}
 	return false, "", ""
+}
+
+// ruleFires is the live decision for one rule and one event. For a
+// threshold rule it also returns how many recorded alerts matching the
+// pattern are already in the window (this event would be one more).
+func (s *Service) ruleFires(ctx context.Context, tenantID string, rule AlertRule, action string, ev map[string]interface{}) (bool, int, error) {
+	matched, err := ruleMatchesEvent(rule, action, ev)
+	if err != nil || !matched {
+		return false, 0, err
+	}
+	if !strings.EqualFold(strings.TrimSpace(rule.Condition), "threshold") || rule.Threshold <= 1 {
+		return true, 0, nil
+	}
+	count, err := s.store.CountRecentAlerts(ctx, tenantID, rule.EventPattern, "", "", ruleWindow(rule))
+	if err != nil {
+		return false, 0, err
+	}
+	return count+1 >= rule.Threshold, count, nil
+}
+
+// ruleMatchesEvent reports whether one event matches a rule, before any
+// counting: the pattern for a threshold rule, the expression otherwise.
+func ruleMatchesEvent(rule AlertRule, action string, ev map[string]interface{}) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(rule.Condition)) {
+	case "threshold":
+		return matchPattern(action, rule.EventPattern), nil
+	case "expression":
+		expr := strings.TrimSpace(rule.Expression)
+		if expr == "" {
+			return false, nil
+		}
+		return EvaluateExpression(expr, expressionFields(action, ev))
+	}
+	return false, nil
+}
+
+// expressionFields are the event fields an expression can name.
+func expressionFields(action string, ev map[string]interface{}) map[string]string {
+	return map[string]string{
+		"action":      action,
+		"severity":    strings.ToLower(firstString(ev["severity"])),
+		"actor_id":    firstString(ev["actor_id"], ev["user_id"]),
+		"source_ip":   firstString(ev["source_ip"], ev["ip"]),
+		"service":     firstString(ev["service"]),
+		"target_type": firstString(ev["target_type"], ev["resource_type"]),
+		"target_id":   firstString(ev["target_id"], ev["resource_id"]),
+	}
+}
+
+func ruleWindow(rule AlertRule) time.Duration {
+	if w := time.Duration(rule.WindowSecond) * time.Second; w > 0 {
+		return w
+	}
+	return 5 * time.Minute
+}
+
+// eventAction is the action reporting matches rules against.
+func eventAction(ev map[string]interface{}) string {
+	action := strings.ToLower(firstString(ev["action"], ev["audit_action"], ev["subject"]))
+	if action == "" {
+		return "unknown.action"
+	}
+	return action
 }
 
 func categoryForAction(action string) string {

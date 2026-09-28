@@ -61,6 +61,8 @@ import {
   listReportingRules,
   createReportingRule,
   updateReportingRule,
+  testReportingRule,
+  type RuleCheck,
   deleteReportingRule,
   listReportingChannels,
   type ReportingAlertRule
@@ -976,6 +978,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [alertRules,setAlertRules]=useState<ReportingAlertRule[]>([]);
   const [alertRulesLoading,setAlertRulesLoading]=useState(false);
   const [ruleModalOpen,setRuleModalOpen]=useState(false);
+  const [ruleCheck,setRuleCheck]=useState<RuleCheck|null>(null);
+  const [ruleChecking,setRuleChecking]=useState(false);
+  const [ruleReplayHours,setRuleReplayHours]=useState(24);
   const [editingRule,setEditingRule]=useState<ReportingAlertRule|null>(null);
   const [ruleName,setRuleName]=useState("");
   const [ruleCondition,setRuleCondition]=useState<"threshold"|"expression">("threshold");
@@ -1060,8 +1065,31 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setRuleName("");setRuleCondition("threshold");setRulePattern("");setRuleSeverity("warning");
       setRuleThreshold(1);setRuleWindowSeconds(300);setRuleExpression("");setRuleChannels(["screen"]);
     }
+    setRuleCheck(null);
     setRuleModalOpen(true);
   },[sanitizeRuleChannels]);
+
+  const ruleBody=useCallback(():ReportingAlertRule=>({
+    name:String(ruleName||"").trim(),
+    condition:ruleCondition,
+    severity:ruleSeverity,
+    event_pattern:ruleCondition==="threshold"?String(rulePattern||"").trim():"*",
+    threshold:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleThreshold)):1,
+    window_seconds:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleWindowSeconds)):60,
+    expression:ruleCondition==="expression"?String(ruleExpression||"").trim():"",
+    channels:sanitizeRuleChannels(ruleChannels),
+    enabled:editingRule?.enabled!==false
+  }),[ruleName,ruleCondition,ruleSeverity,rulePattern,ruleThreshold,ruleWindowSeconds,ruleExpression,ruleChannels,sanitizeRuleChannels,editingRule]);
+
+  // Test runs the rule without saving it: validity, then a replay over the
+  // tenant's real audit events from the chosen period.
+  const handleTestRule=useCallback(async()=>{
+    if(!session?.token) return;
+    setRuleChecking(true);
+    try{setRuleCheck(await testReportingRule(session,ruleBody(),{replayHours:ruleReplayHours}));}
+    catch(error){setRuleCheck(null); if(!sessionGuard(error)) onToast(`Rule test failed: ${errMsg(error)}`);}
+    finally{setRuleChecking(false);}
+  },[session,ruleBody,ruleReplayHours,sessionGuard,onToast]);
 
   const handleSaveRule=useCallback(async()=>{
     if(!session?.token) return;
@@ -1071,17 +1099,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(ruleCondition==="expression"&&!String(ruleExpression||"").trim()){onToast("Expression is required for expression rules."); return;}
     setRuleSaving(true);
     try{
-      const body:ReportingAlertRule={
-        name,
-        condition:ruleCondition,
-        severity:ruleSeverity,
-        event_pattern:ruleCondition==="threshold"?String(rulePattern||"").trim():"*",
-        threshold:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleThreshold)):1,
-        window_seconds:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleWindowSeconds)):60,
-        expression:ruleCondition==="expression"?String(ruleExpression||"").trim():"",
-        channels:sanitizeRuleChannels(ruleChannels),
-        enabled:editingRule?.enabled!==false
-      };
+      const body=ruleBody();
       if(editingRule?.id){
         await updateReportingRule(session,editingRule.id,body);
         onToast("Alert rule updated.");
@@ -1093,7 +1111,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       await refreshAlertRules();
     }catch(error){if(!sessionGuard(error)) onToast(`Alert rule save failed: ${errMsg(error)}`);}
     finally{setRuleSaving(false);}
-  },[session,ruleName,ruleCondition,rulePattern,ruleSeverity,ruleThreshold,ruleWindowSeconds,ruleExpression,ruleChannels,editingRule,refreshAlertRules,sessionGuard,onToast,sanitizeRuleChannels]);
+  },[session,ruleName,ruleCondition,rulePattern,ruleExpression,editingRule,ruleBody,refreshAlertRules,sessionGuard,onToast]);
 
   const toggleRuleChannel=useCallback((ch:string)=>{
     setRuleChannels((prev)=>prev.includes(ch)?prev.filter((c)=>c!==ch):[...prev,ch]);
@@ -3008,7 +3026,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </Sel>
       </FG>
       {ruleCondition==="threshold"&&<>
-        <FG label="Event Pattern (glob)"><Inp value={rulePattern} onChange={(e)=>setRulePattern(e.target.value)} placeholder="e.g. auth.login_failed or key.*"/></FG>
+        <FG label="Event Pattern (glob)"><Inp value={rulePattern} onChange={(e)=>setRulePattern(e.target.value)} placeholder="e.g. audit.auth.login_failed or audit.key.*"/></FG>
         <Row2>
           <FG label="Threshold (count)"><Inp type="number" value={String(ruleThreshold)} onChange={(e)=>setRuleThreshold(Math.max(1,Number(e.target.value||1)))}/></FG>
           <FG label="Window (seconds)"><Inp type="number" value={String(ruleWindowSeconds)} onChange={(e)=>setRuleWindowSeconds(Math.max(1,Number(e.target.value||300)))}/></FG>
@@ -3016,16 +3034,16 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </>}
       {ruleCondition==="expression"&&<>
         <FG label="Expression">
-          <Inp value={ruleExpression} onChange={(e)=>setRuleExpression(e.target.value)} placeholder={'e.g. action == "key.exported" AND actor_id != "admin"'}/>
+          <Inp value={ruleExpression} onChange={(e)=>setRuleExpression(e.target.value)} placeholder={'e.g. action == "audit.key.export" AND actor_id != "backup-svc"'}/>
         </FG>
         <div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"'JetBrains Mono', monospace"}}>
           <div><B>Fields:</B> action, severity, actor_id, source_ip, service, target_type, target_id</div>
           <div><B>Operators:</B> == != contains startsWith matches</div>
           <div><B>Combinators:</B> AND OR ( )</div>
           <div style={{marginTop:4}}><B>Examples:</B></div>
-          <div>action == "key.exported" AND severity != "info"</div>
-          <div>source_ip startsWith "10.0." OR service == "auth"</div>
-          <div>(action matches "key.*" OR action matches "cert.*") AND actor_id != "admin"</div>
+          <div>action == "audit.key.export" AND severity != "info"</div>
+          <div>action startsWith "audit.auth." AND source_ip contains "203.0.113."</div>
+          <div>(service == "keycore" OR service == "hsm") AND actor_id != "backup-svc"</div>
         </div>
       </>}
       <FG label="Severity">
@@ -3041,6 +3059,24 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           {ruleChannelsAvail.map((ch)=><Chk key={ch} label={ch} checked={ruleChannels.includes(ch)} onChange={()=>toggleRuleChannel(ch)}/>)}
         </div>
       </FG>
+      <div style={{border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginTop:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:11,color:C.dim}}>Test against the audit events of the last</span>
+          <Sel value={String(ruleReplayHours)} onChange={(e)=>setRuleReplayHours(Number(e.target.value))} style={{width:110}}>
+            {[1,24,72,168].map((h)=><option key={h} value={h}>{h===1?"1 hour":h<48?`${h} hours`:`${h/24} days`}</option>)}
+          </Sel>
+          <Btn small onClick={()=>void handleTestRule()} disabled={ruleChecking}>{ruleChecking?"Testing...":"Test rule"}</Btn>
+        </div>
+        {ruleCheck&&(!ruleCheck.valid
+          ?<div style={{fontSize:11,color:C.red,marginTop:8}}>Not valid: {ruleCheck.error}</div>
+          :ruleCheck.replay_error
+            ?<div style={{fontSize:11,color:C.amber,marginTop:8}}>Valid. Replay not assessed: {ruleCheck.replay_error}</div>
+            :ruleCheck.replay&&<div style={{fontSize:11,color:C.text,marginTop:8,lineHeight:1.6}}>
+              <div>Valid. Over {ruleCheck.replay.events_scanned} audit events{ruleCheck.replay.truncated?` (only since ${new Date(ruleCheck.replay.from).toLocaleString()}: the audit service returned its maximum)`:""}: <B>{ruleCheck.replay.matched}</B> matched, the rule would have fired <B>{ruleCheck.replay.fired}</B> time{ruleCheck.replay.fired===1?"":"s"}.</div>
+              {ruleCheck.replay.samples.map((s)=><div key={s.event_id} style={{fontFamily:"'JetBrains Mono', monospace",fontSize:10,color:C.dim}}>{new Date(s.timestamp).toLocaleString()} · {s.action} · {s.actor_id||"—"}</div>)}
+              <div style={{fontSize:10,color:C.muted,marginTop:4}}>{ruleCheck.replay.basis}.</div>
+            </div>)}
+      </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
         <Btn small onClick={()=>setRuleModalOpen(false)}>Cancel</Btn>
         <Btn small primary onClick={()=>void handleSaveRule()} disabled={ruleSaving}>{ruleSaving?"Saving...":(editingRule?"Update Rule":"Create Rule")}</Btn>

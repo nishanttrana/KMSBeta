@@ -14,11 +14,11 @@ import (
 )
 
 type Handler struct {
-	svc      *Service
-	store    Store
-	broker   *StreamBroker
-	cluster  clustersync.Publisher
-	mux      *http.ServeMux
+	svc     *Service
+	store   Store
+	broker  *StreamBroker
+	cluster clustersync.Publisher
+	mux     *http.ServeMux
 }
 
 func NewHandler(svc *Service, store Store) *Handler {
@@ -90,7 +90,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /alerts/rules", h.handleListRules)
 	mux.HandleFunc("PUT /alerts/rules/{id}", h.handleUpdateRule)
 	mux.HandleFunc("DELETE /alerts/rules/{id}", h.handleDeleteRule)
-	mux.HandleFunc("POST /alerts/test-rule", h.handleTestRule)
 
 	// Merkle tree integrity routes
 	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
@@ -553,12 +552,6 @@ func (h *Handler) handleDeleteRule(w http.ResponseWriter, r *http.Request) {
 		"request_id": reqID,
 	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleTestRule(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	// scope: validate parse shape and return dry-run accepted.
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "dry-run-ok", "request_id": reqID})
 }
 
 // handleFIPSBoundary returns the FIPS 140-3 module boundary declaration for this service.

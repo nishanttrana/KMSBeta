@@ -1254,131 +1254,80 @@ curl "https://localhost/svc/compliance/compliance/assessment/schedule?tenant_id=
 
 ### 4.1 Alert Rules
 
-Alert rules define conditions that, when matched by incoming audit events, trigger notifications through configured channels. Rules are evaluated in real time as events are ingested — the typical detection latency is under 2 seconds.
+Alert rules live in the reporting service. Each audit event reporting takes
+in is checked against the tenant's enabled rules; the first that fires sets
+the alert's severity. Alerts appear in the Alert Center (the dashboard,
+`screen`). To notify people or a SIEM, trigger a playbook on the alert
+(section 1.7 and Playbooks).
 
 #### Alert Rule Structure
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | UUID | Rule identifier. |
+| `id` | string | Rule identifier (set by the service). |
 | `name` | string | Human-readable name. |
-| `description` | string | What this rule detects and why it matters. |
-| `enabled` | boolean | Rules can be disabled without deletion. |
-| `condition` | string | CEL (Common Expression Language) expression evaluated against each incoming event. |
-| `window_seconds` | int | Sliding time window for count-based and rate-based conditions. |
+| `condition` | string | `threshold` or `expression`. |
+| `event_pattern` | string | Threshold rules: the audit action to match, exact (`audit.auth.login_failed`), a prefix ending in `*` (`audit.key.*`), or `*`. |
+| `threshold` | int | Threshold rules: fire when this many matching alerts fall in the window (1 or less: every match). |
+| `window_seconds` | int | Threshold window (default 300). |
+| `expression` | string | Expression rules: see below. |
 | `severity` | enum | `critical`, `high`, `warning`, `info`. |
-| `channels` | string[] | Reporting delivers alerts to the dashboard only (`screen`); any other value is stored as `screen`. To notify people or a SIEM, trigger a playbook on the alert (Slack, Teams, webhook, SIEM alert, Jira, ServiceNow, email). |
-| `cooldown_seconds` | int | Minimum time between repeated alerts for the same rule+actor combination. Prevents alert storms. |
-| `tags` | string[] | Labels for grouping rules (e.g. `["pci-dss", "incident-response"]`). |
+| `channels` | string[] | Stored as `screen` (the dashboard), the only channel reporting delivers. |
+| `enabled` | boolean | Disabled rules are not evaluated. |
 
-#### CEL Expression Reference
+#### Expression language
 
-CEL expressions have access to the current event as `event` (all fields from the audit schema) and a `count()` function for sliding window aggregation:
+An expression compares event fields with string values, joined with `AND`
+and `OR` and grouped with parentheses. Fields: `action`, `severity`,
+`actor_id`, `source_ip`, `service`, `target_type`, `target_id`. Operators:
+`==`, `!=`, `contains`, `startsWith`, `matches` (regular expression).
+There are no counting or time functions: use a threshold rule for counts.
 
 ```
-# Simple field match
-event.action == "key.export"
-
-# Boolean AND
-event.action == "key.destroy" && event.result == "success"
-
-# High risk score
-event.risk_score >= 80
-
-# Specific actor type
-event.actor_type == "service" && event.action.startsWith("key.")
-
-# Count-based (N events in window)
-event.action == "key.decrypt" && event.result == "failure" && count(events, 300) >= 5
-# Alert if 5+ failed decryptions in 5 minutes
-
-# Time-of-day guard (outside business hours: before 08:00 or after 18:00 UTC)
-event.action == "key.export" && (hour(event.timestamp) < 8 || hour(event.timestamp) > 18)
-
-# Source IP not in known range
-event.action.startsWith("key.") && !event.source_ip.startsWith("10.0.")
-
-# Actor not in allowed list
-event.action == "key.destroy" && !event.actor_id.in(["admin-1-uuid", "admin-2-uuid"])
-
-# New source IP for an actor (first time seen in 30 days)
-event.actor_type == "user" && is_new_source_ip(event.actor_id, event.source_ip, 2592000)
-
-# Combination: brute force + specific resource type
-event.target_type == "key" && event.result == "failure" && count(events, 60) >= 10
+action == "audit.key.export" AND actor_id != "backup-svc"
+action startsWith "audit.auth." AND source_ip contains "203.0.113."
+(service == "keycore" OR service == "hsm") AND severity == "critical"
 ```
+
+#### Testing a rule before saving it
+
+`POST /svc/reporting/alerts/rules/test` checks a rule without saving it,
+with the same matcher live alerting uses (audited as `rule_tested`):
+
+```bash
+curl -X POST "https://localhost/svc/reporting/alerts/rules/test?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"rule": {"condition": "threshold", "event_pattern": "audit.auth.login_failed",
+                "threshold": 5, "window_seconds": 120, "severity": "high"},
+       "event": {"action": "audit.auth.login_failed", "actor_id": "u1"},
+       "replay_hours": 24}'
+```
+
+- `result.valid` / `result.error`: whether create or update would accept it.
+- `result.event` (when `event` is given): `matched`, `fires_now` (the live
+  decision now; a threshold rule counts the alerts already in its window,
+  `in_window`).
+- `result.replay`: the rule run over the tenant's real audit events from
+  the last `replay_hours` (default 24, at most 168; `-1` skips it):
+  `events_scanned`, `matched`, `fired`, up to five `samples`, and
+  `truncated` when the audit service returned its 5,000-event maximum
+  (`from` is then the oldest event read). The replay counts matching
+  events; live alerting counts recorded alerts, which merge repeats of the
+  same action and target within 60 seconds, so it can fire less often.
+  When audit events can't be read, `replay_error` says why and there is no
+  replay result.
 
 #### Managing Alert Rules
 
 ```bash
-# Create an alert rule
 curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Brute Force Key Decryption",
-    "description": "Detects repeated failed decryption attempts from the same source, indicating key misuse or brute force",
-    "enabled": true,
-    "condition": "event.action == \"key.decrypt\" && event.result == \"failure\" && count(events, 300) >= 5",
-    "window_seconds": 300,
-    "severity": "critical",
-    "channels": ["screen"],
-    "cooldown_seconds": 600,
-    "tags": ["brute-force", "pci-dss", "incident-response"]
-  }'
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name": "Brute force login", "condition": "threshold",
+       "event_pattern": "audit.auth.login_failed", "threshold": 5, "window_seconds": 120,
+       "severity": "high"}'
 
-# Create a key export outside business hours rule
-curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "After-Hours Key Export",
-    "description": "Key exports outside 08:00-18:00 UTC are unusual and should be reviewed",
-    "enabled": true,
-    "condition": "event.action == \"key.export\" && (hour(event.timestamp) < 8 || hour(event.timestamp) > 18)",
-    "severity": "high",
-    "channels": ["screen"],
-    "cooldown_seconds": 3600
-  }'
-
-# Create a FIPS mode change alert
-curl -X POST "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "FIPS Mode Disabled",
-    "description": "FIPS mode was disabled — this may violate regulatory requirements",
-    "enabled": true,
-    "condition": "event.action == \"governance.fips.disabled\"",
-    "severity": "critical",
-    "channels": ["screen"],
-    "cooldown_seconds": 0
-  }'
-
-# List all rules
-curl "https://localhost/svc/reporting/alerts/rules?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN"
-
+curl "https://localhost/svc/reporting/alerts/rules?tenant_id=root" -H "Authorization: Bearer $TOKEN"
 ```
-
-#### Built-In Alert Rule Templates
-
-Vecta ships with the following pre-built rules that can be enabled immediately:
-
-| Rule Name | Condition Summary | Default Severity |
-|---|---|---|
-| Key Destruction | Any `key.destroy` success | Critical |
-| Key Export | Any `key.export` success | Critical |
-| Root CA Deletion | Any `ca.deleted` | Critical |
-| FIPS Mode Disabled | `governance.fips.disabled` | Critical |
-| Brute Force Decrypt | 5+ failed decrypts in 5 min | Critical |
-| Brute Force Login | 5+ failed logins in 2 min | High |
-| Account Locked | `user.locked` | High |
-| After-Hours Key Operation | Key op outside 08:00-18:00 | High |
-| Governance Expired | `governance.request.expired` | High |
-| Certificate Expiry (7 days) | Cert expiring in ≤ 7 days | High |
-| Certificate Expiry (30 days) | Cert expiring in ≤ 30 days | Warning |
-| Orphaned Key Created | Key with no access policy | Warning |
-| Non-FIPS Operation in FIPS Mode | `fips_compliant: false` | Warning |
-| New Source IP for Admin | Admin login from unseen IP | Warning |
 
 ---
 
@@ -1393,9 +1342,8 @@ The dashboard channel provides real-time alert visibility in the Vecta UI:
 - **Unread badge:** Count of unacknowledged alerts by severity level
 - **Alert feed:** Chronological list with rule name, event details, affected resource, severity, and timestamp
 - **Acknowledge:** Single alert or bulk acknowledge
-- **Resolve:** Mark as resolved with optional comment (creates audit event)
-- **Assign:** Assign alert to a team member for investigation
-- **Snooze:** Suppress repeat notifications for a configurable period
+- **Resolve:** Mark as resolved with an optional note (audited)
+- **False positive / escalate:** `PUT /alerts/{id}/false-positive`, `PUT /alerts/{id}/escalate`
 
 ---
 
@@ -1920,23 +1868,20 @@ format (json|jsonl|csv|cef|leef), signing_key_id, limit, offset, sort
 
 ---
 
-### Alerting Service (`/svc/alerting/`)
+### Alerts (`/svc/reporting/`)
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/rules` | List alert rules |
-| POST | `/rules` | Create alert rule |
-| GET | `/rules/{id}` | Get rule by ID |
-| PUT | `/rules/{id}` | Update rule |
-| PATCH | `/rules/{id}` | Partial update (e.g. enable/disable) |
-| DELETE | `/rules/{id}` | Delete rule |
-| POST | `/rules/{id}/test` | Test rule against synthetic event |
-| GET | `/alerts` | List triggered alerts |
+| GET | `/alerts/rules` | List alert rules |
+| POST | `/alerts/rules` | Create alert rule |
+| PUT | `/alerts/rules/{id}` | Update rule |
+| DELETE | `/alerts/rules/{id}` | Delete rule |
+| POST | `/alerts/rules/test` | Check a rule without saving it: validity, one event, replay of recent audit events |
+| GET | `/alerts`, `/alerts/feed`, `/alerts/unread` | List alerts |
 | GET | `/alerts/{id}` | Get alert by ID |
-| POST | `/alerts/{id}/acknowledge` | Acknowledge alert |
-| POST | `/alerts/{id}/resolve` | Resolve alert |
-| POST | `/alerts/{id}/assign` | Assign alert to user |
-| GET | `/metrics` | Get MTTD/MTTR metrics |
+| PUT | `/alerts/{id}/{op}` | `acknowledge`, `resolve`, `false-positive`, `escalate` |
+| POST | `/alerts/bulk/acknowledge`, `/alerts/bulk/resolve` | Bulk status change |
+| GET | `/alerts/stats`, `/alerts/stats/mttd`, `/alerts/stats/mttr`, `/alerts/stats/top-sources` | Alert metrics |
 | GET/PUT | `/alerts/channels` | Alert channel settings (only `screen`, the dashboard, is delivered; notify through playbooks) |
 
 ---
