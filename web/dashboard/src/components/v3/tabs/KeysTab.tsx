@@ -1641,7 +1641,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         expires_at:String(grant?.expires_at||"").trim()||undefined,
         justification:String(grant?.justification||"").trim()||undefined,
         ticket_id:String(grant?.ticket_id||"").trim()||undefined
-      })).filter((grant)=>grant.subject_id&&grant.operations.length),session.username||"");
+      })).filter((grant)=>grant.subject_id&&grant.operations.length));
       if(canEditActivation){
         await updateKeyActivation(session,selectedKey.id,{
           mode:policyActivationMode==="pre-active"?"pre-active":policyActivationMode==="scheduled"?"scheduled":"immediate",

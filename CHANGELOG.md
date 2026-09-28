@@ -4,6 +4,62 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [4.0.0-beta] — 2026-09-29
+
+### Security: keycore management routes required no token and no permission
+- **What was exposed.** Keycore's key-management and access-management
+  routes had no permission check, and a request **without any token**
+  reached them (`tenantcheck` skips when no token is present). Envoy routes
+  `/svc/keycore/` from the public listener without validating JWTs. Without
+  a token, or with any user's token (including `readonly`), a caller could
+  make a key exportable (`PUT /keys/{id}/export-policy`), rewrite its grants
+  (`PUT /keys/{id}/access-policy`), change access settings (`PUT
+  /access/settings`), drop a key's approval requirement (`PUT
+  /keys/{id}/approval`), rotate it, or reach the destroy handler. Key
+  *use* (encrypt, decrypt, export of material) was not affected: it already
+  required a verified token and a grant.
+- **What to check on existing deployments.** Review the audit log for
+  `audit.key.export_policy_updated`, `audit.key.access_policy_updated`,
+  `audit.key.access_settings_updated`, `audit.key.approval_updated`,
+  `audit.key.access_group_members_updated`, `audit.key.rotate`,
+  `audit.key.destroy_scheduled` and `audit.key.destroyed` before this release, especially with `updated_by: "api"` or
+  no actor. Reset any export policy, grant or approval you didn't make.
+- **Fix.**
+  - Keycore refuses every request without a verified token (`401`, audited
+    as `audit.key.request_refused`, `reason: unauthenticated`), except the
+    three reconciler routes that authenticate with the internal token.
+  - The 16 access-management routes (`/keys/{id}/access-policy`,
+    `/access/groups`, `/access/settings`, `/access/interface-*`) are on the
+    `pkg/route` kernel with `key.access.read`, `key.access.manage` and
+    `key.access.admin`. Changing a key's grants also needs the caller to
+    have created the key or be a tenant admin (`403`, `reason:
+    not_key_owner`).
+  - The 22 key-management writes (create, import, form, bulk, update,
+    rotate, activate, deactivate, disable, destroy, versions, export policy,
+    approval, usage limit and reset, IV mode, tags) are on the kernel with
+    `key.create`, `key.import`, `key.form`, `key.update`, `key.rotate`,
+    `key.activate`, `key.deactivate`, `key.disable`, `key.destroy`,
+    `key.export_policy_update`, `key.approval_update`,
+    `key.usage_limit_update` and `key.tags.write`. Each emits
+    `audit.key.<action>_requested`, refusals included. `POST /keys` now
+    refuses a `tenant_id` in the body that differs from the token's.
+- **Breaking.** Callers without a token get `401`. Users whose role lacks
+  these permissions get `403`; built-in `admin` / `tenant-admin` hold `*`,
+  and custom roles need the permissions above. `updated_by` / `created_by`
+  in the access-policy and group bodies are rejected (`400`); the actor is
+  the token's. The dashboard no longer sends them.
+
+### Key access model (design, binding)
+- [docs/SECURITY/KEY_ACCESS_MODEL.md](docs/SECURITY/KEY_ACCESS_MODEL.md):
+  one decision for every interface (usage mask, lifecycle phase, grants and
+  label policies, conditions, explicit deny), the full key-usage vocabulary
+  with the enforcement point of each usage, KMIP properties (contact,
+  application namespaces, custom attributes, alternative names, aliases,
+  links, dates), separation of duties, and the phases. Still open from phase
+  0: enforcing the declared usage, delegated usage with the user's token
+  (dataprotect, payment, certs), step-up MFA from a verified claim instead
+  of the `X-Step-Up-Auth` header, and key visibility.
+
 ## [3.2.0-beta] — 2026-09-29
 
 ### Crypto agility measured against NIST's transition schedule (CSWP 39-upd1)

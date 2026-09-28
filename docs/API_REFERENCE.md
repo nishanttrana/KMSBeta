@@ -863,14 +863,55 @@ curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id
 
 ### Caller identity and access denials
 
-Every key operation needs a verified token (a user token through the
-gateway, or a service JWT); a request without one gets `403 access_denied`
-with `reason: authentication_required`. Keycore refuses to start without the
+Every keycore request needs a verified token (a user token through the
+gateway, or a service JWT). Since 4.0.0-beta a request without one gets
+`401 unauthorized` before any handler runs, audited as
+`audit.key.request_refused` (`reason: unauthenticated`). The only exceptions
+are the reconciler routes `GET /keys/due-for-lifecycle`, `POST
+/tenants/onboard` and `POST /keys/{id}/archive`, which require the
+`X-Internal-Token` instead. Keycore refuses to start without the
 key that verifies tokens. Keycore decides key access from the verified token only. `X-Actor-*`,
 `X-KMS-Subject` and `X-KMS-Interface` headers are ignored for authorization
 and recorded in `audit.key.actor_headers_ignored`. A key operation the caller
 may not perform returns `403 access_denied` and emits
 `audit.key.access_refused` with a `reason`.
+
+### Key and access management permissions (4.0.0-beta)
+
+These routes go through the `pkg/route` kernel: a caller without the
+permission gets `403` (`reason: permission_denied`), audited under the
+route's own subject. Built-in `admin` and `tenant-admin` hold `*`; other
+roles need the permission named here. Service principals are allowed.
+
+| Route | Permission | Audit subject |
+|---|---|---|
+| `GET /keys/{id}/access-policy` | `key.access.read` | `access_policy_read` |
+| `PUT /keys/{id}/access-policy` | `key.access.manage`, and the caller created the key or is a tenant admin (else `403 not_key_owner`) | `access_policy_updated` |
+| `GET /access/groups`, `/access/settings`, `/access/interface-policies`, `/access/interface-tls-config`, `/access/interface-ports` | `key.access.read` | `access_groups_listed`, `access_settings_read`, `interface_policies_listed`, `interface_tls_config_read`, `interface_ports_listed` |
+| `POST /access/groups`, `DELETE /access/groups/{id}`, `PUT /access/groups/{id}/members` | `key.access.admin` | `access_group_created`, `access_group_deleted`, `access_group_members_updated` |
+| `PUT /access/settings` | `key.access.admin` | `access_settings_updated` |
+| `POST /access/interface-policies`, `DELETE /access/interface-policies/{id}`, `PUT /access/interface-tls-config`, `POST /access/interface-ports`, `DELETE /access/interface-ports/{name}` | `key.access.admin` | `interface_policy_upserted` / `_deleted`, `interface_tls_config_updated`, `interface_port_upserted` / `_deleted` |
+| `POST /keys` | `key.create` | `create_requested` |
+| `POST /keys/import`, `POST /keys/bulk-import` | `key.import` | `import_requested`, `bulk_import_requested` |
+| `POST /keys/form` | `key.form` | `form_requested` |
+| `PUT /keys/{id}`, `PUT /keys/{id}/iv-mode` | `key.update` | `update_requested`, `iv_mode_update_requested` |
+| `POST /keys/{id}/rotate`, `POST /keys/bulk-rotate` | `key.rotate` | `rotate_requested`, `bulk_rotate_requested` |
+| `POST /keys/{id}/activate`, `POST /keys/{id}/versions/{ver}/activate` | `key.activate` | `activate_requested`, `version_activate_requested` |
+| `POST /keys/{id}/deactivate`, `POST /keys/{id}/versions/{ver}/deactivate` | `key.deactivate` | `deactivate_requested`, `version_deactivate_requested` |
+| `POST /keys/{id}/disable` | `key.disable` | `disable_requested` |
+| `POST /keys/{id}/destroy`, `DELETE /keys/{id}/versions/{ver}`, `POST /keys/bulk-delete` | `key.destroy` | `destroy_requested`, `version_delete_requested`, `bulk_delete_requested` |
+| `PUT /keys/{id}/export-policy` | `key.export_policy_update` | `export_policy_update_requested` |
+| `PUT /keys/{id}/approval` | `key.approval_update` | `approval_update_requested` |
+| `PUT /keys/{id}/usage/limit`, `POST /keys/{id}/usage/reset` | `key.usage_limit_update` | `usage_limit_update_requested`, `usage_reset_requested` |
+| `POST /tags`, `DELETE /tags/{name}` | `key.tags.write` | `tag_upsert_requested`, `tag_delete_requested` |
+
+The actor is the verified token's. `updated_by` in `PUT
+/keys/{id}/access-policy` and `created_by` in `POST /access/groups` are
+rejected with `400` (they were trusted before 4.0.0-beta), and the
+access-policy body must be `{"grants": [...]}` (the bare-array form is
+gone). A `tenant_id` in a request body must match the token's tenant
+(`403 tenant_mismatch`). The model these routes are part of is
+[SECURITY/KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md).
 
 ### POST /svc/keycore/system-keys/ensure
 
@@ -2776,7 +2817,9 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
-- `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored): keycore key access
+- `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
+- `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`, `interface_tls_config_read`, `interface_tls_config_updated`, `interface_ports_listed`, `interface_port_upserted`, `interface_port_deleted`: keycore access management (kernel, 4.0.0-beta)
+- `audit.key.<action>_requested` for `create`, `import`, `form`, `bulk_import`, `bulk_rotate`, `bulk_delete`, `update`, `rotate`, `activate`, `deactivate`, `disable`, `destroy`, `export_policy_update`, `version_activate`, `version_deactivate`, `version_delete`, `usage_limit_update`, `usage_reset`, `approval_update`, `iv_mode_update`, `tag_upsert`, `tag_delete`: keycore key-management requests (kernel, 4.0.0-beta)
 - `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
 | `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |

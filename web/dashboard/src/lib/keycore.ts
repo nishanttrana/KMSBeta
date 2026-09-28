@@ -1213,21 +1213,18 @@ export async function getKeyAccessPolicy(
   return payload.policy || { tenant_id: session.tenantId, key_id: keyId, grants: [] };
 }
 
+// The actor is taken from the session token; keycore rejects a body actor.
 export async function setKeyAccessPolicy(
   session: AuthSession,
   keyId: string,
-  grants: KeyAccessGrant[],
-  updatedBy?: string
+  grants: KeyAccessGrant[]
 ): Promise<void> {
   await apiRequest<Record<string, unknown>>(
     session,
     `/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        grants: Array.isArray(grants) ? grants : [],
-        updated_by: String(updatedBy || "").trim()
-      })
+      body: JSON.stringify({ grants: Array.isArray(grants) ? grants : [] })
     }
   );
 }
@@ -1354,7 +1351,7 @@ export async function listKeyAccessGroups(session: AuthSession): Promise<KeyAcce
 
 export async function createKeyAccessGroup(
   session: AuthSession,
-  input: { name: string; description?: string; created_by?: string }
+  input: { name: string; description?: string }
 ): Promise<KeyAccessGroup> {
   const payload = await apiRequest<APICreateAccessGroupResponse>(
     session,
@@ -1363,8 +1360,7 @@ export async function createKeyAccessGroup(
       method: "POST",
       body: JSON.stringify({
         name: String(input?.name || "").trim(),
-        description: String(input?.description || "").trim(),
-        created_by: String(input?.created_by || "").trim()
+        description: String(input?.description || "").trim()
       })
     }
   );

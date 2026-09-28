@@ -7,6 +7,54 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Key access: one decision, four layers, enforced usage (4.0.0-beta)
+
+**Decision.** The owner asked for CipherTrust-level key granularity ("not
+directly copied", "strong key activity", no existing feature lost) and for
+the design to be implemented "properly and strictly". Key access is one
+keycore decision for every interface: usage mask, lifecycle phase, grant or
+label policy, conditions, and explicit deny, which always wins. The model,
+its enforcement points and the strict implementation rules are in
+[SECURITY/KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md). 4.0.0-beta
+starts phase 0: keycore refuses tokenless requests, and its access and
+key-management routes go through `pkg/route` with permissions, owner-or-admin
+for grant changes, and the actor from the token.
+
+**Why.** CipherTrust stores dates like protect-stop and usage bits without
+acting on all of them, and splits KMIP, NAE and CTE metadata into separate
+tabs that can disagree. A single decision fed by the same fields for every
+protocol can't drift, and each layer refuses with its own reason, so the
+audit trail explains every denial. Reviewing it found that keycore's
+management routes had no permission check and accepted tokenless requests,
+which moved the route work to the front.
+
+**Rejected.**
+- *Copying CipherTrust's screens and 26 flat usage checkboxes.* Usages are
+  grouped, filtered by algorithm, and offered only where an operation
+  enforces them. EMV cryptogram usages are left out until payment implements
+  them.
+- *Label policies in `services/policy`.* That service is the tenant
+  guardrail layer; putting grants there adds a network hop to every crypto
+  operation. Label policies live in keycore next to grants (pending the
+  owner's confirmation, model section 13).
+- *Migrating the key-management handler bodies in the same change.* They
+  carry domain logic that the rotation scheduler and playbooks share. They
+  go through the kernel via a thin adapter now (permission, tenant check,
+  `audit.key.<action>_requested` including refusals), and the service keeps
+  its domain events. Moving the bodies onto `route.Call` is the rest of
+  keycore's migration.
+- *Keeping `updated_by` / `created_by` accepted but ignored.* Rejected: a
+  client that sends an actor has a bug or is forging one; a 400 surfaces it.
+
+**Enforced by.** `TestTokenlessManagementRequestsAreRefused`,
+`TestReadonlyUserCannotManageKeys`, `TestKeyGrantsChangeOnlyByCreatorOrAdmin`,
+`TestAccessRoutesTakeActorFromTokenOnly`,
+`TestCreateKeyRefusesAnotherTenantInBody`, and `routetest.RefusalsAudited`
+on both new routers. The model's section 10 rules bind later phases, and
+CLAUDE.md points to it.
+
+---
+
 ## 2026-09-29 — Crypto agility: one cited NIST catalogue, drafts shown as proposed (3.2.0-beta)
 
 **Decision.** The owner asked for the Crypto Agility tab to follow NIST

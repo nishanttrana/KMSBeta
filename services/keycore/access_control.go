@@ -445,6 +445,9 @@ func (s *Service) ReplaceKeyAccessPolicy(ctx context.Context, tenantID string, k
 	if isDeletedLike(key.Status) {
 		return errors.New("cannot update access policy for deleted keys")
 	}
+	if err := authorizeAccessPolicyChange(accessActorFromContext(ctx), key); err != nil {
+		return err
+	}
 
 	settings, err := s.store.GetKeyAccessSettings(ctx, tenantID)
 	if err != nil {
@@ -518,15 +521,21 @@ func (s *Service) ReplaceKeyAccessPolicy(ctx context.Context, tenantID string, k
 		}
 	}
 
-	if err := s.store.ReplaceKeyAccessGrants(ctx, tenantID, keyID, normalized, updatedBy); err != nil {
-		return err
+	return s.store.ReplaceKeyAccessGrants(ctx, tenantID, keyID, normalized, updatedBy)
+}
+
+// authorizeAccessPolicyChange lets a tenant admin change any key's grants
+// and anyone else only the grants of a key they created. Holding
+// key.access.manage (checked by the route) is not enough on its own: without
+// this, every holder could grant themselves any key.
+func authorizeAccessPolicyChange(actor AccessActor, key Key) error {
+	if actorIsServicePrincipal(actor) || (actor.Authenticated && actorIsAdmin(actor)) {
+		return nil
 	}
-	_ = s.publishAudit(ctx, "audit.key.access_policy_updated", tenantID, map[string]any{
-		"key_id":      keyID,
-		"grant_count": len(normalized),
-		"updated_by":  strings.TrimSpace(updatedBy),
-	})
-	return nil
+	if actor.Authenticated && actorMatchesCreator(actor, key.CreatedBy) {
+		return nil
+	}
+	return refuse("not_key_owner", "access denied: only the key's creator or a tenant admin may change its grants")
 }
 
 func (s *Service) ListAccessGroups(ctx context.Context, tenantID string) ([]AccessGroup, error) {
@@ -556,10 +565,6 @@ func (s *Service) CreateAccessGroup(ctx context.Context, tenantID string, name s
 	if err != nil {
 		return AccessGroup{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.key.access_group_created", tenantID, map[string]any{
-		"group_id": out.ID,
-		"name":     out.Name,
-	})
 	return out, nil
 }
 
@@ -572,17 +577,14 @@ func (s *Service) DeleteAccessGroup(ctx context.Context, tenantID string, groupI
 	if err := s.store.DeleteAccessGroup(ctx, tenantID, groupID); err != nil {
 		return err
 	}
-	_ = s.publishAudit(ctx, "audit.key.access_group_deleted", tenantID, map[string]any{
-		"group_id": groupID,
-	})
 	return nil
 }
 
-func (s *Service) SetAccessGroupMembers(ctx context.Context, tenantID string, groupID string, userIDs []string) error {
+func (s *Service) SetAccessGroupMembers(ctx context.Context, tenantID string, groupID string, userIDs []string) ([]string, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	groupID = strings.TrimSpace(groupID)
 	if tenantID == "" || groupID == "" {
-		return errors.New("tenant_id and group_id are required")
+		return nil, errors.New("tenant_id and group_id are required")
 	}
 	normalized := make([]string, 0, len(userIDs))
 	seen := map[string]struct{}{}
@@ -598,12 +600,7 @@ func (s *Service) SetAccessGroupMembers(ctx context.Context, tenantID string, gr
 		normalized = append(normalized, trimmed)
 	}
 	if err := s.store.ReplaceAccessGroupMembers(ctx, tenantID, groupID, normalized); err != nil {
-		return err
+		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.key.access_group_members_updated", tenantID, map[string]any{
-		"group_id":    groupID,
-		"user_count":  len(normalized),
-		"member_user": normalized,
-	})
-	return nil
+	return normalized, nil
 }

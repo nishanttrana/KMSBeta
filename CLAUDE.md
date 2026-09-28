@@ -253,6 +253,16 @@ an approach, record it here or in the matching doc below.
   (CycloneDX/SPDX) for the customer's vulnerability-management tool. Key
   compromise advisories, quantum-vulnerable classification and CI scans of
   our own release are not this and stay (docs/DECISIONS.md).
+- **Key access follows one model, strictly** (owner directive, 2026-09-29:
+  key management as granular as CipherTrust, "not directly copied", no
+  existing feature lost, "implemented properly and strictly"). Every change
+  to key access, key usage, key metadata or the key management UI follows
+  [docs/SECURITY/KEY_ACCESS_MODEL.md](docs/SECURITY/KEY_ACCESS_MODEL.md)
+  and its section 10 rules. In short: one keycore decision for every
+  interface; a usage, date or field is offered only with the code that
+  enforces it and a test of the refusal; services acting for a user pass the
+  user's verified token and the usage; deny wins. A departure updates that
+  document and docs/DECISIONS.md in the same commit.
 - **One home per view** (owner, 2026-09-28: Analytics under both Audit Log
   and Overview, Alerts under both Audit Log and Alert Center, and a
   Compliance page that "is not accurate"). Charts and trends go in Overview →

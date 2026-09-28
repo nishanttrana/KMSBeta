@@ -251,7 +251,7 @@ func TestCreateKeyPolicyDeniedReturns403(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -272,7 +272,7 @@ func TestImportKeyRawMethod(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys/import", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -303,7 +303,7 @@ func TestImportKeyPEMAutodetect(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys/import", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -377,7 +377,7 @@ func TestImportKeyWrappedEnvelope(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys/import", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -411,7 +411,7 @@ func TestImportKeyTR31Method(t *testing.T) {
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys/import", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -438,7 +438,7 @@ func TestInterfaceTLSConfigAPIOverridesTLSInterfaceWrites(t *testing.T) {
 	})
 	putReq := httptest.NewRequest(http.MethodPut, "/access/interface-tls-config?tenant_id=t1", bytes.NewReader(tlsConfigBody))
 	putRR := httptest.NewRecorder()
-	h.ServeHTTP(putRR, putReq)
+	serveAsAdmin(h, putRR, putReq)
 	if putRR.Code != http.StatusOK {
 		t.Fatalf("put tls config status=%d body=%s", putRR.Code, putRR.Body.String())
 	}
@@ -455,7 +455,7 @@ func TestInterfaceTLSConfigAPIOverridesTLSInterfaceWrites(t *testing.T) {
 	})
 	postReq := httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1", bytes.NewReader(portBody))
 	postRR := httptest.NewRecorder()
-	h.ServeHTTP(postRR, postReq)
+	serveAsAdmin(h, postRR, postReq)
 	if postRR.Code != http.StatusOK {
 		t.Fatalf("upsert interface port status=%d body=%s", postRR.Code, postRR.Body.String())
 	}
@@ -477,7 +477,7 @@ func TestInterfaceTLSConfigAPIOverridesTLSInterfaceWrites(t *testing.T) {
 
 	getReq := httptest.NewRequest(http.MethodGet, "/access/interface-tls-config?tenant_id=t1", nil)
 	getRR := httptest.NewRecorder()
-	h.ServeHTTP(getRR, getReq)
+	serveAsAdmin(h, getRR, getReq)
 	if getRR.Code != http.StatusOK {
 		t.Fatalf("get tls config status=%d body=%s", getRR.Code, getRR.Body.String())
 	}

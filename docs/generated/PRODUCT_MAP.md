@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-28T19:09:44Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T19:14:54Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `898` across `30` services
-- Backend routes on the `pkg/route` kernel: `180` (permission and audit action in `backend-routes.csv`)
+- Backend HTTP routes discovered: `879` across `30` services
+- Backend routes on the `pkg/route` kernel: `196` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `561`
-- Frontend call sites with exact backend route match: `516`
-- Frontend call sites needing review or dynamic/runtime confirmation: `45`
+- Frontend call sites with exact backend route match: `503`
+- Frontend call sites needing review or dynamic/runtime confirmation: `58`
 - Clickable controls with static `onClick` handlers: `755`
-- Backend request flows with handler/service/package summaries: `898`
+- Backend request flows with handler/service/package summaries: `879`
 
 ## How To Use This For Launch
 
@@ -144,7 +144,7 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (161 routes)"]
+  svc_keycore["keycore (142 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (12 routes)"]
   svc_pqc["pqc (16 routes)"]
@@ -219,7 +219,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 161 | 111 |
+| keycore | 142 | 111 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -274,6 +274,19 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /health/scores | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 6 |
 | keycore | POST | /health/scores/{param}/refresh | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 12 |
 | keycore | GET | /inventory/export | trackedFetch | web/dashboard/src/lib/keyInventory.ts | 18 |
+| keycore | POST | /keys | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 587 |
+| keycore | POST | /keys/form | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 711 |
+| keycore | POST | /keys/import | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 742 |
+| keycore | POST | /keys/{param}/rotate | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 777 |
+| keycore | POST | /keys/{param}/destroy | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1117 |
+| keycore | POST | /keys/{param}/activate | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1128 |
+| keycore | POST | /keys/{param}/activate | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1140 |
+| keycore | POST | /keys/{param}/deactivate | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1154 |
+| keycore | POST | /keys/{param}/disable | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1162 |
+| keycore | PUT | /keys/{param}/usage/limit | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1175 |
+| keycore | PUT | /keys/{param}/export-policy | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1193 |
+| keycore | POST | /tags | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1408 |
+| keycore | DELETE | /tags/{param} | keycore.apiRequest | web/dashboard/src/lib/keycore.ts | 1423 |
 | keycore | GET | /ml/anomalies | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 6 |
 | keycore | POST | /ml/detect | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 12 |
 | keycore | GET | /ml/access-heatmap | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 21 |
@@ -285,7 +298,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 302 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
-Showing `45` of `45`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `58` of `58`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -414,7 +427,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
 | compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
 
-Showing `120` of `375`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `368`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

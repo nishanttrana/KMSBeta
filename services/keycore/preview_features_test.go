@@ -17,7 +17,7 @@ func TestEnterpriseControlsCarryFeatureStatus(t *testing.T) {
 	post := func(path string, body map[string]any) *httptest.ResponseRecorder {
 		raw, _ := json.Marshal(body)
 		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, path+"?tenant_id=t1", bytes.NewReader(raw)))
+		serveAsAdmin(h, rr, httptest.NewRequest(http.MethodPost, path+"?tenant_id=t1", bytes.NewReader(raw)))
 		return rr
 	}
 	for _, path := range []string{"/enterprise/federation/providers", "/enterprise/binding/policies", "/enterprise/sharing/grants",

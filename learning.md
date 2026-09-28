@@ -5,6 +5,83 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### Key access overhaul: build it to the model, strictly
+- **What happened:** the owner asked for CipherTrust-level key granularity
+  (per-key matrix, label-selector policies, KMIP properties, full key usage,
+  enforced dates), "not copied" and without losing existing features. The
+  review behind it found the gaps below.
+- **Rule:** every key-access or key-metadata change follows
+  [docs/SECURITY/KEY_ACCESS_MODEL.md](docs/SECURITY/KEY_ACCESS_MODEL.md)
+  section 10. In short: one decision path for every interface; a usage, date
+  or field is offered only with the code that enforces it and a test of the
+  refusal; identity only from a verified credential; every route on
+  `pkg/route`; every change and refusal audited; deny wins; per-record
+  migrations. A departure updates the model doc in the same commit.
+
+### Hardening the crypto path hid an open management path
+- **What happened:** keycore's crypto operations were carefully guarded
+  (`enforceKeyAccess`, refusal audit, header spoof tests), but its
+  management routes had no permission check and accepted requests with no
+  token at all. A probe test showed that without a token `PUT
+  /keys/{id}/export-policy`, `PUT /keys/{id}/access-policy`, `PUT
+  /access/settings` and `PUT /keys/{id}/approval` returned 200, and a
+  readonly user's token did the same. Envoy routes `/svc/keycore/` from the
+  public listener without validating JWTs, so this was reachable from
+  outside. Fixed in 4.0.0-beta.
+- **Why it slipped through:** three reasonable-looking choices combined.
+  `tenantcheck.Enforce` skips when there is no token ("so tokenless internal
+  crypto callers keep working"), keycore's middleware only parsed a token if
+  one was sent, and `docs/ARCHITECTURE_MIGRATION.md` listed keycore among
+  services "with HTTP permission checks" because its crypto path had them.
+  Every test of access control exercised key *use*; none tried to *change* a
+  key without a token.
+- **Rule:** for each service, test the management writes (policy, grants,
+  settings, export, destroy) with no token and with a no-permission token,
+  not just the data plane. A "skip if unauthenticated" branch in a shared
+  check is a bypass unless the caller refuses tokenless requests first.
+
+### A body field that names the actor is identity from the body
+- **What happened:** `PUT /keys/{id}/access-policy` and `POST /access/groups`
+  took `updated_by` / `created_by` from the JSON body and wrote it to the
+  grant records and the audit event, so the record of who changed access
+  could be forged.
+- **Why it slipped through:** it was framed as a display convenience ("who
+  to show"), not as identity, so the rule-4 sweep of headers didn't look at
+  body fields.
+- **Rule:** attribution is identity. Take it from the verified token, and
+  reject a body that names an actor (the kernel's `Decode` refuses unknown
+  fields; don't add the field back "for compatibility").
+
+### A usage checkbox without an enforcement point is a fake feature
+- **What happened:** reviewing CipherTrust's key-usage list for Vecta found
+  that keycore's own `purpose` was never enforced (an `encrypt-decrypt` key
+  also wraps and MACs), KMIP's usage mask was flattened into that string,
+  and CipherTrust-style "Generate / Validate Cryptogram" has no
+  implementation anywhere in the repo.
+- **Why it slipped through:** `ensureKeySupportsOperation` checks what the
+  *algorithm* can do, which reads like a usage check. Nobody asked what the
+  *key* was allowed to do.
+- **Rule:** list each usage with the function that refuses it before adding
+  it to a mask or UI (KEY_ACCESS_MODEL.md section 4). No enforcement point
+  means it isn't offered.
+
+### A trusted service principal erases the user behind it
+- **What happened:** dataprotect (FPE), payment (TR-31 / PIN translate) and
+  certs (CA signing) call keycore with their own service JWT, and service
+  principals skip per-key grants. So keycore can't tell which user asked or
+  for which usage, and anyone who can reach dataprotect can FPE with any key
+  in the tenant. Open; phase 0 in KEY_ACCESS_MODEL.md section 5.
+- **Rule:** a service acting for a user forwards the user's verified token
+  and the intended usage; keycore checks both. A bare service identity is
+  limited to the usages listed for it.
+
+### Assurance level from a header is identity from a header
+- **What happened:** keycore's posture step-up check is satisfied by an
+  `X-Step-Up-Auth: true` request header; tokens carry no MFA claim. Open;
+  phase 0 in KEY_ACCESS_MODEL.md.
+- **Rule:** MFA / step-up comes from a claim auth signs after the second
+  factor, never from a header the caller sets.
+
 ### Four algorithm lists, four answers, and one of them enforced policy
 - **What happened:** keycore agility, pqc, discovery and `pkg/cbom` each kept
   their own algorithm classifier. They disagreed on almost every row:

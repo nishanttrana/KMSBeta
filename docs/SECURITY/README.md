@@ -17,6 +17,11 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   internal one is mTLS, from the internal-services Sub CA. Covers the PKI
   layout, PQC key exchange, rotation, current (non-compliant) status and the
   delivery plan.
+- [KEY_ACCESS_MODEL.md](KEY_ACCESS_MODEL.md): the binding design for key
+  access and key management: one decision for every interface (usage mask,
+  lifecycle phase, grants and label policies, conditions, explicit deny),
+  where each key usage is enforced, KMIP properties, route permissions, the
+  strict implementation rules, and the phases.
 - [REAL_CAPABILITY.md](REAL_CAPABILITY.md): every feature is 100% real
   capability, never mimicked or faked; what counts as fake, how
   `make conformance` catches it, and the features removed for faking.

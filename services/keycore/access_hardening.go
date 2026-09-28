@@ -489,17 +489,6 @@ func (s *Service) UpdateKeyAccessSettings(ctx context.Context, settings KeyAcces
 	if err != nil {
 		return KeyAccessSettings{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.key.access_settings_updated", settings.TenantID, map[string]any{
-		"deny_by_default":                    out.DenyByDefault,
-		"require_approval_for_policy_change": out.RequireApprovalForPolicyChange,
-		"grant_default_ttl_minutes":          out.GrantDefaultTTLMinutes,
-		"grant_max_ttl_minutes":              out.GrantMaxTTLMinutes,
-		"enforce_signed_requests":            out.EnforceSignedRequests,
-		"replay_window_seconds":              out.ReplayWindowSeconds,
-		"nonce_ttl_seconds":                  out.NonceTTLSeconds,
-		"require_interface_policies":         out.RequireInterfacePolicies,
-		"updated_by":                         out.UpdatedBy,
-	})
 	return out, nil
 }
 
@@ -520,14 +509,6 @@ func (s *Service) UpsertKeyInterfaceSubjectPolicy(ctx context.Context, policy Ke
 	if err != nil {
 		return KeyInterfaceSubjectPolicy{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.key.interface_policy_upserted", out.TenantID, map[string]any{
-		"id":             out.ID,
-		"interface_name": out.InterfaceName,
-		"subject_type":   out.SubjectType,
-		"subject_id":     out.SubjectID,
-		"operations":     out.Operations,
-		"enabled":        out.Enabled,
-	})
 	return out, nil
 }
 
@@ -537,11 +518,7 @@ func (s *Service) DeleteKeyInterfaceSubjectPolicy(ctx context.Context, tenantID 
 	if tenantID == "" || id == "" {
 		return errors.New("tenant_id and id are required")
 	}
-	if err := s.store.DeleteKeyInterfaceSubjectPolicy(ctx, tenantID, id); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.key.interface_policy_deleted", tenantID, map[string]any{"id": id})
-	return nil
+	return s.store.DeleteKeyInterfaceSubjectPolicy(ctx, tenantID, id)
 }
 
 func (s *Service) ListKeyInterfacePorts(ctx context.Context, tenantID string) ([]KeyInterfacePort, error) {
@@ -603,12 +580,6 @@ func (s *Service) UpdateKeyInterfaceTLSConfig(ctx context.Context, in KeyInterfa
 			return KeyInterfaceTLSConfig{}, err
 		}
 	}
-	_ = s.publishAudit(ctx, "audit.key.interface_tls_config_updated", out.TenantID, map[string]any{
-		"certificate_source": out.CertSource,
-		"ca_id":              out.CAID,
-		"certificate_id":     out.CertificateID,
-		"updated_by":         out.UpdatedBy,
-	})
 	return out, nil
 }
 
@@ -626,18 +597,6 @@ func (s *Service) UpsertKeyInterfacePort(ctx context.Context, in KeyInterfacePor
 	if err != nil {
 		return KeyInterfacePort{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.key.interface_port_upserted", out.TenantID, map[string]any{
-		"interface_name": out.InterfaceName,
-		"bind_address":   out.BindAddress,
-		"port":           out.Port,
-		"protocol":       out.Protocol,
-		"pqc_mode":       out.PQCMode,
-		"cert_source":    out.CertSource,
-		"ca_id":          out.CAID,
-		"certificate_id": out.CertificateID,
-		"enabled":        out.Enabled,
-		"description":    out.Description,
-	})
 	return out, nil
 }
 
@@ -647,9 +606,5 @@ func (s *Service) DeleteKeyInterfacePort(ctx context.Context, tenantID string, i
 	if tenantID == "" || interfaceName == "" {
 		return errors.New("tenant_id and interface_name are required")
 	}
-	if err := s.store.DeleteKeyInterfacePort(ctx, tenantID, interfaceName); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.key.interface_port_deleted", tenantID, map[string]any{"interface_name": interfaceName})
-	return nil
+	return s.store.DeleteKeyInterfacePort(ctx, tenantID, interfaceName)
 }

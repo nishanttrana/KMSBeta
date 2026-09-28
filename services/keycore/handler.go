@@ -38,6 +38,7 @@ type AuditPublisher interface {
 type Handler struct {
 	svc         *Service
 	mux         *http.ServeMux
+	tokenless   *http.ServeMux
 	parseToken  func(string) (*pkgauth.Claims, error)
 	kernelAudit route.Emitter
 }
@@ -45,7 +46,21 @@ type Handler struct {
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
 	h.mux = h.routes()
+	h.tokenless = h.tokenlessRoutes()
 	return h
+}
+
+// tokenlessRoutes are the only keycore routes served without a verified JWT:
+// the reconciler routes, which authenticate with the internal token
+// themselves. Every other request without a token is refused in ServeHTTP. Until 4.0.0-beta tokenless requests
+// reached every handler, and management routes (export policy, grants,
+// access settings, approval) applied them.
+func (h *Handler) tokenlessRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /keys/due-for-lifecycle", internalauth.RequireToken(h.handleDueForLifecycle))
+	mux.HandleFunc("POST /tenants/onboard", internalauth.RequireToken(h.handleTenantOnboard))
+	mux.HandleFunc("POST /keys/{id}/archive", internalauth.RequireToken(h.handleArchiveKey))
+	return mux
 }
 
 func (h *Handler) SetTokenParser(parser func(string) (*pkgauth.Claims, error)) {
@@ -93,6 +108,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"description":    "identity asserted in X-Actor-*/X-KMS-* headers was ignored; access is decided from the verified token only",
 		})
 	}
+	if _, ok := pkgauth.ClaimsFromContext(ctx); !ok {
+		if _, pattern := h.tokenless.Handler(r); pattern == "" {
+			_ = h.svc.publishAudit(ctx, "audit.key.request_refused", tenantFromRequest(r), map[string]any{
+				"path":                     r.URL.Path,
+				"method":                   r.Method,
+				"source_ip":                actor.SourceIP,
+				"result":                   "refused",
+				"reason":                   "unauthenticated",
+				"severity":                 "warning",
+				"description":              "keycore requires a verified token on every route except the internal-token routes",
+				"unverified_actor_headers": actor.Unverified,
+			})
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "authentication required", requestID(r), "")
+			return
+		}
+	}
 	ctx = contextWithAccessActor(ctx, actor)
 	h.mux.ServeHTTP(w, r.WithContext(ctx))
 }
@@ -114,57 +145,21 @@ func parseStepUpAuthSignal(r *http.Request) bool {
 
 func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /keys", h.handleCreateKey)
-	mux.HandleFunc("POST /keys/import", h.handleImportKey)
-	mux.HandleFunc("POST /keys/form", h.handleFormKey)
-	mux.HandleFunc("POST /keys/bulk-import", h.handleBulkImport)
-	mux.HandleFunc("POST /keys/bulk-rotate", h.handleBulkRotate)
-	mux.HandleFunc("POST /keys/bulk-delete", h.handleBulkDelete)
+	h.keyAdminRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys", h.handleListKeys)
 	mux.HandleFunc("GET /keys/{id}", h.handleGetKey)
-	mux.HandleFunc("PUT /keys/{id}", h.handleUpdateKey)
-	mux.HandleFunc("POST /keys/{id}/rotate", h.handleRotateKey)
-	mux.HandleFunc("POST /keys/{id}/activate", h.handleActivateKey)
-	mux.HandleFunc("POST /keys/{id}/deactivate", h.handleDeactivateKey)
-	mux.HandleFunc("POST /keys/{id}/disable", h.handleDisableKey)
-	mux.HandleFunc("POST /keys/{id}/destroy", h.handleDestroyKey)
 	mux.HandleFunc("POST /keys/{id}/export", h.handleExportKey)
-	mux.HandleFunc("PUT /keys/{id}/export-policy", h.handleSetExportPolicy)
 	mux.HandleFunc("GET /keys/{id}/versions", h.handleListVersions)
 	mux.HandleFunc("GET /keys/{id}/versions/{ver}", h.handleGetVersion)
-	mux.HandleFunc("POST /keys/{id}/versions/{ver}/activate", h.handleActivateVersion)
-	mux.HandleFunc("POST /keys/{id}/versions/{ver}/deactivate", h.handleDeactivateVersion)
-	mux.HandleFunc("DELETE /keys/{id}/versions/{ver}", h.handleDeleteVersion)
 	mux.HandleFunc("GET /keys/{id}/kcv", h.handleGetKCV)
 
 	mux.HandleFunc("GET /keys/{id}/usage", h.handleGetUsage)
 	mux.HandleFunc("POST /keys/{id}/usage/meter", h.handleMeterUsage)
-	mux.HandleFunc("PUT /keys/{id}/usage/limit", h.handleSetUsageLimit)
-	mux.HandleFunc("POST /keys/{id}/usage/reset", h.handleResetUsage)
-	mux.HandleFunc("PUT /keys/{id}/approval", h.handleSetApproval)
 	mux.HandleFunc("GET /keys/{id}/approval", h.handleGetApproval)
-	mux.HandleFunc("GET /keys/{id}/access-policy", h.handleGetKeyAccessPolicy)
-	mux.HandleFunc("PUT /keys/{id}/access-policy", h.handleSetKeyAccessPolicy)
-	mux.HandleFunc("PUT /keys/{id}/iv-mode", h.handleSetIVMode)
+	h.accessRouter(kernelEmitter{h}).MountOn(mux)
 	mux.HandleFunc("GET /keys/{id}/iv-log", h.handleGetIVLog)
 	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.handleGetIVByRef)
-	mux.HandleFunc("GET /access/groups", h.handleListAccessGroups)
-	mux.HandleFunc("POST /access/groups", h.handleCreateAccessGroup)
-	mux.HandleFunc("DELETE /access/groups/{id}", h.handleDeleteAccessGroup)
-	mux.HandleFunc("PUT /access/groups/{id}/members", h.handleSetAccessGroupMembers)
-	mux.HandleFunc("GET /access/settings", h.handleGetAccessSettings)
-	mux.HandleFunc("PUT /access/settings", h.handleSetAccessSettings)
-	mux.HandleFunc("GET /access/interface-policies", h.handleListInterfacePolicies)
-	mux.HandleFunc("POST /access/interface-policies", h.handleUpsertInterfacePolicy)
-	mux.HandleFunc("DELETE /access/interface-policies/{id}", h.handleDeleteInterfacePolicy)
-	mux.HandleFunc("GET /access/interface-tls-config", h.handleGetInterfaceTLSConfig)
-	mux.HandleFunc("PUT /access/interface-tls-config", h.handlePutInterfaceTLSConfig)
-	mux.HandleFunc("GET /access/interface-ports", h.handleListInterfacePorts)
-	mux.HandleFunc("POST /access/interface-ports", h.handleUpsertInterfacePort)
-	mux.HandleFunc("DELETE /access/interface-ports/{name}", h.handleDeleteInterfacePort)
 	mux.HandleFunc("GET /tags", h.handleListTags)
-	mux.HandleFunc("POST /tags", h.handleUpsertTag)
-	mux.HandleFunc("DELETE /tags/{name}", h.handleDeleteTag)
 
 	mux.HandleFunc("POST /keys/{id}/encrypt", h.handleEncrypt)
 	mux.HandleFunc("POST /keys/{id}/decrypt", h.handleDecrypt)
@@ -1198,448 +1193,6 @@ func (h *Handler) handleGetApproval(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"approval": cfg, "request_id": reqID})
-}
-
-func (h *Handler) handleGetKeyAccessPolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	policy, err := h.svc.GetKeyAccessPolicy(r.Context(), tenantID, r.PathValue("id"))
-	if err != nil {
-		code := http.StatusInternalServerError
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "key_access_policy_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"policy":     policy,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleSetKeyAccessPolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req struct {
-		Grants    []KeyAccessGrant `json:"grants"`
-		UpdatedBy string           `json:"updated_by"`
-	}
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	defer r.Body.Close() //nolint:errcheck
-	if len(strings.TrimSpace(string(body))) == 0 {
-		writeErr(w, http.StatusBadRequest, "bad_request", "grants payload is required", reqID, tenantID)
-		return
-	}
-	if err := json.Unmarshal(body, &req); err != nil {
-		// Also allow direct array payload.
-		if arrErr := json.Unmarshal(body, &req.Grants); arrErr != nil {
-			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-			return
-		}
-	}
-
-	updatedBy := strings.TrimSpace(req.UpdatedBy)
-	if updatedBy == "" {
-		actor := accessActorFromContext(r.Context())
-		updatedBy = strings.TrimSpace(actor.UserID)
-		if updatedBy == "" {
-			updatedBy = strings.TrimSpace(actor.Username)
-		}
-		if updatedBy == "" {
-			updatedBy = "api"
-		}
-	}
-
-	if err := h.svc.ReplaceKeyAccessPolicy(r.Context(), tenantID, r.PathValue("id"), req.Grants, updatedBy); err != nil {
-		var approval approvalRequiredError
-		if errors.As(err, &approval) {
-			writeJSON(w, http.StatusAccepted, map[string]any{
-				"status":              "pending_approval",
-				"approval_request_id": approval.RequestID,
-				"request_id":          reqID,
-			})
-			return
-		}
-		code := http.StatusBadRequest
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "key_access_policy_update_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleListAccessGroups(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.svc.ListAccessGroups(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_access_groups_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleCreateAccessGroup(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		CreatedBy   string `json:"created_by"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-
-	createdBy := strings.TrimSpace(req.CreatedBy)
-	if createdBy == "" {
-		actor := accessActorFromContext(r.Context())
-		createdBy = strings.TrimSpace(actor.UserID)
-		if createdBy == "" {
-			createdBy = strings.TrimSpace(actor.Username)
-		}
-		if createdBy == "" {
-			createdBy = "api"
-		}
-	}
-
-	group, err := h.svc.CreateAccessGroup(r.Context(), tenantID, req.Name, req.Description, createdBy)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "create_access_group_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{"group": group, "request_id": reqID})
-}
-
-func (h *Handler) handleDeleteAccessGroup(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	if err := h.svc.DeleteAccessGroup(r.Context(), tenantID, r.PathValue("id")); err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "delete_access_group_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleSetAccessGroupMembers(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req struct {
-		UserIDs []string `json:"user_ids"`
-		Members []string `json:"members"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	userIDs := req.UserIDs
-	if len(userIDs) == 0 && len(req.Members) > 0 {
-		userIDs = req.Members
-	}
-	if err := h.svc.SetAccessGroupMembers(r.Context(), tenantID, r.PathValue("id"), userIDs); err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "set_access_group_members_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleGetAccessSettings(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	settings, err := h.svc.GetKeyAccessSettings(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "access_settings_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"settings":   settings,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleSetAccessSettings(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	current, err := h.svc.GetKeyAccessSettings(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "access_settings_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	var req struct {
-		DenyByDefault                  *bool `json:"deny_by_default"`
-		RequireApprovalForPolicyChange *bool `json:"require_approval_for_policy_change"`
-		GrantDefaultTTLMinutes         *int  `json:"grant_default_ttl_minutes"`
-		GrantMaxTTLMinutes             *int  `json:"grant_max_ttl_minutes"`
-		EnforceSignedRequests          *bool `json:"enforce_signed_requests"`
-		ReplayWindowSeconds            *int  `json:"replay_window_seconds"`
-		NonceTTLSeconds                *int  `json:"nonce_ttl_seconds"`
-		RequireInterfacePolicies       *bool `json:"require_interface_policies"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	if req.DenyByDefault != nil {
-		current.DenyByDefault = *req.DenyByDefault
-	}
-	if req.RequireApprovalForPolicyChange != nil {
-		current.RequireApprovalForPolicyChange = *req.RequireApprovalForPolicyChange
-	}
-	if req.GrantDefaultTTLMinutes != nil {
-		current.GrantDefaultTTLMinutes = *req.GrantDefaultTTLMinutes
-	}
-	if req.GrantMaxTTLMinutes != nil {
-		current.GrantMaxTTLMinutes = *req.GrantMaxTTLMinutes
-	}
-	if req.EnforceSignedRequests != nil {
-		current.EnforceSignedRequests = *req.EnforceSignedRequests
-	}
-	if req.ReplayWindowSeconds != nil {
-		current.ReplayWindowSeconds = *req.ReplayWindowSeconds
-	}
-	if req.NonceTTLSeconds != nil {
-		current.NonceTTLSeconds = *req.NonceTTLSeconds
-	}
-	if req.RequireInterfacePolicies != nil {
-		current.RequireInterfacePolicies = *req.RequireInterfacePolicies
-	}
-	actor := accessActorFromContext(r.Context())
-	current.UpdatedBy = strings.TrimSpace(actor.UserID)
-	if current.UpdatedBy == "" {
-		current.UpdatedBy = strings.TrimSpace(actor.Username)
-	}
-	if current.UpdatedBy == "" {
-		current.UpdatedBy = "api"
-	}
-	out, err := h.svc.UpdateKeyAccessSettings(r.Context(), current)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "access_settings_update_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"settings":   out,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleListInterfacePolicies(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	interfaceName := strings.TrimSpace(r.URL.Query().Get("interface"))
-	items, err := h.svc.ListKeyInterfaceSubjectPolicies(r.Context(), tenantID, interfaceName)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_interface_policies_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"items":      items,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleUpsertInterfacePolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req KeyInterfaceSubjectPolicy
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	req.TenantID = tenantID
-	actor := accessActorFromContext(r.Context())
-	req.CreatedBy = strings.TrimSpace(actor.UserID)
-	if req.CreatedBy == "" {
-		req.CreatedBy = strings.TrimSpace(actor.Username)
-	}
-	if req.CreatedBy == "" {
-		req.CreatedBy = "api"
-	}
-	out, err := h.svc.UpsertKeyInterfaceSubjectPolicy(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "upsert_interface_policy_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"policy":     out,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleDeleteInterfacePolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	if err := h.svc.DeleteKeyInterfaceSubjectPolicy(r.Context(), tenantID, r.PathValue("id")); err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "delete_interface_policy_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleListInterfacePorts(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.svc.ListKeyInterfacePorts(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_interface_ports_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"items":      items,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleGetInterfaceTLSConfig(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	cfg, err := h.svc.GetKeyInterfaceTLSConfig(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "get_interface_tls_config_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"config":     cfg,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handlePutInterfaceTLSConfig(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req KeyInterfaceTLSConfig
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	req.TenantID = tenantID
-	actor := accessActorFromContext(r.Context())
-	req.UpdatedBy = strings.TrimSpace(actor.UserID)
-	if req.UpdatedBy == "" {
-		req.UpdatedBy = strings.TrimSpace(actor.Username)
-	}
-	if req.UpdatedBy == "" {
-		req.UpdatedBy = "api"
-	}
-	out, err := h.svc.UpdateKeyInterfaceTLSConfig(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "put_interface_tls_config_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"config":     out,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleUpsertInterfacePort(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req KeyInterfacePort
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	req.TenantID = tenantID
-	actor := accessActorFromContext(r.Context())
-	req.UpdatedBy = strings.TrimSpace(actor.UserID)
-	if req.UpdatedBy == "" {
-		req.UpdatedBy = strings.TrimSpace(actor.Username)
-	}
-	if req.UpdatedBy == "" {
-		req.UpdatedBy = "api"
-	}
-	out, err := h.svc.UpsertKeyInterfacePort(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "upsert_interface_port_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"item":       out,
-		"request_id": reqID,
-	})
-}
-
-func (h *Handler) handleDeleteInterfacePort(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	interfaceName := strings.TrimSpace(r.PathValue("name"))
-	if err := h.svc.DeleteKeyInterfacePort(r.Context(), tenantID, interfaceName); err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errStoreNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "delete_interface_port_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
 }
 
 func (h *Handler) handleSetIVMode(w http.ResponseWriter, r *http.Request) {

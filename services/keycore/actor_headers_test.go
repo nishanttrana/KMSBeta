@@ -131,20 +131,21 @@ func TestActorHeadersCannotGrantAccess(t *testing.T) {
 	}
 }
 
-// Without any token, headers no longer make a caller "authenticated" or an
-// admin: under deny-by-default the request is refused.
+// Without any token, headers don't make a caller an identity: the request is
+// refused before any handler runs, and the claimed identity is recorded.
 func TestActorHeadersWithoutTokenAreNotAnIdentity(t *testing.T) {
 	h, svc, rec := newActorTestHandler(t)
 	key := ownedKey(t, svc)
-	if _, err := svc.store.UpsertKeyAccessSettings(context.Background(), KeyAccessSettings{TenantID: "t1", DenyByDefault: true}); err != nil {
-		t.Fatal(err)
-	}
 	headers := map[string]string{"X-Actor-User-ID": "owner-1", "X-Actor-Role": "admin", "X-Actor-Permissions": "*"}
-	if w := encryptAs(h, key.ID, nil, headers); w.Code != http.StatusForbidden {
-		t.Fatalf("headers without a token: status %d, want 403 (%s)", w.Code, w.Body)
+	if w := encryptAs(h, key.ID, nil, headers); w.Code != http.StatusUnauthorized {
+		t.Fatalf("headers without a token: status %d, want 401 (%s)", w.Code, w.Body)
 	}
-	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["reason"] != "authentication_required" || d["authenticated"] != false {
+	d := refusalDetails(t, rec, "audit.key.request_refused")
+	if d["reason"] != "unauthenticated" || d["unverified_actor_headers"] == nil {
 		t.Fatalf("details: %+v", d)
+	}
+	if rec.find("audit.key.actor_headers_ignored") == nil {
+		t.Fatal("spoofed headers without a token were not recorded")
 	}
 }
 
@@ -190,17 +191,16 @@ func TestActorBuiltFromVerifiedClaimsOnly(t *testing.T) {
 }
 
 // A key with no grants, in a tenant without deny-by-default, used to be
-// open to any caller without a token. Now every key use needs a verified
-// identity; the creator, an admin and a service principal still work.
+// open to any caller without a token. Now every keycore request needs a
+// verified identity; the creator and a service principal still work.
 func TestAnonymousKeyUseIsRefused(t *testing.T) {
 	h, svc, rec := newActorTestHandler(t)
 	key := ownedKey(t, svc) // created by owner-1, no grants
 
-	if w := encryptAs(h, key.ID, nil, nil); w.Code != http.StatusForbidden {
-		t.Fatalf("no token: status %d, want 403 (%s)", w.Code, w.Body)
+	if w := encryptAs(h, key.ID, nil, nil); w.Code != http.StatusUnauthorized {
+		t.Fatalf("no token: status %d, want 401 (%s)", w.Code, w.Body)
 	}
-	d := refusalDetails(t, rec, "audit.key.access_refused")
-	if d["reason"] != "authentication_required" || d["authenticated"] != false || d["actor"] != "unauthenticated" {
+	if d := refusalDetails(t, rec, "audit.key.request_refused"); d["reason"] != "unauthenticated" {
 		t.Fatalf("refusal details: %+v", d)
 	}
 

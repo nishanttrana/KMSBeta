@@ -14,7 +14,7 @@ cross-cutting rules itself. On 2026-09-26 the services held:
 | HTTP routes, registered on raw `http.ServeMux` in 31 files | ~960 (517 of them writes) | Nothing checks, at registration time, that a route is guarded or audited |
 | Private copies of `writeErr` / `writeJSON` / `requestID` / `decodeJSON` | 26 / 31 / 28 / 28 | A fix to one copy doesn't reach the others |
 | Private copies of `mustTenant` | 22 | Each decides where the tenant comes from; only 36 calls to `tenantcheck.Enforce` exist |
-| Services with HTTP permission checks | a few (auth, keycore, governance, payment; cluster-manager checks for root admin) | In the rest, any authenticated caller in the tenant can do anything |
+| Services with HTTP permission checks | a few (auth, governance, payment; cluster-manager checks for root admin). Keycore was listed here, but only its crypto path checked access: its management routes had no permission check and accepted tokenless requests until 4.0.0-beta | In the rest, any authenticated caller in the tenant can do anything |
 | Specific audit events | ad hoc, success path only | Refusals and failures rely on the generic `http_request` record |
 
 A concrete result was that `POST /secrets` took `tenant_id` from the request
@@ -101,10 +101,14 @@ and the largest last:
 3. `reporting`, `posture`, `compliance`, `governance`, `cloud`, `ai-gateway`
 4. `cluster-manager`, `audit`, `dataprotect`, `certs`, `ekm`, `payment`, `kmip` (HTTP API)
 5. `auth`, then `keycore` (122 write routes; split by handler file). Keycore
-   authorizes per key (grants), not per route, so it needs the phase 1
-   permission vocabulary for key operations first. Until then its identity
-   rule matches the kernel's: the actor is built from verified claims only
-   (the `X-Actor-*` fallback was removed 2026-09-26).
+   authorizes key *use* per key (grants), and key *management* per route.
+   4.0.0-beta refuses every tokenless keycore request and put the
+   access-management routes (`handler_access.go`, fully migrated) and the
+   key-management writes (`handler_key_admin.go`, through a thin adapter
+   over the legacy handlers) on the kernel. Still to do: move those handler
+   bodies onto `route.Call` and delete the service-layer request events,
+   then the read and crypto routes; the model is
+   [SECURITY/KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md).
 
 **Definition of done for each service:**
 - [ ] Every route is registered through `route.Router`; the handler file is
