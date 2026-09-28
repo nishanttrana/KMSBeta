@@ -339,118 +339,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "audit-get-alerts",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /alerts",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/alerts?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/alerts?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-alerts-id",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /alerts/{id}",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/alerts/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/alerts/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-alerts-stats",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /alerts/stats",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/alerts/stats?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/alerts/stats?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-alerts-stream",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /alerts/stream",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/alerts/stream?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/alerts/stream?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "audit-get-audit-cbom-diff",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/cbom/diff",
@@ -768,34 +656,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "GET /svc/audit/audit/session/{session_id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-get-audit-stats",
-    "group": "Audit & Alerts (audit)",
-    "title": "GET /audit/stats",
-    "service": "audit",
-    "method": "GET",
-    "pathTemplate": "/audit/stats?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "GET /svc/audit/audit/stats?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1384,34 +1244,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "POST /svc/audit/webhooks/{id}/test?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "audit-put-alerts-id-action",
-    "group": "Audit & Alerts (audit)",
-    "title": "PUT /alerts/{id}/{action}",
-    "service": "audit",
-    "method": "PUT",
-    "pathTemplate": "/alerts/{id}/{action}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Audit service.",
-    "requestExample": "PUT /svc/audit/alerts/{id}/{action}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
