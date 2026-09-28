@@ -5,6 +5,29 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### `@ts-nocheck` hides the one type error that crashes at runtime
+- **What happened:** a scan of the 36 `@ts-nocheck` dashboard files with
+  the marker lifted found about 1,300 type errors. All but two were loose
+  typing. The two were undefined names: `getPaymentPolicy` and
+  `updatePaymentPolicy`, called without an import in a panel nothing
+  rendered anymore. The same scan also flags `{ pqc }` (TS18004), the 2.7.0
+  Certificates crash. Reading the same files by hand turned up bugs no type
+  checker sees: CSS values written as `"${C.x}"` in plain quotes (the
+  browser got the literal text), and protocol data dropped before
+  rendering.
+- **Why it slipped through:** `@ts-nocheck` turns off every diagnostic in
+  the file, and typescript-eslint turns off `no-undef` for TS files, so
+  nothing checked names at all.
+- **Also found:** the dashboard unit-test job in CI was red. A test pinned
+  the exposure-register service list, and nobody updated it when `audit`
+  joined. A test that copies a list from the backend goes stale; it now
+  reads `pkg/mek/catalog.go`.
+- **Rule:** undefined names are checked even where types aren't
+  (`scripts/check-nocheck-names.mjs`, in `npm run typecheck`). When
+  deleting a variable, search the file for its last use: shorthand
+  properties (`{ pqc }`) are easy to miss.
+
+
 ### A smoke test that never got past the sign-in page hid a broken tab for months
 - **What happened:** the Certificates / PKI tab crashed on every render
   (`ReferenceError: pqc is not defined`) from 1.21.0-beta onward. Commit

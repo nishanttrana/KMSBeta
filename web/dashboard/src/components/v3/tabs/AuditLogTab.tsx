@@ -436,8 +436,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         (e.action || "").toLowerCase().includes(q) ||
         (e.actor_id || "").toLowerCase().includes(q) ||
         (e.target_id || "").toLowerCase().includes(q) ||
-        (e.service || "").toLowerCase().includes(q) ||
-        (e.description || "").toLowerCase().includes(q)
+        (e.service || "").toLowerCase().includes(q)
       );
     }
     return out;

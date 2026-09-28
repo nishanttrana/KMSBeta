@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && node scripts/check-nocheck-names.mjs",
     "lint": "eslint . --ext .ts,.tsx,.js,.mjs,.cjs --max-warnings=0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.mjs,.cjs --fix",
     "check:component-size": "node scripts/check-component-size.mjs",

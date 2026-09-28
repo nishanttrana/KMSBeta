@@ -1,9 +1,17 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { EXPOSURE_SERVICES, reportFrom, summarize } from "../../src/lib/mekExposure";
 
 describe("exposure register", () => {
-  it("covers every service whose data was under a public key", () => {
-    expect(EXPOSURE_SERVICES.map((s) => s.service).sort()).toEqual(["certs", "cloud", "ekm", "secrets"]);
+  // The backend's list of services with an exposure register is
+  // pkg/mek.Catalog; the dashboard must query every one of them (compliance
+  // and audit were once missing, so their exposures showed nowhere).
+  it("covers every service in the pkg/mek catalogue", () => {
+    const catalog = readFileSync(resolve(__dirname, "../../../../pkg/mek/catalog.go"), "utf8");
+    const services = [...catalog.matchAll(/^\t"([a-z-]+)": \{/gm)].map((m) => m[1]).sort();
+    expect(services.length).toBeGreaterThan(4);
+    expect(EXPOSURE_SERVICES.map((s) => s.service).sort()).toEqual(services);
   });
 
   it("separates no access and undeployed services from real results", () => {

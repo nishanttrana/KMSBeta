@@ -4,6 +4,46 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.8.0-beta] — 2026-09-28
+
+### Dashboard: undefined-name check for untyped files; three silent UI bugs fixed; route index regenerated
+- **New check: undefined names in `@ts-nocheck` files.** 36 dashboard
+  files skip type checking, and that hides the one error that fails at
+  runtime: a name that doesn't exist. `scripts/check-nocheck-names.mjs`
+  (part of `npm run typecheck`, so it runs in CI and in every build) reads
+  those files without the marker and fails only on undefined names,
+  shorthand properties with no value, use before declaration, and missing
+  imports or exports. It ignores their ~1,300 loose-typing errors. Run
+  against earlier versions, it catches both the 2.7.0 Certificates crash
+  and the payment policy bug below.
+- **Dead, broken payment policy panel removed.** `PaymentCryptoPolicy` in
+  `TokenizeTab.tsx` (442 lines) called `getPaymentPolicy` and
+  `updatePaymentPolicy` without importing them (import dropped in
+  `dbbfa63ad`). Nothing rendered it: the Payment Policy subtab uses
+  `PaymentPolicyTab`, which works. Removed rather than repaired.
+- **Certificates → Enrollment Protocols showed no engine.** The certs
+  service sends each protocol's implementation (engine and SDKs), but the
+  dashboard dropped it before rendering, so each card's "Engine: …" line
+  never appeared. It is shown now.
+- **Invalid CSS on certificate cards.** Two card backgrounds were written as
+  `"${C.greenTint3}"` in plain quotes, so the browser received the literal
+  text and discarded the gradient. Fixed, along with a reference to a theme
+  colour that doesn't exist (`C.surfaceHi`).
+- **Dashboard unit tests pass again.** `tests/unit/mekExposure.test.ts`
+  (CI `npm run test:unit`) pinned the exposure register to four services
+  and had failed since `audit` was added. It now reads the service list
+  from `pkg/mek/catalog.go` and requires the dashboard to query every one.
+  It fails if a service that records exposures is missing from
+  `EXPOSURE_SERVICES`, as compliance was until 2.6.0.
+- **Audit log search** no longer matches a `description` field the audit
+  service never sends.
+- **Generated route and product map refreshed** (`docs/generated/`, via
+  `scripts/generate_product_map.py`). The map was last regenerated at
+  2.2.0-beta, so it now includes 2.3–2.7: the playbook, connection and
+  run routes, the delegated auth and governance notify routes, and each
+  service's `/mek/exposure` routes including compliance. The generator is
+  deterministic (only timestamps change between runs).
+
 ## [2.7.0-beta] — 2026-09-28
 
 ### Playbook cooldown survives failover; Certificates tab crash fixed; browser smoke test really runs

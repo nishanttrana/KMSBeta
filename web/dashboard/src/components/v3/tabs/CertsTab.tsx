@@ -368,7 +368,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         name,
         title:String(schema?.title||fallback.title),
         rfc:rfcLabel,
-        desc:String(schema?.description||fallback.desc)
+        desc:String(schema?.description||fallback.desc),
+        schema
       };
     });
   },[protocolOrder,protocolSchemaByName]);
@@ -1532,7 +1533,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{String(stats.cas)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>{roots.length} root</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?"${C.amberTint}":"${C.greenTint}"} 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?C.amberTint:C.greenTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
@@ -1681,7 +1682,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               `Structured error responses`
             ]:[];
           const impl=meta.schema?.implementation;
-          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?"${C.greenTint3}":"${C.redTint3}"} 100%)`}}>
+          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?C.greenTint3:C.redTint3} 100%)`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:8,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
@@ -1697,7 +1698,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
             {features.length>0?<div style={{marginBottom:8}}>
               <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Capabilities</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                {features.map((f,i)=><span key={i} style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.surfaceHi||C.accentDim,color:C.text,border:`1px solid ${C.border}`}}>{f}</span>)}
+                {features.map((f,i)=><span key={i} style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.accentDim,color:C.text,border:`1px solid ${C.border}`}}>{f}</span>)}
               </div>
             </div>:null}
             {endpoints.length>0?<div style={{marginBottom:8}}>
