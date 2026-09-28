@@ -17,12 +17,12 @@ import (
 // This is a heuristic, not a model. The thresholds are tunable via env so
 // operators can dial sensitivity to their normal traffic shape.
 type HNDLDetector struct {
-	mu            sync.Mutex
-	tenants       map[string]*hndlState
-	windowSeconds int64
-	opsThreshold  int64
+	mu             sync.Mutex
+	tenants        map[string]*hndlState
+	windowSeconds  int64
+	opsThreshold   int64
 	bytesThreshold int64
-	publisher     EventPublisher
+	publisher      EventPublisher
 }
 
 type hndlState struct {
@@ -99,12 +99,12 @@ func (d *HNDLDetector) emit(ctx context.Context, tenantID string, s *hndlState) 
 		Result:    "warning",
 		Timestamp: time.Now().UTC(),
 		Details: map[string]interface{}{
-			"window_seconds":    d.windowSeconds,
-			"ops_in_window":     s.ops,
-			"bytes_in_window":   s.bytes,
-			"ops_threshold":     d.opsThreshold,
-			"bytes_threshold":   d.bytesThreshold,
-			"remediation_hint":  "rotate target keys to hybrid PQC; review long-retention encrypt patterns",
+			"window_seconds":   d.windowSeconds,
+			"ops_in_window":    s.ops,
+			"bytes_in_window":  s.bytes,
+			"ops_threshold":    d.opsThreshold,
+			"bytes_threshold":  d.bytesThreshold,
+			"remediation_hint": "rotate target keys to hybrid PQC; review long-retention encrypt patterns",
 		},
 	}
 	payload, err := json.Marshal(evt)

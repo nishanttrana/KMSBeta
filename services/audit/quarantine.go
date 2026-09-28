@@ -24,17 +24,17 @@ type QuarantineDecision struct {
 // high-risk event doesn't flap the quarantine — the threshold must be
 // crossed sustainedly for a short window.
 type QuarantineEvaluator struct {
-	mu                sync.Mutex
-	state             map[string]*qstate
-	publisher         EventPublisher
-	scoreThreshold    int
-	sustainedSeconds  int64
+	mu               sync.Mutex
+	state            map[string]*qstate
+	publisher        EventPublisher
+	scoreThreshold   int
+	sustainedSeconds int64
 }
 
 type qstate struct {
-	hits      int
-	firstHit  time.Time
-	alerted   bool
+	hits     int
+	firstHit time.Time
+	alerted  bool
 }
 
 // NewQuarantineEvaluator constructs an evaluator. Defaults trigger when a

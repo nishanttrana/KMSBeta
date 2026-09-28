@@ -4,6 +4,12 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.18.0-beta] — 2026-09-28
+
+### Formatting
+- `gofmt` applied to `services/audit/hndl_detector.go`, `merkle.go` and
+  `quarantine.go`. Whitespace only; no behaviour change.
+
 ## [2.17.0-beta] — 2026-09-28
 
 ### Audit and dashboard clean-up after the alert-store removal

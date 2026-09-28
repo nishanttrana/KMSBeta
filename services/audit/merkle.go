@@ -57,10 +57,10 @@ func (t MerkleTree) Root() string {
 
 // MerkleProof contains the sibling hashes needed to verify inclusion.
 type MerkleProof struct {
-	LeafHash  string          `json:"leaf_hash"`
-	LeafIndex int             `json:"leaf_index"`
-	Siblings  []ProofSibling  `json:"siblings"`
-	Root      string          `json:"root"`
+	LeafHash  string         `json:"leaf_hash"`
+	LeafIndex int            `json:"leaf_index"`
+	Siblings  []ProofSibling `json:"siblings"`
+	Root      string         `json:"root"`
 }
 
 type ProofSibling struct {
