@@ -89,7 +89,7 @@ func streamRig(t *testing.T) (*Handler, *Service, *SQLStore, *httptest.Server, f
 	mektest.ApplySchema(t, store.db.SQL(), "audit")
 	svc.creds.set(mektest.Open(t, store.db.SQL(), "audit", mektest.NewKeycore(t)))
 	conns := &testConns{conns: map[string]streamConnection{}}
-	f := newWebhookFanout(store, svc.creds, conns, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, log.Default())
+	f := newWebhookFanout(store, svc.creds, conns, func(ctx context.Context, ev AuditEvent) { _, _ = svc.ProcessEvent(ctx, ev) }, log.Default())
 	f.disp.client = srv.Client()
 	f.disp.validate = func(u string) error {
 		if !strings.HasPrefix(u, "https://") {
@@ -165,7 +165,7 @@ func waitFor(t *testing.T, cond func() bool) {
 
 func ingest(t *testing.T, svc *Service, action string) {
 	t.Helper()
-	if _, _, err := svc.ProcessEvent(context.Background(), AuditEvent{TenantID: "t1", Service: "key", Action: action, ActorID: "u1", ActorType: "user", Result: "success", Timestamp: time.Now().UTC()}); err != nil {
+	if _, err := svc.ProcessEvent(context.Background(), AuditEvent{TenantID: "t1", Service: "key", Action: action, ActorID: "u1", ActorType: "user", Result: "success", Timestamp: time.Now().UTC()}); err != nil {
 		t.Fatal(err)
 	}
 }

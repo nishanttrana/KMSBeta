@@ -77,15 +77,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /audit/correlation/{id}", h.handleCorrelation)
 	mux.HandleFunc("POST /audit/search", h.handleSearch)
 	mux.HandleFunc("GET /audit/chain/verify", h.handleChainVerify)
-	mux.HandleFunc("GET /audit/stats", h.handleAuditStats)
 	mux.HandleFunc("GET /audit/stream", h.handleStream)
 	mux.HandleFunc("GET /audit/config", h.handleAuditConfig)
-
-	mux.HandleFunc("GET /alerts", h.handleAlerts)
-	mux.HandleFunc("GET /alerts/{id}", h.handleAlert)
-	mux.HandleFunc("PUT /alerts/{id}/{action}", h.handleAlertActionPath)
-	mux.HandleFunc("GET /alerts/stats", h.handleAlertStats)
-	mux.HandleFunc("GET /alerts/stream", h.handleAlertStream)
 
 	// Merkle tree integrity routes
 	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
@@ -306,20 +299,6 @@ func (h *Handler) handleChainVerify(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": ok, "breaks": breaks, "request_id": reqID})
 }
 
-func (h *Handler) handleAuditStats(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	stats, err := h.store.AlertStats(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "stats_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"alerts": stats, "request_id": reqID})
-}
-
 func (h *Handler) handleAuditConfig(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	// Operational settings are returned to authenticated callers, but the
@@ -327,121 +306,11 @@ func (h *Handler) handleAuditConfig(w http.ResponseWriter, r *http.Request) {
 	// to know externally is that the WAL is configured, not where it lives.
 	walConfigured := strings.TrimSpace(h.svc.cfg.WALPath) != ""
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"fail_closed":            h.svc.cfg.FailClosed,
-		"wal_configured":         walConfigured,
-		"wal_max_size_mb":        h.svc.cfg.WALMaxSizeMB,
-		"dedup_window_seconds":   h.svc.cfg.DedupWindowSeconds,
-		"escalation_threshold":   h.svc.cfg.EscalationThreshold,
-		"escalation_window_mins": h.svc.cfg.EscalationMinutes,
-		"request_id":             reqID,
+		"fail_closed":     h.svc.cfg.FailClosed,
+		"wal_configured":  walConfigured,
+		"wal_max_size_mb": h.svc.cfg.WALMaxSizeMB,
+		"request_id":      reqID,
 	})
-}
-
-func (h *Handler) handleAlerts(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	q := AlertQuery{
-		Severity: strings.TrimSpace(r.URL.Query().Get("severity")),
-		Category: strings.TrimSpace(r.URL.Query().Get("category")),
-		Status:   strings.TrimSpace(r.URL.Query().Get("status")),
-		From:     parseTS(r.URL.Query().Get("from")),
-		To:       parseTS(r.URL.Query().Get("to")),
-		Limit:    atoi(r.URL.Query().Get("limit")),
-		Offset:   atoi(r.URL.Query().Get("offset")),
-	}
-	items, err := h.store.QueryAlerts(r.Context(), tenantID, q)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
-}
-
-func (h *Handler) handleAlert(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.store.GetAlert(r.Context(), tenantID, r.PathValue("id"))
-	if errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusNotFound, "not_found", "alert not found", reqID, tenantID)
-		return
-	}
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"alert": item, "request_id": reqID})
-}
-
-func (h *Handler) handleAlertActionPath(w http.ResponseWriter, r *http.Request) {
-	action := strings.ToLower(strings.TrimSpace(r.PathValue("action")))
-	switch action {
-	case "acknowledge", "resolve", "suppress":
-		h.alertAction(w, r, action)
-	default:
-		reqID := requestID(r)
-		writeErr(w, http.StatusNotFound, "not_found", "unsupported alert action", reqID, "")
-	}
-}
-
-func (h *Handler) alertAction(w http.ResponseWriter, r *http.Request, action string) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	var req struct {
-		Actor          string `json:"actor"`
-		Note           string `json:"note"`
-		ResolutionNote string `json:"resolution_note"`
-		SuppressUntil  string `json:"suppress_until"`
-	}
-	_ = decodeJSON(r, &req)
-	note := req.Note
-	if req.ResolutionNote != "" {
-		note = req.ResolutionNote
-	}
-	var suppressUntil *time.Time
-	if ts := parseTS(req.SuppressUntil); !ts.IsZero() {
-		suppressUntil = &ts
-	}
-	if req.Actor == "" {
-		req.Actor = "system"
-	}
-	if err := h.store.UpdateAlertStatus(r.Context(), tenantID, r.PathValue("id"), action, req.Actor, note, suppressUntil); err != nil {
-		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	payload := map[string]interface{}{
-		"alert_id": r.PathValue("id"),
-		"actor":    req.Actor,
-		"action":   action,
-		"note":     note,
-	}
-	if suppressUntil != nil {
-		payload["suppress_until"] = suppressUntil.UTC().Format(time.RFC3339)
-	}
-	h.publishClusterSync(r, tenantID, "alert", r.PathValue("id"), "alert_"+action, payload)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleAlertStats(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	stats, err := h.store.AlertStats(r.Context(), tenantID)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "stats_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"stats": stats, "request_id": reqID})
 }
 
 // handleFIPSBoundary returns the FIPS 140-3 module boundary declaration for this service.

@@ -33,7 +33,7 @@ func TestOpsMetricsBuiltFromIngestedKeyOpEvents(t *testing.T) {
 		{TenantID: "t1", Service: "keycore", Action: "audit.key.encrypt", ActorID: "u1", Result: "success", Timestamp: time.Now().UTC()},
 	}
 	for _, e := range events {
-		if _, _, err := svc.ProcessEvent(ctx, e); err != nil {
+		if _, err := svc.ProcessEvent(ctx, e); err != nil {
 			t.Fatalf("ingest %s: %v", e.Action, err)
 		}
 	}
@@ -99,7 +99,7 @@ func TestOpsMetricsCountAnyServicesMeteredEvents(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, _, err := svc.ProcessEvent(ctx, ev); err != nil {
+		if _, err := svc.ProcessEvent(ctx, ev); err != nil {
 			t.Fatal(err)
 		}
 	}

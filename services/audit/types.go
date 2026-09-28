@@ -70,46 +70,6 @@ type AuditEvent struct {
 	CreatedAt     time.Time              `json:"created_at"`
 }
 
-type Alert struct {
-	ID                 string                 `json:"id"`
-	TenantID           string                 `json:"tenant_id"`
-	AuditEventID       string                 `json:"audit_event_id"`
-	Severity           string                 `json:"severity"`
-	Category           string                 `json:"category"`
-	Title              string                 `json:"title"`
-	Description        string                 `json:"description"`
-	SourceService      string                 `json:"source_service"`
-	ActorID            string                 `json:"actor_id"`
-	TargetID           string                 `json:"target_id"`
-	RiskScore          int                    `json:"risk_score"`
-	Status             string                 `json:"status"`
-	AcknowledgedBy     string                 `json:"acknowledged_by"`
-	AcknowledgedAt     time.Time              `json:"acknowledged_at"`
-	ResolvedBy         string                 `json:"resolved_by"`
-	ResolvedAt         time.Time              `json:"resolved_at"`
-	ResolutionNote     string                 `json:"resolution_note"`
-	DispatchedChannels []string               `json:"dispatched_channels"`
-	DispatchStatus     map[string]interface{} `json:"dispatch_status"`
-	DedupKey           string                 `json:"dedup_key"`
-	OccurrenceCount    int                    `json:"occurrence_count"`
-	EscalatedFrom      string                 `json:"escalated_from"`
-	EscalatedAt        time.Time              `json:"escalated_at"`
-	CreatedAt          time.Time              `json:"created_at"`
-	UpdatedAt          time.Time              `json:"updated_at"`
-}
-
-type AlertStats struct {
-	OpenBySeverity map[string]int `json:"open_by_severity"`
-	TotalOpen      int            `json:"total_open"`
-	TotalAck       int            `json:"total_acknowledged"`
-	TotalResolved  int            `json:"total_resolved"`
-}
-
-type DispatchPlan struct {
-	Channels []string               `json:"channels"`
-	Status   map[string]interface{} `json:"status"`
-}
-
 type AuditConfig struct {
 	FailClosed   bool
 	WALPath      string
@@ -117,10 +77,7 @@ type AuditConfig struct {
 	WALHMACKey   []byte
 	// EventSigningKey is a 32-byte HMAC-SHA256 key used to sign each audit event.
 	// Loaded from AUDIT_EVENT_SIGNING_KEY_B64 env var; auto-generated if missing.
-	EventSigningKey     []byte
-	DedupWindowSeconds  int
-	EscalationThreshold int
-	EscalationMinutes   int
+	EventSigningKey []byte
 }
 
 // ── Merkle Tree Types ───────────────────────────────────────

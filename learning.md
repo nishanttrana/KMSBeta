@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A second store of the same thing outlives its last reader
+- **What happened:** audit wrote an alert row for every event it ingested,
+  with its own dedup and escalation, while reporting raised the real alerts
+  from the same events. After 2.12.0-beta nothing read audit's table, but
+  every ingest still paid for a second insert in the event's transaction,
+  and `/audit/stats` kept returning alert counts under a name that promised
+  event statistics, which the REST explorer documented with invented numbers.
+- **Why it slipped through:** each removal (the UI tab in 2.12, the rules in
+  2.14) took away one reader and left the writer, because the writer sat
+  inside the ingest path and looked essential.
+- **Rule:** when you remove the last reader of a store, remove the writer,
+  the routes, the settings and the table in the same change, and add a test
+  that the routes are gone.
+
 ### A fallback that invents events hides that the real path never worked
 - **What happened:** the dashboard's live feed opened WebSockets to
   `/alerts/stream` and `/audit/stream` at the site root. Envoy sent those to

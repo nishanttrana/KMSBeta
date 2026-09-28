@@ -1764,31 +1764,6 @@ export const REST_API_CATALOG = [
     ]
   },
   {
-    id: "audit-stats",
-    group: "Audit",
-    title: "Audit Statistics",
-    service: "audit",
-    method: "GET",
-    pathTemplate: "/audit/stats?tenant_id={{tenant_id}}",
-    bodyTemplate: "",
-    description: "Returns audit statistics (event counts by type, actor, service).",
-    requestExample: "GET /svc/audit/audit/stats?tenant_id=root",
-    responseExample: {
-      total_events: 45200,
-      by_action: { "key.created": 1200, "key.rotated": 800, "key.exported": 45, "secret.accessed": 3500 },
-      by_service: { keycore: 22000, secrets: 12000, certs: 5000, governance: 6200 },
-      by_actor_top5: [
-        { actor: "admin@bank.com", count: 15000 },
-        { actor: "ops@bank.com", count: 10000 }
-      ]
-    },
-    errorCodes: [
-      { code: 400, meaning: "Missing tenant_id" },
-      { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 403, meaning: "Caller lacks audit stats privilege" }
-    ]
-  },
-  {
     id: "audit-chain-verify",
     group: "Audit",
     title: "Verify Audit Chain",

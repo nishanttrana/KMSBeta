@@ -589,23 +589,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleAuditStats",
-      "line": 80,
-      "match_key": "audit|GET|/audit/stats",
-      "method": "GET",
-      "normalized_path": "/audit/stats",
-      "path": "/audit/stats",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleStream",
-      "line": 81,
+      "line": 80,
       "match_key": "audit|GET|/audit/stream",
       "method": "GET",
       "normalized_path": "/audit/stream",
@@ -620,7 +605,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleAuditConfig",
-      "line": 82,
+      "line": 81,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -634,83 +619,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleAlerts",
-      "line": 84,
-      "match_key": "audit|GET|/alerts",
-      "method": "GET",
-      "normalized_path": "/alerts",
-      "path": "/alerts",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlert",
-      "line": 85,
-      "match_key": "audit|GET|/alerts/{param}",
-      "method": "GET",
-      "normalized_path": "/alerts/{param}",
-      "path": "/alerts/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlertActionPath",
-      "line": 86,
-      "match_key": "audit|PUT|/alerts/{param}/{param}",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/{param}",
-      "path": "/alerts/{id}/{action}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlertStats",
-      "line": 87,
-      "match_key": "audit|GET|/alerts/stats",
-      "method": "GET",
-      "normalized_path": "/alerts/stats",
-      "path": "/alerts/stats",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlertStream",
-      "line": 88,
-      "match_key": "audit|GET|/alerts/stream",
-      "method": "GET",
-      "normalized_path": "/alerts/stream",
-      "path": "/alerts/stream",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleMerkleBuild",
-      "line": 91,
+      "line": 84,
       "match_key": "audit|POST|/audit/merkle/build",
       "method": "POST",
       "normalized_path": "/audit/merkle/build",
@@ -725,7 +635,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleMerkleEpochs",
-      "line": 92,
+      "line": 85,
       "match_key": "audit|GET|/audit/merkle/epochs",
       "method": "GET",
       "normalized_path": "/audit/merkle/epochs",
@@ -740,7 +650,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleMerkleEpoch",
-      "line": 93,
+      "line": 86,
       "match_key": "audit|GET|/audit/merkle/epochs/{param}",
       "method": "GET",
       "normalized_path": "/audit/merkle/epochs/{param}",
@@ -755,7 +665,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleEventProof",
-      "line": 94,
+      "line": 87,
       "match_key": "audit|GET|/audit/events/{param}/proof",
       "method": "GET",
       "normalized_path": "/audit/events/{param}/proof",
@@ -770,7 +680,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleMerkleVerify",
-      "line": 95,
+      "line": 88,
       "match_key": "audit|POST|/audit/merkle/verify",
       "method": "POST",
       "normalized_path": "/audit/merkle/verify",
@@ -785,7 +695,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 99,
+      "line": 92,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -800,7 +710,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 100,
+      "line": 93,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -815,7 +725,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 101,
+      "line": 94,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -830,7 +740,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsOverview",
-      "line": 107,
+      "line": 100,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -845,7 +755,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 108,
+      "line": 101,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -860,7 +770,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetLatencyPercentiles",
-      "line": 109,
+      "line": 102,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -875,7 +785,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetServiceStats",
-      "line": 110,
+      "line": 103,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -890,7 +800,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetErrorBreakdown",
-      "line": 111,
+      "line": 104,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -905,7 +815,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 114,
+      "line": 107,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -920,7 +830,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 117,
+      "line": 110,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -935,7 +845,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 118,
+      "line": 111,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -950,7 +860,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 121,
+      "line": 114,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -14001,23 +13911,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleAuditStats",
-      "line": 80,
-      "match_key": "audit|GET|/audit/stats",
-      "method": "GET",
-      "normalized_path": "/audit/stats",
-      "path": "/audit/stats",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleStream",
-      "line": 81,
+      "line": 80,
       "match_key": "audit|GET|/audit/stream",
       "method": "GET",
       "normalized_path": "/audit/stream",
@@ -14031,53 +13926,8 @@
       "action": "",
       "code_scope": "audit",
       "file": "services/audit/handler.go",
-      "handler": "h.handleAlert",
-      "line": 85,
-      "match_key": "audit|GET|/alerts/{param}",
-      "method": "GET",
-      "normalized_path": "/alerts/{param}",
-      "path": "/alerts/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlertActionPath",
-      "line": 86,
-      "match_key": "audit|PUT|/alerts/{param}/{param}",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/{param}",
-      "path": "/alerts/{id}/{action}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
-      "handler": "h.handleAlertStream",
-      "line": 88,
-      "match_key": "audit|GET|/alerts/stream",
-      "method": "GET",
-      "normalized_path": "/alerts/stream",
-      "path": "/alerts/stream",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "audit"
-    },
-    {
-      "action": "",
-      "code_scope": "audit",
-      "file": "services/audit/handler.go",
       "handler": "h.handleMerkleEpoch",
-      "line": 93,
+      "line": 86,
       "match_key": "audit|GET|/audit/merkle/epochs/{param}",
       "method": "GET",
       "normalized_path": "/audit/merkle/epochs/{param}",
@@ -14092,7 +13942,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 99,
+      "line": 92,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -14107,7 +13957,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 100,
+      "line": 93,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -14122,7 +13972,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 101,
+      "line": 94,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -14137,7 +13987,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 108,
+      "line": 101,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -14152,7 +14002,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 114,
+      "line": 107,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -14167,7 +14017,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 117,
+      "line": 110,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -14182,7 +14032,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 118,
+      "line": 111,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -14197,7 +14047,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 121,
+      "line": 114,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -26998,7 +26848,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 126,
+      "line": 88,
       "match_key": "audit|GET|/audit/events",
       "method": "GET",
       "normalized_path": "/audit/events",
@@ -27011,7 +26861,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 131,
+      "line": 93,
       "match_key": "audit|GET|/audit/events/{param}",
       "method": "GET",
       "normalized_path": "/audit/events/{param}",
@@ -27024,7 +26874,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 148,
+      "line": 110,
       "match_key": "audit|GET|/audit/timeline/{param}",
       "method": "GET",
       "normalized_path": "/audit/timeline/{param}",
@@ -27037,7 +26887,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 188,
+      "line": 150,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -27050,7 +26900,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 204,
+      "line": 166,
       "match_key": "audit|GET|/audit/session/{param}",
       "method": "GET",
       "normalized_path": "/audit/session/{param}",
@@ -27063,7 +26913,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 220,
+      "line": 182,
       "match_key": "audit|GET|/audit/correlation/{param}",
       "method": "GET",
       "normalized_path": "/audit/correlation/{param}",
@@ -27076,7 +26926,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 228,
+      "line": 190,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -27089,7 +26939,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 240,
+      "line": 202,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -27100,61 +26950,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts?${q.toString()}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 267,
-      "match_key": "audit|GET|/alerts",
-      "method": "GET",
-      "normalized_path": "/alerts",
-      "path": "/alerts?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts/${encodeURIComponent(String(alertId || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 277,
-      "match_key": "audit|PUT|/alerts/{param}/acknowledge",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/acknowledge",
-      "path": "/alerts/{param}/acknowledge?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts/${encodeURIComponent(String(alertId || \"\").trim())}/resolve?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 293,
-      "match_key": "audit|PUT|/alerts/{param}/resolve",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/resolve",
-      "path": "/alerts/{param}/resolve?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts/stats?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 304,
-      "match_key": "audit|GET|/alerts/stats",
-      "method": "GET",
-      "normalized_path": "/alerts/stats",
-      "path": "/alerts/stats?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 355,
+      "line": 251,
       "match_key": "audit|GET|/audit/merkle/epochs",
       "method": "GET",
       "normalized_path": "/audit/merkle/epochs",
@@ -27167,7 +26965,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 366,
+      "line": 262,
       "match_key": "audit|GET|/audit/events/{param}/proof",
       "method": "GET",
       "normalized_path": "/audit/events/{param}/proof",
@@ -27180,7 +26978,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 378,
+      "line": 274,
       "match_key": "audit|POST|/audit/merkle/build",
       "method": "POST",
       "normalized_path": "/audit/merkle/build",
@@ -27193,7 +26991,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 390,
+      "line": 286,
       "match_key": "audit|POST|/audit/merkle/verify",
       "method": "POST",
       "normalized_path": "/audit/merkle/verify",
@@ -34158,7 +33956,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-28T10:39:10Z",
+  "generated_at": "2026-09-28T11:05:27Z",
   "navigation": [
     {
       "group": "Overview",
@@ -35503,7 +35301,6 @@
         "strconv.Atoi",
         "strings.TrimSpace",
         "strings.EqualFold",
-        "strings.ToLower",
         "time.Parse"
       ],
       "handler_file": "services/audit/handler.go",
@@ -35527,21 +35324,11 @@
         "handleSearch",
         "handleChainVerify",
         "VerifyChain",
-        "handleAuditStats",
-        "AlertStats",
         "handleAuditConfig",
-        "handleAlerts",
-        "QueryAlerts",
-        "handleAlert",
-        "GetAlert",
-        "handleAlertActionPath",
-        "alertAction",
-        "UpdateAlertStatus",
-        "publishClusterSync",
-        "handleAlertStats",
         "handleFIPSBoundary",
         "signing",
         "newID",
+        "publishClusterSync",
         "Publish",
         "handleMerkleBuild",
         "BuildMerkleEpoch",
@@ -35558,7 +35345,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 126,
+      "handler_line": 119,
       "handler_name": "handlePublish",
       "handler_receiver_calls": [
         "h.cluster.Publish"
@@ -35570,10 +35357,6 @@
       "handler_store_calls": [
         "QueryEvents",
         "GetEvent",
-        "AlertStats",
-        "QueryAlerts",
-        "GetAlert",
-        "UpdateAlertStatus",
         "BuildMerkleEpoch",
         "ListMerkleEpochs",
         "GetMerkleEpoch",
@@ -35621,7 +35404,7 @@
           "file": "services/audit/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 287,
+          "line": 253,
           "name": "VerifyChain",
           "receiver_calls": [],
           "store_calls": []
@@ -35638,7 +35421,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 126,
+          "line": 88,
           "source": "serviceRequest"
         }
       ],
@@ -35658,7 +35441,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 190,
+      "handler_line": 183,
       "handler_name": "handleEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35683,7 +35466,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 131,
+          "line": 93,
           "source": "serviceRequest"
         }
       ],
@@ -35701,7 +35484,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 218,
+      "handler_line": 211,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35726,7 +35509,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 148,
+          "line": 110,
           "source": "serviceRequest"
         }
       ],
@@ -35743,7 +35526,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 236,
+      "handler_line": 229,
       "handler_name": "handleTimeline",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35768,7 +35551,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 204,
+          "line": 166,
           "source": "serviceRequest"
         }
       ],
@@ -35785,7 +35568,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 254,
+      "handler_line": 247,
       "handler_name": "handleSession",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35810,7 +35593,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 220,
+          "line": 182,
           "source": "serviceRequest"
         }
       ],
@@ -35827,7 +35610,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 272,
+      "handler_line": 265,
       "handler_name": "handleCorrelation",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35856,7 +35639,7 @@
         "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 290,
+      "handler_line": 283,
       "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35879,7 +35662,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 228,
+          "line": 190,
           "source": "serviceRequest"
         }
       ],
@@ -35895,7 +35678,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 295,
+      "handler_line": 288,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -35917,46 +35700,12 @@
           "file": "services/audit/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 287,
+          "line": 253,
           "name": "VerifyChain",
           "receiver_calls": [],
           "store_calls": []
         }
       ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleAuditStats",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "AlertStats",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 309,
-      "handler_name": "handleAuditStats",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "AlertStats"
-      ],
-      "method": "GET",
-      "normalized_path": "/audit/stats",
-      "path": "/audit/stats",
-      "route_file": "services/audit/handler.go",
-      "route_line": 80,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
       "service_receiver_calls": [],
       "service_store_calls": []
     },
@@ -35971,7 +35720,7 @@
         "serveSSE"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 95,
+      "handler_line": 76,
       "handler_name": "handleStream",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35980,7 +35729,7 @@
       "normalized_path": "/audit/stream",
       "path": "/audit/stream",
       "route_file": "services/audit/handler.go",
-      "route_line": 81,
+      "route_line": 80,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -35994,7 +35743,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 240,
+          "line": 202,
           "source": "serviceRequest"
         }
       ],
@@ -36008,7 +35757,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 323,
+      "handler_line": 302,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36017,190 +35766,7 @@
       "normalized_path": "/audit/config",
       "path": "/audit/config",
       "route_file": "services/audit/handler.go",
-      "route_line": 82,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/alerts?${q.toString()}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 267,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleAlerts",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "parseTS",
-        "atoi",
-        "QueryAlerts",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 340,
-      "handler_name": "handleAlerts",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "QueryAlerts"
-      ],
-      "method": "GET",
-      "normalized_path": "/alerts",
-      "path": "/alerts",
-      "route_file": "services/audit/handler.go",
-      "route_line": 84,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleAlert",
-      "handler_external_package_calls": [
-        "errors.Is"
-      ],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetAlert",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 363,
-      "handler_name": "handleAlert",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetAlert"
-      ],
-      "method": "GET",
-      "normalized_path": "/alerts/{param}",
-      "path": "/alerts/{id}",
-      "route_file": "services/audit/handler.go",
-      "route_line": 85,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleAlertActionPath",
-      "handler_external_package_calls": [
-        "strings.ToLower",
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "alertAction",
-        "requestID",
-        "writeErr"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 381,
-      "handler_name": "handleAlertActionPath",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/{param}",
-      "path": "/alerts/{id}/{action}",
-      "route_file": "services/audit/handler.go",
-      "route_line": 86,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"audit\", `/alerts/stats?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/audit.ts",
-          "line": 304,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleAlertStats",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "AlertStats",
-        "writeErr",
-        "Error",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 433,
-      "handler_name": "handleAlertStats",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "AlertStats"
-      ],
-      "method": "GET",
-      "normalized_path": "/alerts/stats",
-      "path": "/alerts/stats",
-      "route_file": "services/audit/handler.go",
-      "route_line": 87,
-      "service": "audit",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleAlertStream",
-      "handler_external_package_calls": [],
-      "handler_file": "services/audit/stream.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "serveSSE"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 104,
-      "handler_name": "handleAlertStream",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/alerts/stream",
-      "path": "/alerts/stream",
-      "route_file": "services/audit/handler.go",
-      "route_line": 88,
+      "route_line": 81,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36214,7 +35780,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 378,
+          "line": 274,
           "source": "serviceRequest"
         }
       ],
@@ -36231,7 +35797,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 576,
+      "handler_line": 445,
       "handler_name": "handleMerkleBuild",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36242,7 +35808,7 @@
       "normalized_path": "/audit/merkle/build",
       "path": "/audit/merkle/build",
       "route_file": "services/audit/handler.go",
-      "route_line": 91,
+      "route_line": 84,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36256,7 +35822,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 355,
+          "line": 251,
           "source": "serviceRequest"
         }
       ],
@@ -36273,7 +35839,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 605,
+      "handler_line": 474,
       "handler_name": "handleMerkleEpochs",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36284,7 +35850,7 @@
       "normalized_path": "/audit/merkle/epochs",
       "path": "/audit/merkle/epochs",
       "route_file": "services/audit/handler.go",
-      "route_line": 92,
+      "route_line": 85,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36309,7 +35875,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 620,
+      "handler_line": 489,
       "handler_name": "handleMerkleEpoch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36320,7 +35886,7 @@
       "normalized_path": "/audit/merkle/epochs/{param}",
       "path": "/audit/merkle/epochs/{id}",
       "route_file": "services/audit/handler.go",
-      "route_line": 93,
+      "route_line": 86,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36334,7 +35900,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 366,
+          "line": 262,
           "source": "serviceRequest"
         }
       ],
@@ -36352,7 +35918,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 638,
+      "handler_line": 507,
       "handler_name": "handleEventProof",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36363,7 +35929,7 @@
       "normalized_path": "/audit/events/{param}/proof",
       "path": "/audit/events/{id}/proof",
       "route_file": "services/audit/handler.go",
-      "route_line": 94,
+      "route_line": 87,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36377,7 +35943,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 390,
+          "line": 286,
           "source": "serviceRequest"
         }
       ],
@@ -36393,7 +35959,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 656,
+      "handler_line": 525,
       "handler_name": "handleMerkleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36402,7 +35968,7 @@
       "normalized_path": "/audit/merkle/verify",
       "path": "/audit/merkle/verify",
       "route_file": "services/audit/handler.go",
-      "route_line": 95,
+      "route_line": 88,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36436,7 +36002,7 @@
       "normalized_path": "/audit/cluster/signing-key/join-key",
       "path": "/audit/cluster/signing-key/join-key",
       "route_file": "services/audit/handler.go",
-      "route_line": 99,
+      "route_line": 92,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36490,7 +36056,7 @@
       "normalized_path": "/audit/cluster/signing-key/export",
       "path": "/audit/cluster/signing-key/export",
       "route_file": "services/audit/handler.go",
-      "route_line": 100,
+      "route_line": 93,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36553,7 +36119,7 @@
       "normalized_path": "/audit/cluster/signing-key/import",
       "path": "/audit/cluster/signing-key/import",
       "route_file": "services/audit/handler.go",
-      "route_line": 101,
+      "route_line": 94,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36615,7 +36181,7 @@
       "normalized_path": "/ops-metrics/overview",
       "path": "/ops-metrics/overview",
       "route_file": "services/audit/handler.go",
-      "route_line": 107,
+      "route_line": 100,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36649,7 +36215,7 @@
       "normalized_path": "/ops-metrics/timeseries",
       "path": "/ops-metrics/timeseries",
       "route_file": "services/audit/handler.go",
-      "route_line": 108,
+      "route_line": 101,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36690,7 +36256,7 @@
       "normalized_path": "/ops-metrics/latency",
       "path": "/ops-metrics/latency",
       "route_file": "services/audit/handler.go",
-      "route_line": 109,
+      "route_line": 102,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36731,7 +36297,7 @@
       "normalized_path": "/ops-metrics/by-service",
       "path": "/ops-metrics/by-service",
       "route_file": "services/audit/handler.go",
-      "route_line": 110,
+      "route_line": 103,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36772,7 +36338,7 @@
       "normalized_path": "/ops-metrics/errors",
       "path": "/ops-metrics/errors",
       "route_file": "services/audit/handler.go",
-      "route_line": 111,
+      "route_line": 104,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36792,7 +36358,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 448,
+      "handler_line": 317,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36801,7 +36367,7 @@
       "normalized_path": "/audit/fips/boundary",
       "path": "/audit/fips/boundary",
       "route_file": "services/audit/handler.go",
-      "route_line": 114,
+      "route_line": 107,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36840,7 +36406,7 @@
       "normalized_path": "/audit/cbom/inventory",
       "path": "/audit/cbom/inventory",
       "route_file": "services/audit/handler.go",
-      "route_line": 117,
+      "route_line": 110,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36879,7 +36445,7 @@
       "normalized_path": "/audit/cbom/diff",
       "path": "/audit/cbom/diff",
       "route_file": "services/audit/handler.go",
-      "route_line": 118,
+      "route_line": 111,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -36912,7 +36478,7 @@
       "normalized_path": "/metrics",
       "path": "/metrics",
       "route_file": "services/audit/handler.go",
-      "route_line": 121,
+      "route_line": 114,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -37177,7 +36743,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 188,
+          "line": 150,
           "source": "serviceRequest"
         }
       ],
@@ -92480,7 +92046,7 @@
   "service_counts": {
     "backend_routes": {
       "ai-gateway": 31,
-      "audit": 43,
+      "audit": 37,
       "auth": 86,
       "autokey": 15,
       "backup": 11,
@@ -92514,7 +92080,7 @@
       "$dynamic-service": 2,
       "ai": 3,
       "ai-gateway": 23,
-      "audit": 27,
+      "audit": 23,
       "auth": 45,
       "auth-edge": 4,
       "autokey": 11,
@@ -92731,20 +92297,20 @@
     ]
   },
   "summary": {
-    "backend_routes": 923,
+    "backend_routes": 917,
     "backend_services": 30,
     "button_inventory": 762,
-    "frontend_call_sites": 577,
-    "matched_frontend_call_sites": 530,
+    "frontend_call_sites": 573,
+    "matched_frontend_call_sites": 528,
     "nav_items": 27,
-    "request_flows": 923,
-    "request_flows_with_frontend": 537,
+    "request_flows": 917,
+    "request_flows_with_frontend": 535,
     "request_flows_with_internal_package_calls": 159,
     "request_flows_with_service_calls": 549,
-    "request_flows_with_store_calls": 658,
+    "request_flows_with_store_calls": 654,
     "subpane_groups": 8,
     "tab_components": 35,
-    "unmatched_frontend_call_sites": 47
+    "unmatched_frontend_call_sites": 45
   },
   "tabs": [
     {
@@ -92778,7 +92344,7 @@
       ]
     },
     {
-      "call_count": 207,
+      "call_count": 203,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -92961,7 +92527,7 @@
       ]
     },
     {
-      "call_count": 16,
+      "call_count": 12,
       "component": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "group": "Security & compliance",
       "id": "audit",
@@ -93269,32 +92835,6 @@
       "path": "/ai/protect/policies/{param}",
       "service": "ai",
       "service_key": "ai",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts/${encodeURIComponent(String(alertId || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 277,
-      "match_key": "audit|PUT|/alerts/{param}/acknowledge",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/acknowledge",
-      "path": "/alerts/{param}/acknowledge?{param}",
-      "service": "audit",
-      "service_key": "audit",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"audit\", `/alerts/${encodeURIComponent(String(alertId || \"\").trim())}/resolve?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/audit.ts",
-      "line": 293,
-      "match_key": "audit|PUT|/alerts/{param}/resolve",
-      "method": "PUT",
-      "normalized_path": "/alerts/{param}/resolve",
-      "path": "/alerts/{param}/resolve?{param}",
-      "service": "audit",
-      "service_key": "audit",
       "source": "serviceRequest"
     },
     {
@@ -94800,7 +94340,7 @@
         ]
       },
       {
-        "complexity": 15,
+        "complexity": 11,
         "externalPackages": [
           "encoding/json.NewDecoder",
           "encoding/json.NewEncoder",
@@ -94808,7 +94348,6 @@
           "strconv.Atoi",
           "strings.TrimSpace",
           "strings.EqualFold",
-          "strings.ToLower",
           "time.Parse",
           "encoding/json.Marshal",
           "errors.New"
@@ -94816,7 +94355,7 @@
         "frontendSites": [],
         "handler": "handlePublish",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 126,
+        "handlerLine": 119,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -94841,10 +94380,6 @@
         "storeCalls": [
           "QueryEvents",
           "GetEvent",
-          "AlertStats",
-          "QueryAlerts",
-          "GetAlert",
-          "UpdateAlertStatus",
           "BuildMerkleEpoch",
           "ListMerkleEpochs",
           "GetMerkleEpoch",
@@ -94863,13 +94398,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 126,
+            "line": 88,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvents",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 190,
+        "handlerLine": 183,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94898,13 +94433,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 131,
+            "line": 93,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 218,
+        "handlerLine": 211,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94931,13 +94466,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 148,
+            "line": 110,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleTimeline",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 236,
+        "handlerLine": 229,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94964,13 +94499,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 204,
+            "line": 166,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSession",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 254,
+        "handlerLine": 247,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94997,13 +94532,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 220,
+            "line": 182,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCorrelation",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 272,
+        "handlerLine": 265,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95029,7 +94564,7 @@
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 290,
+        "handlerLine": 283,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95053,13 +94588,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 228,
+            "line": 190,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 295,
+        "handlerLine": 288,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95080,37 +94615,12 @@
         ]
       },
       {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleAuditStats",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 309,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/audit/stats",
-        "path": "/audit/stats",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/audit/stats",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "AlertStats"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
         "complexity": 0,
         "externalPackages": [],
         "frontendSites": [],
         "handler": "handleStream",
         "handlerFile": "services/audit/stream.go",
-        "handlerLine": 95,
+        "handlerLine": 76,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95136,13 +94646,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 240,
+            "line": 202,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 323,
+        "handlerLine": 302,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95162,162 +94672,18 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/alerts?${q.toString()}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 267,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleAlerts",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 340,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/alerts",
-        "path": "/alerts",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/alerts",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "QueryAlerts"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
-        "frontendSites": [],
-        "handler": "handleAlert",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 363,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/alerts/{param}",
-        "path": "/alerts/{id}",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/alerts/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetAlert"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [
-          "strings.ToLower",
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [],
-        "handler": "handleAlertActionPath",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 381,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "PUT",
-        "normalizedPath": "/alerts/{param}/{param}",
-        "path": "/alerts/{id}/{action}",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "audit|PUT|/alerts/{param}/{param}",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"audit\", `/alerts/stats?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/audit.ts",
-            "line": 304,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleAlertStats",
-        "handlerFile": "services/audit/handler.go",
-        "handlerLine": 433,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/alerts/stats",
-        "path": "/alerts/stats",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/alerts/stats",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [
-          "AlertStats"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Audit Log"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleAlertStream",
-        "handlerFile": "services/audit/stream.go",
-        "handlerLine": 104,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/alerts/stream",
-        "path": "/alerts/stream",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "audit|GET|/alerts/stream",
-        "sensitive": false,
-        "service": "audit",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
         "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"audit\", `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 378,
+            "line": 274,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleBuild",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 576,
+        "handlerLine": 445,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95344,13 +94710,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 355,
+            "line": 251,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleEpochs",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 605,
+        "handlerLine": 474,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95378,7 +94744,7 @@
         "frontendSites": [],
         "handler": "handleMerkleEpoch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 620,
+        "handlerLine": 489,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95406,13 +94772,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 366,
+            "line": 262,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEventProof",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 638,
+        "handlerLine": 507,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95439,13 +94805,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/merkle/verify`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 390,
+            "line": 286,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 656,
+        "handlerLine": 525,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95706,7 +95072,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 448,
+        "handlerLine": 317,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96021,7 +95387,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 188,
+            "line": 150,
             "source": "serviceRequest"
           }
         ],
@@ -125459,7 +124825,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-28T10:39:10Z",
+    "generatedAt": "2026-09-28T11:05:27Z",
     "methods": [
       "DELETE",
       "GET",
@@ -125501,8 +124867,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 923,
-      "frontendBacked": 537,
+      "flows": 917,
+      "frontendBacked": 535,
       "highRisk": 367,
       "services": 30
     }

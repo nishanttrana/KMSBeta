@@ -16,7 +16,7 @@ import (
 type selfEmitter struct{ svc *Service }
 
 func (e selfEmitter) Emit(ctx context.Context, action string, evt pkgaudit.Event) error {
-	_, _, err := e.svc.ProcessEvent(ctx, AuditEvent{
+	_, err := e.svc.ProcessEvent(ctx, AuditEvent{
 		TenantID: evt.TenantID, Service: "audit", Action: "audit.audit." + action,
 		ActorID: evt.ActorID, ActorType: evt.ActorType, TargetType: evt.TargetType, TargetID: evt.TargetID,
 		Result: evt.Result, StatusCode: evt.StatusCode, ErrorMessage: evt.ErrorMessage,

@@ -48,14 +48,6 @@ func createAuditSchemaForTest(conn *pkgdb.DB) error {
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE audit_relay_cursor (tenant_id TEXT NOT NULL, chain_node TEXT NOT NULL, last_sequence INTEGER NOT NULL, PRIMARY KEY (tenant_id, chain_node));`,
-		`CREATE TABLE alerts (
-			id TEXT NOT NULL, tenant_id TEXT NOT NULL, audit_event_id TEXT NOT NULL, severity TEXT NOT NULL, category TEXT NOT NULL,
-			title TEXT NOT NULL, description TEXT, source_service TEXT NOT NULL, actor_id TEXT, target_id TEXT, risk_score INTEGER DEFAULT 0,
-			status TEXT NOT NULL DEFAULT 'open', acknowledged_by TEXT, acknowledged_at TEXT, resolved_by TEXT, resolved_at TEXT,
-			resolution_note TEXT, dispatched_channels TEXT, dispatch_status TEXT, dedup_key TEXT, occurrence_count INTEGER DEFAULT 1,
-			escalated_from TEXT, escalated_at TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (tenant_id, id)
-		);`,
 		`CREATE TABLE webhooks (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, url TEXT NOT NULL, format TEXT NOT NULL DEFAULT 'json', events_json TEXT NOT NULL DEFAULT '[]', secret TEXT NOT NULL DEFAULT '', headers_json TEXT NOT NULL DEFAULT '{}', enabled BOOLEAN NOT NULL DEFAULT TRUE, failure_count INT NOT NULL DEFAULT 0, last_delivery_at TIMESTAMP, last_delivery_status TEXT, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, has_secret BOOLEAN NOT NULL DEFAULT FALSE, creds_ciphertext BLOB, creds_data_iv BLOB, creds_wrapped_dek BLOB, creds_wrapped_dek_iv BLOB, connection_id TEXT NOT NULL DEFAULT '', connection_type TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE ops_metrics_hourly (tenant_id TEXT NOT NULL, hour TIMESTAMP NOT NULL, service TEXT NOT NULL DEFAULT '', node TEXT NOT NULL DEFAULT '', op_type TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, error_count INTEGER NOT NULL DEFAULT 0, total_latency_ms INTEGER NOT NULL DEFAULT 0, total_latency_us INTEGER NOT NULL DEFAULT 0, value_count INTEGER NOT NULL DEFAULT 0, lat_b00 INTEGER NOT NULL DEFAULT 0, lat_b01 INTEGER NOT NULL DEFAULT 0, lat_b02 INTEGER NOT NULL DEFAULT 0, lat_b03 INTEGER NOT NULL DEFAULT 0, lat_b04 INTEGER NOT NULL DEFAULT 0, lat_b05 INTEGER NOT NULL DEFAULT 0, lat_b06 INTEGER NOT NULL DEFAULT 0, lat_b07 INTEGER NOT NULL DEFAULT 0, lat_b08 INTEGER NOT NULL DEFAULT 0, lat_b09 INTEGER NOT NULL DEFAULT 0, lat_b10 INTEGER NOT NULL DEFAULT 0, lat_b11 INTEGER NOT NULL DEFAULT 0, lat_b12 INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tenant_id, hour, node, service, op_type));`,
 		`CREATE TABLE webhook_deliveries (id TEXT NOT NULL, tenant_id TEXT NOT NULL, webhook_id TEXT NOT NULL, event_type TEXT NOT NULL, payload_preview TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'success', http_status INT, delivered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, latency_ms INT NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', attempt INT NOT NULL DEFAULT 1, PRIMARY KEY (tenant_id, id));`,
@@ -68,78 +60,17 @@ func createAuditSchemaForTest(conn *pkgdb.DB) error {
 	return nil
 }
 
-func TestPersistEventCreatesAlert(t *testing.T) {
+func TestPersistEventChains(t *testing.T) {
 	s := newAuditStore(t)
-	ctx := context.Background()
-
-	event := AuditEvent{
-		TenantID:  "t1",
-		Timestamp: time.Now().UTC(),
-		Service:   "key",
-		Action:    "audit.key.exported",
-		ActorID:   "u1",
-		ActorType: "human",
-		Result:    "success",
-		Details:   map[string]interface{}{"k": "v"},
-	}
-	alert := Alert{
-		Severity:      "HIGH",
-		Category:      "key",
-		Title:         "Key exported",
-		SourceService: "key",
-		ActorID:       "u1",
-	}
-	ev, al, err := s.PersistEventAndAlert(ctx, event, alert, 60, 5, 10*time.Minute)
+	ev, err := s.PersistEvent(context.Background(), AuditEvent{
+		TenantID: "t1", Timestamp: time.Now().UTC(), Service: "key", Action: "audit.key.exported",
+		ActorID: "u1", ActorType: "human", Result: "success", Details: map[string]interface{}{"k": "v"},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ev.Sequence != 1 || ev.ChainHash == "" || ev.PreviousHash == "" {
+	if ev.Sequence != 1 || ev.ChainHash == "" || ev.PreviousHash != "GENESIS" {
 		t.Fatalf("invalid chain fields: %+v", ev)
-	}
-	if al.ID == "" || al.AuditEventID != ev.ID {
-		t.Fatalf("invalid alert: %+v", al)
-	}
-}
-
-func TestDedupAndEscalation(t *testing.T) {
-	s := newAuditStore(t)
-	ctx := context.Background()
-	base := time.Unix((time.Now().UTC().Unix()/60)*60+5, 0).UTC()
-	for i := 0; i < 5; i++ {
-		_, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
-			TenantID:  "t1",
-			Timestamp: base.Add(time.Duration(i) * time.Second),
-			Service:   "auth",
-			Action:    "audit.auth.login_failed",
-			ActorID:   "u1",
-			ActorType: "human",
-			SourceIP:  "1.1.1.1",
-			Result:    "failure",
-		}, Alert{
-			Severity:      "HIGH",
-			Category:      "auth",
-			Title:         "Login failed",
-			SourceService: "auth",
-		}, 60, 5, 10*time.Minute)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	items, err := s.QueryAlerts(ctx, "t1", AlertQuery{Limit: 20})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(items) == 0 {
-		t.Fatal("expected alerts")
-	}
-	foundCritical := false
-	for _, it := range items {
-		if it.Severity == "CRITICAL" || it.EscalatedFrom == "HIGH" {
-			foundCritical = true
-		}
-	}
-	if !foundCritical {
-		t.Fatal("expected escalation to CRITICAL")
 	}
 }
 
@@ -147,7 +78,7 @@ func TestVerifyChain(t *testing.T) {
 	s := newAuditStore(t)
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
+		_, err := s.PersistEvent(ctx, AuditEvent{
 			TenantID:  "t2",
 			Timestamp: time.Now().UTC().Add(time.Duration(i) * time.Second),
 			Service:   "key",
@@ -155,12 +86,7 @@ func TestVerifyChain(t *testing.T) {
 			ActorID:   "u1",
 			ActorType: "human",
 			Result:    "success",
-		}, Alert{
-			Severity:      "LOW",
-			Category:      "key",
-			Title:         "encrypt",
-			SourceService: "key",
-		}, 60, 5, 10*time.Minute)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +104,7 @@ func TestPersistEventNormalizesSourceIP(t *testing.T) {
 	s := newAuditStore(t)
 	ctx := context.Background()
 
-	_, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
+	_, err := s.PersistEvent(ctx, AuditEvent{
 		TenantID:  "t3",
 		Timestamp: time.Now().UTC(),
 		Service:   "auth",
@@ -187,12 +113,7 @@ func TestPersistEventNormalizesSourceIP(t *testing.T) {
 		ActorType: "human",
 		SourceIP:  "172.18.0.4:55712",
 		Result:    "failure",
-	}, Alert{
-		Severity:      "HIGH",
-		Category:      "auth",
-		Title:         "Login failed",
-		SourceService: "auth",
-	}, 60, 5, 10*time.Minute)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,8 +165,8 @@ func checkActionPrefix(t *testing.T, s *SQLStore, tenant string) {
 	t.Helper()
 	ctx := context.Background()
 	for _, a := range []string{"audit.hsm.encrypt", "audit.hsm.key_generated", "audit.key.hsm_refused", "audit.key.hsmx_other", "audit.key.create"} {
-		if _, _, err := s.PersistEventAndAlert(ctx, AuditEvent{TenantID: tenant, Timestamp: time.Now().UTC(), Service: "hsm",
-			Action: a, ActorID: "kms-keycore", ActorType: "service", Result: "success"}, Alert{}, 60, 5, 10*time.Minute); err != nil {
+		if _, err := s.PersistEvent(ctx, AuditEvent{TenantID: tenant, Timestamp: time.Now().UTC(), Service: "hsm",
+			Action: a, ActorID: "kms-keycore", ActorType: "service", Result: "success"}); err != nil {
 			t.Fatal(err)
 		}
 	}

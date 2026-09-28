@@ -15,6 +15,7 @@ var Replicated = map[string][]string{
 	},
 	"audit": {
 		"alert_rules", // dropped by migration 011 (2.14.0-beta); 001 still creates it first
+		"alerts",      // dropped by migration 012 (2.16.0-beta); 001 still creates it first
 		"audit_mek_exposure",
 		"audit_mek_state",
 		"webhooks",
@@ -255,7 +256,6 @@ var NodeLocal = map[string]string{
 	"cluster_member_credentials":          "credentials a primary issued to its members",
 	"ai_gateway_audit":                    "per-node AI gateway log",
 	"ai_gateway_token_budgets":            "per-node usage counters",
-	"alerts":                              "alerts raised on this node",
 	"auth_hsm_provider_configs":           "HSM hardware configuration of this node",
 	"auth_request_nonce_cache":            "anti-replay nonces are checked where the request lands",
 	"auth_sessions":                       "sessions are bound to the node that issued them",

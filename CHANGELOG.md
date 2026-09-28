@@ -4,6 +4,34 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.16.0-beta] — 2026-09-28
+
+### Audit keeps no alert store; alerts live only in reporting (breaking)
+- **Removed audit's own alerts.** For every event it ingested, the audit
+  service also wrote a row to its `alerts` table, with dedup, HIGH→CRITICAL
+  escalation and a severity-derived title. Reporting raises the real alerts
+  from the same events, and the Alert Center, header bell, incidents and
+  playbooks all read reporting. No screen has read audit's table since
+  2.12.0-beta. Ingest now chains, signs, scores and stores the event only.
+- **Removed routes:** `GET /svc/audit/alerts`, `GET /svc/audit/alerts/{id}`,
+  `PUT /svc/audit/alerts/{id}/{acknowledge|resolve|suppress}`,
+  `GET /svc/audit/alerts/stats`, `GET /svc/audit/alerts/stream` (SSE) and
+  `GET /svc/audit/audit/stats`, which despite its name returned only those
+  alert counts. Use `/svc/reporting/alerts`, `/alerts/stats`,
+  `/alerts/stats/mttr|mttd` and `/alerts/feed`.
+- **Removed settings:** `ALERT_DEDUP_WINDOW_SECONDS`,
+  `ALERT_ESCALATION_THRESHOLD`, `ALERT_ESCALATION_WINDOW_MINUTES`, and the
+  `dedup_window_seconds` / `escalation_*` fields of `GET /svc/audit/audit/config`.
+- **Audit migration 012** drops the `alerts` table. Its rows were copies of
+  events that remain in `audit_events`; the alerts people triage are in
+  reporting and are untouched.
+- **Dashboard:** the unused audit-alert client functions and types are gone,
+  and the REST explorer's "Audit Statistics" entry, which documented event
+  counts the route never returned, is removed.
+- **Tests:** `TestAuditAlertStoreRemoved` asserts every former route answers
+  404/405 and that ingest still stores the chained, risk-scored event. The
+  audit Postgres tests pass with migration 012 on Postgres 17.
+
 ## [2.15.0-beta] — 2026-09-28
 
 ### Dashboard: dead live feed and its invented audit events removed

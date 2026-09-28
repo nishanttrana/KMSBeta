@@ -16,16 +16,11 @@ import (
 var errNotFound = errors.New("not found")
 
 type Store interface {
-	PersistEventAndAlert(ctx context.Context, event AuditEvent, alert Alert, dedupWindowSec int, escalationThreshold int, escalationWindow time.Duration) (AuditEvent, Alert, error)
+	PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error)
 	QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error)
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
 	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
-
-	QueryAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error)
-	GetAlert(ctx context.Context, tenantID string, id string) (Alert, error)
-	UpdateAlertStatus(ctx context.Context, tenantID string, id string, action string, actor string, note string, suppressUntil *time.Time) error
-	AlertStats(ctx context.Context, tenantID string) (AlertStats, error)
 
 	CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error)
 
@@ -107,20 +102,10 @@ type EventQuery struct {
 	Offset         int
 }
 
-type AlertQuery struct {
-	Severity string
-	Category string
-	Status   string
-	From     time.Time
-	To       time.Time
-	Limit    int
-	Offset   int
-}
-
-func (s *SQLStore) PersistEventAndAlert(ctx context.Context, event AuditEvent, alert Alert, dedupWindowSec int, escalationThreshold int, escalationWindow time.Duration) (AuditEvent, Alert, error) {
+func (s *SQLStore) PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
 	tx, err := s.db.SQL().BeginTx(ctx, nil)
 	if err != nil {
-		return AuditEvent{}, Alert{}, err
+		return AuditEvent{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
 
@@ -142,7 +127,7 @@ WHERE tenant_id=$1 AND chain_node IN ('', $2) ORDER BY sequence DESC LIMIT 1
 		sequence = prevSeq + 1
 		previousHash = prevHash
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return AuditEvent{}, Alert{}, err
+		return AuditEvent{}, err
 	}
 	if event.ID == "" {
 		event.ID = newID("evt")
@@ -168,7 +153,7 @@ WHERE tenant_id=$1 AND chain_node IN ('', $2) ORDER BY sequence DESC LIMIT 1
 	}
 
 	if err := s.ensureAuditPartition(ctx, tx, event.Timestamp); err != nil {
-		return AuditEvent{}, Alert{}, err
+		return AuditEvent{}, err
 	}
 
 	tags, _ := json.Marshal(event.Tags)
@@ -192,101 +177,13 @@ INSERT INTO audit_events (
 		event.ChainNode, nullable(event.HMACKeyID),
 	)
 	if err != nil {
-		return AuditEvent{}, Alert{}, err
-	}
-
-	if alert.ID == "" {
-		alert.ID = newID("alr")
-	}
-	alert.TenantID = tenantID
-	alert.AuditEventID = event.ID
-	if alert.Status == "" {
-		alert.Status = "open"
-	}
-	if alert.DedupKey == "" {
-		alert.DedupKey = dedupKey(event, dedupWindowSec)
-	}
-	if alert.DispatchStatus == nil {
-		alert.DispatchStatus = map[string]interface{}{}
-	}
-	if alert.OccurrenceCount == 0 {
-		alert.OccurrenceCount = 1
-	}
-	dispatchJSON, _ := json.Marshal(alert.DispatchStatus)
-	channelsJSON, _ := json.Marshal(alert.DispatchedChannels)
-
-	var existingID string
-	var existingCount int
-	var existingSeverity string
-	err = tx.QueryRowContext(ctx, `
-SELECT id, occurrence_count, severity
-FROM alerts
-WHERE tenant_id=$1 AND dedup_key=$2 AND created_at >= $3
-ORDER BY created_at DESC LIMIT 1
-`, tenantID, alert.DedupKey, time.Now().UTC().Add(-time.Duration(dedupWindowSec)*time.Second)).Scan(&existingID, &existingCount, &existingSeverity)
-	if err == nil {
-		alert.ID = existingID
-		alert.OccurrenceCount = existingCount + 1
-		if existingSeverity != "" {
-			alert.Severity = existingSeverity
-		}
-		_, err = tx.ExecContext(ctx, `
-UPDATE alerts SET occurrence_count=$1, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$2 AND id=$3
-`, alert.OccurrenceCount, tenantID, existingID)
-		if err != nil {
-			return AuditEvent{}, Alert{}, err
-		}
-	} else if errors.Is(err, sql.ErrNoRows) {
-		_, err = tx.ExecContext(ctx, `
-INSERT INTO alerts (
-    id, tenant_id, audit_event_id, severity, category, title, description, source_service, actor_id, target_id, risk_score,
-    status, dispatched_channels, dispatch_status, dedup_key, occurrence_count, escalated_from, escalated_at, created_at, updated_at
-) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
-)
-`, alert.ID, alert.TenantID, alert.AuditEventID, alert.Severity, alert.Category, alert.Title, nullable(alert.Description),
-			alert.SourceService, nullable(alert.ActorID), nullable(alert.TargetID), alert.RiskScore, alert.Status, channelsJSON, dispatchJSON, alert.DedupKey,
-			alert.OccurrenceCount, nullable(alert.EscalatedFrom), nullableTime(alert.EscalatedAt))
-		if err != nil {
-			return AuditEvent{}, Alert{}, err
-		}
-	} else {
-		return AuditEvent{}, Alert{}, err
-	}
-
-	if strings.EqualFold(alert.Severity, "HIGH") && escalationThreshold > 0 {
-		shouldEscalate := alert.OccurrenceCount >= escalationThreshold
-		if !shouldEscalate {
-			var recentHigh int
-			err = tx.QueryRowContext(ctx, `
-SELECT COUNT(1) FROM alerts
-WHERE tenant_id=$1 AND severity='HIGH' AND created_at >= $2
-`, tenantID, time.Now().UTC().Add(-escalationWindow)).Scan(&recentHigh)
-			if err != nil {
-				return AuditEvent{}, Alert{}, err
-			}
-			shouldEscalate = recentHigh >= escalationThreshold
-		}
-		if shouldEscalate {
-			alert.EscalatedFrom = "HIGH"
-			alert.Severity = "CRITICAL"
-			alert.EscalatedAt = time.Now().UTC()
-			_, err = tx.ExecContext(ctx, `
-UPDATE alerts
-SET severity='CRITICAL', escalated_from='HIGH', escalated_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$1 AND id=$2
-`, tenantID, alert.ID)
-			if err != nil {
-				return AuditEvent{}, Alert{}, err
-			}
-		}
+		return AuditEvent{}, err
 	}
 
 	if err := tx.Commit(); err != nil {
-		return AuditEvent{}, Alert{}, err
+		return AuditEvent{}, err
 	}
-	return event, alert, nil
+	return event, nil
 }
 
 func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error) {
@@ -454,115 +351,6 @@ ORDER BY sequence ASC
 	return len(breaks) == 0, breaks, rows.Err()
 }
 
-func (s *SQLStore) QueryAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error) {
-	if q.Limit <= 0 || q.Limit > 1000 {
-		q.Limit = 200
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, audit_event_id, severity, category, title, COALESCE(description,''), source_service,
-       COALESCE(actor_id,''), COALESCE(target_id,''), COALESCE(risk_score,0), status, COALESCE(acknowledged_by,''),
-       acknowledged_at, COALESCE(resolved_by,''), resolved_at,
-       COALESCE(resolution_note,''), COALESCE(dispatched_channels,'[]'), COALESCE(dispatch_status,'{}'), COALESCE(dedup_key,''),
-       COALESCE(occurrence_count,1), COALESCE(escalated_from,''), escalated_at, created_at, updated_at
-FROM alerts
-WHERE tenant_id=$1
-  AND ($2='' OR severity=$2)
-  AND ($3='' OR category=$3)
-  AND ($4='' OR status=$4)
-  AND created_at >= COALESCE($5, created_at)
-  AND created_at <= COALESCE($6, created_at)
-ORDER BY created_at DESC
-LIMIT $7 OFFSET $8
-`, tenantID, q.Severity, q.Category, q.Status, nullableTime(q.From), nullableTime(q.To), q.Limit, q.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []Alert
-	for rows.Next() {
-		al, err := scanAlert(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, al)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) GetAlert(ctx context.Context, tenantID string, id string) (Alert, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, audit_event_id, severity, category, title, COALESCE(description,''), source_service,
-       COALESCE(actor_id,''), COALESCE(target_id,''), COALESCE(risk_score,0), status, COALESCE(acknowledged_by,''),
-       acknowledged_at, COALESCE(resolved_by,''), resolved_at,
-       COALESCE(resolution_note,''), COALESCE(dispatched_channels,'[]'), COALESCE(dispatch_status,'{}'), COALESCE(dedup_key,''),
-       COALESCE(occurrence_count,1), COALESCE(escalated_from,''), escalated_at, created_at, updated_at
-FROM alerts WHERE tenant_id=$1 AND id=$2
-`, tenantID, id)
-	al, err := scanAlert(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Alert{}, errNotFound
-	}
-	return al, err
-}
-
-func (s *SQLStore) UpdateAlertStatus(ctx context.Context, tenantID string, id string, action string, actor string, note string, suppressUntil *time.Time) error {
-	switch strings.ToLower(action) {
-	case "acknowledge":
-		_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE alerts SET status='acknowledged', acknowledged_by=$1, acknowledged_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$2 AND id=$3
-`, actor, tenantID, id)
-		return err
-	case "resolve":
-		_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE alerts SET status='resolved', resolved_by=$1, resolved_at=CURRENT_TIMESTAMP, resolution_note=$2, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$3 AND id=$4
-`, actor, note, tenantID, id)
-		return err
-	case "suppress":
-		noteText := note
-		if suppressUntil != nil {
-			noteText = noteText + " suppress_until=" + suppressUntil.UTC().Format(time.RFC3339)
-		}
-		_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE alerts SET status='suppressed', resolution_note=$1, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$2 AND id=$3
-`, noteText, tenantID, id)
-		return err
-	default:
-		return fmt.Errorf("unsupported alert action %s", action)
-	}
-}
-
-func (s *SQLStore) AlertStats(ctx context.Context, tenantID string) (AlertStats, error) {
-	stats := AlertStats{
-		OpenBySeverity: map[string]int{},
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT severity, COUNT(1)
-FROM alerts
-WHERE tenant_id=$1 AND status='open'
-GROUP BY severity
-`, tenantID)
-	if err != nil {
-		return stats, err
-	}
-	for rows.Next() {
-		var sev string
-		var cnt int
-		if err := rows.Scan(&sev, &cnt); err != nil {
-			rows.Close() //nolint:errcheck
-			return stats, err
-		}
-		stats.OpenBySeverity[sev] = cnt
-		stats.TotalOpen += cnt
-	}
-	rows.Close() //nolint:errcheck
-	_ = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM alerts WHERE tenant_id=$1 AND status='acknowledged'`, tenantID).Scan(&stats.TotalAck)
-	_ = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM alerts WHERE tenant_id=$1 AND status='resolved'`, tenantID).Scan(&stats.TotalResolved)
-	return stats, nil
-}
-
 func (s *SQLStore) CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error) {
 	if targetID == "" {
 		return 0, nil
@@ -607,39 +395,6 @@ func scanEvent(scanner interface {
 		ev.CountryCode = cc
 	}
 	return ev, nil
-}
-
-func scanAlert(scanner interface {
-	Scan(dest ...interface{}) error
-}) (Alert, error) {
-	var al Alert
-	var channelsRaw []byte
-	var dispatchRaw []byte
-	var acknowledgedRaw interface{}
-	var resolvedRaw interface{}
-	var escalatedRaw interface{}
-	var createdRaw interface{}
-	var updatedRaw interface{}
-	err := scanner.Scan(
-		&al.ID, &al.TenantID, &al.AuditEventID, &al.Severity, &al.Category, &al.Title, &al.Description, &al.SourceService,
-		&al.ActorID, &al.TargetID, &al.RiskScore, &al.Status, &al.AcknowledgedBy, &acknowledgedRaw, &al.ResolvedBy,
-		&resolvedRaw, &al.ResolutionNote, &channelsRaw, &dispatchRaw, &al.DedupKey, &al.OccurrenceCount, &al.EscalatedFrom,
-		&escalatedRaw, &createdRaw, &updatedRaw,
-	)
-	if err != nil {
-		return Alert{}, err
-	}
-	al.AcknowledgedAt = parseTimeValue(acknowledgedRaw)
-	al.ResolvedAt = parseTimeValue(resolvedRaw)
-	al.EscalatedAt = parseTimeValue(escalatedRaw)
-	al.CreatedAt = parseTimeValue(createdRaw)
-	al.UpdatedAt = parseTimeValue(updatedRaw)
-	_ = json.Unmarshal(channelsRaw, &al.DispatchedChannels)
-	_ = json.Unmarshal(dispatchRaw, &al.DispatchStatus)
-	if al.DispatchStatus == nil {
-		al.DispatchStatus = map[string]interface{}{}
-	}
-	return al, nil
 }
 
 func nullable(v string) interface{} {

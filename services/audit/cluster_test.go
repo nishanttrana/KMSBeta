@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -21,10 +22,10 @@ var testAuditKey = []byte("0123456789abcdef0123456789abcdef")
 func appendEvents(t *testing.T, s *SQLStore, tenant string, n int) {
 	t.Helper()
 	for i := 0; i < n; i++ {
-		if _, _, err := s.PersistEventAndAlert(context.Background(), AuditEvent{
+		if _, err := s.PersistEvent(context.Background(), AuditEvent{
 			TenantID: tenant, Timestamp: time.Now().UTC(), Service: "key", Action: "audit.key.encrypt",
 			ActorID: "u1", ActorType: "human", Result: "success",
-		}, Alert{Severity: "LOW", Category: "key", Title: "encrypt", SourceService: "key"}, 60, 5, 10*time.Minute); err != nil {
+		}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -55,7 +56,7 @@ func replicate(t *testing.T, from, to *SQLStore, chain string) {
 		}
 		ph := "$1"
 		for i := 2; i <= 34; i++ {
-			ph += ",$" + itoa(int64(i))
+			ph += ",$" + strconv.Itoa(i)
 		}
 		if _, err := to.db.SQL().Exec(`INSERT INTO audit_events (`+eventCols+`) VALUES (`+ph+`)`, vals...); err != nil {
 			t.Fatal(err)
@@ -163,7 +164,7 @@ func TestRelayedDuplicatesAreSkippedOnlyWhenPresent(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !svc.isRelayedDuplicate(ctx, ev) {
-			if _, _, err := svc.ProcessEvent(ctx, ev); err != nil {
+			if _, err := svc.ProcessEvent(ctx, ev); err != nil {
 				t.Fatal(err)
 			}
 		}

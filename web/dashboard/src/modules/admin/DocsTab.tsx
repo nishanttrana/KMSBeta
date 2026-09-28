@@ -173,7 +173,7 @@ const SectionOverview = () => (
         ["Post-Quantum", "PQC algorithms (ML-KEM, ML-DSA, SLH-DSA), migration planning, CBOM"],
         ["MPC", "Distributed key generation, threshold signing, multi-party decryption"],
         ["Governance", "Multi-party approval workflows, policy enforcement, compliance frameworks"],
-        ["Audit", "Immutable audit trail with Merkle tree verification, alerting, SIEM integration"],
+        ["Audit", "Immutable audit trail with Merkle tree verification; alerts are raised from it by reporting"],
         ["Cluster", "Multi-node clustering with etcd consensus, sync replication, role management"],
       ].map(([t, d]) => (
         <Card key={t} style={{ padding: 10 }}>
@@ -326,7 +326,7 @@ const SectionArchitecture = () => (
       ["kms-auth", "8001 / 18001", "Authentication, RBAC, tenant management, SSO, API keys"],
       ["kms-keycore", "8010 / 18010", "Key lifecycle, cryptographic operations, access policies"],
       ["kms-policy", "8040 / 18040", "Policy decision point, permission evaluation"],
-      ["kms-audit", "8070 / 18070", "Immutable audit trail, alerts, Merkle integrity"],
+      ["kms-audit", "8070 / 18070", "Immutable audit trail, Merkle integrity"],
       ["dashboard", "5173", "Web management UI (React/Vite)"],
       ["envoy", "80/443/5696", "Edge proxy, TLS termination, routing"],
       ["postgres", "5432", "Primary database (PostgreSQL 16)"],

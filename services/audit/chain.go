@@ -106,33 +106,3 @@ func categoryGroupForService(service string) CategoryGroup {
 		return CatSystemAdministration
 	}
 }
-
-func dedupKey(event AuditEvent, windowSeconds int) string {
-	if windowSeconds <= 0 {
-		windowSeconds = 60
-	}
-	bucket := event.Timestamp.UTC().Unix() / int64(windowSeconds)
-	return event.TenantID + "|" + event.Action + "|" + event.SourceIP + "|" + event.ActorID + "|" + itoa(bucket)
-}
-
-func itoa(v int64) string {
-	if v == 0 {
-		return "0"
-	}
-	neg := v < 0
-	if neg {
-		v = -v
-	}
-	var b [20]byte
-	i := len(b)
-	for v > 0 {
-		i--
-		b[i] = byte('0' + (v % 10))
-		v /= 10
-	}
-	if neg {
-		i--
-		b[i] = '-'
-	}
-	return string(b[i:])
-}

@@ -41,11 +41,11 @@ func seedKeyTrail(t *testing.T, s *SQLStore, tenant string) []string {
 	base := time.Now().UTC().Truncate(time.Second).Add(-time.Hour)
 	var ids []string
 	write := func(i int, target, action string) {
-		ev, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
+		ev, err := s.PersistEvent(ctx, AuditEvent{
 			TenantID: tenant, Timestamp: base.Add(time.Duration(i) * time.Second), Service: "keycore", Action: action,
 			ActorID: "alice", ActorType: "user", TargetType: "key", TargetID: target, Result: "success",
 			Details: map[string]interface{}{"i": i},
-		}, Alert{}, 60, 5, 10*time.Minute)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

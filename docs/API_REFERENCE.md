@@ -3294,11 +3294,6 @@ from the code; do not edit by hand.
 
 ### audit (`/svc/audit/`)
 
-- `GET /svc/audit/alerts`
-- `GET /svc/audit/alerts/stats`
-- `GET /svc/audit/alerts/stream`
-- `GET /svc/audit/alerts/{id}`
-- `PUT /svc/audit/alerts/{id}/{action}`
 - `GET /svc/audit/audit/cbom/diff`
 - `GET /svc/audit/audit/cbom/inventory`
 - `GET /svc/audit/audit/chain/verify`
@@ -3318,7 +3313,6 @@ from the code; do not edit by hand.
 - `POST /svc/audit/audit/publish`
 - `POST /svc/audit/audit/search`
 - `GET /svc/audit/audit/session/{session_id}`
-- `GET /svc/audit/audit/stats`
 - `GET /svc/audit/audit/stream`
 - `GET /svc/audit/audit/targets/{target_id}/integrity`
 - `GET /svc/audit/audit/timeline/{target_id}`

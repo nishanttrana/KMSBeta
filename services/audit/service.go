@@ -94,7 +94,7 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	if s.isRelayedDuplicate(ctx, event) {
 		return nil // another node's event, already here by replication
 	}
-	_, _, err = s.ProcessEvent(ctx, event)
+	_, err = s.ProcessEvent(ctx, event)
 	if err == nil {
 		return nil
 	}
@@ -107,36 +107,23 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	return nil
 }
 
-func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEvent, Alert, error) {
-	enriched, alert, err := s.classifyAndCorrelate(ctx, event)
-	if err != nil {
-		return AuditEvent{}, Alert{}, err
-	}
+func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
+	enriched := s.classifyAndCorrelate(ctx, event)
 	// Side-effecting detectors run before persistence so a sustained-
 	// risk-score signal lands in the chain in the same epoch as the
 	// triggering event.
 	s.runDetectors(ctx, enriched)
-	dispatch := dispatchPlan(alert.Severity)
-	alert.DispatchedChannels = dispatch.Channels
-	alert.DispatchStatus = dispatch.Status
 
-	evt, al, err := s.store.PersistEventAndAlert(
-		ctx,
-		enriched,
-		alert,
-		s.cfg.DedupWindowSeconds,
-		s.cfg.EscalationThreshold,
-		time.Duration(s.cfg.EscalationMinutes)*time.Minute,
-	)
+	evt, err := s.store.PersistEvent(ctx, enriched)
 	if err != nil {
-		return AuditEvent{}, Alert{}, err
+		return AuditEvent{}, err
 	}
 	s.recordOpMetric(ctx, evt)
-	s.broadcastToStream(evt, al)
+	s.broadcastToStream(evt)
 	if s.webhooks != nil {
 		s.webhooks.Enqueue(ctx, evt)
 	}
-	return evt, al, nil
+	return evt, nil
 }
 
 // runDetectors fans an event out to the optional closed-loop detectors.
@@ -155,21 +142,19 @@ func (s *Service) runDetectors(ctx context.Context, event AuditEvent) {
 	}
 }
 
-func (s *Service) broadcastToStream(evt AuditEvent, al Alert) {
+func (s *Service) broadcastToStream(evt AuditEvent) {
 	if s.broker == nil {
 		return
 	}
 	if raw, err := json.Marshal(evt); err == nil {
 		s.broker.BroadcastEvent(evt.TenantID, evt.ID, string(raw))
 	}
-	if al.ID != "" {
-		if raw, err := json.Marshal(al); err == nil {
-			s.broker.BroadcastAlert(al.TenantID, al.ID, string(raw))
-		}
-	}
 }
 
-func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (AuditEvent, Alert, error) {
+// classifyAndCorrelate fills defaults, the FIPS category group, geo and the
+// risk score. Alerts are raised by reporting from these events
+// (/svc/reporting/alerts); audit keeps no alert store since 2.16.0-beta.
+func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) AuditEvent {
 	if event.ID == "" {
 		event.ID = newID("evt")
 	}
@@ -200,7 +185,6 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (A
 	}
 
 	severity := classifySeverity(event.Action, event.Result)
-	category := classifyCategory(event.Action)
 	// Populate FIPS 140-3 aligned category group from service name.
 	if event.CategoryGroup == "" {
 		event.CategoryGroup = categoryGroupForService(event.Service)
@@ -230,25 +214,7 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (A
 	}
 	event.RiskScore = risk
 
-	// Alert rules live in reporting (/svc/reporting/alerts/rules); audit's
-	// own rule matcher was removed in 2.14.0-beta.
-	title := defaultAlertTitle(event.Action, event.TargetID)
-	alert := Alert{
-		ID:            newID("alr"),
-		TenantID:      event.TenantID,
-		AuditEventID:  event.ID,
-		Severity:      severity,
-		Category:      category,
-		Title:         title,
-		Description:   defaultAlertDescription(event),
-		SourceService: event.Service,
-		ActorID:       event.ActorID,
-		TargetID:      event.TargetID,
-		RiskScore:     risk,
-		Status:        "open",
-		DedupKey:      dedupKey(event, s.cfg.DedupWindowSeconds),
-	}
-	return event, alert, nil
+	return event
 }
 
 func (s *Service) StartSubscriber(ctx context.Context, sub *pkgevents.Subscriber) (*nats.Subscription, error) {
@@ -276,7 +242,7 @@ func (s *Service) DrainWAL(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			_, _, err = s.ProcessEvent(ctx, event)
+			_, err = s.ProcessEvent(ctx, event)
 			return err
 		default:
 			return nil
@@ -319,7 +285,7 @@ func (s *Service) reportChainBroken(ctx context.Context, evt AuditEvent) {
 			return
 		}
 	}
-	_, _, _ = s.ProcessEvent(ctx, evt)
+	_, _ = s.ProcessEvent(ctx, evt)
 }
 
 // maxAuditPayloadBytes caps each NATS audit event so a malformed or hostile
@@ -485,27 +451,6 @@ func baseRisk(severity string, action string) int {
 	default:
 		return 5
 	}
-}
-
-// dispatchPlan records where an alert goes: the dashboard, which is the
-// only place the audit service puts it. It used to list email, SMS,
-// a paging service, SIEM and webhook as "queued", but nothing ever sent to them.
-// Alerts reach people through reporting's alert channels, and SIEMs through
-// event streams (Playbooks → Event streaming), and each records its own
-// real deliveries.
-func dispatchPlan(string) DispatchPlan {
-	return DispatchPlan{Channels: []string{"dashboard"}, Status: map[string]interface{}{"dashboard": "recorded"}}
-}
-
-func defaultAlertTitle(action string, targetID string) string {
-	if targetID == "" {
-		return "Alert: " + action
-	}
-	return "Alert: " + action + " (" + targetID + ")"
-}
-
-func defaultAlertDescription(event AuditEvent) string {
-	return "Action=" + event.Action + ", actor=" + event.ActorID + ", result=" + event.Result
 }
 
 func serviceFromAction(action string) string {

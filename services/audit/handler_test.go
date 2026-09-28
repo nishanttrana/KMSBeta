@@ -30,13 +30,10 @@ func newAuditHandler(t *testing.T, failClosed bool, publisherFail bool) (*Handle
 	store := newAuditStore(t)
 	walPath := filepath.Join(t.TempDir(), "audit-wal.log")
 	svc := NewService(store, AuditConfig{
-		FailClosed:          failClosed,
-		WALPath:             walPath,
-		WALMaxSizeMB:        8,
-		WALHMACKey:          []byte("0123456789abcdef0123456789abcdef"),
-		DedupWindowSeconds:  60,
-		EscalationThreshold: 5,
-		EscalationMinutes:   10,
+		FailClosed:   failClosed,
+		WALPath:      walPath,
+		WALMaxSizeMB: 8,
+		WALHMACKey:   []byte("0123456789abcdef0123456789abcdef"),
 	}, NewWALBuffer(walPath, 8, []byte("0123456789abcdef0123456789abcdef")), mockPublisher{fail: publisherFail})
 	return NewHandler(svc, store), svc, store, walPath
 }
@@ -86,93 +83,33 @@ func TestPublishBuffersWhenFailClosedFalse(t *testing.T) {
 	}
 }
 
-func TestAlertLifecycleEndpoints(t *testing.T) {
-	h, svc, store, _ := newAuditHandler(t, true, false)
-	_, alert, err := svc.ProcessEvent(context.Background(), AuditEvent{
-		TenantID:  "t1",
-		Timestamp: time.Now().UTC(),
-		Service:   "auth",
-		Action:    "audit.auth.login_failed",
-		ActorID:   "u1",
-		ActorType: "human",
-		SourceIP:  "1.1.1.1",
-		Result:    "failure",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ackReq := httptest.NewRequest(http.MethodPut, "/alerts/"+alert.ID+"/acknowledge?tenant_id=t1", bytes.NewReader([]byte(`{"actor":"secops","note":"investigating"}`)))
-	ackRR := httptest.NewRecorder()
-	h.ServeHTTP(ackRR, ackReq)
-	if ackRR.Code != http.StatusOK {
-		t.Fatalf("ack status=%d body=%s", ackRR.Code, ackRR.Body.String())
-	}
-	got, err := store.GetAlert(context.Background(), "t1", alert.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Status != "acknowledged" {
-		t.Fatalf("status=%s", got.Status)
-	}
-}
-
-// An alert records only where it really goes (the dashboard): no email, SMS,
-// paging, SIEM or webhook marked "queued" that nothing sends, and the
-// in-memory channel settings that nothing read are gone.
-func TestAlertRecordsOnlyRealDispatch(t *testing.T) {
-	h, svc, store, _ := newAuditHandler(t, true, false)
-	_, alert, err := svc.ProcessEvent(context.Background(), AuditEvent{
-		TenantID: "t1", Timestamp: time.Now().UTC(), Service: "auth", Action: "audit.auth.login_failed",
-		ActorID: "u1", ActorType: "human", SourceIP: "1.1.1.1", Result: "failure",
-	})
-	if err != nil || alert.ID == "" {
-		t.Fatalf("alert: %+v %v", alert, err)
-	}
-	got, err := store.GetAlert(context.Background(), "t1", alert.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Join(got.DispatchedChannels, ",") != "dashboard" || len(got.DispatchStatus) != 1 || got.DispatchStatus["dashboard"] != "recorded" {
-		t.Fatalf("dispatch %v %v", got.DispatchedChannels, got.DispatchStatus)
-	}
-	for _, sev := range []string{"CRITICAL", "HIGH", "LOW", ""} {
-		if p := dispatchPlan(sev); strings.Join(p.Channels, ",") != "dashboard" {
-			t.Fatalf("%s: %v", sev, p.Channels)
-		}
-	}
-	for _, rt := range []struct{ method, path string }{{http.MethodGet, "/alerts/channels"}, {http.MethodPut, "/alerts/channels"}, {http.MethodPost, "/alerts/channels/test"}} {
-		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path+"?tenant_id=t1", strings.NewReader(`{}`)))
-		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
-			t.Fatalf("%s %s still served: %d", rt.method, rt.path, rr.Code)
-		}
-	}
-}
-
-// Audit's own alert-rule routes are gone (2.14.0-beta): rules live in
-// reporting. An alert still records with audit's default severity and title.
-func TestAuditAlertRuleRoutesRemoved(t *testing.T) {
+// Audit keeps no alert store (2.16.0-beta): alerts, their triage, stats and
+// stream live in reporting (the Alert Center). Every former audit alert
+// route is gone, and ingest still chains the event without writing an alert.
+func TestAuditAlertStoreRemoved(t *testing.T) {
 	h, svc, store, _ := newAuditHandler(t, true, false)
 	for _, rt := range []struct{ method, path string }{
-		{http.MethodGet, "/alerts/rules"}, {http.MethodPost, "/alerts/rules"},
-		{http.MethodPut, "/alerts/rules/r1"}, {http.MethodDelete, "/alerts/rules/r1"},
+		{http.MethodGet, "/alerts"}, {http.MethodGet, "/alerts/a1"},
+		{http.MethodPut, "/alerts/a1/acknowledge"}, {http.MethodPut, "/alerts/a1/resolve"}, {http.MethodPut, "/alerts/a1/suppress"},
+		{http.MethodGet, "/alerts/stats"}, {http.MethodGet, "/alerts/stream"}, {http.MethodGet, "/audit/stats"},
+		{http.MethodGet, "/alerts/rules"}, {http.MethodPost, "/alerts/rules"}, {http.MethodPost, "/alerts/test-rule"},
+		{http.MethodGet, "/alerts/channels"}, {http.MethodPost, "/alerts/channels/test"},
 	} {
 		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path+"?tenant_id=t1", strings.NewReader(`{"condition":"event.action == 'audit.auth.login_failed'","severity":"CRITICAL"}`)))
+		h.ServeHTTP(rr, httptest.NewRequest(rt.method, rt.path+"?tenant_id=t1", strings.NewReader(`{"actor":"secops"}`)))
 		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("%s %s still served: %d", rt.method, rt.path, rr.Code)
 		}
 	}
-	_, alert, err := svc.ProcessEvent(context.Background(), AuditEvent{
+	ev, err := svc.ProcessEvent(context.Background(), AuditEvent{
 		TenantID: "t1", Timestamp: time.Now().UTC(), Service: "auth", Action: "audit.auth.login_failed",
 		ActorID: "u1", ActorType: "human", SourceIP: "1.1.1.1", Result: "failure",
 	})
-	if err != nil || alert.ID == "" {
-		t.Fatalf("alert: %+v %v", alert, err)
+	if err != nil || ev.ChainHash == "" {
+		t.Fatalf("event: %+v %v", ev, err)
 	}
-	got, err := store.GetAlert(context.Background(), "t1", alert.ID)
-	if err != nil || got.Title != defaultAlertTitle("audit.auth.login_failed", "") {
-		t.Fatalf("alert %+v %v", got, err)
+	got, err := store.GetEvent(context.Background(), "t1", ev.ID)
+	if err != nil || got.Action != "audit.auth.login_failed" || got.RiskScore == 0 {
+		t.Fatalf("persisted event %+v %v", got, err)
 	}
 }

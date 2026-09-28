@@ -18,7 +18,7 @@ type StreamBroker struct {
 type subscriber struct {
 	ch       chan sseEvent
 	tenantID string
-	kind     string // "events" or "alerts"
+	kind     string // "events"
 }
 
 type sseEvent struct {
@@ -71,25 +71,6 @@ func (b *StreamBroker) BroadcastEvent(tenantID string, eventID string, data stri
 	}
 }
 
-// BroadcastAlert delivers a serialised alert to all matching subscribers.
-func (b *StreamBroker) BroadcastAlert(tenantID string, alertID string, data string) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	ev := sseEvent{id: alertID, data: data}
-	for _, sub := range b.subscribers {
-		if sub.kind != "alerts" {
-			continue
-		}
-		if sub.tenantID != "" && sub.tenantID != tenantID {
-			continue
-		}
-		select {
-		case sub.ch <- ev:
-		default:
-		}
-	}
-}
-
 // ── SSE Handlers ─────────────────────────────────────────────
 
 func (h *Handler) handleStream(w http.ResponseWriter, r *http.Request) {
@@ -99,15 +80,6 @@ func (h *Handler) handleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	serveSSE(w, r, h.broker, tenantID, "events")
-}
-
-func (h *Handler) handleAlertStream(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
-		return
-	}
-	serveSSE(w, r, h.broker, tenantID, "alerts")
 }
 
 func serveSSE(w http.ResponseWriter, r *http.Request, broker *StreamBroker, tenantID string, kind string) {

@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-28T10:39:10Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T11:05:27Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `923`
-- Routes with exact frontend call sites: `537`
+- Backend routes analyzed: `917`
+- Routes with exact frontend call sites: `535`
 - Routes whose handlers call `h.svc.*`: `549`
-- Routes with detected store calls: `658`
+- Routes with detected store calls: `654`
 - Routes with detected internal `pkg/*` calls: `159`
 
 ## How To Trace One Frontend Click
@@ -47,19 +47,17 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ai-gateway\|GET\|/ai-gateway/v1/audit | GET /ai-gateway/v1/audit | handleListAudit (services/ai-gateway/handler.go:929) |  | ListAudit |  |  | web/dashboard/src/lib/aigateway.ts:137 |
 | ai-gateway\|GET\|/ai-gateway/v1/audit/stats | GET /ai-gateway/v1/audit/stats | handleAuditStats (services/ai-gateway/handler.go:964) |  | GetAuditStats |  |  | web/dashboard/src/lib/aigateway.ts:141 |
 | ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:190) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:126 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:218) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:131 |
-| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:236) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:148 |
-| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:254) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:204 |
-| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:272) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:220 |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:295) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:228 |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:323) |  |  |  |  | web/dashboard/src/lib/audit.ts:240 |
-| audit\|GET\|/alerts | GET /alerts | handleAlerts (services/audit/handler.go:340) |  | QueryAlerts |  |  | web/dashboard/src/lib/audit.ts:267 |
-| audit\|GET\|/alerts/stats | GET /alerts/stats | handleAlertStats (services/audit/handler.go:433) |  | AlertStats |  |  | web/dashboard/src/lib/audit.ts:304 |
-| audit\|POST\|/audit/merkle/build | POST /audit/merkle/build | handleMerkleBuild (services/audit/handler.go:576) |  | BuildMerkleEpoch |  |  | web/dashboard/src/lib/audit.ts:378 |
-| audit\|GET\|/audit/merkle/epochs | GET /audit/merkle/epochs | handleMerkleEpochs (services/audit/handler.go:605) |  | ListMerkleEpochs |  |  | web/dashboard/src/lib/audit.ts:355 |
-| audit\|GET\|/audit/events/{param}/proof | GET /audit/events/{id}/proof | handleEventProof (services/audit/handler.go:638) |  | GetEventMerkleProof |  |  | web/dashboard/src/lib/audit.ts:366 |
-| audit\|POST\|/audit/merkle/verify | POST /audit/merkle/verify | handleMerkleVerify (services/audit/handler.go:656) |  |  |  |  | web/dashboard/src/lib/audit.ts:390 |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:183) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:88 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:211) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:93 |
+| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:229) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:110 |
+| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:247) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:166 |
+| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:265) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:288) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:190 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:302) |  |  |  |  | web/dashboard/src/lib/audit.ts:202 |
+| audit\|POST\|/audit/merkle/build | POST /audit/merkle/build | handleMerkleBuild (services/audit/handler.go:445) |  | BuildMerkleEpoch |  |  | web/dashboard/src/lib/audit.ts:274 |
+| audit\|GET\|/audit/merkle/epochs | GET /audit/merkle/epochs | handleMerkleEpochs (services/audit/handler.go:474) |  | ListMerkleEpochs |  |  | web/dashboard/src/lib/audit.ts:251 |
+| audit\|GET\|/audit/events/{param}/proof | GET /audit/events/{id}/proof | handleEventProof (services/audit/handler.go:507) |  | GetEventMerkleProof |  |  | web/dashboard/src/lib/audit.ts:262 |
+| audit\|POST\|/audit/merkle/verify | POST /audit/merkle/verify | handleMerkleVerify (services/audit/handler.go:525) |  |  |  |  | web/dashboard/src/lib/audit.ts:286 |
 | audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
@@ -70,7 +68,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:220) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
 | audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:234) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
 | audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:259) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
-| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:391) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:188 |
+| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:391) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:150 |
 | auth\|GET\|/auth/system-health | GET /auth/system-health | handleSystemHealth (services/auth/handler_system_health.go:13) |  |  | h.healthChecker.Snapshot |  | web/dashboard/src/lib/authAdmin.ts:441 |
 | auth\|POST\|/auth/system-health/restart | POST /auth/system-health/restart | handleRestartSystemService (services/auth/handler_system_health.go:51) |  |  | h.healthChecker.RestartService, h.logger.Printf | pkg/auth.ClaimsFromContext | web/dashboard/src/lib/authAdmin.ts:517 |
 | auth\|POST\|/tenants | POST /tenants | handleCreateTenant (services/auth/handler.go:925) |  |  |  |  | web/dashboard/src/lib/authAdmin.ts:554 |
@@ -597,27 +595,21 @@ This file connects frontend requests to backend Go processing. It is static anal
 | ai-gateway\|GET\|/ai-gateway/v1/audit/{param} | GET /ai-gateway/v1/audit/{id} | handleGetAudit (services/ai-gateway/handler.go:954) |  | GetAudit |  |  |  |
 | ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
 | ai-gateway\|GET\|/ai-gateway/v1/metrics | GET /ai-gateway/v1/metrics | handleMetrics (services/ai-gateway/handler.go:1009) |  | GetAuditStats |  |  |  |
-| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:126) | PublishAudit, VerifyChain | QueryEvents, GetEvent, AlertStats, QueryAlerts, GetAlert, UpdateAlertStatus, BuildMerkleEpoch, ListMerkleEpochs, +2 more | h.cluster.Publish, s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
-| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:190) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:126 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:218) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:131 |
-| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:236) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:148 |
-| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:254) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:204 |
-| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:272) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:220 |
-| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:290) |  |  |  |  |  |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:295) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:228 |
-| audit\|GET\|/audit/stats | GET /audit/stats | handleAuditStats (services/audit/handler.go:309) |  | AlertStats |  |  |  |
-| audit\|GET\|/audit/stream | GET /audit/stream | handleStream (services/audit/stream.go:95) |  |  |  |  |  |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:323) |  |  |  |  | web/dashboard/src/lib/audit.ts:240 |
-| audit\|GET\|/alerts | GET /alerts | handleAlerts (services/audit/handler.go:340) |  | QueryAlerts |  |  | web/dashboard/src/lib/audit.ts:267 |
-| audit\|GET\|/alerts/{param} | GET /alerts/{id} | handleAlert (services/audit/handler.go:363) |  | GetAlert |  |  |  |
-| audit\|PUT\|/alerts/{param}/{param} | PUT /alerts/{id}/{action} | handleAlertActionPath (services/audit/handler.go:381) |  |  |  |  |  |
-| audit\|GET\|/alerts/stats | GET /alerts/stats | handleAlertStats (services/audit/handler.go:433) |  | AlertStats |  |  | web/dashboard/src/lib/audit.ts:304 |
-| audit\|GET\|/alerts/stream | GET /alerts/stream | handleAlertStream (services/audit/stream.go:104) |  |  |  |  |  |
-| audit\|POST\|/audit/merkle/build | POST /audit/merkle/build | handleMerkleBuild (services/audit/handler.go:576) |  | BuildMerkleEpoch |  |  | web/dashboard/src/lib/audit.ts:378 |
-| audit\|GET\|/audit/merkle/epochs | GET /audit/merkle/epochs | handleMerkleEpochs (services/audit/handler.go:605) |  | ListMerkleEpochs |  |  | web/dashboard/src/lib/audit.ts:355 |
-| audit\|GET\|/audit/merkle/epochs/{param} | GET /audit/merkle/epochs/{id} | handleMerkleEpoch (services/audit/handler.go:620) |  | GetMerkleEpoch |  |  |  |
-| audit\|GET\|/audit/events/{param}/proof | GET /audit/events/{id}/proof | handleEventProof (services/audit/handler.go:638) |  | GetEventMerkleProof |  |  | web/dashboard/src/lib/audit.ts:366 |
-| audit\|POST\|/audit/merkle/verify | POST /audit/merkle/verify | handleMerkleVerify (services/audit/handler.go:656) |  |  |  |  | web/dashboard/src/lib/audit.ts:390 |
+| audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:119) | PublishAudit, VerifyChain | QueryEvents, GetEvent, BuildMerkleEpoch, ListMerkleEpochs, GetMerkleEpoch, GetEventMerkleProof | h.cluster.Publish, s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
+| audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:183) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:88 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:211) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:93 |
+| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:229) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:110 |
+| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:247) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:166 |
+| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:265) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:182 |
+| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:283) |  |  |  |  |  |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:288) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:190 |
+| audit\|GET\|/audit/stream | GET /audit/stream | handleStream (services/audit/stream.go:76) |  |  |  |  |  |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:302) |  |  |  |  | web/dashboard/src/lib/audit.ts:202 |
+| audit\|POST\|/audit/merkle/build | POST /audit/merkle/build | handleMerkleBuild (services/audit/handler.go:445) |  | BuildMerkleEpoch |  |  | web/dashboard/src/lib/audit.ts:274 |
+| audit\|GET\|/audit/merkle/epochs | GET /audit/merkle/epochs | handleMerkleEpochs (services/audit/handler.go:474) |  | ListMerkleEpochs |  |  | web/dashboard/src/lib/audit.ts:251 |
+| audit\|GET\|/audit/merkle/epochs/{param} | GET /audit/merkle/epochs/{id} | handleMerkleEpoch (services/audit/handler.go:489) |  | GetMerkleEpoch |  |  |  |
+| audit\|GET\|/audit/events/{param}/proof | GET /audit/events/{id}/proof | handleEventProof (services/audit/handler.go:507) |  | GetEventMerkleProof |  |  | web/dashboard/src/lib/audit.ts:262 |
+| audit\|POST\|/audit/merkle/verify | POST /audit/merkle/verify | handleMerkleVerify (services/audit/handler.go:525) |  |  |  |  | web/dashboard/src/lib/audit.ts:286 |
 | audit\|POST\|/audit/cluster/signing-key/join-key | POST /audit/cluster/signing-key/join-key | handleClusterKeyJoinKey (services/audit/cluster.go:169) | auditCluster |  |  |  |  |
 | audit\|POST\|/audit/cluster/signing-key/export | POST /audit/cluster/signing-key/export | handleClusterKeyExport (services/audit/cluster.go:182) | signing, auditCluster |  |  | pkg/clusterkey.Seal |  |
 | audit\|POST\|/audit/cluster/signing-key/import | POST /audit/cluster/signing-key/import | handleClusterKeyImport (services/audit/cluster.go:212) | auditCluster, signing |  |  | pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize |  |
@@ -626,7 +618,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
 | audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:70 |
-| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:448) |  |  |  |  |  |
+| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:317) |  |  |  |  |  |
 | audit\|GET\|/audit/cbom/inventory | GET /audit/cbom/inventory | handleCBOMInventory (services/audit/handler_cbom.go:17) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/audit/cbom/diff | GET /audit/cbom/diff | handleCBOMDiff (services/audit/handler_cbom.go:51) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/metrics | GET /metrics | handlePrometheusMetrics (services/audit/handler_prometheus.go:14) |  | GetAllServiceStats |  |  |  |
@@ -636,7 +628,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|DELETE\|/webhooks/{param} | DELETE /webhooks/{id} | deleteWebhook (services/audit/handler_webhook.go:220) |  | DeleteWebhook |  |  | web/dashboard/src/lib/webhooks.ts:67 |
 | audit\|POST\|/webhooks/{param}/test | POST /webhooks/{id}/test | testWebhook (services/audit/handler_webhook.go:234) |  | GetWebhook |  |  | web/dashboard/src/lib/webhooks.ts:71 |
 | audit\|GET\|/webhooks/{param}/deliveries | GET /webhooks/{id}/deliveries | listDeliveries (services/audit/handler_webhook.go:259) |  | ListDeliveries |  |  | web/dashboard/src/lib/webhooks.ts:75 |
-| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:391) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:188 |
+| audit\|GET\|/audit/targets/{param}/integrity | GET /audit/targets/{target_id}/integrity | verifyTargetIntegrity (services/audit/target_integrity.go:391) | VerifyTarget | VerifyTarget |  |  | web/dashboard/src/lib/audit.ts:150 |
 | auth\|POST\|/auth/delegated/authority | POST /auth/delegated/authority | delegatedAuthority (services/auth/delegated.go:141) |  | GetUserByID |  | pkg/route.Allowed |  |
 | auth\|POST\|/auth/delegated/users/{param}/disable | POST /auth/delegated/users/{id}/disable | delegatedDisableUser (services/auth/delegated.go:179) |  | GetUserByID, UpdateUserStatus |  |  |  |
 | auth\|POST\|/auth/delegated/api-keys/{param}/revoke | POST /auth/delegated/api-keys/{id}/revoke | delegatedRevokeAPIKey (services/auth/delegated.go:255) |  | GetAPIKeyByID, DeleteAPIKey |  | pkg/tenantcheck.StripReserved |  |

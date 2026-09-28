@@ -252,7 +252,7 @@ func (h *Handler) handleClusterKeyImport(w http.ResponseWriter, r *http.Request)
 func (s *Service) auditCluster(ctx context.Context, action, result, severity string, details map[string]interface{}) {
 	details["severity"] = severity
 	details["result"] = result
-	_, _, _ = s.ProcessEvent(ctx, AuditEvent{
+	_, _ = s.ProcessEvent(ctx, AuditEvent{
 		TenantID: "root", Service: "audit", Action: "audit.audit." + action,
 		ActorID: clusterkey.ClusterManager, ActorType: "service", Result: result,
 		Timestamp: time.Now().UTC(), Details: details,

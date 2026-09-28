@@ -116,7 +116,7 @@ func main() {
 	// Event streams send through compliance connections, opened over
 	// internal mTLS as kms-audit (stream_connections.go).
 	conns := complianceConnections{base: strings.TrimRight(envOr("COMPLIANCE_URL", "https://compliance:8110"), "/"), http: &http.Client{Timeout: 10 * time.Second}}
-	fanout := newWebhookFanout(store, svc.creds, conns, func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }, logger)
+	fanout := newWebhookFanout(store, svc.creds, conns, func(ctx context.Context, ev AuditEvent) { _, _ = svc.ProcessEvent(ctx, ev) }, logger)
 	fanout.Start(ctx)
 	svc.SetWebhookFanout(fanout)
 	handler := NewHandler(svc, store)
@@ -124,7 +124,7 @@ func main() {
 	// Webhook credentials master key from keycore (pkg/mek). It opens in the
 	// background: the audit pipeline never waits on keycore (webhook_creds.go).
 	selfAudit := selfEmitter{svc}
-	auditFn := func(ctx context.Context, ev AuditEvent) { _, _, _ = svc.ProcessEvent(ctx, ev) }
+	auditFn := func(ctx context.Context, ev AuditEvent) { _, _ = svc.ProcessEvent(ctx, ev) }
 	go svc.openCredsKeyring(ctx, func(ctx context.Context) (*mek.Keyring, error) {
 		return mek.Open(ctx, mek.Options{
 			Tables: mek.Catalog["audit"],
@@ -305,14 +305,11 @@ func main() {
 
 func loadAuditConfig() AuditConfig {
 	return AuditConfig{
-		FailClosed:          envBool("AUDIT_FAIL_CLOSED", true),
-		WALPath:             envOr("AUDIT_WAL_PATH", filepath.Join("var", "audit-wal", "buffer.log")),
-		WALMaxSizeMB:        int64(envInt("AUDIT_WAL_MAX_SIZE_MB", 512)),
-		WALHMACKey:          loadKey32("AUDIT_WAL_HMAC_KEY_B64"),
-		EventSigningKey:     loadKey32("AUDIT_EVENT_SIGNING_KEY_B64"),
-		DedupWindowSeconds:  envInt("ALERT_DEDUP_WINDOW_SECONDS", 60),
-		EscalationThreshold: envInt("ALERT_ESCALATION_THRESHOLD", 5),
-		EscalationMinutes:   envInt("ALERT_ESCALATION_WINDOW_MINUTES", 10),
+		FailClosed:      envBool("AUDIT_FAIL_CLOSED", true),
+		WALPath:         envOr("AUDIT_WAL_PATH", filepath.Join("var", "audit-wal", "buffer.log")),
+		WALMaxSizeMB:    int64(envInt("AUDIT_WAL_MAX_SIZE_MB", 512)),
+		WALHMACKey:      loadKey32("AUDIT_WAL_HMAC_KEY_B64"),
+		EventSigningKey: loadKey32("AUDIT_EVENT_SIGNING_KEY_B64"),
 	}
 }
 
