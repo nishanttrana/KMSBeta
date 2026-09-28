@@ -58,6 +58,7 @@ type Store interface {
 	GetPlaybookSummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
 	CountThresholdHit(ctx context.Context, tenantID, playbookID, group string, at time.Time, window time.Duration) (int, error)
 	ResetThresholdHits(ctx context.Context, tenantID, playbookID, group string) error
+	ClaimPlaybookFire(ctx context.Context, tenantID, playbookID string, at time.Time, cooldown time.Duration) (bool, error)
 
 	// Playbook connections (sealed credentials)
 	ListConnections(ctx context.Context, tenantID string) ([]Connection, error)

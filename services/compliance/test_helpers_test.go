@@ -262,6 +262,7 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			category TEXT NOT NULL DEFAULT 'incident_response',
 			authorized_by TEXT NOT NULL DEFAULT '',
+			last_fired_ms BIGINT NOT NULL DEFAULT 0,
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE compliance_playbook_runs (

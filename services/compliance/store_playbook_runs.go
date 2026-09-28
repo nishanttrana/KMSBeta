@@ -273,6 +273,20 @@ WHERE tenant_id=$1 AND playbook_id=$2 AND group_key=$3`, tenantID, playbookID, g
 	return n, tx.Commit()
 }
 
+// ClaimPlaybookFire records a firing at `at` unless the playbook already
+// fired within cooldown. One conditional UPDATE, so the claim holds across a
+// failover and between concurrent listeners.
+func (s *SQLStore) ClaimPlaybookFire(ctx context.Context, tenantID, playbookID string, at time.Time, cooldown time.Duration) (bool, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE compliance_playbooks SET last_fired_ms=$3
+WHERE tenant_id=$1 AND id=$2 AND last_fired_ms <= $4`, tenantID, playbookID, at.UnixMilli(), at.Add(-cooldown).UnixMilli())
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
 // ResetThresholdHits clears a playbook's counts: one group after it fires,
 // or every group (group "*") when the playbook is edited or deleted.
 func (s *SQLStore) ResetThresholdHits(ctx context.Context, tenantID, playbookID, group string) error {

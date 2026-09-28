@@ -526,7 +526,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }).length;
     const missedWindows=Number(renewalSummary?.missed_window_count||0);
     const emergencyRotations=Number(renewalSummary?.emergency_rotation_count||0);
-    return {active,revoked,pqc,expiring,missedWindows,emergencyRotations,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
+    return {active,revoked,expiring,missedWindows,emergencyRotations,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
   },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal,renewalSummary]);
 
   const expiryItems=useMemo(()=>{

@@ -206,6 +206,14 @@ func (hs *playbookHarness) conn(t *testing.T, typ string, fields map[string]stri
 	return c.ID
 }
 
+// resetCooldown lets every playbook fire again.
+func (hs *playbookHarness) resetCooldown(t *testing.T) {
+	t.Helper()
+	if _, err := hs.store.db.SQL().Exec(`UPDATE compliance_playbooks SET last_fired_ms=0`); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (hs *playbookHarness) event(tenant, result, target string, at time.Time, extra map[string]interface{}) []byte {
 	m := map[string]interface{}{"tenant_id": tenant, "result": result, "target_id": target, "timestamp": at.Format(time.RFC3339Nano)}
 	for k, v := range extra {
@@ -699,7 +707,7 @@ func TestPlaybookApprovalGate(t *testing.T) {
 	body := playbookBody("canary_tripped", true, act("deactivate_key", map[string]string{"key_id": "{{event.target_id}}"}), act("create_audit_event", map[string]string{"message": "done"}))
 	id := createdID(t, hs.do(t, http.MethodPost, "/compliance/playbooks", pbAdmin, body))
 	start := func() PlaybookRun {
-		hs.tl.lastFire = map[string]time.Time{}
+		hs.resetCooldown(t)
 		hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "key-5", hs.now, nil))
 		runID, _ := lastEvent(t, hs.rec, "playbook_triggered").Event.Details["run_id"].(string)
 		return runOf(t, hs, runID)
@@ -834,7 +842,7 @@ func TestPlaybookTriggerListener(t *testing.T) {
 	hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "k1", hs.now, nil))
 	wantRefused(t, triggered("pb-canary")[0], reasonAuthorityRevoked)
 	hs.authority.missing, hs.authority.err = nil, errors.New("auth unreachable")
-	hs.tl.lastFire = map[string]time.Time{}
+	hs.resetCooldown(t)
 	hs.tl.handle(ctx, "audit.keycore.canary_tripped", hs.event("t1", "success", "k1", hs.now, nil))
 	wantRefused(t, triggered("pb-canary")[1], reasonAuthorityUnknown)
 	hs.authority.err = nil
@@ -1132,4 +1140,50 @@ func TestPlaybookThresholdUnavailableRefused(t *testing.T) {
 		t.Fatalf("events: %+v", ev)
 	}
 	wantRefused(t, ev[0], reasonThresholdUnavailable)
+}
+
+// The cooldown is stored with the playbook: a new primary still refuses a
+// second firing inside it, and allows one after it.
+func TestPlaybookCooldownSurvivesFailover(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-rot", TenantID: "t1", Name: "rot", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "key_rotated"}, Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}); err != nil {
+		t.Fatal(err)
+	}
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k1", hs.now, nil))
+
+	next := NewTriggerListener(hs.store, hs.tl.executor, hs.tl.logger)
+	next.now = func() time.Time { return hs.now }
+	next.dispatch = func(f func()) { f() }
+	hs.now = hs.now.Add(triggerCooldown / 2)
+	next.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k1", hs.now, nil))
+	hs.now = hs.now.Add(triggerCooldown)
+	next.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k1", hs.now, nil))
+
+	ev := events(hs.rec, "playbook_triggered")
+	if len(ev) != 3 || ev[0].Event.Result != route.ResultSuccess || ev[2].Event.Result != route.ResultSuccess {
+		t.Fatalf("firings: %+v", ev)
+	}
+	wantRefused(t, ev[1], reasonCooldown)
+}
+
+// When the cooldown can't be checked the playbook doesn't fire, and says why.
+func TestPlaybookCooldownUnavailableRefused(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	ctx := context.Background()
+	if _, err := hs.store.CreatePlaybook(ctx, Playbook{ID: "pb-rot", TenantID: "t1", Name: "rot", Category: "incident_response", Enabled: true, AuthorizedBy: "u-admin",
+		Trigger: PlaybookTrigger{Type: "key_rotated"}, Actions: []PlaybookAction{{Type: "create_audit_event", Parameters: map[string]string{}}}}); err != nil {
+		t.Fatal(err)
+	}
+	hs.tl.playbooks(ctx, "t1") // cache the playbook, then lose the column
+	if _, err := hs.store.db.SQL().Exec(`ALTER TABLE compliance_playbooks DROP COLUMN last_fired_ms`); err != nil {
+		t.Fatal(err)
+	}
+	hs.tl.handle(ctx, "audit.key.rotate", hs.event("t1", "success", "k1", hs.now, nil))
+	ev := events(hs.rec, "playbook_triggered")
+	if len(ev) != 1 {
+		t.Fatalf("events: %+v", ev)
+	}
+	wantRefused(t, ev[0], reasonCooldownUnavailable)
 }

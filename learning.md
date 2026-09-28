@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A smoke test that never got past the sign-in page hid a broken tab for months
+- **What happened:** the Certificates / PKI tab crashed on every render
+  (`ReferenceError: pqc is not defined`) from 1.21.0-beta onward. Commit
+  `b3c87986f` removed the fake PQC certificate count but left `pqc` in a
+  returned object. CI's Playwright smoke test (`tests/smoke-tabs.spec.ts`)
+  was meant to catch exactly this.
+- **Why it slipped through:** two gaps stacked up.
+  - `CertsTab.tsx` is `@ts-nocheck`, so `tsc` doesn't report undefined
+    names there.
+  - The smoke test wrote its session to `localStorage` after the dashboard
+    had moved sessions to `sessionStorage`. The app stayed on the sign-in
+    page, and the test skipped every tab button it couldn't find.
+    Sidebar entries aren't `button`s either, so it would have skipped them
+    anyway. It passed while clicking nothing.
+- **Rule:** a test that skips what it can't find must also assert that it
+  did something. The smoke test now fails on the sign-in page and requires
+  more than 10 tabs opened. Found while exercising the 2.6.0 playbook UI in
+  a real browser.
+
+
 ### The service that detects tampering was the one event nobody could hear
 - **What happened:** `audit.audit.chain_broken`, the most critical event on
   the platform, was written by the audit service straight into its own

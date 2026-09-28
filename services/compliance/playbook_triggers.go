@@ -63,9 +63,8 @@ type TriggerListener struct {
 	// dispatch runs an execution; tests run it inline.
 	dispatch func(func())
 
-	mu       sync.Mutex
-	lastFire map[string]time.Time
-	cache    map[string]cachedPlaybooks
+	mu    sync.Mutex
+	cache map[string]cachedPlaybooks
 }
 
 type cachedPlaybooks struct {
@@ -78,7 +77,7 @@ func NewTriggerListener(store Store, executor *PlaybookExecutor, logger *log.Log
 	return &TriggerListener{
 		store: store, executor: executor, logger: logger, now: time.Now,
 		dispatch: func(f func()) { go f() },
-		lastFire: map[string]time.Time{}, cache: map[string]cachedPlaybooks{},
+		cache:    map[string]cachedPlaybooks{},
 	}
 }
 
@@ -233,7 +232,14 @@ func (tl *TriggerListener) fire(ctx context.Context, pb Playbook, ev RunEvent) {
 	case stale:
 		tl.audit(pb, ev, "", reasonStaleEvent, "")
 		return
-	case !tl.claim(pb.TenantID + "/" + pb.ID):
+	}
+	claimed, err := tl.store.ClaimPlaybookFire(ctx, pb.TenantID, pb.ID, tl.now(), triggerCooldown)
+	switch {
+	case err != nil:
+		tl.logger.Printf("playbook triggers: cooldown claim playbook=%s: %v", pb.ID, err)
+		tl.audit(pb, ev, "", reasonCooldownUnavailable, "the cooldown could not be checked")
+		return
+	case !claimed:
 		tl.audit(pb, ev, "", reasonCooldown, "")
 		return
 	}
@@ -279,23 +285,6 @@ func (tl *TriggerListener) resolveApproval(ctx context.Context, ev RunEvent, dec
 		defer cancel()
 		tl.executor.Execute(rctx, pb, run)
 	})
-}
-
-// claim reserves a playbook for the cooldown window.
-func (tl *TriggerListener) claim(key string) bool {
-	tl.mu.Lock()
-	defer tl.mu.Unlock()
-	now := tl.now()
-	for k, t := range tl.lastFire {
-		if now.Sub(t) >= triggerCooldown {
-			delete(tl.lastFire, k)
-		}
-	}
-	if _, busy := tl.lastFire[key]; busy {
-		return false
-	}
-	tl.lastFire[key] = now
-	return true
 }
 
 // audit records a trigger decision: a run started, or why it didn't.

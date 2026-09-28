@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.7.0-beta] — 2026-09-28
+
+### Playbook cooldown survives failover; Certificates tab crash fixed; browser smoke test really runs
+- **The 60-second cooldown is stored.** A playbook fires at most once per
+  cooldown. The last firing was kept in memory, so right after a restart or
+  failover a playbook could fire again inside the window. It is now stored
+  on the playbook (`last_fired_ms`, migration 008) and claimed with one
+  conditional `UPDATE`, so a new primary sees it and two listeners can't
+  both claim the same window. If the claim can't be checked, the playbook
+  doesn't fire and the refusal is audited (`playbook_triggered`, `reason:
+  cooldown_unavailable`).
+- **Certificates / PKI tab crash fixed.** The tab threw `ReferenceError:
+  pqc is not defined` on every render and showed "This tab failed to
+  render". This has been broken since 1.21.0-beta (commit `b3c87986f`,
+  which removed the post-quantum certificate count but not its last use).
+- **The dashboard smoke test opens tabs again.** `tests/smoke-tabs.spec.ts`
+  (CI `npm run test:smoke`) put its session in `localStorage` after the
+  dashboard had moved sessions to `sessionStorage`. The test stayed on the
+  sign-in page and skipped every tab, so it passed while testing nothing.
+  It now signs in, clicks each sidebar entry (Playbooks added), and fails
+  if it opens fewer than 10 tabs or reaches the sign-in page.
+- **Browser test for the 2.6.0 exposure flags.**
+  `tests/playbook-exposure.spec.ts` renders the Playbooks → Connections
+  view and the Administration exposure register in Chromium. It checks that
+  the ROTATE badge and banner appear only for an open exposure, and that an
+  unreachable register shows "not assessed", never a clean list.
+
 ## [2.6.0-beta] — 2026-09-28
 
 ### Playbooks: tampering trigger, failover-safe thresholds, a policy that can't be switched off, credentials to rotate

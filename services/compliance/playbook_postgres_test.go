@@ -12,7 +12,7 @@ import (
 )
 
 // The playbook store on real Postgres (CI integration-postgres): migrations
-// 004-007 (re-runnable), a row saved before 005 read with its legacy action
+// 004-008 (re-runnable), a row saved before 005 read with its legacy action
 // names mapped, authorization and category round-trips, run actor, and the
 // summary for a tenant with no playbooks (SUM over no rows is NULL).
 func TestPlaybookStorePostgres(t *testing.T) {
@@ -120,6 +120,15 @@ func TestPlaybookStorePostgres(t *testing.T) {
 	}
 	if err := store.ResetThresholdHits(ctx, tenant, "pb-old", "*"); err != nil {
 		t.Fatal(err)
+	}
+	// Cooldown claim: once per window, then again after it.
+	for i, c := range []struct {
+		at   time.Time
+		want bool
+	}{{hitAt, true}, {hitAt.Add(30 * time.Second), false}, {hitAt.Add(61 * time.Second), true}} {
+		if ok, err := store.ClaimPlaybookFire(ctx, tenant, "pb-old", c.at, time.Minute); err != nil || ok != c.want {
+			t.Fatalf("claim %d: %v %v, want %v", i, ok, err, c.want)
+		}
 	}
 	var left int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM compliance_playbook_threshold_hits WHERE tenant_id=$1`, tenant).Scan(&left); err != nil || left != 0 {

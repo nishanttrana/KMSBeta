@@ -19,6 +19,7 @@ const TAB_LABELS = [
   "Alert Center",
   "Audit Log",
   "Compliance",
+  "Playbooks",
   "SBOM / CBOM",
   "Administration"
 ];
@@ -95,7 +96,9 @@ async function assertNoRenderBoundary(page: Page): Promise<void> {
 test.beforeEach(async ({ page }) => {
   await installApiMocks(page);
   await page.addInitScript(() => {
-    window.localStorage.setItem(
+    // The session is tab-scoped (src/lib/auth.ts); localStorage left the
+    // app on the sign-in page and every tab below was skipped.
+    window.sessionStorage.setItem(
       "vecta_ui_session",
       JSON.stringify({
         tenantId: "root",
@@ -113,13 +116,17 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("major tabs render without runtime boundary failures", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Sign In" })).toHaveCount(0);
+  let opened = 0;
   for (const label of TAB_LABELS) {
-    const button = page.getByRole("button", { name: label }).first();
-    if ((await button.count()) === 0) {
+    const entry = page.getByText(label, { exact: true }).first();
+    if ((await entry.count()) === 0) {
       continue;
     }
-    await button.click();
+    opened += 1;
+    await entry.click();
     await page.waitForTimeout(250);
     await assertNoRenderBoundary(page);
   }
+  expect(opened).toBeGreaterThan(10);
 });

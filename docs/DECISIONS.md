@@ -22,6 +22,11 @@ rejected, and how it's enforced.
   approval (that removes dual control without anyone deciding to), and
   leaving it disableable with a warning (a silent outage of every gated
   step).
+- **The cooldown is stored too (2.7.0-beta)**, as `last_fired_ms` on the
+  playbook row and claimed with a conditional `UPDATE ... WHERE
+  last_fired_ms <= now - cooldown`. That makes it atomic without a lock
+  table. *Rejected:* a separate firings table (one row per playbook is
+  enough).
 - **`chain_broken` goes through the stream.** Ingest records it once, the
   same way every other event is recorded. If the publish fails, it is
   written directly, so a break is never lost. *Rejected:* recording it

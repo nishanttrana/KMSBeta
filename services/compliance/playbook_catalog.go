@@ -161,6 +161,7 @@ const (
 	reasonActionRemoved        = "action_removed"
 	reasonCooldown             = "cooldown"
 	reasonThresholdUnavailable = "threshold_unavailable"
+	reasonCooldownUnavailable  = "cooldown_unavailable"
 	reasonStaleEvent           = "stale_event"
 	reasonUserRequired         = "user_required"
 	reasonAuthorityRevoked     = "authority_revoked"

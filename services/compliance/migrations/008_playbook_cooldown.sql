@@ -1,0 +1,11 @@
+-- Playbook cooldown (2.7.0-beta).
+--
+-- A playbook fires at most once per cooldown (60 s). The last firing was
+-- kept in memory on the primary, so right after a restart or failover a
+-- playbook could fire again inside the cooldown. It is stored on the
+-- playbook row instead and claimed with one conditional UPDATE, so a new
+-- primary sees it and two listeners can't both claim the same window.
+-- Milliseconds since the epoch; 0 means never fired.
+--
+-- Schema only: the table is replicated (pkg/clustercatalog).
+ALTER TABLE compliance_playbooks ADD COLUMN IF NOT EXISTS last_fired_ms BIGINT NOT NULL DEFAULT 0;
