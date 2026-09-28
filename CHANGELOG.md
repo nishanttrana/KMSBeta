@@ -4,6 +4,48 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [2.12.0-beta] — 2026-09-28
+
+### Dashboard: one home per view; Compliance shows only what it assesses
+- **Overview → Analytics is the only place for charts.** It now has four
+  views: Key inventory, Operations, **Audit activity** and **Alerts**. The
+  Audit Log's Analytics sub-tab and the alert charts in Compliance → Reporting
+  (severity, daily trend, MTTR, resolution status, top sources) moved there.
+  MTTD, which used to appear only inside Compliance, sits next to MTTR.
+- **Audit Log is the record and its integrity:** Events · Forensics · Merkle.
+  Its Alerts sub-tab is gone. It showed the audit service's own alert table,
+  a second list next to the Alert Center (reporting), which is where the
+  header bell, playbooks and incidents already point. Alerts are triaged only
+  in the Alert Center.
+- **Audit activity counts what it read.** The old Audit Log analytics charted
+  the current page of 100 events and called it "Total Events". The new view
+  pages through up to 2,000 events in the chosen window (24h / 7d / 30d),
+  shows "Events analysed", and says so when the window holds more.
+- **Compliance → Assessment shows only compliance.** Removed:
+  - the MTTD/MTTR charts, which measure alert response (now in Analytics);
+  - the Autokey, Workload Identity, SCIM, Certificate Renewal, REST Client,
+    Key Access and Artifact Signing "Controls" cards. They repeated Posture's
+    cards, and when their API call failed they showed "Disabled" instead of
+    the error;
+  - the **Threshold Signing / FROST** card (also removed from Posture). There
+    is no MPC service, so it always rendered zeros and "No active keys".
+- **Compliance → Crypto Inventory removed.** It scored keys and
+  certificates with a formula invented in the browser, and a failed fetch
+  gave an empty inventory scored 100/100. The cryptographic inventory is
+  SBOM / CBOM. Its in-app guide ("KeyInsight") is removed too.
+- **PQC Migration Gaps** says "unavailable" with the error when the PQC
+  inventory can't be read, instead of 0/100, zero counts and "No gaps". The
+  tenant policy reads "not set" rather than the invented `balanced hybrid`.
+- **Compliance → Reports** (renamed from Reporting) keeps report generation,
+  schedules and downloads.
+- **Audit Log badges and footer:** removed "250+ event types". That number
+  is a service × verb product in `services/audit/event_catalog.go` that
+  includes services this product doesn't have (mpc, tfe, dam, qrng, qkd). The
+  footer no longer lists MPC, QRNG, TFE or DAM as audited features.
+- **Test:** `tests/smoke-tabs.spec.ts` asserts the Audit Log has only Events,
+  Forensics and Merkle, that Analytics → Audit activity and Alerts render,
+  and that Compliance has no Crypto Inventory, MTTD or FROST section.
+
 ## [2.11.0-beta] — 2026-09-28
 
 ### PagerDuty removed completely

@@ -185,7 +185,6 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
   const [keyAccessSummary, setKeyAccessSummary] = useState<any>(null);
   const [signingSummary, setSigningSummary] = useState<any>(null);
-  const [mpcOverview, setMpcOverview] = useState<any>(null);
   const [findingStatus, setFindingStatus] = useState("");
   const [findingSeverity, setFindingSeverity] = useState("");
   const [findingSearch, setFindingSearch] = useState("");
@@ -201,12 +200,12 @@ export const PostureTab = ({ session, onToast }: any) => {
 
   const load = async (silent = false) => {
     if (!session?.token) {
-      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]); setAutokeySummary(null); setWorkloadSummary(null); setScimSummary(null); setRestClientSecurity(null); setKeyAccessSummary(null); setSigningSummary(null); setMpcOverview(null);
+      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]); setAutokeySummary(null); setWorkloadSummary(null); setScimSummary(null); setRestClientSecurity(null); setKeyAccessSummary(null); setSigningSummary(null);
       return;
     }
     if (!silent) setLoading(true);
     try {
-      const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, keyAccessSummaryOut, signingSummaryOut, mpcOverviewOut] = await Promise.all([
+      const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, keyAccessSummaryOut, signingSummaryOut] = await Promise.all([
         getPostureDashboard(session),
         getPostureRisk(session),
         listPostureRiskHistory(session, 60),
@@ -217,8 +216,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         getAuthSCIMSummary(session).catch(() => null),
         getAuthRESTClientSecuritySummary(session).catch(() => null),
         getKeyAccessSummary(session).catch(() => null),
-        getSigningSummary(session).catch(() => null),
-        Promise.resolve(null)
+        getSigningSummary(session).catch(() => null)
       ]);
       setDashboard(dash || {});
       setRisk(latestRisk || dash?.risk || {});
@@ -231,7 +229,6 @@ export const PostureTab = ({ session, onToast }: any) => {
       setRestClientSecurity(restClientSecurityOut || null);
       setKeyAccessSummary(keyAccessSummaryOut || null);
       setSigningSummary(signingSummaryOut || null);
-      setMpcOverview(mpcOverviewOut || null);
       if (!silent) onToast?.("Posture view refreshed.");
     } catch (error) {
       onToast?.(`Posture load failed: ${errMsg(error)}`);
@@ -401,22 +398,6 @@ export const PostureTab = ({ session, onToast }: any) => {
     }
     return { tone: "green", label: "Verified" };
   }, [signingSummary]);
-  const mpcStatus = useMemo(() => {
-    const stats = mpcOverview?.stats;
-    if (!stats) {
-      return { tone: "blue", label: "Unavailable" };
-    }
-    if (Number(stats?.failed_ceremonies || 0) > 0) {
-      return { tone: "red", label: "Failed ceremonies" };
-    }
-    if (Number(stats?.pending_ceremonies || 0) > 0) {
-      return { tone: "amber", label: "Ceremonies pending" };
-    }
-    if (Number(stats?.active_keys || 0) > 0) {
-      return { tone: "green", label: "Ready" };
-    }
-    return { tone: "amber", label: "No active quorum keys" };
-  }, [mpcOverview]);
   const validationByDomain = useMemo(() => {
     const map: Record<string, any[]> = {};
     validationBadges.forEach((badge: any) => {
@@ -711,24 +692,6 @@ export const PostureTab = ({ session, onToast }: any) => {
               {Boolean(signingSummary?.enabled)
                 ? "Artifact and Git signing are backed by KMS keys, workload/OIDC identity constraints, and transparency-linked records. Watch verification failures and unsigned transparency gaps before treating supply-chain posture as healthy."
                 : "Artifact signing is disabled, so release provenance and workload-bound signing policy are not enforced for blobs, OCI metadata, or Git artifacts."}
-            </div>
-          </Card>
-
-          <Card style={{ padding: "14px 16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Threshold Signing / FROST</span>
-              <B c={mpcStatus.tone}>{mpcStatus.label}</B>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-              <Stat l="Active Keys" v={String(Number(mpcOverview?.stats?.active_keys || 0))} c="green" />
-              <Stat l="Pending Ceremonies" v={String(Number(mpcOverview?.stats?.pending_ceremonies || 0))} c={Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : "green"} />
-              <Stat l="Participants" v={String(Number(mpcOverview?.stats?.total_participants || 0))} c="blue" />
-              <Stat l="Failed Ceremonies" v={String(Number(mpcOverview?.stats?.failed_ceremonies || 0))} c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : "green"} />
-            </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
-              {Number(mpcOverview?.stats?.total_keys || 0) > 0
-                ? "Quorum-backed signing and decryption ceremonies are active. Use this to spot stalled ceremonies, participant drift, or failed threshold operations before they affect high-assurance workflows."
-                : "No quorum-backed keys are currently active. Create MPC/FROST ceremony policy when high-assurance signing or split-operator approval must avoid a single private-key holder."}
             </div>
           </Card>
         </div>

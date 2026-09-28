@@ -130,3 +130,30 @@ test("major tabs render without runtime boundary failures", async ({ page }) => 
   }
   expect(opened).toBeGreaterThan(10);
 });
+
+// Each kind of view has one home (2.12.0-beta): charts under Overview >
+// Analytics, alert triage in the Alert Center, the record in the Audit Log.
+test("analytics, alerts and audit each have a single home", async ({ page }) => {
+  const nav = (label: string) => page.getByText(label, { exact: true }).first().click();
+
+  await nav("Audit Log");
+  for (const t of ["Events", "Forensics", "Merkle"]) {
+    await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
+  }
+  for (const t of ["Analytics", "Alerts"]) {
+    await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(0);
+  }
+
+  await nav("Analytics");
+  for (const [view, marker] of [["Audit activity", "Events analysed"], ["Alerts", "Triage them there."]] as const) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    await expect(page.getByText(marker).first()).toBeVisible();
+    await assertNoRenderBoundary(page);
+  }
+
+  await nav("Compliance");
+  await expect(page.getByRole("button", { name: "Reports", exact: true })).toHaveCount(1);
+  await expect(page.getByText("Crypto Inventory", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Mean Time to Detect")).toHaveCount(0);
+  await expect(page.getByText("Threshold Signing / FROST Controls")).toHaveCount(0);
+});

@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-28T08:39:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T08:46:16Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -74,6 +74,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2038 | ai_gateway | Btn | Export | exportReportJSON |
 | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2090 | ai_gateway | Btn | setAuditPage(p => Math.max(0, p - 1))} disabled= >Prev |  |
 | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2092 | ai_gateway | Btn | setAuditPage(p => Math.min(totalAuditPages - 1, p + 1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 60 | - | Btn | void load()}>Retry |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 67 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 411 | alerts | Btn | void refresh(false)}> |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 412 | alerts | Btn | void ackAllAlerts()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 422 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
@@ -88,17 +90,16 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 342 | - | Btn | editProfile(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 645 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 646 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 649 | audit | Btn | load()} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 740 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 741 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 935 | audit | Btn | handleAcknowledge(al.id)}>Ack |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 938 | audit | Btn | handleResolve(al.id)}>Resolve |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 969 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 1077 | audit | Btn | }> View Timeline ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 1082 | audit | Btn | }> View Session ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 1087 | audit | Btn | }> View Correlation ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 90 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 482 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 483 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 486 | audit | Btn | load()} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 577 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 578 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 604 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 712 | audit | Btn | }> View Timeline ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 717 | audit | Btn | }> View Session ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 722 | audit | Btn | }> View Correlation ( ) |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 371 | - | Btn | refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 372 | - | Btn | Save Settings | saveSettings} disabled={busy \|\| loading |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 476 | - | Btn | Save Settings | saveSettings} disabled={busy |
@@ -246,30 +247,24 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 398 | home, recommendations | button | setSev("all")}>All ( ) |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 400 | home, recommendations | button | setSev(s)}> ( ) |  |
 | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | 407 | home, recommendations | button | Show snoozed | unsnoozeAll |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 760 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 761 | compliance | Btn | setView("reporting")} style={ }>Reporting |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 762 | compliance | Btn | setView("inventory")} style={ }>Crypto Inventory |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 765 | compliance | Btn | void loadInventory()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 892 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 893 | compliance | Btn | setView("reporting")} style={ }>Reporting |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 894 | compliance | Btn | setView("inventory")} style={ }>Crypto Inventory |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 897 | compliance | Btn | void loadReporting()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1030 | compliance | Btn | void triggerReportNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1056 | compliance | Btn | void createScheduleReport()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1076 | compliance | Btn | void downloadJob(job)} disabled= >Download |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1077 | compliance | Btn | void deleteJob(job)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1111 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1112 | compliance | Btn | setView("reporting")} style={ }>Reporting |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1113 | compliance | Btn | setView("inventory")} style={ }>Crypto Inventory |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1124 | compliance | Btn | void createTemplate()} disabled= >+ Template |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1125 | compliance | Btn | void saveTemplate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1126 | compliance | Btn | void removeTemplate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1127 | compliance | Btn | void loadAssessment( )} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1128 | compliance | Btn | void exportEvidencePack("pdf")} disabled= >Evidence Pack |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1129 | compliance | Btn | void runNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1135 | compliance | Btn | void saveSchedule()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1153 | compliance | Btn | void runNow()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1988 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 520 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 521 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 524 | compliance | Btn | void loadReporting()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 544 | compliance | Btn | void triggerReportNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 570 | compliance | Btn | void createScheduleReport()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 590 | compliance | Btn | void downloadJob(job)} disabled= >Download |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 591 | compliance | Btn | void deleteJob(job)}>Delete |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 625 | compliance | Btn | setView("assessment")} style={ }>Assessment |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 626 | compliance | Btn | setView("reporting")} style={ }>Reports |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 637 | compliance | Btn | void createTemplate()} disabled= >+ Template |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 638 | compliance | Btn | void saveTemplate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 639 | compliance | Btn | void removeTemplate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 640 | compliance | Btn | void loadAssessment( )} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 641 | compliance | Btn | void exportEvidencePack("pdf")} disabled= >Evidence Pack |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 642 | compliance | Btn | void runNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 648 | compliance | Btn | void saveSchedule()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 666 | compliance | Btn | void runNow()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1142 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 292 | - | Btn | void refresh(false)}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 325 | - | Btn | void refresh(false)}>Reload |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 326 | - | Btn | void savePolicy()} disabled= > |  |
@@ -420,10 +415,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 250 | - | Btn | void saveRule()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 288 | - | Btn | editRule(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 289 | - | Btn | void removeRule(item)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 16 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 64 | key_analytics | Btn | Export JSON | handleExport |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 65 | key_analytics | Btn | (icon or dynamic label) | load |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 71 | key_analytics | button | setView(id)} style={{ padding: "8px 16px", border: "none", background: "trans... |  |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 18 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 66 | key_analytics | Btn | Export JSON | handleExport |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 67 | key_analytics | Btn | (icon or dynamic label) | load |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 73 | key_analytics | button | setView(id)} style={{ padding: "8px 16px", border: "none", background: "trans... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 53 | - | Btn | void load()}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 77 | - | Btn | void run(k.key_id, "start migration", () => kdfTransition(session, k.key_id,... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 81 | - | Btn | void run(k.key_id, "re-protect vault tokens", () => kdfReprotectVault(session... |  |
@@ -528,15 +523,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 133 | - | Btn | void refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 134 | - | Btn | void scanNow()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx | 135 | - | Btn | void savePolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 537 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 538 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 947 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1183 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1184 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1185 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1186 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1277 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1279 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 518 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 519 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 910 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1146 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1147 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1148 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1149 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1240 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1242 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 477 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 508 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 515 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

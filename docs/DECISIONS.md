@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-28 — One home per kind of view (2.12.0-beta)
+
+**Decision.** Charts and trends live only in Overview → Analytics (Key
+inventory, Operations, Audit activity, Alerts). Alerts are triaged only in the
+Alert Center (reporting's store). The Audit Log is the record and its
+integrity (Events, Forensics, Merkle). Compliance shows what the compliance
+assessment measured, plus its reports. Posture keeps operational drift cards.
+The cryptographic asset inventory is SBOM / CBOM.
+
+**Why.** The owner found Analytics in two places, alerts in two places, and a
+Compliance page full of numbers that weren't compliance: alert MTTD/MTTR,
+operational cards copied from Posture, a phantom FROST card and a
+browser-scored inventory. Each copy drifted and none was obviously the real
+one.
+
+**Rejected.** Keeping the Audit Log Alerts tab as a second view of the audit
+service's own alert table. It is a separate store from the Alert Center's,
+so the two lists disagreed. Retiring or merging that backend store is a
+separate change; the UI no longer shows it.
+
+**Enforced by** `tests/smoke-tabs.spec.ts` ("analytics, alerts and audit each
+have a single home") and the CLAUDE.md rule under "How we build".
+
 ## 2026-09-28 — Webhooks and SIEM are Playbooks connections; compliance holds every outbound credential (2.10.0-beta)
 
 **Decision.** The owner asked for webhooks and SIEM inside Playbooks, not a

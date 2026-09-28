@@ -145,7 +145,6 @@ const NAV = [
   { id: "config-backup", label: "Config: Backup" },
   { id: "config-profiles", label: "Config: Docker Profiles" },
   { id: "config-fastinstall", label: "Config: Fast Install" },
-  { id: "guide-crypto-inventory", label: "Guide: Crypto Inventory" },
   { id: "guide-vault-hierarchy", label: "Guide: Vault Hierarchy" },
   { id: "guide-hsm-certs", label: "Guide: HSM Certificates" },
   { id: "troubleshooting", label: "Troubleshooting" },
@@ -2657,15 +2656,17 @@ const SectionUIMonitoring = () => (
     <H3>What you can do:</H3>
     <P>- Filter by severity (Critical, High, Medium, Low) and status (New, Open, Acknowledged, Resolved)</P>
     <P>- Bulk acknowledge alerts to clear the queue after review</P>
-    <P>- Escalate critical alerts to incident response teams</P>
-    <P>- View alert statistics: Mean Time To Resolution (MTTR), top alert sources, severity distribution</P>
-    <P>- Configure alert rules to define what triggers alerts and at what severity</P>
+    <P>- Escalate an alert's severity to critical</P>
+    <P>- See open, critical, today's and resolved counts, MTTR and enabled notification channels</P>
+    <P>Trends (severity mix, daily volume, MTTD/MTTR, top sources) are under Overview → Analytics → Alerts. The Alert Center is the only place alerts are triaged.</P>
 
     <H2>Audit Log Sub-Pane</H2>
-    <P>Every operation in the KMS is recorded in an immutable audit trail secured by Merkle hash trees.</P>
+    <P>Every operation in the KMS is recorded in an append-only, hash-chained audit trail sealed into Merkle epochs. The Audit Log has three tabs: Events, Forensics and Merkle. Charts of audit activity are under Overview → Analytics → Audit activity.</P>
     <H3>Events Tab:</H3>
     <P>Search and filter audit events by service (keycore, auth, secrets, certs, etc.), result (success, failure, denied), severity, time range, and user. Each event shows who did what, when, from where, and the result. Export events as CSV or CEF for SIEM integration.</P>
-    <H3>Chain Verification Tab:</H3>
+    <H3>Forensics Tab:</H3>
+    <P>Reconstruct what happened to a target (timeline), within a session, or across one correlation ID.</P>
+    <H3>Merkle Tab:</H3>
     <P>The audit log uses Merkle hash trees to guarantee immutability. Build Merkle epochs (periodic hash checkpoints), request inclusion proofs for any event (prove an event was logged and hasn't been tampered with), and verify the entire chain integrity. This is critical for regulatory audits that require provable, tamper-evident logging.</P>
 
     <H2>Posture Sub-Pane</H2>
@@ -2686,6 +2687,8 @@ const SectionUIMonitoring = () => (
     <P>- View key hygiene reports: rotation compliance, algorithm strength analysis, expiry tracking</P>
     <P>- Find orphaned keys (keys with no usage) that represent security risk</P>
     <P>- Schedule automated assessments (daily, weekly, monthly)</P>
+    <P>- Reports tab: generate compliance reports now or on a schedule, and download them</P>
+    <P>The cryptographic asset inventory lives in SBOM / CBOM; alert and audit trends live in Overview → Analytics.</P>
 
     <H2>SBOM / CBOM Sub-Pane</H2>
     <P>The SBOM/CBOM sub-pane provides software and cryptographic inventory.</P>
@@ -3106,38 +3109,6 @@ spec:
   </div>
 );
 
-/* ───────── Crypto Inventory Guide ───────── */
-const SectionGuideCryptoInventory = () => (
-  <div>
-    <div style={S.h1}>Cryptographic Inventory (KeyInsight)</div>
-    <P>The Crypto Inventory feature provides Fortanix KeyInsight-style visibility into all cryptographic assets across your organization. Access it via Compliance → Crypto Inventory tab.</P>
-    <H2>Inventory Score</H2>
-    <P>A composite score (0-100) calculated from risk findings across keys and certificates. Critical findings reduce the score by 15 points per affected asset, high by 8, and warnings by 3. Target: 80+ for healthy posture.</P>
-    <H2>Risk Detection Rules</H2>
-    <table style={S.table}>
-      <thead><tr><th style={S.th}>Finding</th><th style={S.th}>Severity</th><th style={S.th}>Applies To</th></tr></thead>
-      <tbody>
-        {[
-          ["Weak algorithm (RSA-1024, DES, 3DES, RC4)", "Critical", "Keys"],
-          ["Key status compromised/destroyed", "Critical", "Keys"],
-          ["Certificate expired", "Critical", "Certificates"],
-          ["Weak signing (SHA-1, MD5)", "Critical", "Certificates"],
-          ["Key older than 1 year without rotation", "High", "Keys"],
-          ["Certificate expiring within 30 days", "High", "Certificates"],
-          ["Certificate expiring within 90 days", "Warning", "Certificates"],
-          ["Key is exportable without HSM protection", "Warning", "Keys"],
-        ].map(([finding, sev, type], i) => (
-          <tr key={i}><td style={{...S.td, fontFamily: "inherit"}}>{finding}</td><td style={S.td}>{sev}</td><td style={S.td}>{type}</td></tr>
-        ))}
-      </tbody>
-    </table>
-    <H2>PQC Readiness</H2>
-    <P>Keys are classified into three categories: PQC Native (ML-KEM, ML-DSA, SLH-DSA, Kyber, Dilithium), Hybrid (combined classical + PQC), and Classical (AES, RSA, ECDSA). The donut chart shows your quantum readiness breakdown.</P>
-    <H2>Charts</H2>
-    <P>Algorithm Distribution (horizontal bar), Key Age Distribution (vertical bar), PQC Readiness (donut), Certificate Expiry Timeline (stacked bar with color coding: red=expired, amber=within 30d, green=safe).</P>
-  </div>
-);
-
 /* ───────── Vault Hierarchy Guide ───────── */
 const SectionGuideVaultHierarchy = () => (
   <div>
@@ -3448,7 +3419,6 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "config-backup": SectionConfigBackup,
   "config-profiles": SectionConfigProfiles,
   "config-fastinstall": SectionConfigFastInstall,
-  "guide-crypto-inventory": SectionGuideCryptoInventory,
   "guide-vault-hierarchy": SectionGuideVaultHierarchy,
   "guide-hsm-certs": SectionGuideHsmCerts,
   troubleshooting: SectionTroubleshooting,

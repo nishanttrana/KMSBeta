@@ -238,6 +238,13 @@ an approach, record it here or in the matching doc below.
   PagerDuty integration (owner, 2026-09-28: "no one uses it"; "remove
   pager completely"): conformance `no-pagerduty` fails on any mention in
   code.
+- **One home per view** (owner, 2026-09-28: Analytics under both Audit Log
+  and Overview, Alerts under both Audit Log and Alert Center, and a
+  Compliance page that "is not accurate"). Charts and trends go in Overview →
+  Analytics, alert triage in the Alert Center, the audit record in the Audit
+  Log, and only assessed compliance in Compliance. Don't copy a view into
+  another tab; link to its home. A failed or missing source shows
+  "unavailable" or "not assessed", never 0 or 100 (docs/DECISIONS.md).
 
 ## Documentation is part of done
 

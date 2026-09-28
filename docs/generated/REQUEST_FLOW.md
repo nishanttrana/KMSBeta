@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-28T08:39:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T08:46:16Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -139,7 +139,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|DELETE\|/certs/ca/{param} | DELETE /certs/ca/{id} | handleDeleteCA (services/certs/handler.go:140) | DeleteCA | GetCA, CountChildCAs, CountCertificatesByCA, ListCertificates, RevokeCertificate, DeleteCertificate, DeleteCA | s.exposure.Retire |  | web/dashboard/src/lib/certs.ts:440 |
 | certs\|POST\|/certs | POST /certs | handleIssueCert (services/certs/handler.go:158) | IssueCertificate | GetProfile, GetCA, CreateCertificate, GetCertificate |  |  | web/dashboard/src/lib/certs.ts:472 |
 | certs\|POST\|/certs/sign-csr | POST /certs/sign-csr | handleSignCSR (services/certs/handler.go:177) | IssueCertificate | GetProfile, GetCA, CreateCertificate, GetCertificate |  |  | web/dashboard/src/lib/certs.ts:489 |
-| certs\|GET\|/certs | GET /certs | handleListCerts (services/certs/handler.go:202) | ListCertificates | ListCertificates |  |  | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:337, web/dashboard/src/lib/certs.ts:464 |
+| certs\|GET\|/certs | GET /certs | handleListCerts (services/certs/handler.go:202) | ListCertificates | ListCertificates |  |  | web/dashboard/src/lib/certs.ts:464 |
 | certs\|DELETE\|/certs/{param} | DELETE /certs/{id} | handleDeleteCert (services/certs/handler.go:311) | DeleteCertificate | GetCertificate, DeleteCertificate |  |  | web/dashboard/src/lib/certs.ts:538 |
 | certs\|GET\|/certs/download/{param} | GET /certs/download/{id} | handleDownloadCert (services/certs/handler.go:238) | DownloadCertificate | GetCA |  |  | web/dashboard/src/lib/certs.ts:567 |
 | certs\|POST\|/certs/{param}/renew | POST /certs/{id}/renew | handleRenewCert (services/certs/handler.go:268) | RenewCertificate | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:505 |
@@ -345,7 +345,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:293) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:334) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:368) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:711 |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:526) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:547 |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:526) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:547 |
 | keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:616) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:777 |
 | keycore\|POST\|/keys/{param}/activate | POST /keys/{id}/activate | handleActivateKey (services/keycore/handler.go:652) | ConfigureKeyActivation | SetKeyActivation | s.cache.Delete |  | web/dashboard/src/lib/keycore.ts:1128, web/dashboard/src/lib/keycore.ts:1140 |
 | keycore\|POST\|/keys/{param}/deactivate | POST /keys/{id}/deactivate | handleDeactivateKey (services/keycore/handler.go:690) |  |  |  |  | web/dashboard/src/lib/keycore.ts:1154 |
@@ -758,7 +758,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|DELETE\|/certs/ca/{param} | DELETE /certs/ca/{id} | handleDeleteCA (services/certs/handler.go:140) | DeleteCA | GetCA, CountChildCAs, CountCertificatesByCA, ListCertificates, RevokeCertificate, DeleteCertificate, DeleteCA | s.exposure.Retire |  | web/dashboard/src/lib/certs.ts:440 |
 | certs\|POST\|/certs | POST /certs | handleIssueCert (services/certs/handler.go:158) | IssueCertificate | GetProfile, GetCA, CreateCertificate, GetCertificate |  |  | web/dashboard/src/lib/certs.ts:472 |
 | certs\|POST\|/certs/sign-csr | POST /certs/sign-csr | handleSignCSR (services/certs/handler.go:177) | IssueCertificate | GetProfile, GetCA, CreateCertificate, GetCertificate |  |  | web/dashboard/src/lib/certs.ts:489 |
-| certs\|GET\|/certs | GET /certs | handleListCerts (services/certs/handler.go:202) | ListCertificates | ListCertificates |  |  | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:337, web/dashboard/src/lib/certs.ts:464 |
+| certs\|GET\|/certs | GET /certs | handleListCerts (services/certs/handler.go:202) | ListCertificates | ListCertificates |  |  | web/dashboard/src/lib/certs.ts:464 |
 | certs\|GET\|/certs/{param} | GET /certs/{id} | handleGetCert (services/certs/handler.go:220) | GetCertificate | GetCertificate |  |  |  |
 | certs\|DELETE\|/certs/{param} | DELETE /certs/{id} | handleDeleteCert (services/certs/handler.go:311) | DeleteCertificate | GetCertificate, DeleteCertificate |  |  | web/dashboard/src/lib/certs.ts:538 |
 | certs\|GET\|/certs/download/{param} | GET /certs/download/{id} | handleDownloadCert (services/certs/handler.go:238) | DownloadCertificate | GetCA |  |  | web/dashboard/src/lib/certs.ts:567 |
@@ -1108,7 +1108,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/keys/bulk-import | POST /keys/bulk-import | handleBulkImport (services/keycore/handler.go:403) | ImportKey |  |  | pkg/crypto.Zeroize |  |
 | keycore\|POST\|/keys/bulk-rotate | POST /keys/bulk-rotate | handleBulkRotate (services/keycore/handler.go:430) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual |  |
 | keycore\|POST\|/keys/bulk-delete | POST /keys/bulk-delete | handleBulkDelete (services/keycore/handler.go:465) | ScheduleKeyDestroy | ScheduleDestroy | s.cache.Delete |  |  |
-| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:526) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx:335, web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:547 |
+| keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:526) | ListKeysCursor, ListKeys | ListKeysCursor, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce | web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:547 |
 | keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:578) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
 | keycore\|PUT\|/keys/{param} | PUT /keys/{id} | handleUpdateKey (services/keycore/handler.go:598) | UpdateKey | UpdateKeyMetadata | s.cache.Delete |  |  |
 | keycore\|POST\|/keys/{param}/rotate | POST /keys/{id}/rotate | handleRotateKey (services/keycore/handler.go:616) | RotateKey | RecordRotationMetric, RotateVersion | s.cache.Delete | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keycore.ts:777 |

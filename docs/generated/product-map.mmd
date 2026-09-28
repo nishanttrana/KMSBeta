@@ -64,16 +64,9 @@ flowchart LR
   tab_posture --> svc_workload
   tab_compliance["Compliance"]
   UI --> tab_compliance
-  tab_compliance --> svc_auth
-  tab_compliance --> svc_autokey
-  tab_compliance --> svc_certs
   tab_compliance --> svc_compliance
-  tab_compliance --> svc_keyaccess
-  tab_compliance --> svc_keycore
   tab_compliance --> svc_pqc
   tab_compliance --> svc_reporting
-  tab_compliance --> svc_signing
-  tab_compliance --> svc_workload
   tab_sbom["SBOM / CBOM"]
   UI --> tab_sbom
   tab_sbom --> svc_sbom

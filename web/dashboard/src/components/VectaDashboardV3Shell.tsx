@@ -237,7 +237,7 @@ const TITLES: Record<string, string> = {
   ai_gateway: "AI Security Gateway",
   playbooks: "Playbooks",
   // Enterprise Advanced Features
-  key_analytics: "Key Analytics",
+  key_analytics: "Analytics",
 };
 
 const NAV = [

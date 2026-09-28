@@ -1,24 +1,8 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar as RBar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
-} from "recharts";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, Inp, Modal, Row2, Row3, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, Inp, Modal, Section, Sel, Tabs } from "../legacyPrimitives";
 import {
   listAuditEvents,
   getAuditTimeline,
@@ -26,10 +10,6 @@ import {
   getAuditCorrelation,
   verifyAuditChain,
   getAuditConfig,
-  getAuditAlertStats,
-  listAuditAlerts,
-  acknowledgeAuditAlert,
-  resolveAuditAlert,
   exportEventsAsCSV,
   exportEventsAsCEF,
   listMerkleEpochs,
@@ -37,8 +17,6 @@ import {
   verifyMerkleProof,
   buildMerkleEpoch,
   type AuditEvent,
-  type AuditAlert,
-  type AuditAlertStats,
   type AuditConfig,
   type ChainVerifyResult,
   type MerkleEpoch,
@@ -60,8 +38,6 @@ const SERVICES = [
 const PAGE_SIZE = 100;
 
 const RESULT_COLORS: Record<string, string> = { success: C.green, failure: C.red, denied: C.amber };
-const SEVERITY_COLORS: Record<string, string> = { critical: C.red, high: C.orange, medium: C.amber, low: C.blue, info: C.dim };
-const RISK_BUCKET_COLORS = [C.green, C.green, C.amber, C.orange, C.red];
 
 /* ── helpers ── */
 
@@ -86,13 +62,6 @@ function resultTone(r: string) {
   if (v === "success") return "green";
   if (v === "failure") return "red";
   if (v === "denied") return "amber";
-  return "blue";
-}
-
-function sevTone(s: string) {
-  const v = String(s || "").toLowerCase();
-  if (v === "critical" || v === "high") return "red";
-  if (v === "medium" || v === "warning") return "amber";
   return "blue";
 }
 
@@ -151,48 +120,6 @@ function timeRangeToFrom(range: string): string {
     default:    return "";
   }
 }
-
-/* ── chart tooltips ── */
-
-const ChartTooltip = ({ containerStyle, children }: any) => (
-  <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "8px 12px", fontSize: 10, color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,.5)", ...containerStyle }}>
-    {children}
-  </div>
-);
-
-const VolumeTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <ChartTooltip>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div>
-      <div>Events: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div>
-    </ChartTooltip>
-  );
-};
-
-const BarTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <ChartTooltip>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div>
-      {payload.map((entry: any) => (
-        <div key={entry.dataKey} style={{ color: entry.color }}>
-          {entry.name}: <span style={{ fontWeight: 700, color: C.text }}>{entry.value}</span>
-        </div>
-      ))}
-    </ChartTooltip>
-  );
-};
-
-const HistogramTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <ChartTooltip>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>Risk: {label}</div>
-      <div>Events: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div>
-    </ChartTooltip>
-  );
-};
 
 /* ── table header style ── */
 
@@ -365,8 +292,6 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   const [config, setConfig] = useState<AuditConfig | null>(null);
   const [chainResult, setChainResult] = useState<ChainVerifyResult | null>(null);
   const [chainVerifying, setChainVerifying] = useState(false);
-  const [alertStats, setAlertStats] = useState<AuditAlertStats | null>(null);
-  const [alerts, setAlerts] = useState<AuditAlert[]>([]);
 
   // filters
   const [serviceFilter, setServiceFilter] = useState("");
@@ -398,21 +323,17 @@ export const AuditLogTab = ({ session, onToast }: any) => {
     if (!silent) setLoading(true);
     try {
       const from = timeRangeToFrom(timeRange);
-      const [eventList, cfg, stats, alertList] = await Promise.all([
+      const [eventList, cfg] = await Promise.all([
         listAuditEvents(session, {
           result: resultFilter || undefined,
           from: from || undefined,
           limit: PAGE_SIZE,
           offset
         }),
-        getAuditConfig(session),
-        getAuditAlertStats(session),
-        listAuditAlerts(session, { limit: 100 })
+        getAuditConfig(session)
       ]);
       setEvents(Array.isArray(eventList) ? eventList : []);
       setConfig(cfg);
-      setAlertStats(stats);
-      setAlerts(Array.isArray(alertList) ? alertList : []);
       if (!silent) onToast?.("Audit log refreshed.");
     } catch (error) {
       onToast?.(`Audit load failed: ${errMsg(error)}`);
@@ -442,70 +363,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
     return out;
   }, [events, serviceFilter, originFilter, searchQuery]);
 
-  /* ── analytics computed data ── */
 
-  const resultDistribution = useMemo(() => {
-    const counts: Record<string, number> = {};
-    filteredEvents.forEach((e) => { counts[e.result] = (counts[e.result] || 0) + 1; });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [filteredEvents]);
-
-  const serviceDistribution = useMemo(() => {
-    const counts: Record<string, number> = {};
-    filteredEvents.forEach((e) => { counts[e.service] = (counts[e.service] || 0) + 1; });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([name, value]) => ({ name: name.replace("kms-", ""), fullName: name, value }));
-  }, [filteredEvents]);
-
-  const riskHistogram = useMemo(() => {
-    const buckets = [0, 0, 0, 0, 0];
-    filteredEvents.forEach((e) => {
-      const s = Math.max(0, Math.min(100, Number(e.risk_score || 0)));
-      if (s <= 20) buckets[0]++;
-      else if (s <= 40) buckets[1]++;
-      else if (s <= 60) buckets[2]++;
-      else if (s <= 80) buckets[3]++;
-      else buckets[4]++;
-    });
-    return ["0-20", "21-40", "41-60", "61-80", "81-100"].map((range, i) => ({
-      range, count: buckets[i]
-    }));
-  }, [filteredEvents]);
-
-  const volumeTimeline = useMemo(() => {
-    const buckets: Record<string, number> = {};
-    filteredEvents.forEach((e) => {
-      const ts = String(e.timestamp || e.created_at || "").trim();
-      if (!ts) return;
-      const dt = new Date(ts);
-      if (Number.isNaN(dt.getTime())) return;
-      const key = `${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, "0")}:00`;
-      buckets[key] = (buckets[key] || 0) + 1;
-    });
-    return Object.entries(buckets)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([time, count]) => ({ time, count }));
-  }, [filteredEvents]);
-
-  const topActors = useMemo(() => {
-    const counts: Record<string, number> = {};
-    filteredEvents.forEach((e) => {
-      if (e.actor_id) counts[e.actor_id] = (counts[e.actor_id] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([actor, count]) => ({ actor, count }));
-  }, [filteredEvents]);
-
-  const severityGaugeData = useMemo(() => {
-    if (!alertStats?.open_by_severity) return [];
-    return Object.entries(alertStats.open_by_severity).map(([name, value]) => ({
-      name, value, fill: SEVERITY_COLORS[name.toLowerCase()] || C.dim
-    }));
-  }, [alertStats]);
 
   /* ── chain verification ── */
 
@@ -563,27 +421,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
     }, 50);
   };
 
-  /* ── alert actions ── */
 
-  const handleAcknowledge = async (alertId: string) => {
-    try {
-      await acknowledgeAuditAlert(session, alertId, session?.username);
-      onToast?.("Alert acknowledged.");
-      void load(true);
-    } catch (error) {
-      onToast?.(`Acknowledge failed: ${errMsg(error)}`);
-    }
-  };
-
-  const handleResolve = async (alertId: string) => {
-    try {
-      await resolveAuditAlert(session, alertId, session?.username, "Resolved via dashboard");
-      onToast?.("Alert resolved.");
-      void load(true);
-    } catch (error) {
-      onToast?.(`Resolve failed: ${errMsg(error)}`);
-    }
-  };
 
   /* ── integrity status bar ── */
 
@@ -598,7 +436,6 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       <B c={config?.fail_closed ? "green" : "amber"}>
         Fail-closed: {config?.fail_closed ? "ACTIVE" : "INACTIVE"}
       </B>
-      <B c="blue">250+ event types</B>
       <B c="purple">SHA-256 hash chain</B>
       <B c="accent">Immutable storage</B>
       {chainResult && !chainResult.ok && (
@@ -744,209 +581,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
     </>;
   };
 
-  /* ── render: Analytics sub-tab ── */
 
-  const renderAnalytics = () => (
-    <>
-      {/* stat cards */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <Stat l="Total Events" v={filteredEvents.length} c="accent" />
-        <Stat l="Open Alerts" v={alertStats?.total_open ?? 0} c={alertStats && alertStats.total_open > 0 ? "red" : "green"} />
-        <Stat l="Acknowledged" v={alertStats?.total_acknowledged ?? 0} c="amber" />
-        <Stat l="Resolved" v={alertStats?.total_resolved ?? 0} c="green" />
-      </div>
-
-      {/* row 1: three charts */}
-      <Row3>
-        {/* events by result donut */}
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Events by Result</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie data={resultDistribution} cx="50%" cy="50%" innerRadius={40} outerRadius={65}
-                dataKey="value" nameKey="name" paddingAngle={3} strokeWidth={0}>
-                {resultDistribution.map((entry) => (
-                  <Cell key={entry.name} fill={RESULT_COLORS[entry.name] || C.dim} />
-                ))}
-              </Pie>
-              <Tooltip content={<BarTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 9, color: C.dim }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* events by service bar */}
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Top Services</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={serviceDistribution} layout="vertical" margin={{ left: 40, right: 10 }}>
-              <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 9 }} axisLine={false} tickLine={false} width={60} />
-              <Tooltip content={<BarTooltip />} />
-              <RBar dataKey="value" name="Events" fill={C.blue} radius={[0, 4, 4, 0]} barSize={12} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* risk distribution histogram */}
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Risk Distribution</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={riskHistogram} margin={{ left: 0, right: 10 }}>
-              <XAxis dataKey="range" tick={{ fill: C.muted, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
-              <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<HistogramTooltip />} />
-              <RBar dataKey="count" name="Events" radius={[4, 4, 0, 0]} barSize={24}>
-                {riskHistogram.map((_, i) => (
-                  <Cell key={i} fill={RISK_BUCKET_COLORS[i]} />
-                ))}
-              </RBar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </Row3>
-
-      {/* event volume timeline */}
-      <Section title="Event Volume Timeline">
-        <Card>
-          {volumeTimeline.length === 0 ? (
-            <div style={{ textAlign: "center", color: C.muted, fontSize: 10, padding: 20 }}>No volume data available.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={volumeTimeline} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="auditVolumeGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={C.accent} stopOpacity={0.25} />
-                    <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="time" tick={{ fill: C.muted, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
-                <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<VolumeTooltip />} />
-                <Area type="monotone" dataKey="count" stroke={C.accent} strokeWidth={2} fill="url(#auditVolumeGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </Section>
-
-      {/* row 2: top actors + severity gauge */}
-      <Row2>
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Top Actors</div>
-          {topActors.length === 0 ? (
-            <div style={{ fontSize: 10, color: C.muted }}>No actor data.</div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={TH}>Actor</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Events</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topActors.map((a) => (
-                  <tr key={a.actor}>
-                    <td style={TD}>{a.actor}</td>
-                    <td style={{ ...TD, textAlign: "right", fontWeight: 600, color: C.text }}>{a.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Card>
-
-        <Card>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Alert Severity</div>
-          {severityGaugeData.length === 0 ? (
-            <div style={{ fontSize: 10, color: C.muted, textAlign: "center", padding: 20 }}>No open alerts.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <RadialBarChart cx="50%" cy="50%" innerRadius="30%" outerRadius="90%"
-                data={severityGaugeData} startAngle={180} endAngle={0} barSize={14}>
-                <RadialBar dataKey="value" cornerRadius={6} background={{ fill: C.border }} />
-                <Tooltip content={<BarTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 9, color: C.dim }} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
-      </Row2>
-    </>
-  );
-
-  /* ── render: Alerts sub-tab ── */
-
-  const renderAlerts = () => (
-    <>
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <Stat l="Open" v={alertStats?.total_open ?? 0} c="red" />
-        <Stat l="Acknowledged" v={alertStats?.total_acknowledged ?? 0} c="amber" />
-        <Stat l="Resolved" v={alertStats?.total_resolved ?? 0} c="green" />
-      </div>
-
-      {alertStats?.open_by_severity && Object.keys(alertStats.open_by_severity).length > 0 && (
-        <Card style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 }}>Open by Severity</div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {Object.entries(alertStats.open_by_severity).map(([sev, count]) => (
-              <div key={sev} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <B c={sevTone(sev)}>{sev}</B>
-                <span style={{ fontSize: 14, fontWeight: 700, color: SEVERITY_COLORS[sev.toLowerCase()] || C.text }}>{count}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card>
-        <div style={{ overflowX: "auto", maxHeight: 400 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={TH}>Severity</th>
-                <th style={TH}>Title</th>
-                <th style={TH}>Category</th>
-                <th style={TH}>Service</th>
-                <th style={TH}>Status</th>
-                <th style={TH}>Count</th>
-                <th style={TH}>Created</th>
-                <th style={TH}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alerts.length === 0 && (
-                <tr><td colSpan={8} style={{ ...TD, textAlign: "center", color: C.muted, padding: 20 }}>
-                  No audit alerts.
-                </td></tr>
-              )}
-              {alerts.map((al) => (
-                <tr key={al.id}>
-                  <td style={TD}><B c={sevTone(al.severity)}>{al.severity}</B></td>
-                  <td style={{ ...TD, color: C.text, fontWeight: 500, maxWidth: 200 }}>{al.title}</td>
-                  <td style={TD}>{al.category}</td>
-                  <td style={TD}><B c="blue">{(al.source_service || "").replace("kms-", "")}</B></td>
-                  <td style={TD}><B c={al.status === "open" ? "red" : al.status === "acknowledged" ? "amber" : "green"}>{al.status}</B></td>
-                  <td style={{ ...TD, fontWeight: 600, color: C.text }}>{al.occurrence_count || 1}</td>
-                  <td style={TD}>{shortTS(al.created_at)}</td>
-                  <td style={TD}>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {al.status === "open" && (
-                        <Btn small onClick={() => handleAcknowledge(al.id)}>Ack</Btn>
-                      )}
-                      {(al.status === "open" || al.status === "acknowledged") && (
-                        <Btn small primary onClick={() => handleResolve(al.id)}>Resolve</Btn>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </>
-  );
 
   /* ── render: Forensics sub-tab ── */
 
@@ -1122,11 +757,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   return (
     <div>
       <IntegrityBar />
-      <Tabs tabs={["Events", "Analytics", "Alerts", "Forensics", "Merkle"]} active={subTab} onChange={setSubTab} />
+      <Tabs tabs={["Events", "Forensics", "Merkle"]} active={subTab} onChange={setSubTab} />
 
       {subTab === "Events" && renderEvents()}
-      {subTab === "Analytics" && renderAnalytics()}
-      {subTab === "Alerts" && renderAlerts()}
       {subTab === "Forensics" && renderForensics()}
       {subTab === "Merkle" && <MerkleSection session={session} />}
 
@@ -1134,12 +767,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
       {/* audit integration note */}
       <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 9, color: C.muted }}>
-        All audit events are cryptographically chained (SHA-256), stored in immutable PostgreSQL partitions
-        (UPDATE/DELETE triggers blocked), and protected by HMAC-signed WAL for fail-closed operation.
-        Audit data feeds into Compliance (anomaly detection) and Posture (risk scoring) modules automatically.
-        Every KMS feature — keys, certs, BYOK/HYOK/Cloud EKM, HYOK, TFE, MPC, QRNG, DAM, AI Gateway, cluster,
-        payment, data protection, signing, and all interfaces (PKCS#11, KMIP, JCE, CNG) — publishes immutable
-        audit events to this log. Cluster operation logs are available here (filter by service: cluster).
+        Every service publishes to the single audit stream. Events are hash-chained (SHA-256), sealed into Merkle
+        epochs and stored append-only; a fail-closed WAL covers outages. Charts are under Overview → Analytics →
+        Audit activity; alerts raised from these events are triaged in the Alert Center.
       </div>
     </div>
   );

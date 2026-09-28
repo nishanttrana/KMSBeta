@@ -2,8 +2,6 @@ service,service_key,method,path,normalized_path,dynamic,source,file,line,match_k
 ai,ai,GET,/ai/protect/policies?tenant_id={param},/ai/protect/policies,True,serviceRequest,web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx,395,ai|GET|/ai/protect/policies
 ai,ai,POST,/ai/protect/policies,/ai/protect/policies,False,serviceRequest,web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx,610,ai|POST|/ai/protect/policies
 ai,ai,DELETE,/ai/protect/policies/{param},/ai/protect/policies/{param},True,serviceRequest,web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx,623,ai|DELETE|/ai/protect/policies/{param}
-keycore,keycore,GET,/keys,/keys,True,fetch,web/dashboard/src/components/v3/tabs/ComplianceTab.tsx,335,keycore|GET|/keys
-certs,certs,GET,/certs,/certs,True,fetch,web/dashboard/src/components/v3/tabs/ComplianceTab.tsx,337,certs|GET|/certs
 ai-gateway,ai-gateway,GET,/ai-gateway/v1/health,/ai-gateway/v1/health,False,serviceRequest,web/dashboard/src/lib/aigateway.ts,58,ai-gateway|GET|/ai-gateway/v1/health
 ai-gateway,ai-gateway,GET,/ai-gateway/v1/models,/ai-gateway/v1/models,False,serviceRequest,web/dashboard/src/lib/aigateway.ts,63,ai-gateway|GET|/ai-gateway/v1/models
 ai-gateway,ai-gateway,POST,/ai-gateway/v1/models,/ai-gateway/v1/models,False,serviceRequest,web/dashboard/src/lib/aigateway.ts,67,ai-gateway|POST|/ai-gateway/v1/models

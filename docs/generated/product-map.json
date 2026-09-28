@@ -20403,6 +20403,22 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
+      "handler": "",
+      "label": "void load()}>Retry",
+      "line": 60,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
+      "handler": "",
+      "label": "void load()} disabled= >",
+      "line": 67,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>",
@@ -20529,10 +20545,18 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx",
+      "handler": "",
+      "label": "void load()} disabled= >",
+      "line": 90,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 645,
+      "line": 482,
       "tabs": [
         "audit"
       ],
@@ -20542,7 +20566,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 646,
+      "line": 483,
       "tabs": [
         "audit"
       ],
@@ -20552,7 +20576,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 649,
+      "line": 486,
       "tabs": [
         "audit"
       ],
@@ -20562,7 +20586,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 740,
+      "line": 577,
       "tabs": [
         "audit"
       ],
@@ -20572,27 +20596,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 741,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "",
-      "label": "handleAcknowledge(al.id)}>Ack",
-      "line": 935,
-      "tabs": [
-        "audit"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
-      "handler": "",
-      "label": "handleResolve(al.id)}>Resolve",
-      "line": 938,
+      "line": 578,
       "tabs": [
         "audit"
       ],
@@ -20602,7 +20606,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "loadForensic} disabled={forensicLoading",
       "label": "(icon or dynamic label)",
-      "line": 969,
+      "line": 604,
       "tabs": [
         "audit"
       ],
@@ -20612,7 +20616,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Timeline ( )",
-      "line": 1077,
+      "line": 712,
       "tabs": [
         "audit"
       ],
@@ -20622,7 +20626,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Session ( )",
-      "line": 1082,
+      "line": 717,
       "tabs": [
         "audit"
       ],
@@ -20632,7 +20636,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Correlation ( )",
-      "line": 1087,
+      "line": 722,
       "tabs": [
         "audit"
       ],
@@ -22063,7 +22067,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "setView(\"assessment\")} style={ }>Assessment",
-      "line": 760,
+      "line": 520,
       "tabs": [
         "compliance"
       ],
@@ -22072,58 +22076,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
-      "label": "setView(\"reporting\")} style={ }>Reporting",
-      "line": 761,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "setView(\"inventory\")} style={ }>Crypto Inventory",
-      "line": 762,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "void loadInventory()} disabled= >",
-      "line": 765,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "setView(\"assessment\")} style={ }>Assessment",
-      "line": 892,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "setView(\"reporting\")} style={ }>Reporting",
-      "line": 893,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "setView(\"inventory\")} style={ }>Crypto Inventory",
-      "line": 894,
+      "label": "setView(\"reporting\")} style={ }>Reports",
+      "line": 521,
       "tabs": [
         "compliance"
       ],
@@ -22133,7 +22087,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void loadReporting()} disabled= >",
-      "line": 897,
+      "line": 524,
       "tabs": [
         "compliance"
       ],
@@ -22143,7 +22097,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void triggerReportNow()} disabled= >",
-      "line": 1030,
+      "line": 544,
       "tabs": [
         "compliance"
       ],
@@ -22153,7 +22107,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void createScheduleReport()} disabled= >",
-      "line": 1056,
+      "line": 570,
       "tabs": [
         "compliance"
       ],
@@ -22163,7 +22117,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void downloadJob(job)} disabled= >Download",
-      "line": 1076,
+      "line": 590,
       "tabs": [
         "compliance"
       ],
@@ -22173,7 +22127,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void deleteJob(job)}>Delete",
-      "line": 1077,
+      "line": 591,
       "tabs": [
         "compliance"
       ],
@@ -22183,7 +22137,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "setView(\"assessment\")} style={ }>Assessment",
-      "line": 1111,
+      "line": 625,
       "tabs": [
         "compliance"
       ],
@@ -22192,18 +22146,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
-      "label": "setView(\"reporting\")} style={ }>Reporting",
-      "line": 1112,
-      "tabs": [
-        "compliance"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "handler": "",
-      "label": "setView(\"inventory\")} style={ }>Crypto Inventory",
-      "line": 1113,
+      "label": "setView(\"reporting\")} style={ }>Reports",
+      "line": 626,
       "tabs": [
         "compliance"
       ],
@@ -22213,7 +22157,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void createTemplate()} disabled= >+ Template",
-      "line": 1124,
+      "line": 637,
       "tabs": [
         "compliance"
       ],
@@ -22223,7 +22167,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void saveTemplate()} disabled= >",
-      "line": 1125,
+      "line": 638,
       "tabs": [
         "compliance"
       ],
@@ -22233,7 +22177,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void removeTemplate()} disabled= >",
-      "line": 1126,
+      "line": 639,
       "tabs": [
         "compliance"
       ],
@@ -22243,7 +22187,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void loadAssessment( )} disabled= >Refresh",
-      "line": 1127,
+      "line": 640,
       "tabs": [
         "compliance"
       ],
@@ -22253,7 +22197,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void exportEvidencePack(\"pdf\")} disabled= >Evidence Pack",
-      "line": 1128,
+      "line": 641,
       "tabs": [
         "compliance"
       ],
@@ -22263,7 +22207,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void runNow()} disabled= >",
-      "line": 1129,
+      "line": 642,
       "tabs": [
         "compliance"
       ],
@@ -22273,7 +22217,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void saveSchedule()} disabled= >",
-      "line": 1135,
+      "line": 648,
       "tabs": [
         "compliance"
       ],
@@ -22283,7 +22227,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "void runNow()} disabled= >",
-      "line": 1153,
+      "line": 666,
       "tabs": [
         "compliance"
       ],
@@ -22293,7 +22237,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "{ setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa...",
-      "line": 1988,
+      "line": 1142,
       "tabs": [
         "compliance"
       ],
@@ -23729,7 +23673,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "onClick} style={{ display: \"inline-flex\", alignItems: \"center\", gap: 5, padding: small ? \"4px 10px\" : \"6px 14px\", bor...",
       "label": "(icon or dynamic label)",
-      "line": 16,
+      "line": 18,
       "tabs": [
         "key_analytics"
       ],
@@ -23739,7 +23683,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "handleExport",
       "label": "Export JSON",
-      "line": 64,
+      "line": 66,
       "tabs": [
         "key_analytics"
       ],
@@ -23749,7 +23693,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "load",
       "label": "(icon or dynamic label)",
-      "line": 65,
+      "line": 67,
       "tabs": [
         "key_analytics"
       ],
@@ -23759,7 +23703,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "",
       "label": "setView(id)} style={{ padding: \"8px 16px\", border: \"none\", background: \"trans...",
-      "line": 71,
+      "line": 73,
       "tabs": [
         "key_analytics"
       ],
@@ -24771,7 +24715,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
-      "line": 537,
+      "line": 518,
       "tabs": [
         "posture"
       ],
@@ -24781,7 +24725,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "runScan} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 538,
+      "line": 519,
       "tabs": [
         "posture"
       ],
@@ -24791,7 +24735,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 947,
+      "line": 910,
       "tabs": [
         "posture"
       ],
@@ -24801,7 +24745,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1183,
+      "line": 1146,
       "tabs": [
         "posture"
       ],
@@ -24811,7 +24755,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1184,
+      "line": 1147,
       "tabs": [
         "posture"
       ],
@@ -24821,7 +24765,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1185,
+      "line": 1148,
       "tabs": [
         "posture"
       ],
@@ -24831,7 +24775,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1186,
+      "line": 1149,
       "tabs": [
         "posture"
       ],
@@ -24841,7 +24785,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1277,
+      "line": 1240,
       "tabs": [
         "posture"
       ],
@@ -24851,7 +24795,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1279,
+      "line": 1242,
       "tabs": [
         "posture"
       ],
@@ -26877,32 +26821,6 @@
       "service": "ai",
       "service_key": "ai",
       "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "fetch(`${base}/svc/keycore/keys?limit=500`)",
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "line": 335,
-      "match_key": "keycore|GET|/keys",
-      "method": "GET",
-      "normalized_path": "/keys",
-      "path": "/keys",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "fetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "fetch(`${base}/svc/certs/certs?limit=500`)",
-      "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-      "line": 337,
-      "match_key": "certs|GET|/certs",
-      "method": "GET",
-      "normalized_path": "/certs",
-      "path": "/certs",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "fetch"
     },
     {
       "dynamic": false,
@@ -34354,7 +34272,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-28T08:39:49Z",
+  "generated_at": "2026-09-28T08:46:16Z",
   "navigation": [
     {
       "group": "Overview",
@@ -43611,12 +43529,6 @@
     },
     {
       "frontend_call_sites": [
-        {
-          "expression": "fetch(`${base}/svc/certs/certs?limit=500`)",
-          "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-          "line": 337,
-          "source": "fetch"
-        },
         {
           "expression": "serviceRequest(\"certs\", `/certs?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
@@ -69378,12 +69290,6 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "fetch(`${base}/svc/keycore/keys?limit=500`)",
-          "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-          "line": 335,
-          "source": "fetch"
-        },
-        {
           "expression": "trackedFetch(`${BASE}/keys`)",
           "file": "web/dashboard/src/lib/keyVerification.ts",
           "line": 15,
@@ -92855,7 +92761,7 @@
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 52,
+      "certs": 51,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 19,
@@ -92866,7 +92772,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 113,
+      "keycore": 112,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
@@ -92884,28 +92790,28 @@
       "ai": 1,
       "ai-gateway": 1,
       "audit": 2,
-      "auth": 5,
+      "auth": 4,
       "auth-edge": 7,
-      "autokey": 2,
+      "autokey": 1,
       "backup": 1,
-      "certs": 4,
+      "certs": 3,
       "cloud": 1,
       "cluster-manager": 2,
       "compliance": 3,
       "ekm": 2,
       "governance": 2,
       "hyok": 1,
-      "keyaccess": 2,
-      "keycore": 6,
+      "keyaccess": 1,
+      "keycore": 5,
       "payment": 1,
       "posture": 1,
       "pqc": 1,
       "reporting": 3,
       "sbom": 1,
       "secrets": 3,
-      "signing": 2,
+      "signing": 1,
       "tfe": 2,
-      "workload": 2
+      "workload": 1
     }
   },
   "subpanes": {
@@ -93069,9 +92975,9 @@
   "summary": {
     "backend_routes": 927,
     "backend_services": 30,
-    "button_inventory": 766,
-    "frontend_call_sites": 578,
-    "matched_frontend_call_sites": 531,
+    "button_inventory": 761,
+    "frontend_call_sites": 576,
+    "matched_frontend_call_sites": 529,
     "nav_items": 27,
     "request_flows": 927,
     "request_flows_with_frontend": 536,
@@ -93362,33 +93268,20 @@
       ]
     },
     {
-      "call_count": 179,
+      "call_count": 43,
       "component": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "group": "Security & compliance",
       "id": "compliance",
       "label": "Compliance",
       "services": [
-        "auth",
-        "autokey",
-        "certs",
         "compliance",
-        "keyaccess",
-        "keycore",
         "pqc",
-        "reporting",
-        "signing",
-        "workload"
+        "reporting"
       ],
       "support_files": [
-        "web/dashboard/src/lib/authAdmin.ts",
-        "web/dashboard/src/lib/autokey.ts",
-        "web/dashboard/src/lib/certs.ts",
         "web/dashboard/src/lib/compliance.ts",
-        "web/dashboard/src/lib/keyaccess.ts",
         "web/dashboard/src/lib/pqc.ts",
-        "web/dashboard/src/lib/reporting.ts",
-        "web/dashboard/src/lib/signing.ts",
-        "web/dashboard/src/lib/workloadIdentity.ts"
+        "web/dashboard/src/lib/reporting.ts"
       ]
     },
     {
@@ -96889,7 +96782,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -96931,7 +96824,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97116,7 +97009,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97151,7 +97044,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97218,7 +97111,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97260,7 +97153,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97293,7 +97186,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97338,7 +97231,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97480,7 +97373,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97519,7 +97412,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97588,7 +97481,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97627,7 +97520,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97748,7 +97641,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97791,7 +97684,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97830,7 +97723,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97873,7 +97766,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97910,7 +97803,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97949,7 +97842,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -97989,7 +97882,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98024,7 +97917,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98063,7 +97956,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98100,7 +97993,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98137,7 +98030,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98174,7 +98067,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98211,7 +98104,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98246,7 +98139,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98283,7 +98176,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98318,7 +98211,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98355,7 +98248,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98395,7 +98288,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98477,7 +98370,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98517,7 +98410,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98562,7 +98455,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98603,7 +98496,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98700,7 +98593,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98737,7 +98630,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98875,7 +98768,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98914,7 +98807,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98956,7 +98849,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -98995,7 +98888,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -99037,7 +98930,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -99074,7 +98967,7 @@
           "Key Management",
           "HSM",
           "Posture",
-          "+2 tabs"
+          "restapi"
         ]
       },
       {
@@ -99506,8 +99399,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99541,8 +99433,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99583,8 +99474,7 @@
           "ListHandles"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99618,8 +99508,7 @@
           "ListTemplates"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99707,8 +99596,7 @@
           "DeleteTemplate"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99742,8 +99630,7 @@
           "ListServicePolicies"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99831,8 +99718,7 @@
           "DeleteServicePolicy"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99869,8 +99755,7 @@
           "ListRequests"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99911,8 +99796,7 @@
           "UpdateRequest"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99946,8 +99830,7 @@
           "GetRequest"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -99984,8 +99867,7 @@
           "ListHandles"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -100423,7 +100305,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100463,7 +100344,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100517,7 +100397,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100567,7 +100446,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100617,7 +100495,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100629,12 +100506,6 @@
           "errors.New"
         ],
         "frontendSites": [
-          {
-            "expression": "fetch(`${base}/svc/certs/certs?limit=500`)",
-            "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-            "line": 337,
-            "source": "fetch"
-          },
           {
             "expression": "serviceRequest(\"certs\", `/certs?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
@@ -100662,7 +100533,6 @@
           "ListCertificates"
         ],
         "uiLabels": [
-          "Compliance",
           "Operations",
           "Certificates / PKI",
           "restapi"
@@ -100740,7 +100610,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100789,7 +100658,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100830,7 +100698,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100872,7 +100739,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -100943,7 +100809,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101068,7 +100933,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101163,7 +101027,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101288,7 +101151,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101327,7 +101189,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101368,7 +101229,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101419,7 +101279,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101491,7 +101350,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101530,7 +101388,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101571,7 +101428,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101612,7 +101468,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101660,7 +101515,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101704,7 +101558,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101739,7 +101592,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101781,7 +101633,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101824,7 +101675,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101863,7 +101713,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101903,7 +101752,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101938,7 +101786,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -101979,7 +101826,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102023,7 +101869,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102060,7 +101905,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102097,7 +101941,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102161,7 +102004,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102194,7 +102036,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102329,7 +102170,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102382,7 +102222,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102455,7 +102294,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102496,7 +102334,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102545,7 +102382,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102652,7 +102488,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102691,7 +102526,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102759,7 +102593,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102805,7 +102638,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102852,7 +102684,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102898,7 +102729,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102941,7 +102771,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -102974,7 +102803,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -103009,7 +102837,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -103044,7 +102871,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -103079,7 +102905,6 @@
         "uiLabels": [
           "Operations",
           "Certificates / PKI",
-          "Compliance",
           "restapi"
         ]
       },
@@ -112531,8 +112356,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -112566,8 +112390,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -112607,8 +112430,7 @@
           "ListDecisions"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -112642,8 +112464,7 @@
           "ListRules"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -112733,8 +112554,7 @@
           "DeleteRule"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -112772,8 +112592,7 @@
           "ListDecisions"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -113137,12 +112956,6 @@
         ],
         "frontendSites": [
           {
-            "expression": "fetch(`${base}/svc/keycore/keys?limit=500`)",
-            "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
-            "line": 335,
-            "source": "fetch"
-          },
-          {
             "expression": "trackedFetch(`${BASE}/keys`)",
             "file": "web/dashboard/src/lib/keyVerification.ts",
             "line": 15,
@@ -113183,10 +112996,10 @@
           "ListKeys"
         ],
         "uiLabels": [
-          "Compliance",
           "keyVerification",
           "Operations",
-          "+3 tabs"
+          "Key Management",
+          "+2 tabs"
         ]
       },
       {
@@ -124222,8 +124035,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124257,8 +124069,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124296,8 +124107,7 @@
           "ListRecords"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124331,8 +124141,7 @@
           "ListProfiles"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124422,8 +124231,7 @@
           "DeleteProfile"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124460,8 +124268,7 @@
           "ListRecords"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124491,8 +124298,7 @@
         "serviceCalls": [],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124522,8 +124328,7 @@
         "serviceCalls": [],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124569,8 +124374,7 @@
           "ListRecords"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124662,8 +124466,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124699,8 +124502,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124738,8 +124540,7 @@
           "ListIssuanceRecords"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124773,8 +124574,7 @@
           "ListRegistrations"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124862,8 +124662,7 @@
           "DeleteRegistration"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124897,8 +124696,7 @@
           "ListFederationBundles"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -124986,8 +124784,7 @@
           "DeleteFederationBundle"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -125024,8 +124821,7 @@
           "TouchRegistrationIssued"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -125062,8 +124858,7 @@
           "ListIssuanceRecords"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -125104,8 +124899,7 @@
           "TouchRegistrationUsed"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -125142,8 +124936,7 @@
           "ListRegistrations"
         ],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -125178,8 +124971,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Posture",
-          "Compliance"
+          "Posture"
         ]
       },
       {
@@ -126008,7 +125800,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-28T08:39:49Z",
+    "generatedAt": "2026-09-28T08:46:16Z",
     "methods": [
       "DELETE",
       "GET",

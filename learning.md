@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-09-28
 
+### A card that renders zeros for a service that doesn't exist looks healthy
+- **What happened:** Posture and Compliance each had a "Threshold Signing /
+  FROST" card fed by `Promise.resolve(null)`. No MPC service exists, so it
+  showed 0 keys, 0 failures and "No active keys" on every tenant. Compliance's
+  Crypto Inventory scored a browser-side formula and returned 100 when the
+  key and cert fetches failed (`.catch(() => [])`). The Audit Log badge said
+  "250+ event types", counted from a service × verb product that includes
+  services we don't ship. The Audit Log analytics charted one page of 100
+  events and labelled it "Total Events".
+- **Why it slipped through:** none of them has a `fake*` or `mock*` name, and
+  `Number(x || 0)` turns "no data" into a real-looking zero. The same charts
+  were copied into three tabs (Audit Log, Compliance, Analytics), so each
+  copy looked like it had a source somewhere else.
+- **Rule:** a missing or failed source renders "unavailable" or "not
+  assessed", never 0 or 100. A count names what it counted ("events
+  analysed"). A view has one home; before adding a chart, check whether
+  Analytics already has it.
+
 ### "Queued" is a claim, and nothing checked it
 - **What happened:** audit alerts recorded email, SMS, PagerDuty, SIEM and
   webhook as `queued` on every alert, and audit exposed channel settings

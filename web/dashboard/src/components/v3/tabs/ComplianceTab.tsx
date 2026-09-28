@@ -33,8 +33,7 @@ import {
   RadialBar,
   PieChart,
   Pie,
-  Cell,
-  Legend
+  Cell
 } from "recharts";
 import {
   deleteComplianceTemplate,
@@ -58,22 +57,12 @@ import {
   deleteReportingReportJob,
   downloadReportingReport,
   generateReportingReport,
-  getReportingAlertStats,
-  getReportingMTTD,
-  getReportingMTTR,
   getReportingReportJob,
-  getReportingTopSources,
   listReportingReportJobs,
   listReportingReportTemplates,
   listReportingScheduledReports
 } from "../../../lib/reporting";
-import { getAuthRESTClientSecuritySummary, getAuthSCIMSummary } from "../../../lib/authAdmin";
-import { getAutokeySummary } from "../../../lib/autokey";
-import { getCertRenewalSummary } from "../../../lib/certs";
-import { getKeyAccessSummary } from "../../../lib/keyaccess";
 import { getPQCInventory } from "../../../lib/pqc";
-import { getSigningSummary } from "../../../lib/signing";
-import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
 /* ── Shared chart tooltip ── */
 const ChartTip = ({ children, style }: any) => (
@@ -117,14 +106,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [frameworkGaps, setFrameworkGaps] = useState<any[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
   const [pqcInventory, setPqcInventory] = useState<any>(null);
-  const [autokeySummary, setAutokeySummary] = useState<any>(null);
-  const [workloadSummary, setWorkloadSummary] = useState<any>(null);
-  const [scimSummary, setScimSummary] = useState<any>(null);
-  const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
-  const [certRenewalSummary, setCertRenewalSummary] = useState<any>(null);
-  const [keyAccessSummary, setKeyAccessSummary] = useState<any>(null);
-  const [signingSummary, setSigningSummary] = useState<any>(null);
-  const [mpcOverview, setMpcOverview] = useState<any>(null);
+  const [pqcError, setPqcError] = useState("");
 
   /* ── Evidence Export state ── */
   const [evidenceFramework, setEvidenceFramework] = useState("gdpr");
@@ -139,18 +121,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [scheduleForm, setScheduleForm] = useState<any>({ name: "weekly-compliance", template_id: "", format: "pdf", schedule: "weekly" });
   const [reportBusy, setReportBusy] = useState(false);
 
-  /* ── NEW: alert stats state ── */
-  const [alertStats, setAlertStats] = useState<any>(null);
-  const [mttd, setMttd] = useState<any>(null);
-  const [mttr, setMttr] = useState<any>(null);
-  const [topSources, setTopSources] = useState<any>(null);
 
-  /* ── Crypto Inventory (KeyInsight) state ── */
-  const [inventoryKeys, setInventoryKeys] = useState<any[]>([]);
-  const [inventoryCerts, setInventoryCerts] = useState<any[]>([]);
-  const [inventoryLoading, setInventoryLoading] = useState(false);
-  const [inventorySearch, setInventorySearch] = useState("");
-  const [inventoryFilter, setInventoryFilter] = useState("all");
 
   /* ── Template seed logic (unchanged) ── */
   const frameworkSeed = useMemo(() => {
@@ -208,7 +179,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadAssessment = async (opts: any = {}) => {
-    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setPqcInventory(null); setAutokeySummary(null); setWorkloadSummary(null); setScimSummary(null); setRestClientSecurity(null); setCertRenewalSummary(null); setKeyAccessSummary(null); setSigningSummary(null); setMpcOverview(null); setMttr(null); setMttd(null); return; }
+    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setPqcInventory(null); setPqcError(""); return; }
     if (!opts?.silent) setLoading(true);
     try {
       const payload = await loadTemplates();
@@ -217,18 +188,10 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const effectiveTemplateID = hasTemplate ? candidateTemplateID : "default";
       if (effectiveTemplateID !== selectedTemplateID) setSelectedTemplateID(effectiveTemplateID);
 
-      const [assessOut, scheduleOut, historyOut, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, certRenewalSummaryOut, keyAccessSummaryOut, signingSummaryOut, mpcOverviewOut] = await Promise.all([
+      const [assessOut, scheduleOut, historyOut] = await Promise.all([
         getComplianceAssessment(session, effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
-        listComplianceAssessmentHistory(session, 20, effectiveTemplateID),
-        getAutokeySummary(session).catch(() => null),
-        getWorkloadIdentitySummary(session).catch(() => null),
-        getAuthSCIMSummary(session).catch(() => null),
-        getAuthRESTClientSecuritySummary(session).catch(() => null),
-        getCertRenewalSummary(session).catch(() => null),
-        getKeyAccessSummary(session).catch(() => null),
-        getSigningSummary(session).catch(() => null),
-        Promise.resolve(null)
+        listComplianceAssessmentHistory(session, 20, effectiveTemplateID)
       ]);
 
       const visibleHistory = (Array.isArray(historyOut) ? historyOut : []).filter((item: any) => isRealAssessment(item));
@@ -236,36 +199,24 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setAssessment(visibleAssessment);
       setSchedule(scheduleOut || { enabled: false, frequency: "daily" });
       setHistory(visibleHistory);
-      setAutokeySummary(autokeySummaryOut || null);
-      setWorkloadSummary(workloadSummaryOut || null);
-      setScimSummary(scimSummaryOut || null);
-      setRestClientSecurity(restClientSecurityOut || null);
-      setCertRenewalSummary(certRenewalSummaryOut || null);
-      setKeyAccessSummary(keyAccessSummaryOut || null);
-      setSigningSummary(signingSummaryOut || null);
-      setMpcOverview(mpcOverviewOut || null);
-      const hasAssessment = Boolean(visibleAssessment) || visibleHistory.length > 0;
-      if (hasAssessment) {
-        const [breakdownOut, hygieneOut, anomalyOut, deltaOut, pqcInventoryOut, mttrOut, mttdOut] = await Promise.all([
+      if (visibleAssessment) {
+        let pqcErr = "";
+        const [breakdownOut, hygieneOut, anomalyOut, deltaOut, pqcInventoryOut] = await Promise.all([
           getCompliancePostureBreakdown(session).catch(() => null),
           getComplianceKeyHygiene(session).catch(() => null),
           getComplianceAuditAnomalies(session).catch(() => []),
           getComplianceAssessmentDelta(session, effectiveTemplateID).catch(() => null),
-          getPQCInventory(session).catch(() => null),
-          getReportingMTTR(session).catch(() => null),
-          getReportingMTTD(session).catch(() => null)
+          getPQCInventory(session).catch((error) => { pqcErr = errMsg(error); return null; })
         ]);
         setPostureBreakdown(breakdownOut || null);
         setKeyHygiene(hygieneOut || null);
         setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
         setAssessmentDelta(deltaOut || null);
         setPqcInventory(pqcInventoryOut || null);
-        setMttr(mttrOut || null);
-        setMttd(mttdOut || null);
+        setPqcError(pqcErr);
 
-        /* load gaps for first framework with a score */
-        const fwScores = assessOut?.framework_scores || {};
-        const firstFW = Object.keys(fwScores)[0];
+        /* gaps for the first framework the displayed assessment scored */
+        const firstFW = Object.keys(visibleAssessment?.framework_scores || {})[0];
         if (firstFW) {
           const gaps = await getComplianceFrameworkGaps(session, firstFW).catch(() => []);
           setFrameworkGaps(Array.isArray(gaps) ? gaps : []);
@@ -279,15 +230,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         setAnomalies([]);
         setAssessmentDelta(null);
         setPqcInventory(null);
-        setAutokeySummary(autokeySummaryOut || null);
-        setWorkloadSummary(workloadSummaryOut || null);
-        setRestClientSecurity(restClientSecurityOut || null);
-        setCertRenewalSummary(certRenewalSummaryOut || null);
-        setKeyAccessSummary(keyAccessSummaryOut || null);
-        setSigningSummary(signingSummaryOut || null);
-        setMpcOverview(mpcOverviewOut || null);
-        setMttr(null);
-        setMttd(null);
+        setPqcError("");
       }
 
       if (effectiveTemplateID === "default") { setTemplateDraft(null); }
@@ -300,54 +243,26 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadReporting = async () => {
-    if (!session?.token) { setReportTemplates([]); setReportJobs([]); setScheduledReports([]); setAlertStats(null); setMttr(null); setMttd(null); setTopSources(null); return; }
+    if (!session?.token) { setReportTemplates([]); setReportJobs([]); setScheduledReports([]); return; }
     try {
-      const [templatesOut, jobsOut, scheduledOut, statsOut, mttrOut, mttdOut, topOut] = await Promise.all([
+      const [templatesOut, jobsOut, scheduledOut] = await Promise.all([
         listReportingReportTemplates(session),
         listReportingReportJobs(session, 40, 0),
-        listReportingScheduledReports(session),
-        getReportingAlertStats(session).catch(() => null),
-        getReportingMTTR(session).catch(() => null),
-        getReportingMTTD(session).catch(() => null),
-        getReportingTopSources(session).catch(() => null)
+        listReportingScheduledReports(session)
       ]);
       const tpls = Array.isArray(templatesOut) ? templatesOut : [];
       setReportTemplates(tpls);
       setReportJobs(Array.isArray(jobsOut) ? jobsOut : []);
       setScheduledReports(Array.isArray(scheduledOut) ? scheduledOut : []);
-      setAlertStats(statsOut || null);
-      setMttr(mttrOut || null);
-      setMttd(mttdOut || null);
-      setTopSources(topOut || null);
       if (!reportForm.template_id && tpls.length) setReportForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
       if (!scheduleForm.template_id && tpls.length) setScheduleForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
     } catch (error) { onToast?.(`Reporting load failed: ${errMsg(error)}`); }
-  };
-
-  const loadInventory = async () => {
-    if (!session?.token) { setInventoryKeys([]); setInventoryCerts([]); return; }
-    setInventoryLoading(true);
-    try {
-      const base = String(session?.baseUrl || "").replace(/\/+$/, "");
-      const headers: any = { Authorization: `Bearer ${session.token}`, "X-Tenant-ID": String(session.tenantId || "root") };
-      const [keysRes, certsRes] = await Promise.all([
-        // eslint-disable-next-line no-restricted-globals -- intentional: legacy direct call, refactor to typed client tracked separately
-        fetch(`${base}/svc/keycore/keys?limit=500`, { headers }).then((r) => r.json()).catch(() => []),
-        // eslint-disable-next-line no-restricted-globals -- intentional: legacy direct call, refactor to typed client tracked separately
-        fetch(`${base}/svc/certs/certs?limit=500`, { headers }).then((r) => r.json()).catch(() => [])
-      ]);
-      setInventoryKeys(Array.isArray(keysRes) ? keysRes : Array.isArray(keysRes?.items) ? keysRes.items : Array.isArray(keysRes?.keys) ? keysRes.keys : []);
-      setInventoryCerts(Array.isArray(certsRes) ? certsRes : Array.isArray(certsRes?.items) ? certsRes.items : Array.isArray(certsRes?.certificates) ? certsRes.certificates : []);
-    } catch (error) { onToast?.(`Inventory load failed: ${errMsg(error)}`); }
-    finally { setInventoryLoading(false); }
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   useEffect(() => { void loadAssessment({ templateId: "default" }); }, [session?.token, session?.tenantId]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   useEffect(() => { if (view === "reporting") void loadReporting(); }, [view, session?.token, session?.tenantId]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
-  useEffect(() => { if (view === "inventory") void loadInventory(); }, [view, session?.token, session?.tenantId]);
 
   /* ── Actions (unchanged) ── */
   const runNow = async () => {
@@ -597,417 +512,16 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       .slice(0, 8);
   }, [keyHygiene]);
 
-  /* ── Alert stats chart data ── */
-  const severityDonut = useMemo(() => {
-    if (!alertStats?.by_severity) return [];
-    const map: any = alertStats.by_severity;
-    return [
-      { name: "Critical", value: Number(map.critical || 0), fill: C.red },
-      { name: "High", value: Number(map.high || 0), fill: C.amber },
-      { name: "Warning", value: Number(map.warning || 0), fill: C.amber },
-      { name: "Info", value: Number(map.info || 0), fill: C.blue }
-    ].filter((d) => d.value > 0);
-  }, [alertStats]);
-
-  const dailyTrend = useMemo(() => {
-    if (!alertStats?.daily_trend) return [];
-    return Object.entries(alertStats.daily_trend)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-14)
-      .map(([date, count]) => ({ name: shortDate(date), alerts: Number(count || 0) }));
-  }, [alertStats]);
-
-  const statusBar = useMemo(() => {
-    if (!alertStats?.by_status) return null;
-    const map: any = alertStats.by_status;
-    const total = Object.values(map).reduce((s: number, v: any) => s + Number(v || 0), 0) as number;
-    if (!total) return null;
-    return {
-      new: Number(map.new || 0),
-      acknowledged: Number(map.acknowledged || 0),
-      resolved: Number(map.resolved || 0),
-      false_positive: Number(map.false_positive || 0),
-      total
-    };
-  }, [alertStats]);
-
-  const mttrBars = useMemo(() => {
-    if (!mttr) return [];
-    return ["critical", "high", "warning", "info"]
-      .filter((k) => Number(mttr[k] || 0) > 0)
-      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
-  }, [mttr]);
-
-  const mttdBars = useMemo(() => {
-    if (!mttd) return [];
-    return ["critical", "high", "warning", "info"]
-      .filter((k) => Number(mttd[k] || 0) > 0)
-      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttd[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
-  }, [mttd]);
-
-  const topActors = useMemo(() => Array.isArray(topSources?.top_actors) ? topSources.top_actors.slice(0, 5) : [], [topSources]);
-  const topIPs = useMemo(() => Array.isArray(topSources?.top_ips) ? topSources.top_ips.slice(0, 5) : [], [topSources]);
-  const topServices = useMemo(() => Array.isArray(topSources?.top_services) ? topSources.top_services.slice(0, 5) : [], [topSources]);
-
-  /* ══════════════════════════ INVENTORY (KeyInsight) VIEW ══════════════════════════ */
-  const invAlgoDistribution = useMemo(() => {
-    const map: Record<string, number> = {};
-    inventoryKeys.forEach((k: any) => { const algo = String(k?.algorithm || "unknown"); map[algo] = (map[algo] || 0) + 1; });
-    return Object.entries(map).sort(([, a], [, b]) => b - a).map(([name, count]) => ({ name, count }));
-  }, [inventoryKeys]);
-
-  const invAgeDistribution = useMemo(() => {
-    const buckets = { "<30d": 0, "30-90d": 0, "90-180d": 0, "180-365d": 0, ">1yr": 0 };
-    const now = Date.now();
-    inventoryKeys.forEach((k: any) => {
-      const created = new Date(String(k?.created_at || "")).getTime();
-      if (Number.isNaN(created)) return;
-      const days = Math.floor((now - created) / 86400000);
-      if (days < 30) buckets["<30d"]++;
-      else if (days < 90) buckets["30-90d"]++;
-      else if (days < 180) buckets["90-180d"]++;
-      else if (days < 365) buckets["180-365d"]++;
-      else buckets[">1yr"]++;
-    });
-    return Object.entries(buckets).map(([name, count]) => ({ name, count }));
-  }, [inventoryKeys]);
-
-  const invRiskItems = useMemo(() => {
-    const risks: any[] = [];
-    inventoryKeys.forEach((k: any) => {
-      const algo = String(k?.algorithm || "").toLowerCase();
-      const exportAllowed = Boolean(k?.export_allowed);
-      const status = String(k?.status || "").toLowerCase();
-      const hsmNonExportable = String(k?.labels?.hsm_non_exportable || "false") === "true";
-      if (algo.includes("rsa-1024") || algo.includes("des") || algo.includes("3des") || algo.includes("rc4"))
-        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "critical", reason: `Weak algorithm: ${algo}`, type: "key" });
-      if (exportAllowed && !hsmNonExportable)
-        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "warning", reason: "Key is exportable — consider restricting", type: "key" });
-      if (status === "compromised" || status === "destroyed")
-        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "critical", reason: `Key status: ${status}`, type: "key" });
-      const created = new Date(String(k?.created_at || "")).getTime();
-      if (!Number.isNaN(created) && (Date.now() - created) > 365 * 86400000)
-        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "high", reason: "Key older than 1 year — consider rotation", type: "key" });
-    });
-    inventoryCerts.forEach((c: any) => {
-      const notAfter = new Date(String(c?.not_after || "")).getTime();
-      if (!Number.isNaN(notAfter)) {
-        const daysLeft = Math.floor((notAfter - Date.now()) / 86400000);
-        if (daysLeft < 0) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "critical", reason: "Certificate expired", type: "cert" });
-        else if (daysLeft < 30) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "high", reason: `Certificate expires in ${daysLeft} days`, type: "cert" });
-        else if (daysLeft < 90) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "warning", reason: `Certificate expires in ${daysLeft} days`, type: "cert" });
-      }
-      const algo = String(c?.algorithm || "").toLowerCase();
-      if (algo.includes("sha1") || algo.includes("md5"))
-        risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "critical", reason: `Weak signing: ${algo}`, type: "cert" });
-    });
-    return risks.sort((a, b) => (a.risk === "critical" ? 0 : a.risk === "high" ? 1 : 2) - (b.risk === "critical" ? 0 : b.risk === "high" ? 1 : 2));
-  }, [inventoryKeys, inventoryCerts]);
-
-  const invCertExpiryTimeline = useMemo(() => {
-    const buckets = { "Expired": 0, "<30d": 0, "30-90d": 0, "90-180d": 0, ">180d": 0 };
-    inventoryCerts.forEach((c: any) => {
-      const notAfter = new Date(String(c?.not_after || "")).getTime();
-      if (Number.isNaN(notAfter)) return;
-      const days = Math.floor((notAfter - Date.now()) / 86400000);
-      if (days < 0) buckets["Expired"]++;
-      else if (days < 30) buckets["<30d"]++;
-      else if (days < 90) buckets["30-90d"]++;
-      else if (days < 180) buckets["90-180d"]++;
-      else buckets[">180d"]++;
-    });
-    return Object.entries(buckets).map(([name, count]) => ({ name, count }));
-  }, [inventoryCerts]);
-
-  const invPqcReadiness = useMemo(() => {
-    let pqcReady = 0, hybrid = 0, classical = 0;
-    inventoryKeys.forEach((k: any) => {
-      const algo = String(k?.algorithm || "").toLowerCase();
-      if (algo.includes("ml-") || algo.includes("slh-") || algo.includes("dilithium") || algo.includes("kyber")) pqcReady++;
-      else if (algo.includes("hybrid")) hybrid++;
-      else classical++;
-    });
-    return [
-      { name: "PQC Native", count: pqcReady, fill: C.green },
-      { name: "Hybrid", count: hybrid, fill: C.blue },
-      { name: "Classical", count: classical, fill: C.amber }
-    ];
-  }, [inventoryKeys]);
-
-  const invHsmKeys = useMemo(() => inventoryKeys.filter((k: any) => k?.labels?.hsm_provider || k?.labels?.hsm_key_label), [inventoryKeys]);
-  const invExportableKeys = useMemo(() => inventoryKeys.filter((k: any) => Boolean(k?.export_allowed)), [inventoryKeys]);
-  const invFilteredRisks = useMemo(() => {
-    let items = invRiskItems;
-    if (inventoryFilter !== "all") items = items.filter((r) => r.risk === inventoryFilter);
-    if (inventorySearch) { const q = inventorySearch.toLowerCase(); items = items.filter((r) => String(r.name || "").toLowerCase().includes(q) || String(r.reason || "").toLowerCase().includes(q)); }
-    return items;
-  }, [invRiskItems, inventoryFilter, inventorySearch]);
-
-  const invScore = useMemo(() => {
-    if (!inventoryKeys.length && !inventoryCerts.length) return 100;
-    const criticals = invRiskItems.filter((r) => r.risk === "critical").length;
-    const highs = invRiskItems.filter((r) => r.risk === "high").length;
-    const warnings = invRiskItems.filter((r) => r.risk === "warning").length;
-    const total = inventoryKeys.length + inventoryCerts.length;
-    return Math.max(0, Math.round(100 - (criticals * 15 + highs * 8 + warnings * 3) / Math.max(1, total) * 10));
-  }, [invRiskItems, inventoryKeys.length, inventoryCerts.length]);
-
-  if (view === "inventory") {
-    const scoreTone = invScore >= 80 ? C.green : invScore >= 60 ? C.amber : C.red;
-    return (
-      <div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
-          <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reporting</Btn>
-          <Btn small onClick={() => setView("inventory")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Crypto Inventory</Btn>
-        </div>
-
-        <Section title="Cryptographic Inventory" actions={<Btn small onClick={() => void loadInventory()} disabled={inventoryLoading}>{inventoryLoading ? "Scanning..." : "Refresh Inventory"}</Btn>}>
-
-          {/* KPI Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, marginBottom: 14 }}>
-            <Card style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Inventory Score</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: scoreTone, marginTop: 4 }}>{invScore}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{invScore >= 80 ? "Healthy" : invScore >= 60 ? "Needs attention" : "At risk"}</div>
-            </Card>
-            <Card style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Total Keys</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: C.accent, marginTop: 4 }}>{inventoryKeys.length}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{invAlgoDistribution.length} algorithms</div>
-            </Card>
-            <Card style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Certificates</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: C.blue, marginTop: 4 }}>{inventoryCerts.length}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{invCertExpiryTimeline.find((b) => b.name === "Expired")?.count || 0} expired</div>
-            </Card>
-            <Card style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>HSM Backed</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: C.purple, marginTop: 4 }}>{invHsmKeys.length}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{invExportableKeys.length} exportable</div>
-            </Card>
-            <Card style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Risk Findings</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: C.red, marginTop: 4 }}>{invRiskItems.length}</div>
-              <div style={{ fontSize: 10, color: C.dim }}>{invRiskItems.filter((r) => r.risk === "critical").length} critical</div>
-            </Card>
-          </div>
-
-          {/* Charts Row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
-            {/* Algorithm Distribution */}
-            <Card>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Algorithm Distribution</div>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={invAlgoDistribution.slice(0, 8)} layout="vertical">
-                  <XAxis type="number" tick={{ fontSize: 9, fill: C.dim }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: C.dim }} width={90} />
-                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value}`}</ChartTip> : null} />
-                  <RBar dataKey="count" fill={C.accent} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Key Age Distribution */}
-            <Card>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Key Age Distribution</div>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={invAgeDistribution}>
-                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: C.dim }} />
-                  <YAxis tick={{ fontSize: 9, fill: C.dim }} />
-                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value} keys`}</ChartTip> : null} />
-                  <RBar dataKey="count" fill={C.blue} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* PQC Readiness */}
-            <Card>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>PQC Readiness</div>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={invPqcReadiness} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={2}>
-                    {invPqcReadiness.map((entry: any, i: number) => <Cell key={i} fill={entry.fill} />)}
-                  </Pie>
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: 9 }} />
-                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].name}: ${payload[0].value}`}</ChartTip> : null} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
-
-          {/* Certificate Expiry Timeline */}
-          <Card style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Certificate Expiry Timeline</div>
-            <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={invCertExpiryTimeline}>
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: C.dim }} />
-                <YAxis tick={{ fontSize: 9, fill: C.dim }} />
-                <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value} certs`}</ChartTip> : null} />
-                <RBar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {invCertExpiryTimeline.map((entry: any, i: number) => <Cell key={i} fill={entry.name === "Expired" ? C.red : entry.name === "<30d" ? C.amber : C.green} />)}
-                </RBar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Risk Findings Table */}
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Risk Findings ({invFilteredRisks.length})</div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <Inp value={inventorySearch} onChange={(e: any) => setInventorySearch(e.target.value)} placeholder="Search..." style={{ width: 160, height: 28, fontSize: 10 }} />
-                <Sel w={100} value={inventoryFilter} onChange={(e: any) => setInventoryFilter(e.target.value)} style={{ height: 28, fontSize: 10 }}>
-                  <option value="all">All</option>
-                  <option value="critical">Critical</option>
-                  <option value="high">High</option>
-                  <option value="warning">Warning</option>
-                </Sel>
-              </div>
-            </div>
-            <div style={{ display: "grid", gap: 4, maxHeight: 340, overflowY: "auto" }}>
-              {invFilteredRisks.slice(0, 50).map((r: any, i: number) => (
-                <div key={`${r.id}-${i}`} style={{ display: "grid", gridTemplateColumns: "70px 60px 1fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}`, alignItems: "center" }}>
-                  <B c={r.risk === "critical" ? "red" : r.risk === "high" ? "amber" : "blue"}>{String(r.risk).toUpperCase()}</B>
-                  <B c={r.type === "key" ? "accent" : "purple"}>{r.type === "key" ? "KEY" : "CERT"}</B>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 11, color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.name || r.id)}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>{r.reason}</div>
-                  </div>
-                </div>
-              ))}
-              {!invFilteredRisks.length && <div style={{ fontSize: 10, color: C.muted, padding: 12, textAlign: "center" }}>No risk findings detected. Your crypto inventory looks healthy.</div>}
-            </div>
-          </Card>
-        </Section>
-      </div>
-    );
-  }
-
   /* ══════════════════════════ REPORTING VIEW ══════════════════════════ */
   if (view === "reporting") {
     return (
       <div>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
-          <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Reporting</Btn>
-          <Btn small onClick={() => setView("inventory")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Crypto Inventory</Btn>
+          <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Reports</Btn>
         </div>
 
-        <Section title="Compliance Reporting" actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}>
-
-          {/* ═══ Alert Analytics Dashboard ═══ */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-            {/* Severity Donut */}
-            <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Alert Severity</span>
-                <B c="accent">{alertStats?.total || 0} total</B>
-              </div>
-              {severityDonut.length > 0 ? (
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={severityDonut} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                      {severityDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
-                    </Pie>
-                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}</ChartTip> : null} />
-                    <Legend verticalAlign="bottom" height={24} iconType="circle" iconSize={8} formatter={(v) => <span style={{ color: C.dim, fontSize: 9 }}>{v}</span>} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No alert data</span></div>
-              )}
-            </Card>
-
-            {/* Daily Alert Trend */}
-            <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Daily Trend</span>
-                <B c="blue">{dailyTrend.length} days</B>
-              </div>
-              {dailyTrend.length > 0 ? (
-                <ResponsiveContainer width="100%" height={160}>
-                  <AreaChart data={dailyTrend}>
-                    <defs>
-                      <linearGradient id="alertGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={C.accent} stopOpacity={0.25} />
-                        <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
-                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
-                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Alerts: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
-                    <Area type="monotone" dataKey="alerts" stroke={C.accent} strokeWidth={2} fill="url(#alertGrad)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No daily trend data</span></div>
-              )}
-            </Card>
-
-            {/* MTTR by Severity */}
-            <Card>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Resolve</span>
-                <B c="green">MTTR</B>
-              </div>
-              {mttrBars.length > 0 ? (
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={mttrBars} layout="vertical">
-                    <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
-                    <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
-                    <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
-                      {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
-                    </RBar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTR data</span></div>
-              )}
-            </Card>
-          </div>
-
-          {/* ═══ Alert Status Progress Bar ═══ */}
-          {statusBar && (
-            <Card style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Alert Resolution Status</span>
-                <span style={{ fontSize: 9, color: C.muted }}>{statusBar.total} total</span>
-              </div>
-              <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                {statusBar.resolved > 0 && <div style={{ width: `${(statusBar.resolved / statusBar.total) * 100}%`, background: C.green }} title={`Resolved: ${statusBar.resolved}`} />}
-                {statusBar.acknowledged > 0 && <div style={{ width: `${(statusBar.acknowledged / statusBar.total) * 100}%`, background: C.blue }} title={`Acknowledged: ${statusBar.acknowledged}`} />}
-                {statusBar.new > 0 && <div style={{ width: `${(statusBar.new / statusBar.total) * 100}%`, background: C.amber }} title={`New: ${statusBar.new}`} />}
-                {statusBar.false_positive > 0 && <div style={{ width: `${(statusBar.false_positive / statusBar.total) * 100}%`, background: C.muted }} title={`False Positive: ${statusBar.false_positive}`} />}
-              </div>
-              <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
-                {[["Resolved", statusBar.resolved, C.green], ["Acknowledged", statusBar.acknowledged, C.blue], ["New", statusBar.new, C.amber], ["False Positive", statusBar.false_positive, C.muted]].map(([label, count, color]) => (
-                  <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
-                    {label} ({count})
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* ═══ Top Sources ═══ */}
-          {(topActors.length > 0 || topIPs.length > 0 || topServices.length > 0) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-              {[["Top Actors", topActors, C.accent], ["Top Source IPs", topIPs, C.blue], ["Top Services", topServices, C.green]].map(([title, items, color]) => (
-                <Card key={String(title)}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 6, display: "block" }}>{title as string}</span>
-                  {(items as any[]).length > 0 ? (items as any[]).map((item: any, idx: number) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: 10, color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{String(item?.key || "-")}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: color as string }}>{Number(item?.count || 0)}</span>
-                    </div>
-                  )) : <span style={{ fontSize: 10, color: C.muted }}>No data</span>}
-                </Card>
-              ))}
-            </div>
-          )}
+        <Section title="Compliance Reports" actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}>
 
           {/* ═══ Report Generation + Schedule (existing, kept) ═══ */}
           <Row2>
@@ -1109,8 +623,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <Btn small onClick={() => setView("assessment")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Assessment</Btn>
-        <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reporting</Btn>
-        <Btn small onClick={() => setView("inventory")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Crypto Inventory</Btn>
+        <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reports</Btn>
       </div>
       <Section
         title="Compliance Posture"
@@ -1275,50 +788,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 </div>
               </div>
             </Card>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Detect</span>
-                  <B c="blue">MTTD</B>
-                </div>
-                {mttdBars.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={150}>
-                    <BarChart data={mttdBars} layout="vertical">
-                      <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
-                      <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                      <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
-                      <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
-                        {mttdBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
-                      </RBar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTD data yet.</span></div>
-                )}
-              </Card>
-
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Resolve</span>
-                  <B c="green">MTTR</B>
-                </div>
-                {mttrBars.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={150}>
-                    <BarChart data={mttrBars} layout="vertical">
-                      <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
-                      <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                      <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
-                      <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
-                        {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
-                      </RBar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTR data yet.</span></div>
-                )}
-              </Card>
-            </div>
           </>
         )}
 
@@ -1389,15 +858,16 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>PQC Migration Gaps</span>
-            <B c={Number(pqcInventory?.classical_usage?.length || 0) > 0 || Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 || Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"}>
-              {`${Number(pqcInventory?.readiness_score || 0)}/100`}
+            <B c={!pqcInventory ? "red" : Number(pqcInventory?.classical_usage?.length || 0) > 0 || Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 || Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"}>
+              {pqcInventory ? `${Number(pqcInventory?.readiness_score || 0)}/100` : "unavailable"}
             </B>
           </div>
+          {pqcInventory ? <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
             <Stat l="RSA / ECC Active" v={String(Number(pqcInventory?.classical_usage?.length || 0))} c={Number(pqcInventory?.classical_usage?.length || 0) > 0 ? "amber" : "green"} />
             <Stat l="Interfaces Pending" v={String(Number(pqcInventory?.non_migrated_interfaces?.length || 0))} c={Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 ? "amber" : "green"} />
             <Stat l="Certificates Pending" v={String(Number(pqcInventory?.non_migrated_certificates?.length || 0))} c={Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Tenant PQC Policy" v={String(pqcInventory?.policy?.profile_id || "balanced_hybrid").replaceAll("_", " ")} c="accent" />
+            <Stat l="Tenant PQC Policy" v={String(pqcInventory?.policy?.profile_id || "not set").replaceAll("_", " ")} c="accent" />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
@@ -1427,327 +897,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               {!(pqcInventory?.non_migrated_certificates || []).length && <div style={{ fontSize: 10, color: C.muted }}>No certificate migration gaps.</div>}
             </div>
           </div>
+          </> : <div style={{ fontSize: 10, color: C.red }}>{`PQC inventory unavailable${pqcError ? `: ${pqcError}` : "."}`}</div>}
         </Card>
 
         <div style={{ height: 10 }} />
 
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Autokey Controls</span>
-            <B c={!autokeySummary?.enabled ? "amber" : Number(autokeySummary?.failed_count || 0) > 0 ? "red" : Number(autokeySummary?.pending_approvals || 0) > 0 || Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"}>
-              {!autokeySummary?.enabled ? "Disabled" : Number(autokeySummary?.failed_count || 0) > 0 ? "Failures" : Number(autokeySummary?.pending_approvals || 0) > 0 || Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "Needs review" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Templates" v={String(Number(autokeySummary?.template_count || 0))} c="blue" />
-            <Stat l="Service Defaults" v={String(Number(autokeySummary?.service_policy_count || 0))} c="blue" />
-            <Stat l="Pending Approvals" v={String(Number(autokeySummary?.pending_approvals || 0))} c={Number(autokeySummary?.pending_approvals || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Policy Mismatches" v={String(Number(autokeySummary?.policy_mismatch_count || 0))} c={Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Policy Alignment</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "Generated requests diverged from org policy" : "Generated requests matched org policy"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(autokeySummary?.policy_matched_count || 0)} matched • {Number(autokeySummary?.denied_count || 0)} denied • {Number(autokeySummary?.failed_count || 0)} failed
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Autokey request governance</div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  Review approval backlog, keep default service policies enforced, and use tenant templates so generated handles stay aligned with org cryptography standards.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Workload Identity Controls</span>
-            <B c={!workloadSummary?.enabled ? "amber" : Number(workloadSummary?.expired_svid_count || 0) > 0 || Number(workloadSummary?.over_privileged_count || 0) > 0 ? "red" : "green"}>
-              {!workloadSummary?.enabled ? "Disabled" : Number(workloadSummary?.expired_svid_count || 0) > 0 || Number(workloadSummary?.over_privileged_count || 0) > 0 ? "Needs review" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Trust Domain" v={String(workloadSummary?.trust_domain || "-")} c="accent" />
-            <Stat l="Expired SVIDs" v={String(Number(workloadSummary?.expired_svid_count || 0))} c={Number(workloadSummary?.expired_svid_count || 0) > 0 ? "red" : "green"} />
-            <Stat l="Over-Privileged" v={String(Number(workloadSummary?.over_privileged_count || 0))} c={Number(workloadSummary?.over_privileged_count || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Static API Keys" v={Boolean(workloadSummary?.disable_static_api_keys) ? "Disabled" : "Allowed"} c={Boolean(workloadSummary?.disable_static_api_keys) ? "green" : "amber"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Rotation & Usage</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{Boolean(workloadSummary?.rotation_healthy) ? "Rotation healthy" : "Rotation attention needed"}</div>
-                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                    {Number(workloadSummary?.expiring_svid_count || 0)} expiring • {Number(workloadSummary?.token_exchange_count_24h || 0)} token exchanges • {Number(workloadSummary?.unique_workloads_using_keys_24h || 0)} workloads used keys in the last 24h
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Identity hardening</div>
-                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                    Review registrations with wildcard access, rotate expiring SVIDs, and disable static API keys so workload callers use SPIFFE/SVID exchange instead of long-lived bearer secrets.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>SCIM Provisioning Controls</span>
-            <B c={!scimSummary?.enabled ? "amber" : !scimSummary?.token_configured ? "amber" : Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"}>
-              {!scimSummary?.enabled ? "Disabled" : !scimSummary?.token_configured ? "Token missing" : Number(scimSummary?.disabled_users || 0) > 0 ? "Needs review" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Managed Users" v={String(Number(scimSummary?.managed_users || 0))} c="blue" />
-            <Stat l="Managed Groups" v={String(Number(scimSummary?.managed_groups || 0))} c="green" />
-            <Stat l="Disabled Users" v={String(Number(scimSummary?.disabled_users || 0))} c={Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Role-Mapped Groups" v={String(Number(scimSummary?.role_mapped_groups || 0))} c="blue" />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Provisioning State</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Boolean(scimSummary?.enabled) && Boolean(scimSummary?.token_configured) ? "Tenant can accept SCIM pushes" : "Provisioning handshake is incomplete"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Boolean(scimSummary?.token_configured) ? `Token prefix ${String(scimSummary?.token_prefix || "").trim() || "configured"} is registered for the tenant.` : "Rotate the SCIM bearer token and configure the IdP connector before enabling production provisioning."}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Identity lifecycle hygiene</div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  Keep group-to-role mappings reviewed, disable orphaned identities on deprovision, and audit tenants where SCIM is enabled but token rotation or role mappings are incomplete.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Certificate Renewal Controls</span>
-            <B c={Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "red" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "amber" : "green"}>
-              {Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "Emergency rotation" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Needs review" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="ARI Mode" v={Boolean(certRenewalSummary?.ari_enabled) ? "Enabled" : "Local"} c={Boolean(certRenewalSummary?.ari_enabled) ? "green" : "amber"} />
-            <Stat l="Missed Windows" v={String(Number(certRenewalSummary?.missed_window_count || 0))} c={Number(certRenewalSummary?.missed_window_count || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Emergency Rotations" v={String(Number(certRenewalSummary?.emergency_rotation_count || 0))} c={Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "red" : "green"} />
-            <Stat l="Mass-Renewal Risks" v={String(Number(certRenewalSummary?.mass_renewal_risks?.length || 0))} c={Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "amber" : "green"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Window Discipline</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(certRenewalSummary?.missed_window_count || 0) > 0 ? "Renewal windows were missed" : "Coordinated renewal windows are being met"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(certRenewalSummary?.due_soon_count || 0)} certificates are due soon. Poll every {Number(certRenewalSummary?.recommended_poll_hours || 24)} hours and keep clients renewing inside the CA-directed window.
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Risk Hotspots</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Mass-renewal concentration detected" : "No mass-renewal hotspot detected"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Distribute certificate cohorts across more renewal days or widen the ARI bias window to avoid one-day rotation spikes." : "Renewal schedule is distributed across CA buckets without triggering the current hotspot threshold."}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>REST Client Authentication Controls</span>
-            <B c={Number(restClientSecurity?.total_clients || 0) === 0 ? "blue" : Number(restClientSecurity?.replay_violations || 0) > 0 || Number(restClientSecurity?.signature_failures || 0) > 0 ? "red" : Number(restClientSecurity?.non_compliant_clients || 0) > 0 || Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"}>
-              {Number(restClientSecurity?.total_clients || 0) === 0 ? "No REST clients" : Number(restClientSecurity?.replay_violations || 0) > 0 || Number(restClientSecurity?.signature_failures || 0) > 0 ? "Control failures" : Number(restClientSecurity?.non_compliant_clients || 0) > 0 || Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "Migration pending" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Sender-Constrained" v={`${Number(restClientSecurity?.sender_constrained_clients || 0)}/${Number(restClientSecurity?.total_clients || 0)}`} c={Number(restClientSecurity?.non_compliant_clients || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Replay Violations" v={String(Number(restClientSecurity?.replay_violations || 0))} c={Number(restClientSecurity?.replay_violations || 0) > 0 ? "red" : "green"} />
-            <Stat l="Signature Failures" v={String(Number(restClientSecurity?.signature_failures || 0))} c={Number(restClientSecurity?.signature_failures || 0) > 0 ? "red" : "green"} />
-            <Stat l="Unsigned Rejects" v={String(Number(restClientSecurity?.unsigned_rejects || 0))} c={Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Current Control State</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Signed vs unsigned REST traffic</div>
-                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                    {Number(restClientSecurity?.unsigned_rejects || 0)} unsigned requests were blocked. {Number(restClientSecurity?.verified_requests || 0)} signed or bound requests were accepted through the hardened path.
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Sender-constrained migration</div>
-                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                    Move legacy bearer clients to OAuth mTLS, DPoP, or HTTP Message Signatures and investigate any replay or signature failures before treating REST control posture as compliant.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Key Access Justification Controls</span>
-            <B c={!keyAccessSummary?.enabled ? "amber" : Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 || Number(keyAccessSummary?.approval_count_24h || 0) > 0 ? "amber" : "green"}>
-              {!keyAccessSummary?.enabled ? "Disabled" : Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "Bypass detected" : Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 || Number(keyAccessSummary?.approval_count_24h || 0) > 0 ? "Needs review" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Rules" v={String(Number(keyAccessSummary?.rule_count || 0))} c="blue" />
-            <Stat l="Requests 24h" v={String(Number(keyAccessSummary?.total_requests_24h || 0))} c="accent" />
-            <Stat l="Unjustified" v={String(Number(keyAccessSummary?.unjustified_count_24h || 0))} c={Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Bypass Signals" v={String(Number(keyAccessSummary?.bypass_count_24h || 0))} c={Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : "green"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Policy Outcome</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "Some external key requests lacked valid justification" : "External key requests matched declared reason-code policy"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(keyAccessSummary?.allow_count_24h || 0)} allowed • {Number(keyAccessSummary?.deny_count_24h || 0)} denied • {Number(keyAccessSummary?.approval_count_24h || 0)} held for approval
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Usage justification enforcement</div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  Require valid reason codes for HYOK, EKM, and external decrypt/sign calls and investigate any bypass or policy-scope mismatch before accepting the external-access control posture.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Artifact Signing Controls</span>
-            <B c={!signingSummary?.enabled ? "amber" : Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"}>
-              {!signingSummary?.enabled ? "Disabled" : Number(signingSummary?.verification_failures_24h || 0) > 0 ? "Verification failures" : Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "Transparency gaps" : "Aligned"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Profiles" v={String(Number(signingSummary?.profile_count || 0))} c="blue" />
-            <Stat l="Signed 24h" v={String(Number(signingSummary?.record_count_24h || 0))} c="accent" />
-            <Stat l="Transparency Logged" v={String(Number(signingSummary?.transparency_logged_24h || 0))} c={Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"} />
-            <Stat l="Verify Failures" v={String(Number(signingSummary?.verification_failures_24h || 0))} c={Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : "green"} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Provenance State</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "Some signatures were not logged with transparency metadata" : "Recent signatures were logged with transparency metadata"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(signingSummary?.workload_signed_24h || 0)} workload-signed • {Number(signingSummary?.oidc_signed_24h || 0)} OIDC-signed • {Array.isArray(signingSummary?.artifact_counts) ? signingSummary.artifact_counts.length : 0} artifact classes active
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Supply-chain signing hygiene</div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  Enforce trust constraints on workload or OIDC identities, require transparency logging for release profiles, and investigate verification failures before treating build provenance as compliant.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Threshold Signing / FROST Controls</span>
-            <B c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : Number(mpcOverview?.stats?.active_keys || 0) > 0 ? "green" : "amber"}>
-              {Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "Failures" : Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "Pending ceremony" : Number(mpcOverview?.stats?.active_keys || 0) > 0 ? "Aligned" : "No active keys"}
-            </B>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
-            <Stat l="Active Keys" v={String(Number(mpcOverview?.stats?.active_keys || 0))} c="green" />
-            <Stat l="Pending Ceremonies" v={String(Number(mpcOverview?.stats?.pending_ceremonies || 0))} c={Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Failed Ceremonies" v={String(Number(mpcOverview?.stats?.failed_ceremonies || 0))} c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : "green"} />
-            <Stat l="Participants" v={String(Number(mpcOverview?.stats?.total_participants || 0))} c="blue" />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Ceremony State</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
-                  {Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "Quorum-backed ceremonies are waiting on contributors" : "No pending threshold ceremonies"}
-                </div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  {Number(mpcOverview?.stats?.completed_ceremonies || 0)} completed • {Number(mpcOverview?.stats?.active_policies || 0)} active policies • {Number(mpcOverview?.stats?.total_keys || 0)} total quorum-backed keys
-                </div>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
-              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
-                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Quorum ceremony discipline</div>
-                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
-                  Keep participant roster and threshold policy current, investigate failed ceremonies, and review stalled approvals so high-assurance signing does not fall back to single-holder controls.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div style={{ height: 10 }} />
 
         {/* ═══ ROW 2: Posture Breakdown + Key Hygiene ═══ */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
