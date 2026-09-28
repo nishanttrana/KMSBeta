@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-28T18:19:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-28T19:09:44Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -11,8 +11,8 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `898` across `30` services
 - Backend routes on the `pkg/route` kernel: `180` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `562`
-- Frontend call sites with exact backend route match: `517`
+- Frontend API call sites discovered: `561`
+- Frontend call sites with exact backend route match: `516`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
 - Clickable controls with static `onClick` handlers: `755`
 - Backend request flows with handler/service/package summaries: `898`
@@ -169,7 +169,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 98 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
-| Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 5 |
+| Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 4 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 100 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -219,7 +219,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 161 | 112 |
+| keycore | 161 | 111 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
@@ -414,7 +414,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
 | compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
 
-Showing `120` of `374`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `375`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

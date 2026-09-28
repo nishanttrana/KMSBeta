@@ -47,7 +47,7 @@ governance service, are:
 posture_hndl_detection_enabled
 posture_auto_quarantine_enabled
 posture_auto_migration_enabled
-posture_min_algorithm_tier            // classical-128 | classical-192 | classical-256 | pqc-hybrid | pqc-only
+posture_min_algorithm_tier            // classical-112 | classical-128 | classical-192 | classical-256 | pqc-hybrid | pqc-only (stored; not yet enforced by keycore)
 posture_zeroization_interval_mins
 ```
 
@@ -103,7 +103,8 @@ The catalogued event subjects added by this wave are listed in
 - `audit.key.hbs_exhausted`
 - `audit.key.wake_kat_failed`
 - `audit.health.incident`
-- `audit.policy.crypto_floor_violation`
+- `audit.policy.crypto_floor_violation` (a policy's `minAlgorithmTier`
+  denied a request; emitted since 3.2.0-beta, with `algorithm` and `tier`)
 - `audit.policy.quota_exceeded`
 
 ## Dashboards
@@ -114,8 +115,9 @@ The "Health & Reconciliation" tab in the v3 dashboard surfaces:
 - per-controller reconciler status (last run, last error)
 - recent watchdog incidents (timestamp, service, recommendation)
 
-The existing "Crypto Agility" tab continues to render the CBOM
-inventory; live data lands via `lib/cbom.ts`.
+The "Crypto Agility" tab shows keycore's `GET /agility/posture`: live keys
+against NIST's transition schedule from `pkg/cryptocatalog`
+(docs/SECURITY/ALGORITHM_TRANSITIONS.md). CBOM tiers use the same catalogue.
 
 ## Caveats and follow-ups
 

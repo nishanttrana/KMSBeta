@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/cbom"
 	"vecta-kms/pkg/clustersync"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -57,6 +58,10 @@ func (s *Service) SetGovernancePostureControlsProvider(provider GovernancePostur
 func (s *Service) CreatePolicy(ctx context.Context, req CreatePolicyRequest) (Policy, error) {
 	doc, parsed, err := parsePolicyYAML(req.YAML)
 	if err != nil {
+		return Policy{}, err
+	}
+	if err := validateAlgorithmFloor(doc); err != nil {
+		s.auditFloorRefused(ctx, req.TenantID, doc)
 		return Policy{}, err
 	}
 	tenantID, err := normalizeTenant(req.TenantID, doc.Metadata.Tenant)
@@ -117,6 +122,10 @@ func (s *Service) UpdatePolicy(ctx context.Context, policyID string, req UpdateP
 	}
 	doc, parsed, err := parsePolicyYAML(req.YAML)
 	if err != nil {
+		return Policy{}, err
+	}
+	if err := validateAlgorithmFloor(doc); err != nil {
+		s.auditFloorRefused(ctx, req.TenantID, doc)
 		return Policy{}, err
 	}
 	tenantID, err := normalizeTenant(req.TenantID, doc.Metadata.Tenant)
@@ -262,6 +271,7 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 				OccurredAt: time.Now().UTC(),
 			})
 			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"result":    "refused",
 				"operation": req.Operation,
 				"key_id":    req.KeyID,
 				"reason":    out.Reason,
@@ -295,6 +305,7 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 				OccurredAt: time.Now().UTC(),
 			})
 			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"result":    "refused",
 				"operation": req.Operation,
 				"key_id":    req.KeyID,
 				"reason":    out.Reason,
@@ -328,6 +339,7 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 				OccurredAt: time.Now().UTC(),
 			})
 			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"result":    "refused",
 				"operation": req.Operation,
 				"key_id":    req.KeyID,
 				"reason":    out.Reason,
@@ -436,10 +448,27 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 	switch result.Decision {
 	case DecisionDeny:
 		_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+			"result":    "refused",
 			"operation": req.Operation,
 			"key_id":    req.KeyID,
+			"algorithm": req.Algorithm,
 			"reason":    result.Reason,
+			"rules":     deniedRules(result.Outcomes),
 		})
+		for _, o := range result.Outcomes {
+			if o.RuleName == "crypto-floor" {
+				_ = s.publishAudit(ctx, "audit.policy.crypto_floor_violation", req.TenantID, map[string]any{
+					"result":    "refused",
+					"reason":    "below_min_algorithm_tier",
+					"policy_id": o.PolicyID,
+					"operation": req.Operation,
+					"key_id":    req.KeyID,
+					"algorithm": req.Algorithm,
+					"tier":      string(cbom.ClassifyTier(req.Algorithm, "")),
+					"message":   o.Message,
+				})
+			}
+		}
 	case DecisionRequireApproval:
 		_ = s.publishAudit(ctx, "audit.policy.approval_required", req.TenantID, map[string]any{
 			"operation":           req.Operation,
@@ -460,12 +489,16 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]any) error {
 	var outErr error
 	if s.events != nil {
+		result := "success"
+		if r, ok := data["result"].(string); ok && r != "" {
+			result = r // a refusal is never recorded as a success
+		}
 		raw, err := json.Marshal(map[string]any{
 			"tenant_id": tenantID,
 			"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 			"service":   "policy",
 			"action":    subject,
-			"result":    "success",
+			"result":    result,
 			"data":      data,
 		})
 		if err != nil {
@@ -480,6 +513,31 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		}
 	}
 	return outErr
+}
+
+// deniedRules names the rules that denied a request (e.g. crypto-floor):
+// every action other than warn, auto-rotate and require-approval denies
+// (evaluatePolicy).
+func deniedRules(outcomes []RuleOutcome) []string {
+	out := []string{}
+	for _, o := range outcomes {
+		switch o.Action {
+		case "warn", "auto-rotate", "require-approval":
+		default:
+			out = append(out, o.RuleName)
+		}
+	}
+	return out
+}
+
+// auditFloorRefused records a policy refused for an unknown minAlgorithmTier.
+func (s *Service) auditFloorRefused(ctx context.Context, tenantID string, doc PolicyDoc) {
+	_ = s.publishAudit(ctx, "audit.policy.floor_refused", tenantID, map[string]any{
+		"policy_name":        doc.Metadata.Name,
+		"min_algorithm_tier": doc.Spec.MinAlgorithmTier,
+		"result":             "refused",
+		"reason":             "invalid_min_algorithm_tier",
+	})
 }
 
 func normalizeTenant(requestTenant string, yamlTenant string) (string, error) {

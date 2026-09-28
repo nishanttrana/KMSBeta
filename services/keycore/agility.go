@@ -1,28 +1,60 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
 
-// AlgorithmUsage holds usage statistics for a single cryptographic algorithm.
+	"vecta-kms/pkg/cryptocatalog"
+)
+
+// AlgorithmUsage is one algorithm in the tenant's live keys, with what NIST
+// says about it (pkg/cryptocatalog). Assessed is false when the name does
+// not identify a parameter set (e.g. "RSA" without a size): no status is
+// shown for it.
 type AlgorithmUsage struct {
-	Algorithm     string  `json:"algorithm"`
-	KeyCount      int     `json:"key_count"`
-	Percentage    float64 `json:"percentage"`
-	IsLegacy      bool    `json:"is_legacy"`
-	IsQuantumSafe bool    `json:"is_quantum_safe"`
+	Algorithm         string               `json:"algorithm"`
+	KeyCount          int                  `json:"key_count"`
+	Percentage        float64              `json:"percentage"`
+	Assessed          bool                 `json:"assessed"`
+	Canonical         string               `json:"canonical,omitempty"`
+	Family            string               `json:"family,omitempty"`
+	SecurityBits      int                  `json:"security_bits,omitempty"`
+	PQCCategory       int                  `json:"pqc_category,omitempty"`
+	QuantumVulnerable bool                 `json:"quantum_vulnerable"`
+	PostQuantum       bool                 `json:"post_quantum"`
+	Status            cryptocatalog.Status `json:"nist_status,omitempty"`
+	NextChange        *cryptocatalog.Step  `json:"next_change,omitempty"`
+	Schedule          []cryptocatalog.Step `json:"schedule,omitempty"`
+	Note              string               `json:"note,omitempty"`
 }
 
-// AgilityScore summarises the overall cryptographic agility posture for a tenant.
-type AgilityScore struct {
-	// Assessed is false when the tenant has no live keys: there is nothing to
-	// score, and Score/Grade are zero values rather than a perfect result.
-	Assessed         bool             `json:"assessed"`
-	Score            int              `json:"score"`             // 0–100
-	Grade            string           `json:"grade"`             // A–F
-	QuantumReadiness int              `json:"quantum_readiness"` // percentage
-	LegacyKeyCount   int              `json:"legacy_key_count"`
-	TotalKeys        int              `json:"total_keys"`
-	Algorithms       []AlgorithmUsage `json:"algorithms"`
-	Recommendations  []string         `json:"recommendations"`
+// TransitionMilestone is a dated NIST status change and the live keys it
+// reaches.
+type TransitionMilestone struct {
+	cryptocatalog.Milestone
+	Citation   string   `json:"citation"`
+	KeyCount   int      `json:"key_count"`
+	Algorithms []string `json:"algorithms"`
+}
+
+// AgilityPosture is the tenant's key inventory measured against NIST's
+// transition schedule (CSWP 39-upd1 §2.3: SP 800-131Ar3 and IR 8547). Every
+// count is of live keys; every status and date is cited.
+type AgilityPosture struct {
+	// Assessed is false when the tenant has no live keys.
+	Assessed              bool                         `json:"assessed"`
+	AsOf                  string                       `json:"as_of"`
+	TotalKeys             int                          `json:"total_keys"`
+	NotAssessedKeys       int                          `json:"not_assessed_keys"`
+	QuantumVulnerableKeys int                          `json:"quantum_vulnerable_keys"`
+	PostQuantumKeys       int                          `json:"post_quantum_keys"`
+	StatusCounts          map[cryptocatalog.Status]int `json:"status_counts"`
+	Milestones            []TransitionMilestone        `json:"milestones"`
+	Algorithms            []AlgorithmUsage             `json:"algorithms"`
+	Findings              []string                     `json:"findings"`
+	Sources               []cryptocatalog.Source       `json:"sources"`
 }
 
 // KeysByAlgorithm lists keys grouped under a specific algorithm.
@@ -46,127 +78,106 @@ type MigrationPlan struct {
 	TargetDate    *time.Time `json:"target_date,omitempty"`
 }
 
-// legacyAlgorithms is the set of algorithms considered cryptographically weak
-// or deprecated.
-var legacyAlgorithms = map[string]bool{
-	"DES":         true,
-	"3DES":        true,
-	"RC4":         true,
-	"MD5":         true,
-	"SHA-1":       true,
-	"RSA-1024":    true,
-	"RSA-2048":    true,
-	"AES-128-CBC": true,
-	"AES-128-ECB": true,
-	"AES-256-ECB": true,
+// computeAgilityPosture annotates the live-key distribution with catalogue
+// entries and measures it on day now.
+func computeAgilityPosture(algos []AlgorithmUsage, now time.Time) AgilityPosture {
+	p := AgilityPosture{
+		AsOf: now.UTC().Format("2006-01-02"), Algorithms: algos,
+		StatusCounts: map[cryptocatalog.Status]int{}, Milestones: []TransitionMilestone{},
+		Findings: []string{}, Sources: []cryptocatalog.Source{},
+	}
+	for i := range algos {
+		p.TotalKeys += algos[i].KeyCount
+	}
+	if p.TotalKeys == 0 {
+		return p
+	}
+	p.Assessed = true
+	var entries []cryptocatalog.Entry
+	sourceSeen := map[string]bool{}
+	for i := range algos {
+		a := &algos[i]
+		a.Percentage = float64(a.KeyCount) / float64(p.TotalKeys) * 100
+		e, ok := cryptocatalog.Lookup(a.Algorithm)
+		if !ok {
+			p.NotAssessedKeys += a.KeyCount
+			continue
+		}
+		entries = append(entries, e)
+		a.Assessed, a.Canonical, a.Family = true, e.Algorithm, e.Family
+		a.SecurityBits, a.PQCCategory = e.SecurityBits, e.PQCCategory
+		a.QuantumVulnerable, a.PostQuantum = e.QuantumVulnerable, e.PostQuantum
+		a.Status, a.Schedule, a.Note = e.StatusAt(now), e.Schedule, e.Note
+		if next, ok := e.Next(now); ok {
+			a.NextChange = &next
+		}
+		p.StatusCounts[a.Status] += a.KeyCount
+		if e.QuantumVulnerable {
+			p.QuantumVulnerableKeys += a.KeyCount
+		}
+		if e.PostQuantum {
+			p.PostQuantumKeys += a.KeyCount
+		}
+		for _, s := range e.Sources() {
+			if !sourceSeen[s.ID] {
+				sourceSeen[s.ID] = true
+				p.Sources = append(p.Sources, s)
+			}
+		}
+	}
+	for _, m := range cryptocatalog.Milestones(entries, now) {
+		tm := TransitionMilestone{Milestone: m, Citation: cryptocatalog.Cite(m.Source, m.Ref), Algorithms: []string{}}
+		for _, a := range algos {
+			for _, s := range a.Schedule {
+				if s.From == m.Date && s.Status == m.Status && s.Source == m.Source {
+					tm.KeyCount += a.KeyCount
+					tm.Algorithms = append(tm.Algorithms, a.Algorithm)
+					break
+				}
+			}
+		}
+		p.Milestones = append(p.Milestones, tm)
+	}
+	sort.Slice(p.Sources, func(i, j int) bool { return p.Sources[i].ID < p.Sources[j].ID })
+	p.Findings = agilityFindings(p)
+	return p
 }
 
-// quantumSafeAlgorithms is the set of algorithms considered quantum-resistant.
-var quantumSafeAlgorithms = map[string]bool{
-	"ML-KEM-768":         true,
-	"ML-KEM-1024":        true,
-	"ML-DSA-44":          true,
-	"ML-DSA-65":          true,
-	"ML-DSA-87":          true,
-	"CRYSTALS-Kyber":     true,
-	"CRYSTALS-Dilithium": true,
-	"SPHINCS+":           true,
-	"FALCON-512":         true,
-	"FALCON-1024":        true,
-}
-
-// computeAgilityScore calculates a real cryptographic agility score from the
-// provided algorithm usage distribution.
-//
-// Scoring methodology:
-//   - Base score starts at 100.
-//   - Each percentage point of legacy algorithm usage subtracts 0.6 points
-//     (max −60).
-//   - Algorithms that are NOT quantum-safe but also NOT legacy subtract a
-//     smaller penalty of 0.2 points per percentage point (max −20).
-//   - The quantum-readiness percentage forms part of the final score.
-//   - Grade thresholds: A ≥ 85, B ≥ 70, C ≥ 55, D ≥ 40, F < 40.
-func computeAgilityScore(algos []AlgorithmUsage) AgilityScore {
-	var totalKeys int
-	for i := range algos {
-		totalKeys += algos[i].KeyCount
-	}
-	if totalKeys == 0 {
-		return AgilityScore{Algorithms: algos, Recommendations: []string{}}
-	}
-
-	// Annotate algorithms and compute totals.
-	var legacyKeys, quantumSafeKeys int
-	for i := range algos {
-		if totalKeys > 0 {
-			algos[i].Percentage = float64(algos[i].KeyCount) / float64(totalKeys) * 100
+// agilityFindings states what the measurements mean, citing the source. It
+// adds nothing when there is nothing to act on.
+func agilityFindings(p AgilityPosture) []string {
+	var out []string
+	pick := func(match func(AlgorithmUsage) bool) (int, string) {
+		n, names := 0, []string{}
+		for _, a := range p.Algorithms {
+			if match(a) {
+				n += a.KeyCount
+				names = append(names, a.Algorithm)
+			}
 		}
-		algos[i].IsLegacy = legacyAlgorithms[algos[i].Algorithm]
-		algos[i].IsQuantumSafe = quantumSafeAlgorithms[algos[i].Algorithm]
-		if algos[i].IsLegacy {
-			legacyKeys += algos[i].KeyCount
-		}
-		if algos[i].IsQuantumSafe {
-			quantumSafeKeys += algos[i].KeyCount
+		return n, strings.Join(names, ", ")
+	}
+	if n, names := pick(func(a AlgorithmUsage) bool {
+		return a.Assessed && (a.Status == cryptocatalog.Disallowed || a.Status == cryptocatalog.LegacyUse)
+	}); n > 0 {
+		out = append(out, fmt.Sprintf("Live keys on algorithms NIST no longer allows for new protection: %d (%s). Keep them only to decrypt or verify existing data, and migrate them (SP 800-131Ar3 ipd).", n, names))
+	}
+	if n, names := pick(func(a AlgorithmUsage) bool { return a.Status == cryptocatalog.NotApproved }); n > 0 {
+		out = append(out, fmt.Sprintf("Live keys on algorithms no NIST standard approves: %d (%s) (SP 800-131Ar3 ipd).", n, names))
+	}
+	if n, names := pick(func(a AlgorithmUsage) bool { return a.Status == cryptocatalog.Deprecated }); n > 0 {
+		out = append(out, fmt.Sprintf("Live keys on algorithms NIST deprecates today: %d (%s). Allowed only while the data owner accepts the risk (SP 800-131Ar3 ipd).", n, names))
+	}
+	for _, m := range p.Milestones {
+		if m.Status == cryptocatalog.Disallowed && m.Source == cryptocatalog.SrcIR8547 && m.KeyCount > 0 {
+			out = append(out, fmt.Sprintf("Quantum-vulnerable live keys that become disallowed on %s (%s): %d (%s). Plan their migration to ML-KEM or ML-DSA before then.", m.Date, m.Citation, m.KeyCount, strings.Join(m.Algorithms, ", ")))
 		}
 	}
-
-	var legacyPct, quantumPct float64
-	if totalKeys > 0 {
-		legacyPct = float64(legacyKeys) / float64(totalKeys) * 100
-		quantumPct = float64(quantumSafeKeys) / float64(totalKeys) * 100
+	if n, names := pick(func(a AlgorithmUsage) bool { return !a.Assessed }); n > 0 {
+		out = append(out, fmt.Sprintf("Live keys whose algorithm name states no parameter set, so their NIST status is not assessed: %d (%s).", n, names))
 	}
-
-	score := 100.0
-	score -= legacyPct * 0.6
-	// Non-legacy, non-quantum-safe keys also reduce score slightly.
-	nonQuantumSafeNonLegacyPct := 100.0 - legacyPct - quantumPct
-	if nonQuantumSafeNonLegacyPct > 0 {
-		score -= nonQuantumSafeNonLegacyPct * 0.2
+	if out == nil {
+		out = []string{}
 	}
-	if score < 0 {
-		score = 0
-	}
-
-	intScore := int(score + 0.5)
-
-	grade := "F"
-	switch {
-	case intScore >= 85:
-		grade = "A"
-	case intScore >= 70:
-		grade = "B"
-	case intScore >= 55:
-		grade = "C"
-	case intScore >= 40:
-		grade = "D"
-	}
-
-	var recommendations []string
-	if legacyKeys > 0 {
-		recommendations = append(recommendations, "Migrate legacy algorithm keys (DES, 3DES, RC4) to AES-256-GCM or stronger.")
-	}
-	if quantumPct < 20 {
-		recommendations = append(recommendations, "Increase quantum-safe key usage (ML-KEM, ML-DSA) to at least 20% of inventory.")
-	}
-	if quantumPct < 50 {
-		recommendations = append(recommendations, "Create migration plans for transitioning existing keys to post-quantum algorithms.")
-	}
-	if len(algos) == 1 {
-		recommendations = append(recommendations, "Diversify algorithm usage to reduce single-algorithm dependency risk.")
-	}
-	if len(recommendations) == 0 {
-		recommendations = append(recommendations, "Cryptographic posture is strong. Continue monitoring for newly deprecated algorithms.")
-	}
-
-	return AgilityScore{
-		Assessed:         true,
-		Score:            intScore,
-		Grade:            grade,
-		QuantumReadiness: int(quantumPct + 0.5),
-		LegacyKeyCount:   legacyKeys,
-		TotalKeys:        totalKeys,
-		Algorithms:       algos,
-		Recommendations:  recommendations,
-	}
+	return out
 }

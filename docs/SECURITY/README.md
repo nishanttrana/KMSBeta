@@ -30,6 +30,11 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [FIPS.md](FIPS.md): every binary links the certified Go Cryptographic
   Module; the runtime mode (`on` / `only` / `off`) is the customer's choice
   and is tested in all three modes.
+- [ALGORITHM_TRANSITIONS.md](ALGORITHM_TRANSITIONS.md): every algorithm
+  strength, quantum classification and NIST status/deadline comes from
+  `pkg/cryptocatalog`, copied from cited NIST tables (SP 800-131A Rev. 3 and
+  IR 8547 drafts, per CSWP 39-upd1); drafts are shown as proposed, and a
+  name without a parameter set is not assessed.
 - [DATAPROTECT_KEY_DERIVATION.md](DATAPROTECT_KEY_DERIVATION.md): dataprotect
   working keys come from keycore key material (service-derive), never from
   identifiers; includes the per-key migration runbook for legacy data.

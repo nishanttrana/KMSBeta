@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"vecta-kms/pkg/cryptocatalog"
 	"vecta-kms/pkg/route/routetest"
 )
 
@@ -20,7 +22,7 @@ func agilityCall(t *testing.T, h *Handler, method, path, body string) (*httptest
 	return rr, out
 }
 
-// Inventory, score and plan progress all come from the tenant's keys table:
+// Inventory, posture and plan progress all come from the tenant's keys table:
 // affected_keys is counted server-side at creation (a client value is
 // rejected), and progress moves only when keys leave from_algorithm.
 func TestAgilityFiguresComeFromKeys(t *testing.T) {
@@ -29,7 +31,7 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 	h.kernelAudit = rec
 	ctx := context.Background()
 	var rsaIDs []string
-	for _, alg := range []string{"RSA-2048", "RSA-2048", "AES-256"} {
+	for _, alg := range []string{"RSA-2048", "RSA-2048", "AES-256", "RSA"} {
 		k, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k-" + alg, Algorithm: alg, KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
 		if err != nil {
 			t.Fatal(err)
@@ -39,13 +41,14 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 		}
 	}
 
-	rr, out := agilityCall(t, h, http.MethodGet, "/agility/score", "")
-	score, _ := out["data"].(map[string]any)
-	if rr.Code != http.StatusOK || score["assessed"] != true || score["total_keys"] != float64(3) || score["legacy_key_count"] != float64(2) {
-		t.Fatalf("score: %d %s", rr.Code, rr.Body)
+	rr, out := agilityCall(t, h, http.MethodGet, "/agility/posture", "")
+	posture, _ := out["data"].(map[string]any)
+	if rr.Code != http.StatusOK || posture["assessed"] != true || posture["total_keys"] != float64(4) ||
+		posture["quantum_vulnerable_keys"] != float64(2) || posture["not_assessed_keys"] != float64(1) {
+		t.Fatalf("posture: %d %s", rr.Code, rr.Body)
 	}
-	if e := rec.Last(t); e.Action != "agility_score_read" || e.Event.Result != "success" {
-		t.Fatalf("score event %+v", e)
+	if e := rec.Last(t); e.Action != "agility_posture_read" || e.Event.Result != "success" || e.Event.Details["quantum_vulnerable_keys"] != 2 {
+		t.Fatalf("posture event %+v", e)
 	}
 
 	if rr, _ := agilityCall(t, h, http.MethodPost, "/agility/migration-plans",
@@ -121,13 +124,60 @@ func TestAgilityRoutesRefusalsAudited(t *testing.T) {
 	routetest.RefusalsAudited(t, h.agilityRouter(rec), rec)
 }
 
-// With no live keys there is nothing to score: the result says so instead of
-// reporting a perfect 100/A.
-func TestAgilityScoreNotAssessedWithoutKeys(t *testing.T) {
+// With no live keys there is nothing to measure: the result says so.
+func TestAgilityPostureNotAssessedWithoutKeys(t *testing.T) {
 	h, _ := newHandlerForTest(t)
-	rr, out := agilityCall(t, h, http.MethodGet, "/agility/score", "")
-	score, _ := out["data"].(map[string]any)
-	if rr.Code != http.StatusOK || score["assessed"] != false || score["score"] != float64(0) || score["grade"] != "" {
-		t.Fatalf("empty tenant scored: %d %s", rr.Code, rr.Body)
+	rr, out := agilityCall(t, h, http.MethodGet, "/agility/posture", "")
+	p, _ := out["data"].(map[string]any)
+	if rr.Code != http.StatusOK || p["assessed"] != false || p["total_keys"] != float64(0) {
+		t.Fatalf("empty tenant assessed: %d %s", rr.Code, rr.Body)
+	}
+}
+
+// The posture measures live keys against the NIST schedule on a given day.
+// Before 3.2.0-beta RSA-2048 and AES-128-CBC were "legacy", SLH-DSA was not
+// quantum-safe, and a 0-100 score with invented weights stood in for this.
+func TestAgilityPostureAgainstNISTSchedule(t *testing.T) {
+	day := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
+	p := computeAgilityPosture([]AlgorithmUsage{
+		{Algorithm: "RSA-2048", KeyCount: 3},
+		{Algorithm: "AES-128-CBC", KeyCount: 2},
+		{Algorithm: "SLH-DSA-SHA2-128s", KeyCount: 1},
+		{Algorithm: "3DES", KeyCount: 1},
+		{Algorithm: "ECDSA", KeyCount: 1},
+	}, day)
+	if !p.Assessed || p.TotalKeys != 8 || p.QuantumVulnerableKeys != 3 || p.PostQuantumKeys != 1 || p.NotAssessedKeys != 1 {
+		t.Fatalf("posture counts: %+v", p)
+	}
+	if p.StatusCounts[cryptocatalog.Acceptable] != 6 || p.StatusCounts[cryptocatalog.LegacyUse] != 1 {
+		t.Fatalf("status counts: %+v", p.StatusCounts)
+	}
+	byAlg := map[string]AlgorithmUsage{}
+	for _, a := range p.Algorithms {
+		byAlg[a.Algorithm] = a
+	}
+	if a := byAlg["RSA-2048"]; a.Status != cryptocatalog.Acceptable || a.SecurityBits != 112 || a.NextChange == nil || a.NextChange.From != "2031-01-01" {
+		t.Fatalf("RSA-2048: %+v", a)
+	}
+	if a := byAlg["SLH-DSA-SHA2-128s"]; !a.PostQuantum || a.QuantumVulnerable || a.PQCCategory != 1 {
+		t.Fatalf("SLH-DSA: %+v", a)
+	}
+	if a := byAlg["ECDSA"]; a.Assessed || a.Status != "" {
+		t.Fatalf("bare ECDSA must not be assessed: %+v", a)
+	}
+	if len(p.Milestones) != 2 || p.Milestones[0].Date != "2031-01-01" || p.Milestones[0].KeyCount != 3 ||
+		p.Milestones[1].Date != "2036-01-01" || p.Milestones[1].Citation != "IR 8547 ipd, Tables 2 and 4" {
+		t.Fatalf("milestones: %+v", p.Milestones)
+	}
+	joined := strings.Join(p.Findings, "\n")
+	for _, want := range []string{"no longer allows for new protection: 1 (3DES)", "become disallowed on 2036-01-01 (IR 8547 ipd, Tables 2 and 4): 3 (RSA-2048)", "not assessed: 1 (ECDSA)"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("findings missing %q:\n%s", want, joined)
+		}
+	}
+	for _, s := range p.Sources {
+		if s.ID == cryptocatalog.SrcIR8547 && s.Revision != "ipd" {
+			t.Fatalf("IR 8547 must be cited as a draft: %+v", s)
+		}
 	}
 }

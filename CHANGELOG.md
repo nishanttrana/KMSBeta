@@ -4,6 +4,73 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [3.2.0-beta] — 2026-09-29
+
+### Crypto agility measured against NIST's transition schedule (CSWP 39-upd1)
+NIST CSWP 39-upd1 (*Considerations for Achieving Crypto Agility*, updated
+2026-06-29) §2.3 defers to IR 8547 and SP 800-131A Rev. 3 for the move off
+quantum-vulnerable algorithms, and §5.2 asks for one machine-consumable crypto
+policy. The platform now has one: `pkg/cryptocatalog`
+([docs/SECURITY/ALGORITHM_TRANSITIONS.md](docs/SECURITY/ALGORITHM_TRANSITIONS.md)).
+
+- **Added: `pkg/cryptocatalog`.** For each algorithm: SP 800-57 security
+  strength, NIST post-quantum category, quantum vulnerability and the
+  approval schedule (acceptable / deprecated / disallowed / legacy use), each
+  fact citing its table. RSA-2048 and other 112-bit schemes are acceptable
+  through 2030, deprecated from 2031-01-01 and disallowed from 2036-01-01;
+  every quantum-vulnerable scheme is disallowed from 2036-01-01. SP 800-131A
+  Rev. 3 and IR 8547 are initial public drafts, so their dates are shown as
+  proposed. A name without a parameter set (`RSA`, `AES`, `Dilithium3`) is
+  **not assessed**, never guessed.
+- **Crypto Agility tab rebuilt on it.** Instead of a 0–100 score with
+  invented weights, it shows live keys that are quantum-vulnerable,
+  post-quantum, no longer allowed for new protection, or not assessed; the
+  NIST deadlines that reach your keys (date, status, key count, algorithms,
+  citation); per-algorithm strength, PQC category, status today and next
+  change; cited findings; and the source documents with their draft status.
+  Plan targets offered are ones keycore generates (ML-DSA-44 is gone).
+  `web/dashboard/tests/crypto-agility.spec.ts` asserts the deadlines,
+  citations, draft labels, the not-assessed row, and "unavailable" (no
+  figures) when keycore fails.
+- **Breaking: keycore `GET /agility/score` is replaced by
+  `GET /agility/posture`** (`audit.key.agility_posture_read`).
+  `GET /agility/algorithms` returns catalogue fields (`assessed`,
+  `security_bits`, `pqc_category`, `quantum_vulnerable`, `post_quantum`,
+  `nist_status`, `next_change`, `schedule`) instead of `is_legacy` and
+  `is_quantum_safe`.
+- **Fixed: four classifiers disagreed.** keycore called RSA-2048 and
+  AES-128-CBC "legacy" and SLH-DSA not quantum-safe; pqc and discovery rated
+  RSA-4096 and ECDSA "strong", did not recognise SLH-DSA as post-quantum,
+  counted hybrids as pure PQC, and would have migrated an SLH-DSA signing key
+  to ML-KEM-768. All now read the catalogue.
+- **Fixed (enforcement): CBOM tiers were one level too high.** The policy
+  floor (`spec.minAlgorithmTier`) let RSA-2048 (112-bit) meet
+  `classical-128` and RSA-3072 meet `classical-192`, and refused HMAC,
+  Ed25519 and ECDH under every floor. Tiers are now SP 800-57 strengths; new
+  tiers `classical-112` and `not-assessed`. **Existing policies with a
+  `classical-128` floor now deny RSA-2048**; set `classical-112` to allow it.
+- **Fixed: a policy with an unknown floor enforced nothing.** It is now
+  refused on create and update (`audit.policy.floor_refused`), and at
+  evaluation an unknown floor is met by nothing.
+- **Audit:** a floor denial now emits `audit.policy.crypto_floor_violation`
+  (catalogued HIGH and documented for alerting, but never emitted before),
+  and `audit.policy.violated` carries `result: refused` (was `success`),
+  the `algorithm` and the denying `rules`.
+- **pqc: invented deadlines removed.** The timeline showed "CNSA 2.0 hybrid by
+  2028", an "EU crypto-agility baseline 2029-06-30" and EU 2031-12-31, with
+  status from a readiness score. Milestones are now the catalogue's dated
+  changes that reach scanned assets (affected count, citation). A plan
+  defaults to `timeline_standard: nist-ir-8547-ipd`, deadline 2035-12-31;
+  any other standard needs an explicit `deadline`. `qsl_score` is 100 when
+  quantum-resistant and allowed today, else 0 (was hand-picked 35–100). Scan
+  risk items skip assets that are already quantum-resistant and allowed. New
+  phase `classical_replacement` (e.g. 3DES to AES-256).
+- **discovery:** `strength_bits` is the security strength (RSA-2048 is 112),
+  not the key or parameter size; ML-DSA certificates count as PQC-ready.
+- **Open:** the tenant-wide `MinAlgorithmTier` posture control is stored but
+  not enforced by keycore; the CARAF assessment (threats, asset profiles,
+  X/Y/Z timeline and cost, decisions, roadmap) is the next slice.
+
 ## [3.1.0-beta] — 2026-09-28
 
 ### Removed: the keycore audit-chain anchor preview

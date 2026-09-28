@@ -81,6 +81,20 @@ func parsePolicyYAML(raw string) (PolicyDoc, map[string]any, error) {
 	return doc, parsed, nil
 }
 
+// errInvalidAlgorithmFloor refuses a policy whose minAlgorithmTier is not a
+// floor: evaluating it would deny every operation it targets.
+var errInvalidAlgorithmFloor = errors.New("spec.minAlgorithmTier must be one of classical-112, classical-128, classical-192, classical-256, pqc-hybrid, pqc-only")
+
+func validateAlgorithmFloor(doc PolicyDoc) error {
+	if strings.TrimSpace(doc.Spec.MinAlgorithmTier) == "" {
+		return nil
+	}
+	if _, ok := cbom.ParseTier(doc.Spec.MinAlgorithmTier); !ok {
+		return errInvalidAlgorithmFloor
+	}
+	return nil
+}
+
 func normalizePolicyType(v string) string {
 	v = strings.ToLower(strings.TrimSpace(v))
 	v = strings.ReplaceAll(v, "-", "_")
@@ -93,33 +107,6 @@ func normalizeDefaultAction(v string) string {
 		return "deny"
 	default:
 		return "allow"
-	}
-}
-
-// tierMeetsFloor returns true when actual is at or above the floor. The
-// ordering matches cbom.Tier semantics: classical-128 < classical-192 <
-// classical-256 < pqc-hybrid < pqc-only. Deprecated never meets any floor.
-func tierMeetsFloor(actual, floor cbom.Tier) bool {
-	if actual == cbom.TierDeprecated {
-		return false
-	}
-	return tierRank(actual) >= tierRank(floor)
-}
-
-func tierRank(t cbom.Tier) int {
-	switch t {
-	case cbom.TierClassical128:
-		return 1
-	case cbom.TierClassical192:
-		return 2
-	case cbom.TierClassical256:
-		return 3
-	case cbom.TierPQCHybrid:
-		return 4
-	case cbom.TierPQCOnly:
-		return 5
-	default:
-		return 0
 	}
 }
 
@@ -145,11 +132,13 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 	// targeted request must use an algorithm at or above the floor; below
 	// is denied with a dedicated outcome that the dashboard can surface as
 	// a crypto-agility violation. The check fires before rule processing
-	// so a permissive rule cannot override the floor.
+	// so a permissive rule cannot override the floor. Tiers come from the
+	// NIST catalogue (pkg/cryptocatalog); an algorithm it cannot assess, or
+	// a floor it does not know, is denied.
 	if floor := strings.ToLower(strings.TrimSpace(doc.Spec.MinAlgorithmTier)); floor != "" {
 		if alg := strings.TrimSpace(req.Algorithm); alg != "" {
 			tier := cbom.ClassifyTier(alg, "")
-			if !tierMeetsFloor(tier, cbom.Tier(floor)) {
+			if !cbom.MeetsFloor(tier, cbom.Tier(floor)) {
 				return evaluationResult{
 					Decision: DecisionDeny,
 					Outcomes: []RuleOutcome{{
@@ -157,7 +146,7 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 						PolicyVersion: version,
 						RuleName:      "crypto-floor",
 						Action:        "deny",
-						Message:       "algorithm " + alg + " is below required tier " + floor,
+						Message:       "algorithm " + alg + " (" + string(tier) + ") is below required tier " + floor,
 					}},
 				}
 			}

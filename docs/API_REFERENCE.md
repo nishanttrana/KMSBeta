@@ -545,16 +545,18 @@ Encrypt the data locally with the DEK, discard it, and store `wrapped_dek` +
 
 ### Crypto agility: /svc/keycore/agility/*
 
-Every figure is computed from the tenant's live keys (status not `deleted` or
-`destroyed`); nothing is estimated or seeded. Served by the `pkg/route` kernel:
+Every count is computed from the tenant's live keys (status not `deleted` or
+`destroyed`); every status, strength, category and date comes from
+`pkg/cryptocatalog`, which cites the NIST table it was copied from
+(docs/SECURITY/ALGORITHM_TRANSITIONS.md). Nothing is estimated or seeded. Served by the `pkg/route` kernel:
 the tenant comes from the token (a conflicting `tenant_id` is refused as
 `tenant_mismatch`), and each call emits its own audit event, refusals
 included.
 
 | Route | Permission | Audit | Response `data` |
 |---|---|---|---|
-| `GET /agility/score` | `key.agility.read` | `audit.key.agility_score_read` | `assessed` (false with no live keys: `score` 0, `grade` ""), `score`, `grade`, `quantum_readiness`, `legacy_key_count`, `total_keys`, `algorithms`, `recommendations` |
-| `GET /agility/algorithms` | `key.agility.read` | `audit.key.agility_inventory_read` | `[{algorithm, key_count, percentage, is_legacy, is_quantum_safe}]`, plus top-level `total_keys` |
+| `GET /agility/posture` | `key.agility.read` | `audit.key.agility_posture_read` (details `total_keys`, `quantum_vulnerable_keys`, `not_assessed_keys`) | `assessed` (false with no live keys), `as_of`, `total_keys`, `not_assessed_keys`, `quantum_vulnerable_keys`, `post_quantum_keys`, `status_counts` (live keys by NIST status today), `milestones` (`[{date, status, source, ref, citation, key_count, algorithms}]`, future NIST status changes that reach live keys), `algorithms`, `findings`, `sources` (`[{id, label, title, revision, date, url}]`; `revision: ipd` is an initial public draft) |
+| `GET /agility/algorithms` | `key.agility.read` | `audit.key.agility_inventory_read` | `[{algorithm, key_count, percentage, assessed, canonical, family, security_bits, pqc_category, quantum_vulnerable, post_quantum, nist_status, next_change, schedule, note}]`, plus top-level `total_keys`. `assessed: false` means the name states no parameter set (e.g. `RSA`): no status is given |
 | `GET /agility/keys-by-algorithm?algorithm=` | `key.agility.read` | `audit.key.agility_keys_by_algorithm_read` | `{algorithm, keys}` |
 | `GET /agility/migration-plans` | `key.agility.read` | `audit.key.agility_migration_plans_listed` | plans with derived progress |
 | `POST /agility/migration-plans` | `key.agility.write` | `audit.key.agility_migration_plan_created` | the new plan (`201`) |
@@ -2039,22 +2041,26 @@ Returns the PQC inventory — all crypto assets classified by algorithm family.
 
 ### GET /svc/pqc/pqc/readiness
 
-Returns PQC readiness metrics for the tenant.
+Returns the latest readiness scan (`{"readiness": {...}}`), running one if
+none exists. Algorithm facts come from `pkg/cryptocatalog`
+(docs/SECURITY/ALGORITHM_TRANSITIONS.md):
 
-**Response 200**:
-```json
-{
-  "totalAssets": 42,
-  "pqcReadyCount": 8,
-  "pqcReadinessPercent": 19,
-  "hybridCount": 5,
-  "classicalCount": 29,
-  "deprecatedCount": 4,
-  "algorithmDistribution": {"AES": 16, "RSA": 9, "ECDSA": 9, "ML-DSA": 8},
-  "migrationDeadline": "2030-01-01",
-  "daysToDeadline": 1752
-}
-```
+- `total_assets`, `pqc_ready_assets` (ML-KEM, ML-DSA, SLH-DSA, LMS/XMSS),
+  `hybrid_assets`, `classical_assets`, `algorithm_summary`.
+- `risk_items`: assets that are not both quantum-resistant and allowed by
+  NIST today, each with `classification` (`vulnerable`, `weak`, `strong`,
+  `unknown` when the name states no parameter set), `qsl_score` (100 when
+  quantum-resistant and allowed for new protection, else 0) and
+  `migration_target` (empty when not assessed).
+- `timeline_status`: per NIST milestone that reaches scanned assets
+  (`{deadline, status: upcoming|due_within_year, days_remaining,
+  affected_assets, citation}`), keyed `<date>-<status>-<source>`.
+
+`GET /svc/pqc/pqc/timeline` returns the same milestones as
+`[{id, standard, title, due_date, status, days_left, affected_assets,
+citation, description}]`; `standard` is the cited source (`SP800-131Ar3`,
+`IR8547`), `description` the affected algorithms. Before 3.2.0-beta it
+returned CNSA 2.0 and EU milestones with dates no document sets.
 
 ---
 
@@ -2080,7 +2086,13 @@ keys the plan created; rotations are reported as not reversible (plan status
 
 ### GET /svc/pqc/pqc/migration/plans
 
-List or get migration plans.
+List or get migration plans. `POST` creates one from the latest scan; with no
+`deadline` it uses `timeline_standard: nist-ir-8547-ipd` and deadline
+2035-12-31 (IR 8547 disallows quantum-vulnerable algorithms after 2035). Any
+other `timeline_standard` must come with an explicit `deadline` (`400`
+otherwise). Steps are phased `classical_to_hybrid`, `classical_to_pqc`,
+`hybrid_to_pqc`, `pqc_hardening` or `classical_replacement` (e.g. 3DES to
+AES-256); a key step with no target is `manual_required`.
 
 ---
 
@@ -2089,6 +2101,26 @@ List or get migration plans.
 Returns the current migration status report.
 
 **Response 200**: `{"migratedCount": 8, "inProgressCount": 3, "remainingCount": 31, "lastUpdatedAt": "..."}`
+
+---
+
+## Policy algorithm floor (`spec.minAlgorithmTier`)
+
+A `CryptoPolicy` may set `spec.minAlgorithmTier`: every request it targets
+must use an algorithm at or above that tier, or it is denied with rule
+`crypto-floor` before any other rule runs. Floors, weakest first:
+`classical-112`, `classical-128`, `classical-192`, `classical-256`,
+`pqc-hybrid`, `pqc-only`. Classical tiers are the SP 800-57 security
+strength from `pkg/cryptocatalog` (RSA-2048 is `classical-112`, RSA-3072 and
+RSA-4096 `classical-128`, P-384 `classical-192`, HMAC-SHA-256 with a 256-bit
+key `classical-256`). An algorithm NIST no longer allows for new protection
+is `deprecated`; a name that states no parameter set is `not-assessed`;
+neither meets any floor. A policy whose floor is not one of the six is
+refused on create and update (`400`, `audit.policy.floor_refused`). A
+denial emits `audit.policy.violated` and `audit.policy.crypto_floor_violation`. Before
+3.2.0-beta RSA-2048 met `classical-128`, RSA-3072 met `classical-192`, and
+HMAC, Ed25519 and ECDH were refused under every floor
+(docs/SECURITY/ALGORITHM_TRANSITIONS.md).
 
 ---
 
@@ -2842,6 +2874,11 @@ Returns the access policy for a path (and all sub-paths).
 - `network`: a TLS handshake with each endpoint in `DISCOVERY_TLS_ENDPOINTS`
   (operator config, no default). It records the negotiated key exchange,
   protocol, cipher, leaf key and `chain_trusted`.
+
+Each asset's `strength_bits` is the SP 800-57 security strength (RSA-2048 is
+112, ML-KEM-768 192; 0 when not assessed), and `classification`, `pqc_ready`
+and `qsl_score` come from `pkg/cryptocatalog` (since 3.2.0-beta; before, the
+key or parameter size and a hand-kept score).
 - `cloud`: each registered account's live KMS inventory via the cloud
   service (`CLOUD_URL`, default `https://cloud:8080`).
 - `certs`: the certs service's certificates.
@@ -3068,6 +3105,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
+| audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
 | audit.scim.* | SCIM provisioning |
@@ -3113,7 +3151,8 @@ Selected events with dedicated audit classification:
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
-- `audit.key.agility_score_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
+- `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
+- `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
@@ -3772,7 +3811,7 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/agility/migration-plans`
 - `POST /svc/keycore/agility/migration-plans`
 - `PATCH /svc/keycore/agility/migration-plans/{id}`
-- `GET /svc/keycore/agility/score`
+- `GET /svc/keycore/agility/posture`
 - `GET /svc/keycore/analytics/algorithms`
 - `GET /svc/keycore/analytics/hotspots`
 - `POST /svc/keycore/analytics/metrics`

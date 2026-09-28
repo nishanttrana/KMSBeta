@@ -3,6 +3,49 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-29
+
+### Four algorithm lists, four answers, and one of them enforced policy
+- **What happened:** keycore agility, pqc, discovery and `pkg/cbom` each kept
+  their own algorithm classifier. They disagreed on almost every row:
+  RSA-2048 was "legacy" (keycore), "weak" (pqc) and `classical-128` (cbom)
+  when NIST rates it 112-bit and acceptable through 2030; RSA-4096 and ECDSA
+  were "strong" in pqc and discovery although a quantum computer breaks
+  both; SLH-DSA was not recognised as post-quantum anywhere but cbom. The
+  cbom one drove the policy floor, so a `classical-192` floor let RSA-3072
+  (128-bit) through and HMAC was refused under every floor.
+- **Why it slipped through:** each list was written for one screen, with
+  numbers that looked plausible (QSL 88, grade A–F) and no cited source, so
+  review checked the code path, never the value. The policy floor had no
+  test at all, and a stored floor that wasn't a tier silently enforced
+  nothing.
+- **Rule:** an algorithm fact (strength, quantum status, NIST status or
+  date) comes only from `pkg/cryptocatalog`, and each row cites the NIST
+  table it was copied from, pinned by a test. A name the catalogue cannot
+  parse is "not assessed", never classified by substring.
+
+### A deadline is evidence: it needs a source you can open
+- **What happened:** the pqc timeline showed "CNSA 2.0 classical to hybrid by
+  2028-12-31", an "EU crypto-agility baseline 2029-06-30" and an EU target
+  of 2031-12-31, none of which any published roadmap sets, and plans
+  defaulted to them. Their status came from the readiness score, not from
+  whether any asset was affected.
+- **Why it slipped through:** round dates next to real programme names read
+  as fact; nobody asked for the document. The same happened to CSWP 39's
+  own "112-bit disallowed in 2031", which NIST withdrew in the 2026-06-29
+  update (Appendix C).
+- **Rule:** a date shown as a regulatory or NIST deadline carries its
+  document, revision and table, and a draft is labelled proposed. With no
+  source, ask the operator for the date instead of supplying one.
+
+### A catalogued alert that nothing emits is a silent gap
+- **What happened:** `audit.policy.crypto_floor_violation` was in the audit
+  catalogue (HIGH) and in docs/AUTOMATION_ALKM_PQC.md as an event to alert
+  on, but the policy service only emitted `audit.policy.violated`, with
+  `result: success`.
+- **Rule:** when a doc or catalogue names an event, grep for its emitter; a
+  test must assert it is emitted (AUDIT_EVENTS_2026-09.md).
+
 ## 2026-09-28
 
 ### A preview named after a guarantee outlives the real thing

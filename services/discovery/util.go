@@ -11,6 +11,7 @@ import (
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/cryptocatalog"
 )
 
 type serviceError struct {
@@ -233,87 +234,57 @@ func normalizeAlgorithm(v string) string {
 	return strings.ToUpper(strings.TrimSpace(v))
 }
 
-func inferBits(alg string) int {
-	alg = normalizeAlgorithm(alg)
-	switch {
-	case strings.Contains(alg, "ML-KEM-1024"), strings.Contains(alg, "ML-DSA-87"):
-		return 1024
-	case strings.Contains(alg, "ML-KEM-768"), strings.Contains(alg, "ML-DSA-65"):
-		return 768
-	case strings.Contains(alg, "ML-KEM-512"), strings.Contains(alg, "ML-DSA-44"):
-		return 512
-	case strings.Contains(alg, "RSA-4096"):
-		return 4096
-	case strings.Contains(alg, "RSA-3072"):
-		return 3072
-	case strings.Contains(alg, "RSA-2048"):
-		return 2048
-	case strings.Contains(alg, "AES-256"):
-		return 256
-	case strings.Contains(alg, "AES-192"):
-		return 192
-	case strings.Contains(alg, "AES-128"):
-		return 128
-	default:
-		return 256
-	}
-}
+// Algorithm facts come from pkg/cryptocatalog, which cites the NIST table
+// behind each one. Before 3.2.0-beta this service kept its own lists: RSA-4096
+// and ECDSA were "strong", SLH-DSA was not post-quantum, and hybrids counted
+// as pure PQC.
 
+// isPQCAlgorithm: a post-quantum scheme (FIPS 203/204/205, SP 800-208) that
+// is not a hybrid.
 func isPQCAlgorithm(alg string) bool {
-	alg = normalizeAlgorithm(alg)
-	switch {
-	case strings.Contains(alg, "ML-KEM"), strings.Contains(alg, "KYBER"), strings.Contains(alg, "ML-DSA"), strings.Contains(alg, "DILITHIUM"), strings.Contains(alg, "FALCON"), strings.Contains(alg, "SPHINCS"):
-		return true
-	default:
-		return false
-	}
+	e, ok := cryptocatalog.Lookup(alg)
+	return ok && e.PostQuantum && !e.Hybrid
 }
 
 func isHybridAlgorithm(alg string) bool {
-	alg = normalizeAlgorithm(alg)
-	return strings.Contains(alg, "HYBRID") || (isPQCAlgorithm(alg) && (strings.Contains(alg, "ECDH") || strings.Contains(alg, "RSA")))
+	e, ok := cryptocatalog.Lookup(alg)
+	return ok && e.Hybrid
 }
 
+// isDeprecatedAlgorithm: NIST no longer allows it for new protection
+// (disallowed, legacy use only, or not approved).
 func isDeprecatedAlgorithm(alg string) bool {
-	alg = normalizeAlgorithm(alg)
-	switch {
-	case strings.Contains(alg, "3DES"), strings.Contains(alg, "DES"), strings.Contains(alg, "RC4"), strings.Contains(alg, "SHA-1"), strings.Contains(alg, "RSA-1024"), strings.Contains(alg, "RSA-2048"):
-		return true
-	default:
-		return false
-	}
+	a := cryptocatalog.Assess(alg, time.Now())
+	return a.Assessed && !a.Status.Protects() && a.Status != cryptocatalog.NotTabled
 }
 
+// algorithmQSL is 100 when the algorithm resists a quantum computer and NIST
+// allows it for new protection today, else 0 (including when not assessed).
+// It replaced hand-picked 35-100 scores that had no source.
 func algorithmQSL(alg string) float64 {
-	alg = normalizeAlgorithm(alg)
-	switch {
-	case isPQCAlgorithm(alg):
+	if cryptocatalog.Assess(alg, time.Now()).Ready {
 		return 100
-	case isHybridAlgorithm(alg):
-		return 90
-	case strings.Contains(alg, "AES-256"), strings.Contains(alg, "RSA-4096"):
-		return 88
-	case strings.Contains(alg, "AES-192"), strings.Contains(alg, "RSA-3072"), strings.Contains(alg, "ECDSA"), strings.Contains(alg, "ED25519"):
-		return 78
-	case strings.Contains(alg, "AES-128"):
-		return 70
-	case isDeprecatedAlgorithm(alg):
-		return 35
-	default:
-		return 60
 	}
+	return 0
 }
 
-func classifyAlgorithm(alg string, bits int) string {
-	qsl := algorithmQSL(alg)
-	switch {
-	case isDeprecatedAlgorithm(alg), bits < 128, qsl < 50:
-		return "vulnerable"
-	case qsl < 75:
-		return "weak"
-	default:
-		return "strong"
-	}
+// classifyAlgorithm is vulnerable, weak, strong or unknown
+// (cryptocatalog.Assess).
+func classifyAlgorithm(alg string) string {
+	return cryptocatalog.Assess(alg, time.Now()).Class
+}
+
+// strengthBits is the classical security strength (SP 800-57), not the key
+// or parameter size stored here before 3.2.0-beta; 0 when not assessed.
+func strengthBits(alg string) int {
+	e, _ := cryptocatalog.Lookup(alg)
+	return e.SecurityBits
+}
+
+// pqcReady: a post-quantum or hybrid scheme.
+func pqcReady(alg string) bool {
+	e, ok := cryptocatalog.Lookup(alg)
+	return ok && e.PostQuantum
 }
 
 func assetDeterministicID(tenantID string, source string, assetType string, name string, location string, algorithm string) string {

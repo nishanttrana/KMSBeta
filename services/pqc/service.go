@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/cryptocatalog"
 )
 
 type Service struct {
@@ -80,8 +82,8 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 			classical++
 		}
 
-		if isPQCAlgorithm(alg) {
-			continue
+		if a := cryptocatalog.Assess(alg, s.now()); a.Ready && a.Class == "strong" {
+			continue // quantum-resistant and allowed by NIST today: nothing to migrate
 		}
 
 		classification := strings.ToLower(strings.TrimSpace(asset.Classification))
@@ -125,7 +127,7 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 			0.15*pct(hybrid, maxInt(total, 1)),
 	))
 
-	timelineStatus := s.timelineStatusMap(readinessScore)
+	timelineStatus := s.timelineStatusMap(algorithmSummary)
 	scan := ReadinessScan{
 		ID:               newID("scan"),
 		TenantID:         tenantID,
@@ -333,7 +335,7 @@ func (s *Service) GetMigrationReport(ctx context.Context, tenantID string) (PQCM
 	if err != nil {
 		return PQCMigrationReport{}, err
 	}
-	timeline := s.buildTimelineMilestones(maxInt(inventory.ReadinessScore, readiness.ReadinessScore))
+	timeline := s.buildTimelineMilestones(readiness.AlgorithmSummary)
 	topRisks := readiness.RiskItems
 	if len(topRisks) > 8 {
 		topRisks = topRisks[:8]
@@ -369,10 +371,13 @@ func (s *Service) CreateMigrationPlan(ctx context.Context, req PlanRequest) (Mig
 		req.Name = "PQC migration plan " + s.now().Format("2006-01-02")
 	}
 	targetProfile := defaultString(req.TargetProfile, "hybrid-first")
-	timelineStandard := defaultString(req.TimelineStandard, "cnsa2")
+	timelineStandard := defaultString(req.TimelineStandard, nistTimelineStandard)
 	deadline := parseTimeString(req.Deadline)
 	if deadline.IsZero() {
-		deadline = defaultDeadline(timelineStandard)
+		if timelineStandard != nistTimelineStandard {
+			return MigrationPlan{}, newServiceError(400, "bad_request", "no sourced deadline for timeline_standard "+timelineStandard+": pass deadline")
+		}
+		deadline = nistQuantumDeadline
 	}
 	steps := make([]MigrationStep, 0, len(readiness.RiskItems))
 	phaseCount := map[string]int{}
@@ -412,6 +417,7 @@ func (s *Service) CreateMigrationPlan(ctx context.Context, req PlanRequest) (Mig
 			"hybrid_to_pqc":          phaseCount["hybrid_to_pqc"],
 			"classical_to_pqc":       phaseCount["classical_to_pqc"],
 			"pqc_hardening":          phaseCount["pqc_hardening"],
+			"classical_replacement":  phaseCount["classical_replacement"],
 			"estimated_risk_reduced": estimatedRiskReduction(steps),
 		},
 		Steps:     steps,
@@ -500,6 +506,9 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 			manual++
 			step.Status = "manual_required"
 			step.Metadata["reason"] = "the KMS cannot change a " + step.AssetType + "; change it at its source"
+			if isKeyAsset(step.AssetType) {
+				step.Metadata["reason"] = "no migration target: " + step.CurrentAlg + " does not name a parameter set NIST tables"
+			}
 			continue
 		}
 		if err != nil {
@@ -669,7 +678,7 @@ func (s *Service) Timeline(ctx context.Context, tenantID string) ([]TimelineMile
 	if err != nil {
 		return nil, ReadinessScan{}, err
 	}
-	milestones := s.buildTimelineMilestones(readiness.ReadinessScore)
+	milestones := s.buildTimelineMilestones(readiness.AlgorithmSummary)
 	return milestones, readiness, nil
 }
 
@@ -1134,7 +1143,7 @@ var errManualStep = errors.New("manual step")
 // Before 1.26.0-beta every step was marked completed after a same-algorithm
 // rotate, or after nothing at all.
 func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step MigrationStep, actor string) (string, string, error) {
-	if !isKeyAsset(step.AssetType) {
+	if _, ok := cryptocatalog.Lookup(step.TargetAlg); !isKeyAsset(step.AssetType) || !ok {
 		return "", "", errManualStep
 	}
 	if s.keycore == nil {
@@ -1163,118 +1172,101 @@ func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step 
 	return "successor_created", id, err
 }
 
-func (s *Service) timelineStatusMap(readinessScore int) map[string]interface{} {
-	cnsaDeadline := time.Date(2030, 12, 31, 0, 0, 0, 0, time.UTC)
-	euDeadline := time.Date(2030, 12, 31, 0, 0, 0, 0, time.UTC)
-	return map[string]interface{}{
-		"cnsa2": map[string]interface{}{
-			"deadline":       cnsaDeadline.Format("2006-01-02"),
-			"status":         timelineReadinessStatus(readinessScore, cnsaDeadline, s.now()),
-			"readiness":      readinessScore,
-			"days_remaining": int(cnsaDeadline.Sub(s.now()).Hours() / 24),
-		},
-		"eu_pqc": map[string]interface{}{
-			"deadline":       euDeadline.Format("2006-01-02"),
-			"status":         timelineReadinessStatus(readinessScore, euDeadline, s.now()),
-			"readiness":      readinessScore,
-			"days_remaining": int(euDeadline.Sub(s.now()).Hours() / 24),
-		},
-	}
-}
+// nistTimelineStandard is the only timeline with a sourced default deadline:
+// IR 8547 (ipd) disallows quantum-vulnerable signatures and key
+// establishment after 2035. Before 3.2.0-beta plans defaulted to "cnsa2"
+// with dates (a 2028 hybrid step, an EU 2029 baseline) that no document set.
+const nistTimelineStandard = "nist-ir-8547-ipd"
 
-func (s *Service) buildTimelineMilestones(readinessScore int) []TimelineMilestone {
+var nistQuantumDeadline = time.Date(2035, 12, 31, 0, 0, 0, 0, time.UTC)
+
+// buildTimelineMilestones lists the NIST status changes that reach the
+// scanned algorithms (pkg/cryptocatalog), soonest first, with how many assets
+// each one affects.
+func (s *Service) buildTimelineMilestones(algorithmSummary map[string]int) []TimelineMilestone {
 	now := s.now()
-	milestones := []TimelineMilestone{
-		{
-			ID:          "cnsa2-hybrid",
-			Standard:    "cnsa2",
-			Title:       "Classical to hybrid transition",
-			DueDate:     time.Date(2028, 12, 31, 0, 0, 0, 0, time.UTC),
-			Description: "Adopt hybrid cryptography for high-value systems.",
-		},
-		{
-			ID:          "cnsa2-pqc-default",
-			Standard:    "cnsa2",
-			Title:       "PQC-by-default rollout",
-			DueDate:     time.Date(2030, 12, 31, 0, 0, 0, 0, time.UTC),
-			Description: "Default to PQC key establishment and signatures.",
-		},
-		{
-			ID:          "cnsa2-classical-retire",
-			Standard:    "cnsa2",
-			Title:       "Classical-only retirement",
-			DueDate:     time.Date(2033, 12, 31, 0, 0, 0, 0, time.UTC),
-			Description: "Retire classical-only cryptographic paths.",
-		},
-		{
-			ID:          "eu-agility",
-			Standard:    "eu-pqc",
-			Title:       "EU crypto-agility baseline",
-			DueDate:     time.Date(2029, 6, 30, 0, 0, 0, 0, time.UTC),
-			Description: "Ensure crypto inventory and algorithm agility controls.",
-		},
-		{
-			ID:          "eu-pqc-transition",
-			Standard:    "eu-pqc",
-			Title:       "EU PQC transition target",
-			DueDate:     time.Date(2031, 12, 31, 0, 0, 0, 0, time.UTC),
-			Description: "Transition trust services to hybrid/PQC-safe cryptography.",
-		},
+	var entries []cryptocatalog.Entry
+	for alg := range algorithmSummary {
+		if e, ok := cryptocatalog.Lookup(alg); ok {
+			entries = append(entries, e)
+		}
 	}
-	for i := range milestones {
-		milestones[i].DaysLeft = int(milestones[i].DueDate.Sub(now).Hours() / 24)
-		milestones[i].Status = timelineReadinessStatus(readinessScore, milestones[i].DueDate, now)
+	out := []TimelineMilestone{}
+	for _, m := range cryptocatalog.Milestones(entries, now) {
+		due, _ := time.Parse("2006-01-02", m.Date)
+		affected, algs := 0, []string{}
+		for alg, n := range algorithmSummary {
+			e, ok := cryptocatalog.Lookup(alg)
+			if !ok {
+				continue
+			}
+			for _, st := range e.Schedule {
+				if st.From == m.Date && st.Status == m.Status && st.Source == m.Source {
+					affected += n
+					algs = append(algs, alg)
+					break
+				}
+			}
+		}
+		sort.Strings(algs)
+		days := int(due.Sub(now).Hours() / 24)
+		status := "upcoming"
+		if days <= 365 {
+			status = "due_within_year"
+		}
+		out = append(out, TimelineMilestone{
+			ID:             m.Date + "-" + string(m.Status) + "-" + strings.ToLower(m.Source),
+			Standard:       m.Source,
+			Title:          "Becomes " + strings.ReplaceAll(string(m.Status), "_", " "),
+			DueDate:        due,
+			Status:         status,
+			DaysLeft:       days,
+			AffectedAssets: affected,
+			Citation:       cryptocatalog.Cite(m.Source, m.Ref),
+			Description:    strings.Join(algs, ", "),
+		})
 	}
-	return milestones
+	return out
 }
 
-func timelineReadinessStatus(readinessScore int, due time.Time, now time.Time) string {
-	days := int(due.Sub(now).Hours() / 24)
-	if readinessScore >= 85 {
-		return "on_track"
-	}
-	if days < 0 {
-		if readinessScore >= 70 {
-			return "at_risk"
+// timelineStatusMap is the scan's summary of those milestones, keyed by ID.
+func (s *Service) timelineStatusMap(algorithmSummary map[string]int) map[string]interface{} {
+	out := map[string]interface{}{}
+	for _, m := range s.buildTimelineMilestones(algorithmSummary) {
+		out[m.ID] = map[string]interface{}{
+			"deadline":        m.DueDate.Format("2006-01-02"),
+			"status":          m.Status,
+			"days_remaining":  m.DaysLeft,
+			"affected_assets": m.AffectedAssets,
+			"citation":        m.Citation,
 		}
-		return "overdue"
 	}
-	if days <= 365 {
-		if readinessScore >= 70 {
-			return "at_risk"
-		}
-		return "critical"
-	}
-	if readinessScore >= 70 {
-		return "in_progress"
-	}
-	return "not_started"
+	return out
 }
 
-// migrationTarget is a key algorithm keycore generates for key assets. Other
-// assets (TLS endpoints, certificates, code) get a description of the change;
-// their steps are manual, since the KMS cannot change them.
+// migrationTarget is the algorithm an asset should move to. A key asset's
+// target is one keycore can generate; other assets (TLS endpoints,
+// certificates, code) get the algorithm to adopt, and their steps are manual
+// since the KMS cannot change them. An algorithm the catalogue cannot assess
+// gets no target.
 func migrationTarget(alg string, assetType string) string {
-	alg = normalizeAlgorithm(alg)
-	assetType = strings.ToLower(strings.TrimSpace(assetType))
-	if !isKeyAsset(assetType) {
-		if strings.Contains(assetType, "tls") {
-			return "hybrid ML-KEM key exchange (X25519MLKEM768)"
-		}
-		return "replace with an ML-DSA-65 or ML-KEM-768 based credential"
-	}
+	e, ok := cryptocatalog.Lookup(alg)
 	switch {
-	case isPQCAlgorithm(alg) && !isHybridAlgorithm(alg):
-		return alg
-	case strings.Contains(alg, "AES-128"):
-		return "AES-256"
-	case strings.Contains(alg, "AES"), strings.Contains(alg, "HMAC"):
-		return alg
-	case strings.Contains(alg, "RSA"), strings.Contains(alg, "ECDSA"), strings.Contains(alg, "ED25519"), strings.Contains(assetType, "signature"):
-		return "ML-DSA-65"
-	default:
+	case ok && e.PostQuantum:
+		return e.Algorithm
+	case strings.Contains(strings.ToLower(assetType), "tls"):
+		return "X25519MLKEM768"
+	case !ok:
+		return ""
+	case e.Function == "key_establishment":
 		return "ML-KEM-768"
+	case e.QuantumVulnerable:
+		// Signatures, and RSA or EC keys whose use the asset doesn't record.
+		return "ML-DSA-65"
+	case !e.StatusAt(time.Now()).Protects():
+		return "AES-256" // disallowed or legacy-use symmetric (3DES, DES, AES-ECB)
 	}
+	return e.Algorithm
 }
 
 func isKeyAsset(assetType string) bool {
@@ -1298,7 +1290,7 @@ func migrationPhase(current string, target string) string {
 	case !isPQCAlgorithm(current) && isPQCAlgorithm(target):
 		return "classical_to_pqc"
 	default:
-		return "classical_to_hybrid"
+		return "classical_replacement"
 	}
 }
 
@@ -1352,16 +1344,6 @@ func estimatedRiskReduction(steps []MigrationStep) int {
 		total += step.Priority
 	}
 	return clampScore(total / len(steps))
-}
-
-func defaultDeadline(standard string) time.Time {
-	standard = strings.ToLower(strings.TrimSpace(standard))
-	switch standard {
-	case "eu", "eu-pqc", "eidas":
-		return time.Date(2031, 12, 31, 0, 0, 0, 0, time.UTC)
-	default:
-		return time.Date(2030, 12, 31, 0, 0, 0, 0, time.UTC)
-	}
 }
 
 func formatScore(v float64) string {

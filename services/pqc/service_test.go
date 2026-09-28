@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -101,7 +102,10 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 				t.Fatalf("rotation reported as migration to %s: %+v", step.TargetAlg, step)
 			}
 		case "manual_required":
-			if isKeyAsset(step.AssetType) {
+			// A key is manual only when its algorithm is not assessed
+			// (ML-KEM-768-HYBRID names no classical group), so no target
+			// is proposed for it.
+			if isKeyAsset(step.AssetType) && (step.TargetAlg != "" || !strings.Contains(step.Metadata["reason"].(string), "no migration target")) {
 				t.Fatalf("key step left manual: %+v", step)
 			}
 		default:

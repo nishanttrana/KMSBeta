@@ -233,14 +233,18 @@ type MigrationRun struct {
 	CompletedAt time.Time              `json:"completed_at"`
 }
 
+// TimelineMilestone is a NIST status change that reaches scanned assets
+// (pkg/cryptocatalog). Standard is the cited source ID.
 type TimelineMilestone struct {
-	ID          string    `json:"id"`
-	Standard    string    `json:"standard"`
-	Title       string    `json:"title"`
-	DueDate     time.Time `json:"due_date"`
-	Status      string    `json:"status"`
-	DaysLeft    int       `json:"days_left"`
-	Description string    `json:"description"`
+	ID             string    `json:"id"`
+	Standard       string    `json:"standard"`
+	Title          string    `json:"title"`
+	DueDate        time.Time `json:"due_date"`
+	Status         string    `json:"status"` // upcoming, due_within_year
+	DaysLeft       int       `json:"days_left"`
+	AffectedAssets int       `json:"affected_assets"`
+	Citation       string    `json:"citation"`
+	Description    string    `json:"description"` // affected algorithms
 }
 
 type ScanRequest struct {

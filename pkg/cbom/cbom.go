@@ -9,21 +9,39 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/cryptocatalog"
 )
 
 // Tier classifies an algorithm or parameter set against the current best-
 // practice posture. Operators set the floor; anything below the floor
-// surfaces in the diff endpoint.
+// surfaces in the diff endpoint. Classical tiers are the SP 800-57 security
+// strength from pkg/cryptocatalog.
 type Tier string
 
 const (
+	TierClassical112 Tier = "classical-112"
 	TierClassical128 Tier = "classical-128"
 	TierClassical192 Tier = "classical-192"
 	TierClassical256 Tier = "classical-256"
 	TierPQCHybrid    Tier = "pqc-hybrid"
 	TierPQCOnly      Tier = "pqc-only"
-	TierDeprecated   Tier = "deprecated"
+	// TierDeprecated: NIST no longer allows the algorithm for new protection
+	// (disallowed, legacy use only, or not approved), or it is below 112 bits.
+	TierDeprecated Tier = "deprecated"
+	// TierNotAssessed: the catalogue cannot identify the parameter set.
+	TierNotAssessed Tier = "not-assessed"
 )
+
+// Floors are the tiers a policy may require, weakest first.
+var Floors = []Tier{TierClassical112, TierClassical128, TierClassical192, TierClassical256, TierPQCHybrid, TierPQCOnly}
+
+// ParseTier accepts a floor name. Deprecated and not-assessed are
+// classifications, never floors.
+func ParseTier(s string) (Tier, bool) {
+	t := Tier(strings.ToLower(strings.TrimSpace(s)))
+	return t, tierOrder(t) > 0
+}
 
 // Entry is one algorithm-or-parameter-set row of the inventory.
 type Entry struct {
@@ -80,8 +98,12 @@ func Build(tenantID string, floor Tier, samples []Entry) Inventory {
 		if e.Tier == "" {
 			e.Tier = ClassifyTier(e.Algorithm, e.Parameters)
 		}
-		if floor != "" && !meetsFloor(e.Tier, floor) {
-			e.Note = "below floor " + string(floor)
+		if st, ok := statusOf(e.Algorithm); ok && !st.Protects() {
+			e.Deprecated = true
+			e.Note = "NIST status: " + string(st)
+		}
+		if floor != "" && !MeetsFloor(e.Tier, floor) {
+			e.Note = strings.TrimPrefix(e.Note+"; below floor "+string(floor), "; ")
 		}
 		entries = append(entries, *e)
 	}
@@ -95,7 +117,7 @@ func Build(tenantID string, floor Tier, samples []Entry) Inventory {
 	if total > 0 && floor != "" {
 		ok := 0
 		for _, e := range entries {
-			if meetsFloor(e.Tier, floor) {
+			if MeetsFloor(e.Tier, floor) {
 				ok += e.KeyCount
 			}
 		}
@@ -111,57 +133,59 @@ func Build(tenantID string, floor Tier, samples []Entry) Inventory {
 	}
 }
 
-// ClassifyTier returns the security tier for a given algorithm + parameter
-// set. Unknown algorithms fall through to TierDeprecated so they surface
-// in audits rather than silently passing.
-func ClassifyTier(algorithm, parameters string) Tier {
-	a := strings.ToUpper(strings.TrimSpace(algorithm))
-	p := strings.ToUpper(strings.TrimSpace(parameters))
-	switch {
-	case strings.HasPrefix(a, "ML-KEM"), strings.HasPrefix(a, "ML-DSA"), strings.HasPrefix(a, "SLH-DSA"):
-		if strings.Contains(p, "HYBRID") || strings.Contains(a, "HYBRID") {
-			return TierPQCHybrid
-		}
-		return TierPQCOnly
-	case strings.HasPrefix(a, "XMSS"), strings.HasPrefix(a, "LMS"):
-		return TierPQCOnly
-	case strings.HasPrefix(a, "AES-256"), a == "RSA-4096", strings.HasPrefix(a, "ECDSA-P384"), strings.HasPrefix(a, "ECDSA-P521"):
-		return TierClassical256
-	case strings.HasPrefix(a, "AES-192"), a == "RSA-3072":
-		return TierClassical192
-	case strings.HasPrefix(a, "AES-128"), a == "RSA-2048", strings.HasPrefix(a, "ECDSA-P256"):
-		return TierClassical128
-	case strings.HasPrefix(a, "3DES"), strings.HasPrefix(a, "DES"),
-		strings.HasPrefix(a, "MD5"), strings.HasPrefix(a, "SHA-1"),
-		a == "RSA-1024":
-		return TierDeprecated
-	default:
-		return TierDeprecated
+func statusOf(algorithm string) (cryptocatalog.Status, bool) {
+	e, ok := cryptocatalog.Lookup(algorithm)
+	if !ok {
+		return "", false
 	}
+	return e.StatusAt(time.Now()), true
 }
 
-// meetsFloor compares two tiers using a strict ordering classical < hybrid <
-// pqc-only. "Deprecated" never meets any floor.
-func meetsFloor(actual, floor Tier) bool {
-	if actual == TierDeprecated {
-		return false
+// ClassifyTier returns the tier of an algorithm from its catalogue entry.
+// Parameters mark a post-quantum algorithm used in a hybrid with "hybrid".
+// An algorithm the catalogue cannot identify is not assessed, and like a
+// deprecated one it meets no floor.
+func ClassifyTier(algorithm, parameters string) Tier {
+	e, ok := cryptocatalog.Lookup(algorithm)
+	if !ok {
+		return TierNotAssessed
 	}
-	return tierOrder(actual) >= tierOrder(floor)
+	st := e.StatusAt(time.Now())
+	switch {
+	case !st.Protects() && st != cryptocatalog.NotTabled:
+		return TierDeprecated
+	case e.Hybrid, e.PostQuantum && strings.Contains(strings.ToUpper(parameters), "HYBRID"):
+		return TierPQCHybrid
+	case e.PostQuantum:
+		return TierPQCOnly
+	case e.SecurityBits >= 256:
+		return TierClassical256
+	case e.SecurityBits >= 192:
+		return TierClassical192
+	case e.SecurityBits >= 128:
+		return TierClassical128
+	case e.SecurityBits >= 112:
+		return TierClassical112
+	case e.SecurityBits > 0:
+		return TierDeprecated
+	}
+	return TierNotAssessed
+}
+
+// MeetsFloor reports whether actual is at or above floor, ordered
+// classical-112 < classical-128 < classical-192 < classical-256 < pqc-hybrid
+// < pqc-only. Deprecated and not-assessed meet no floor, and an unknown floor
+// is met by nothing: a mistyped policy fails closed.
+func MeetsFloor(actual, floor Tier) bool {
+	a, f := tierOrder(actual), tierOrder(floor)
+	return a > 0 && f > 0 && a >= f
 }
 
 func tierOrder(t Tier) int {
-	switch t {
-	case TierClassical128:
-		return 1
-	case TierClassical192:
-		return 2
-	case TierClassical256:
-		return 3
-	case TierPQCHybrid:
-		return 4
-	case TierPQCOnly:
-		return 5
-	default:
-		return 0
+	for i, f := range Floors {
+		if t == f {
+			return i + 1
+		}
 	}
+	return 0
 }

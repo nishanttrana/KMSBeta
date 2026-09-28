@@ -7,6 +7,55 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Crypto agility: one cited NIST catalogue, drafts shown as proposed (3.2.0-beta)
+
+**Decision.** The owner asked for the Crypto Agility tab to follow NIST
+crypto agility guidance and the CARAF paper (Ma et al., *Journal of
+Cybersecurity* 2021, cited by CSWP 39 §5), then "as per the updated doc"
+(CSWP 39-upd1). Every algorithm fact (strength, quantum vulnerability, NIST
+status and dates) now comes from `pkg/cryptocatalog`, copied from SP 800-57,
+SP 800-131A Rev. 3 (ipd), IR 8547 (ipd) and FIPS 186-5/203/204/205, each row
+citing its table. The tab measures live keys against that schedule. The
+agility score is removed.
+
+**Why.** CSWP 39-upd1 §5.2 asks for one machine-consumable crypto policy kept
+in step with NIST, and its 2026 update (§2.3, Appendix C) moves the
+quantum transition dates to IR 8547 and SP 800-131A Rev. 3. Four
+hand-kept lists disagreed and one of them drove policy enforcement
+(docs/SECURITY/ALGORITHM_TRANSITIONS.md, learning.md 2026-09-29).
+
+**Rejected.**
+- *Keep a 0–100 agility score.* Its weights (0.6 per legacy point, 0.2 per
+  non-PQC point, "20% quantum-safe" target) had no source. Counts against a
+  cited schedule say the same thing and can be checked.
+- *Wait for the final SP 800-131A Rev. 3 and IR 8547.* CSWP 39-upd1 already
+  points to them; the dates are shown as proposed, and a test pins each row
+  so finalisation is a one-file change.
+- *Classify by substring (contains "RSA", "KYBER").* That is how SLH-DSA,
+  hybrids and RSA-4096 were mislabelled. The catalogue parses exact names; a
+  name without a parameter set is not assessed.
+- *Keep `classical-128` as RSA-2048's tier so existing floors keep passing.*
+  That keeps a false label on an enforcement path. Tenants who accept
+  112-bit keys say so with `classical-112`.
+- *Supply CNSA 2.0 or EU dates.* They are not in the documents CSWP 39-upd1
+  cites and the ones in pqc were wrong; plans against other standards must
+  pass an explicit deadline.
+
+**Enforced by.** `TestCatalogMatchesNISTTables` and the other
+`pkg/cryptocatalog` tests, `TestMeetsFloorFailsClosed`,
+`TestCryptoFloorUsesNISTStrengths`, `TestUnknownFloorRefusedAndAudited`,
+`TestAgilityPostureAgainstNISTSchedule`, `TestTimelineMilestonesAreSourced`,
+`TestPlanDeadlineMustBeSourced`, `TestDiscoveryLabelsFollowTheCatalogue`.
+
+**Next.** The CARAF assessment on the same tab: a threat register (Z),
+asset profiles for the eight inventory factors (sensitivity, shelf-life X,
+ownership, implementation, location), X/Y/Z and cost ratings, a decision per
+asset (secure, accept with expiring approval, phase out, compensating
+control), a roadmap on the pqc engine, and a CSF-tier maturity view
+(CSWP 39 §6.5).
+
+---
+
 ## 2026-09-28 — Audit integrity: sign the chain head, no Merkle trees (3.0.0-beta)
 
 **Decision.** The owner: "let go off the merkle tree and sign the logs",

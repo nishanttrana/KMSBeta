@@ -8,13 +8,14 @@ import (
 	"vecta-kms/pkg/route"
 )
 
-// agilityRouter serves the crypto-agility inventory, score and migration plans
-// through the pkg/route kernel (tenant, permission and audit by construction);
-// the legacy mux mounts it. Every figure is computed from the tenant's keys
-// table: nothing here is estimated or seeded.
+// agilityRouter serves the crypto-agility posture, inventory and migration
+// plans through the pkg/route kernel (tenant, permission and audit by
+// construction); the legacy mux mounts it. Counts come from the tenant's keys
+// table and every status and date from pkg/cryptocatalog, which cites the
+// NIST document it was copied from.
 func (h *Handler) agilityRouter(audit route.Emitter) *route.Router {
 	r := route.New("key", audit, nil)
-	r.Handle("GET /agility/score", route.Spec{Action: "agility_score_read", Permission: "key.agility.read", Resource: "agility"}, h.getAgilityScore)
+	r.Handle("GET /agility/posture", route.Spec{Action: "agility_posture_read", Permission: "key.agility.read", Resource: "agility"}, h.getAgilityPosture)
 	r.Handle("GET /agility/algorithms", route.Spec{Action: "agility_inventory_read", Permission: "key.agility.read", Resource: "agility"}, h.getAlgorithmInventory)
 	r.Handle("GET /agility/keys-by-algorithm", route.Spec{Action: "agility_keys_by_algorithm_read", Permission: "key.agility.read", Resource: "agility"}, h.getKeysByAlgorithm)
 	r.Handle("GET /agility/migration-plans", route.Spec{Action: "agility_migration_plans_listed", Permission: "key.agility.read", Resource: "migration_plan"}, h.listMigrationPlans)
@@ -25,13 +26,17 @@ func (h *Handler) agilityRouter(audit route.Emitter) *route.Router {
 
 var migrationPlanStatuses = map[string]bool{"planned": true, "in_progress": true, "paused": true, "completed": true}
 
-func (h *Handler) getAgilityScore(c *route.Call) {
+func (h *Handler) getAgilityPosture(c *route.Call) {
 	algos, err := h.svc.store.GetAlgorithmDistribution(c.R.Context(), c.Tenant)
 	if err != nil {
-		c.Error(http.StatusInternalServerError, "agility_score_failed", err.Error())
+		c.Error(http.StatusInternalServerError, "agility_posture_failed", err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, map[string]interface{}{"data": computeAgilityScore(algos)})
+	p := computeAgilityPosture(algos, time.Now())
+	c.Detail("total_keys", p.TotalKeys)
+	c.Detail("quantum_vulnerable_keys", p.QuantumVulnerableKeys)
+	c.Detail("not_assessed_keys", p.NotAssessedKeys)
+	c.JSON(http.StatusOK, map[string]interface{}{"data": p})
 }
 
 func (h *Handler) getAlgorithmInventory(c *route.Call) {
@@ -40,8 +45,8 @@ func (h *Handler) getAlgorithmInventory(c *route.Call) {
 		c.Error(http.StatusInternalServerError, "algorithm_inventory_failed", err.Error())
 		return
 	}
-	score := computeAgilityScore(algos) // annotates percentage / legacy / quantum-safe
-	c.JSON(http.StatusOK, map[string]interface{}{"data": score.Algorithms, "total_keys": score.TotalKeys})
+	p := computeAgilityPosture(algos, time.Now()) // annotates share and NIST status
+	c.JSON(http.StatusOK, map[string]interface{}{"data": p.Algorithms, "total_keys": p.TotalKeys})
 }
 
 func (h *Handler) getKeysByAlgorithm(c *route.Call) {

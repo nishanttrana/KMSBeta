@@ -56,7 +56,6 @@ func (s *Service) scanNetwork(ctx context.Context, tenantID string, scanID strin
 type tlsProbe struct {
 	version, cipher string
 	kex             string
-	kexBits         int
 	leaf            *x509.Certificate
 	trusted         bool
 }
@@ -99,45 +98,45 @@ func probeTLS(ctx context.Context, endpoint string, timeout time.Duration) (tlsP
 	cs := conn.(*tls.Conn).ConnectionState()
 	p.version = tls.VersionName(cs.Version)
 	p.cipher = tls.CipherSuiteName(cs.CipherSuite)
-	p.kex, p.kexBits = keyExchangeName(cs.CurveID)
+	p.kex = keyExchangeName(cs.CurveID)
 	return p, nil
 }
 
 // keyExchangeName names a negotiated group in this service's algorithm
 // vocabulary; 0 is a TLS 1.2 RSA key exchange.
-func keyExchangeName(id tls.CurveID) (string, int) {
+func keyExchangeName(id tls.CurveID) string {
 	switch id {
 	case 0:
-		return "RSA-KEX", 0
+		return "RSA-KEX"
 	case tls.X25519MLKEM768:
-		return "X25519-ML-KEM-768-HYBRID", 768
+		return "X25519-ML-KEM-768-HYBRID"
 	case tls.SecP256r1MLKEM768:
-		return "ECDH-P256-ML-KEM-768-HYBRID", 768
+		return "ECDH-P256-ML-KEM-768-HYBRID"
 	case tls.SecP384r1MLKEM1024:
-		return "ECDH-P384-ML-KEM-1024-HYBRID", 1024
+		return "ECDH-P384-ML-KEM-1024-HYBRID"
 	case tls.X25519:
-		return "X25519", 256
+		return "X25519"
 	case tls.CurveP256:
-		return "ECDH-P256", 256
+		return "ECDH-P256"
 	case tls.CurveP384:
-		return "ECDH-P384", 384
+		return "ECDH-P384"
 	case tls.CurveP521:
-		return "ECDH-P521", 521
+		return "ECDH-P521"
 	}
-	return strings.ToUpper(id.String()), 0
+	return strings.ToUpper(id.String())
 }
 
-func publicKeyName(pub any) (string, int) {
+func publicKeyName(pub any) string {
 	family, bits := pkgcrypto.DescribePublicKey(pub)
 	switch family {
 	case "RSA":
-		return fmt.Sprintf("RSA-%d", bits), bits
+		return fmt.Sprintf("RSA-%d", bits)
 	case "ECDSA":
-		return fmt.Sprintf("ECDSA-P%d", bits), bits
+		return fmt.Sprintf("ECDSA-P%d", bits)
 	case "ED25519":
-		return "ED25519", 256
+		return "ED25519"
 	}
-	return "UNKNOWN", 0
+	return "UNKNOWN"
 }
 
 func (s *Service) tlsAssets(tenantID, scanID, ep string, p tlsProbe) []CryptoAsset {
@@ -145,18 +144,18 @@ func (s *Service) tlsAssets(tenantID, scanID, ep string, p tlsProbe) []CryptoAss
 	kex := CryptoAsset{
 		ID: assetDeterministicID(tenantID, "network", "tls_endpoint", ep, ep, ""), TenantID: tenantID, ScanID: scanID,
 		AssetType: "tls_endpoint", Name: ep, Location: ep, Source: "network",
-		Algorithm: p.kex, StrengthBits: p.kexBits, Status: "active",
-		Classification: classifyAlgorithm(p.kex, max(p.kexBits, 128)),
-		PQCReady:       isHybridAlgorithm(p.kex), QSLScore: round2(algorithmQSL(p.kex)),
+		Algorithm: p.kex, StrengthBits: strengthBits(p.kex), Status: "active",
+		Classification: classifyAlgorithm(p.kex),
+		PQCReady:       pqcReady(p.kex), QSLScore: round2(algorithmQSL(p.kex)),
 		Metadata:  map[string]interface{}{"protocol": p.version, "cipher_suite": p.cipher, "key_exchange": p.kex},
 		FirstSeen: now, LastSeen: now,
 	}
-	alg, bits := publicKeyName(p.leaf.PublicKey)
+	alg := publicKeyName(p.leaf.PublicKey)
 	cert := CryptoAsset{
 		ID: assetDeterministicID(tenantID, "network", "tls_certificate", ep, ep, ""), TenantID: tenantID, ScanID: scanID,
 		AssetType: "tls_certificate", Name: p.leaf.Subject.CommonName, Location: ep, Source: "network",
-		Algorithm: alg, StrengthBits: bits, Status: "active",
-		Classification: classifyAlgorithm(alg, bits), PQCReady: false, QSLScore: round2(algorithmQSL(alg)),
+		Algorithm: alg, StrengthBits: strengthBits(alg), Status: "active",
+		Classification: classifyAlgorithm(alg), PQCReady: pqcReady(alg), QSLScore: round2(algorithmQSL(alg)),
 		Metadata: map[string]interface{}{
 			"subject": p.leaf.Subject.String(), "issuer": p.leaf.Issuer.String(),
 			"not_after": p.leaf.NotAfter.UTC().Format(time.RFC3339), "signature_algorithm": p.leaf.SignatureAlgorithm.String(),
@@ -191,14 +190,13 @@ func (s *Service) scanCloud(ctx context.Context, tenantID string, scanID string)
 		}
 		for _, it := range items {
 			alg := normalizeAlgorithm(firstString(it["algorithm"]))
-			bits := inferBits(alg)
 			keyID := firstString(it["cloud_key_id"])
 			loc := provider + "/" + firstString(it["region"])
 			out = append(out, CryptoAsset{
 				ID: assetDeterministicID(tenantID, "cloud", "kms_key", keyID, loc, ""), TenantID: tenantID, ScanID: scanID,
 				AssetType: "kms_key", Name: keyID, Location: loc, Source: "cloud",
-				Algorithm: alg, StrengthBits: bits, Status: strings.ToLower(defaultString(firstString(it["state"]), "unknown")),
-				Classification: classifyAlgorithm(alg, bits), PQCReady: isPQCAlgorithm(alg), QSLScore: round2(algorithmQSL(alg)),
+				Algorithm: alg, StrengthBits: strengthBits(alg), Status: strings.ToLower(defaultString(firstString(it["state"]), "unknown")),
+				Classification: classifyAlgorithm(alg), PQCReady: pqcReady(alg), QSLScore: round2(algorithmQSL(alg)),
 				Metadata: map[string]interface{}{
 					"provider": provider, "account_id": accountID, "cloud_key_ref": firstString(it["cloud_key_ref"]),
 					"managed_by_vecta": it["managed_by_vecta"],
@@ -225,14 +223,13 @@ func (s *Service) scanCertificates(ctx context.Context, tenantID string, scanID 
 	out := make([]CryptoAsset, 0, len(items))
 	for _, c := range items {
 		alg := normalizeAlgorithm(firstString(c["algorithm"], c["signature_algorithm"]))
-		bits := inferBits(alg)
 		cn := firstString(c["subject_cn"], c["id"])
 		id := firstString(c["id"])
 		out = append(out, CryptoAsset{
 			ID: assetDeterministicID(tenantID, "certs", "certificate", id, cn, alg), TenantID: tenantID, ScanID: scanID,
 			AssetType: "certificate", Name: cn, Location: defaultString(firstString(c["location"], c["subject_cn"]), cn), Source: "certs",
-			Algorithm: alg, StrengthBits: bits, Status: strings.ToLower(defaultString(firstString(c["status"]), "active")),
-			Classification: classifyAlgorithm(alg, bits), PQCReady: isPQCAlgorithm(alg), QSLScore: round2(algorithmQSL(alg)),
+			Algorithm: alg, StrengthBits: strengthBits(alg), Status: strings.ToLower(defaultString(firstString(c["status"]), "active")),
+			Classification: classifyAlgorithm(alg), PQCReady: pqcReady(alg), QSLScore: round2(algorithmQSL(alg)),
 			Metadata:  map[string]interface{}{"cert_id": id, "not_after": firstString(c["not_after"])},
 			FirstSeen: s.now(), LastSeen: s.now(),
 		})
@@ -283,7 +280,7 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			out = append(out, CryptoAsset{
 				ID: assetDeterministicID(tenantID, "code", f.kind, rel, fmt.Sprint(f.line), f.fingerprint), TenantID: tenantID, ScanID: scanID,
 				AssetType: f.kind, Name: filepath.Base(rel), Location: fmt.Sprintf("%s:%d", rel, f.line), Source: "code",
-				Algorithm: f.algorithm, StrengthBits: f.bits, Status: "active", Classification: "vulnerable",
+				Algorithm: f.algorithm, StrengthBits: strengthBits(f.algorithm), Status: "active", Classification: "vulnerable",
 				Metadata:  map[string]interface{}{"fingerprint_sha256_prefix": f.fingerprint, "line": f.line},
 				FirstSeen: now, LastSeen: now,
 			})
@@ -295,7 +292,7 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 
 type secretFinding struct {
 	kind, algorithm, fingerprint string
-	bits, line                   int
+	line                         int
 }
 
 func fingerprint(secret []byte) string {
@@ -327,13 +324,12 @@ func findSecrets(raw []byte) []secretFinding {
 		if !strings.Contains(block.Type, "PRIVATE KEY") {
 			continue
 		}
-		alg, bits := privateKeyName(block)
-		out = append(out, secretFinding{kind: "private_key_material", algorithm: alg, bits: bits, fingerprint: fingerprint(block.Bytes), line: pemLine(raw, block)})
+		out = append(out, secretFinding{kind: "private_key_material", algorithm: privateKeyName(block), fingerprint: fingerprint(block.Bytes), line: pemLine(raw, block)})
 	}
 	return out
 }
 
-func privateKeyName(block *pem.Block) (string, int) {
+func privateKeyName(block *pem.Block) string {
 	if k, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
 		if s, ok := k.(interface{ Public() stdcrypto.PublicKey }); ok {
 			return publicKeyName(s.Public())
@@ -345,7 +341,7 @@ func privateKeyName(block *pem.Block) (string, int) {
 	if k, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
 		return publicKeyName(&k.PublicKey)
 	}
-	return "UNKNOWN", 0 // e.g. OpenSSH format: reported, not guessed
+	return "UNKNOWN" // e.g. OpenSSH format: reported, not guessed
 }
 
 func pemLine(raw []byte, block *pem.Block) int {

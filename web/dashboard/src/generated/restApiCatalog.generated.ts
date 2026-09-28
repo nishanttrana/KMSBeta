@@ -14039,15 +14039,15 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-agility-score",
+    "id": "keycore-get-agility-posture",
     "group": "Key Management (keycore)",
-    "title": "GET /agility/score",
+    "title": "GET /agility/posture",
     "service": "keycore",
     "method": "GET",
-    "pathTemplate": "/agility/score?tenant_id={{tenant_id}}",
+    "pathTemplate": "/agility/posture?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/agility/score?tenant_id={{tenant_id}}",
+    "requestExample": "GET /svc/keycore/agility/posture?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
