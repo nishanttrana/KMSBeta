@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T09:05:41Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T09:11:56Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -415,10 +415,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
 | keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
 | keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
-| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:562) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:695 |
-| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:571) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:702 |
-| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:597) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:676 |
-| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:612) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:682 |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:565) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:695 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:574) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:600) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:676 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:615) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:682 |
 | keycore\|GET\|/keys/{param}/consumers | GET /keys/{id}/consumers | getKeyConsumers (services/keycore/key_consumers.go:157) | KeyConsumers | GetKey, ListVersions, ListKeyConsumers |  |  | web/dashboard/src/lib/keyConsumers.ts:35 |
 | keycore\|GET\|/inventory/keys | GET /inventory/keys | handleListInventory (services/keycore/handler_enterprise_audit.go:168) | DetectDuplicateKeys | ListInventoryItems, GetInventorySummary, ListKeys |  |  | web/dashboard/src/lib/keyInventory.ts:6 |
 | keycore\|GET\|/inventory/dependencies | GET /inventory/dependencies | handleListKeyDependencies (services/keycore/handler_enterprise_audit.go:212) |  | ListKeyDependencies |  |  | web/dashboard/src/lib/keyInventory.ts:12 |
@@ -1230,10 +1230,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
 | keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
 | keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
-| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:562) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:695 |
-| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:571) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:702 |
-| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:597) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:676 |
-| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:612) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:682 |
+| keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:565) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:695 |
+| keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:574) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:702 |
+| keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:600) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:676 |
+| keycore\|GET\|/keys/{param}/hsm | GET /keys/{id}/hsm | inspectHSMKey (services/keycore/hsm.go:615) | InspectHSMKey | ListVersions | s.hsm.Inspect | pkg/hsm.Inspect | web/dashboard/src/lib/keycore.ts:682 |
 | keycore\|GET\|/keys/{param}/consumers | GET /keys/{id}/consumers | getKeyConsumers (services/keycore/key_consumers.go:157) | KeyConsumers | GetKey, ListVersions, ListKeyConsumers |  |  | web/dashboard/src/lib/keyConsumers.ts:35 |
 | keycore\|GET\|/inventory/keys | GET /inventory/keys | handleListInventory (services/keycore/handler_enterprise_audit.go:168) | DetectDuplicateKeys | ListInventoryItems, GetInventorySummary, ListKeys |  |  | web/dashboard/src/lib/keyInventory.ts:6 |
 | keycore\|GET\|/inventory/orphans | GET /inventory/orphans | handleListOrphanedInventory (services/keycore/handler_enterprise_audit.go:184) |  | ListOrphanedInventoryItems |  |  |  |

@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.7.0-beta] — 2026-09-29
+
+### Keycore: destroying an HSM key with no HSM connector is audited
+An HSM-resident key destroyed while the platform ran no HSM connector
+(disabled after the key was made) skipped HSM cleanup without a word: the
+objects stayed on the token and no event said so. It now emits
+`audit.key.hsm_destroy_failed` (critical, `result: failure`,
+`reason: hsm_not_configured`) naming every version's label, as the
+unreachable-HSM case already did, and never `hsm_objects_destroyed`. Remove
+the objects in the HSM, or re-enable the connector and confirm with
+`POST /keys/{id}/destruction-check`. Test:
+`TestDestroyWithoutHSMConnectorIsAudited`.
+
 ## [6.6.0-beta] — 2026-09-29
 
 ### Docs: the identity and PQC guide describes what the product does

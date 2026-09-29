@@ -460,3 +460,33 @@ func TestHSMRoutesAudited(t *testing.T) {
 		}
 	}
 }
+
+// An HSM-resident key destroyed while the platform runs no HSM connector
+// leaves its objects on the token. Before 6.7.0-beta that was silent; now it
+// is audited as a failure naming every label, and the destruction check
+// says the HSM was not asked.
+func TestDestroyWithoutHSMConnectorIsAudited(t *testing.T) {
+	h, svc, rec := newActorTestHandler(t)
+	key := ownedKey(t, svc)
+	raw, _ := json.Marshal(map[string]string{labelHSM: labelHSMResident})
+	if _, err := svc.store.(*SQLStore).db.SQL().ExecContext(context.Background(), `UPDATE keys SET labels = ? WHERE id = ?`, string(raw), key.ID); err != nil {
+		t.Fatal(err)
+	}
+	_ = svc.cache.Delete(context.Background(), "t1", key.ID)
+	if err := svc.DestroyKeyImmediately(adminCtx(), "t1", key.ID, "destroy with no HSM connector", "tester", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	ev := rec.find("audit.key.hsm_destroy_failed")
+	d, _ := ev["details"].(map[string]any)
+	labels, _ := d["labels"].([]any)
+	if ev == nil || d["reason"] != "hsm_not_configured" || d["result"] != "failure" || d["severity"] != "critical" ||
+		len(labels) != 1 || labels[0] != hsm.KeyLabel("t1", key.ID, 1) {
+		t.Fatalf("destroy without connector audited as %+v", ev)
+	}
+	if rec.find("audit.key.hsm_objects_destroyed") != nil {
+		t.Fatal("objects never removed must not be audited as destroyed")
+	}
+	if _, got := destructionCheck(t, h, key.ID); got.HSM != "not_configured" {
+		t.Fatalf("destruction check: %+v", got)
+	}
+}

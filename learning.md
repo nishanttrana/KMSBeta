@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A guard that returns early can hide the failure it guards
+- **What happened:** `destroyHSMObjects` began with
+  `if !resident || s.hsm == nil { return }`. The first condition means
+  "nothing to do"; the second means "can't do it". Folding them into one
+  early return made a destroyed HSM key with no connector look exactly like
+  a software key: objects left on the token, no event. Found while building
+  the destruction check (6.5.0-beta), fixed in 6.7.0-beta.
+- **Why it slipped through:** the unreachable-HSM test set a connector
+  pointing at a dead address, so the nil-connector branch was never run.
+- **Rule:** in a guard clause, keep "not applicable" and "unable" apart.
+  Only the first may return quietly; the second is a failure to audit.
+
 ### A reference guide drifts into a spec when nobody follows its examples to a route
 - **What happened:** `docs/IDENTITY_AND_PQC.md` (3,100 lines) presented as
   product capability a SPIFFE agent with seven attestors, RFC 8693 exchange

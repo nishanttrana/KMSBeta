@@ -9980,7 +9980,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.getHSM",
-      "line": 555,
+      "line": 558,
       "match_key": "keycore|GET|/hsm/settings",
       "method": "GET",
       "normalized_path": "/hsm/settings",
@@ -9995,7 +9995,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.putHSM",
-      "line": 556,
+      "line": 559,
       "match_key": "keycore|PUT|/hsm/settings",
       "method": "PUT",
       "normalized_path": "/hsm/settings",
@@ -10010,7 +10010,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.listHSMObjects",
-      "line": 557,
+      "line": 560,
       "match_key": "keycore|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -10025,7 +10025,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/hsm.go",
       "handler": "h.inspectHSMKey",
-      "line": 558,
+      "line": 561,
       "match_key": "keycore|GET|/keys/{param}/hsm",
       "method": "GET",
       "normalized_path": "/keys/{param}/hsm",
@@ -33768,7 +33768,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T09:05:41Z",
+  "generated_at": "2026-09-29T09:11:56Z",
   "navigation": [
     {
       "group": "Overview",
@@ -76444,7 +76444,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 562,
+      "handler_line": 565,
       "handler_name": "getHSM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76455,7 +76455,7 @@
       "normalized_path": "/hsm/settings",
       "path": "/hsm/settings",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 555,
+      "route_line": 558,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76513,7 +76513,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 571,
+      "handler_line": 574,
       "handler_name": "putHSM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76524,7 +76524,7 @@
       "normalized_path": "/hsm/settings",
       "path": "/hsm/settings",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 556,
+      "route_line": 559,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76594,7 +76594,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 597,
+      "handler_line": 600,
       "handler_name": "listHSMObjects",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76605,7 +76605,7 @@
       "normalized_path": "/hsm/objects",
       "path": "/hsm/objects",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 557,
+      "route_line": 560,
       "service": "keycore",
       "service_external_package_calls": [
         "fmt.Sscanf",
@@ -76640,7 +76640,7 @@
             "pkg/hsm.TenantPrefix",
             "pkg/hsm.TenantKeyLabel"
           ],
-          "line": 519,
+          "line": 522,
           "name": "ListHSMObjects",
           "receiver_calls": [
             "s.hsm.Objects"
@@ -76675,7 +76675,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 612,
+      "handler_line": 615,
       "handler_name": "inspectHSMKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76686,7 +76686,7 @@
       "normalized_path": "/keys/{param}/hsm",
       "path": "/keys/{id}/hsm",
       "route_file": "services/keycore/hsm.go",
-      "route_line": 558,
+      "route_line": 561,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76711,7 +76711,7 @@
           "internal_package_calls": [
             "pkg/hsm.Inspect"
           ],
-          "line": 472,
+          "line": 475,
           "name": "InspectHSMKey",
           "receiver_calls": [
             "s.hsm.Inspect"
@@ -115795,7 +115795,7 @@
         ],
         "handler": "getHSM",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 562,
+        "handlerLine": 565,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Status"
@@ -115838,7 +115838,7 @@
         ],
         "handler": "putHSM",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 571,
+        "handlerLine": 574,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Status",
@@ -115888,7 +115888,7 @@
         ],
         "handler": "listHSMObjects",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 597,
+        "handlerLine": 600,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Objects",
@@ -115932,7 +115932,7 @@
         ],
         "handler": "inspectHSMKey",
         "handlerFile": "services/keycore/hsm.go",
-        "handlerLine": 612,
+        "handlerLine": 615,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/hsm.Inspect"
@@ -123870,7 +123870,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T09:05:41Z",
+    "generatedAt": "2026-09-29T09:11:56Z",
     "methods": [
       "DELETE",
       "GET",

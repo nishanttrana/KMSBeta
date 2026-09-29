@@ -392,23 +392,26 @@ func (s *Service) rotateHSMKey(ctx context.Context, key Key) (KeyVersion, error)
 }
 
 // destroyHSMObjects removes a destroyed key's versions from the HSM. The
-// key is already destroyed in keycore; an HSM failure is audited so the
-// object can be removed by hand.
+// key is already destroyed in keycore; an HSM failure, or no HSM connector
+// at all, is audited so the objects can be removed by hand.
 func (s *Service) destroyHSMObjects(ctx context.Context, tenantID string, deleted KeyDeletionRecord) {
-	if deleted.Labels[labelHSM] != labelHSMResident || s.hsm == nil {
+	if deleted.Labels[labelHSM] != labelHSMResident {
 		return
 	}
 	var failed []string
+	reason := "hsm_unreachable"
 	for v := 1; v <= deleted.CurrentVersion; v++ {
 		label := hsm.KeyLabel(tenantID, deleted.KeyID, v)
-		if err := s.hsm.Destroy(ctx, tenantID, label); err != nil && !errors.Is(err, hsm.ErrNotFound) {
+		if s.hsm == nil {
+			failed, reason = append(failed, label), "hsm_not_configured"
+		} else if err := s.hsm.Destroy(ctx, tenantID, label); err != nil && !errors.Is(err, hsm.ErrNotFound) {
 			failed = append(failed, label)
 		}
 	}
 	subject, details := "audit.key.hsm_objects_destroyed", map[string]any{"key_id": deleted.KeyID, "versions": deleted.CurrentVersion}
 	if len(failed) > 0 {
 		subject = "audit.key.hsm_destroy_failed"
-		details["labels"], details["severity"], details["result"], details["reason"] = failed, "critical", "failure", "hsm_unreachable"
+		details["labels"], details["severity"], details["result"], details["reason"] = failed, "critical", "failure", reason
 		details["description"] = "the key is destroyed in the KMS, but these HSM objects remain: remove them in the HSM"
 	}
 	_ = s.publishAudit(ctx, subject, tenantID, details)

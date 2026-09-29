@@ -97,8 +97,11 @@ takes `"hsm": true` on `POST /keys`.
   SHA-256(SPKI)[:3].
 - **Rotation** generates the next version in the HSM.
 - **Destroy** (immediate or scheduled) destroys every version's objects in
-  the HSM. If the HSM can't be reached, `audit.key.hsm_destroy_failed`
-  (critical) lists the labels left behind.
+  the HSM. If the HSM can't be reached (`reason: hsm_unreachable`), or
+  the HSM connector has been disabled since the key was made
+  (`reason: hsm_not_configured`, 6.7.0-beta), `audit.key.hsm_destroy_failed`
+  (critical) lists the labels left behind. `POST /keys/{id}/destruction-check`
+  then finds them by label once the connector is back.
 - **Refused operations.** Anything that needs the material is refused with
   `409 hsm_operation_unsupported` and audited: export, wrap, derive, MAC,
   KEM and material verification. Also refused: an external or deterministic
