@@ -5,6 +5,29 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A "verified" label on a check that looked somewhere else
+- **What happened:** `POST /keys/{id}/zeroize-verify` (263893d12, "stringent
+  FIPS 140-3 posture") returned `zeroization_verified` from
+  `ConfirmKeyMaterialZeroized`, which only asked whether the key cache had
+  an entry and returned true when there was no cache. The cache holds
+  `Key` metadata; material lives in `key_versions` and the HSM, which it
+  never read. Worse, the success path was unreachable: destroy writes
+  status `deleted`, the handler required `destroyed`, and `GetKey` 404s a
+  deleted key. Nobody had ever received the answer. Replaced by
+  `POST /keys/{id}/destruction-check` (6.5.0-beta).
+- **Why it slipped through:** the doc comment quoted the standard
+  ("satisfies FIPS 140-3 §4.9.2"), and a citation reads like evidence. No
+  test called the route with a destroyed key, so neither the overclaim nor
+  the dead path showed. The 5.3.0-beta cleanup removed the zeroization
+  scheduler for doing nothing and explicitly kept this route ("stays")
+  without following its data. The kernel migration then gave it a
+  permission and an audit event, which made it look reviewed.
+- **Rule:** a field named for a guarantee (`verified`, `zeroized`,
+  `validated`) must name the thing it read. Follow the data to where the
+  secret actually lives. Test the success path with the state the real
+  lifecycle produces (here a key destroyed by `DestroyKeyImmediately`), not
+  a status string typed into a fixture.
+
 ### A field that follows a removed policy is a dangling switch
 - **What happened:** keycore's interface `pqc_mode` was added with the pqc
   tenant policy, whose default mode `inherit` resolved to. The only reader

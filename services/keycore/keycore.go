@@ -124,24 +124,6 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 	return svc
 }
 
-// ConfirmKeyMaterialZeroized checks that the key cache holds no live material
-// for the given key, returning true when the entry is absent (i.e. the
-// in-memory copy has been evicted or explicitly deleted on destruction).
-// This satisfies FIPS 140-3 §4.9.2 zeroization verification requirement.
-func (s *Service) ConfirmKeyMaterialZeroized(tenantID string, keyID string) bool {
-	if s.cache == nil {
-		return true
-	}
-	ctx := context.Background()
-	_, found, err := s.cache.Get(ctx, tenantID, keyID)
-	if err != nil || !found {
-		return true
-	}
-	// Cache still has an entry — attempt explicit eviction and report failure.
-	_ = s.cache.Delete(ctx, tenantID, keyID)
-	return false
-}
-
 func (s *Service) SetGovernanceApprovalClient(client *governanceApprovalClient) {
 	if client == nil {
 		return

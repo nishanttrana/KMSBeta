@@ -29,6 +29,7 @@ func TestKeyOpsNeedTheirPermission(t *testing.T) {
 		{"/enterprise/orchestration/runs", `{"key_ids":["` + key.ID + `"],"execute_rotation":true}`},
 		{"/ceremony", `{}`},
 		{"/keys/" + key.ID + "/attest", `{}`},
+		{"/keys/" + key.ID + "/destruction-check", ``},
 	}
 	for _, c := range calls {
 		rec.Reset()

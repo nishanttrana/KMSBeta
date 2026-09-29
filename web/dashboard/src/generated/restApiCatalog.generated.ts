@@ -17203,6 +17203,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-keys-id-destruction-check",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/destruction-check",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/destruction-check?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/destruction-check?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-keys-id-disable",
     "group": "Key Management (keycore)",
     "title": "POST /keys/{id}/disable",
@@ -17744,34 +17772,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/{id}/wrap?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-keys-id-zeroize-verify",
-    "group": "Key Management (keycore)",
-    "title": "POST /keys/{id}/zeroize-verify",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/keys/{id}/zeroize-verify?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/keys/{id}/zeroize-verify?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

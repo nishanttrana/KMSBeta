@@ -969,8 +969,25 @@ roles need the permission named here. Service principals are allowed.
 | `POST /keys/{id}/rotation-metrics` | `key.rotation.write` (key must be visible) | `rotation_metric_recorded` |
 | `POST /keys/{id}/usage/meter` | `key.usage.meter` (and the per-key grant) | `usage_meter_requested` |
 | `POST /keys/{id}/attest` | `key.attest` (key must be visible) | `attest_requested` |
-| `POST /keys/{id}/verify-material`, `POST /keys/{id}/zeroize-verify` | `key.integrity.verify` (key must be visible) | `verify_material_requested`, `zeroize_verify_requested` |
+| `POST /keys/{id}/verify-material`, `POST /keys/{id}/destruction-check` | `key.integrity.verify` (key must be visible) | `verify_material_requested`, `destruction_checked` |
 | `POST /fips/self-test` | `key.fips.selftest` | `fips_self_test_requested` |
+
+**Destruction check (6.5.0-beta).** `POST /keys/{id}/destruction-check`
+looks for a destroyed key's material where keycore keeps it: the
+`key_versions` rows (the only table holding material, encrypted under the
+MEK or wrapped by the HSM) and, when the HSM connector is enabled, every
+HSM object under the key's label prefix (`vecta:<tenant>:key:<id>:v*`).
+Response `{"check": {...}}`: `key_id`, `status`, `version_rows`, `hsm`
+(`checked` | `not_configured` | `unreachable`), `hsm_objects` (labels
+found), `hsm_error`, `result` (`removed` | `material_remains` |
+`incomplete` when the HSM couldn't be asked), `not_covered` (what the check
+can't see: database pages until vacuumed, backups, process memory) and
+`checked_at`. A key that isn't destroyed is refused with 409
+`key_not_destroyed`. Audited as `audit.key.destruction_checked` with
+`result`, `version_rows`, `hsm`, `hsm_objects`; `material_remains` is
+`severity: critical`. It replaces the former `zeroize-verify` route, whose
+`zeroization_verified` looked only at the metadata cache and could never
+answer for a destroyed key.
 
 **Key visibility (5.0.0-beta).** `GET /keys` and every per-key read
 (`GET /keys/{id}`, `/versions`, `/versions/{ver}`, `/kcv`, `/usage`,
@@ -4062,6 +4079,7 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/decrypt`
 - `POST /svc/keycore/keys/{id}/derive`
 - `POST /svc/keycore/keys/{id}/destroy`
+- `POST /svc/keycore/keys/{id}/destruction-check`
 - `POST /svc/keycore/keys/{id}/disable`
 - `POST /svc/keycore/keys/{id}/encrypt`
 - `POST /svc/keycore/keys/{id}/export`
@@ -4095,7 +4113,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/versions/{ver}/activate`
 - `POST /svc/keycore/keys/{id}/versions/{ver}/deactivate`
 - `POST /svc/keycore/keys/{id}/wrap`
-- `POST /svc/keycore/keys/{id}/zeroize-verify`
 - `GET /svc/keycore/rotation/analytics`
 - `GET /svc/keycore/rotation/analytics/overdue`
 - `GET /svc/keycore/rotation/policies`

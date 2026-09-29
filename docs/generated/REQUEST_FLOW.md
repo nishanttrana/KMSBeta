@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T08:59:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T09:05:41Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -10,7 +10,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 - Routes with exact frontend call sites: `536`
 - Routes whose handlers call `h.svc.*`: `542`
 - Routes with detected store calls: `653`
-- Routes with detected internal `pkg/*` calls: `158`
+- Routes with detected internal `pkg/*` calls: `159`
 
 ## How To Trace One Frontend Click
 
@@ -1110,7 +1110,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/keys/{param}/health | GET /keys/{id}/health | handleGetKeyHealth (services/keycore/handler_enterprise_audit.go:96) | CalculateKeyHealth | GetKeyHealthScore, GetInventoryItem, UpsertKeyHealthScore |  |  |  |
 | keycore\|GET\|/analytics/algorithms | GET /analytics/algorithms | handleGetAlgorithmBenchmarks (services/keycore/handler_enterprise_audit.go:439) |  | GetAlgorithmBenchmarks |  |  |  |
 | keycore\|GET\|/attestation/public-key | GET /attestation/public-key | handleAttestationPublicKey (services/keycore/handler_attestation.go:19) | attestationPublicKeyPEM |  |  | pkg/crypto.MarshalPublicKeyPEM |  |
-| keycore\|GET\|/fips/rng-health | GET /fips/rng-health | handleRNGHealth (services/keycore/handler_fips_selftest.go:46) |  |  |  |  |  |
+| keycore\|GET\|/fips/rng-health | GET /fips/rng-health | handleRNGHealth (services/keycore/handler_fips_selftest.go:45) |  |  |  |  |  |
 | keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle |  |  |  |  |
 | keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:68) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1208 |
 | keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:80) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1221 |
@@ -1221,8 +1221,8 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|DELETE\|/scheduling/jobs/{param} | DELETE /scheduling/jobs/{id} | handleDeleteSchedulingJob (services/keycore/handler_advanced.go:142) |  | DeleteSchedulingJob |  |  | web/dashboard/src/lib/keyScheduling.ts:36 |
 | keycore\|POST\|/keys/{param}/attest | POST /keys/{id}/attest | handleAttestKey (services/keycore/handler_attestation.go:5) | AttestKey |  |  | pkg/crypto.Sign | web/dashboard/src/lib/keycore.ts:795 |
 | keycore\|POST\|/keys/{param}/verify-material | POST /keys/{id}/verify-material | handleVerifyKeyMaterial (services/keycore/handler_advanced.go:158) | VerifyKeyIntegrity | GetVersion |  | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keyVerification.ts:6, web/dashboard/src/lib/keycore.ts:785 |
-| keycore\|POST\|/keys/{param}/zeroize-verify | POST /keys/{id}/zeroize-verify | handleZeroizeVerify (services/keycore/handler_fips_selftest.go:69) | GetKey, ConfirmKeyMaterialZeroized | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
-| keycore\|POST\|/fips/self-test | POST /fips/self-test | handleFIPSSelfTest (services/keycore/handler_fips_selftest.go:20) |  |  |  |  |  |
+| keycore\|POST\|/keys/{param}/destruction-check | POST /keys/{id}/destruction-check | handleDestructionCheck (services/keycore/destruction_check.go:88) | CheckKeyDestruction | GetKey, ListVersions | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix |  |
+| keycore\|POST\|/fips/self-test | POST /fips/self-test | handleFIPSSelfTest (services/keycore/handler_fips_selftest.go:19) |  |  |  |  |  |
 | keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:27) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
 | keycore\|POST\|/rotation/policies | POST /rotation/policies | createRotationPolicy (services/keycore/handler_rotation.go:36) |  | CreateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:68 |
 | keycore\|PATCH\|/rotation/policies/{param} | PATCH /rotation/policies/{id} | updateRotationPolicy (services/keycore/handler_rotation.go:88) |  | UpdateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:73 |

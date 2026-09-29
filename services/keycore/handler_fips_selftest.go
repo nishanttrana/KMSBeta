@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"io"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 
@@ -57,48 +56,6 @@ func (h *Handler) handleRNGHealth(w http.ResponseWriter, r *http.Request) {
 		"passed":              result.Passed,
 		"timestamp":           time.Now().UTC().Format(time.RFC3339),
 		"request_id":          reqID,
-	})
-}
-
-// handleZeroizeVerify verifies that a key's in-memory material has been
-// correctly zeroized after destruction.  Callers supply a key ID; the handler
-// confirms the key is in DESTROYED state and that no live memory reference
-// exists in the key cache.
-//
-// POST /keys/{id}/zeroize-verify
-func (h *Handler) handleZeroizeVerify(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	keyID := strings.TrimSpace(r.PathValue("id"))
-
-	key, err := h.svc.GetKey(r.Context(), tenantID, keyID)
-	if err != nil {
-		writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, tenantID)
-		return
-	}
-	if !strings.EqualFold(strings.TrimSpace(key.Status), "destroyed") {
-		writeErr(w, http.StatusConflict, "not_destroyed",
-			"key must be in DESTROYED state before zeroization can be verified", reqID, tenantID)
-		return
-	}
-
-	// Confirm the cache holds no live key material for this ID.
-	cacheClean := h.svc.ConfirmKeyMaterialZeroized(tenantID, keyID)
-
-	// Force a GC sweep so any dangling pointers become unreachable.
-	runtime.GC()
-
-	writeJSON(w, http.StatusOK, map[string]any{
-		"key_id":               keyID,
-		"status":               key.Status,
-		"cache_cleared":        cacheClean,
-		"gc_forced":            true,
-		"zeroization_verified": cacheClean,
-		"timestamp":            time.Now().UTC().Format(time.RFC3339),
-		"request_id":           reqID,
 	})
 }
 

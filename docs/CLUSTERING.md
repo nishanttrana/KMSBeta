@@ -168,8 +168,8 @@ entirely. So:
   `clusterstate.RunsPrimaryJobs(ctx)` is true: compliance, reporting,
   posture and SBOM schedules, certs expiry sweep, CA signer rewrap and mesh
   discovery, governance approval expiry, and the dataprotect receipt
-  reconciler. Keycore's zeroization check still runs everywhere, because it
-  verifies each node's own copy and only emits audit.
+  reconciler. (Keycore's zeroization scheduler, once listed here as running
+  everywhere, was removed in 5.3.0-beta: it never did anything.)
 - **dataprotect working-key state:** a member computes a key's initial
   derivation state from replicated inputs without recording it, and records
   legacy (v1) use only in the audit event.

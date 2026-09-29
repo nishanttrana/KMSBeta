@@ -64,7 +64,7 @@ func (h *Handler) keyOpsRouter(audit route.Emitter) *route.Router {
 	r.Handle("DELETE /scheduling/jobs/{id}", route.Spec{Action: "scheduling_job_deleted", Permission: "key.scheduling.write", Resource: "key", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteSchedulingJob))
 	r.Handle("POST /keys/{id}/attest", route.Spec{Action: "attest_requested", Permission: "key.attest", Resource: "key", TargetParam: "id"}, legacy(h.visibleKeyRoute(h.handleAttestKey)))
 	r.Handle("POST /keys/{id}/verify-material", route.Spec{Action: "verify_material_requested", Permission: "key.integrity.verify", Resource: "key", TargetParam: "id"}, legacy(h.visibleKeyRoute(h.handleVerifyKeyMaterial)))
-	r.Handle("POST /keys/{id}/zeroize-verify", route.Spec{Action: "zeroize_verify_requested", Permission: "key.integrity.verify", Resource: "key", TargetParam: "id"}, legacy(h.visibleKeyRoute(h.handleZeroizeVerify)))
+	r.Handle("POST /keys/{id}/destruction-check", route.Spec{Action: "destruction_checked", Permission: "key.integrity.verify", Resource: "key", TargetParam: "id"}, h.handleDestructionCheck)
 	r.Handle("POST /fips/self-test", route.Spec{Action: "fips_self_test_requested", Permission: "key.fips.selftest", Resource: "key"}, legacy(h.handleFIPSSelfTest))
 	return r
 }

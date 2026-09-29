@@ -9841,15 +9841,15 @@
       "service": "keycore"
     },
     {
-      "action": "zeroize_verify_requested",
+      "action": "destruction_checked",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.visibleKeyRoute(h.handleZeroizeVerify))",
+      "handler": "h.handleDestructionCheck",
       "line": 67,
-      "match_key": "keycore|POST|/keys/{param}/zeroize-verify",
+      "match_key": "keycore|POST|/keys/{param}/destruction-check",
       "method": "POST",
-      "normalized_path": "/keys/{param}/zeroize-verify",
-      "path": "/keys/{id}/zeroize-verify",
+      "normalized_path": "/keys/{param}/destruction-check",
+      "path": "/keys/{id}/destruction-check",
       "permission": "key.integrity.verify",
       "registration": "kernel",
       "resource": "key",
@@ -17718,15 +17718,15 @@
       "service": "keycore"
     },
     {
-      "action": "zeroize_verify_requested",
+      "action": "destruction_checked",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_ops.go",
-      "handler": "legacy(h.visibleKeyRoute(h.handleZeroizeVerify))",
+      "handler": "h.handleDestructionCheck",
       "line": 67,
-      "match_key": "keycore|POST|/keys/{param}/zeroize-verify",
+      "match_key": "keycore|POST|/keys/{param}/destruction-check",
       "method": "POST",
-      "normalized_path": "/keys/{param}/zeroize-verify",
-      "path": "/keys/{id}/zeroize-verify",
+      "normalized_path": "/keys/{param}/destruction-check",
+      "path": "/keys/{id}/destruction-check",
       "permission": "key.integrity.verify",
       "registration": "kernel",
       "resource": "key",
@@ -33768,7 +33768,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T08:59:55Z",
+  "generated_at": "2026-09-29T09:05:41Z",
   "navigation": [
     {
       "group": "Overview",
@@ -67268,7 +67268,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Encrypt"
           ],
-          "line": 2783,
+          "line": 2765,
           "name": "Encrypt",
           "receiver_calls": [
             "s.hsm.Encrypt",
@@ -67458,7 +67458,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1976,
+          "line": 1958,
           "name": "ListKeysCursor",
           "receiver_calls": [
             "s.cache.Delete",
@@ -67482,7 +67482,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1946,
+          "line": 1928,
           "name": "ListKeys",
           "receiver_calls": [
             "s.cache.Delete",
@@ -67566,7 +67566,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2006,
+          "line": 1988,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -67910,7 +67910,7 @@
             "pkg/hsm.Verify",
             "pkg/hsm.Random"
           ],
-          "line": 1665,
+          "line": 1647,
           "name": "ExportPublicComponentPlaintext",
           "receiver_calls": [
             "s.cache.Delete",
@@ -67980,7 +67980,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1737,
+          "line": 1719,
           "name": "ExportCurrentVersionWrapped",
           "receiver_calls": [],
           "store_calls": []
@@ -68076,7 +68076,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2681,
+          "line": 2663,
           "name": "ListVersions",
           "receiver_calls": [],
           "store_calls": [
@@ -68133,7 +68133,7 @@
             "GetKey"
           ],
           "internal_package_calls": [],
-          "line": 2685,
+          "line": 2667,
           "name": "GetVersion",
           "receiver_calls": [],
           "store_calls": [
@@ -68205,7 +68205,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2006,
+          "line": 1988,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -68266,7 +68266,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2565,
+          "line": 2547,
           "name": "GetUsage",
           "receiver_calls": [],
           "store_calls": [
@@ -68315,7 +68315,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2677,
+          "line": 2659,
           "name": "GetApproval",
           "receiver_calls": [],
           "store_calls": [
@@ -68456,7 +68456,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2418,
+          "line": 2400,
           "name": "ListTagCatalog",
           "receiver_calls": [],
           "store_calls": [
@@ -68666,7 +68666,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Verify"
           ],
-          "line": 3072,
+          "line": 3054,
           "name": "Verify",
           "receiver_calls": [
             "s.hsm.Verify",
@@ -68864,7 +68864,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3522,
+          "line": 3504,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -69231,7 +69231,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3635,
+          "line": 3617,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69329,7 +69329,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3718,
+          "line": 3700,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69398,7 +69398,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3426,
+          "line": 3408,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -69483,7 +69483,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3461,
+          "line": 3443,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -69732,7 +69732,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 46,
+      "handler_line": 45,
       "handler_name": "handleRNGHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72004,7 +72004,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 834,
+          "line": 816,
           "name": "CreateKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72083,7 +72083,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 862,
+          "line": 844,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72182,7 +72182,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1573,
+          "line": 1555,
           "name": "FormKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72250,7 +72250,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 862,
+          "line": 844,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72344,7 +72344,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1801,
+          "line": 1783,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72438,7 +72438,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2155,
+          "line": 2137,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72504,7 +72504,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2039,
+          "line": 2021,
           "name": "UpdateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72619,7 +72619,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1801,
+          "line": 1783,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72717,7 +72717,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2050,
+          "line": 2032,
           "name": "ConfigureKeyActivation",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72899,7 +72899,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 2006,
+          "line": 1988,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -72936,7 +72936,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2155,
+          "line": 2137,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72969,7 +72969,7 @@
             "buildDeletedItemsAudit"
           ],
           "internal_package_calls": [],
-          "line": 2231,
+          "line": 2213,
           "name": "DestroyKeyImmediately",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73064,7 +73064,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2332,
+          "line": 2314,
           "name": "SetExportAllowed",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73193,7 +73193,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2696,
+          "line": 2678,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -73256,7 +73256,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2320,
+          "line": 2302,
           "name": "SetUsageLimit",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73315,7 +73315,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2523,
+          "line": 2505,
           "name": "ResetUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73388,7 +73388,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2532,
+          "line": 2514,
           "name": "SetApproval",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73462,7 +73462,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2696,
+          "line": 2678,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -73539,7 +73539,7 @@
             "ListTagCatalog"
           ],
           "internal_package_calls": [],
-          "line": 2440,
+          "line": 2422,
           "name": "UpsertTag",
           "receiver_calls": [],
           "store_calls": [
@@ -73615,7 +73615,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2470,
+          "line": 2452,
           "name": "DeleteTag",
           "receiver_calls": [],
           "store_calls": [
@@ -74102,7 +74102,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2623,
+          "line": 2605,
           "name": "MeterUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -75188,7 +75188,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2696,
+          "line": 2678,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -75625,7 +75625,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1801,
+          "line": 1783,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -76010,108 +76010,78 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "legacy(h.visibleKeyRoute(h.handleZeroizeVerify))",
+      "handler": "h.handleDestructionCheck",
       "handler_external_package_calls": [
-        "runtime.GC",
-        "strings.TrimSpace",
-        "strings.EqualFold",
-        "time.Now"
+        "errors.Is"
       ],
-      "handler_file": "services/keycore/handler_fips_selftest.go",
+      "handler_file": "services/keycore/destruction_check.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetKey",
-        "writeErr",
-        "ConfirmKeyMaterialZeroized",
-        "writeJSON"
+        "visibleKey",
+        "CheckKeyDestruction",
+        "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 69,
-      "handler_name": "handleZeroizeVerify",
+      "handler_line": 88,
+      "handler_name": "handleDestructionCheck",
       "handler_receiver_calls": [],
       "handler_service_calls": [
-        "GetKey",
-        "ConfirmKeyMaterialZeroized"
+        "CheckKeyDestruction"
       ],
       "handler_store_calls": [],
       "method": "POST",
-      "normalized_path": "/keys/{param}/zeroize-verify",
-      "path": "/keys/{id}/zeroize-verify",
+      "normalized_path": "/keys/{param}/destruction-check",
+      "path": "/keys/{id}/destruction-check",
       "route_file": "services/keycore/handler_key_ops.go",
       "route_line": 67,
       "service": "keycore",
       "service_external_package_calls": [
-        "errors.Is",
-        "context.Background"
+        "strings.HasPrefix",
+        "time.Now"
       ],
       "service_helper_calls": [
-        "reconcileLifecycle",
-        "existsToken",
-        "Get",
+        "GetKey",
         "normalizeLifecycleStatus",
-        "Delete",
-        "noteCanaryProbe",
-        "Set"
+        "ListVersions",
+        "Error"
       ],
-      "service_internal_package_calls": [],
+      "service_internal_package_calls": [
+        "pkg/hsm.Objects",
+        "pkg/hsm.TenantPrefix"
+      ],
       "service_method_details": [
         {
           "external_package_calls": [
-            "errors.Is"
+            "strings.HasPrefix",
+            "time.Now"
           ],
-          "file": "services/keycore/keycore.go",
+          "file": "services/keycore/destruction_check.go",
           "helper_calls": [
-            "reconcileLifecycle",
-            "existsToken",
-            "Get",
+            "GetKey",
             "normalizeLifecycleStatus",
-            "Delete",
-            "noteCanaryProbe",
-            "Set"
+            "ListVersions",
+            "Error"
           ],
-          "internal_package_calls": [],
-          "line": 2006,
-          "name": "GetKey",
+          "internal_package_calls": [
+            "pkg/hsm.Objects",
+            "pkg/hsm.TenantPrefix"
+          ],
+          "line": 46,
+          "name": "CheckKeyDestruction",
           "receiver_calls": [
-            "s.exists.TestString",
-            "s.cache.Get",
-            "s.cache.Delete",
-            "s.exists.AddString",
-            "s.cache.Set"
+            "s.hsm.Objects"
           ],
           "store_calls": [
-            "GetKey"
+            "GetKey",
+            "ListVersions"
           ]
-        },
-        {
-          "external_package_calls": [
-            "context.Background"
-          ],
-          "file": "services/keycore/keycore.go",
-          "helper_calls": [
-            "Get",
-            "Delete"
-          ],
-          "internal_package_calls": [],
-          "line": 131,
-          "name": "ConfirmKeyMaterialZeroized",
-          "receiver_calls": [
-            "s.cache.Get",
-            "s.cache.Delete"
-          ],
-          "store_calls": []
         }
       ],
       "service_receiver_calls": [
-        "s.exists.TestString",
-        "s.cache.Get",
-        "s.cache.Delete",
-        "s.exists.AddString",
-        "s.cache.Set"
+        "s.hsm.Objects"
       ],
       "service_store_calls": [
-        "GetKey"
+        "GetKey",
+        "ListVersions"
       ]
     },
     {
@@ -76127,7 +76097,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 20,
+      "handler_line": 19,
       "handler_name": "handleFIPSSelfTest",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -91608,7 +91578,7 @@
     "nav_items": 27,
     "request_flows": 909,
     "request_flows_with_frontend": 536,
-    "request_flows_with_internal_package_calls": 158,
+    "request_flows_with_internal_package_calls": 159,
     "request_flows_with_service_calls": 542,
     "request_flows_with_store_calls": 653,
     "subpane_groups": 8,
@@ -111783,7 +111753,7 @@
         "frontendSites": [],
         "handler": "handleRNGHealth",
         "handlerFile": "services/keycore/handler_fips_selftest.go",
-        "handlerLine": 46,
+        "handlerLine": 45,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -115511,41 +115481,37 @@
         ]
       },
       {
-        "complexity": 6,
+        "complexity": 5,
         "externalPackages": [
-          "runtime.GC",
-          "strings.TrimSpace",
-          "strings.EqualFold",
-          "time.Now",
           "errors.Is",
-          "context.Background"
+          "strings.HasPrefix",
+          "time.Now"
         ],
         "frontendSites": [],
-        "handler": "handleZeroizeVerify",
-        "handlerFile": "services/keycore/handler_fips_selftest.go",
-        "handlerLine": 69,
+        "handler": "handleDestructionCheck",
+        "handlerFile": "services/keycore/destruction_check.go",
+        "handlerLine": 88,
         "hasFrontend": false,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/hsm.Objects",
+          "pkg/hsm.TenantPrefix"
+        ],
         "method": "POST",
-        "normalizedPath": "/keys/{param}/zeroize-verify",
-        "path": "/keys/{id}/zeroize-verify",
+        "normalizedPath": "/keys/{param}/destruction-check",
+        "path": "/keys/{id}/destruction-check",
         "receiverCalls": [
-          "s.exists.TestString",
-          "s.cache.Get",
-          "s.cache.Delete",
-          "s.exists.AddString",
-          "s.cache.Set"
+          "s.hsm.Objects"
         ],
         "risk": "high",
-        "routeKey": "keycore|POST|/keys/{param}/zeroize-verify",
+        "routeKey": "keycore|POST|/keys/{param}/destruction-check",
         "sensitive": true,
         "service": "keycore",
         "serviceCalls": [
-          "GetKey",
-          "ConfirmKeyMaterialZeroized"
+          "CheckKeyDestruction"
         ],
         "storeCalls": [
-          "GetKey"
+          "GetKey",
+          "ListVersions"
         ],
         "uiLabels": [
           "API only"
@@ -115559,7 +115525,7 @@
         "frontendSites": [],
         "handler": "handleFIPSSelfTest",
         "handlerFile": "services/keycore/handler_fips_selftest.go",
-        "handlerLine": 20,
+        "handlerLine": 19,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -123904,7 +123870,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T08:59:55Z",
+    "generatedAt": "2026-09-29T09:05:41Z",
     "methods": [
       "DELETE",
       "GET",

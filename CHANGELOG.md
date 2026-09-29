@@ -4,6 +4,39 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.5.0-beta] — 2026-09-29
+
+### Keycore: the destruction check reports what it checked, not "zeroization verified"
+`POST /keys/{id}/zeroize-verify` answered `"zeroization_verified": true`
+when the key cache held no entry for the key, or when there was no cache.
+That claimed FIPS 140-3 SSP zeroization from a check that looked at
+neither the stored material nor the HSM, and the cache holds only key
+metadata, never material. It could not even answer for a destroyed key:
+destroy sets the status to `deleted`, the handler wanted `destroyed`, and
+`GetKey` answers 404 for a deleted key, so every call got 404 or 409. It
+also forced a Go GC and reported `gc_forced`, which zeroes nothing.
+
+- **Breaking: replaced by `POST /keys/{id}/destruction-check`** (same
+  `key.integrity.verify` permission, key must be visible). For a destroyed
+  key it counts the remaining `key_versions` rows (the only table holding
+  material) and, with the HSM connector enabled, lists every HSM object
+  under the key's label prefix. Destroy clears the row's HSM labels, so the
+  check goes by label, not by what the row says. `result` is `removed`,
+  `material_remains` or `incomplete` (HSM unreachable). Every answer
+  carries `not_covered`: the check can't see database pages until vacuumed,
+  backups or process memory, and never claims they were overwritten.
+- **Audit:** `audit.key.destruction_checked` replaces
+  `audit.key.zeroize_verify_requested`, with the result and counts;
+  `material_remains` is critical. A live key is refused (409
+  `key_not_destroyed`) and audited as refused.
+- `Service.ConfirmKeyMaterialZeroized` is removed.
+- docs/CLUSTERING.md no longer says keycore's zeroization check runs on
+  every node; that scheduler was removed in 5.3.0-beta.
+- The dashboard never displayed the field; only the generated API catalogue
+  listed the route.
+- **Open:** on a cluster the check runs on the primary (the default for
+  POST). Checking each member's replica is not built.
+
 ## [6.4.0-beta] — 2026-09-29
 
 ### Interfaces: the record-only PQC mode is removed
