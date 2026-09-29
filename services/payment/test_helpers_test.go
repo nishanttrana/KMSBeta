@@ -61,6 +61,7 @@ type fakePaymentKeyCore struct {
 	mu        sync.Mutex
 	counter   int
 	materials map[string][]byte
+	usages    map[string]string // key ID -> usage of its last export
 }
 
 func newFakePaymentKeyCore() *fakePaymentKeyCore {
@@ -97,9 +98,13 @@ func (f *fakePaymentKeyCore) GetKey(_ context.Context, tenantID string, keyID st
 	}, nil
 }
 
-func (f *fakePaymentKeyCore) ExportKey(_ context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
+func (f *fakePaymentKeyCore) ExportKey(_ context.Context, tenantID string, keyID string, usage string) (map[string]interface{}, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.usages == nil {
+		f.usages = map[string]string{}
+	}
+	f.usages[keyID] = usage
 	raw := f.ensureMaterial(tenantID, keyID)
 	return map[string]interface{}{
 		"material": base64.StdEncoding.EncodeToString(raw),

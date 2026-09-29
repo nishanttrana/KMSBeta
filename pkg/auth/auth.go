@@ -102,6 +102,22 @@ func ContextWithClaims(ctx context.Context, claims *Claims) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)
 }
 
+const rawTokenKey ctxKey = "raw_token"
+
+// ContextWithVerifiedToken keeps the bearer token whose claims are in ctx, so
+// a service acting for the caller can forward it to keycore, which verifies
+// it itself (pkg/delegation). Only set after the token was verified.
+func ContextWithVerifiedToken(ctx context.Context, raw string) context.Context {
+	return context.WithValue(ctx, rawTokenKey, raw)
+}
+
+// VerifiedTokenFromContext returns the token ContextWithVerifiedToken kept.
+// It is a credential: never log it or put it in an error or URL.
+func VerifiedTokenFromContext(ctx context.Context) (string, bool) {
+	raw, ok := ctx.Value(rawTokenKey).(string)
+	return raw, ok && raw != ""
+}
+
 func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
 	c, ok := ctx.Value(claimsKey).(*Claims)
 	return c, ok
@@ -115,7 +131,8 @@ func HTTPMiddleware(next http.Handler, parser func(string) (*Claims, error)) htt
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(ContextWithClaims(r.Context(), claims)))
+		ctx := ContextWithVerifiedToken(ContextWithClaims(r.Context(), claims), raw)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

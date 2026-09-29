@@ -4,6 +4,49 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.0.0-beta] — 2026-09-29
+
+### Security: services acting for a user now use keys as that user
+- **What was wrong.** dataprotect (FPE, tokenization, field, envelope and
+  searchable encryption), payment (PIN and TR-31 translation, PVV/CVV/MAC,
+  ISO 20022) and certs (CA signing) called keycore with their own service
+  identity, and keycore lets a service identity use any key in the tenant.
+  So anyone who could reach one of those services could use any key there,
+  whatever their grants.
+- **Fix (`pkg/delegation`).** These services now forward the user's own
+  verified token (`X-Vecta-Delegated-Token`) and the usage they perform
+  (`X-Vecta-Key-Usage`) on the keycore call that decides: dataprotect's
+  per-operation meter, payment's key export and ISO 20022 operations, and
+  certs' signatures. Keycore verifies the token itself, accepts it only from
+  a service identity, for a user (not a service token) of the key's tenant,
+  and decides as that user: grants must allow the usage. Refusals are
+  audited as `audit.key.delegation_refused` (`delegation_by_non_service`,
+  `delegation_token_invalid`, `delegation_token_is_service`,
+  `delegation_tenant_mismatch`, `delegation_usage_invalid`) or
+  `audit.key.access_refused` with `via` and `usage`; every keycore event
+  for a delegated request carries `on_behalf_of`, `via` and `usage`.
+  Envoy strips both headers from outside requests.
+- **New grant operations:** `fpe-encrypt`, `fpe-decrypt`, `tokenize`,
+  `detokenize`, `translate-wrap`, `translate-unwrap`, `translate-encrypt`,
+  `translate-decrypt`, `certificate-sign`, `crl-sign`.
+
+### Breaking
+- A user's grants now decide these operations. A user with only `encrypt`
+  on a key can't FPE-encrypt with it through dataprotect; grant
+  `fpe-encrypt` (or `all`). Signing with an HSM CA as a non-admin needs
+  `certificate-sign` / `crl-sign` on the CA's key. Admins and key creators
+  are unaffected. Requests with no user behind them (schedulers, ACME/EST,
+  OCSP) still act as the service.
+
+### Known issue (not introduced here): payment operations by key ID
+- Payment fetches key material with `POST /keys/{id}/export` and reads a
+  plaintext `material` field; keycore's export only returns material
+  wrapped under a `wrapping_key_id`. Every payment operation that names a
+  key by ID therefore fails (`keycore_export_failed`); only inline
+  `material_b64` works. Payment's tests used a fake keycore that returned
+  the field. The fix needs an owner decision
+  ([KEY_ACCESS_MODEL.md](docs/SECURITY/KEY_ACCESS_MODEL.md) section 5a).
+
 ## [5.4.0-beta] — 2026-09-29
 
 ### Crypto Agility: risk assessment (CARAF) and readiness & execution

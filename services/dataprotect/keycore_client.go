@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/servicetoken"
 )
 
@@ -113,7 +114,7 @@ func (c *HTTPKeyCoreClient) ServiceDerive(ctx context.Context, tenantID string, 
 	return raw, metaInt(out["version"]), nil
 }
 
-func (c *HTTPKeyCoreClient) MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error {
+func (c *HTTPKeyCoreClient) MeterUsage(ctx context.Context, tenantID string, keyID string, operation string, usage string) error {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return errors.New("keycore base url is not configured")
 	}
@@ -135,6 +136,9 @@ func (c *HTTPKeyCoreClient) MeterUsage(ctx context.Context, tenantID string, key
 		return err
 	}
 	servicetoken.Authorize(ctx, req)
+	if usage != "" {
+		delegation.Attach(ctx, req, usage)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {

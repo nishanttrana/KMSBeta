@@ -5,6 +5,29 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A fake that answers what the code expects hides a contract nobody kept
+- **What happened:** payment fetched key material with `POST
+  /keys/{id}/export` and read a plaintext `material` field. Keycore's export
+  has only ever returned material wrapped under a `wrapping_key_id`, and
+  fails without one, so every payment operation naming a key by ID failed
+  against the real keycore; only inline `material_b64` worked. Payment's
+  tests used a fake keycore whose `ExportKey` returned `material`, so they
+  all passed. Found while wiring delegation, when a keycore test of the same
+  call returned `400 wrapping_key_id is required`.
+- **Why it slipped through:** the fake was written from the client's
+  expectations, not from the server's contract, and no test called the real
+  keycore handler the way payment did.
+- **Rule:** a fake of another service returns exactly what that service's
+  handler returns; for each client call, one test drives the real handler
+  with the client's request shape.
+
+### crypto.Signer drops the request, and with it the user
+- **What happened:** certs' HSM CA signer implements `crypto.Signer`, whose
+  `Sign` has no context; it signed under `context.Background()`, so the user
+  who issued the certificate never reached keycore.
+- **Rule:** a `crypto.Signer` backed by a remote key is built per request and
+  carries that request's context and usage (`hsmSigner.ctx`, `.usage`).
+
 ### A check that reads a setting nobody can write is dead code with a test
 - **What happened:** 5.1.0-beta enforced a tenant "minimum algorithm tier"
   read from governance posture, and a unit test injected the value and
@@ -196,7 +219,8 @@ Newest entries on top.
   certs (CA signing) call keycore with their own service JWT, and service
   principals skip per-key grants. So keycore can't tell which user asked or
   for which usage, and anyone who can reach dataprotect can FPE with any key
-  in the tenant. Open; phase 0 in KEY_ACCESS_MODEL.md section 5.
+  in the tenant. Fixed in 6.0.0-beta (`pkg/delegation`); bare service
+  identities are not yet limited to their usages.
 - **Rule:** a service acting for a user forwards the user's verified token
   and the intended usage; keycore checks both. A bare service identity is
   limited to the usages listed for it.

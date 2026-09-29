@@ -24,6 +24,12 @@ development secrets as much as production ones.
   in test output (`t.Log(dsn)`) or error messages.
 - **Services** log and return errors without secret values. Redact tokens,
   DSNs and key material, and fingerprint instead of printing.
+- **Forwarded user tokens** (6.0.0-beta, `pkg/delegation`): a service
+  acting for a user sends the user's bearer token to keycore in
+  `X-Vecta-Delegated-Token`, over internal mTLS only. It is a credential:
+  never log request headers, never copy it into an audit event, error or
+  URL (keycore records who the user is, not the token), and never forward it
+  anywhere but keycore. Envoy strips the header from outside requests.
 - **Commits:** review `git status` / `git diff --cached` before committing.
   `.env`, keys and binaries never go in.
 

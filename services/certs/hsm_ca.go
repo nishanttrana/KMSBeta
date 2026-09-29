@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -32,7 +33,9 @@ const signerVersionHSM = "hsm"
 // HSMKeyStore is keycore's HSM key API as certs uses it.
 type HSMKeyStore interface {
 	CreateHSMSigningKey(ctx context.Context, tenantID, algorithm, name string) (keyID string, publicDER []byte, err error)
-	SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte) ([]byte, error)
+	// SignDigest signs with an HSM key. A non-empty usage (certificate-sign,
+	// crl-sign) is performed for the user in ctx, whose grants keycore checks.
+	SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte, usage string) ([]byte, error)
 }
 
 var errHSMCAAlgorithm = errors.New("HSM CA keys are ECDSA P-256 or P-384 (the HSM signs RSA only with PSS, which OCSP responses can't carry)")
@@ -46,11 +49,15 @@ func hsmCAAlgorithm(alg string) string {
 }
 
 // hsmSigner is a crypto.Signer whose private key is in the tenant's HSM.
+// crypto.Signer carries no context, so the signer holds the request's: with
+// usage set, keycore signs for the user who asked (pkg/delegation).
 type hsmSigner struct {
 	keys     HSMKeyStore
 	tenantID string
 	keyID    string
 	pub      crypto.PublicKey
+	ctx      context.Context
+	usage    string
 }
 
 func (h *hsmSigner) Public() crypto.PublicKey { return h.pub }
@@ -62,12 +69,18 @@ func (h *hsmSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	if name == "" {
 		return nil, fmt.Errorf("HSM CA keys sign SHA-256/384/512 digests, not %v", opts.HashFunc())
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	parent := h.ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
-	return h.keys.SignDigest(ctx, h.tenantID, h.keyID, name, digest)
+	return h.keys.SignDigest(ctx, h.tenantID, h.keyID, name, digest, h.usage)
 }
 
-// newHSMCAKey creates a CA key in the tenant's HSM through keycore.
+// newHSMCAKey creates a CA key in the tenant's HSM through keycore. Its
+// signer self-signs the new CA as the certs service: the user was already
+// authorized to create the CA, and holds no grant on a key made a moment ago.
 func (s *Service) newHSMCAKey(ctx context.Context, tenantID, algorithm, name string) (*hsmSigner, error) {
 	alg := hsmCAAlgorithm(algorithm)
 	if alg == "" {
@@ -89,8 +102,8 @@ func (s *Service) newHSMCAKey(ctx context.Context, tenantID, algorithm, name str
 }
 
 // hsmCASigner is the signer of an existing HSM CA; its public key is the
-// one in the CA certificate.
-func (s *Service) hsmCASigner(ca CA) (crypto.Signer, error) {
+// one in the CA certificate. With usage set it signs for the user in ctx.
+func (s *Service) hsmCASigner(ctx context.Context, ca CA, usage string) (crypto.Signer, error) {
 	keys, ok := s.keycore.(HSMKeyStore)
 	if !ok {
 		return nil, errors.New("HSM CA keys need keycore, which is not configured")
@@ -99,7 +112,7 @@ func (s *Service) hsmCASigner(ca CA) (crypto.Signer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &hsmSigner{keys: keys, tenantID: ca.TenantID, keyID: ca.KeyRef, pub: cert.PublicKey}, nil
+	return &hsmSigner{keys: keys, tenantID: ca.TenantID, keyID: ca.KeyRef, pub: cert.PublicKey, ctx: ctx, usage: usage}, nil
 }
 
 // CreateHSMSigningKey creates an HSM-resident signing key in keycore and
@@ -128,19 +141,24 @@ func (h *HTTPKeyCoreSigner) CreateHSMSigningKey(ctx context.Context, tenantID, a
 }
 
 // SignDigest has keycore sign a digest with an HSM key.
-func (h *HTTPKeyCoreSigner) SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte) ([]byte, error) {
+func (h *HTTPKeyCoreSigner) SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte, usage string) ([]byte, error) {
 	var out struct {
 		Signature string `json:"signature"`
 	}
-	if err := h.post(ctx, tenantID, "/keys/"+keyID+"/sign", map[string]interface{}{
+	if err := h.postAs(ctx, tenantID, "/keys/"+keyID+"/sign", map[string]interface{}{
 		"tenant_id": tenantID, "data": base64.StdEncoding.EncodeToString(digest), "algorithm": hash, "prehashed": true,
-	}, &out); err != nil {
+	}, &out, usage); err != nil {
 		return nil, err
 	}
 	return base64.StdEncoding.DecodeString(out.Signature)
 }
 
 func (h *HTTPKeyCoreSigner) post(ctx context.Context, tenantID, path string, body, out interface{}) error {
+	return h.postAs(ctx, tenantID, path, body, out, "")
+}
+
+// postAs is post for a usage performed for the user in ctx (pkg/delegation).
+func (h *HTTPKeyCoreSigner) postAs(ctx context.Context, tenantID, path string, body, out interface{}, usage string) error {
 	if h == nil || h.baseURL == "" {
 		return errors.New("keycore base url is empty")
 	}
@@ -155,6 +173,9 @@ func (h *HTTPKeyCoreSigner) post(ctx context.Context, tenantID, path string, bod
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Tenant-ID", tenantID)
 	servicetoken.Authorize(ctx, req)
+	if usage != "" {
+		delegation.Attach(ctx, req, usage)
+	}
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return err

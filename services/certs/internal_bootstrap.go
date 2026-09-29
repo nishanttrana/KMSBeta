@@ -195,7 +195,7 @@ func (s *Service) bootstrapCA(tenant, name string, parent *CA) (CA, error) {
 	if err != nil {
 		return CA{}, err
 	}
-	return s.mintCA(req, newID("ca"), signer, enc, parent)
+	return s.mintCA(context.Background(), req, newID("ca"), signer, enc, parent)
 }
 
 func (b *bootstrapPKI) verifyChain() error {

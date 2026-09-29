@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/servicetoken"
 )
 
 type KeyCoreClient interface {
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
-	ExportKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
+	// ExportKey returns key material for usage, performed for the user in
+	// ctx: keycore decides with that user's grants (pkg/delegation).
+	ExportKey(ctx context.Context, tenantID string, keyID string, usage string) (map[string]interface{}, error)
 	ImportKey(ctx context.Context, tenantID string, name string, algorithm string, keyType string, purpose string, materialB64 string) (string, error)
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) (map[string]interface{}, error)
 	Encrypt(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error)
@@ -54,9 +57,9 @@ func (c *HTTPKeyCoreClient) GetKey(ctx context.Context, tenantID string, keyID s
 	return keyMap, nil
 }
 
-func (c *HTTPKeyCoreClient) ExportKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error) {
+func (c *HTTPKeyCoreClient) ExportKey(ctx context.Context, tenantID string, keyID string, usage string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/export?tenant_id=" + strings.TrimSpace(tenantID)
-	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{})
+	return c.doJSONAs(ctx, http.MethodPost, path, map[string]interface{}{}, usage)
 }
 
 func (c *HTTPKeyCoreClient) ImportKey(ctx context.Context, tenantID string, name string, algorithm string, keyType string, purpose string, materialB64 string) (string, error) {
@@ -89,41 +92,47 @@ func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyI
 
 func (c *HTTPKeyCoreClient) Encrypt(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/encrypt"
-	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{
+	return c.doJSONAs(ctx, http.MethodPost, path, map[string]interface{}{
 		"tenant_id":    strings.TrimSpace(tenantID),
 		"plaintext":    strings.TrimSpace(plaintextB64),
 		"iv":           strings.TrimSpace(ivB64),
 		"reference_id": strings.TrimSpace(referenceID),
-	})
+	}, "encrypt")
 }
 
 func (c *HTTPKeyCoreClient) Decrypt(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/decrypt"
-	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{
+	return c.doJSONAs(ctx, http.MethodPost, path, map[string]interface{}{
 		"tenant_id":  strings.TrimSpace(tenantID),
 		"ciphertext": strings.TrimSpace(ciphertextB64),
 		"iv":         strings.TrimSpace(ivB64),
-	})
+	}, "decrypt")
 }
 
 func (c *HTTPKeyCoreClient) Sign(ctx context.Context, tenantID string, keyID string, dataB64 string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/sign"
-	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{
+	return c.doJSONAs(ctx, http.MethodPost, path, map[string]interface{}{
 		"tenant_id": strings.TrimSpace(tenantID),
 		"data":      strings.TrimSpace(dataB64),
-	})
+	}, "sign")
 }
 
 func (c *HTTPKeyCoreClient) Verify(ctx context.Context, tenantID string, keyID string, dataB64 string, signatureB64 string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/verify"
-	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{
+	return c.doJSONAs(ctx, http.MethodPost, path, map[string]interface{}{
 		"tenant_id": strings.TrimSpace(tenantID),
 		"data":      strings.TrimSpace(dataB64),
 		"signature": strings.TrimSpace(signatureB64),
-	})
+	}, "verify")
 }
 
 func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path string, payload interface{}) (map[string]interface{}, error) {
+	return c.doJSONAs(ctx, method, path, payload, "")
+}
+
+// doJSONAs calls keycore; a non-empty usage is performed for the user in ctx
+// (pkg/delegation), so keycore decides key access with that user's grants.
+func (c *HTTPKeyCoreClient) doJSONAs(ctx context.Context, method string, path string, payload interface{}, usage string) (map[string]interface{}, error) {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, errors.New("keycore base url is empty")
 	}
@@ -140,6 +149,9 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 		return nil, err
 	}
 	servicetoken.Authorize(ctx, req)
+	if usage != "" {
+		delegation.Attach(ctx, req, usage)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {

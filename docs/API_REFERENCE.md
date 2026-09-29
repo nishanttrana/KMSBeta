@@ -973,6 +973,18 @@ not_found` as a missing one and emits `audit.key.access_refused`
 (`operation: read`, `reason: not_visible`). Grants accept the operation
 `read`, which allows no use of the key.
 
+**Delegated key use (6.0.0-beta).** A platform service performing a user's
+request sends `X-Vecta-Delegated-Token` (the user's bearer token) and
+`X-Vecta-Key-Usage` (one of `encrypt`, `decrypt`, `wrap`, `unwrap`,
+`export`, `sign`, `verify`, `mac`, `fpe-encrypt`, `fpe-decrypt`,
+`tokenize`, `detokenize`, `translate-wrap`, `translate-unwrap`,
+`translate-encrypt`, `translate-decrypt`, `certificate-sign`, `crl-sign`).
+Keycore verifies the token, accepts it only from a service identity and for
+a user of the key's tenant, and decides key access as that user for that
+usage; otherwise `403 delegation_refused` with the reason. These headers are
+internal: Envoy removes them from outside requests. Grants accept the
+usages above as operations.
+
 The actor is the verified token's. `updated_by` in `PUT
 /keys/{id}/access-policy` and `created_by` in `POST /access/groups` are
 rejected with `400` (they were trusted before 4.0.0-beta), and the
@@ -2902,7 +2914,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
-- `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
+- `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
 - `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`, `interface_tls_config_read`, `interface_tls_config_updated`, `interface_ports_listed`, `interface_port_upserted`, `interface_port_deleted`: keycore access management (kernel, 4.0.0-beta)
 - `audit.key.<action>_requested` for `create`, `import`, `form`, `bulk_import`, `bulk_rotate`, `bulk_delete`, `update`, `rotate`, `activate`, `deactivate`, `disable`, `destroy`, `export_policy_update`, `version_activate`, `version_deactivate`, `version_delete`, `usage_limit_update`, `usage_reset`, `approval_update`, `iv_mode_update`, `tag_upsert`, `tag_delete`: keycore key-management requests (kernel, 4.0.0-beta)
 - `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |

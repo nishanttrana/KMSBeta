@@ -249,7 +249,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 	if _, err := s.signWithKeyCoreIfConfigured(ctx, req.TenantID, req.KeyBackend, req.KeyRef, buildCASigningIntent(req)); err != nil {
 		return CA{}, err
 	}
-	ca, err := s.mintCA(req, caID, signer, encSigner, parent)
+	ca, err := s.mintCA(ctx, req, caID, signer, encSigner, parent)
 	if err != nil {
 		return CA{}, err
 	}
@@ -273,7 +273,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 // mintCA signs a CA certificate for req under parent (nil: self-signed root)
 // and returns its record, without storing it. CreateCA stores it; the
 // internal PKI bootstrap uses it before the database is reachable.
-func (s *Service) mintCA(req CreateCARequest, caID string, signer crypto.Signer, encSigner EncryptedSigner, parent *CA) (CA, error) {
+func (s *Service) mintCA(ctx context.Context, req CreateCARequest, caID string, signer crypto.Signer, encSigner EncryptedSigner, parent *CA) (CA, error) {
 	subject := parseSubject(req.Subject, req.Name)
 	now := time.Now().UTC()
 	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 120))
@@ -300,7 +300,7 @@ func (s *Service) mintCA(req CreateCARequest, caID string, signer crypto.Signer,
 		if err != nil {
 			return CA{}, err
 		}
-		parentKey, err := s.loadCASigner(*parent)
+		parentKey, err := s.loadCASignerFor(ctx, *parent, "certificate-sign")
 		if err != nil {
 			return CA{}, err
 		}
@@ -547,7 +547,7 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if err != nil {
 		return Certificate{}, "", err
 	}
-	issuerSigner, err := s.loadCASigner(ca)
+	issuerSigner, err := s.loadCASignerFor(ctx, ca, "certificate-sign")
 	if err != nil {
 		return Certificate{}, "", err
 	}
@@ -990,7 +990,7 @@ func (s *Service) GenerateCRL(ctx context.Context, tenantID string, caID string)
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	issuerSigner, err := s.loadCASigner(ca)
+	issuerSigner, err := s.loadCASignerFor(ctx, ca, "crl-sign")
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -2391,9 +2391,19 @@ func (s *Service) ensureDefaultProfiles(ctx context.Context, tenantID string) er
 	return nil
 }
 
+// loadCASigner is the CA's signer, used as the certs service (OCSP, SCEP,
+// internal bootstrap: no user behind the request).
 func (s *Service) loadCASigner(ca CA) (crypto.Signer, error) {
+	return s.loadCASignerFor(context.Background(), ca, "")
+}
+
+// loadCASignerFor is the CA's signer for usage (certificate-sign, crl-sign)
+// performed for the user in ctx. It matters for an HSM CA, whose key is in
+// keycore: keycore checks that user's grant (pkg/delegation). A software
+// CA's key is decrypted here, under the certs master key.
+func (s *Service) loadCASignerFor(ctx context.Context, ca CA, usage string) (crypto.Signer, error) {
 	if ca.KeyBackend == "hsm" && ca.SignerKeyVersion == signerVersionHSM {
-		return s.hsmCASigner(ca)
+		return s.hsmCASigner(ctx, ca, usage)
 	}
 	raw, err := s.decryptSigner(ca)
 	if err != nil {

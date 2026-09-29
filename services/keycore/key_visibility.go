@@ -46,6 +46,11 @@ func (v keyView) sees(k Key) bool {
 func (s *Service) keyViewFor(ctx context.Context, tenantID string) (keyView, error) {
 	actor := accessActorFromContext(ctx)
 	claims, _ := pkgauth.ClaimsFromContext(ctx)
+	if actor.Via != "" {
+		// A service acting for a user sees what the user sees: the token in
+		// ctx is the service's, so the user's own permissions decide.
+		claims = &pkgauth.Claims{UserID: actor.UserID, Role: actor.Role, Permissions: actor.Permissions}
+	}
 	if actorIsServicePrincipal(actor) || (actor.Authenticated && actorIsAdmin(actor)) || route.Allowed(claims, permInventoryRead) {
 		return keyView{all: true}, nil
 	}

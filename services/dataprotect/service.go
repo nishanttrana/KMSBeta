@@ -1383,7 +1383,7 @@ func (s *Service) SubmitFieldEncryptionUsageReceipt(ctx context.Context, req Fie
 		return FieldEncryptionUsageReceipt{}, err
 	}
 	for i := 0; i < req.OpCount; i++ {
-		if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, req.Operation); err != nil {
+		if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, req.Operation, ""); err != nil {
 			return FieldEncryptionUsageReceipt{}, err
 		}
 	}
@@ -3197,7 +3197,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) (_ []map[st
 	if maxTTL > 0 && req.TTLHours > maxTTL {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "token ttl exceeds configured policy limit")
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "encrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "encrypt", "tokenize"); err != nil {
 		return nil, err
 	}
 
@@ -3459,7 +3459,7 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) (_ []ma
 		cacheKey := fmt.Sprintf("%s|%s|%d", vault.KeyID, kdfVersionOrLegacy(record.KDFVersion), record.KDFKeyVersion)
 		key, ok := keyCache[cacheKey]
 		if !ok {
-			if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "decrypt"); err != nil {
+			if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "decrypt", "detokenize"); err != nil {
 				return nil, err
 			}
 			meta, err := s.keycore.GetKey(ctx, req.TenantID, vault.KeyID)
@@ -3541,7 +3541,7 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (_ map[string]
 	if algo != "FF1" {
 		return nil, s.refuseFPE(ctx, req, "encrypt", algo, start)
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt", "fpe-encrypt"); err != nil {
 		return nil, err
 	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "fpe")
@@ -3577,7 +3577,7 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (_ map[string]
 	if algo != "FF1" && algo != fpeLegacyFF1 && algo != fpeLegacyFF3 {
 		return nil, s.refuseFPE(ctx, req, "decrypt", algo, start)
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt", "fpe-decrypt"); err != nil {
 		return nil, err
 	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "fpe")
@@ -3760,7 +3760,7 @@ func (s *Service) ApplyMask(ctx context.Context, req MaskRequest) (map[string]in
 	seed := []byte{}
 	if policy.Consistent {
 		if policy.KeyID != "" {
-			if err := s.enforceKeycoreMetering(ctx, req.TenantID, policy.KeyID, "encrypt"); err != nil {
+			if err := s.enforceKeycoreMetering(ctx, req.TenantID, policy.KeyID, "encrypt", "encrypt"); err != nil {
 				return nil, err
 			}
 			mk, err := s.resolveWorkingKey(ctx, req.TenantID, policy.KeyID, "masking")
@@ -3938,7 +3938,7 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (_ map
 	if docRaw, jErr := json.Marshal(req.Document); jErr == nil && len(docRaw) > policy.MaxDocumentBytes {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "document size exceeds configured policy limit")
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt", "encrypt"); err != nil {
 		return nil, err
 	}
 	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "field-encrypt", policy)
@@ -4069,7 +4069,7 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (_ map
 		key, ok := keyCache[keyID]
 		if !ok {
 			if _, seen := metered[keyID]; !seen {
-				if err := s.enforceKeycoreMetering(ctx, req.TenantID, keyID, "decrypt"); err != nil {
+				if err := s.enforceKeycoreMetering(ctx, req.TenantID, keyID, "decrypt", "decrypt"); err != nil {
 					return nil, err
 				}
 				metered[keyID] = struct{}{}
@@ -4135,7 +4135,7 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (_ m
 	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
 		return nil, err
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "wrap"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "wrap", "wrap"); err != nil {
 		return nil, err
 	}
 	kek, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "envelope-kek", policy)
@@ -4196,7 +4196,7 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (_ m
 	if err := s.enforceEnvelopePolicyDecrypt(policy, req.KeyID, req.DEKCreatedAt); err != nil {
 		return nil, err
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "unwrap"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "unwrap", "unwrap"); err != nil {
 		return nil, err
 	}
 	kek, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "envelope-kek", policy)
@@ -4263,7 +4263,7 @@ func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) 
 	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
 		return nil, err
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt", "encrypt"); err != nil {
 		return nil, err
 	}
 	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "searchable", policy)
@@ -4305,7 +4305,7 @@ func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) 
 	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
 		return nil, err
 	}
-	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt", "decrypt"); err != nil {
 		return nil, err
 	}
 	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "searchable", policy)
@@ -4345,7 +4345,11 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 	return s.events.Publish(ctx, subject, raw)
 }
 
-func (s *Service) enforceKeycoreMetering(ctx context.Context, tenantID string, keyID string, operation string) error {
+// enforceKeycoreMetering meters a key operation in keycore, which is also
+// where key access is decided. usage names what is done for the user in ctx
+// (fpe-encrypt, tokenize, ...), so keycore checks the user's grant for it;
+// "" meters without a decision (lease receipts, already authorized).
+func (s *Service) enforceKeycoreMetering(ctx context.Context, tenantID string, keyID string, operation string, usage string) error {
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
 	if tenantID == "" || keyID == "" {
@@ -4354,7 +4358,7 @@ func (s *Service) enforceKeycoreMetering(ctx context.Context, tenantID string, k
 	if s.keycore == nil {
 		return newServiceError(http.StatusServiceUnavailable, "keycore_unavailable", "keycore usage metering is required")
 	}
-	if err := s.keycore.MeterUsage(ctx, tenantID, keyID, operation); err != nil {
+	if err := s.keycore.MeterUsage(ctx, tenantID, keyID, operation, usage); err != nil {
 		var herr keycoreHTTPError
 		if errors.As(err, &herr) {
 			msg := strings.TrimSpace(herr.Message)

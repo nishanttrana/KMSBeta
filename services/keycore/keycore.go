@@ -2714,6 +2714,10 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		}
 		data["auth_mode"] = "workload_identity"
 	}
+	if actor.Via != "" {
+		data["on_behalf_of"] = firstNonEmpty(actor.UserID, actor.Username, actor.ClientID)
+		data["via"], data["usage"] = actor.Via, actor.Usage
+	}
 	var outErr error
 	if s.events != nil {
 		if err := publishAuditEvent(ctx, s.events, subject, tenantID, data); err != nil {

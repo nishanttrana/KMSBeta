@@ -71,6 +71,10 @@ static_resources:
             virtual_hosts:
             - name: kms_api
               domains: ["*"]
+              # Internal-only headers: a service forwards a user's token to
+              # keycore in these (pkg/delegation). Keycore refuses them from
+              # anything but a service identity; the edge drops them too.
+              request_headers_to_remove: ["x-vecta-delegated-token", "x-vecta-key-usage"]
               response_headers_to_add:
               - append_action: OVERWRITE_IF_EXISTS_OR_ADD
                 header: { key: "strict-transport-security", value: "max-age=31536000; includeSubDomains" }

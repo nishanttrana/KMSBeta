@@ -1034,12 +1034,12 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (_ Crea
 	if !paymentTR31VersionAllowed(policy, version) {
 		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31_version is blocked by payment policy")
 	}
-	raw, err := s.resolveKeyMaterial(ctx, req.TenantID, req.KeyID, req.MaterialB64)
+	raw, err := s.resolveKeyMaterial(ctx, req.TenantID, req.KeyID, req.MaterialB64, "export")
 	if err != nil {
 		return CreateTR31Response{}, err
 	}
 	defer pkgcrypto.Zeroize(raw)
-	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
+	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id", "wrap")
 	if err != nil {
 		return CreateTR31Response{}, err
 	}
@@ -1136,7 +1136,7 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (_ ParseT
 	if err := s.enforceKBPKClassPolicy(ctx, policy, req.TenantID, kbpkID, strings.TrimSpace(firstString(req.KBPKKeyB64, req.KEKKeyB64)) != ""); err != nil {
 		return ParseTR31Response{}, err
 	}
-	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
+	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id", "unwrap")
 	if err != nil {
 		return ParseTR31Response{Valid: false}, err
 	}
@@ -1325,7 +1325,7 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	case TR31FormatAESKWP:
 		result = "AESKWP|" + base64.StdEncoding.EncodeToString(keyMaterial) + "|" + sourceKCV
 	default:
-		targetKBPK, targetKBPKRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, targetKBPKKeyID, targetKBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "target_kbpk_key_b64", "target_kbpk_key_id")
+		targetKBPK, targetKBPKRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, targetKBPKKeyID, targetKBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "target_kbpk_key_b64", "target_kbpk_key_id", "translate-wrap")
 		if err != nil {
 			return TranslateTR31Response{}, err
 		}
@@ -1413,7 +1413,7 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (_ 
 	if err := s.enforceKBPKClassPolicy(ctx, policy, tenantID, kbpkID, strings.TrimSpace(firstString(req.KBPKKeyB64, req.KEKKeyB64)) != ""); err != nil {
 		return ValidateTR31Response{}, err
 	}
-	kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
+	kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id", "unwrap")
 	if err != nil {
 		return ValidateTR31Response{}, err
 	}
@@ -1516,12 +1516,12 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (_ 
 			return "", err
 		}
 	}
-	sourceKeyRaw, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, sourceZPK, sourceZPKB64, "source_zpk_key_b64", "source_zpk_key_id")
+	sourceKeyRaw, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, sourceZPK, sourceZPKB64, "source_zpk_key_b64", "source_zpk_key_id", "translate-decrypt")
 	if err != nil {
 		return "", err
 	}
 	defer pkgcrypto.Zeroize(sourceKeyRaw)
-	targetKeyRaw, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, targetZPK, targetZPKB64, "target_zpk_key_b64", "target_zpk_key_id")
+	targetKeyRaw, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, targetZPK, targetZPKB64, "target_zpk_key_b64", "target_zpk_key_id", "translate-encrypt")
 	if err != nil {
 		return "", err
 	}
@@ -1609,7 +1609,7 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (_ st
 	if err := s.enforceIssuerProfilePolicy(ctx, policy, req.TenantID, req.PVKKeyID); err != nil {
 		return "", err
 	}
-	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id")
+	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id", "mac")
 	if err != nil {
 		return "", err
 	}
@@ -1662,7 +1662,7 @@ func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (_ bool, 
 	if err := s.enforceIssuerProfilePolicy(ctx, policy, strings.TrimSpace(req.TenantID), req.PVKKeyID); err != nil {
 		return false, err
 	}
-	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id")
+	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id", "mac")
 	if err != nil {
 		return false, err
 	}
@@ -1802,7 +1802,7 @@ func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (_ stri
 	if err := s.enforceIssuerProfilePolicy(ctx, policy, req.TenantID, req.CVKKeyID); err != nil {
 		return "", err
 	}
-	cvk, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id")
+	cvk, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id", "mac")
 	if err != nil {
 		return "", err
 	}
@@ -1854,7 +1854,7 @@ func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (_ bool, 
 	if err := s.enforceIssuerProfilePolicy(ctx, policy, strings.TrimSpace(req.TenantID), req.CVKKeyID); err != nil {
 		return false, err
 	}
-	cvk, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id")
+	cvk, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id", "mac")
 	if err != nil {
 		return false, err
 	}
@@ -1899,7 +1899,7 @@ func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (_ string, err
 	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.KeyID, op, true); err != nil {
 		return "", err
 	}
-	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id")
+	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id", "mac")
 	if err != nil {
 		return "", err
 	}
@@ -1948,7 +1948,7 @@ func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (_ bool, 
 	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.KeyID, "mac.verify", true); err != nil {
 		return false, err
 	}
-	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id")
+	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id", "mac")
 	if err != nil {
 		return false, err
 	}
@@ -2214,7 +2214,7 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (_ st
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(req.Message)) > policy.MaxISO20022PayloadBytes {
 		return "", newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "message exceeds payment policy max_iso20022_payload_bytes")
 	}
-	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.KeyID, req.LAUKeyB64, "lau_key_b64", "key_id")
+	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.KeyID, req.LAUKeyB64, "lau_key_b64", "key_id", "mac")
 	if err != nil {
 		return "", err
 	}
@@ -2268,7 +2268,9 @@ func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (_ bool, 
 	return ok, nil
 }
 
-func (s *Service) resolveKeyMaterial(ctx context.Context, tenantID string, keyID string, materialB64 string) ([]byte, error) {
+// resolveKeyMaterial returns inline material, or exports keyID from keycore
+// for usage, decided with the grants of the user in ctx (pkg/delegation).
+func (s *Service) resolveKeyMaterial(ctx context.Context, tenantID string, keyID string, materialB64 string, usage string) ([]byte, error) {
 	if strings.TrimSpace(materialB64) != "" {
 		raw, err := decodeB64(materialB64, "material_b64")
 		if err != nil {
@@ -2279,7 +2281,7 @@ func (s *Service) resolveKeyMaterial(ctx context.Context, tenantID string, keyID
 	if s.keycore == nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "material_b64 is required when keycore export is unavailable")
 	}
-	out, err := s.keycore.ExportKey(ctx, tenantID, keyID)
+	out, err := s.keycore.ExportKey(ctx, tenantID, keyID, usage)
 	if err != nil {
 		return nil, newServiceError(http.StatusBadGateway, "keycore_export_failed", err.Error())
 	}
@@ -2294,7 +2296,7 @@ func (s *Service) resolveKeyMaterial(ctx context.Context, tenantID string, keyID
 	return raw, nil
 }
 
-func (s *Service) resolveOperationKeyMaterial(ctx context.Context, tenantID string, keyID string, materialB64 string, materialField string, keyField string) ([]byte, error) {
+func (s *Service) resolveOperationKeyMaterial(ctx context.Context, tenantID string, keyID string, materialB64 string, materialField string, keyField string, usage string) ([]byte, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
 	materialB64 = strings.TrimSpace(materialB64)
@@ -2320,13 +2322,13 @@ func (s *Service) resolveOperationKeyMaterial(ctx context.Context, tenantID stri
 	if tenantID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	return s.resolveKeyMaterial(ctx, tenantID, keyID, "")
+	return s.resolveKeyMaterial(ctx, tenantID, keyID, "", usage)
 }
 
-func (s *Service) resolveKBPKMaterial(ctx context.Context, tenantID string, kbpkKeyID string, kbpkKeyB64 string, kekKeyID string, kekKeyB64 string, materialField string, keyField string) ([]byte, string, error) {
+func (s *Service) resolveKBPKMaterial(ctx context.Context, tenantID string, kbpkKeyID string, kbpkKeyB64 string, kekKeyID string, kekKeyB64 string, materialField string, keyField string, usage string) ([]byte, string, error) {
 	selectedID := strings.TrimSpace(firstString(kbpkKeyID, kekKeyID))
 	selectedB64 := strings.TrimSpace(firstString(kbpkKeyB64, kekKeyB64))
-	raw, err := s.resolveOperationKeyMaterial(ctx, tenantID, selectedID, selectedB64, materialField, keyField)
+	raw, err := s.resolveOperationKeyMaterial(ctx, tenantID, selectedID, selectedB64, materialField, keyField, usage)
 	if err != nil {
 		return nil, "", err
 	}
@@ -2403,7 +2405,7 @@ func (s *Service) resolveSourceMaterial(ctx context.Context, tenantID string, ke
 	if sourceBlock != "" {
 		switch sourceFormat {
 		case TR31FormatB, TR31FormatC, TR31FormatD:
-			kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, sourceKBPKKeyID, sourceKBPKKeyB64, "", "", "source_kbpk_key_b64", "source_kbpk_key_id")
+			kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, sourceKBPKKeyID, sourceKBPKKeyB64, "", "", "source_kbpk_key_b64", "source_kbpk_key_id", "translate-unwrap")
 			if err != nil {
 				return nil, "", err
 			}
@@ -2430,7 +2432,7 @@ func (s *Service) resolveSourceMaterial(ctx context.Context, tenantID string, ke
 	if strings.TrimSpace(keyID) == "" {
 		return nil, "", newServiceError(http.StatusBadRequest, "bad_request", "source_block or source_key_id is required")
 	}
-	raw, err := s.resolveKeyMaterial(ctx, tenantID, keyID, "")
+	raw, err := s.resolveKeyMaterial(ctx, tenantID, keyID, "", "export")
 	if err != nil {
 		return nil, "", err
 	}

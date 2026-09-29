@@ -7700,7 +7700,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 60,
+      "line": 61,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -7715,7 +7715,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleListKeys",
-      "line": 147,
+      "line": 202,
       "match_key": "keycore|GET|/keys",
       "method": "GET",
       "normalized_path": "/keys",
@@ -7730,7 +7730,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKey)",
-      "line": 148,
+      "line": 203,
       "match_key": "keycore|GET|/keys/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}",
@@ -7745,7 +7745,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleExportKey",
-      "line": 149,
+      "line": 204,
       "match_key": "keycore|POST|/keys/{param}/export",
       "method": "POST",
       "normalized_path": "/keys/{param}/export",
@@ -7760,7 +7760,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListVersions)",
-      "line": 150,
+      "line": 205,
       "match_key": "keycore|GET|/keys/{param}/versions",
       "method": "GET",
       "normalized_path": "/keys/{param}/versions",
@@ -7775,7 +7775,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetVersion)",
-      "line": 151,
+      "line": 206,
       "match_key": "keycore|GET|/keys/{param}/versions/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}/versions/{param}",
@@ -7790,7 +7790,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKCV)",
-      "line": 152,
+      "line": 207,
       "match_key": "keycore|GET|/keys/{param}/kcv",
       "method": "GET",
       "normalized_path": "/keys/{param}/kcv",
@@ -7805,7 +7805,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetUsage)",
-      "line": 154,
+      "line": 209,
       "match_key": "keycore|GET|/keys/{param}/usage",
       "method": "GET",
       "normalized_path": "/keys/{param}/usage",
@@ -7820,7 +7820,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetApproval)",
-      "line": 155,
+      "line": 210,
       "match_key": "keycore|GET|/keys/{param}/approval",
       "method": "GET",
       "normalized_path": "/keys/{param}/approval",
@@ -7835,7 +7835,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetIVLog)",
-      "line": 157,
+      "line": 212,
       "match_key": "keycore|GET|/keys/{param}/iv-log",
       "method": "GET",
       "normalized_path": "/keys/{param}/iv-log",
@@ -7850,7 +7850,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetIVByRef)",
-      "line": 158,
+      "line": 213,
       "match_key": "keycore|GET|/keys/{param}/iv-log/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}/iv-log/{param}",
@@ -7865,7 +7865,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleListTags",
-      "line": 159,
+      "line": 214,
       "match_key": "keycore|GET|/tags",
       "method": "GET",
       "normalized_path": "/tags",
@@ -7880,7 +7880,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleEncrypt",
-      "line": 161,
+      "line": 216,
       "match_key": "keycore|POST|/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/encrypt",
@@ -7895,7 +7895,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleDecrypt",
-      "line": 162,
+      "line": 217,
       "match_key": "keycore|POST|/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/decrypt",
@@ -7910,7 +7910,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleSign",
-      "line": 163,
+      "line": 218,
       "match_key": "keycore|POST|/keys/{param}/sign",
       "method": "POST",
       "normalized_path": "/keys/{param}/sign",
@@ -7925,7 +7925,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleVerify",
-      "line": 164,
+      "line": 219,
       "match_key": "keycore|POST|/keys/{param}/verify",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify",
@@ -7940,7 +7940,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleWrap",
-      "line": 165,
+      "line": 220,
       "match_key": "keycore|POST|/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/keys/{param}/wrap",
@@ -7955,7 +7955,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleUnwrap",
-      "line": 166,
+      "line": 221,
       "match_key": "keycore|POST|/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/keys/{param}/unwrap",
@@ -7970,7 +7970,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleMAC",
-      "line": 167,
+      "line": 222,
       "match_key": "keycore|POST|/keys/{param}/mac",
       "method": "POST",
       "normalized_path": "/keys/{param}/mac",
@@ -7985,7 +7985,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleDerive",
-      "line": 168,
+      "line": 223,
       "match_key": "keycore|POST|/keys/{param}/derive",
       "method": "POST",
       "normalized_path": "/keys/{param}/derive",
@@ -8000,7 +8000,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleServiceDerive",
-      "line": 169,
+      "line": 224,
       "match_key": "keycore|POST|/keys/{param}/service-derive",
       "method": "POST",
       "normalized_path": "/keys/{param}/service-derive",
@@ -8015,7 +8015,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 177,
+      "line": 232,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -8030,7 +8030,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 178,
+      "line": 233,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -8045,7 +8045,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 179,
+      "line": 234,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -8060,7 +8060,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMEncapsulate",
-      "line": 180,
+      "line": 235,
       "match_key": "keycore|POST|/keys/{param}/kem/encapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/encapsulate",
@@ -8075,7 +8075,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMDecapsulate",
-      "line": 181,
+      "line": 236,
       "match_key": "keycore|POST|/keys/{param}/kem/decapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/decapsulate",
@@ -8090,7 +8090,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleHash",
-      "line": 182,
+      "line": 237,
       "match_key": "keycore|POST|/crypto/hash",
       "method": "POST",
       "normalized_path": "/crypto/hash",
@@ -8105,7 +8105,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRandom",
-      "line": 183,
+      "line": 238,
       "match_key": "keycore|POST|/crypto/random",
       "method": "POST",
       "normalized_path": "/crypto/random",
@@ -8120,7 +8120,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 194,
+      "line": 249,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -8135,7 +8135,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 197,
+      "line": 252,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -8150,7 +8150,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 198,
+      "line": 253,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -8165,7 +8165,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 201,
+      "line": 256,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -8180,7 +8180,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 207,
+      "line": 262,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -8195,7 +8195,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 213,
+      "line": 268,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -10025,7 +10025,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListInventory)",
-      "line": 174,
+      "line": 179,
       "match_key": "keycore|GET|/inventory/keys",
       "method": "GET",
       "normalized_path": "/inventory/keys",
@@ -10040,7 +10040,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListOrphanedInventory)",
-      "line": 175,
+      "line": 180,
       "match_key": "keycore|GET|/inventory/orphans",
       "method": "GET",
       "normalized_path": "/inventory/orphans",
@@ -10055,7 +10055,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListDuplicateKeys)",
-      "line": 176,
+      "line": 181,
       "match_key": "keycore|GET|/inventory/duplicates",
       "method": "GET",
       "normalized_path": "/inventory/duplicates",
@@ -10070,7 +10070,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyDependencies)",
-      "line": 177,
+      "line": 182,
       "match_key": "keycore|GET|/inventory/dependencies",
       "method": "GET",
       "normalized_path": "/inventory/dependencies",
@@ -10085,7 +10085,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetRotationAnalytics)",
-      "line": 178,
+      "line": 183,
       "match_key": "keycore|GET|/rotation/analytics",
       "method": "GET",
       "normalized_path": "/rotation/analytics",
@@ -10100,7 +10100,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListOverdueRotationMetrics)",
-      "line": 179,
+      "line": 184,
       "match_key": "keycore|GET|/rotation/analytics/overdue",
       "method": "GET",
       "normalized_path": "/rotation/analytics/overdue",
@@ -10115,7 +10115,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetEnterpriseAuditSummary)",
-      "line": 180,
+      "line": 185,
       "match_key": "keycore|GET|/enterprise/summary",
       "method": "GET",
       "normalized_path": "/enterprise/summary",
@@ -10130,7 +10130,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetHealthSummary)",
-      "line": 181,
+      "line": 186,
       "match_key": "keycore|GET|/health/summary",
       "method": "GET",
       "normalized_path": "/health/summary",
@@ -10145,7 +10145,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListCompromiseEvents)",
-      "line": 182,
+      "line": 187,
       "match_key": "keycore|GET|/compromise/events",
       "method": "GET",
       "normalized_path": "/compromise/events",
@@ -10160,7 +10160,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyUsageMetrics)",
-      "line": 183,
+      "line": 188,
       "match_key": "keycore|GET|/analytics/usage",
       "method": "GET",
       "normalized_path": "/analytics/usage",
@@ -10175,7 +10175,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyHotspots)",
-      "line": 184,
+      "line": 189,
       "match_key": "keycore|GET|/analytics/hotspots",
       "method": "GET",
       "normalized_path": "/analytics/hotspots",
@@ -10190,7 +10190,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyTrend)",
-      "line": 185,
+      "line": 190,
       "match_key": "keycore|GET|/analytics/trends",
       "method": "GET",
       "normalized_path": "/analytics/trends",
@@ -10205,7 +10205,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyDSPMFindings)",
-      "line": 186,
+      "line": 191,
       "match_key": "keycore|GET|/enterprise/dspm/findings",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/findings",
@@ -10220,7 +10220,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleExportKeyDSPMEvents)",
-      "line": 187,
+      "line": 192,
       "match_key": "keycore|GET|/enterprise/dspm/events",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/events",
@@ -10235,7 +10235,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseComplianceDashboard)",
-      "line": 188,
+      "line": 193,
       "match_key": "keycore|GET|/enterprise/compliance/dashboard",
       "method": "GET",
       "normalized_path": "/enterprise/compliance/dashboard",
@@ -10250,7 +10250,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseCostOptimization)",
-      "line": 189,
+      "line": 194,
       "match_key": "keycore|GET|/enterprise/cost/optimization",
       "method": "GET",
       "normalized_path": "/enterprise/cost/optimization",
@@ -16702,7 +16702,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 60,
+      "line": 61,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -16717,7 +16717,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKey)",
-      "line": 148,
+      "line": 203,
       "match_key": "keycore|GET|/keys/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}",
@@ -16732,7 +16732,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetVersion)",
-      "line": 151,
+      "line": 206,
       "match_key": "keycore|GET|/keys/{param}/versions/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}/versions/{param}",
@@ -16747,7 +16747,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKCV)",
-      "line": 152,
+      "line": 207,
       "match_key": "keycore|GET|/keys/{param}/kcv",
       "method": "GET",
       "normalized_path": "/keys/{param}/kcv",
@@ -16762,7 +16762,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetUsage)",
-      "line": 154,
+      "line": 209,
       "match_key": "keycore|GET|/keys/{param}/usage",
       "method": "GET",
       "normalized_path": "/keys/{param}/usage",
@@ -16777,7 +16777,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetApproval)",
-      "line": 155,
+      "line": 210,
       "match_key": "keycore|GET|/keys/{param}/approval",
       "method": "GET",
       "normalized_path": "/keys/{param}/approval",
@@ -16792,7 +16792,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetIVLog)",
-      "line": 157,
+      "line": 212,
       "match_key": "keycore|GET|/keys/{param}/iv-log",
       "method": "GET",
       "normalized_path": "/keys/{param}/iv-log",
@@ -16807,7 +16807,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetIVByRef)",
-      "line": 158,
+      "line": 213,
       "match_key": "keycore|GET|/keys/{param}/iv-log/{param}",
       "method": "GET",
       "normalized_path": "/keys/{param}/iv-log/{param}",
@@ -16822,7 +16822,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleWrap",
-      "line": 165,
+      "line": 220,
       "match_key": "keycore|POST|/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/keys/{param}/wrap",
@@ -16837,7 +16837,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleUnwrap",
-      "line": 166,
+      "line": 221,
       "match_key": "keycore|POST|/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/keys/{param}/unwrap",
@@ -16852,7 +16852,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleMAC",
-      "line": 167,
+      "line": 222,
       "match_key": "keycore|POST|/keys/{param}/mac",
       "method": "POST",
       "normalized_path": "/keys/{param}/mac",
@@ -16867,7 +16867,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleServiceDerive",
-      "line": 169,
+      "line": 224,
       "match_key": "keycore|POST|/keys/{param}/service-derive",
       "method": "POST",
       "normalized_path": "/keys/{param}/service-derive",
@@ -16882,7 +16882,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 177,
+      "line": 232,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -16897,7 +16897,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 178,
+      "line": 233,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -16912,7 +16912,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 179,
+      "line": 234,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -16927,7 +16927,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 194,
+      "line": 249,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -16942,7 +16942,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 197,
+      "line": 252,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -16957,7 +16957,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 198,
+      "line": 253,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -16972,7 +16972,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 201,
+      "line": 256,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -16987,7 +16987,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 207,
+      "line": 262,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -17002,7 +17002,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 213,
+      "line": 268,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -17752,7 +17752,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListOrphanedInventory)",
-      "line": 175,
+      "line": 180,
       "match_key": "keycore|GET|/inventory/orphans",
       "method": "GET",
       "normalized_path": "/inventory/orphans",
@@ -17767,7 +17767,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListDuplicateKeys)",
-      "line": 176,
+      "line": 181,
       "match_key": "keycore|GET|/inventory/duplicates",
       "method": "GET",
       "normalized_path": "/inventory/duplicates",
@@ -17782,7 +17782,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListCompromiseEvents)",
-      "line": 182,
+      "line": 187,
       "match_key": "keycore|GET|/compromise/events",
       "method": "GET",
       "normalized_path": "/compromise/events",
@@ -17797,7 +17797,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyUsageMetrics)",
-      "line": 183,
+      "line": 188,
       "match_key": "keycore|GET|/analytics/usage",
       "method": "GET",
       "normalized_path": "/analytics/usage",
@@ -17812,7 +17812,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyHotspots)",
-      "line": 184,
+      "line": 189,
       "match_key": "keycore|GET|/analytics/hotspots",
       "method": "GET",
       "normalized_path": "/analytics/hotspots",
@@ -17827,7 +17827,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleGetKeyTrend)",
-      "line": 185,
+      "line": 190,
       "match_key": "keycore|GET|/analytics/trends",
       "method": "GET",
       "normalized_path": "/analytics/trends",
@@ -17842,7 +17842,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleListKeyDSPMFindings)",
-      "line": 186,
+      "line": 191,
       "match_key": "keycore|GET|/enterprise/dspm/findings",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/findings",
@@ -17857,7 +17857,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleExportKeyDSPMEvents)",
-      "line": 187,
+      "line": 192,
       "match_key": "keycore|GET|/enterprise/dspm/events",
       "method": "GET",
       "normalized_path": "/enterprise/dspm/events",
@@ -17872,7 +17872,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseComplianceDashboard)",
-      "line": 188,
+      "line": 193,
       "match_key": "keycore|GET|/enterprise/compliance/dashboard",
       "method": "GET",
       "normalized_path": "/enterprise/compliance/dashboard",
@@ -17887,7 +17887,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
       "handler": "legacy(h.handleEnterpriseCostOptimization)",
-      "line": 189,
+      "line": 194,
       "match_key": "keycore|GET|/enterprise/cost/optimization",
       "method": "GET",
       "normalized_path": "/enterprise/cost/optimization",
@@ -33760,7 +33760,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T00:36:00Z",
+  "generated_at": "2026-09-29T00:42:38Z",
   "navigation": [
     {
       "group": "Overview",
@@ -41820,7 +41820,7 @@
         "parseSubject",
         "addCertMetaExtensions",
         "parseCertificatePEM",
-        "loadCASigner",
+        "loadCASignerFor",
         "CreateCertificate",
         "Public",
         "ListCAs",
@@ -41876,7 +41876,7 @@
             "parseSubject",
             "addCertMetaExtensions",
             "parseCertificatePEM",
-            "loadCASigner",
+            "loadCASignerFor",
             "CreateCertificate",
             "Public",
             "ListCAs",
@@ -42199,7 +42199,7 @@
         "normalizeCertClass",
         "GetCA",
         "parseCertificatePEM",
-        "loadCASigner",
+        "loadCASignerFor",
         "signsLocally",
         "dedupStrings",
         "parseCSRPEM",
@@ -42246,7 +42246,7 @@
             "normalizeCertClass",
             "GetCA",
             "parseCertificatePEM",
-            "loadCASigner",
+            "loadCASignerFor",
             "signsLocally",
             "dedupStrings",
             "parseCSRPEM",
@@ -42346,7 +42346,7 @@
         "normalizeCertClass",
         "GetCA",
         "parseCertificatePEM",
-        "loadCASigner",
+        "loadCASignerFor",
         "signsLocally",
         "dedupStrings",
         "parseCSRPEM",
@@ -42393,7 +42393,7 @@
             "normalizeCertClass",
             "GetCA",
             "parseCertificatePEM",
-            "loadCASigner",
+            "loadCASignerFor",
             "signsLocally",
             "dedupStrings",
             "parseCSRPEM",
@@ -43140,7 +43140,7 @@
       "service_helper_calls": [
         "GetCA",
         "parseCertificatePEM",
-        "loadCASigner",
+        "loadCASignerFor",
         "ListRevokedByCA",
         "publishAudit",
         "Error",
@@ -43149,6 +43149,7 @@
         "GetCertificateBySerial",
         "defaultString",
         "CheckOCSPDER",
+        "loadCASigner",
         "signsLocally",
         "signingFailed",
         "meteredIf",
@@ -43168,8 +43169,7 @@
         "ListTenants",
         "RefreshTenantRenewalIntelligence",
         "ListCertificates",
-        "ListCertExpiryAlertStates",
-        "DeleteCertExpiryAlertState"
+        "ListCertExpiryAlertStates"
       ],
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
@@ -43201,7 +43201,7 @@
           "helper_calls": [
             "GetCA",
             "parseCertificatePEM",
-            "loadCASigner",
+            "loadCASignerFor",
             "ListRevokedByCA",
             "publishAudit",
             "Error",
@@ -43210,6 +43210,7 @@
             "GetCertificateBySerial",
             "defaultString",
             "CheckOCSPDER",
+            "loadCASigner",
             "signsLocally",
             "signingFailed",
             "meteredIf",
@@ -43628,6 +43629,7 @@
             "ensureDefaultProfiles",
             "GetProfileByName",
             "CreateProfile",
+            "loadCASignerFor",
             "hsmCASigner",
             "decryptSigner",
             "parseSignerPEM",
@@ -43972,6 +43974,7 @@
             "ensureDefaultProfiles",
             "GetProfileByName",
             "CreateProfile",
+            "loadCASignerFor",
             "hsmCASigner",
             "decryptSigner",
             "parseSignerPEM",
@@ -44229,7 +44232,7 @@
             "Status"
           ],
           "internal_package_calls": [],
-          "line": 2509,
+          "line": 2519,
           "name": "SecurityStatus",
           "receiver_calls": [
             "s.securityProvider.Status"
@@ -44703,7 +44706,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2480,
+          "line": 2490,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -45266,7 +45269,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2480,
+          "line": 2490,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -46933,35 +46936,30 @@
       "route_line": 94,
       "service": "certs",
       "service_external_package_calls": [
+        "context.Background",
         "errors.New",
         "strings.TrimSpace",
         "strings.ToLower"
       ],
       "service_helper_calls": [
-        "hsmCASigner",
-        "decryptSigner",
-        "parseSignerPEM",
+        "loadCASignerFor",
         "ensureProtocolEnabled",
         "scepOptions",
         "IssueCertificate",
         "publishAudit"
       ],
-      "service_internal_package_calls": [
-        "pkg/crypto.Zeroize"
-      ],
+      "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [],
+          "external_package_calls": [
+            "context.Background"
+          ],
           "file": "services/certs/service.go",
           "helper_calls": [
-            "hsmCASigner",
-            "decryptSigner",
-            "parseSignerPEM"
+            "loadCASignerFor"
           ],
-          "internal_package_calls": [
-            "pkg/crypto.Zeroize"
-          ],
-          "line": 2394,
+          "internal_package_calls": [],
+          "line": 2396,
           "name": "loadCASigner",
           "receiver_calls": [],
           "store_calls": []
@@ -53347,7 +53345,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -53910,7 +53908,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -53982,7 +53980,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54054,7 +54052,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54247,7 +54245,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54436,7 +54434,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54516,7 +54514,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -54595,7 +54593,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55191,7 +55189,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55270,7 +55268,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55349,7 +55347,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55427,7 +55425,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55505,7 +55503,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55583,7 +55581,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -55742,7 +55740,7 @@
             "WriteAuditEntry"
           ],
           "internal_package_calls": [],
-          "line": 5267,
+          "line": 5271,
           "name": "writeAudit",
           "receiver_calls": [],
           "store_calls": [
@@ -56909,7 +56907,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 5281,
+          "line": 5285,
           "name": "ListAuditLog",
           "receiver_calls": [],
           "store_calls": [
@@ -56965,7 +56963,7 @@
           "file": "services/dataprotect/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 5285,
+          "line": 5289,
           "name": "GetStats",
           "receiver_calls": [],
           "store_calls": [
@@ -67262,7 +67260,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Encrypt"
           ],
-          "line": 2779,
+          "line": 2783,
           "name": "Encrypt",
           "receiver_calls": [
             "s.hsm.Encrypt",
@@ -67304,7 +67302,7 @@
       "normalized_path": "/keys/due-for-lifecycle",
       "path": "/keys/due-for-lifecycle",
       "route_file": "services/keycore/handler.go",
-      "route_line": 60,
+      "route_line": 61,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -67370,7 +67368,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 451,
+      "handler_line": 506,
       "handler_name": "handleListKeys",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67383,7 +67381,7 @@
       "normalized_path": "/keys",
       "path": "/keys",
       "route_file": "services/keycore/handler.go",
-      "route_line": 147,
+      "route_line": 202,
       "service": "keycore",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -67518,7 +67516,7 @@
         "renderKey"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 508,
+      "handler_line": 563,
       "handler_name": "handleGetKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67529,7 +67527,7 @@
       "normalized_path": "/keys/{param}",
       "path": "/keys/{id}",
       "route_file": "services/keycore/handler.go",
-      "route_line": 148,
+      "route_line": 203,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.Is"
@@ -67615,7 +67613,7 @@
         "writeHSMError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 779,
+      "handler_line": 834,
       "handler_name": "handleExportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67627,7 +67625,7 @@
       "normalized_path": "/keys/{param}/export",
       "path": "/keys/{id}/export",
       "route_file": "services/keycore/handler.go",
-      "route_line": 149,
+      "route_line": 204,
       "service": "keycore",
       "service_external_package_calls": [
         "bytes.Repeat",
@@ -67797,6 +67795,7 @@
             "GetApproval",
             "ListVersions",
             "accessActorFromContext",
+            "firstNonEmpty",
             "publishAuditEvent",
             "keycoreSyncRequest",
             "Publish",
@@ -67846,7 +67845,6 @@
             "hsmFailure",
             "Derive",
             "rejectReservedDeriveInfo",
-            "firstNonEmpty",
             "KEMEncapsulate",
             "mlkemEncapsulate",
             "KEMDecapsulate",
@@ -68048,7 +68046,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 858,
+      "handler_line": 913,
       "handler_name": "handleListVersions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68059,7 +68057,7 @@
       "normalized_path": "/keys/{param}/versions",
       "path": "/keys/{id}/versions",
       "route_file": "services/keycore/handler.go",
-      "route_line": 150,
+      "route_line": 205,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68101,7 +68099,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 876,
+      "handler_line": 931,
       "handler_name": "handleGetVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68112,7 +68110,7 @@
       "normalized_path": "/keys/{param}/versions/{param}",
       "path": "/keys/{id}/versions/{ver}",
       "route_file": "services/keycore/handler.go",
-      "route_line": 151,
+      "route_line": 206,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -68157,7 +68155,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 932,
+      "handler_line": 987,
       "handler_name": "handleGetKCV",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68168,7 +68166,7 @@
       "normalized_path": "/keys/{param}/kcv",
       "path": "/keys/{id}/kcv",
       "route_file": "services/keycore/handler.go",
-      "route_line": 152,
+      "route_line": 207,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.Is"
@@ -68238,7 +68236,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 946,
+      "handler_line": 1001,
       "handler_name": "handleGetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68249,7 +68247,7 @@
       "normalized_path": "/keys/{param}/usage",
       "path": "/keys/{id}/usage",
       "route_file": "services/keycore/handler.go",
-      "route_line": 154,
+      "route_line": 209,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68287,7 +68285,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1121,
+      "handler_line": 1176,
       "handler_name": "handleGetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68298,7 +68296,7 @@
       "normalized_path": "/keys/{param}/approval",
       "path": "/keys/{id}/approval",
       "route_file": "services/keycore/handler.go",
-      "route_line": 155,
+      "route_line": 210,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68339,7 +68337,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1237,
+      "handler_line": 1292,
       "handler_name": "handleGetIVLog",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68350,7 +68348,7 @@
       "normalized_path": "/keys/{param}/iv-log",
       "path": "/keys/{id}/iv-log",
       "route_file": "services/keycore/handler.go",
-      "route_line": 157,
+      "route_line": 212,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68373,7 +68371,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1263,
+      "handler_line": 1318,
       "handler_name": "handleGetIVByRef",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68384,7 +68382,7 @@
       "normalized_path": "/keys/{param}/iv-log/{param}",
       "path": "/keys/{id}/iv-log/{ref}",
       "route_file": "services/keycore/handler.go",
-      "route_line": 158,
+      "route_line": 213,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68414,7 +68412,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1156,
+      "handler_line": 1211,
       "handler_name": "handleListTags",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68425,7 +68423,7 @@
       "normalized_path": "/tags",
       "path": "/tags",
       "route_file": "services/keycore/handler.go",
-      "route_line": 159,
+      "route_line": 214,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -68481,7 +68479,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1321,
+      "handler_line": 1376,
       "handler_name": "handleEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68490,7 +68488,7 @@
       "normalized_path": "/keys/{param}/encrypt",
       "path": "/keys/{id}/encrypt",
       "route_file": "services/keycore/handler.go",
-      "route_line": 161,
+      "route_line": 216,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68515,7 +68513,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1360,
+      "handler_line": 1415,
       "handler_name": "handleDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68524,7 +68522,7 @@
       "normalized_path": "/keys/{param}/decrypt",
       "path": "/keys/{id}/decrypt",
       "route_file": "services/keycore/handler.go",
-      "route_line": 162,
+      "route_line": 217,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68549,7 +68547,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1399,
+      "handler_line": 1454,
       "handler_name": "handleSign",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68558,7 +68556,7 @@
       "normalized_path": "/keys/{param}/sign",
       "path": "/keys/{id}/sign",
       "route_file": "services/keycore/handler.go",
-      "route_line": 163,
+      "route_line": 218,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68592,7 +68590,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1403,
+      "handler_line": 1458,
       "handler_name": "handleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68603,7 +68601,7 @@
       "normalized_path": "/keys/{param}/verify",
       "path": "/keys/{id}/verify",
       "route_file": "services/keycore/handler.go",
-      "route_line": 164,
+      "route_line": 219,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -68660,7 +68658,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Verify"
           ],
-          "line": 3068,
+          "line": 3072,
           "name": "Verify",
           "receiver_calls": [
             "s.hsm.Verify",
@@ -68684,7 +68682,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1435,
+      "handler_line": 1490,
       "handler_name": "handleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68693,7 +68691,7 @@
       "normalized_path": "/keys/{param}/wrap",
       "path": "/keys/{id}/wrap",
       "route_file": "services/keycore/handler.go",
-      "route_line": 165,
+      "route_line": 220,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68711,7 +68709,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1439,
+      "handler_line": 1494,
       "handler_name": "handleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68720,7 +68718,7 @@
       "normalized_path": "/keys/{param}/unwrap",
       "path": "/keys/{id}/unwrap",
       "route_file": "services/keycore/handler.go",
-      "route_line": 166,
+      "route_line": 221,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68738,7 +68736,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1443,
+      "handler_line": 1498,
       "handler_name": "handleMAC",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68747,7 +68745,7 @@
       "normalized_path": "/keys/{param}/mac",
       "path": "/keys/{id}/mac",
       "route_file": "services/keycore/handler.go",
-      "route_line": 167,
+      "route_line": 222,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -68782,7 +68780,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1447,
+      "handler_line": 1502,
       "handler_name": "handleDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68793,7 +68791,7 @@
       "normalized_path": "/keys/{param}/derive",
       "path": "/keys/{id}/derive",
       "route_file": "services/keycore/handler.go",
-      "route_line": 168,
+      "route_line": 223,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -68858,7 +68856,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3518,
+          "line": 3522,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -68882,7 +68880,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1490,
+      "handler_line": 1545,
       "handler_name": "handleServiceDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68893,7 +68891,7 @@
       "normalized_path": "/keys/{param}/service-derive",
       "path": "/keys/{id}/service-derive",
       "route_file": "services/keycore/handler.go",
-      "route_line": 169,
+      "route_line": 224,
       "service": "keycore",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -68941,7 +68939,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2261,
+      "handler_line": 2316,
       "handler_name": "handleClusterJoinKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68952,7 +68950,7 @@
       "normalized_path": "/cluster/mek/join-key",
       "path": "/cluster/mek/join-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 177,
+      "route_line": 232,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69003,7 +69001,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2271,
+      "handler_line": 2326,
       "handler_name": "handleClusterMEKExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69014,7 +69012,7 @@
       "normalized_path": "/cluster/mek/export",
       "path": "/cluster/mek/export",
       "route_file": "services/keycore/handler.go",
-      "route_line": 178,
+      "route_line": 233,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69067,7 +69065,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2290,
+      "handler_line": 2345,
       "handler_name": "handleClusterMEKImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69078,7 +69076,7 @@
       "normalized_path": "/cluster/mek/import",
       "path": "/cluster/mek/import",
       "route_file": "services/keycore/handler.go",
-      "route_line": 179,
+      "route_line": 234,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69161,7 +69159,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1520,
+      "handler_line": 1575,
       "handler_name": "handleKEMEncapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69172,7 +69170,7 @@
       "normalized_path": "/keys/{param}/kem/encapsulate",
       "path": "/keys/{id}/kem/encapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 180,
+      "route_line": 235,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69225,7 +69223,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3631,
+          "line": 3635,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69259,7 +69257,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1560,
+      "handler_line": 1615,
       "handler_name": "handleKEMDecapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69270,7 +69268,7 @@
       "normalized_path": "/keys/{param}/kem/decapsulate",
       "path": "/keys/{id}/kem/decapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 181,
+      "route_line": 236,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69323,7 +69321,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3714,
+          "line": 3718,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69356,7 +69354,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1599,
+      "handler_line": 1654,
       "handler_name": "handleHash",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69367,7 +69365,7 @@
       "normalized_path": "/crypto/hash",
       "path": "/crypto/hash",
       "route_file": "services/keycore/handler.go",
-      "route_line": 182,
+      "route_line": 237,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69392,7 +69390,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3422,
+          "line": 3426,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -69427,7 +69425,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1627,
+      "handler_line": 1682,
       "handler_name": "handleRandom",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69438,7 +69436,7 @@
       "normalized_path": "/crypto/random",
       "path": "/crypto/random",
       "route_file": "services/keycore/handler.go",
-      "route_line": 183,
+      "route_line": 238,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/rand.Read",
@@ -69477,7 +69475,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3457,
+          "line": 3461,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -69519,7 +69517,7 @@
       "normalized_path": "/keys/{param}/rotation-metrics",
       "path": "/keys/{id}/rotation-metrics",
       "route_file": "services/keycore/handler.go",
-      "route_line": 194,
+      "route_line": 249,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69561,7 +69559,7 @@
       "normalized_path": "/keys/{param}/health",
       "path": "/keys/{id}/health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 197,
+      "route_line": 252,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69645,7 +69643,7 @@
       "normalized_path": "/analytics/algorithms",
       "path": "/analytics/algorithms",
       "route_file": "services/keycore/handler.go",
-      "route_line": 198,
+      "route_line": 253,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69679,7 +69677,7 @@
       "normalized_path": "/attestation/public-key",
       "path": "/attestation/public-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 201,
+      "route_line": 256,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -69735,7 +69733,7 @@
       "normalized_path": "/fips/rng-health",
       "path": "/fips/rng-health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 207,
+      "route_line": 262,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69771,7 +69769,7 @@
       "normalized_path": "/keys/due-for-lifecycle",
       "path": "/keys/due-for-lifecycle",
       "route_file": "services/keycore/handler.go",
-      "route_line": 213,
+      "route_line": 268,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69847,7 +69845,7 @@
             "ListKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 429,
+          "line": 467,
           "name": "GetKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -69939,7 +69937,7 @@
             "ReplaceKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 444,
+          "line": 482,
           "name": "ReplaceKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -69999,7 +69997,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 545,
+          "line": 583,
           "name": "ListAccessGroups",
           "receiver_calls": [],
           "store_calls": [
@@ -70062,7 +70060,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 552,
+          "line": 590,
           "name": "CreateAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70120,7 +70118,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 575,
+          "line": 613,
           "name": "DeleteAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70182,7 +70180,7 @@
             "ReplaceAccessGroupMembers"
           ],
           "internal_package_calls": [],
-          "line": 587,
+          "line": 625,
           "name": "SetAccessGroupMembers",
           "receiver_calls": [],
           "store_calls": [
@@ -71810,7 +71808,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 218,
+      "handler_line": 273,
       "handler_name": "handleCreateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71893,7 +71891,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 259,
+      "handler_line": 314,
       "handler_name": "handleImportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71972,7 +71970,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 293,
+      "handler_line": 348,
       "handler_name": "handleFormKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72060,7 +72058,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 328,
+      "handler_line": 383,
       "handler_name": "handleBulkImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72128,7 +72126,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 355,
+      "handler_line": 410,
       "handler_name": "handleBulkRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72232,7 +72230,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 390,
+      "handler_line": 445,
       "handler_name": "handleBulkDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72324,7 +72322,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 528,
+      "handler_line": 583,
       "handler_name": "handleUpdateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72403,7 +72401,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 546,
+      "handler_line": 601,
       "handler_name": "handleRotateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72525,7 +72523,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 582,
+      "handler_line": 637,
       "handler_name": "handleActivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72604,7 +72602,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 620,
+      "handler_line": 675,
       "handler_name": "handleDeactivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72638,7 +72636,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 623,
+      "handler_line": 678,
       "handler_name": "handleDisableKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72690,7 +72688,7 @@
         "DestroyKeyImmediately"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 626,
+      "handler_line": 681,
       "handler_name": "handleDestroyKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72872,7 +72870,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1039,
+      "handler_line": 1094,
       "handler_name": "handleSetExportPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72944,7 +72942,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 891,
+      "handler_line": 946,
       "handler_name": "handleActivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72971,7 +72969,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 894,
+      "handler_line": 949,
       "handler_name": "handleDeactivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73007,7 +73005,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 913,
+      "handler_line": 968,
       "handler_name": "handleDeleteVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73027,6 +73025,7 @@
       ],
       "service_helper_calls": [
         "accessActorFromContext",
+        "firstNonEmpty",
         "publishAuditEvent",
         "keycoreSyncRequest",
         "Publish"
@@ -73040,6 +73039,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [
             "accessActorFromContext",
+            "firstNonEmpty",
             "publishAuditEvent",
             "keycoreSyncRequest",
             "Publish"
@@ -73080,7 +73080,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 967,
+      "handler_line": 1022,
       "handler_name": "handleSetUsageLimit",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73139,7 +73139,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1077,
+      "handler_line": 1132,
       "handler_name": "handleResetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73202,7 +73202,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1090,
+      "handler_line": 1145,
       "handler_name": "handleSetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73274,7 +73274,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1135,
+      "handler_line": 1190,
       "handler_name": "handleSetIVMode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73294,6 +73294,7 @@
       ],
       "service_helper_calls": [
         "accessActorFromContext",
+        "firstNonEmpty",
         "publishAuditEvent",
         "keycoreSyncRequest",
         "Publish"
@@ -73307,6 +73308,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [
             "accessActorFromContext",
+            "firstNonEmpty",
             "publishAuditEvent",
             "keycoreSyncRequest",
             "Publish"
@@ -73347,7 +73349,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1181,
+      "handler_line": 1236,
       "handler_name": "handleUpsertTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73429,7 +73431,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1217,
+      "handler_line": 1272,
       "handler_name": "handleDeleteTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73898,7 +73900,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 988,
+      "handler_line": 1043,
       "handler_name": "handleMeterUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -74990,6 +74992,7 @@
         "auditSubjectForEnterpriseCategory",
         "UpsertDSPMFinding",
         "accessActorFromContext",
+        "firstNonEmpty",
         "publishAuditEvent",
         "keycoreSyncRequest",
         "Publish"
@@ -75031,6 +75034,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [
             "accessActorFromContext",
+            "firstNonEmpty",
             "publishAuditEvent",
             "keycoreSyncRequest",
             "Publish"
@@ -76724,7 +76728,7 @@
       "normalized_path": "/inventory/keys",
       "path": "/inventory/keys",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 174,
+      "route_line": 179,
       "service": "keycore",
       "service_external_package_calls": [
         "encoding/hex.EncodeToString",
@@ -76794,7 +76798,7 @@
       "normalized_path": "/inventory/orphans",
       "path": "/inventory/orphans",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 175,
+      "route_line": 180,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -76828,7 +76832,7 @@
       "normalized_path": "/inventory/duplicates",
       "path": "/inventory/duplicates",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 176,
+      "route_line": 181,
       "service": "keycore",
       "service_external_package_calls": [
         "encoding/hex.EncodeToString",
@@ -76908,7 +76912,7 @@
       "normalized_path": "/inventory/dependencies",
       "path": "/inventory/dependencies",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 177,
+      "route_line": 182,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -76950,7 +76954,7 @@
       "normalized_path": "/rotation/analytics",
       "path": "/rotation/analytics",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 178,
+      "route_line": 183,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -76992,7 +76996,7 @@
       "normalized_path": "/rotation/analytics/overdue",
       "path": "/rotation/analytics/overdue",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 179,
+      "route_line": 184,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77034,7 +77038,7 @@
       "normalized_path": "/enterprise/summary",
       "path": "/enterprise/summary",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 180,
+      "route_line": 185,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -77133,7 +77137,7 @@
       "normalized_path": "/health/summary",
       "path": "/health/summary",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 181,
+      "route_line": 186,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77173,7 +77177,7 @@
       "normalized_path": "/compromise/events",
       "path": "/compromise/events",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 182,
+      "route_line": 187,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77211,7 +77215,7 @@
       "normalized_path": "/analytics/usage",
       "path": "/analytics/usage",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 183,
+      "route_line": 188,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77247,7 +77251,7 @@
       "normalized_path": "/analytics/hotspots",
       "path": "/analytics/hotspots",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 184,
+      "route_line": 189,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77285,7 +77289,7 @@
       "normalized_path": "/analytics/trends",
       "path": "/analytics/trends",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 185,
+      "route_line": 190,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77320,7 +77324,7 @@
       "normalized_path": "/enterprise/dspm/findings",
       "path": "/enterprise/dspm/findings",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 186,
+      "route_line": 191,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -77355,7 +77359,7 @@
       "normalized_path": "/enterprise/dspm/events",
       "path": "/enterprise/dspm/events",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 187,
+      "route_line": 192,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -77408,7 +77412,7 @@
       "normalized_path": "/enterprise/compliance/dashboard",
       "path": "/enterprise/compliance/dashboard",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 188,
+      "route_line": 193,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -77484,7 +77488,7 @@
       "normalized_path": "/enterprise/cost/optimization",
       "path": "/enterprise/cost/optimization",
       "route_file": "services/keycore/key_visibility.go",
-      "route_line": 189,
+      "route_line": 194,
       "service": "keycore",
       "service_external_package_calls": [
         "strings.HasPrefix",
@@ -91612,7 +91616,7 @@
     "nav_items": 27,
     "request_flows": 909,
     "request_flows_with_frontend": 536,
-    "request_flows_with_internal_package_calls": 159,
+    "request_flows_with_internal_package_calls": 158,
     "request_flows_with_service_calls": 543,
     "request_flows_with_store_calls": 653,
     "subpane_groups": 8,
@@ -100645,13 +100649,14 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 1,
         "externalPackages": [
           "encoding/pem.EncodeToMemory",
           "io.ReadAll",
           "strings.ToLower",
           "strings.TrimSpace",
           "github.com/smallstep/scep.ParsePKIMessage",
+          "context.Background",
           "errors.New"
         ],
         "frontendSites": [
@@ -100666,9 +100671,7 @@
         "handlerFile": "services/certs/handler.go",
         "handlerLine": 951,
         "hasFrontend": true,
-        "internalPackages": [
-          "pkg/crypto.Zeroize"
-        ],
+        "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/scep/pkiclient.exe",
         "path": "/scep/pkiclient.exe",
@@ -110666,7 +110669,7 @@
         ],
         "handler": "handleListKeys",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 451,
+        "handlerLine": 506,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce",
@@ -110712,7 +110715,7 @@
         "frontendSites": [],
         "handler": "handleGetKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 508,
+        "handlerLine": 563,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110777,7 +110780,7 @@
         ],
         "handler": "handleExportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 779,
+        "handlerLine": 834,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -110870,7 +110873,7 @@
         ],
         "handler": "handleListVersions",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 858,
+        "handlerLine": 913,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110904,7 +110907,7 @@
         "frontendSites": [],
         "handler": "handleGetVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 876,
+        "handlerLine": 931,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110935,7 +110938,7 @@
         "frontendSites": [],
         "handler": "handleGetKCV",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 932,
+        "handlerLine": 987,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110968,7 +110971,7 @@
         "frontendSites": [],
         "handler": "handleGetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 946,
+        "handlerLine": 1001,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110995,7 +110998,7 @@
         "frontendSites": [],
         "handler": "handleGetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1121,
+        "handlerLine": 1176,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111024,7 +111027,7 @@
         "frontendSites": [],
         "handler": "handleGetIVLog",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1237,
+        "handlerLine": 1292,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111049,7 +111052,7 @@
         "frontendSites": [],
         "handler": "handleGetIVByRef",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1263,
+        "handlerLine": 1318,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111085,7 +111088,7 @@
         ],
         "handler": "handleListTags",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1156,
+        "handlerLine": 1211,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111123,7 +111126,7 @@
         ],
         "handler": "handleEncrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1321,
+        "handlerLine": 1376,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111156,7 +111159,7 @@
         ],
         "handler": "handleDecrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1360,
+        "handlerLine": 1415,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111189,7 +111192,7 @@
         ],
         "handler": "handleSign",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1399,
+        "handlerLine": 1454,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111228,7 +111231,7 @@
         ],
         "handler": "handleVerify",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1403,
+        "handlerLine": 1458,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111262,7 +111265,7 @@
         "frontendSites": [],
         "handler": "handleWrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1435,
+        "handlerLine": 1490,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111285,7 +111288,7 @@
         "frontendSites": [],
         "handler": "handleUnwrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1439,
+        "handlerLine": 1494,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111308,7 +111311,7 @@
         "frontendSites": [],
         "handler": "handleMAC",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1443,
+        "handlerLine": 1498,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111347,7 +111350,7 @@
         ],
         "handler": "handleDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1447,
+        "handlerLine": 1502,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111379,7 +111382,7 @@
         "frontendSites": [],
         "handler": "handleServiceDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1490,
+        "handlerLine": 1545,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111406,7 +111409,7 @@
         "frontendSites": [],
         "handler": "handleClusterJoinKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2261,
+        "handlerLine": 2316,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.NewKEMRecipient"
@@ -111436,7 +111439,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKExport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2271,
+        "handlerLine": 2326,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.KEMSeal"
@@ -111472,7 +111475,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2290,
+        "handlerLine": 2345,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111514,7 +111517,7 @@
         ],
         "handler": "handleKEMEncapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1520,
+        "handlerLine": 1575,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111557,7 +111560,7 @@
         ],
         "handler": "handleKEMDecapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1560,
+        "handlerLine": 1615,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111598,7 +111601,7 @@
         ],
         "handler": "handleHash",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1599,
+        "handlerLine": 1654,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111639,7 +111642,7 @@
         ],
         "handler": "handleRandom",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1627,
+        "handlerLine": 1682,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -113243,7 +113246,7 @@
         ],
         "handler": "handleCreateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 218,
+        "handlerLine": 273,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113286,7 +113289,7 @@
         ],
         "handler": "handleImportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 259,
+        "handlerLine": 314,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113331,7 +113334,7 @@
         ],
         "handler": "handleFormKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 293,
+        "handlerLine": 348,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113364,7 +113367,7 @@
         "frontendSites": [],
         "handler": "handleBulkImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 328,
+        "handlerLine": 383,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113395,7 +113398,7 @@
         "frontendSites": [],
         "handler": "handleBulkRotate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 355,
+        "handlerLine": 410,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -113434,7 +113437,7 @@
         "frontendSites": [],
         "handler": "handleBulkDelete",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 390,
+        "handlerLine": 445,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113463,7 +113466,7 @@
         "frontendSites": [],
         "handler": "handleUpdateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 528,
+        "handlerLine": 583,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113506,7 +113509,7 @@
         ],
         "handler": "handleRotateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 546,
+        "handlerLine": 601,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -113560,7 +113563,7 @@
         ],
         "handler": "handleActivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 582,
+        "handlerLine": 637,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113599,7 +113602,7 @@
         ],
         "handler": "handleDeactivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 620,
+        "handlerLine": 675,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113632,7 +113635,7 @@
         ],
         "handler": "handleDisableKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 623,
+        "handlerLine": 678,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113674,7 +113677,7 @@
         ],
         "handler": "handleDestroyKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 626,
+        "handlerLine": 681,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113725,7 +113728,7 @@
         ],
         "handler": "handleSetExportPolicy",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1039,
+        "handlerLine": 1094,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113757,7 +113760,7 @@
         "frontendSites": [],
         "handler": "handleActivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 891,
+        "handlerLine": 946,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113780,7 +113783,7 @@
         "frontendSites": [],
         "handler": "handleDeactivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 894,
+        "handlerLine": 949,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113807,7 +113810,7 @@
         "frontendSites": [],
         "handler": "handleDeleteVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 913,
+        "handlerLine": 968,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -113843,7 +113846,7 @@
         ],
         "handler": "handleSetUsageLimit",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 967,
+        "handlerLine": 1022,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113875,7 +113878,7 @@
         "frontendSites": [],
         "handler": "handleResetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1077,
+        "handlerLine": 1132,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113906,7 +113909,7 @@
         "frontendSites": [],
         "handler": "handleSetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1090,
+        "handlerLine": 1145,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113937,7 +113940,7 @@
         "frontendSites": [],
         "handler": "handleSetIVMode",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1135,
+        "handlerLine": 1190,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113979,7 +113982,7 @@
         ],
         "handler": "handleUpsertTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1181,
+        "handlerLine": 1236,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -114024,7 +114027,7 @@
         ],
         "handler": "handleDeleteTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1217,
+        "handlerLine": 1272,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -114369,7 +114372,7 @@
         "frontendSites": [],
         "handler": "handleMeterUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 988,
+        "handlerLine": 1043,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -123903,7 +123906,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T00:36:00Z",
+    "generatedAt": "2026-09-29T00:42:38Z",
     "methods": [
       "DELETE",
       "GET",

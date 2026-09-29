@@ -7,6 +7,46 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Delegated key use: forward the user's own token (6.0.0-beta)
+
+**Decision.** A service that performs a user's request forwards the user's
+verified bearer token and the usage to keycore, which verifies the token
+itself and decides as the user. Built in `pkg/delegation`; the model is
+KEY_ACCESS_MODEL.md section 5.
+
+**Why.** Keycore trusted service identities tenant-wide, so the user behind
+dataprotect, payment and certs was invisible and their grants never applied.
+The token is the only identity the service didn't make up: keycore checks
+its signature, expiry and tenant with its own key.
+
+**Rejected.**
+- *The service names the user (a body field or header, as the playbook
+  delegation in auth does).* That trusts the service to tell the truth about
+  who asked; a compromised or buggy service could name anyone. Auth's
+  delegated operations are narrower (one identity, re-checked against auth).
+- *Swapping the request's claims for the user's.* The route permission (for
+  example `key.usage.meter`) belongs to the service; users don't hold it.
+  Keycore keeps the service's claims for the route and uses the user as the
+  access actor.
+- *Accepting the base operation for user grants (`encrypt` covers
+  `fpe-encrypt`).* The owner asked for CipherTrust-level granularity, which
+  keeps FPE, translate and CA signing as separate rights. Workload tokens are
+  the exception, because their permission vocabulary has no such names.
+- *Delegating `service-derive`.* It's a service-only route; dataprotect's
+  metering call just before it carries the decision.
+- *Delegating a new HSM CA's self-signature.* The key was made moments
+  before by certs; the user was authorized to create the CA.
+
+**Enforced by.** `TestDelegatedUseDecidesWithUserGrant`,
+`TestDelegatedExportIsDecidedByTheTranslateGrant`, `TestDelegationRefusals`,
+`TestDelegatedTenantMustOwnTheKey` (keycore), `TestAttachForwardsOnlyAUser`,
+`TestMiddlewareKeepsOnlyAVerifiedToken` (pkg/delegation),
+`TestDataprotectNamesItsUsage`, `TestTranslatePINNamesItsUsages`,
+`TestHSMSignerCarriesRequestContextAndUsage`, and on real SoftHSM2
+`TestHSMCAKeysSignInTheHSM` (usage of every HSM signature).
+
+---
+
 ## 2026-09-29 — Automation/ALKM/PQC: remove what isn't real rather than document it (5.3.0-beta)
 
 **Decision.** Where `docs/AUTOMATION_ALKM_PQC.md` described a capability

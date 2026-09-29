@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/servicetoken"
 )
 
@@ -112,6 +113,9 @@ func (h *HTTPKeyCoreSigner) Sign(ctx context.Context, tenantID string, keyRef st
 		return nil, err
 	}
 	servicetoken.Authorize(ctx, req)
+	// The keycore backend signs only certificates (CreateCA, IssueCertificate):
+	// for the user in ctx, whose certificate-sign grant keycore checks.
+	delegation.Attach(ctx, req, "certificate-sign")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := h.client.Do(req)
 	if err != nil {

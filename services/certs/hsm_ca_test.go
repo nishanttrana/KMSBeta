@@ -21,6 +21,7 @@ import (
 // SoftHSM2, so every signature here is made by a real PKCS#11 HSM.
 // keycore's own side (prehashed HSM signing) is tested in keycore.
 type hsmKeycore struct {
+	usages []string // usage of each HSM signature (pkg/delegation)
 	client *hsm.Client
 	n      int
 }
@@ -37,7 +38,8 @@ func (k *hsmKeycore) CreateHSMSigningKey(ctx context.Context, tenantID, algorith
 	res, err := k.client.Generate(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), algorithm)
 	return keyID, res.PublicKey, err
 }
-func (k *hsmKeycore) SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte) ([]byte, error) {
+func (k *hsmKeycore) SignDigest(ctx context.Context, tenantID, keyID, hash string, digest []byte, usage string) ([]byte, error) {
+	k.usages = append(k.usages, usage)
 	return k.client.Sign(ctx, tenantID, hsm.KeyLabel(tenantID, keyID, 1), hash, digest)
 }
 
@@ -60,7 +62,8 @@ func certFromPEM(t *testing.T, s string) *x509.Certificate {
 func TestHSMCAKeysSignInTheHSM(t *testing.T) {
 	srv := softhsmtest.Start(t, "kms-keycore", "t-ca")
 	svc, _ := newCertsService(t)
-	svc.keycore = &hsmKeycore{client: hsm.New(srv.URL)}
+	kc := &hsmKeycore{client: hsm.New(srv.URL)}
+	svc.keycore = kc
 	ctx := context.Background()
 
 	root, err := svc.CreateCA(ctx, CreateCARequest{TenantID: "t-ca", Name: "HSM Root", CALevel: "root", Algorithm: "ECDSA-P384", KeyBackend: "hsm", Subject: "CN=HSM Root"})
@@ -100,6 +103,11 @@ func TestHSMCAKeysSignInTheHSM(t *testing.T) {
 	crlPEM, _, err := svc.GenerateCRL(ctx, "t-ca", inter.ID)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Root self-signature as the certs service (""), the intermediate and
+	// the leaf as certificate-sign, the CRL as crl-sign.
+	if want := []string{"", "certificate-sign", "certificate-sign", "crl-sign"}; strings.Join(kc.usages, ",") != strings.Join(want, ",") {
+		t.Fatalf("HSM signature usages %q, want %q", kc.usages, want)
 	}
 	b, _ := pem.Decode([]byte(crlPEM))
 	crl, err := x509.ParseRevocationList(b.Bytes)

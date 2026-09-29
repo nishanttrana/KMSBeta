@@ -67,6 +67,13 @@ type AccessActor struct {
 	// ServicePrincipal is true only for a verified internal service JWT
 	// (see tenantcheck.IsServicePrincipal); never derived from headers.
 	ServicePrincipal bool
+	// Via is the service identity acting for this user, and Usage what it
+	// does with the key, for a delegated request (pkg/delegation). Key
+	// access is then decided for the user and Usage.
+	Via   string
+	Usage string
+	// TenantID is set for a delegated user: the key must belong to it.
+	TenantID string
 	// Unverified holds identity a caller asserted in request headers. It is
 	// audit context only: no access decision reads it (CLAUDE.md rule 4).
 	Unverified UnverifiedActorHeaders
@@ -187,6 +194,12 @@ func normalizeAccessOperation(raw string) (string, error) {
 		return "kem-decapsulate", nil
 	case "export":
 		return "export", nil
+	case "fpe-encrypt", "fpe-decrypt", "tokenize", "detokenize",
+		"translate-wrap", "translate-unwrap", "translate-encrypt", "translate-decrypt",
+		"certificate-sign", "crl-sign":
+		// Delegated usages: performed by dataprotect, payment or certs for
+		// a user (pkg/delegation, KEY_ACCESS_MODEL.md section 4).
+		return strings.ToLower(strings.TrimSpace(raw)), nil
 	default:
 		return "", fmt.Errorf("unsupported operation %q", raw)
 	}
@@ -210,6 +223,18 @@ func normalizeAccessOperations(raw []string) ([]string, error) {
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+// delegatedBaseOperation maps a delegated usage to the key operation it
+// rests on. Workload tokens name only key operations (key.encrypt, ...), so a
+// workload's permission check accepts the base operation; user and group
+// grants must name the usage itself (or all).
+var delegatedBaseOperation = map[string]string{
+	"fpe-encrypt": "encrypt", "fpe-decrypt": "decrypt",
+	"tokenize": "encrypt", "detokenize": "decrypt",
+	"translate-wrap": "wrap", "translate-unwrap": "unwrap",
+	"translate-encrypt": "encrypt", "translate-decrypt": "decrypt",
+	"certificate-sign": "sign", "crl-sign": "sign",
 }
 
 func operationAllowed(operations []string, op string) bool {
@@ -319,6 +344,9 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 	if actor.Unverified.Present() {
 		details["unverified_actor_headers"] = actor.Unverified
 	}
+	if actor.Via != "" {
+		details["via"], details["usage"] = actor.Via, actor.Usage
+	}
 	_ = s.publishAudit(ctx, "audit.key.access_refused", key.TenantID, details)
 	return err
 }
@@ -326,11 +354,20 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 // evaluateKeyAccess decides whether the verified caller may perform
 // operation on key. A denial is an *accessRefusal carrying a reason code.
 func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation string) error {
+	actor := accessActorFromContext(ctx)
+	// A service acting for a user performs the user's usage (fpe-encrypt,
+	// translate-wrap, ...): the user's grants must allow that usage, whatever
+	// keycore operation the service needs to carry it out.
+	if actor.Usage != "" {
+		operation = actor.Usage
+	}
+	if actor.Via != "" && !strings.EqualFold(actor.TenantID, key.TenantID) {
+		return refuse("delegation_tenant_mismatch", "access denied: the user acted for belongs to another tenant")
+	}
 	normOperation, err := normalizeAccessOperation(operation)
 	if err != nil {
 		return err
 	}
-	actor := accessActorFromContext(ctx)
 	// Internal service identities are trusted to act on behalf of the request's
 	// tenant (tenant scoping is enforced upstream by tenantcheck), so they are
 	// authorized for the operation without a per-key grant.
@@ -350,7 +387,8 @@ func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation stri
 		if !actor.Authenticated {
 			return refuse("workload_not_authenticated", "access denied: authenticated workload token required")
 		}
-		if !actorPermissionAllowsOperation(actor.Permissions, normOperation) {
+		if !actorPermissionAllowsOperation(actor.Permissions, normOperation) &&
+			!actorPermissionAllowsOperation(actor.Permissions, delegatedBaseOperation[normOperation]) {
 			return refuse("workload_operation_not_permitted", "access denied: workload token does not permit this operation")
 		}
 		if !workloadKeyAllowed(actor, key.ID) {

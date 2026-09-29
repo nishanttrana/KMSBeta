@@ -103,10 +103,10 @@ Adding a checkbox without its enforcement point is a fake capability
 |---|---|---|
 | Encrypt, Decrypt, Wrap, Unwrap, Sign, Verify, Generate MAC, Verify MAC, Derive, Key agreement | keycore | the decision, directly |
 | Export | keycore `/keys/{id}/export` | the decision, directly |
-| FPE encrypt / decrypt | dataprotect (FF1) | delegated (section 5) |
-| Translate wrap / unwrap (TR-31) | payment `TranslateTR31` | delegated |
-| Translate encrypt / decrypt (PIN) | payment `TranslatePIN` | delegated |
-| Certificate sign, CRL sign | certs (CA keys held in keycore) | delegated |
+| FPE encrypt / decrypt, tokenize / detokenize | dataprotect (FF1, vaults) | delegated (section 5), 6.0.0-beta |
+| Translate wrap / unwrap (TR-31) | payment `TranslateTR31` | delegated, 6.0.0-beta (material delivery open, 5a) |
+| Translate encrypt / decrypt (PIN) | payment `TranslatePIN` | delegated, 6.0.0-beta (material delivery open, 5a) |
+| Certificate sign, CRL sign | certs (CA keys held in keycore) | delegated, 6.0.0-beta |
 | Content commitment | not an operation: the X.509 non-repudiation bit | certs sets the bit on an issued certificate only if the CA key's mask has it |
 | Generate / validate cryptogram (EMV ARQC) | **nothing implements it** | not offered until payment implements EMV cryptograms |
 
@@ -122,15 +122,73 @@ Mask rules:
 
 ## 5. Delegated usage (service acting for a user)
 
-A service performing a user's request sends keycore:
-1. the intended usage (for example `fpe-encrypt`), and
-2. the user's own token, which keycore verifies itself (never a header or
-   body claim, CLAUDE.md rule 4).
+Built in 6.0.0-beta (`pkg/delegation`). A service performing a user's
+request forwards, on its keycore call:
+1. the user's own bearer token (`X-Vecta-Delegated-Token`), which keycore
+   verifies itself with its JWT key (never a header or body claim, CLAUDE.md
+   rule 4), and
+2. the usage it performs (`X-Vecta-Key-Usage`, for example `fpe-encrypt`).
 
-Keycore then checks the key's mask for that usage and the **user's** grant.
-A service with no user behind the call (scheduler, rotation, reconciler) stays
-a service principal but may use only the usages listed for its identity in
-`pkg/svctls.Services`, not every usage.
+`pkg/auth`'s middleware keeps the verified token in the request context, and
+`delegation.Attach` adds both headers only when the caller is a user (not a
+service token, not a request with no token). Keycore accepts a delegation
+only from a verified service identity; the forwarded token must verify, must
+not be a service token, and must belong to the tenant of the request and of
+the key; the usage must be known. Anything else is refused before any
+handler (`audit.key.delegation_refused` with a reason). The access actor
+becomes the user: the user's grants must allow the **usage** (an `encrypt`
+grant does not allow `fpe-encrypt`), visibility is the user's, and every
+event keycore emits carries `on_behalf_of`, `via` and `usage`. The route
+permission is still checked against the calling service. The edge (Envoy)
+strips both headers from outside requests.
+
+A workload token forwarded this way names key operations only
+(`key.encrypt`, ...), so its permission check accepts the usage's base
+operation (`fpe-encrypt` → encrypt); its key binding still applies.
+
+| Service | Keycore call (decision point) | Usages |
+|---|---|---|
+| dataprotect | `POST /keys/{id}/usage/meter`, made before every key operation and before `service-derive` | `fpe-encrypt`, `fpe-decrypt`, `tokenize`, `detokenize`, `encrypt`/`decrypt` (field, searchable, mask), `wrap`/`unwrap` (envelope) |
+| payment | `POST /keys/{id}/export` for key material; `encrypt`, `decrypt`, `sign`, `verify` (ISO 20022) | `translate-decrypt`/`translate-encrypt` (PIN), `translate-unwrap`/`translate-wrap` (TR-31 translate), `export` (TR-31 create payload), `wrap`/`unwrap` (KBPK), `mac` (PVV, offset, CVV, MAC, LAU) |
+| certs | `POST /keys/{id}/sign` (HSM CA keys and the `keycore` backend) | `certificate-sign` (issuance, sub-CA), `crl-sign` |
+
+Not delegated, and why:
+- `service-derive` stays service-only; dataprotect's metering call before it
+  is the decision.
+- certs signs as itself for OCSP responses, SCEP, the internal bootstrap and
+  a new HSM CA's own self-signature (the user was authorized to create the
+  CA and holds no grant on the key made a moment before).
+- dataprotect lease receipts meter operations already authorized when the
+  lease was issued.
+
+Open:
+- **Bare service identities are not yet limited to their usages.** A
+  request with no user behind it (scheduler, ACME/EST client, reconciler)
+  still acts with the service's tenant-wide trust. The allowlist per
+  identity in `pkg/svctls.Services` is the next step.
+- **Field-encryption leases** hand wrapped key material to a registered
+  wrapper without a keycore decision for the user who asked
+  (`IssueFieldEncryptionLease`).
+- **Payment key references** (section 5a).
+
+### 5a. Payment key references (open, owner decision)
+
+Payment's operations accept a key by ID and fetch its material with `POST
+/keys/{id}/export`, reading a plaintext `material` field. Keycore's export
+has only ever returned material wrapped under a `wrapping_key_id`, so every
+payment operation that names a key by ID fails against the real keycore
+(`keycore_export_failed: wrapping_key_id is required`); only inline
+`material_b64` works. Payment's tests passed because their fake keycore
+returned a `material` field the real one never sends. The delegated
+decision in front of that export is built and tested in keycore
+(`TestDelegatedExportIsDecidedByTheTranslateGrant`), but the path behind it
+doesn't deliver material. Options, for the owner:
+1. A keycore endpoint that releases a key's material only to `kms-payment`,
+   for a delegated user and a payment usage, audited, over internal mTLS
+   (payment zeroizes it after use).
+2. Payment's cryptography moves into keycore, so material never leaves it.
+3. Payment accepts inline material only, and the key-by-ID option is
+   removed from the API and UI.
 
 ## 6. Key properties and KMIP metadata
 
@@ -273,7 +331,8 @@ Every slice of this work meets all of these, or it isn't done:
 |---|---|---|
 | 0 | Tokenless refusal; access and key-management routes on the kernel with permissions; owner-or-admin for grant changes; actor from token | **done, 4.0.0-beta** |
 | 0 | Key visibility (option A, `key.inventory.read`, `read` grants); every remaining keycore write on the kernel | **done, 5.0.0-beta** |
-| 0 | Enforce the declared usage; delegated usage with the user's token for dataprotect, payment, certs; step-up from a verified MFA claim | open |
+| 0 | Delegated usage with the user's token for dataprotect, payment, certs (section 5) | **done, 6.0.0-beta** |
+| 0 | Enforce the declared usage; bare service identities limited to their usages; field-encryption lease decision; payment key references (5a); step-up from a verified MFA claim | open |
 | 1 | Usage-mask column (full vocabulary, per-key migration, KMIP mask kept); owner and change-owner; subjects from auth; explicit deny | open |
 | 2 | Label policies, cache with NATS invalidation, explainers, dry run; tags into labels | open |
 | 3 | Enforced dates; aliases; links; section 6 properties; KMIP Add/Modify/DeleteAttribute | open |
@@ -285,3 +344,4 @@ Every slice of this work meets all of these, or it isn't done:
 1. ~~Default key visibility~~: decided 2026-09-29, option A (section 8).
 2. Retire keycore's own groups into auth groups.
 3. Label policies in keycore (recommended) or in `services/policy`.
+4. How payment gets key material for a key named by ID (section 5a).

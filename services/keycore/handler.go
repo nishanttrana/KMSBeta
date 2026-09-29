@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/internalauth"
 	pkgrestauth "vecta-kms/pkg/restauth"
 	"vecta-kms/pkg/route"
@@ -122,8 +123,62 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if raw := strings.TrimSpace(r.Header.Get(delegation.HeaderToken)); raw != "" {
+		delegated, reason := h.delegatedActor(r, actor, raw)
+		if reason != "" {
+			_ = h.svc.publishAudit(ctx, "audit.key.delegation_refused", tenantFromRequest(r), map[string]any{
+				"path":        r.URL.Path,
+				"method":      r.Method,
+				"caller":      firstNonEmpty(actor.ClientID, actor.UserID, actor.Username, "unauthenticated"),
+				"usage":       strings.TrimSpace(r.Header.Get(delegation.HeaderUsage)),
+				"result":      "refused",
+				"reason":      reason,
+				"severity":    "warning",
+				"description": "a request to use a key on a user's behalf was refused",
+			})
+			writeErr(w, http.StatusForbidden, "delegation_refused", reason, requestID(r), tenantFromRequest(r))
+			return
+		}
+		actor = delegated
+	}
 	ctx = contextWithAccessActor(ctx, actor)
 	h.mux.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// delegatedActor verifies a service's request to use a key for a user
+// (pkg/delegation): only a service identity may delegate, the user's token
+// must verify here and must not itself be a service token, it must belong
+// to the tenant the request names, and the usage must be a known one. The
+// actor becomes the user, so the user's grants decide; the route permission
+// is still checked against the calling service. It returns a refusal reason
+// or "".
+func (h *Handler) delegatedActor(r *http.Request, caller AccessActor, raw string) (AccessActor, string) {
+	usage := strings.ToLower(strings.TrimSpace(r.Header.Get(delegation.HeaderUsage)))
+	switch {
+	case !actorIsServicePrincipal(caller):
+		return AccessActor{}, "delegation_by_non_service"
+	case !delegation.Usages[usage]:
+		return AccessActor{}, "delegation_usage_invalid"
+	case h.parseToken == nil:
+		return AccessActor{}, "delegation_unverifiable"
+	}
+	claims, err := h.parseToken(raw)
+	switch {
+	case err != nil || claims == nil:
+		return AccessActor{}, "delegation_token_invalid"
+	case tenantcheck.IsServicePrincipal(claims):
+		return AccessActor{}, "delegation_token_is_service"
+	case strings.TrimSpace(claims.TenantID) == "":
+		return AccessActor{}, "delegation_tenant_mismatch"
+	}
+	if t := tenantFromRequest(r); t != "" && !strings.EqualFold(t, claims.TenantID) {
+		return AccessActor{}, "delegation_tenant_mismatch"
+	}
+	user := accessActorFromHTTPRequest(r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
+	user.TenantID = strings.TrimSpace(claims.TenantID)
+	user.Via = firstNonEmpty(caller.ClientID, caller.Username)
+	user.Usage = usage
+	return user, ""
 }
 
 func parseStepUpAuthSignal(r *http.Request) bool {

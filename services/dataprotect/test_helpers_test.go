@@ -58,6 +58,7 @@ type fakeDataProtectKeyCore struct {
 	items         map[string]map[string]interface{}
 	deriveCalls   int
 	deriveHistory []string
+	usages        []string // usage per MeterUsage call (pkg/delegation)
 }
 
 // ServiceDerive stands in for keycore's HKDF over secret material: a
@@ -87,7 +88,10 @@ func (f *fakeDataProtectKeyCore) GetKey(_ context.Context, _ string, keyID strin
 	return map[string]interface{}{"id": keyID, "kcv": "ABCD12"}, nil
 }
 
-func (f *fakeDataProtectKeyCore) MeterUsage(_ context.Context, _ string, _ string, _ string) error {
+func (f *fakeDataProtectKeyCore) MeterUsage(_ context.Context, _ string, _ string, _ string, usage string) error {
+	f.mu.Lock()
+	f.usages = append(f.usages, usage)
+	f.mu.Unlock()
 	return nil
 }
 

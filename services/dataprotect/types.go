@@ -11,7 +11,10 @@ type EventPublisher interface {
 
 type KeyCoreClient interface {
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
-	MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error
+	// MeterUsage meters one key operation in keycore. A non-empty usage is
+	// what the caller does for the user in ctx: keycore then decides access
+	// with the user's grants (pkg/delegation).
+	MeterUsage(ctx context.Context, tenantID string, keyID string, operation string, usage string) error
 	// ServiceDerive returns a 32-byte working key derived by keycore from the
 	// key's secret material for this service and purpose (version 0 = current).
 	ServiceDerive(ctx context.Context, tenantID string, keyID string, purpose string, version int) ([]byte, int, error)
