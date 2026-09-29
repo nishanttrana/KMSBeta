@@ -245,6 +245,8 @@ var Replicated = map[string][]string{
 		"workload_identity_federation",
 		"workload_identity_registrations",
 		"workload_identity_settings",
+		"workload_mek_exposure",
+		"workload_mek_state",
 	},
 }
 

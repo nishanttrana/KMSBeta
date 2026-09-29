@@ -23,6 +23,10 @@ import (
 // Backup contents and retired master keys
 // (docs/SECURITY/SERVICE_MASTER_KEYS.md).
 //
+// A backup is never captured while a catalogued table still holds secret
+// material an earlier release stored in plaintext (mek.Table.Plaintext, for
+// example workload signing keys before 6.11.0-beta).
+//
 // Rows of catalogued tables (stored secrets, CA signing keys, cloud
 // credentials, BitLocker recovery keys) found under a public development key
 // are re-wrapped by their owning service (POST /mek/rewrap-legacy,
@@ -117,6 +121,16 @@ func reprotectTables(ctx context.Context, rw backupRewrapper, tables map[string]
 			if err := dec.Decode(&rows); err != nil {
 				return nil, fmt.Errorf("backup table %s: %w", t.Name, err)
 			}
+			// Secret material an earlier release stored in plaintext never
+			// goes into a new artifact: the owning service seals it at start
+			// and every 15 minutes. A restore may bring such rows back; the
+			// service seals them and records them as exposed.
+			if !restoring {
+				if n := plaintextRows(rows, t.Plaintext); n > 0 {
+					return nil, fmt.Errorf("%d row(s) of %s still hold plaintext %s; start %s so it seals them, then back up again",
+						n, t.Name, strings.Join(t.Plaintext, "/"), mek.Catalog[name].ClientID)
+				}
+			}
 			// Only rows under a public key need the service: they're found
 			// here with the public keys, so a clean backup never depends on
 			// the service being up. (Rows under an operator's old env key are
@@ -169,6 +183,20 @@ func reprotectTables(ctx context.Context, rw backupRewrapper, tables map[string]
 		}
 	}
 	return counts, nil
+}
+
+// plaintextRows counts rows with a non-empty value in any of cols.
+func plaintextRows(rows []map[string]interface{}, cols []string) int {
+	n := 0
+	for _, row := range rows {
+		for _, c := range cols {
+			if v, ok := row[c].(string); ok && v != "" {
+				n++
+				break
+			}
+		}
+	}
+	return n
 }
 
 // decodeWrapped reads a wrapped-DEK column as captured by row_to_json:

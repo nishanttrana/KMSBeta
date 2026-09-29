@@ -4,6 +4,56 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.11.0-beta] — 2026-09-29
+
+### Workload signing keys are sealed under the workload master key (security)
+Each tenant's SPIFFE root CA private key and JWT-SVID signer private key
+were stored as plaintext PEM in `workload_identity_settings`
+(`local_ca_key_pem`, `jwt_signer_private_pem`). A database copy, volume
+snapshot or governance backup was enough to mint SVIDs for any workload in
+any tenant. CLAUDE.md rule 6.
+
+- **Sealed at rest.** Both keys are one AES-256-GCM envelope per tenant
+  (`pkg/crypto`, module-generated IVs) in new `signing_*` columns, with a
+  random data key per row wrapped by the workload service master key. The
+  key comes from keycore through `pkg/mek` (catalog entry `workload`,
+  identity `kms-workload-identity`, purpose `workload-mek`), pinned and
+  checked on every start, re-wrapped on keycore rotation. The sealed payload
+  names its tenant. The service doesn't start without the key; it needs
+  `KEYCORE_URL` (added to compose) and the `kms-workload-identity` service
+  identity (added to auth's internal service clients).
+- **Existing plaintext rows (per key, not a silent switch).** On start,
+  before serving, and every 15 minutes, the primary
+  (`clusterstate.RunsPrimaryJobs`) seals each plaintext row: the tenant goes
+  into the exposure register first (`source: plaintext_storage`,
+  `audit.workload.mek_exposure_recorded`), then one conditional update
+  writes the envelope and empties both plaintext columns
+  (`audit.workload.mek_signing_keys_sealed`). A row that can't be sealed is
+  left unchanged and audited as `audit.workload.mek_signing_keys_seal_refused`;
+  on the startup pass that stops the start. Members only read.
+- **Rotation.** `POST /workload-identity/settings/rotate-signing-keys`
+  (`workload.write`, `audit.workload.signing_keys_rotated`) replaces both
+  keys in the same trust domain and closes the tenant's exposure entry; so
+  does a trust-domain change. The dashboard has **Rotate Signing Keys** on
+  Workload Identity → Overview. SVIDs issued under the old keys stop
+  verifying.
+- **Exposure register.** `GET /svc/workload/mek/exposure` and the
+  acknowledge route (`workload.exposure.acknowledge`); Administration →
+  Tenant → Security → Key exposure register lists "Workload signing keys".
+- **Backups.** Governance refuses to capture a backup while any row still
+  holds plaintext signing keys (`backup_create_refused`, naming
+  `kms-workload-identity`), via the new `mek.Table.Plaintext`. Restoring an
+  older backup is allowed; the workload's periodic pass seals the restored
+  rows and records them as exposed.
+- **Upgrade action:** rotate each tenant's signing keys once the upgrade
+  has sealed them. Earlier copies of the database still hold the old keys.
+- **Cluster:** `workload_mek_state` and `workload_mek_exposure` are
+  replicated under `workload`.
+- **Tests:** `TestSigningKeysSealedAtRestSQLite` / `…Postgres` (added to CI
+  integration-postgres), `TestRotateSigningKeys`,
+  `TestBackupRefusesPlaintextSigningKeys` / `…Postgres`,
+  `TestCatalogIsValidAndMigrated`, and the dashboard's exposure-register
+  catalogue test.
 ## [6.10.0-beta] — 2026-09-29
 
 ### Key access justifications fail closed in EKM, cloud BYOK and HYOK (breaking)
@@ -135,7 +185,7 @@ route records the identity it verified itself) and
 
 ### Open (documented, not fixed here)
 - The workload CA and JWT signer private keys are still stored as PEM, not
-  sealed under `pkg/mek`.
+  sealed under `pkg/mek`. *(Fixed in 6.11.0-beta.)*
 - EKM and cloud still allow an operation when keyaccess can't be reached,
   and HYOK does unless it is fail-closed.
 - The X.509 proof replay cache is in the primary's memory; a restart inside
@@ -267,7 +317,7 @@ no code returns. They now list the real routes, fields and response keys.
   gateway has no JWT filter. Only `POST /confidential/release` is on the
   `pkg/route` kernel.
 - The workload CA and JWT signer private keys are stored as PEM in the
-  workload database, not sealed under `pkg/mek`.
+  workload database, not sealed under `pkg/mek`. *(Fixed in 6.11.0-beta.)*
 - EKM and cloud allow the operation when keyaccess can't be reached, and
   so does HYOK unless it is fail-closed. `disable_static_api_keys`,
   `rotation_alert_*` and the rule time-window fields are record-only.

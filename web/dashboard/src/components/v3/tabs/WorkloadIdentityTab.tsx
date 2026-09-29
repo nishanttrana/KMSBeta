@@ -15,6 +15,7 @@ import {
   listWorkloadIssuances,
   listWorkloadRegistrations,
   listWorkloadUsage,
+  rotateWorkloadSigningKeys,
   signX509ExchangeProof,
   updateWorkloadIdentitySettings,
   upsertWorkloadFederationBundle,
@@ -161,6 +162,21 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
       await load(true);
     } catch (error) {
       onToast?.(`Settings save failed: ${errMsg(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rotateSigningKeys = async () => {
+    if (!session?.token) return;
+    if (!confirm("Rotate the SPIFFE root CA and JWT-SVID signer? SVIDs issued under the current keys stop verifying; workloads must fetch new ones, and federated domains need the new JWKS.")) return;
+    setBusy(true);
+    try {
+      await rotateWorkloadSigningKeys(session);
+      onToast?.("Signing keys rotated");
+      await load(true);
+    } catch (error) {
+      onToast?.(`Signing key rotation failed: ${errMsg(error)}`);
     } finally {
       setBusy(false);
     }
@@ -324,7 +340,10 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <B c="blue">{String(settings?.jwt_signer_key_id || "local signer")}</B>
-              <Btn primary onClick={saveSettings} disabled={busy}>{busy ? "Saving..." : "Save Settings"}</Btn>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn onClick={rotateSigningKeys} disabled={busy}>Rotate Signing Keys</Btn>
+                <Btn primary onClick={saveSettings} disabled={busy}>{busy ? "Saving..." : "Save Settings"}</Btn>
+              </div>
             </div>
             <div style={{ marginTop: 12 }}>
               <FG label="Local Federation JWKS" hint="Copy this bundle to another trust domain when federating JWT-SVID verification.">

@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
+	"vecta-kms/pkg/mek"
 )
 
 type Store interface {
@@ -29,28 +31,36 @@ type Store interface {
 }
 
 type SQLStore struct {
-	db *pkgdb.DB
+	db   *pkgdb.DB
+	keys *mek.Keyring // seals the tenant signing keys (signing_keys.go)
 }
 
-func NewSQLStore(db *pkgdb.DB) *SQLStore {
-	return &SQLStore{db: db}
+func NewSQLStore(db *pkgdb.DB, keys *mek.Keyring) *SQLStore {
+	return &SQLStore{db: db, keys: keys}
 }
+
+// settingsColumns are read by GetSettings. The private keys come from the
+// sealed envelope, or from the plaintext columns of a row an earlier release
+// wrote that the primary hasn't sealed yet.
+const settingsColumns = `tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
+       default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
+       local_bundle_jwks, local_ca_cert_pem, jwt_signer_public_pem, jwt_signer_kid,
+       COALESCE(updated_by,''), updated_at,
+       local_ca_key_pem, jwt_signer_private_pem,
+       signing_ciphertext, signing_data_iv, signing_wrapped_dek, signing_wrapped_dek_iv`
 
 func (s *SQLStore) GetSettings(ctx context.Context, tenantID string) (WorkloadIdentitySettings, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
-       default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
-       local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
-       jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
-       COALESCE(updated_by,''), updated_at
+	row := s.db.SQL().QueryRowContext(ctx, `SELECT `+settingsColumns+`
 FROM workload_identity_settings
 WHERE tenant_id = $1
 `, strings.TrimSpace(tenantID))
 
 	var (
-		item                 WorkloadIdentitySettings
-		allowedAudiencesJSON string
-		updatedRaw           interface{}
+		item                     WorkloadIdentitySettings
+		allowedAudiencesJSON     string
+		updatedRaw               interface{}
+		ct, dataIV, dek, dekIV   []byte
+		plainCAKey, plainJWTPriv string
 	)
 	if err := row.Scan(
 		&item.TenantID,
@@ -64,12 +74,13 @@ WHERE tenant_id = $1
 		&allowedAudiencesJSON,
 		&item.LocalBundleJWKS,
 		&item.LocalCACertificatePEM,
-		&item.LocalCAKeyPEM,
-		&item.JWTSignerPrivatePEM,
 		&item.JWTSignerPublicPEM,
 		&item.JWTSignerKeyID,
 		&item.UpdatedBy,
 		&updatedRaw,
+		&plainCAKey,
+		&plainJWTPriv,
+		&ct, &dataIV, &dek, &dekIV,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return WorkloadIdentitySettings{}, errNotFound
@@ -78,19 +89,42 @@ WHERE tenant_id = $1
 	}
 	item.AllowedAudiences = parseJSONArrayString(allowedAudiencesJSON)
 	item.UpdatedAt = parseTimeValue(updatedRaw)
+	switch env := envelopeFromColumns(ct, dataIV, dek, dekIV); {
+	case plainCAKey != "" || plainJWTPriv != "":
+		// Not sealed yet: the primary seals exactly these values.
+		item.LocalCAKeyPEM, item.JWTSignerPrivatePEM = plainCAKey, plainJWTPriv
+	case env != nil:
+		caKey, jwtPriv, err := openSigningKeys(s.keys, item.TenantID, env)
+		if err != nil {
+			return WorkloadIdentitySettings{}, err
+		}
+		item.LocalCAKeyPEM, item.JWTSignerPrivatePEM = caKey, jwtPriv
+	}
 	return item, nil
 }
 
+// UpsertSettings stores item with its private keys sealed; the plaintext
+// columns are always written empty.
 func (s *SQLStore) UpsertSettings(ctx context.Context, item WorkloadIdentitySettings) (WorkloadIdentitySettings, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
+	env, err := sealSigningKeys(s.keys, item.TenantID, item.LocalCAKeyPEM, item.JWTSignerPrivatePEM)
+	if err != nil {
+		return WorkloadIdentitySettings{}, err
+	}
+	var ct, dataIV, dek, dekIV []byte
+	if env != nil {
+		ct, dataIV, dek, dekIV = env.Ciphertext, env.DataIV, env.WrappedDEK, env.WrappedDEKIV
+	}
+	var updatedRaw interface{}
+	if err := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO workload_identity_settings (
   tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
   default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
-  local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
-  jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
+  local_bundle_jwks, local_ca_cert_pem, jwt_signer_public_pem, jwt_signer_kid,
+  local_ca_key_pem, jwt_signer_private_pem,
+  signing_ciphertext, signing_data_iv, signing_wrapped_dek, signing_wrapped_dek_iv,
   updated_by, updated_at
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,CURRENT_TIMESTAMP
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'','',$14,$15,$16,$17,$18,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
   enabled = EXCLUDED.enabled,
@@ -103,17 +137,17 @@ ON CONFLICT (tenant_id) DO UPDATE SET
   allowed_audiences_json = EXCLUDED.allowed_audiences_json,
   local_bundle_jwks = EXCLUDED.local_bundle_jwks,
   local_ca_cert_pem = EXCLUDED.local_ca_cert_pem,
-  local_ca_key_pem = EXCLUDED.local_ca_key_pem,
-  jwt_signer_private_pem = EXCLUDED.jwt_signer_private_pem,
   jwt_signer_public_pem = EXCLUDED.jwt_signer_public_pem,
   jwt_signer_kid = EXCLUDED.jwt_signer_kid,
+  local_ca_key_pem = '',
+  jwt_signer_private_pem = '',
+  signing_ciphertext = EXCLUDED.signing_ciphertext,
+  signing_data_iv = EXCLUDED.signing_data_iv,
+  signing_wrapped_dek = EXCLUDED.signing_wrapped_dek,
+  signing_wrapped_dek_iv = EXCLUDED.signing_wrapped_dek_iv,
   updated_by = EXCLUDED.updated_by,
   updated_at = CURRENT_TIMESTAMP
-RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
-          default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
-          local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
-          jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
-          COALESCE(updated_by,''), updated_at
+RETURNING updated_at
 `, item.TenantID,
 		item.Enabled,
 		item.TrustDomain,
@@ -125,42 +159,59 @@ RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_e
 		validJSONOr(mustJSON(item.AllowedAudiences), "[]"),
 		item.LocalBundleJWKS,
 		item.LocalCACertificatePEM,
-		item.LocalCAKeyPEM,
-		item.JWTSignerPrivatePEM,
 		item.JWTSignerPublicPEM,
 		item.JWTSignerKeyID,
+		ct, dataIV, dek, dekIV,
 		item.UpdatedBy,
-	)
-
-	var (
-		out                  WorkloadIdentitySettings
-		allowedAudiencesJSON string
-		updatedRaw           interface{}
-	)
-	if err := row.Scan(
-		&out.TenantID,
-		&out.Enabled,
-		&out.TrustDomain,
-		&out.FederationEnabled,
-		&out.TokenExchangeEnabled,
-		&out.DefaultX509TTLSeconds,
-		&out.DefaultJWTTTLSeconds,
-		&out.RotationWindowSeconds,
-		&allowedAudiencesJSON,
-		&out.LocalBundleJWKS,
-		&out.LocalCACertificatePEM,
-		&out.LocalCAKeyPEM,
-		&out.JWTSignerPrivatePEM,
-		&out.JWTSignerPublicPEM,
-		&out.JWTSignerKeyID,
-		&out.UpdatedBy,
-		&updatedRaw,
-	); err != nil {
+	).Scan(&updatedRaw); err != nil {
 		return WorkloadIdentitySettings{}, err
 	}
-	out.AllowedAudiences = parseJSONArrayString(allowedAudiencesJSON)
-	out.UpdatedAt = parseTimeValue(updatedRaw)
-	return out, nil
+	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+// plaintextSigningRow is a row an earlier release stored in plaintext.
+type plaintextSigningRow struct {
+	TenantID            string
+	CAKeyPEM            string
+	JWTSignerPrivatePEM string
+}
+
+func (s *SQLStore) listPlaintextSigningKeys(ctx context.Context) ([]plaintextSigningRow, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, local_ca_key_pem, jwt_signer_private_pem
+FROM workload_identity_settings
+WHERE local_ca_key_pem <> '' OR jwt_signer_private_pem <> ''
+ORDER BY tenant_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []plaintextSigningRow
+	for rows.Next() {
+		var r plaintextSigningRow
+		if err := rows.Scan(&r.TenantID, &r.CAKeyPEM, &r.JWTSignerPrivatePEM); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// replacePlaintextSigningKeys writes env and empties the plaintext columns,
+// only if the row still holds the plaintext that was read.
+func (s *SQLStore) replacePlaintextSigningKeys(ctx context.Context, r plaintextSigningRow, env *pkgcrypto.EnvelopeCiphertext) (bool, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE workload_identity_settings
+SET signing_ciphertext = $1, signing_data_iv = $2, signing_wrapped_dek = $3, signing_wrapped_dek_iv = $4,
+    local_ca_key_pem = '', jwt_signer_private_pem = ''
+WHERE tenant_id = $5 AND local_ca_key_pem = $6 AND jwt_signer_private_pem = $7`,
+		env.Ciphertext, env.DataIV, env.WrappedDEK, env.WrappedDEKIV, r.TenantID, r.CAKeyPEM, r.JWTSignerPrivatePEM)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 func (s *SQLStore) ListRegistrations(ctx context.Context, tenantID string) ([]WorkloadRegistration, error) {

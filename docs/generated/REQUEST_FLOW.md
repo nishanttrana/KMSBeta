@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T13:15:06Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T13:18:40Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `906`
-- Routes with exact frontend call sites: `533`
-- Routes whose handlers call `h.svc.*`: `537`
-- Routes with detected store calls: `648`
-- Routes with detected internal `pkg/*` calls: `161`
+- Backend routes analyzed: `910`
+- Routes with exact frontend call sites: `536`
+- Routes whose handlers call `h.svc.*`: `538`
+- Routes with detected store calls: `649`
+- Routes with detected internal `pkg/*` calls: `162`
 
 ## How To Trace One Frontend Click
 
@@ -533,30 +533,33 @@ This file connects frontend requests to backend Go processing. It is static anal
 | signing\|POST\|/signing/verify | POST /signing/verify | handleVerify (services/signing/handler.go:214) | VerifyArtifact | GetRecord, ListRecords | s.keycore.Verify |  | web/dashboard/src/lib/signing.ts:161 |
 | watchdog\|GET\|/watchdog/heartbeats | GET /watchdog/heartbeats | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:35 |
 | watchdog\|GET\|/watchdog/incidents | GET /watchdog/incidents | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:40 |
-| workload\|GET\|/workload-identity/settings | GET /workload-identity/settings | getSettings (services/workload/handler.go:59) | GetSettings |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:146 |
-| workload\|PUT\|/workload-identity/settings | PUT /workload-identity/settings | putSettings (services/workload/handler.go:68) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/workloadIdentity.ts:151 |
-| workload\|GET\|/workload-identity/summary | GET /workload-identity/summary | getSummary (services/workload/handler.go:90) | GetSummary | ListRegistrations, ListFederationBundles, ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:159 |
-| workload\|GET\|/workload-identity/registrations | GET /workload-identity/registrations | listRegistrations (services/workload/handler.go:99) | ListRegistrations | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:164 |
-| workload\|DELETE\|/workload-identity/registrations/{param} | DELETE /workload-identity/registrations/{id} | deleteRegistration (services/workload/handler.go:134) | DeleteRegistration | DeleteRegistration |  |  | web/dashboard/src/lib/workloadIdentity.ts:180 |
-| workload\|GET\|/workload-identity/federation | GET /workload-identity/federation | listFederation (services/workload/handler.go:142) | ListFederationBundles | ListFederationBundles |  |  | web/dashboard/src/lib/workloadIdentity.ts:186 |
-| workload\|DELETE\|/workload-identity/federation/{param} | DELETE /workload-identity/federation/{id} | deleteFederation (services/workload/handler.go:175) | DeleteFederationBundle | DeleteFederationBundle |  |  | web/dashboard/src/lib/workloadIdentity.ts:202 |
-| workload\|POST\|/workload-identity/issue | POST /workload-identity/issue | issueSVID (services/workload/handler.go:183) | IssueSVID | InsertIssuanceRecord, TouchRegistrationIssued |  |  | web/dashboard/src/lib/workloadIdentity.ts:211 |
-| workload\|GET\|/workload-identity/issuances | GET /workload-identity/issuances | listIssuances (services/workload/handler.go:205) | ListIssuances | ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:219 |
-| workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | exchangeToken (services/workload/handler.go:219) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.proofs.verify, s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:236 |
-| workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | getGraph (services/workload/handler.go:251) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:244 |
-| workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | listUsage (services/workload/handler.go:262) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:249 |
-| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| compliance\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| compliance\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
+| workload\|GET\|/workload-identity/settings | GET /workload-identity/settings | getSettings (services/workload/handler.go:65) | GetSettings |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:146 |
+| workload\|PUT\|/workload-identity/settings | PUT /workload-identity/settings | putSettings (services/workload/handler.go:85) | UpdateSettings | UpsertSettings | s.keys.Retire |  | web/dashboard/src/lib/workloadIdentity.ts:151 |
+| workload\|POST\|/workload-identity/settings/rotate-signing-keys | POST /workload-identity/settings/rotate-signing-keys | rotateSigningKeys (services/workload/handler.go:74) | RotateSigningKeys | UpsertSettings | s.keys.Retire |  | web/dashboard/src/lib/workloadIdentity.ts:161 |
+| workload\|GET\|/workload-identity/summary | GET /workload-identity/summary | getSummary (services/workload/handler.go:107) | GetSummary | ListRegistrations, ListFederationBundles, ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:169 |
+| workload\|GET\|/workload-identity/registrations | GET /workload-identity/registrations | listRegistrations (services/workload/handler.go:116) | ListRegistrations | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:174 |
+| workload\|DELETE\|/workload-identity/registrations/{param} | DELETE /workload-identity/registrations/{id} | deleteRegistration (services/workload/handler.go:151) | DeleteRegistration | DeleteRegistration |  |  | web/dashboard/src/lib/workloadIdentity.ts:190 |
+| workload\|GET\|/workload-identity/federation | GET /workload-identity/federation | listFederation (services/workload/handler.go:159) | ListFederationBundles | ListFederationBundles |  |  | web/dashboard/src/lib/workloadIdentity.ts:196 |
+| workload\|DELETE\|/workload-identity/federation/{param} | DELETE /workload-identity/federation/{id} | deleteFederation (services/workload/handler.go:192) | DeleteFederationBundle | DeleteFederationBundle |  |  | web/dashboard/src/lib/workloadIdentity.ts:212 |
+| workload\|POST\|/workload-identity/issue | POST /workload-identity/issue | issueSVID (services/workload/handler.go:200) | IssueSVID | InsertIssuanceRecord, TouchRegistrationIssued |  |  | web/dashboard/src/lib/workloadIdentity.ts:221 |
+| workload\|GET\|/workload-identity/issuances | GET /workload-identity/issuances | listIssuances (services/workload/handler.go:222) | ListIssuances | ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:229 |
+| workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | exchangeToken (services/workload/handler.go:236) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.proofs.verify, s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:246 |
+| workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | getGraph (services/workload/handler.go:268) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:254 |
+| workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | listUsage (services/workload/handler.go:279) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:259 |
+| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| compliance\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| workload\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| compliance\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| workload\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
 
 ## All Backend Request Flows
 
@@ -1422,22 +1425,23 @@ This file connects frontend requests to backend Go processing. It is static anal
 | signing\|POST\|/signing/verify | POST /signing/verify | handleVerify (services/signing/handler.go:214) | VerifyArtifact | GetRecord, ListRecords | s.keycore.Verify |  | web/dashboard/src/lib/signing.ts:161 |
 | watchdog\|GET\|/watchdog/heartbeats | GET /watchdog/heartbeats | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:35 |
 | watchdog\|GET\|/watchdog/incidents | GET /watchdog/incidents | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:40 |
-| workload\|GET\|/workload-identity/settings | GET /workload-identity/settings | getSettings (services/workload/handler.go:59) | GetSettings |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:146 |
-| workload\|PUT\|/workload-identity/settings | PUT /workload-identity/settings | putSettings (services/workload/handler.go:68) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/workloadIdentity.ts:151 |
-| workload\|GET\|/workload-identity/summary | GET /workload-identity/summary | getSummary (services/workload/handler.go:90) | GetSummary | ListRegistrations, ListFederationBundles, ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:159 |
-| workload\|GET\|/workload-identity/registrations | GET /workload-identity/registrations | listRegistrations (services/workload/handler.go:99) | ListRegistrations | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:164 |
-| workload\|POST\|/workload-identity/registrations | POST /workload-identity/registrations | upsertRegistration (services/workload/handler.go:109) | UpsertRegistration | UpsertRegistration |  |  |  |
-| workload\|PUT\|/workload-identity/registrations/{param} | PUT /workload-identity/registrations/{id} | upsertRegistration (services/workload/handler.go:109) | UpsertRegistration | UpsertRegistration |  |  |  |
-| workload\|DELETE\|/workload-identity/registrations/{param} | DELETE /workload-identity/registrations/{id} | deleteRegistration (services/workload/handler.go:134) | DeleteRegistration | DeleteRegistration |  |  | web/dashboard/src/lib/workloadIdentity.ts:180 |
-| workload\|GET\|/workload-identity/federation | GET /workload-identity/federation | listFederation (services/workload/handler.go:142) | ListFederationBundles | ListFederationBundles |  |  | web/dashboard/src/lib/workloadIdentity.ts:186 |
-| workload\|POST\|/workload-identity/federation | POST /workload-identity/federation | upsertFederation (services/workload/handler.go:152) | UpsertFederationBundle | UpsertFederationBundle |  |  |  |
-| workload\|PUT\|/workload-identity/federation/{param} | PUT /workload-identity/federation/{id} | upsertFederation (services/workload/handler.go:152) | UpsertFederationBundle | UpsertFederationBundle |  |  |  |
-| workload\|DELETE\|/workload-identity/federation/{param} | DELETE /workload-identity/federation/{id} | deleteFederation (services/workload/handler.go:175) | DeleteFederationBundle | DeleteFederationBundle |  |  | web/dashboard/src/lib/workloadIdentity.ts:202 |
-| workload\|POST\|/workload-identity/issue | POST /workload-identity/issue | issueSVID (services/workload/handler.go:183) | IssueSVID | InsertIssuanceRecord, TouchRegistrationIssued |  |  | web/dashboard/src/lib/workloadIdentity.ts:211 |
-| workload\|GET\|/workload-identity/issuances | GET /workload-identity/issuances | listIssuances (services/workload/handler.go:205) | ListIssuances | ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:219 |
-| workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | exchangeToken (services/workload/handler.go:219) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.proofs.verify, s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:236 |
-| workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | getGraph (services/workload/handler.go:251) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:244 |
-| workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | listUsage (services/workload/handler.go:262) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:249 |
+| workload\|GET\|/workload-identity/settings | GET /workload-identity/settings | getSettings (services/workload/handler.go:65) | GetSettings |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:146 |
+| workload\|PUT\|/workload-identity/settings | PUT /workload-identity/settings | putSettings (services/workload/handler.go:85) | UpdateSettings | UpsertSettings | s.keys.Retire |  | web/dashboard/src/lib/workloadIdentity.ts:151 |
+| workload\|POST\|/workload-identity/settings/rotate-signing-keys | POST /workload-identity/settings/rotate-signing-keys | rotateSigningKeys (services/workload/handler.go:74) | RotateSigningKeys | UpsertSettings | s.keys.Retire |  | web/dashboard/src/lib/workloadIdentity.ts:161 |
+| workload\|GET\|/workload-identity/summary | GET /workload-identity/summary | getSummary (services/workload/handler.go:107) | GetSummary | ListRegistrations, ListFederationBundles, ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:169 |
+| workload\|GET\|/workload-identity/registrations | GET /workload-identity/registrations | listRegistrations (services/workload/handler.go:116) | ListRegistrations | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:174 |
+| workload\|POST\|/workload-identity/registrations | POST /workload-identity/registrations | upsertRegistration (services/workload/handler.go:126) | UpsertRegistration | UpsertRegistration |  |  |  |
+| workload\|PUT\|/workload-identity/registrations/{param} | PUT /workload-identity/registrations/{id} | upsertRegistration (services/workload/handler.go:126) | UpsertRegistration | UpsertRegistration |  |  |  |
+| workload\|DELETE\|/workload-identity/registrations/{param} | DELETE /workload-identity/registrations/{id} | deleteRegistration (services/workload/handler.go:151) | DeleteRegistration | DeleteRegistration |  |  | web/dashboard/src/lib/workloadIdentity.ts:190 |
+| workload\|GET\|/workload-identity/federation | GET /workload-identity/federation | listFederation (services/workload/handler.go:159) | ListFederationBundles | ListFederationBundles |  |  | web/dashboard/src/lib/workloadIdentity.ts:196 |
+| workload\|POST\|/workload-identity/federation | POST /workload-identity/federation | upsertFederation (services/workload/handler.go:169) | UpsertFederationBundle | UpsertFederationBundle |  |  |  |
+| workload\|PUT\|/workload-identity/federation/{param} | PUT /workload-identity/federation/{id} | upsertFederation (services/workload/handler.go:169) | UpsertFederationBundle | UpsertFederationBundle |  |  |  |
+| workload\|DELETE\|/workload-identity/federation/{param} | DELETE /workload-identity/federation/{id} | deleteFederation (services/workload/handler.go:192) | DeleteFederationBundle | DeleteFederationBundle |  |  | web/dashboard/src/lib/workloadIdentity.ts:212 |
+| workload\|POST\|/workload-identity/issue | POST /workload-identity/issue | issueSVID (services/workload/handler.go:200) | IssueSVID | InsertIssuanceRecord, TouchRegistrationIssued |  |  | web/dashboard/src/lib/workloadIdentity.ts:221 |
+| workload\|GET\|/workload-identity/issuances | GET /workload-identity/issuances | listIssuances (services/workload/handler.go:222) | ListIssuances | ListIssuanceRecords |  |  | web/dashboard/src/lib/workloadIdentity.ts:229 |
+| workload\|POST\|/workload-identity/token/exchange | POST /workload-identity/token/exchange | exchangeToken (services/workload/handler.go:236) | ExchangeToken | ListFederationBundles, TouchRegistrationUsed | s.proofs.verify, s.auth.IssueWorkloadToken |  | web/dashboard/src/lib/workloadIdentity.ts:246 |
+| workload\|GET\|/workload-identity/graph | GET /workload-identity/graph | getGraph (services/workload/handler.go:268) | GetGraph | ListRegistrations |  |  | web/dashboard/src/lib/workloadIdentity.ts:254 |
+| workload\|GET\|/workload-identity/usage | GET /workload-identity/usage | listUsage (services/workload/handler.go:279) | ListUsage |  |  |  | web/dashboard/src/lib/workloadIdentity.ts:259 |
 | hsm-connector\|POST\|/hsm/keys | POST /hsm/keys | generate (pkg/hsmconnector/handler.go:158) |  |  |  | pkg/hsm.NormalizeAlgorithm |  |
 | hsm-connector\|POST\|/hsm/tenant-key | POST /hsm/tenant-key | tenantKey (pkg/hsmconnector/handler.go:184) |  |  |  | pkg/hsm.TenantKeyLabel |  |
 | hsm-connector\|POST\|/hsm/encrypt | POST /hsm/encrypt | encrypt (pkg/hsmconnector/handler.go:207) |  |  |  |  |  |
@@ -1450,21 +1454,24 @@ This file connects frontend requests to backend Go processing. It is static anal
 | hsm-connector\|GET\|/hsm/objects | GET /hsm/objects | objects (pkg/hsmconnector/handler.go:337) |  |  |  |  |  |
 | hsm-connector\|GET\|/hsm/status | GET /hsm/status | status (pkg/hsmconnector/handler.go:387) |  |  | h.configs.Load, h.p11.status |  |  |
 | hsm-connector\|GET\|/healthz | GET /healthz | <inline func> (:) |  |  |  |  |  |
-| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| compliance\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:81 |
-| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| compliance\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
-| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:97 |
+| audit\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| certs\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| cloud\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| compliance\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| ekm\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| secrets\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| workload\|GET\|/mek/exposure | GET /mek/exposure | listExposure (pkg/mek/http.go:65) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:83 |
+| audit\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| certs\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| cloud\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| compliance\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| ekm\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| secrets\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
+| workload\|POST\|/mek/exposure/{param}/{param}/acknowledge | POST /mek/exposure/{item_type}/{item_id}/acknowledge | acknowledge (pkg/mek/http.go:82) |  |  |  |  | web/dashboard/src/lib/mekExposure.ts:99 |
 | audit\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | certs\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | cloud\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | compliance\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | ekm\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
 | secrets\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |
+| workload\|POST\|/mek/rewrap-legacy | POST /mek/rewrap-legacy | rewrapLegacy (pkg/mek/http.go:106) |  |  |  | pkg/crypto.EnvelopeWrappedUnder, pkg/crypto.RewrapEnvelope, pkg/tenantcheck.IsServicePrincipal |  |

@@ -5,7 +5,7 @@ master encryption key (MEK) from keycore through `pkg/mek`. No environment
 variable, no fallback, and never a value derived from a string in the repo
 (CLAUDE.md rules 3 and 6; `make conformance` rule `no-literal-key-material`).
 
-Six services store envelope-encrypted data. Each value has its own data key
+Seven services store envelope-encrypted data. Each value has its own data key
 (DEK), and the service's MEK wraps it:
 
 | Service | What it protects | Table |
@@ -16,6 +16,7 @@ Six services store envelope-encrypted data. Each value has its own data key
 | ekm | BitLocker recovery keys | `ekm_bitlocker_recovery_keys` |
 | audit | webhook signing secrets and custom header values (Splunk HEC tokens, Datadog API keys), sealed together per webhook | `webhooks` (`creds_wrapped_dek` set) |
 | compliance | playbook connection credentials (Slack/Teams webhook URLs, webhook URLs and headers, Jira and ServiceNow tokens), sealed together per connection (2.5.0-beta) | `compliance_playbook_connections` |
+| workload (`kms-workload-identity`) | each tenant's SPIFFE root CA private key and JWT-SVID signer private key, sealed together per tenant (6.11.0-beta) | `workload_identity_settings` (`signing_wrapped_dek` set) |
 
 ## What was wrong (found 2026-09-26)
 
@@ -124,6 +125,7 @@ the material. So each item found under a public key is recorded in
 | ekm | a `rotate` job escrows a new recovery key for the volume, or the client is deleted |
 | audit | every credential the webhook had is replaced in one or more updates (a new or removed secret, and each header sent with a new value or dropped), or the webhook is deleted |
 | compliance | every field of the connection is sent anew in one update, or the connection is deleted |
+| workload | the tenant's signing keys are rotated (`POST /workload-identity/settings/rotate-signing-keys`) or its trust domain is changed |
 
 An administrator can also close an entry with a reason of at least 10
 characters (`POST /mek/exposure/{item_type}/{item_id}/acknowledge`,
@@ -153,6 +155,14 @@ the service re-wraps only what a legacy key opens):
   live again. If that service can't re-wrap, nothing is restored
   (`backup_restore_refused`).
 
+- **Plaintext rows are never captured.** A catalogued table can name
+  columns an earlier release kept secret material in, in the clear
+  (`mek.Table.Plaintext`; today the workload signing keys). While any row
+  still holds a value there, governance refuses the backup
+  (`backup_create_refused`, naming the service to start so it seals them).
+  A restore of an older backup may bring such rows back; the owning
+  service's periodic pass seals them and records them as exposed.
+
 Backups already stored are not re-sealed in place: governance no longer keeps
 software-mode backup keys, and migration 013 removed the stored keys of
 backups taken before the upgrade ([BACKUP_KEYS.md](BACKUP_KEYS.md)). An
@@ -167,7 +177,8 @@ stored keys (no backups had been taken on the old version).
 - **CA signing keys** re-wrapped onto the sealed root key (certs'
   `RewrapLegacyCASigners`) are still the same private keys, so their entries
   stay open until the CA is replaced.
-- **Keycore is a startup dependency** of secrets, certs, cloud and ekm. For
+- **Keycore is a startup dependency** of secrets, certs, cloud, ekm and
+  workload. For
   audit it gates webhook credentials only; for compliance, playbook
   connections only (until the key opens, connection writes return 503 and
   notification steps fail with the reason).
@@ -179,6 +190,16 @@ stored keys (no backups had been taken on the old version).
   URLs and tokens at the receiver. Since 2.6.0-beta the Playbooks →
   Connections view flags each one ROTATE, and the Administration exposure
   register lists them under "Playbook connections".
+- **Workload signing keys stored before 6.11.0-beta** were plaintext PEM
+  (`local_ca_key_pem`, `jwt_signer_private_pem`). The workload primary
+  seals them at startup, before serving (a failure stops the start), and
+  every 15 minutes, which catches restored rows. Each tenant goes into the
+  exposure register first (`source: plaintext_storage`,
+  `audit.workload.mek_exposure_recorded`), then the envelope is written and
+  the plaintext columns emptied in one conditional update
+  (`audit.workload.mek_signing_keys_sealed`, or
+  `mek_signing_keys_seal_refused` with the row left as it was). Rotate the
+  signing keys: earlier copies still hold them.
 - **Webhook credentials stored before 1.25.0-beta** were plaintext. The
   audit service seals them at startup (and every 15 minutes, which catches
   restored rows) and records each webhook in the exposure register
@@ -201,7 +222,13 @@ stored keys (no backups had been taken on the old version).
   `TestUpgradeMovesCloudCredentialsOffPublicKey`,
   `TestUpgradeMovesRecoveryKeysOffPublicKey`,
   `TestUpgradeMovesCASignerOffPublicKey`.
-- **governance:** `TestBackupReprotectPostgres` (capture and restore re-wrap).
+- **governance:** `TestBackupReprotectPostgres` (capture and restore re-wrap),
+  `TestBackupRefusesPlaintextSigningKeys` (and `…Postgres`).
+- **workload:** `TestSigningKeysSealedAtRestSQLite` and
+  `TestSigningKeysSealedAtRestPostgres` (plaintext row sealed on the primary
+  only, exposure recorded, no plaintext PEM left, tenant binding, rotation
+  closes the exposure, a failed seal refused and audited),
+  `TestRotateSigningKeys`, `TestWorkloadRefusalsAudited`.
 - **audit:** `TestWebhookCredentialsAreSealedAtRest`,
   `TestWebhookCredentialsAreBoundToTheirWebhook`,
   `TestWebhookCredentialsFailClosedWithoutKey`,

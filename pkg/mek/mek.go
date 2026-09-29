@@ -98,6 +98,7 @@ func (st ServiceTables) Validate() error {
 	for _, t := range st.Tables {
 		names = append(names, t.Name, t.Tenant, t.Item, t.WrappedDEK, t.WrappedIV)
 		names = append(names, t.Keys...)
+		names = append(names, t.Plaintext...)
 		if len(t.Keys) == 0 || t.ItemType == "" {
 			return fmt.Errorf("mek: table %q needs Keys and ItemType", t.Name)
 		}

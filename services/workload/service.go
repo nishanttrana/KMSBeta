@@ -7,10 +7,13 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/mek"
 )
 
 type Service struct {
 	store  Store
+	keys   *mek.Keyring // exposure register of the sealed signing keys; nil in tests
 	auth   AuthClient
 	audit  AuditClient
 	proofs *proofCache
@@ -95,12 +98,7 @@ func (s *Service) ensureSettings(ctx context.Context, tenantID string) (Workload
 	if genErr != nil {
 		return WorkloadIdentitySettings{}, genErr
 	}
-	item.LocalCACertificatePEM = caCertPEM
-	item.LocalCAKeyPEM = caKeyPEM
-	item.JWTSignerPrivatePEM = jwtPrivPEM
-	item.JWTSignerPublicPEM = jwtPubPEM
-	item.JWTSignerKeyID = kid
-	item.LocalBundleJWKS = jwksJSON
+	setSigningMaterial(&item, caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON)
 	item, err = s.store.UpsertSettings(ctx, item)
 	if err != nil {
 		return WorkloadIdentitySettings{}, err
@@ -131,23 +129,55 @@ func (s *Service) UpdateSettings(ctx context.Context, in WorkloadIdentitySetting
 	next.JWTSignerPublicPEM = current.JWTSignerPublicPEM
 	next.JWTSignerKeyID = current.JWTSignerKeyID
 	next.LocalBundleJWKS = current.LocalBundleJWKS
-	if !strings.EqualFold(next.TrustDomain, current.TrustDomain) {
+	regenerated := !strings.EqualFold(next.TrustDomain, current.TrustDomain)
+	if regenerated {
 		caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON, genErr := generateSigningMaterial(next.TrustDomain)
 		if genErr != nil {
 			return WorkloadIdentitySettings{}, genErr
 		}
-		next.LocalCACertificatePEM = caCertPEM
-		next.LocalCAKeyPEM = caKeyPEM
-		next.JWTSignerPrivatePEM = jwtPrivPEM
-		next.JWTSignerPublicPEM = jwtPubPEM
-		next.JWTSignerKeyID = kid
-		next.LocalBundleJWKS = jwksJSON
+		setSigningMaterial(&next, caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON)
 	}
 	item, err := s.store.UpsertSettings(ctx, next)
 	if err != nil {
 		return WorkloadIdentitySettings{}, err
 	}
+	if regenerated {
+		s.keys.Retire(ctx, item.TenantID, signingKeysItemType, item.TenantID, "rotated")
+	}
 	return sanitizeSettings(item), nil
+}
+
+// RotateSigningKeys replaces the tenant's SPIFFE root CA and JWT-SVID signer
+// with new keys in the same trust domain. SVIDs issued under the old keys
+// stop verifying here; workloads fetch new ones. It closes the tenant's entry
+// in the exposure register, if one is open.
+func (s *Service) RotateSigningKeys(ctx context.Context, tenantID, actor string) (WorkloadIdentitySettings, error) {
+	current, err := s.ensureSettings(ctx, tenantID)
+	if err != nil {
+		return WorkloadIdentitySettings{}, err
+	}
+	caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON, err := generateSigningMaterial(current.TrustDomain)
+	if err != nil {
+		return WorkloadIdentitySettings{}, err
+	}
+	next := current
+	setSigningMaterial(&next, caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON)
+	next.UpdatedBy = strings.TrimSpace(actor)
+	item, err := s.store.UpsertSettings(ctx, next)
+	if err != nil {
+		return WorkloadIdentitySettings{}, err
+	}
+	s.keys.Retire(ctx, item.TenantID, signingKeysItemType, item.TenantID, "rotated")
+	return sanitizeSettings(item), nil
+}
+
+func setSigningMaterial(item *WorkloadIdentitySettings, caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON string) {
+	item.LocalCACertificatePEM = caCertPEM
+	item.LocalCAKeyPEM = caKeyPEM
+	item.JWTSignerPrivatePEM = jwtPrivPEM
+	item.JWTSignerPublicPEM = jwtPubPEM
+	item.JWTSignerKeyID = kid
+	item.LocalBundleJWKS = jwksJSON
 }
 
 func normalizeRegistration(in WorkloadRegistration, settings WorkloadIdentitySettings) (WorkloadRegistration, error) {

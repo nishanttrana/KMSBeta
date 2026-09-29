@@ -7,6 +7,39 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Workload signing keys: seal in the store, refuse backups that would copy plaintext (6.11.0-beta)
+
+**Decision.** The tenant's root CA and JWT-SVID signer private keys are
+sealed together as one envelope per tenant row, under a `pkg/mek` master key
+for `kms-workload-identity`, in the SQL store (`GetSettings` /
+`UpsertSettings`). The plaintext columns stay, always written empty, so the
+primary can seal what earlier releases left in them (and what a restore
+brings back), record each tenant in the exposure register, and clear them.
+
+**Why.** CLAUDE.md rule 6 and SERVICE_MASTER_KEYS.md. One envelope per row
+(not per key) matches audit and compliance and keeps the conditional update
+atomic. The payload names the tenant so an envelope moved between rows
+doesn't open. Sealing in the store means every path (lazy first read,
+settings update, trust-domain change, rotation) is covered without handler
+changes.
+
+**Rejected.**
+- *Reinterpreting the existing columns as ciphertext:* a silent switch;
+  a row would be ambiguous between plaintext and sealed.
+- *Keys in keycore (non-exportable signing keys):* the X.509 CA signing
+  path and JWT signer would call keycore on every issuance; a larger change
+  with its own availability trade-off. Still possible later.
+- *Governance stripping plaintext columns from a backup:* the restored
+  tenant would have a CA certificate without its key. Governance refuses
+  the capture instead and names the service to start. A deployment that
+  disabled workload with unsealed rows must start it once.
+- *Refusing a restore of an older backup with plaintext rows:* restoring an
+  old backup is legitimate; the rows are sealed by the next periodic pass
+  (at most 15 minutes) and recorded as exposed.
+
+**Enforced by** `TestSigningKeysSealedAtRest{SQLite,Postgres}`,
+`TestBackupRefusesPlaintextSigningKeys{,Postgres}`,
+`TestCatalogIsValidAndMigrated`.
 ## 2026-09-29 — Key access: deployed means the compose profile, unknown fails closed (6.10.0-beta)
 
 **Decision.** ekm, cloud and hyok decide whether key access justifications

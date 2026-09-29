@@ -21,6 +21,10 @@ type Table struct {
 	WrappedIV  string   // column holding the wrap IV
 	Base64     bool     // DEK and IV are stored as base64 text
 	Where      string   // optional constant filter selecting rows under the master key
+	// Plaintext lists columns an earlier release stored secret material in,
+	// in the clear. The owning service seals them and empties the columns;
+	// governance refuses to capture a backup while any row still holds one.
+	Plaintext []string
 }
 
 // ServiceTables is one service's master-key configuration: the tables it
@@ -97,6 +101,20 @@ var Catalog = map[string]ServiceTables{
 			Name: "compliance_playbook_connections", Keys: []string{"tenant_id", "id"}, Tenant: "tenant_id",
 			Item: "id", ItemType: "playbook_connection", WrappedDEK: "creds_wrapped_dek", WrappedIV: "creds_wrapped_dek_iv",
 			Where: "creds_wrapped_dek IS NOT NULL",
+		}},
+	},
+	// workload: each tenant's SPIFFE root CA private key and JWT-SVID signer
+	// private key, sealed together per tenant (6.11.0-beta). Earlier releases
+	// stored both as plaintext PEM; the workload service seals those rows
+	// and records them in the exposure register (services/workload/signing_keys.go).
+	"workload": {
+		Service: "workload", ClientID: "kms-workload-identity",
+		StateTable: "workload_mek_state", ExposureTable: "workload_mek_exposure",
+		Tables: []Table{{
+			Name: "workload_identity_settings", Keys: []string{"tenant_id"}, Tenant: "tenant_id",
+			Item: "tenant_id", ItemType: "workload_signing_keys", WrappedDEK: "signing_wrapped_dek", WrappedIV: "signing_wrapped_dek_iv",
+			Where:     "signing_wrapped_dek IS NOT NULL",
+			Plaintext: []string{"local_ca_key_pem", "jwt_signer_private_pem"},
 		}},
 	},
 	"certs": {

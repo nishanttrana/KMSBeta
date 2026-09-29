@@ -959,6 +959,7 @@ services:
       <<: *kms-common-env
       AUTH_URL: https://auth:8001
       AUDIT_URL: https://audit:8070
+      KEYCORE_URL: https://keycore:8010
       HTTP_PORT: "8250"
       GRPC_PORT: "18250"
     ports:

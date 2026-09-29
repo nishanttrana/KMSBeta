@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
 )
 
@@ -30,6 +31,7 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r := route.New("workload", audit, logger)
 	r.Handle("GET /workload-identity/settings", route.Spec{Action: "settings_viewed", Permission: permRead, Resource: "workload_identity_settings"}, h.getSettings)
 	r.Handle("PUT /workload-identity/settings", route.Spec{Action: "settings_updated", Permission: permWrite, Resource: "workload_identity_settings", Severity: "warning"}, h.putSettings)
+	r.Handle("POST /workload-identity/settings/rotate-signing-keys", route.Spec{Action: "signing_keys_rotated", Permission: permWrite, Resource: "workload_identity_settings", Severity: "warning"}, h.rotateSigningKeys)
 	r.Handle("GET /workload-identity/summary", route.Spec{Action: "summary_viewed", Permission: permRead, Resource: "workload_identity_settings"}, h.getSummary)
 	r.Handle("GET /workload-identity/registrations", route.Spec{Action: "registrations_viewed", Permission: permRead, Resource: "workload_registration"}, h.listRegistrations)
 	r.Handle("POST /workload-identity/registrations", route.Spec{Action: "registration_upserted", Permission: permWrite, Resource: "workload_registration"}, h.upsertRegistration)
@@ -50,6 +52,10 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	return h
 }
 
+// MountKeyring adds the master-key routes (exposure register, backup
+// re-wrap) of the sealed signing keys (pkg/mek).
+func (h *Handler) MountKeyring(k *mek.Keyring) { k.Routes(h.router, "workload") }
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.router.ServeHTTP(w, r) }
 
 // Public reports whether r reaches the token exchange, which authenticates
@@ -62,6 +68,17 @@ func (h *Handler) getSettings(c *route.Call) {
 		writeServiceError(c, err)
 		return
 	}
+	c.JSON(http.StatusOK, map[string]interface{}{"settings": item})
+}
+
+func (h *Handler) rotateSigningKeys(c *route.Call) {
+	item, err := h.svc.RotateSigningKeys(c.R.Context(), c.Tenant, c.Actor())
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.Detail("trust_domain", item.TrustDomain)
+	c.Detail("jwt_signer_key_id", item.JWTSignerKeyID)
 	c.JSON(http.StatusOK, map[string]interface{}{"settings": item})
 }
 

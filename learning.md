@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### An "open item" in the docs is not a fix, and a store is the only safe place to seal
+- **What happened:** the workload service kept every tenant's SPIFFE root
+  CA and JWT-SVID signer private keys as plaintext PEM. It was listed under
+  "Open" in two releases (6.8.0, 6.9.0) while the rule it broke (CLAUDE.md
+  rule 6) was already enforced for six other services. Fixed in 6.11.0-beta.
+- **Why it slipped through:** `pkg/mek` covered services that already
+  envelope-encrypted something (the catalog listed tables with a wrapped
+  DEK). A service that stored secrets in plain `TEXT` had no wrapped-DEK
+  column, so nothing flagged it; the `json:"-"` tags kept the keys out of
+  API responses, which made the storage look handled.
+- **Rule:** grep new tables for private keys, tokens and passwords in
+  `TEXT` columns, not only for wrapped DEKs. Seal in the store (the one
+  place every read and write passes), never in handlers. When plaintext
+  existed, a backup is also a copy: `mek.Table.Plaintext` makes governance
+  refuse to capture it. Also: `ADD COLUMN IF NOT EXISTS` doesn't parse on
+  SQLite; plain `ADD COLUMN` is safe because `schema_migrations` applies a
+  file once, and it lets the same migration run the SQLite test.
 ### An optional dependency needs a deployment signal, or its callers fail open
 - **What happened:** ekm, cloud and hyok allowed key operations whenever
   keyaccess returned an error, because keyaccess is optional (compose

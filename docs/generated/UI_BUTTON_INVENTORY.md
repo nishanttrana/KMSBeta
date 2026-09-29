@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T13:15:06Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T13:18:40Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -630,16 +630,17 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 313 | - | button | {logOpen ? : } | onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 404 | - | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 411 | - | button | } style={ } > New stream |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 289 | - | Btn | load(false)}> |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 327 | - | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 377 | - | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 397 | - | Btn | setRegistrationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 398 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 418 | - | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 433 | - | Btn | setFederationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 434 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 467 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 508 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 305 | - | Btn | load(false)}> |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 344 | - | Btn | Rotate Signing Keys | rotateSigningKeys} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 345 | - | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 396 | - | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 416 | - | Btn | setRegistrationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 417 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 437 | - | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 452 | - | Btn | setFederationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 453 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 486 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 527 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setThreatModal( )}> Add threat |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 376 | - | button | setThreatModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 377 | - | button | void remove("threat", t.id, t.name)}> |  |

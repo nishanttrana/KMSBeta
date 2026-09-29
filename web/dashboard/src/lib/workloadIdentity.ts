@@ -155,6 +155,16 @@ export async function updateWorkloadIdentitySettings(session: AuthSession, input
   return (out?.settings || {}) as WorkloadIdentitySettings;
 }
 
+// rotateWorkloadSigningKeys replaces the tenant's SPIFFE root CA and JWT-SVID
+// signer (same trust domain). SVIDs issued under the old keys stop verifying.
+export async function rotateWorkloadSigningKeys(session: AuthSession): Promise<WorkloadIdentitySettings> {
+  const out = await serviceRequest<{ settings: WorkloadIdentitySettings }>(session, "workload", `/workload-identity/settings/rotate-signing-keys?${tenantQuery(session)}`, {
+    method: "POST",
+    body: "{}"
+  });
+  return (out?.settings || {}) as WorkloadIdentitySettings;
+}
+
 export async function getWorkloadIdentitySummary(session: AuthSession): Promise<WorkloadIdentitySummary> {
   const out = await serviceRequest<{ summary: WorkloadIdentitySummary }>(session, "workload", `/workload-identity/summary?${tenantQuery(session)}`);
   return (out?.summary || {}) as WorkloadIdentitySummary;

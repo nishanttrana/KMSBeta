@@ -12905,7 +12905,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.getSettings",
-      "line": 31,
+      "line": 32,
       "match_key": "workload|GET|/workload-identity/settings",
       "method": "GET",
       "normalized_path": "/workload-identity/settings",
@@ -12920,7 +12920,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.putSettings",
-      "line": 32,
+      "line": 33,
       "match_key": "workload|PUT|/workload-identity/settings",
       "method": "PUT",
       "normalized_path": "/workload-identity/settings",
@@ -12931,11 +12931,26 @@
       "service": "workload"
     },
     {
+      "action": "signing_keys_rotated",
+      "code_scope": "workload",
+      "file": "services/workload/handler.go",
+      "handler": "h.rotateSigningKeys",
+      "line": 34,
+      "match_key": "workload|POST|/workload-identity/settings/rotate-signing-keys",
+      "method": "POST",
+      "normalized_path": "/workload-identity/settings/rotate-signing-keys",
+      "path": "/workload-identity/settings/rotate-signing-keys",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_identity_settings",
+      "service": "workload"
+    },
+    {
       "action": "summary_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.getSummary",
-      "line": 33,
+      "line": 35,
       "match_key": "workload|GET|/workload-identity/summary",
       "method": "GET",
       "normalized_path": "/workload-identity/summary",
@@ -12950,7 +12965,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.listRegistrations",
-      "line": 34,
+      "line": 36,
       "match_key": "workload|GET|/workload-identity/registrations",
       "method": "GET",
       "normalized_path": "/workload-identity/registrations",
@@ -12965,7 +12980,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertRegistration",
-      "line": 35,
+      "line": 37,
       "match_key": "workload|POST|/workload-identity/registrations",
       "method": "POST",
       "normalized_path": "/workload-identity/registrations",
@@ -12980,7 +12995,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertRegistration",
-      "line": 36,
+      "line": 38,
       "match_key": "workload|PUT|/workload-identity/registrations/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/registrations/{param}",
@@ -12995,7 +13010,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.deleteRegistration",
-      "line": 37,
+      "line": 39,
       "match_key": "workload|DELETE|/workload-identity/registrations/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/registrations/{param}",
@@ -13010,7 +13025,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.listFederation",
-      "line": 38,
+      "line": 40,
       "match_key": "workload|GET|/workload-identity/federation",
       "method": "GET",
       "normalized_path": "/workload-identity/federation",
@@ -13025,7 +13040,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertFederation",
-      "line": 39,
+      "line": 41,
       "match_key": "workload|POST|/workload-identity/federation",
       "method": "POST",
       "normalized_path": "/workload-identity/federation",
@@ -13040,7 +13055,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertFederation",
-      "line": 40,
+      "line": 42,
       "match_key": "workload|PUT|/workload-identity/federation/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/federation/{param}",
@@ -13055,7 +13070,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.deleteFederation",
-      "line": 41,
+      "line": 43,
       "match_key": "workload|DELETE|/workload-identity/federation/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/federation/{param}",
@@ -13070,7 +13085,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.issueSVID",
-      "line": 42,
+      "line": 44,
       "match_key": "workload|POST|/workload-identity/issue",
       "method": "POST",
       "normalized_path": "/workload-identity/issue",
@@ -13085,7 +13100,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.listIssuances",
-      "line": 43,
+      "line": 45,
       "match_key": "workload|GET|/workload-identity/issuances",
       "method": "GET",
       "normalized_path": "/workload-identity/issuances",
@@ -13100,7 +13115,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.exchangeToken",
-      "line": 46,
+      "line": 48,
       "match_key": "workload|POST|/workload-identity/token/exchange",
       "method": "POST",
       "normalized_path": "/workload-identity/token/exchange",
@@ -13115,7 +13130,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.getGraph",
-      "line": 47,
+      "line": 49,
       "match_key": "workload|GET|/workload-identity/graph",
       "method": "GET",
       "normalized_path": "/workload-identity/graph",
@@ -13130,7 +13145,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.listUsage",
-      "line": 48,
+      "line": 50,
       "match_key": "workload|GET|/workload-identity/usage",
       "method": "GET",
       "normalized_path": "/workload-identity/usage",
@@ -13411,6 +13426,21 @@
       "service": "secrets"
     },
     {
+      "action": "mek_exposure_listed",
+      "code_scope": "pkg/mek",
+      "file": "pkg/mek/http.go",
+      "handler": "k.listExposure",
+      "line": 55,
+      "match_key": "workload|GET|/mek/exposure",
+      "method": "GET",
+      "normalized_path": "/mek/exposure",
+      "path": "/mek/exposure",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "mek_exposure",
+      "service": "workload"
+    },
+    {
       "action": "mek_exposure_acknowledged",
       "code_scope": "pkg/mek",
       "file": "pkg/mek/http.go",
@@ -13501,6 +13531,21 @@
       "service": "secrets"
     },
     {
+      "action": "mek_exposure_acknowledged",
+      "code_scope": "pkg/mek",
+      "file": "pkg/mek/http.go",
+      "handler": "k.acknowledge",
+      "line": 56,
+      "match_key": "workload|POST|/mek/exposure/{param}/{param}/acknowledge",
+      "method": "POST",
+      "normalized_path": "/mek/exposure/{param}/{param}/acknowledge",
+      "path": "/mek/exposure/{item_type}/{item_id}/acknowledge",
+      "permission": "workload.exposure.acknowledge",
+      "registration": "kernel",
+      "resource": "mek_exposure",
+      "service": "workload"
+    },
+    {
       "action": "mek_backup_rewrap",
       "code_scope": "pkg/mek",
       "file": "pkg/mek/http.go",
@@ -13589,6 +13634,21 @@
       "registration": "kernel",
       "resource": "",
       "service": "secrets"
+    },
+    {
+      "action": "mek_backup_rewrap",
+      "code_scope": "pkg/mek",
+      "file": "pkg/mek/http.go",
+      "handler": "k.rewrapLegacy",
+      "line": 60,
+      "match_key": "workload|POST|/mek/rewrap-legacy",
+      "method": "POST",
+      "normalized_path": "/mek/rewrap-legacy",
+      "path": "/mek/rewrap-legacy",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "",
+      "service": "workload"
     }
   ],
   "backend_routes_not_directly_called_by_dashboard": [
@@ -18862,7 +18922,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertRegistration",
-      "line": 35,
+      "line": 37,
       "match_key": "workload|POST|/workload-identity/registrations",
       "method": "POST",
       "normalized_path": "/workload-identity/registrations",
@@ -18877,7 +18937,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertRegistration",
-      "line": 36,
+      "line": 38,
       "match_key": "workload|PUT|/workload-identity/registrations/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/registrations/{param}",
@@ -18892,7 +18952,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertFederation",
-      "line": 39,
+      "line": 41,
       "match_key": "workload|POST|/workload-identity/federation",
       "method": "POST",
       "normalized_path": "/workload-identity/federation",
@@ -18907,7 +18967,7 @@
       "code_scope": "workload",
       "file": "services/workload/handler.go",
       "handler": "h.upsertFederation",
-      "line": 40,
+      "line": 42,
       "match_key": "workload|PUT|/workload-identity/federation/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/federation/{param}",
@@ -19186,6 +19246,21 @@
       "registration": "kernel",
       "resource": "",
       "service": "secrets"
+    },
+    {
+      "action": "mek_backup_rewrap",
+      "code_scope": "pkg/mek",
+      "file": "pkg/mek/http.go",
+      "handler": "k.rewrapLegacy",
+      "line": 60,
+      "match_key": "workload|POST|/mek/rewrap-legacy",
+      "method": "POST",
+      "normalized_path": "/mek/rewrap-legacy",
+      "path": "/mek/rewrap-legacy",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "",
+      "service": "workload"
     }
   ],
   "button_inventory": [
@@ -25094,7 +25169,15 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "load(false)}>",
-      "line": 289,
+      "line": 305,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
+      "handler": "rotateSigningKeys} disabled={busy",
+      "label": "Rotate Signing Keys",
+      "line": 344,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25102,7 +25185,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveSettings} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 327,
+      "line": 345,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25110,7 +25193,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveRegistration} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 377,
+      "line": 396,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25118,7 +25201,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setRegistrationDraft( )}>Edit",
-      "line": 397,
+      "line": 416,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25126,7 +25209,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 398,
+      "line": 417,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25134,7 +25217,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveFederation} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 418,
+      "line": 437,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25142,7 +25225,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setFederationDraft( )}>Edit",
-      "line": 433,
+      "line": 452,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25150,7 +25233,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 434,
+      "line": 453,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25158,7 +25241,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runIssue} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 467,
+      "line": 486,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25166,7 +25249,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runExchange} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 508,
+      "line": 527,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31795,7 +31878,7 @@
       "dynamic": true,
       "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
       "file": "web/dashboard/src/lib/mekExposure.ts",
-      "line": 81,
+      "line": 83,
       "match_key": "$dynamic-service|GET|/mek/exposure",
       "method": "GET",
       "normalized_path": "/mek/exposure",
@@ -31808,7 +31891,7 @@
       "dynamic": true,
       "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
       "file": "web/dashboard/src/lib/mekExposure.ts",
-      "line": 97,
+      "line": 99,
       "match_key": "$dynamic-service|POST|/mek/exposure/{param}/{param}/acknowledge",
       "method": "POST",
       "normalized_path": "/mek/exposure/{param}/{param}/acknowledge",
@@ -33483,9 +33566,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"workload\", `/workload-identity/settings/rotate-signing-keys?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/workloadIdentity.ts",
+      "line": 161,
+      "match_key": "workload|POST|/workload-identity/settings/rotate-signing-keys",
+      "method": "POST",
+      "normalized_path": "/workload-identity/settings/rotate-signing-keys",
+      "path": "/workload-identity/settings/rotate-signing-keys?{param}",
+      "service": "workload",
+      "service_key": "workload",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 159,
+      "line": 169,
       "match_key": "workload|GET|/workload-identity/summary",
       "method": "GET",
       "normalized_path": "/workload-identity/summary",
@@ -33498,7 +33594,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/registrations?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 164,
+      "line": 174,
       "match_key": "workload|GET|/workload-identity/registrations",
       "method": "GET",
       "normalized_path": "/workload-identity/registrations",
@@ -33511,7 +33607,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/registrations/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 180,
+      "line": 190,
       "match_key": "workload|DELETE|/workload-identity/registrations/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/registrations/{param}",
@@ -33524,7 +33620,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/federation?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 186,
+      "line": 196,
       "match_key": "workload|GET|/workload-identity/federation",
       "method": "GET",
       "normalized_path": "/workload-identity/federation",
@@ -33537,7 +33633,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/federation/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 202,
+      "line": 212,
       "match_key": "workload|DELETE|/workload-identity/federation/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/federation/{param}",
@@ -33550,7 +33646,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"workload\", \"/workload-identity/issue\")",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 211,
+      "line": 221,
       "match_key": "workload|POST|/workload-identity/issue",
       "method": "POST",
       "normalized_path": "/workload-identity/issue",
@@ -33563,7 +33659,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/issuances?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 219,
+      "line": 229,
       "match_key": "workload|GET|/workload-identity/issuances",
       "method": "GET",
       "normalized_path": "/workload-identity/issuances",
@@ -33576,7 +33672,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 236,
+      "line": 246,
       "match_key": "workload|POST|/workload-identity/token/exchange",
       "method": "POST",
       "normalized_path": "/workload-identity/token/exchange",
@@ -33589,7 +33685,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 244,
+      "line": 254,
       "match_key": "workload|GET|/workload-identity/graph",
       "method": "GET",
       "normalized_path": "/workload-identity/graph",
@@ -33602,7 +33698,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 249,
+      "line": 259,
       "match_key": "workload|GET|/workload-identity/usage",
       "method": "GET",
       "normalized_path": "/workload-identity/usage",
@@ -33612,7 +33708,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T13:15:06Z",
+  "generated_at": "2026-09-29T13:18:40Z",
   "navigation": [
     {
       "group": "Overview",
@@ -88748,7 +88844,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 59,
+      "handler_line": 65,
       "handler_name": "getSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -88759,7 +88855,7 @@
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
       "route_file": "services/workload/handler.go",
-      "route_line": 31,
+      "route_line": 32,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -88776,7 +88872,7 @@
             "sanitizeSettings"
           ],
           "internal_package_calls": [],
-          "line": 111,
+          "line": 109,
           "name": "GetSettings",
           "receiver_calls": [],
           "store_calls": []
@@ -88802,7 +88898,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 68,
+      "handler_line": 85,
       "handler_name": "putSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -88813,7 +88909,7 @@
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
       "route_file": "services/workload/handler.go",
-      "route_line": 32,
+      "route_line": 33,
       "service": "workload",
       "service_external_package_calls": [
         "strings.EqualFold"
@@ -88822,6 +88918,7 @@
         "ensureSettings",
         "normalizeSettings",
         "generateSigningMaterial",
+        "setSigningMaterial",
         "UpsertSettings",
         "sanitizeSettings"
       ],
@@ -88836,19 +88933,96 @@
             "ensureSettings",
             "normalizeSettings",
             "generateSigningMaterial",
+            "setSigningMaterial",
             "UpsertSettings",
             "sanitizeSettings"
           ],
           "internal_package_calls": [],
-          "line": 119,
+          "line": 117,
           "name": "UpdateSettings",
-          "receiver_calls": [],
+          "receiver_calls": [
+            "s.keys.Retire"
+          ],
           "store_calls": [
             "UpsertSettings"
           ]
         }
       ],
-      "service_receiver_calls": [],
+      "service_receiver_calls": [
+        "s.keys.Retire"
+      ],
+      "service_store_calls": [
+        "UpsertSettings"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"workload\", `/workload-identity/settings/rotate-signing-keys?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/workloadIdentity.ts",
+          "line": 161,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.rotateSigningKeys",
+      "handler_external_package_calls": [],
+      "handler_file": "services/workload/handler.go",
+      "handler_helper_calls": [
+        "RotateSigningKeys",
+        "writeServiceError"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 74,
+      "handler_name": "rotateSigningKeys",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "RotateSigningKeys"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/workload-identity/settings/rotate-signing-keys",
+      "path": "/workload-identity/settings/rotate-signing-keys",
+      "route_file": "services/workload/handler.go",
+      "route_line": 34,
+      "service": "workload",
+      "service_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "ensureSettings",
+        "generateSigningMaterial",
+        "setSigningMaterial",
+        "UpsertSettings",
+        "sanitizeSettings"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.TrimSpace"
+          ],
+          "file": "services/workload/service.go",
+          "helper_calls": [
+            "ensureSettings",
+            "generateSigningMaterial",
+            "setSigningMaterial",
+            "UpsertSettings",
+            "sanitizeSettings"
+          ],
+          "internal_package_calls": [],
+          "line": 154,
+          "name": "RotateSigningKeys",
+          "receiver_calls": [
+            "s.keys.Retire"
+          ],
+          "store_calls": [
+            "UpsertSettings"
+          ]
+        }
+      ],
+      "service_receiver_calls": [
+        "s.keys.Retire"
+      ],
       "service_store_calls": [
         "UpsertSettings"
       ]
@@ -88858,7 +89032,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 159,
+          "line": 169,
           "source": "serviceRequest"
         }
       ],
@@ -88870,7 +89044,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 90,
+      "handler_line": 107,
       "handler_name": "getSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -88881,7 +89055,7 @@
       "normalized_path": "/workload-identity/summary",
       "path": "/workload-identity/summary",
       "route_file": "services/workload/handler.go",
-      "route_line": 33,
+      "route_line": 35,
       "service": "workload",
       "service_external_package_calls": [
         "time.Duration"
@@ -88914,7 +89088,7 @@
             "maxInt"
           ],
           "internal_package_calls": [],
-          "line": 515,
+          "line": 545,
           "name": "GetSummary",
           "receiver_calls": [],
           "store_calls": [
@@ -88936,7 +89110,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/registrations?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 164,
+          "line": 174,
           "source": "serviceRequest"
         }
       ],
@@ -88948,7 +89122,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 99,
+      "handler_line": 116,
       "handler_name": "listRegistrations",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -88959,7 +89133,7 @@
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
       "route_file": "services/workload/handler.go",
-      "route_line": 34,
+      "route_line": 36,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -88974,7 +89148,7 @@
             "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 205,
+          "line": 235,
           "name": "ListRegistrations",
           "receiver_calls": [],
           "store_calls": [
@@ -88997,7 +89171,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 109,
+      "handler_line": 126,
       "handler_name": "upsertRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89008,7 +89182,7 @@
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
       "route_file": "services/workload/handler.go",
-      "route_line": 35,
+      "route_line": 37,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89025,7 +89199,7 @@
             "normalizeRegistration"
           ],
           "internal_package_calls": [],
-          "line": 216,
+          "line": 246,
           "name": "UpsertRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89048,7 +89222,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 109,
+      "handler_line": 126,
       "handler_name": "upsertRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89059,7 +89233,7 @@
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 36,
+      "route_line": 38,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89076,7 +89250,7 @@
             "normalizeRegistration"
           ],
           "internal_package_calls": [],
-          "line": 216,
+          "line": 246,
           "name": "UpsertRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89094,7 +89268,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/registrations/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 180,
+          "line": 190,
           "source": "serviceRequest"
         }
       ],
@@ -89106,7 +89280,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 134,
+      "handler_line": 151,
       "handler_name": "deleteRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89117,7 +89291,7 @@
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 37,
+      "route_line": 39,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -89128,7 +89302,7 @@
           "file": "services/workload/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 232,
+          "line": 262,
           "name": "DeleteRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89146,7 +89320,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/federation?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 186,
+          "line": 196,
           "source": "serviceRequest"
         }
       ],
@@ -89158,7 +89332,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 142,
+      "handler_line": 159,
       "handler_name": "listFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89169,7 +89343,7 @@
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
       "route_file": "services/workload/handler.go",
-      "route_line": 38,
+      "route_line": 40,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89184,7 +89358,7 @@
             "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 239,
+          "line": 269,
           "name": "ListFederationBundles",
           "receiver_calls": [],
           "store_calls": [
@@ -89207,7 +89381,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 152,
+      "handler_line": 169,
       "handler_name": "upsertFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89218,7 +89392,7 @@
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
       "route_file": "services/workload/handler.go",
-      "route_line": 39,
+      "route_line": 41,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89237,7 +89411,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 250,
+          "line": 280,
           "name": "UpsertFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89260,7 +89434,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 152,
+      "handler_line": 169,
       "handler_name": "upsertFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89271,7 +89445,7 @@
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 40,
+      "route_line": 42,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89290,7 +89464,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 250,
+          "line": 280,
           "name": "UpsertFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89308,7 +89482,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/federation/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 202,
+          "line": 212,
           "source": "serviceRequest"
         }
       ],
@@ -89320,7 +89494,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 175,
+      "handler_line": 192,
       "handler_name": "deleteFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89331,7 +89505,7 @@
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 41,
+      "route_line": 43,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -89342,7 +89516,7 @@
           "file": "services/workload/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 268,
+          "line": 298,
           "name": "DeleteFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89360,7 +89534,7 @@
         {
           "expression": "serviceRequest(\"workload\", \"/workload-identity/issue\")",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 211,
+          "line": 221,
           "source": "serviceRequest"
         }
       ],
@@ -89372,7 +89546,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 183,
+      "handler_line": 200,
       "handler_name": "issueSVID",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89383,7 +89557,7 @@
       "normalized_path": "/workload-identity/issue",
       "path": "/workload-identity/issue",
       "route_file": "services/workload/handler.go",
-      "route_line": 42,
+      "route_line": 44,
       "service": "workload",
       "service_external_package_calls": [
         "time.Duration"
@@ -89424,7 +89598,7 @@
             "TouchRegistrationIssued"
           ],
           "internal_package_calls": [],
-          "line": 286,
+          "line": 316,
           "name": "IssueSVID",
           "receiver_calls": [],
           "store_calls": [
@@ -89444,7 +89618,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/issuances?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 219,
+          "line": 229,
           "source": "serviceRequest"
         }
       ],
@@ -89457,7 +89631,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 205,
+      "handler_line": 222,
       "handler_name": "listIssuances",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89468,7 +89642,7 @@
       "normalized_path": "/workload-identity/issuances",
       "path": "/workload-identity/issuances",
       "route_file": "services/workload/handler.go",
-      "route_line": 43,
+      "route_line": 45,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89485,7 +89659,7 @@
             "ListIssuanceRecords"
           ],
           "internal_package_calls": [],
-          "line": 275,
+          "line": 305,
           "name": "ListIssuances",
           "receiver_calls": [],
           "store_calls": [
@@ -89503,7 +89677,7 @@
         {
           "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 236,
+          "line": 246,
           "source": "serviceRequest"
         }
       ],
@@ -89517,7 +89691,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 219,
+      "handler_line": 236,
       "handler_name": "exchangeToken",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89528,7 +89702,7 @@
       "normalized_path": "/workload-identity/token/exchange",
       "path": "/workload-identity/token/exchange",
       "route_file": "services/workload/handler.go",
-      "route_line": 46,
+      "route_line": 48,
       "service": "workload",
       "service_external_package_calls": [
         "errors.As",
@@ -89585,7 +89759,7 @@
             "TouchRegistrationUsed"
           ],
           "internal_package_calls": [],
-          "line": 346,
+          "line": 376,
           "name": "ExchangeToken",
           "receiver_calls": [
             "s.proofs.verify",
@@ -89611,7 +89785,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 244,
+          "line": 254,
           "source": "serviceRequest"
         }
       ],
@@ -89623,7 +89797,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 251,
+      "handler_line": 268,
       "handler_name": "getGraph",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89634,7 +89808,7 @@
       "normalized_path": "/workload-identity/graph",
       "path": "/workload-identity/graph",
       "route_file": "services/workload/handler.go",
-      "route_line": 47,
+      "route_line": 49,
       "service": "workload",
       "service_external_package_calls": [
         "sort.Slice",
@@ -89669,7 +89843,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 455,
+          "line": 485,
           "name": "GetGraph",
           "receiver_calls": [],
           "store_calls": [
@@ -89687,7 +89861,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 249,
+          "line": 259,
           "source": "serviceRequest"
         }
       ],
@@ -89700,7 +89874,7 @@
         "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 262,
+      "handler_line": 279,
       "handler_name": "listUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -89711,7 +89885,7 @@
       "normalized_path": "/workload-identity/usage",
       "path": "/workload-identity/usage",
       "route_file": "services/workload/handler.go",
-      "route_line": 48,
+      "route_line": 50,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -89732,7 +89906,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 444,
+          "line": 474,
           "name": "ListUsage",
           "receiver_calls": [],
           "store_calls": []
@@ -90105,7 +90279,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90139,7 +90313,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90173,7 +90347,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90207,7 +90381,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90241,7 +90415,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90275,7 +90449,7 @@
         {
           "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 81,
+          "line": 83,
           "source": "serviceRequestRaw"
         }
       ],
@@ -90307,9 +90481,43 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
+          "file": "web/dashboard/src/lib/mekExposure.ts",
+          "line": 83,
+          "source": "serviceRequestRaw"
+        }
+      ],
+      "handler": "k.listExposure",
+      "handler_external_package_calls": [],
+      "handler_file": "pkg/mek/http.go",
+      "handler_helper_calls": [
+        "Exposures"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 65,
+      "handler_name": "listExposure",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/mek/exposure",
+      "path": "/mek/exposure",
+      "route_file": "pkg/mek/http.go",
+      "route_line": 55,
+      "service": "workload",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90345,7 +90553,7 @@
         {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90381,7 +90589,7 @@
         {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90417,7 +90625,7 @@
         {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90453,7 +90661,7 @@
         {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90489,7 +90697,7 @@
         {
           "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
           "file": "web/dashboard/src/lib/mekExposure.ts",
-          "line": 97,
+          "line": 99,
           "source": "serviceRequest"
         }
       ],
@@ -90513,6 +90721,42 @@
       "route_file": "pkg/mek/http.go",
       "route_line": 56,
       "service": "secrets",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
+          "file": "web/dashboard/src/lib/mekExposure.ts",
+          "line": 99,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "k.acknowledge",
+      "handler_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "handler_file": "pkg/mek/http.go",
+      "handler_helper_calls": [
+        "Remediate"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 82,
+      "handler_name": "acknowledge",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/mek/exposure/{param}/{param}/acknowledge",
+      "path": "/mek/exposure/{item_type}/{item_id}/acknowledge",
+      "route_file": "pkg/mek/http.go",
+      "route_line": 56,
+      "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [],
       "service_internal_package_calls": [],
@@ -90711,6 +90955,39 @@
       "route_file": "pkg/mek/http.go",
       "route_line": 60,
       "service": "secrets",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "k.rewrapLegacy",
+      "handler_external_package_calls": [],
+      "handler_file": "pkg/mek/http.go",
+      "handler_helper_calls": [
+        "unb64",
+        "recordExposure",
+        "b64"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/crypto.EnvelopeWrappedUnder",
+        "pkg/crypto.RewrapEnvelope",
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 106,
+      "handler_name": "rewrapLegacy",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/mek/rewrap-legacy",
+      "path": "/mek/rewrap-legacy",
+      "route_file": "pkg/mek/http.go",
+      "route_line": 60,
+      "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [],
       "service_internal_package_calls": [],
@@ -90750,7 +91027,7 @@
       "secrets": 25,
       "signing": 11,
       "watchdog": 2,
-      "workload": 16
+      "workload": 20
     },
     "frontend_calls": {
       "$dynamic-service": 2,
@@ -90784,7 +91061,7 @@
       "signing": 9,
       "tfe": 1,
       "watchdog": 2,
-      "workload": 12
+      "workload": 13
     },
     "tab_dependencies": {
       "ai": 1,
@@ -90973,17 +91250,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 906,
+    "backend_routes": 910,
     "backend_services": 30,
-    "button_inventory": 761,
-    "frontend_call_sites": 571,
-    "matched_frontend_call_sites": 526,
+    "button_inventory": 762,
+    "frontend_call_sites": 572,
+    "matched_frontend_call_sites": 527,
     "nav_items": 27,
-    "request_flows": 906,
-    "request_flows_with_frontend": 533,
-    "request_flows_with_internal_package_calls": 161,
-    "request_flows_with_service_calls": 537,
-    "request_flows_with_store_calls": 648,
+    "request_flows": 910,
+    "request_flows_with_frontend": 536,
+    "request_flows_with_internal_package_calls": 162,
+    "request_flows_with_service_calls": 538,
+    "request_flows_with_store_calls": 649,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -91245,7 +91522,7 @@
       ]
     },
     {
-      "call_count": 91,
+      "call_count": 92,
       "component": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "group": "Security & compliance",
       "id": "posture",
@@ -121795,7 +122072,7 @@
         ],
         "handler": "getSettings",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 59,
+        "handlerLine": 65,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121815,7 +122092,7 @@
         ]
       },
       {
-        "complexity": 1,
+        "complexity": 2,
         "externalPackages": [
           "strings.EqualFold"
         ],
@@ -121829,19 +122106,59 @@
         ],
         "handler": "putSettings",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 68,
+        "handlerLine": 85,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
         "normalizedPath": "/workload-identity/settings",
         "path": "/workload-identity/settings",
-        "receiverCalls": [],
+        "receiverCalls": [
+          "s.keys.Retire"
+        ],
         "risk": "medium",
         "routeKey": "workload|PUT|/workload-identity/settings",
         "sensitive": true,
         "service": "workload",
         "serviceCalls": [
           "UpdateSettings"
+        ],
+        "storeCalls": [
+          "UpsertSettings"
+        ],
+        "uiLabels": [
+          "Posture"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"workload\", `/workload-identity/settings/rotate-signing-keys?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/workloadIdentity.ts",
+            "line": 161,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "rotateSigningKeys",
+        "handlerFile": "services/workload/handler.go",
+        "handlerLine": 74,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/workload-identity/settings/rotate-signing-keys",
+        "path": "/workload-identity/settings/rotate-signing-keys",
+        "receiverCalls": [
+          "s.keys.Retire"
+        ],
+        "risk": "medium",
+        "routeKey": "workload|POST|/workload-identity/settings/rotate-signing-keys",
+        "sensitive": true,
+        "service": "workload",
+        "serviceCalls": [
+          "RotateSigningKeys"
         ],
         "storeCalls": [
           "UpsertSettings"
@@ -121859,13 +122176,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 159,
+            "line": 169,
             "source": "serviceRequest"
           }
         ],
         "handler": "getSummary",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 90,
+        "handlerLine": 107,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121895,13 +122212,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/registrations?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 164,
+            "line": 174,
             "source": "serviceRequest"
           }
         ],
         "handler": "listRegistrations",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 99,
+        "handlerLine": 116,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -121928,7 +122245,7 @@
         "frontendSites": [],
         "handler": "upsertRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 109,
+        "handlerLine": 126,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -121955,7 +122272,7 @@
         "frontendSites": [],
         "handler": "upsertRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 109,
+        "handlerLine": 126,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -121983,13 +122300,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/registrations/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 180,
+            "line": 190,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 134,
+        "handlerLine": 151,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -122017,13 +122334,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/federation?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 186,
+            "line": 196,
             "source": "serviceRequest"
           }
         ],
         "handler": "listFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 142,
+        "handlerLine": 159,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122050,7 +122367,7 @@
         "frontendSites": [],
         "handler": "upsertFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 152,
+        "handlerLine": 169,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -122077,7 +122394,7 @@
         "frontendSites": [],
         "handler": "upsertFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 152,
+        "handlerLine": 169,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -122105,13 +122422,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/federation/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 202,
+            "line": 212,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 175,
+        "handlerLine": 192,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -122141,13 +122458,13 @@
           {
             "expression": "serviceRequest(\"workload\", \"/workload-identity/issue\")",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 211,
+            "line": 221,
             "source": "serviceRequest"
           }
         ],
         "handler": "issueSVID",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 183,
+        "handlerLine": 200,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -122176,13 +122493,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/issuances?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 219,
+            "line": 229,
             "source": "serviceRequest"
           }
         ],
         "handler": "listIssuances",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 205,
+        "handlerLine": 222,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122217,13 +122534,13 @@
           {
             "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 236,
+            "line": 246,
             "source": "serviceRequest"
           }
         ],
         "handler": "exchangeToken",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 219,
+        "handlerLine": 236,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -122258,13 +122575,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 244,
+            "line": 254,
             "source": "serviceRequest"
           }
         ],
         "handler": "getGraph",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 251,
+        "handlerLine": 268,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122292,13 +122609,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 249,
+            "line": 259,
             "source": "serviceRequest"
           }
         ],
         "handler": "listUsage",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 262,
+        "handlerLine": 279,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122615,7 +122932,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122645,7 +122962,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122675,7 +122992,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122705,7 +123022,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122735,7 +123052,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122765,7 +123082,7 @@
           {
             "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 81,
+            "line": 83,
             "source": "serviceRequestRaw"
           }
         ],
@@ -122790,6 +123107,36 @@
       },
       {
         "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequestRaw(service, \"/mek/exposure?open=false\")",
+            "file": "web/dashboard/src/lib/mekExposure.ts",
+            "line": 83,
+            "source": "serviceRequestRaw"
+          }
+        ],
+        "handler": "listExposure",
+        "handlerFile": "pkg/mek/http.go",
+        "handlerLine": 65,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/mek/exposure",
+        "path": "/mek/exposure",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "workload|GET|/mek/exposure",
+        "sensitive": true,
+        "service": "workload",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "mekExposure"
+        ]
+      },
+      {
+        "complexity": 0,
         "externalPackages": [
           "strings.TrimSpace"
         ],
@@ -122797,7 +123144,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122829,7 +123176,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122861,7 +123208,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122893,7 +123240,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122925,7 +123272,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122957,7 +123304,7 @@
           {
             "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
             "file": "web/dashboard/src/lib/mekExposure.ts",
-            "line": 97,
+            "line": 99,
             "source": "serviceRequest"
           }
         ],
@@ -122974,6 +123321,38 @@
         "routeKey": "secrets|POST|/mek/exposure/{param}/{param}/acknowledge",
         "sensitive": true,
         "service": "secrets",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "mekExposure"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(service, `/mek/exposure/${encodeURIComponent(item.item_type)}/${encodeURIComponent(item.item_id)}/acknowledge`)",
+            "file": "web/dashboard/src/lib/mekExposure.ts",
+            "line": 99,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "acknowledge",
+        "handlerFile": "pkg/mek/http.go",
+        "handlerLine": 82,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/mek/exposure/{param}/{param}/acknowledge",
+        "path": "/mek/exposure/{item_type}/{item_id}/acknowledge",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "workload|POST|/mek/exposure/{param}/{param}/acknowledge",
+        "sensitive": true,
+        "service": "workload",
         "serviceCalls": [],
         "storeCalls": [],
         "uiLabels": [
@@ -123141,9 +123520,36 @@
         "uiLabels": [
           "API only"
         ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "rewrapLegacy",
+        "handlerFile": "pkg/mek/http.go",
+        "handlerLine": 106,
+        "hasFrontend": false,
+        "internalPackages": [
+          "pkg/crypto.EnvelopeWrappedUnder",
+          "pkg/crypto.RewrapEnvelope",
+          "pkg/tenantcheck.IsServicePrincipal"
+        ],
+        "method": "POST",
+        "normalizedPath": "/mek/rewrap-legacy",
+        "path": "/mek/rewrap-legacy",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "workload|POST|/mek/rewrap-legacy",
+        "sensitive": true,
+        "service": "workload",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
+        ]
       }
     ],
-    "generatedAt": "2026-09-29T13:15:06Z",
+    "generatedAt": "2026-09-29T13:18:40Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123185,8 +123591,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 906,
-      "frontendBacked": 533,
+      "flows": 910,
+      "frontendBacked": 536,
       "highRisk": 374,
       "services": 30
     }

@@ -20,14 +20,17 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[workload] ", log.LstdFlags|log.Lmicroseconds)
@@ -45,6 +48,8 @@ func main() {
 	if _, err := pkgsvctls.Init(ctx, "kms-workload-identity", pkgsvctls.Options{Logger: logger}); err != nil {
 		logger.Fatalf("internal mTLS enrolment failed: %v", err)
 	}
+	// Service JWT for keycore (the signing keys master key).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-workload-identity"))
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -66,11 +71,12 @@ func main() {
 
 	var publisher pkgauditmw.EventPublisher
 	var audit route.Emitter
+	var mekAudit mek.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.workload.dead_letter")
 		if c, err := pkgaudit.NewClient(js, "workload"); err == nil {
-			audit = c
+			audit, mekAudit = c, c
 		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
@@ -80,14 +86,42 @@ func main() {
 	auditURL := envOr("AUDIT_URL", "https://audit:8070")
 	sharedSecret := strings.TrimSpace(os.Getenv("WORKLOAD_IDENTITY_SHARED_SECRET"))
 
+	// Master key of the tenant signing keys, from keycore (pkg/mek). The
+	// service doesn't serve without it, nor with plaintext keys left in the
+	// table (signing_keys.go).
+	primary := clusterstate.RunsPrimaryJobs
+	keys, err := mek.Open(ctx, mek.Options{
+		Tables: mek.Catalog["workload"],
+		Source: mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["workload"]),
+		DB:     dbConn.SQL(),
+		Audit:  mekAudit,
+		Member: func(ctx context.Context) bool { return !primary(ctx) },
+		Logf:   logger.Printf,
+		Wait:   10 * time.Minute,
+	})
+	if err != nil {
+		logger.Fatalf("workload master key: %v", err)
+	}
+	store := NewSQLStore(dbConn, keys)
+	if n, err := store.SealPlaintextSigningKeys(ctx, primary, audit); err != nil {
+		logger.Fatalf("workload signing keys: %v", err)
+	} else if n > 0 {
+		logger.Printf("workload signing keys: sealed %d plaintext tenant row(s); recorded in the exposure register", n)
+	}
+	go keys.Watch(ctx, 15*time.Minute)
+	go store.sealPlaintextLoop(ctx, primary, audit, 15*time.Minute, logger.Printf)
+
 	svc := NewService(
-		NewSQLStore(dbConn),
+		store,
 		NewHTTPAuthClient(authURL, sharedSecret),
 		NewHTTPAuditClient(auditURL),
 	)
+	svc.keys = keys
+	routes := NewHandler(svc, audit, logger)
+	routes.MountKeyring(keys)
 	// Every route needs a verified JWT except the token exchange, which the
 	// workload's SVID authenticates (docs/DECISIONS.md 2026-09-29).
-	handler := pkgjwtauth.MustWrapRouter("WORKLOAD", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
+	handler := pkgjwtauth.MustWrapRouter("WORKLOAD", cfg.JWTIssuer, cfg.JWTAudience, routes, logger)
 
 	httpPort := envOr("HTTP_PORT", "8250")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "workload"))

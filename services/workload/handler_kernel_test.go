@@ -317,3 +317,21 @@ func TestSummaryReportsUsageUnavailable(t *testing.T) {
 	}
 	f.do(t, "GET", "/workload-identity/usage", "", f.admin, http.StatusBadGateway)
 }
+
+// Rotating the signing keys replaces the root CA and JWT signer, audits
+// signing_keys_rotated, and SVIDs issued under the old keys stop verifying.
+func TestRotateSigningKeys(t *testing.T) {
+	f := newFixture(t)
+	before := f.store.settings[f.tenant]
+	f.rec.Reset()
+	f.do(t, "POST", "/workload-identity/settings/rotate-signing-keys", `{}`, f.admin, http.StatusOK)
+	if ev := f.rec.Last(t); ev.Action != "signing_keys_rotated" || ev.Event.Result != "success" {
+		t.Fatalf("event %s result=%s, want signing_keys_rotated success", ev.Action, ev.Event.Result)
+	}
+	after := f.store.settings[f.tenant]
+	if after.LocalCAKeyPEM == before.LocalCAKeyPEM || after.JWTSignerPrivatePEM == before.JWTSignerPrivatePEM || after.JWTSignerKeyID == before.JWTSignerKeyID || after.TrustDomain != before.TrustDomain {
+		t.Fatal("rotation did not replace both keys in the same trust domain")
+	}
+	f.do(t, "POST", ExchangePath, `{"tenant_id":"t1","interface_name":"rest","audience":"kms","jwt_svid":"`+f.jwtA.JWTSVID+`"}`, nil, http.StatusUnauthorized)
+	f.expectRefused(t, "svid_invalid", "")
+}

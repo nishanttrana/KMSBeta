@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-29T13:15:06Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T13:18:40Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `906` across `30` services
-- Backend routes on the `pkg/route` kernel: `339` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `571`
-- Frontend call sites with exact backend route match: `526`
+- Backend HTTP routes discovered: `910` across `30` services
+- Backend routes on the `pkg/route` kernel: `343` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `572`
+- Frontend call sites with exact backend route match: `527`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `761`
-- Backend request flows with handler/service/package summaries: `906`
+- Clickable controls with static `onClick` handlers: `762`
+- Backend request flows with handler/service/package summaries: `910`
 
 ## How To Use This For Launch
 
@@ -153,7 +153,7 @@ flowchart LR
   svc_secrets["secrets (25 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
-  svc_workload["workload (16 routes)"]
+  svc_workload["workload (20 routes)"]
 ```
 
 A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
@@ -180,7 +180,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 9 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
-| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
+| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 92 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
@@ -231,7 +231,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | secrets | 25 | 10 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
-| workload | 16 | 12 |
+| workload | 20 | 13 |
 
 ## Frontend Calls Needing Review
 
@@ -414,7 +414,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
 | compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
 
-Showing `120` of `373`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `374`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

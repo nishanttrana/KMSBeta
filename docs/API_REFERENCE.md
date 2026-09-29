@@ -2048,6 +2048,7 @@ credential (docs/DECISIONS.md 2026-09-29, below).
 | Route | Body / query | Response key |
 |---|---|---|
 | `GET` / `PUT /svc/workload/workload-identity/settings` | `enabled`, `trust_domain`, `token_exchange_enabled`, `federation_enabled` (federated bundles verify SVIDs only while it is on), `default_x509_ttl_seconds`, `default_jwt_ttl_seconds`, `rotation_window_seconds`, `allowed_audiences` (the only audiences an exchange accepts). `disable_static_api_keys` and `rotation_alert_*` were removed in 6.9.0-beta (nothing acted on them); sending them is a 400 | `settings` |
+| `POST .../settings/rotate-signing-keys` | none (`workload.write`) | `settings`. Replaces the tenant's SPIFFE root CA and JWT-SVID signer with new keys in the same trust domain (6.11.0-beta); SVIDs issued under the old keys stop verifying. Closes the tenant's exposure-register entry. Audited `signing_keys_rotated` |
 | `GET .../summary` | | `summary`; `key_usage_unavailable` says why the key-usage counts are missing when the audit log can't be read with the caller's token |
 | `GET` / `POST .../registrations`, `PUT` / `DELETE .../registrations/{id}` | `name`, `spiffe_id`, `selectors`, `allowed_interfaces`, `allowed_key_ids`, `permissions`, `issue_x509_svid`, `issue_jwt_svid`, `default_ttl_seconds`, `enabled` | `items` / `registration` |
 | `GET` / `POST .../federation`, `PUT` / `DELETE .../federation/{id}` | `trust_domain`, `jwks_json`, `ca_bundle_pem`, `bundle_endpoint` (stored, not fetched), `enabled` | `items` / `bundle` |
@@ -2080,6 +2081,20 @@ Exchange refusals (401/403/409, `result: refused` on
 `svid_registration_mismatch`, `registration_disabled`,
 `interface_not_allowed`, `permissions_not_allowed`, `keys_not_allowed`,
 `workload_identity_disabled`, `token_exchange_disabled`.
+
+**Signing keys at rest (6.11.0-beta).** The root CA and JWT-SVID signer
+private keys are sealed together per tenant under the workload master key
+from keycore (`pkg/mek`; nothing to configure). The service needs
+`KEYCORE_URL` (default `https://keycore:8010`) and the
+`kms-workload-identity` service identity, and doesn't start without the key.
+Rows an earlier release stored in plaintext are sealed by the primary and
+recorded in the exposure register:
+
+| Route | Permission | Meaning |
+|---|---|---|
+| `GET /svc/workload/mek/exposure?open=false` | `workload.read` | the tenant's exposure register: signing keys stored as plaintext PEM before 6.11.0-beta (`item_type: workload_signing_keys`, `item_id` = tenant), open until rotated |
+| `POST /svc/workload/mek/exposure/{item_type}/{item_id}/acknowledge` | `workload.exposure.acknowledge` | close an entry with `{"reason": "..."}` (at least 10 characters) |
+| `POST /svc/workload/mek/rewrap-legacy` | `kms-governance` only | backup re-wrap (docs/SECURITY/SERVICE_MASTER_KEYS.md) |
 
 Audit: `audit.workload.<action>` for every route; the actions are in the
 Audit Action Subject Reference below.
@@ -2886,7 +2901,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
-- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
+- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance, workload: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
 - `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`: keycore access management (kernel, 4.0.0-beta). `interface_tls_config_*` and `interface_port*` were removed with their routes in 6.8.0-beta
@@ -3251,7 +3266,8 @@ Selected events with dedicated audit classification:
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
 - `audit.sbom.generated` (`snapshot_id`, `component_count`, `trigger`), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
-- `audit.workload.*` request events (route kernel, 6.9.0-beta): `settings_viewed`, `settings_updated`, `summary_viewed`, `registrations_viewed`, `registration_upserted`, `registration_deleted`, `federation_viewed`, `federation_bundle_upserted`, `federation_bundle_deleted`, `svid_issued`, `issuance_history_viewed`, `token_exchanged` (actor: the verified SPIFFE ID), `graph_viewed`, `key_usage_viewed`
+- `audit.workload.mek_signing_keys_sealed` / `mek_signing_keys_seal_refused` (6.11.0-beta): the primary sealed a tenant's plaintext signing keys from an earlier release, or couldn't (`result: refused`, `reason: seal_failed`); `audit.workload.mek_exposure_recorded` precedes each seal
+- `audit.workload.*` request events (route kernel, 6.9.0-beta): `settings_viewed`, `settings_updated`, `signing_keys_rotated` (6.11.0-beta), `summary_viewed`, `registrations_viewed`, `registration_upserted`, `registration_deleted`, `federation_viewed`, `federation_bundle_upserted`, `federation_bundle_deleted`, `svid_issued`, `issuance_history_viewed`, `token_exchanged` (actor: the verified SPIFFE ID), `graph_viewed`, `key_usage_viewed`
 - `audit.keyaccess.*` request events (route kernel, 6.9.0-beta): `settings_viewed`, `settings_updated`, `summary_viewed`, `codes_viewed`, `code_upserted`, `code_deleted`, `decisions_viewed`, `decision_evaluated` (refusals `evaluator_identity_required`, `service_mismatch`)
 - `audit.confidential.*` request events (route kernel, 6.9.0-beta): `policy_viewed`, `policy_updated`, `summary_viewed`, `key_release_evaluated`, `releases_viewed`, `release_viewed`, `key_release`
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
@@ -4317,6 +4333,7 @@ from the code; do not edit by hand.
 - `PUT /svc/workload/workload-identity/registrations/{id}`
 - `GET /svc/workload/workload-identity/settings`
 - `PUT /svc/workload/workload-identity/settings`
+- `POST /svc/workload/workload-identity/settings/rotate-signing-keys`
 - `GET /svc/workload/workload-identity/summary`
 - `POST /svc/workload/workload-identity/token/exchange`
 - `GET /svc/workload/workload-identity/usage`
