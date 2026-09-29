@@ -266,7 +266,6 @@ const readiness = {
   "hybrid_assets": 0,
   "classical_assets": 6,
   "average_qsl": 47.56,
-  "readiness_score": 32,
   "algorithm_summary": {
     "ECDSA-P384 + ML-DSA-65": 1,
     "ML-DSA-65": 3,
@@ -368,10 +367,8 @@ const plans = [
       "classical_replacement": 2,
       "classical_to_hybrid": 1,
       "classical_to_pqc": 3,
-      "estimated_risk_reduced": 67,
       "hybrid_to_pqc": 0,
       "pqc_hardening": 0,
-      "readiness_score": 32,
       "total_steps": 6
     },
     "steps": [

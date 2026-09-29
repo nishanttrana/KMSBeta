@@ -78,7 +78,7 @@ export type PlatformSnapshot = {
     enforce_signed_requests: boolean;
   } | undefined;
   governancePolicies?: Array<{ status?: string | undefined }> | undefined;
-  pqc?: { readiness_score: number; total_assets: number; classical_assets: number } | null | undefined;
+  pqc?: { total_assets: number; pqc_ready_assets: number; hybrid_assets: number; classical_assets: number } | null | undefined;
   postureFindings?: Array<{ severity: string; status: string }> | undefined;
   cluster?: { total_nodes?: number | undefined; online_nodes?: number | undefined; degraded_nodes?: number | undefined; down_nodes?: number | undefined } | undefined;
   users?: Array<{ username: string; role: string; status: string; must_change_password: boolean }> | undefined;
@@ -502,7 +502,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
 
   if (s.pqc !== undefined) {
     const scanned = !!s.pqc && s.pqc.total_assets > 0;
-    check("pqc-scan", "PQC readiness has been assessed", "Post-quantum", true, !scanned || (s.pqc?.readiness_score ?? 0) < 50);
+    check("pqc-scan", "PQC readiness has been assessed", "Post-quantum", true, !scanned);
     if (!scanned) {
       recs.push({
         id: "pqc-scan", severity: "medium", category: "Post-quantum",

@@ -132,9 +132,8 @@ Use this area for migration from classical-only crypto to hybrid or PQC-aware op
 
 Typical tasks:
 
-- define PQC profiles
-- review readiness scores
-- classify interfaces and certificates
+- review keys and certificates counted as classical, hybrid or PQC-only
+- require PQC for new protection with Crypto Agility migration rules
 - find non-migrated assets
 
 ### Autokey

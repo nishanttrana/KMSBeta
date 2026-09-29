@@ -81,39 +81,6 @@ func firstString(values ...interface{}) string {
 	return ""
 }
 
-func extractInt(v interface{}) int {
-	switch x := v.(type) {
-	case int:
-		return x
-	case int32:
-		return int(x)
-	case int64:
-		return int(x)
-	case float64:
-		return int(x)
-	case string:
-		return atoi(strings.TrimSpace(x))
-	default:
-		return 0
-	}
-}
-
-func extractBool(v interface{}) bool {
-	switch x := v.(type) {
-	case bool:
-		return x
-	case int:
-		return x != 0
-	case float64:
-		return x != 0
-	case string:
-		s := strings.ToLower(strings.TrimSpace(x))
-		return s == "1" || s == "true" || s == "yes"
-	default:
-		return false
-	}
-}
-
 func extractFloat(v interface{}) float64 {
 	switch x := v.(type) {
 	case float64:
@@ -242,29 +209,12 @@ func uniqueStrings(in []string) []string {
 	return out
 }
 
-func pct(n int, d int) float64 {
-	if d <= 0 {
-		return 0
-	}
-	return float64(n) * 100 / float64(d)
-}
-
 func round2(v float64) float64 {
 	if v < 0 {
 		return -round2(-v)
 	}
 	x := int(v*100 + 0.5)
 	return float64(x) / 100
-}
-
-func clampScore(v int) int {
-	if v < 0 {
-		return 0
-	}
-	if v > 100 {
-		return 100
-	}
-	return v
 }
 
 func normalizeAlgorithm(v string) string {

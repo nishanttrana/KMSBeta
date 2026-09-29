@@ -51,9 +51,6 @@ func TestAuditEventCatalogClassification(t *testing.T) {
 	if sev := classifySeverity("audit.confidential.key_release_evaluated", "success"); sev != "HIGH" {
 		t.Fatalf("unexpected severity for confidential.key_release_evaluated: %s", sev)
 	}
-	if sev := classifySeverity("audit.pqc.policy_updated", "success"); sev != "MEDIUM" {
-		t.Fatalf("unexpected severity for pqc.policy_updated: %s", sev)
-	}
 	if sev := classifySeverity("audit.pqc.inventory_viewed", "success"); sev != "LOW" {
 		t.Fatalf("unexpected severity for pqc.inventory_viewed: %s", sev)
 	}

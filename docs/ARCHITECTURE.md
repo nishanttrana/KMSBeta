@@ -213,7 +213,7 @@ This is the configuration and catalog state that should usually survive restarts
 - artifact signing profiles, settings, and transparency-linked signature records
 - workload identity registrations
 - confidential-compute policy
-- PQC policy and migration data
+- PQC readiness scans and migration plans
 - Autokey templates and requests
 - posture and compliance evidence where applicable
 
@@ -254,7 +254,7 @@ Use `Workbench -> Payment Crypto` for controlled operational testing and `Data P
 
 ### PQC + Interfaces + Certificates
 
-Use this when you need an actual migration program, not a laboratory demo. PQC policy should be reflected in interface behavior, certificate inventory, posture, and compliance.
+Use this when you need an actual migration program, not a laboratory demo. Crypto Agility migration rules are enforced by keycore; the PQC inventory counts keys and certificates by their actual algorithm (interface TLS is not assessed).
 
 ## UI Model
 

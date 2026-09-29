@@ -47,7 +47,8 @@ message ReadinessScan {
   int32 hybrid_assets = 6;
   int32 classical_assets = 7;
   double average_qsl = 8;
-  int32 readiness_score = 9;
+  reserved 9; // readiness_score: removed in 6.3.0-beta (invented weighting)
+  reserved "readiness_score";
   map<string, int32> algorithm_summary = 10;
   map<string, string> timeline_status = 11;
   repeated AssetRisk risk_items = 12;

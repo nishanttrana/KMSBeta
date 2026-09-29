@@ -23,7 +23,7 @@ type Handler struct {
 // Permissions for the pqc domain.
 const (
 	permRead  = "pqc.read"
-	permWrite = "pqc.write" // policy, scans, plans, execution, rollback
+	permWrite = "pqc.write" // scans, plans, execution, rollback
 )
 
 func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
@@ -41,8 +41,6 @@ func (h *Handler) routes() {
 	spec := func(action, perm, resource, target string) route.Spec {
 		return route.Spec{Action: action, Permission: perm, Resource: resource, TargetParam: target}
 	}
-	r.Handle("GET /pqc/policy", spec("policy_read", permRead, "pqc_policy", ""), h.getPolicy)
-	r.Handle("PUT /pqc/policy", spec("policy_update_requested", permWrite, "pqc_policy", ""), h.updatePolicy)
 	r.Handle("GET /pqc/inventory", spec("inventory_read", permRead, "pqc_inventory", ""), h.getInventory)
 	r.Handle("POST /pqc/scan", spec("scan_requested", permWrite, "pqc_scan", ""), h.startScan)
 	r.Handle("GET /pqc/scans", spec("scans_listed", permRead, "pqc_scan", ""), h.listScans)
@@ -59,28 +57,6 @@ func (h *Handler) routes() {
 
 	r.Handle("GET /pqc/timeline", spec("timeline_read", permRead, "pqc_plan", ""), h.timeline)
 	r.Handle("GET /pqc/cbom/export", spec("cbom_exported", permRead, "cbom", ""), h.exportCBOM)
-}
-
-func (h *Handler) getPolicy(c *route.Call) {
-	item, err := h.svc.GetPolicy(c.R.Context(), c.Tenant)
-	if !h.ok(c, err) {
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
-}
-
-func (h *Handler) updatePolicy(c *route.Call) {
-	var req PQCPolicy
-	if !c.Decode(&req) {
-		return
-	}
-	req.TenantID, req.UpdatedBy = c.Tenant, c.Actor()
-	item, err := h.svc.UpdatePolicy(c.R.Context(), req)
-	if !h.ok(c, err) {
-		return
-	}
-	c.Detail("profile_id", item.ProfileID)
-	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
 }
 
 func (h *Handler) getInventory(c *route.Call) {

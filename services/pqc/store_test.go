@@ -20,7 +20,6 @@ func TestPQCStoreFlows(t *testing.T) {
 		HybridAssets:     1,
 		ClassicalAssets:  2,
 		AverageQSL:       71.5,
-		ReadinessScore:   68,
 		AlgorithmSummary: map[string]int{"RSA-2048": 2, "ML-DSA-65": 1},
 		TimelineStatus:   map[string]interface{}{"cnsa2": "at_risk"},
 		RiskItems:        []AssetRisk{{AssetID: "a1", Algorithm: "RSA-2048", Priority: 80}},
@@ -34,7 +33,7 @@ func TestPQCStoreFlows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get latest scan: %v", err)
 	}
-	if gotScan.ReadinessScore != 68 || gotScan.TotalAssets != 5 {
+	if gotScan.TotalAssets != 5 {
 		t.Fatalf("unexpected scan: %+v", gotScan)
 	}
 

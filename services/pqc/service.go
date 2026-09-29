@@ -121,12 +121,6 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 	if total > 0 {
 		avgQSL = qslSum / float64(total)
 	}
-	readinessScore := clampScore(int(
-		0.55*pct(pqcReady+hybrid, maxInt(total, 1)) +
-			0.30*avgQSL +
-			0.15*pct(hybrid, maxInt(total, 1)),
-	))
-
 	timelineStatus := s.timelineStatusMap(ctx, tenantID)
 	scan := ReadinessScan{
 		ID:               newID("scan"),
@@ -137,7 +131,6 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 		HybridAssets:     hybrid,
 		ClassicalAssets:  classical,
 		AverageQSL:       round2(avgQSL),
-		ReadinessScore:   readinessScore,
 		AlgorithmSummary: algorithmSummary,
 		TimelineStatus:   timelineStatus,
 		RiskItems:        riskItems,
@@ -155,9 +148,11 @@ func (s *Service) StartReadinessScan(ctx context.Context, req ScanRequest) (Read
 		return ReadinessScan{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.pqc.scan_completed", tenantID, map[string]interface{}{
-		"scan_id":         out.ID,
-		"readiness_score": out.ReadinessScore,
-		"total_assets":    out.TotalAssets,
+		"scan_id":          out.ID,
+		"total_assets":     out.TotalAssets,
+		"pqc_ready_assets": out.PQCReadyAssets,
+		"hybrid_assets":    out.HybridAssets,
+		"classical_assets": out.ClassicalAssets,
 	})
 	return out, nil
 }
@@ -194,70 +189,11 @@ func (s *Service) GetLatestReadiness(ctx context.Context, tenantID string) (Read
 	return ReadinessScan{}, err
 }
 
-func (s *Service) GetPolicy(ctx context.Context, tenantID string) (PQCPolicy, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return PQCPolicy{}, newServiceError(400, "bad_request", "tenant_id is required")
-	}
-	item, err := s.store.GetPolicy(ctx, tenantID)
-	if err == nil {
-		out := normalizePQCPolicy(item)
-		_ = s.publishAudit(ctx, "audit.pqc.policy_viewed", tenantID, map[string]interface{}{
-			"profile_id":               out.ProfileID,
-			"interface_default_mode":   out.InterfaceDefaultMode,
-			"certificate_default_mode": out.CertificateDefaultMode,
-		})
-		return out, nil
-	}
-	if !errorsIsNotFound(err) {
-		return PQCPolicy{}, err
-	}
-	out := defaultPQCPolicy(tenantID)
-	_ = s.publishAudit(ctx, "audit.pqc.policy_viewed", tenantID, map[string]interface{}{
-		"profile_id":               out.ProfileID,
-		"interface_default_mode":   out.InterfaceDefaultMode,
-		"certificate_default_mode": out.CertificateDefaultMode,
-		"source":                   "default",
-	})
-	return out, nil
-}
-
-func (s *Service) UpdatePolicy(ctx context.Context, in PQCPolicy) (PQCPolicy, error) {
-	out := normalizePQCPolicy(in)
-	if out.TenantID == "" {
-		return PQCPolicy{}, newServiceError(400, "bad_request", "tenant_id is required")
-	}
-	saved, err := s.store.UpsertPolicy(ctx, out)
-	if err != nil {
-		return PQCPolicy{}, err
-	}
-	saved = normalizePQCPolicy(saved)
-	_ = s.publishAudit(ctx, "audit.pqc.policy_updated", saved.TenantID, map[string]interface{}{
-		"profile_id":               saved.ProfileID,
-		"default_kem":              saved.DefaultKEM,
-		"default_signature":        saved.DefaultSignature,
-		"interface_default_mode":   saved.InterfaceDefaultMode,
-		"certificate_default_mode": saved.CertificateDefaultMode,
-		"hqc_backup_enabled":       saved.HQCBackupEnabled,
-		"flag_classical_usage":     saved.FlagClassicalUsage,
-		"flag_classical_certs":     saved.FlagClassicalCerts,
-		"flag_non_migrated_ifaces": saved.FlagNonMigratedIfaces,
-		"require_pqc_for_new_keys": saved.RequirePQCForNewKeys,
-		"updated_by":               saved.UpdatedBy,
-	})
-	return saved, nil
-}
-
 func (s *Service) GetInventory(ctx context.Context, tenantID string) (PQCInventory, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return PQCInventory{}, newServiceError(400, "bad_request", "tenant_id is required")
 	}
-	policy, err := s.GetPolicy(ctx, tenantID)
-	if err != nil {
-		return PQCInventory{}, err
-	}
-
 	keys, err := s.keycore.ListKeys(ctx, tenantID, 5000)
 	if err != nil && s.keycore != nil {
 		return PQCInventory{}, err
@@ -272,52 +208,27 @@ func (s *Service) GetInventory(ctx context.Context, tenantID string) (PQCInvento
 		}
 	}
 
-	interfaces := []map[string]interface{}{}
-	if s.keycore != nil {
-		if portItems, portErr := s.keycore.ListInterfacePorts(ctx, tenantID); portErr == nil {
-			interfaces = portItems
-		} else if len(keys) == 0 && len(certs) == 0 {
-			return PQCInventory{}, portErr
-		}
-	}
-
-	keyBreakdown, classicalUsage := buildKeyInventory(keys, policy)
-	certBreakdown, classicalCerts, nonMigratedCerts := buildCertificateInventory(certs, policy)
-	interfaceBreakdown, nonMigratedIfaces := buildInterfaceInventory(interfaces, policy)
+	keyBreakdown, classicalUsage := buildKeyInventory(keys)
+	certBreakdown, classicalCerts, nonMigratedCerts := buildCertificateInventory(certs)
 	classicalUsage = append(classicalUsage, classicalCerts...)
 	sortClassicalUsage(classicalUsage)
-	sortInterfacePQCItems(nonMigratedIfaces)
 	sortCertificatePQCItems(nonMigratedCerts)
-
-	weightedTotal := keyBreakdown.Total + certBreakdown.Total + interfaceBreakdown.Total
-	weightedReady := float64(keyBreakdown.PQCOnly+certBreakdown.PQCOnly+interfaceBreakdown.PQCOnly) +
-		0.7*float64(keyBreakdown.Hybrid+certBreakdown.Hybrid+interfaceBreakdown.Hybrid)
-	readinessPercent := 0.0
-	if weightedTotal > 0 {
-		readinessPercent = round2(weightedReady * 100 / float64(weightedTotal))
-	}
-	readinessScore := clampScore(int(readinessPercent*0.85 + pct(weightedTotal-len(classicalUsage), maxInt(weightedTotal, 1))*0.15))
 
 	inventory := PQCInventory{
 		TenantID:                tenantID,
 		GeneratedAt:             s.now(),
-		Policy:                  policy,
-		ReadinessScore:          readinessScore,
-		QuantumReadinessPercent: readinessPercent,
 		Keys:                    keyBreakdown,
 		Certificates:            certBreakdown,
-		Interfaces:              interfaceBreakdown,
+		Interfaces:              interfacesNotAssessed,
 		ClassicalUsage:          classicalUsage,
-		NonMigratedInterfaces:   nonMigratedIfaces,
 		NonMigratedCertificates: nonMigratedCerts,
-		Recommendations:         buildPQCRecommendations(policy, classicalUsage, nonMigratedIfaces, nonMigratedCerts),
+		Recommendations:         buildPQCRecommendations(classicalUsage, nonMigratedCerts),
 	}
 	_ = s.publishAudit(ctx, "audit.pqc.inventory_viewed", tenantID, map[string]interface{}{
-		"readiness_score":              inventory.ReadinessScore,
-		"quantum_readiness_percent":    inventory.QuantumReadinessPercent,
-		"classical_usage_count":        len(inventory.ClassicalUsage),
-		"non_migrated_interface_count": len(inventory.NonMigratedInterfaces),
-		"non_migrated_cert_count":      len(inventory.NonMigratedCertificates),
+		"key_count":               keyBreakdown.Total,
+		"certificate_count":       certBreakdown.Total,
+		"classical_usage_count":   len(inventory.ClassicalUsage),
+		"non_migrated_cert_count": len(inventory.NonMigratedCertificates),
 	})
 	return inventory, nil
 }
@@ -343,7 +254,6 @@ func (s *Service) GetMigrationReport(ctx context.Context, tenantID string) (PQCM
 	report := PQCMigrationReport{
 		TenantID:        tenantID,
 		GeneratedAt:     s.now(),
-		Policy:          inventory.Policy,
 		Inventory:       inventory,
 		LatestReadiness: readiness,
 		Timeline:        timeline,
@@ -351,9 +261,8 @@ func (s *Service) GetMigrationReport(ctx context.Context, tenantID string) (PQCM
 		NextActions:     inventory.Recommendations,
 	}
 	_ = s.publishAudit(ctx, "audit.pqc.migration_report_viewed", tenantID, map[string]interface{}{
-		"readiness_score": report.Inventory.ReadinessScore,
-		"top_risk_count":  len(report.TopRisks),
-		"timeline_count":  len(report.Timeline),
+		"top_risk_count": len(report.TopRisks),
+		"timeline_count": len(report.Timeline),
 	})
 	return report, nil
 }
@@ -407,14 +316,13 @@ func (s *Service) CreateMigrationPlan(ctx context.Context, req PlanRequest) (Mig
 		TimelineStandard: timelineStandard,
 		Deadline:         deadline,
 		Summary: map[string]interface{}{
-			"readiness_score":        readiness.ReadinessScore,
-			"total_steps":            len(steps),
-			"classical_to_hybrid":    phaseCount["classical_to_hybrid"],
-			"hybrid_to_pqc":          phaseCount["hybrid_to_pqc"],
-			"classical_to_pqc":       phaseCount["classical_to_pqc"],
-			"pqc_hardening":          phaseCount["pqc_hardening"],
-			"classical_replacement":  phaseCount["classical_replacement"],
-			"estimated_risk_reduced": estimatedRiskReduction(steps),
+			"scan_id":               readiness.ID,
+			"total_steps":           len(steps),
+			"classical_to_hybrid":   phaseCount["classical_to_hybrid"],
+			"hybrid_to_pqc":         phaseCount["hybrid_to_pqc"],
+			"classical_to_pqc":      phaseCount["classical_to_pqc"],
+			"pqc_hardening":         phaseCount["pqc_hardening"],
+			"classical_replacement": phaseCount["classical_replacement"],
 		},
 		Steps:     steps,
 		CreatedBy: defaultString(req.CreatedBy, "system"),
@@ -717,99 +625,7 @@ func (s *Service) ExportCBOM(ctx context.Context, tenantID string) (map[string]i
 	}, nil
 }
 
-func defaultPQCPolicy(tenantID string) PQCPolicy {
-	return pqcPolicyProfileDefaults("balanced_hybrid", tenantID)
-}
-
-func normalizePQCPolicy(in PQCPolicy) PQCPolicy {
-	profileID := normalizePQCProfileID(in.ProfileID)
-	base := pqcPolicyProfileDefaults(profileID, in.TenantID)
-	if strings.TrimSpace(in.DefaultKEM) != "" {
-		base.DefaultKEM = normalizeAlgorithm(in.DefaultKEM)
-	}
-	if strings.TrimSpace(in.DefaultSignature) != "" {
-		base.DefaultSignature = normalizeAlgorithm(in.DefaultSignature)
-	}
-	switch strings.ToLower(strings.TrimSpace(in.InterfaceDefaultMode)) {
-	case "", "inherit":
-	case "classical", "legacy":
-		base.InterfaceDefaultMode = "classical"
-	case "hybrid":
-		base.InterfaceDefaultMode = "hybrid"
-	case "pqc", "pqc_only", "pqc-only":
-		base.InterfaceDefaultMode = "pqc_only"
-	}
-	switch strings.ToLower(strings.TrimSpace(in.CertificateDefaultMode)) {
-	case "", "inherit":
-	case "classical", "legacy":
-		base.CertificateDefaultMode = "classical"
-	case "hybrid":
-		base.CertificateDefaultMode = "hybrid"
-	case "pqc", "pqc_only", "pqc-only":
-		base.CertificateDefaultMode = "pqc_only"
-	}
-	if strings.TrimSpace(in.ProfileID) != "" || strings.TrimSpace(in.TenantID) != "" || strings.TrimSpace(in.UpdatedBy) != "" || !in.UpdatedAt.IsZero() {
-		base.HQCBackupEnabled = in.HQCBackupEnabled
-		base.FlagClassicalUsage = in.FlagClassicalUsage
-		base.FlagClassicalCerts = in.FlagClassicalCerts
-		base.FlagNonMigratedIfaces = in.FlagNonMigratedIfaces
-		base.RequirePQCForNewKeys = in.RequirePQCForNewKeys
-	}
-	base.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
-	if !in.UpdatedAt.IsZero() {
-		base.UpdatedAt = in.UpdatedAt.UTC()
-	}
-	return base
-}
-
-func normalizePQCProfileID(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "balanced", "balanced-hybrid", "balanced_hybrid":
-		return "balanced_hybrid"
-	case "quantum-first", "quantum_first", "pqc-first", "pqc_first":
-		return "quantum_first"
-	case "signing-first", "signing_first":
-		return "signing_first"
-	case "compliance-accelerated", "compliance_accelerated":
-		return "compliance_accelerated"
-	default:
-		return strings.ToLower(strings.TrimSpace(raw))
-	}
-}
-
-func pqcPolicyProfileDefaults(profileID string, tenantID string) PQCPolicy {
-	out := PQCPolicy{
-		TenantID:               strings.TrimSpace(tenantID),
-		ProfileID:              normalizePQCProfileID(profileID),
-		DefaultKEM:             "ML-KEM-768",
-		DefaultSignature:       "ML-DSA-65",
-		InterfaceDefaultMode:   "hybrid",
-		CertificateDefaultMode: "hybrid",
-		HQCBackupEnabled:       true,
-		FlagClassicalUsage:     true,
-		FlagClassicalCerts:     true,
-		FlagNonMigratedIfaces:  true,
-		RequirePQCForNewKeys:   false,
-	}
-	switch out.ProfileID {
-	case "quantum_first":
-		out.DefaultKEM = "ML-KEM-1024"
-		out.DefaultSignature = "ML-DSA-87"
-		out.InterfaceDefaultMode = "pqc_only"
-		out.CertificateDefaultMode = "pqc_only"
-		out.RequirePQCForNewKeys = true
-	case "signing_first":
-		out.DefaultSignature = "SLH-DSA-SHAKE-256F"
-	case "compliance_accelerated":
-		out.DefaultKEM = "ML-KEM-1024"
-		out.DefaultSignature = "ML-DSA-87"
-		out.CertificateDefaultMode = "pqc_only"
-		out.RequirePQCForNewKeys = true
-	}
-	return out
-}
-
-func buildKeyInventory(items []map[string]interface{}, policy PQCPolicy) (InventoryBreakdown, []ClassicalUsageItem) {
+func buildKeyInventory(items []map[string]interface{}) (InventoryBreakdown, []ClassicalUsageItem) {
 	breakdown := InventoryBreakdown{Algorithms: map[string]int{}}
 	classicalUsage := make([]ClassicalUsageItem, 0)
 	for _, item := range items {
@@ -821,7 +637,7 @@ func buildKeyInventory(items []map[string]interface{}, policy PQCPolicy) (Invent
 		breakdown.Total++
 		incrementInventoryMode(&breakdown, mode)
 		breakdown.Algorithms[alg]++
-		if policy.FlagClassicalUsage && mode == "classical" && isClassicalAsymmetricAlgorithm(alg) {
+		if mode == "classical" && isClassicalAsymmetricAlgorithm(alg) {
 			classicalUsage = append(classicalUsage, ClassicalUsageItem{
 				AssetType: "key",
 				AssetID:   firstString(item["id"], item["key_id"]),
@@ -836,17 +652,17 @@ func buildKeyInventory(items []map[string]interface{}, policy PQCPolicy) (Invent
 	return breakdown, classicalUsage
 }
 
-func buildCertificateInventory(items []map[string]interface{}, policy PQCPolicy) (InventoryBreakdown, []ClassicalUsageItem, []CertificatePQCItem) {
+func buildCertificateInventory(items []map[string]interface{}) (InventoryBreakdown, []ClassicalUsageItem, []CertificatePQCItem) {
 	breakdown := InventoryBreakdown{Algorithms: map[string]int{}}
 	classicalUsage := make([]ClassicalUsageItem, 0)
 	nonMigrated := make([]CertificatePQCItem, 0)
 	for _, item := range items {
 		alg := normalizeAlgorithm(firstString(item["algorithm"], item["signature_algorithm"], item["cert_class"]))
-		mode := certificateInventoryMode(item, policy)
+		mode := certificateInventoryMode(item)
 		breakdown.Total++
 		incrementInventoryMode(&breakdown, mode)
 		breakdown.Algorithms[alg]++
-		if policy.FlagClassicalCerts && mode == "classical" && isClassicalAsymmetricAlgorithm(alg) {
+		if mode == "classical" && isClassicalAsymmetricAlgorithm(alg) {
 			classicalUsage = append(classicalUsage, ClassicalUsageItem{
 				AssetType: "certificate",
 				AssetID:   firstString(item["id"], item["cert_id"]),
@@ -872,35 +688,6 @@ func buildCertificateInventory(items []map[string]interface{}, policy PQCPolicy)
 	return breakdown, classicalUsage, nonMigrated
 }
 
-func buildInterfaceInventory(items []map[string]interface{}, policy PQCPolicy) (InventoryBreakdown, []InterfacePQCItem) {
-	breakdown := InventoryBreakdown{Algorithms: map[string]int{}}
-	nonMigrated := make([]InterfacePQCItem, 0)
-	for _, item := range items {
-		protocol := strings.ToLower(strings.TrimSpace(firstString(item["protocol"])))
-		mode := effectiveInterfaceMode(item, policy)
-		breakdown.Total++
-		incrementInventoryMode(&breakdown, mode)
-		breakdown.Algorithms[protocol+"|"+mode]++
-		if policy.FlagNonMigratedIfaces && mode == "classical" {
-			nonMigrated = append(nonMigrated, InterfacePQCItem{
-				InterfaceName:    firstString(item["interface_name"], item["name"]),
-				Description:      firstString(item["description"]),
-				BindAddress:      firstString(item["bind_address"]),
-				Port:             extractInt(item["port"]),
-				Protocol:         protocol,
-				PQCMode:          strings.ToLower(strings.TrimSpace(firstString(item["pqc_mode"]))),
-				EffectivePQCMode: mode,
-				Enabled:          extractBool(item["enabled"]),
-				Status:           defaultString(strings.ToLower(firstString(item["status"])), "configured"),
-				CertSource:       firstString(item["certificate_source"]),
-				CAID:             firstString(item["ca_id"]),
-				CertificateID:    firstString(item["certificate_id"]),
-			})
-		}
-	}
-	return breakdown, nonMigrated
-}
-
 func incrementInventoryMode(b *InventoryBreakdown, mode string) {
 	switch mode {
 	case "pqc_only":
@@ -924,7 +711,7 @@ func keyInventoryMode(item map[string]interface{}) string {
 	return "classical"
 }
 
-func certificateInventoryMode(item map[string]interface{}, policy PQCPolicy) string {
+func certificateInventoryMode(item map[string]interface{}) string {
 	certClass := strings.ToLower(strings.TrimSpace(firstString(item["cert_class"])))
 	switch certClass {
 	case "hybrid":
@@ -939,64 +726,17 @@ func certificateInventoryMode(item map[string]interface{}, policy PQCPolicy) str
 	if isPQCAlgorithm(alg) {
 		return "pqc_only"
 	}
-	if policy.CertificateDefaultMode == "pqc_only" && certClass == "" {
-		return "classical"
-	}
 	return "classical"
 }
 
-func effectiveInterfaceMode(item map[string]interface{}, policy PQCPolicy) string {
-	protocol := strings.ToLower(strings.TrimSpace(firstString(item["protocol"])))
-	if protocol == "" {
-		protocol = "http"
-	}
-	if !interfaceProtocolSupportsPQC(protocol) {
-		return "classical"
-	}
-	raw := strings.ToLower(strings.TrimSpace(firstString(item["pqc_mode"])))
-	switch raw {
-	case "", "inherit", "default":
-		if policy.InterfaceDefaultMode == "" {
-			return "hybrid"
-		}
-		return policy.InterfaceDefaultMode
-	case "hybrid":
-		return "hybrid"
-	case "pqc", "pqc_only", "pqc-only":
-		return "pqc_only"
-	default:
-		return "classical"
-	}
-}
-
-func interfaceProtocolSupportsPQC(protocol string) bool {
-	switch strings.ToLower(strings.TrimSpace(protocol)) {
-	case "https", "tls13", "mtls":
-		return true
-	default:
-		return false
-	}
-}
-
-func buildPQCRecommendations(policy PQCPolicy, classicalUsage []ClassicalUsageItem, nonMigratedIfaces []InterfacePQCItem, nonMigratedCerts []CertificatePQCItem) []string {
-	out := make([]string, 0, 6)
+// buildPQCRecommendations names only what the inventory found.
+func buildPQCRecommendations(classicalUsage []ClassicalUsageItem, nonMigratedCerts []CertificatePQCItem) []string {
+	out := make([]string, 0, 2)
 	if len(classicalUsage) > 0 {
 		out = append(out, "Rotate RSA/ECC-only keys and certificates to hybrid or PQC-native algorithms, starting with the highest-QSL-risk assets.")
 	}
-	if len(nonMigratedIfaces) > 0 {
-		out = append(out, "Move TLS-capable interfaces to hybrid or PQC-only mode and leave classical mode only for explicitly approved compatibility paths.")
-	}
 	if len(nonMigratedCerts) > 0 {
 		out = append(out, "Issue hybrid or PQC-class certificates for externally exposed interfaces before moving them to PQC-only.")
-	}
-	if !policy.HQCBackupEnabled {
-		out = append(out, "Track HQC as a backup KEM path in migration planning so future agility reviews have a documented fallback strategy.")
-	}
-	if policy.RequirePQCForNewKeys {
-		out = append(out, "Keep new high-value asymmetric keys on ML-KEM / ML-DSA / SLH-DSA profiles and use classical algorithms only for approved compatibility exceptions.")
-	}
-	if len(out) == 0 {
-		out = append(out, "Current tenant posture is aligned with the selected PQC policy profile.")
 	}
 	return out
 }
@@ -1007,14 +747,6 @@ func sortClassicalUsage(items []ClassicalUsageItem) {
 			return items[i].Name < items[j].Name
 		}
 		return items[i].QSLScore < items[j].QSLScore
-	})
-}
-
-func sortInterfacePQCItems(items []InterfacePQCItem) {
-	sort.Slice(items, func(i, j int) bool {
-		left := items[i].InterfaceName + "|" + items[i].Protocol + "|" + items[i].BindAddress
-		right := items[j].InterfaceName + "|" + items[j].Protocol + "|" + items[j].BindAddress
-		return left < right
 	})
 }
 
@@ -1320,26 +1052,8 @@ func riskReason(alg string, classification string, qsl float64) string {
 	return strings.Join(parts, ", ")
 }
 
-func estimatedRiskReduction(steps []MigrationStep) int {
-	if len(steps) == 0 {
-		return 0
-	}
-	total := 0
-	for _, step := range steps {
-		total += step.Priority
-	}
-	return clampScore(total / len(steps))
-}
-
 func formatScore(v float64) string {
 	return strings.TrimRight(strings.TrimRight(strconv.FormatFloat(round2(v), 'f', 2, 64), "0"), ".")
-}
-
-func maxInt(a int, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func defaultFloat(v float64, fallback float64) float64 {

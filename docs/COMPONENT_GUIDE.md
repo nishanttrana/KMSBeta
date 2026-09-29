@@ -610,19 +610,18 @@ Common APIs:
 
 What it does:
 
-- stores tenant PQC policy and readiness state
-- tracks inventory as classical, hybrid, or PQC-only
+- counts keys and certificates as classical, hybrid or PQC-only by their
+  actual algorithm (no score; interface TLS is not assessed)
+- stores readiness scans
 - drives migration plans, scans, reports, and CBOM export
 
 Use cases:
 
-- decide which interfaces should move to hybrid first
 - quantify where RSA/ECC is still used
 - stage ML-KEM and ML-DSA adoption with rollback-safe plans
 
 Common APIs:
 
-- `GET /svc/pqc/pqc/policy?tenant_id=root`
 - `GET /svc/pqc/pqc/inventory?tenant_id=root`
 - `GET /svc/pqc/pqc/readiness?tenant_id=root`
 - `GET /svc/pqc/pqc/migration/report?tenant_id=root`

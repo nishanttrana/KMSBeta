@@ -2143,12 +2143,10 @@ const SectionApiPqc = () => (
 
     <Collapse title="PQC Endpoints" defaultOpen>
       <EndpointTable rows={[
-        ["GET", "/pqc/policy", "Read the tenant PQC policy profile, default ML-KEM / ML-DSA / SLH-DSA choices, interface default mode, and migration guardrails"],
-        ["PUT", "/pqc/policy", "Update the tenant PQC policy profile and readiness flags"],
-        ["GET", "/pqc/inventory", "Return live PQC inventory split into classical, hybrid, and PQC-only for keys, certificates, and request-handling interfaces"],
+        ["GET", "/pqc/inventory", "Count keys and certificates as classical, hybrid or PQC-only by their actual algorithm; interface TLS is reported as not assessed"],
         ["POST", "/pqc/scan", "Start a PQC readiness scan across all keys and crypto operations"],
         ["GET", "/pqc/scans", "List completed scans with results"],
-        ["GET", "/pqc/readiness", "Get overall PQC readiness score and breakdown"],
+        ["GET", "/pqc/readiness", "Get the latest scan's asset counts (PQC, hybrid, classical) and risk items"],
         ["GET", "/pqc/migration/report", "Get a consolidated migration report with latest readiness, top risks, timeline, and next actions"],
         ["POST", "/pqc/migration/plans", "Create a migration plan (maps classical → PQC algorithms)"],
         ["GET", "/pqc/migration/plans", "List migration plans with status"],
@@ -2164,15 +2162,11 @@ const SectionApiPqc = () => (
 curl -X POST http://localhost:8060/pqc/scan \\
   -H "Authorization: Bearer $TOKEN"
 
-# Check readiness score
+# Latest scan: measured counts, no score
 curl http://localhost:8060/pqc/readiness \\
   -H "Authorization: Bearer $TOKEN"
-# Returns: { "score": 15, "classical_keys": 245, "pqc_keys": 3,
-#   "recommendations": [
-#     "Migrate 45 RSA-2048 keys to ML-KEM-768 for key exchange",
-#     "Migrate 12 EC-P256 signing keys to ML-DSA-65",
-#     "Create PQC keys for 3 KMIP clients"
-#   ] }
+# Returns: { "readiness": { "total_assets": 251, "pqc_ready_assets": 3,
+#   "hybrid_assets": 3, "classical_assets": 245, "risk_items": [ ... ] } }
 
 # Create a migration plan
 curl -X POST http://localhost:8060/pqc/migration/plans \\
@@ -2469,15 +2463,15 @@ const SectionUIWorkload = () => (
 const SectionUIPqc = () => (
   <div>
     <div style={S.h1}>UI Guide: Post-Quantum Crypto</div>
-    <P>The Post-Quantum Crypto tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It is the tenant control plane for ML-KEM, ML-DSA, SLH-DSA, hybrid migration policy, interface readiness, and certificate drift.</P>
+    <P>The Post-Quantum Crypto tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It covers ML-KEM, ML-DSA and SLH-DSA migration of keys and certificates.</P>
     <H2>Overview</H2>
-    <P>Review the tenant quantum-readiness score, key / certificate / interface inventory, RSA-ECC usage still active, and the exact interfaces and certificates that remain non-migrated. This view is backed by the dedicated <IC>kms-pqc</IC> microservice rather than a static dashboard estimate.</P>
-    <H2>Policy</H2>
-    <P>Choose a PQC profile such as <IC>Balanced Hybrid</IC> or <IC>Quantum First</IC>, set the default ML-KEM and signature family, choose the tenant default mode for exposed interfaces and certificates, and decide whether HQC tracking and stricter migration guardrails should be enabled.</P>
+    <P>Review how many keys and certificates are classical, hybrid or PQC-only (counted from each one's actual algorithm), the RSA / ECC keys and certificates still active, and the certificates that remain non-migrated. There is no readiness score. Interface TLS key exchange is not measured and is shown as not assessed.</P>
+    <H2>Requiring PQC</H2>
+    <P>To stop new protection with quantum-vulnerable keys, add a Crypto Agility migration rule (for example <IC>quantum_vulnerable → decrypt_only</IC>); keycore enforces it on every key operation. The former tenant PQC policy enforced nothing and was removed in 6.3.0-beta.</P>
     <H2>Migration Report</H2>
     <P>Inspect the latest readiness scan, projected milestones, top risks, and recommended actions. Operators can use this report to sequence migration work across keys, certificates, and externally exposed listeners.</P>
     <H2>Interfaces</H2>
-    <P>Hybrid mode per request-handling interface is configured from <IC>Administration -&gt; Interfaces</IC>. Interfaces can inherit the tenant PQC policy or override it to classical, hybrid, or PQC-only for readiness and compliance reporting.</P>
+    <P>The PQC mode on <IC>Administration -&gt; Interfaces</IC> is recorded only: it does not change or measure the listener's key exchange, and the PQC inventory does not report it.</P>
   </div>
 );
 

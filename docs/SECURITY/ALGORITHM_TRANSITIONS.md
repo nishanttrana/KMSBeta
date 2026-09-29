@@ -120,6 +120,32 @@ is refused so no measurement is mislabelled. Events:
 The pqc timeline is the customer's own plan deadlines. A plan without a
 deadline has none.
 
+## Requiring post-quantum, and what pqc reports (6.3.0-beta)
+
+A tenant requires post-quantum for new protection with a migration rule
+(`match_kind: quantum_vulnerable`, `action: decrypt_only`). Keycore refuses
+create, import, rotate, encrypt, sign, wrap, MAC and derive with a
+quantum-vulnerable key from the rule's effective date, and audits each
+refusal. This is the only switch that requires PQC.
+
+The pqc service's tenant "PQC policy" (`/pqc/policy`: profile, default KEM
+and signature, interface and certificate default modes, HQC backup, three
+`flag_*` switches, `require_pqc_for_new_keys`) was removed. Nothing outside
+pqc read it, so `require_pqc_for_new_keys` enforced nothing, and the flags
+only hid findings. Migration 003 drops `pqc_policies`.
+
+pqc reports measured counts only:
+
+- Inventory and scans count keys, certificates and discovered assets as
+  classical, hybrid or PQC-only by the algorithm each has. The
+  hand-weighted `readiness_score` (scan 55/30/15, inventory 85/15 with
+  hybrid counted as 0.7), `quantum_readiness_percent` and a plan's
+  `estimated_risk_reduced` were removed.
+- Interfaces are `not_assessed`. The inventory used to report an
+  interface with `pqc_mode: inherit` as having the policy's default mode,
+  so a TLS mode that was never measured appeared as measured. The
+  interface `pqc_mode` in keycore is recorded but not enforced.
+
 ## How it is enforced
 
 - `TestCatalogFacts`, `TestNamesWithoutAParameterSetAreNotAssessed`,
@@ -133,6 +159,12 @@ deadline has none.
 - `TestTimelineIsTheCustomersPlanDeadlines` (pqc).
 - `TestDrillMeasuresRealRoundTrips`, `TestAgilityDrillRouteValidatedAndAudited`,
   `TestAgilityDrillStrictRefusesNonModuleAlgorithm` (swap drill).
+- `TestPQCPolicyRemovedAndNoInventedScores` (pqc): `/pqc/policy` is gone,
+  and inventory, readiness and report carry no score, policy or interface
+  mode. `TestPQCServiceReadinessPlanExecuteRollback` checks the inventory
+  counts against each asset's algorithm and that interfaces are
+  `not_assessed`. `TestPolicyAndScoreDroppedPostgres` runs the migrations on
+  Postgres.
 - `web/dashboard/tests/crypto-agility.spec.ts` asserts that the tab shows no
   standards document, draft or reference.
 
@@ -141,5 +173,8 @@ deadline has none.
 - A rule applies to keycore keys. Certificates, TLS endpoints and
   discovered assets are measured and planned (pqc, discovery), but the KMS
   cannot refuse their use.
+- The key exchange a KMS listener negotiates is not measured, and keycore's
+  per-interface `pqc_mode` is recorded only. It should be removed, or made a
+  preview (`409 feature_preview`), or enforced at the listener.
 - CARAF decisions are recorded, not gated: accepting a risk needs a review
   date, not a governance approval.

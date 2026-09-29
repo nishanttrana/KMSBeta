@@ -12,21 +12,6 @@ func TestPQCHandlerFlow(t *testing.T) {
 	h, _, _ := newPQCHandler(t)
 	tenantID := "tenant-h1"
 
-	policyReq := httptest.NewRequest(http.MethodGet, "/pqc/policy?tenant_id="+tenantID, nil)
-	policyRR := httptest.NewRecorder()
-	h.ServeHTTP(policyRR, policyReq)
-	if policyRR.Code != http.StatusOK {
-		t.Fatalf("get policy status=%d body=%s", policyRR.Code, policyRR.Body.String())
-	}
-
-	updatePolicyReq := httptest.NewRequest(http.MethodPut, "/pqc/policy", strings.NewReader(`{"tenant_id":"`+tenantID+`","profile_id":"balanced_hybrid","default_kem":"ML-KEM-768","default_signature":"ML-DSA-65","interface_default_mode":"hybrid","certificate_default_mode":"hybrid","hqc_backup_enabled":true,"flag_classical_usage":true,"flag_classical_certificates":true,"flag_non_migrated_interfaces":true,"require_pqc_for_new_keys":false,"updated_by":"tester"}`))
-	updatePolicyReq.Header.Set("Content-Type", "application/json")
-	updatePolicyRR := httptest.NewRecorder()
-	h.ServeHTTP(updatePolicyRR, updatePolicyReq)
-	if updatePolicyRR.Code != http.StatusOK {
-		t.Fatalf("update policy status=%d body=%s", updatePolicyRR.Code, updatePolicyRR.Body.String())
-	}
-
 	inventoryReq := httptest.NewRequest(http.MethodGet, "/pqc/inventory?tenant_id="+tenantID, nil)
 	inventoryRR := httptest.NewRecorder()
 	h.ServeHTTP(inventoryRR, inventoryReq)
@@ -120,5 +105,32 @@ func TestPQCHandlerFlow(t *testing.T) {
 	h.ServeHTTP(cbomRR, cbomReq)
 	if cbomRR.Code != http.StatusOK {
 		t.Fatalf("cbom status=%d body=%s", cbomRR.Code, cbomRR.Body.String())
+	}
+}
+
+// The tenant PQC policy enforced nothing and was removed in 6.3.0-beta; its
+// routes no longer exist, and no response carries an invented score or an
+// interface mode nobody measured.
+func TestPQCPolicyRemovedAndNoInventedScores(t *testing.T) {
+	h, _, _ := newPQCHandler(t)
+	for _, method := range []string{http.MethodGet, http.MethodPut} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(method, "/pqc/policy", strings.NewReader(`{"require_pqc_for_new_keys":true}`)))
+		if rr.Code != http.StatusNotFound && rr.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s /pqc/policy status=%d, want the route gone", method, rr.Code)
+		}
+	}
+	for _, path := range []string{"/pqc/inventory", "/pqc/readiness", "/pqc/migration/report"} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s status=%d body=%s", path, rr.Code, rr.Body.String())
+		}
+		body := rr.Body.String()
+		for _, gone := range []string{"readiness_score", "quantum_readiness_percent", `"policy"`, "effective_pqc_mode", "non_migrated_interfaces"} {
+			if strings.Contains(body, gone) {
+				t.Fatalf("%s still returns %s: %s", path, gone, body)
+			}
+		}
 	}
 }

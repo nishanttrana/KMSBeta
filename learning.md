@@ -5,6 +5,27 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### Hiding a switch in the UI doesn't remove it
+- **What happened:** 5.4.0-beta deleted the Post-Quantum tab and hid the
+  pqc policy switches and readiness score in the new panel, because they
+  enforced nothing and the score had no basis. The API, table and service
+  code stayed. So `PUT /pqc/policy` still accepted
+  `require_pqc_for_new_keys: true` with a success audit event, the inventory
+  still used `interface_default_mode` to report unmeasured interfaces as
+  hybrid, the `flag_*` switches could still hide findings, and ComplianceTab
+  (a second consumer nobody checked) still showed the score as "x/100" and
+  the policy profile.
+- **Why it slipped through:** the fix was scoped to the tab being replaced,
+  and the leftover was written down as "Open" in the CHANGELOG instead of
+  being removed. The policy was only ever read inside its own service, so no
+  cross-service search flagged it. Nothing links a removed UI control to the
+  API field behind it.
+- **Rule:** when a control is found to be fake, remove it at the source
+  (route, store, table, types), then grep every consumer of its fields,
+  including other tabs, generated catalogues and docs. Hiding it in one view
+  only moves the fake. For each field, check whether anything outside the
+  owning service reads it; if nothing does, it is record-only.
+
 ### A benchmark labels its row with the name the user typed, not what ran
 - **What happened:** the first cut of the swap drill accepted `RSA`. Keycore
   generated its default RSA size and the drill history would have shown a

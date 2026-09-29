@@ -293,7 +293,6 @@ Use it when:
 
 ### Primary APIs
 
-- `GET /svc/pqc/pqc/policy?tenant_id=root`
 - `GET /svc/pqc/pqc/inventory?tenant_id=root`
 - `GET /svc/pqc/pqc/readiness?tenant_id=root`
 - `GET /svc/pqc/pqc/migration/report?tenant_id=root`

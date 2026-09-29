@@ -332,7 +332,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
         </div>
         <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={snapshot?.keys ? `${pqcExposed} quantum-vulnerable` : "keycore unreachable"} />
         <Kpi icon={FileCheck2} label="Certs expiring ≤30d" value={snapshot?.certs ? String(certsSoon) : "—"} sub={snapshot?.certs ? `${snapshot.certs.length} certificates tracked` : "PKI not reachable"} tone={certsSoon ? C.amberFg : undefined} />
-        <Kpi icon={Atom} label="PQC readiness" value={snapshot?.pqc ? `${Math.round(snapshot.pqc.readiness_score)}%` : "—"} sub={snapshot?.pqc ? `${snapshot.pqc.classical_assets} classical assets` : "no scan on record"} />
+        <Kpi icon={Atom} label="PQC or hybrid assets" value={snapshot?.pqc ? `${snapshot.pqc.pqc_ready_assets + snapshot.pqc.hybrid_assets} / ${snapshot.pqc.total_assets}` : "—"} sub={snapshot?.pqc ? `${snapshot.pqc.classical_assets} classical, latest scan` : "no scan on record"} />
         <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
       </div>
 

@@ -2384,28 +2384,17 @@ Response:
 }
 ```
 
-Enforce PQC policy after migration is complete:
+Require post-quantum for new protection with a Crypto Agility migration
+rule, which keycore enforces on every key operation (the pqc service's own
+tenant policy enforced nothing and was removed in 6.3.0-beta):
 
 ```bash
-curl -s -X PUT \
-  "https://localhost/svc/pqc/pqc/policy?tenant_id=root" \
+curl -s -X POST "https://localhost/svc/keycore/agility/policy/rules" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "mode": "enforce",
-    "requireHybrid": true,
-    "algorithmAllowlist": [
-      "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024",
-      "ML-DSA-44", "ML-DSA-65", "ML-DSA-87",
-      "SLH-DSA-SHA2-128f", "SLH-DSA-SHA2-128s",
-      "SLH-DSA-SHA2-256f", "SLH-DSA-SHA2-256s",
-      "HYBRID_X25519_MLKEM768", "HYBRID_P256_MLKEM512",
-      "AES-128-GCM", "AES-256-GCM"
-    ],
-    "exemptions": []
-  }'
+  -d '{"name": "No new quantum-vulnerable protection",
+       "match_kind": "quantum_vulnerable", "action": "decrypt_only",
+       "effective_date": "2027-01-01"}'
 ```
 
 ---
@@ -2414,13 +2403,9 @@ curl -s -X PUT \
 
 Service prefix: `/svc/pqc/pqc`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
 
-#### GET/PUT /svc/pqc/pqc/policy
-
-Returns or updates the tenant PQC enforcement policy. See examples above.
-
 #### GET /svc/pqc/pqc/inventory
 
-Returns full PQC asset inventory. Query params: `?asset_type=key|certificate|tls_interface`, `?risk=CRITICAL|HIGH|MEDIUM|LOW|NONE`, `?status=classical|hybrid|pqc_ready`.
+Counts the tenant's keys and certificates as classical, hybrid or PQC-only by the algorithm each has, and lists the classical ones. There is no score. `interfaces` is always `not_assessed` (see docs/API_REFERENCE.md).
 
 #### POST /svc/pqc/pqc/migration/plans
 
@@ -2446,7 +2431,7 @@ Run a scan with `POST /svc/pqc/pqc/scan`; results are at `GET /svc/pqc/pqc/scans
 
 #### GET /svc/pqc/pqc/readiness
 
-Returns the tenant's PQC readiness score and framework alignment.
+Returns the latest readiness scan: asset counts (`total_assets`, `pqc_ready_assets`, `hybrid_assets`, `classical_assets`), `algorithm_summary` and `risk_items`. There is no score.
 
 ```bash
 curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
@@ -3095,7 +3080,7 @@ curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
   -H "X-Tenant-ID: root" > pqc_migration_q1_2026.json
 ```
 
-3. Get the readiness score:
+3. Get the latest readiness scan (asset counts):
 
 ```bash
 curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
@@ -3123,7 +3108,7 @@ curl -sk -X POST https://localhost/svc/reporting/reports/generate \
   }'
 ```
 
-**Outcome:** A complete, auditable PQC status package is produced in minutes rather than days: inventory snapshot, risk findings, migration progress, readiness score, CNSA 2.0 gap analysis, and an AI-generated board summary. The evidence pack is signed and timestamped, suitable for regulatory submission.
+**Outcome:** A complete, auditable PQC status package is produced in minutes rather than days: inventory snapshot, risk findings, migration progress, readiness scan counts, CNSA 2.0 gap analysis, and an AI-generated board summary. The evidence pack is signed and timestamped, suitable for regulatory submission.
 
 ---
 

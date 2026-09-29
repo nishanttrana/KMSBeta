@@ -75,14 +75,6 @@ func (f *fakePQCKeyCore) RotateKey(_ context.Context, _ string, keyID string, _ 
 	return nil
 }
 
-func (f *fakePQCKeyCore) ListInterfacePorts(_ context.Context, _ string) ([]map[string]interface{}, error) {
-	return []map[string]interface{}{
-		{"interface_name": "rest", "description": "REST API", "bind_address": "0.0.0.0", "port": 443, "protocol": "https", "pqc_mode": "inherit", "certificate_source": "internal_ca", "enabled": true},
-		{"interface_name": "kmip", "description": "KMIP", "bind_address": "0.0.0.0", "port": 5696, "protocol": "mtls", "pqc_mode": "hybrid", "certificate_source": "internal_ca", "enabled": true},
-		{"interface_name": "dashboard-ui", "description": "Dashboard", "bind_address": "0.0.0.0", "port": 5173, "protocol": "http", "pqc_mode": "classical", "certificate_source": "none", "enabled": true},
-	}, nil
-}
-
 type fakePQCDiscovery struct{}
 
 func (f *fakePQCDiscovery) ListCryptoAssets(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {
@@ -152,7 +144,6 @@ func createPQCSchemaForTest(conn *pkgdb.DB) error {
 			hybrid_assets INTEGER NOT NULL DEFAULT 0,
 			classical_assets INTEGER NOT NULL DEFAULT 0,
 			average_qsl REAL NOT NULL DEFAULT 0,
-			readiness_score INTEGER NOT NULL DEFAULT 0,
 			algorithm_summary_json TEXT NOT NULL DEFAULT '{}',
 			timeline_status_json TEXT NOT NULL DEFAULT '{}',
 			risk_items_json TEXT NOT NULL DEFAULT '[]',
@@ -160,21 +151,6 @@ func createPQCSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			completed_at TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
-		);`,
-		`CREATE TABLE pqc_policies (
-			tenant_id TEXT NOT NULL PRIMARY KEY,
-			profile_id TEXT NOT NULL DEFAULT 'balanced_hybrid',
-			default_kem TEXT NOT NULL DEFAULT 'ML-KEM-768',
-			default_signature TEXT NOT NULL DEFAULT 'ML-DSA-65',
-			interface_default_mode TEXT NOT NULL DEFAULT 'hybrid',
-			certificate_default_mode TEXT NOT NULL DEFAULT 'hybrid',
-			hqc_backup_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-			flag_classical_usage BOOLEAN NOT NULL DEFAULT TRUE,
-			flag_classical_certificates BOOLEAN NOT NULL DEFAULT TRUE,
-			flag_non_migrated_interfaces BOOLEAN NOT NULL DEFAULT TRUE,
-			require_pqc_for_new_keys BOOLEAN NOT NULL DEFAULT FALSE,
-			updated_by TEXT NOT NULL DEFAULT '',
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE pqc_migration_plans (
 			tenant_id TEXT NOT NULL,

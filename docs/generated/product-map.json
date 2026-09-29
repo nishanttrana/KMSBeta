@@ -11476,41 +11476,11 @@
       "service": "posture"
     },
     {
-      "action": "policy_read",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.getPolicy",
-      "line": 44,
-      "match_key": "pqc|GET|/pqc/policy",
-      "method": "GET",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy",
-      "permission": "pqc.read",
-      "registration": "kernel",
-      "resource": "pqc_policy",
-      "service": "pqc"
-    },
-    {
-      "action": "policy_update_requested",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.updatePolicy",
-      "line": 45,
-      "match_key": "pqc|PUT|/pqc/policy",
-      "method": "PUT",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy",
-      "permission": "pqc.write",
-      "registration": "kernel",
-      "resource": "pqc_policy",
-      "service": "pqc"
-    },
-    {
       "action": "inventory_read",
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getInventory",
-      "line": 46,
+      "line": 44,
       "match_key": "pqc|GET|/pqc/inventory",
       "method": "GET",
       "normalized_path": "/pqc/inventory",
@@ -11525,7 +11495,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.startScan",
-      "line": 47,
+      "line": 45,
       "match_key": "pqc|POST|/pqc/scan",
       "method": "POST",
       "normalized_path": "/pqc/scan",
@@ -11540,7 +11510,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.listScans",
-      "line": 48,
+      "line": 46,
       "match_key": "pqc|GET|/pqc/scans",
       "method": "GET",
       "normalized_path": "/pqc/scans",
@@ -11555,7 +11525,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getScan",
-      "line": 49,
+      "line": 47,
       "match_key": "pqc|GET|/pqc/scans/{param}",
       "method": "GET",
       "normalized_path": "/pqc/scans/{param}",
@@ -11570,7 +11540,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getReadiness",
-      "line": 50,
+      "line": 48,
       "match_key": "pqc|GET|/pqc/readiness",
       "method": "GET",
       "normalized_path": "/pqc/readiness",
@@ -11585,7 +11555,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getMigrationReport",
-      "line": 52,
+      "line": 50,
       "match_key": "pqc|GET|/pqc/migration/report",
       "method": "GET",
       "normalized_path": "/pqc/migration/report",
@@ -11600,7 +11570,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.createPlan",
-      "line": 53,
+      "line": 51,
       "match_key": "pqc|POST|/pqc/migration/plans",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans",
@@ -11615,7 +11585,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.listPlans",
-      "line": 54,
+      "line": 52,
       "match_key": "pqc|GET|/pqc/migration/plans",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans",
@@ -11630,7 +11600,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getPlan",
-      "line": 55,
+      "line": 53,
       "match_key": "pqc|GET|/pqc/migration/plans/{param}",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans/{param}",
@@ -11645,7 +11615,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.executePlan",
-      "line": 56,
+      "line": 54,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/execute",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/execute",
@@ -11660,7 +11630,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.rollbackPlan",
-      "line": 57,
+      "line": 55,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/rollback",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/rollback",
@@ -11675,7 +11645,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.listRuns",
-      "line": 58,
+      "line": 56,
       "match_key": "pqc|GET|/pqc/migration/plans/{param}/runs",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans/{param}/runs",
@@ -11690,7 +11660,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.timeline",
-      "line": 60,
+      "line": 58,
       "match_key": "pqc|GET|/pqc/timeline",
       "method": "GET",
       "normalized_path": "/pqc/timeline",
@@ -11705,7 +11675,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.exportCBOM",
-      "line": 61,
+      "line": 59,
       "match_key": "pqc|GET|/pqc/cbom/export",
       "method": "GET",
       "normalized_path": "/pqc/cbom/export",
@@ -18427,7 +18397,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.listScans",
-      "line": 48,
+      "line": 46,
       "match_key": "pqc|GET|/pqc/scans",
       "method": "GET",
       "normalized_path": "/pqc/scans",
@@ -18442,7 +18412,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getScan",
-      "line": 49,
+      "line": 47,
       "match_key": "pqc|GET|/pqc/scans/{param}",
       "method": "GET",
       "normalized_path": "/pqc/scans/{param}",
@@ -18457,7 +18427,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.getPlan",
-      "line": 55,
+      "line": 53,
       "match_key": "pqc|GET|/pqc/migration/plans/{param}",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans/{param}",
@@ -18472,7 +18442,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.listRuns",
-      "line": 58,
+      "line": 56,
       "match_key": "pqc|GET|/pqc/migration/plans/{param}/runs",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans/{param}/runs",
@@ -18487,7 +18457,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.timeline",
-      "line": 60,
+      "line": 58,
       "match_key": "pqc|GET|/pqc/timeline",
       "method": "GET",
       "normalized_path": "/pqc/timeline",
@@ -18502,7 +18472,7 @@
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
       "handler": "h.exportCBOM",
-      "line": 61,
+      "line": 59,
       "match_key": "pqc|GET|/pqc/cbom/export",
       "method": "GET",
       "normalized_path": "/pqc/cbom/export",
@@ -25673,7 +25643,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 2730,
+      "line": 2720,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25681,7 +25651,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveNetIf()}>",
-      "line": 2731,
+      "line": 2721,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25689,7 +25659,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2737,
+      "line": 2727,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25697,7 +25667,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2737,
+      "line": 2727,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25705,7 +25675,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setPanel(\"interfaces\")}>Open Interfaces",
-      "line": 2804,
+      "line": 2794,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25713,7 +25683,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 2814,
+      "line": 2804,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25721,7 +25691,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 2821,
+      "line": 2811,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25729,7 +25699,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 2834,
+      "line": 2824,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25737,7 +25707,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 2865,
+      "line": 2855,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25745,7 +25715,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 2868,
+      "line": 2858,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25753,7 +25723,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 2875,
+      "line": 2865,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25761,7 +25731,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
-      "line": 2881,
+      "line": 2871,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25769,7 +25739,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover...",
-      "line": 2889,
+      "line": 2879,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25777,7 +25747,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadJobs()}>",
-      "line": 2896,
+      "line": 2886,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25785,7 +25755,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 2910,
+      "line": 2900,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25793,7 +25763,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 2934,
+      "line": 2924,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25801,7 +25771,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 2937,
+      "line": 2927,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25809,7 +25779,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 2965,
+      "line": 2955,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25817,7 +25787,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 2966,
+      "line": 2956,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25825,7 +25795,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 2971,
+      "line": 2961,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25833,7 +25803,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 2972,
+      "line": 2962,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25841,7 +25811,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 2986,
+      "line": 2976,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25849,7 +25819,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 2986,
+      "line": 2976,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25857,7 +25827,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 2986,
+      "line": 2976,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25865,7 +25835,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 2992,
+      "line": 2982,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25873,7 +25843,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 2992,
+      "line": 2982,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25881,7 +25851,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 3009,
+      "line": 2999,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25889,7 +25859,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 3012,
+      "line": 3002,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25897,7 +25867,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 3013,
+      "line": 3003,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25905,7 +25875,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleTestRule()} disabled= >",
-      "line": 3068,
+      "line": 3058,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25913,7 +25883,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 3081,
+      "line": 3071,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25921,7 +25891,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 3082,
+      "line": 3072,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25929,7 +25899,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 3089,
+      "line": 3079,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25937,7 +25907,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 3090,
+      "line": 3080,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25945,7 +25915,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 3126,
+      "line": 3116,
       "tabs": [],
       "tag": "button"
     },
@@ -25953,7 +25923,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 3127,
+      "line": 3117,
       "tabs": [],
       "tag": "button"
     },
@@ -25961,7 +25931,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 3200,
+      "line": 3190,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25969,7 +25939,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 3201,
+      "line": 3191,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25977,7 +25947,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 3244,
+      "line": 3234,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25985,7 +25955,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 3245,
+      "line": 3235,
       "tabs": [],
       "tag": "Btn"
     },
@@ -32564,35 +32534,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 135,
-      "match_key": "pqc|GET|/pqc/policy",
-      "method": "GET",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy?{param}",
-      "service": "pqc",
-      "service_key": "pqc",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 140,
-      "match_key": "pqc|PUT|/pqc/policy",
-      "method": "PUT",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy?{param}",
-      "service": "pqc",
-      "service_key": "pqc",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 148,
+      "line": 101,
       "match_key": "pqc|GET|/pqc/inventory",
       "method": "GET",
       "normalized_path": "/pqc/inventory",
@@ -32605,7 +32549,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 153,
+      "line": 106,
       "match_key": "pqc|GET|/pqc/migration/report",
       "method": "GET",
       "normalized_path": "/pqc/migration/report",
@@ -32618,7 +32562,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 158,
+      "line": 111,
       "match_key": "pqc|GET|/pqc/readiness",
       "method": "GET",
       "normalized_path": "/pqc/readiness",
@@ -32631,7 +32575,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 163,
+      "line": 116,
       "match_key": "pqc|POST|/pqc/scan",
       "method": "POST",
       "normalized_path": "/pqc/scan",
@@ -32644,7 +32588,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 212,
+      "line": 165,
       "match_key": "pqc|GET|/pqc/migration/plans",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans",
@@ -32657,7 +32601,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 217,
+      "line": 170,
       "match_key": "pqc|POST|/pqc/migration/plans",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans",
@@ -32670,7 +32614,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 225,
+      "line": 178,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/execute",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/execute",
@@ -32683,7 +32627,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 233,
+      "line": 186,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/rollback",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/rollback",
@@ -33824,7 +33768,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T08:48:19Z",
+  "generated_at": "2026-09-29T08:53:34Z",
   "navigation": [
     {
       "group": "Overview",
@@ -83415,139 +83359,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 135,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.getPolicy",
-      "handler_external_package_calls": [],
-      "handler_file": "services/pqc/handler.go",
-      "handler_helper_calls": [
-        "GetPolicy",
-        "ok"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 64,
-      "handler_name": "getPolicy",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "GetPolicy"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy",
-      "route_file": "services/pqc/handler.go",
-      "route_line": 44,
-      "service": "pqc",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "newServiceError",
-        "normalizePQCPolicy",
-        "publishAudit",
-        "errorsIsNotFound",
-        "defaultPQCPolicy"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/pqc/service.go",
-          "helper_calls": [
-            "newServiceError",
-            "normalizePQCPolicy",
-            "publishAudit",
-            "errorsIsNotFound",
-            "defaultPQCPolicy"
-          ],
-          "internal_package_calls": [],
-          "line": 197,
-          "name": "GetPolicy",
-          "receiver_calls": [],
-          "store_calls": [
-            "GetPolicy"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "GetPolicy"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-          "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 140,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.updatePolicy",
-      "handler_external_package_calls": [],
-      "handler_file": "services/pqc/handler.go",
-      "handler_helper_calls": [
-        "UpdatePolicy",
-        "ok"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 72,
-      "handler_name": "updatePolicy",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "UpdatePolicy"
-      ],
-      "handler_store_calls": [],
-      "method": "PUT",
-      "normalized_path": "/pqc/policy",
-      "path": "/pqc/policy",
-      "route_file": "services/pqc/handler.go",
-      "route_line": 45,
-      "service": "pqc",
-      "service_external_package_calls": [],
-      "service_helper_calls": [
-        "normalizePQCPolicy",
-        "newServiceError",
-        "UpsertPolicy",
-        "publishAudit"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/pqc/service.go",
-          "helper_calls": [
-            "normalizePQCPolicy",
-            "newServiceError",
-            "UpsertPolicy",
-            "publishAudit"
-          ],
-          "internal_package_calls": [],
-          "line": 225,
-          "name": "UpdatePolicy",
-          "receiver_calls": [],
-          "store_calls": [
-            "UpsertPolicy"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "UpsertPolicy"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 148,
+          "line": 101,
           "source": "serviceRequest"
         }
       ],
@@ -83559,7 +83373,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 86,
+      "handler_line": 62,
       "handler_name": "getInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83570,27 +83384,19 @@
       "normalized_path": "/pqc/inventory",
       "path": "/pqc/inventory",
       "route_file": "services/pqc/handler.go",
-      "route_line": 46,
+      "route_line": 44,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "newServiceError",
-        "GetPolicy",
         "ListKeys",
         "ListCertificates",
-        "ListInterfacePorts",
         "buildKeyInventory",
         "buildCertificateInventory",
-        "buildInterfaceInventory",
         "sortClassicalUsage",
-        "sortInterfacePQCItems",
         "sortCertificatePQCItems",
-        "round2",
-        "clampScore",
-        "pct",
-        "maxInt",
         "buildPQCRecommendations",
         "publishAudit"
       ],
@@ -83603,38 +83409,28 @@
           "file": "services/pqc/service.go",
           "helper_calls": [
             "newServiceError",
-            "GetPolicy",
             "ListKeys",
             "ListCertificates",
-            "ListInterfacePorts",
             "buildKeyInventory",
             "buildCertificateInventory",
-            "buildInterfaceInventory",
             "sortClassicalUsage",
-            "sortInterfacePQCItems",
             "sortCertificatePQCItems",
-            "round2",
-            "clampScore",
-            "pct",
-            "maxInt",
             "buildPQCRecommendations",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 251,
+          "line": 192,
           "name": "GetInventory",
           "receiver_calls": [
             "s.keycore.ListKeys",
-            "s.certs.ListCertificates",
-            "s.keycore.ListInterfacePorts"
+            "s.certs.ListCertificates"
           ],
           "store_calls": []
         }
       ],
       "service_receiver_calls": [
         "s.keycore.ListKeys",
-        "s.certs.ListCertificates",
-        "s.keycore.ListInterfacePorts"
+        "s.certs.ListCertificates"
       ],
       "service_store_calls": []
     },
@@ -83643,7 +83439,7 @@
         {
           "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 163,
+          "line": 116,
           "source": "serviceRequest"
         }
       ],
@@ -83655,7 +83451,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
+      "handler_line": 70,
       "handler_name": "startScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83666,7 +83462,7 @@
       "normalized_path": "/pqc/scan",
       "path": "/pqc/scan",
       "route_file": "services/pqc/handler.go",
-      "route_line": 47,
+      "route_line": 45,
       "service": "pqc",
       "service_external_package_calls": [
         "sort.Slice",
@@ -83688,9 +83484,6 @@
         "migrationTarget",
         "riskPriority",
         "riskReason",
-        "clampScore",
-        "pct",
-        "maxInt",
         "timelineStatusMap",
         "CreateReadinessScan",
         "GetReadinessScan"
@@ -83721,9 +83514,6 @@
             "migrationTarget",
             "riskPriority",
             "riskReason",
-            "clampScore",
-            "pct",
-            "maxInt",
             "timelineStatusMap",
             "CreateReadinessScan",
             "GetReadinessScan"
@@ -83757,7 +83547,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 109,
+      "handler_line": 85,
       "handler_name": "listScans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83768,7 +83558,7 @@
       "normalized_path": "/pqc/scans",
       "path": "/pqc/scans",
       "route_file": "services/pqc/handler.go",
-      "route_line": 48,
+      "route_line": 46,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83787,7 +83577,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 165,
+          "line": 160,
           "name": "ListReadinessScans",
           "receiver_calls": [],
           "store_calls": [
@@ -83810,7 +83600,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 118,
+      "handler_line": 94,
       "handler_name": "getScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83821,7 +83611,7 @@
       "normalized_path": "/pqc/scans/{param}",
       "path": "/pqc/scans/{id}",
       "route_file": "services/pqc/handler.go",
-      "route_line": 49,
+      "route_line": 47,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83840,7 +83630,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 173,
+          "line": 168,
           "name": "GetReadinessScan",
           "receiver_calls": [],
           "store_calls": [
@@ -83858,7 +83648,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 158,
+          "line": 111,
           "source": "serviceRequest"
         }
       ],
@@ -83870,7 +83660,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 126,
+      "handler_line": 102,
       "handler_name": "getReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83881,7 +83671,7 @@
       "normalized_path": "/pqc/readiness",
       "path": "/pqc/readiness",
       "route_file": "services/pqc/handler.go",
-      "route_line": 50,
+      "route_line": 48,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83906,7 +83696,7 @@
             "StartReadinessScan"
           ],
           "internal_package_calls": [],
-          "line": 182,
+          "line": 177,
           "name": "GetLatestReadiness",
           "receiver_calls": [],
           "store_calls": [
@@ -83924,7 +83714,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 153,
+          "line": 106,
           "source": "serviceRequest"
         }
       ],
@@ -83936,7 +83726,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 149,
+      "handler_line": 125,
       "handler_name": "getMigrationReport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83947,7 +83737,7 @@
       "normalized_path": "/pqc/migration/report",
       "path": "/pqc/migration/report",
       "route_file": "services/pqc/handler.go",
-      "route_line": 52,
+      "route_line": 50,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83974,7 +83764,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 325,
+          "line": 236,
           "name": "GetMigrationReport",
           "receiver_calls": [],
           "store_calls": []
@@ -83988,7 +83778,7 @@
         {
           "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 217,
+          "line": 170,
           "source": "serviceRequest"
         }
       ],
@@ -84000,7 +83790,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 134,
+      "handler_line": 110,
       "handler_name": "createPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84011,7 +83801,7 @@
       "normalized_path": "/pqc/migration/plans",
       "path": "/pqc/migration/plans",
       "route_file": "services/pqc/handler.go",
-      "route_line": 53,
+      "route_line": 51,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -84023,7 +83813,6 @@
         "parseTimeString",
         "migrationPhase",
         "newID",
-        "estimatedRiskReduction",
         "GetMigrationPlan",
         "publishAudit"
       ],
@@ -84041,12 +83830,11 @@
             "parseTimeString",
             "migrationPhase",
             "newID",
-            "estimatedRiskReduction",
             "GetMigrationPlan",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 361,
+          "line": 270,
           "name": "CreateMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -84066,7 +83854,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 212,
+          "line": 165,
           "source": "serviceRequest"
         }
       ],
@@ -84079,7 +83867,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 157,
+      "handler_line": 133,
       "handler_name": "listPlans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84090,7 +83878,7 @@
       "normalized_path": "/pqc/migration/plans",
       "path": "/pqc/migration/plans",
       "route_file": "services/pqc/handler.go",
-      "route_line": 54,
+      "route_line": 52,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -84109,7 +83897,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 439,
+          "line": 347,
           "name": "ListMigrationPlans",
           "receiver_calls": [],
           "store_calls": [
@@ -84132,7 +83920,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 166,
+      "handler_line": 142,
       "handler_name": "getPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84143,7 +83931,7 @@
       "normalized_path": "/pqc/migration/plans/{param}",
       "path": "/pqc/migration/plans/{id}",
       "route_file": "services/pqc/handler.go",
-      "route_line": 55,
+      "route_line": 53,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -84162,7 +83950,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 447,
+          "line": 355,
           "name": "GetMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -84180,7 +83968,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 225,
+          "line": 178,
           "source": "serviceRequest"
         }
       ],
@@ -84192,7 +83980,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 176,
+      "handler_line": 152,
       "handler_name": "executePlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84203,7 +83991,7 @@
       "normalized_path": "/pqc/migration/plans/{param}/execute",
       "path": "/pqc/migration/plans/{id}/execute",
       "route_file": "services/pqc/handler.go",
-      "route_line": 56,
+      "route_line": 54,
       "service": "pqc",
       "service_external_package_calls": [
         "errors.Is",
@@ -84244,7 +84032,7 @@
             "UpdateMigrationRun"
           ],
           "internal_package_calls": [],
-          "line": 456,
+          "line": 364,
           "name": "ExecuteMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -84268,7 +84056,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 233,
+          "line": 186,
           "source": "serviceRequest"
         }
       ],
@@ -84280,7 +84068,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 191,
+      "handler_line": 167,
       "handler_name": "rollbackPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84291,7 +84079,7 @@
       "normalized_path": "/pqc/migration/plans/{param}/rollback",
       "path": "/pqc/migration/plans/{id}/rollback",
       "route_file": "services/pqc/handler.go",
-      "route_line": 57,
+      "route_line": 55,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -84328,7 +84116,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 599,
+          "line": 507,
           "name": "RollbackMigrationPlan",
           "receiver_calls": [
             "s.keycore.DeactivateKey"
@@ -84359,7 +84147,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 204,
+      "handler_line": 180,
       "handler_name": "listRuns",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84370,7 +84158,7 @@
       "normalized_path": "/pqc/migration/plans/{param}/runs",
       "path": "/pqc/migration/plans/{id}/runs",
       "route_file": "services/pqc/handler.go",
-      "route_line": 58,
+      "route_line": 56,
       "service": "pqc",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -84389,7 +84177,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 664,
+          "line": 572,
           "name": "ListMigrationRuns",
           "receiver_calls": [],
           "store_calls": [
@@ -84412,7 +84200,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 212,
+      "handler_line": 188,
       "handler_name": "timeline",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84423,7 +84211,7 @@
       "normalized_path": "/pqc/timeline",
       "path": "/pqc/timeline",
       "route_file": "services/pqc/handler.go",
-      "route_line": 60,
+      "route_line": 58,
       "service": "pqc",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -84440,7 +84228,7 @@
             "buildTimelineMilestones"
           ],
           "internal_package_calls": [],
-          "line": 672,
+          "line": 580,
           "name": "Timeline",
           "receiver_calls": [],
           "store_calls": []
@@ -84459,7 +84247,7 @@
         "ok"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 224,
+      "handler_line": 200,
       "handler_name": "exportCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84470,7 +84258,7 @@
       "normalized_path": "/pqc/cbom/export",
       "path": "/pqc/cbom/export",
       "route_file": "services/pqc/handler.go",
-      "route_line": 61,
+      "route_line": 59,
       "service": "pqc",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -84481,7 +84269,7 @@
           "file": "services/pqc/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 681,
+          "line": 589,
           "name": "ExportCBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -91582,7 +91370,7 @@
       "payment": 42,
       "policy": 12,
       "posture": 12,
-      "pqc": 16,
+      "pqc": 14,
       "reconciler": 1,
       "reporting": 34,
       "sbom": 14,
@@ -91615,7 +91403,7 @@
       "kmip": 11,
       "payment": 27,
       "posture": 8,
-      "pqc": 10,
+      "pqc": 8,
       "reconciler": 1,
       "reporting": 24,
       "sbom": 12,
@@ -91812,17 +91600,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 911,
+    "backend_routes": 909,
     "backend_services": 30,
     "button_inventory": 770,
-    "frontend_call_sites": 576,
-    "matched_frontend_call_sites": 531,
+    "frontend_call_sites": 574,
+    "matched_frontend_call_sites": 529,
     "nav_items": 27,
-    "request_flows": 911,
-    "request_flows_with_frontend": 538,
+    "request_flows": 909,
+    "request_flows_with_frontend": 536,
     "request_flows_with_internal_package_calls": 158,
-    "request_flows_with_service_calls": 544,
-    "request_flows_with_store_calls": 655,
+    "request_flows_with_service_calls": 542,
+    "request_flows_with_store_calls": 653,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -92107,7 +91895,7 @@
       ]
     },
     {
-      "call_count": 48,
+      "call_count": 46,
       "component": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "group": "Security & compliance",
       "id": "compliance",
@@ -119441,77 +119229,7 @@
         ]
       },
       {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 135,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "getPolicy",
-        "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 64,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/pqc/policy",
-        "path": "/pqc/policy",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "pqc|GET|/pqc/policy",
-        "sensitive": false,
-        "service": "pqc",
-        "serviceCalls": [
-          "GetPolicy"
-        ],
-        "storeCalls": [
-          "GetPolicy"
-        ],
-        "uiLabels": [
-          "Compliance"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"pqc\", `/pqc/policy?${tenantQuery(session)}`)",
-            "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 140,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "updatePolicy",
-        "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 72,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "PUT",
-        "normalizedPath": "/pqc/policy",
-        "path": "/pqc/policy",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "pqc|PUT|/pqc/policy",
-        "sensitive": false,
-        "service": "pqc",
-        "serviceCalls": [
-          "UpdatePolicy"
-        ],
-        "storeCalls": [
-          "UpsertPolicy"
-        ],
-        "uiLabels": [
-          "Compliance"
-        ]
-      },
-      {
-        "complexity": 3,
+        "complexity": 2,
         "externalPackages": [
           "strings.TrimSpace"
         ],
@@ -119519,13 +119237,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 148,
+            "line": 101,
             "source": "serviceRequest"
           }
         ],
         "handler": "getInventory",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 86,
+        "handlerLine": 62,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -119533,8 +119251,7 @@
         "path": "/pqc/inventory",
         "receiverCalls": [
           "s.keycore.ListKeys",
-          "s.certs.ListCertificates",
-          "s.keycore.ListInterfacePorts"
+          "s.certs.ListCertificates"
         ],
         "risk": "low",
         "routeKey": "pqc|GET|/pqc/inventory",
@@ -119559,13 +119276,13 @@
           {
             "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 163,
+            "line": 116,
             "source": "serviceRequest"
           }
         ],
         "handler": "startScan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 70,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/cryptocatalog.Assess"
@@ -119597,7 +119314,7 @@
         "frontendSites": [],
         "handler": "listScans",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 109,
+        "handlerLine": 85,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -119626,7 +119343,7 @@
         "frontendSites": [],
         "handler": "getScan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 118,
+        "handlerLine": 94,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -119656,13 +119373,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 158,
+            "line": 111,
             "source": "serviceRequest"
           }
         ],
         "handler": "getReadiness",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 126,
+        "handlerLine": 102,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -119692,13 +119409,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 153,
+            "line": 106,
             "source": "serviceRequest"
           }
         ],
         "handler": "getMigrationReport",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 149,
+        "handlerLine": 125,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -119726,13 +119443,13 @@
           {
             "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 217,
+            "line": 170,
             "source": "serviceRequest"
           }
         ],
         "handler": "createPlan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 134,
+        "handlerLine": 110,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -119763,13 +119480,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 212,
+            "line": 165,
             "source": "serviceRequest"
           }
         ],
         "handler": "listPlans",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 157,
+        "handlerLine": 133,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -119798,7 +119515,7 @@
         "frontendSites": [],
         "handler": "getPlan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 166,
+        "handlerLine": 142,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -119829,13 +119546,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 225,
+            "line": 178,
             "source": "serviceRequest"
           }
         ],
         "handler": "executePlan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 176,
+        "handlerLine": 152,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -119868,13 +119585,13 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 233,
+            "line": 186,
             "source": "serviceRequest"
           }
         ],
         "handler": "rollbackPlan",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 191,
+        "handlerLine": 167,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -119907,7 +119624,7 @@
         "frontendSites": [],
         "handler": "listRuns",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 204,
+        "handlerLine": 180,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -119934,7 +119651,7 @@
         "frontendSites": [],
         "handler": "timeline",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 212,
+        "handlerLine": 188,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -119959,7 +119676,7 @@
         "frontendSites": [],
         "handler": "exportCBOM",
         "handlerFile": "services/pqc/handler.go",
-        "handlerLine": 224,
+        "handlerLine": 200,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -124187,7 +123904,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T08:48:19Z",
+    "generatedAt": "2026-09-29T08:53:34Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124229,8 +123946,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 911,
-      "frontendBacked": 538,
+      "flows": 909,
+      "frontendBacked": 536,
       "highRisk": 379,
       "services": 30
     }

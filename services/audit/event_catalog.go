@@ -130,8 +130,6 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.workload.summary_viewed":              {Severity: "LOW"},
 		"audit.workload.key_usage_viewed":            {Severity: "LOW"},
 		"audit.workload.graph_viewed":                {Severity: "LOW"},
-		"audit.pqc.policy_viewed":                    {Severity: "LOW"},
-		"audit.pqc.policy_updated":                   {Severity: "MEDIUM"},
 		"audit.pqc.inventory_viewed":                 {Severity: "LOW"},
 		"audit.pqc.migration_report_viewed":          {Severity: "LOW"},
 		"audit.reporting.evidence_pack_requested":    {Severity: "MEDIUM"},

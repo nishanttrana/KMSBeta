@@ -7,6 +7,45 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — PQC policy: remove it; migration rules are the only PQC switch (6.3.0-beta)
+
+**Decision.** Every field of the pqc service's tenant policy was removed
+rather than enforced or listed as a preview, and the readiness scores were
+replaced by the counts they were computed from.
+
+**Why, per field.**
+- `require_pqc_for_new_keys`: a keycore migration rule
+  (`quantum_vulnerable -> decrypt_only`) already refuses new protection with
+  quantum-vulnerable keys, with a date and an audited refusal. A second
+  switch would be a second decision point (KEY_ACCESS_MODEL: one keycore
+  decision).
+- `profile_id`, `default_kem`, `default_signature`, `hqc_backup_enabled`:
+  no consumer beyond recommendation text. Making them real would mean pqc
+  choosing algorithms for keycore, which the customer's rules already do
+  through `target_algorithm`.
+- `interface_default_mode`, `certificate_default_mode`: nothing sets a
+  listener's key exchange from them, and the product issues no PQC
+  certificates (1.19.0-beta). The inventory can only honestly report what it
+  measures, so interfaces are "not assessed".
+- `flag_*`: they only suppressed findings. A findings list that can be
+  switched off is not an inventory.
+- Scores: 55/30/15 and 85/15 (hybrid as 0.7) had no source.
+  "N of M classical" is measured and needs no weighting.
+
+**Rejected.**
+- *A preview entry with 409 on `PUT`.* A preview is for a capability we
+  intend to build. Every field here duplicates the migration rules or has no
+  target, so a preview would advertise a feature that shouldn't exist.
+- *Enforce `require_pqc_for_new_keys` by having keycore call pqc.* That adds
+  a cross-service dependency on the key-operation path to do what a
+  migration rule does locally.
+- *Keep the score but document the weights.* A documented guess is still a
+  guess (rule 7).
+
+**Enforced by.** `TestPQCPolicyRemovedAndNoInventedScores`,
+`TestPolicyAndScoreDroppedPostgres`, and the inventory count assertions in
+`TestPQCServiceReadinessPlanExecuteRollback`.
+
 ## 2026-09-29 — Swap drill runs in memory; no maturity tiers (6.1.0-beta)
 
 **Decision.** The algorithm-swap drill generates throwaway keys in keycore's

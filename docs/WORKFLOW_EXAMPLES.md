@@ -580,7 +580,8 @@ Components used:
 
 Steps:
 
-1. Set tenant PQC policy.
+1. Add Crypto Agility migration rules (for example quantum-vulnerable keys
+   `decrypt_only` from a date).
 2. Run a scan.
 3. Review inventory and readiness.
 4. Create migration plans.

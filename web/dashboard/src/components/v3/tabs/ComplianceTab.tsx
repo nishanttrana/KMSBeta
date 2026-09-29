@@ -858,30 +858,30 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>PQC Migration Gaps</span>
-            <B c={!pqcInventory ? "red" : Number(pqcInventory?.classical_usage?.length || 0) > 0 || Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 || Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"}>
-              {pqcInventory ? `${Number(pqcInventory?.readiness_score || 0)}/100` : "unavailable"}
+            <B c={!pqcInventory ? "red" : Number(pqcInventory?.classical_usage?.length || 0) > 0 || Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"}>
+              {pqcInventory ? `${Number(pqcInventory?.keys?.classical || 0) + Number(pqcInventory?.certificates?.classical || 0)} of ${Number(pqcInventory?.keys?.total || 0) + Number(pqcInventory?.certificates?.total || 0)} classical` : "unavailable"}
             </B>
           </div>
           {pqcInventory ? <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
             <Stat l="RSA / ECC Active" v={String(Number(pqcInventory?.classical_usage?.length || 0))} c={Number(pqcInventory?.classical_usage?.length || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Interfaces Pending" v={String(Number(pqcInventory?.non_migrated_interfaces?.length || 0))} c={Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 ? "amber" : "green"} />
             <Stat l="Certificates Pending" v={String(Number(pqcInventory?.non_migrated_certificates?.length || 0))} c={Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"} />
-            <Stat l="Tenant PQC Policy" v={String(pqcInventory?.policy?.profile_id || "not set").replaceAll("_", " ")} c="accent" />
+            <Stat l="Keys PQC / Hybrid" v={`${Number(pqcInventory?.keys?.pqc_only || 0)} / ${Number(pqcInventory?.keys?.hybrid || 0)}`} c="accent" />
+            <Stat l="Interface TLS" v="not assessed" c="muted" />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Non-Migrated Interfaces</div>
-              {(pqcInventory?.non_migrated_interfaces || []).slice(0, 4).map((item: any) => (
-                <div key={`${item.interface_name}-${item.port}`} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Classical Keys & Certificates</div>
+              {(pqcInventory?.classical_usage || []).slice(0, 4).map((item: any) => (
+                <div key={`${item.asset_type}-${item.asset_id}`} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.interface_name}</span>
-                    <span style={{ fontSize: 10, color: C.red }}>{item.effective_pqc_mode}</span>
+                    <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.name}</span>
+                    <span style={{ fontSize: 10, color: C.red }}>{item.algorithm}</span>
                   </div>
-                  <div style={{ fontSize: 9, color: C.dim }}>{`${item.protocol.toUpperCase()} ${item.bind_address}:${item.port}`}</div>
+                  <div style={{ fontSize: 9, color: C.dim }}>{item.asset_type}</div>
                 </div>
               ))}
-              {!(pqcInventory?.non_migrated_interfaces || []).length && <div style={{ fontSize: 10, color: C.muted }}>No interface migration gaps.</div>}
+              {!(pqcInventory?.classical_usage || []).length && <div style={{ fontSize: 10, color: C.muted }}>No classical RSA / ECC keys or certificates.</div>}
             </div>
             <div>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Non-Migrated Certificates</div>

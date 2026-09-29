@@ -137,7 +137,7 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 | `posture` | `/svc/posture/` | Risk findings, drift detection, remediation |
 | `workload` | `/svc/workload/` | Workload identity, SPIFFE/SVID, token exchange |
 | `confidential` | `/svc/confidential/` | TEE attestation, attested key release |
-| `pqc` | `/svc/pqc/` | PQC policy, inventory, migration planning |
+| `pqc` | `/svc/pqc/` | PQC inventory, readiness scans, migration planning |
 | `keyaccess` | `/svc/keyaccess/` | Access justification rules and audit |
 | `dataprotect` | `/svc/dataprotect/` | Tokenization, masking, field encryption |
 | `payment` | `/svc/payment/` | TR-31, PIN blocks, ISO 20022 signing |

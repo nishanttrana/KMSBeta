@@ -4,6 +4,64 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.3.0-beta] — 2026-09-29
+
+### PQC: the record-only policy and the invented readiness scores are gone
+5.4.0-beta hid the pqc policy switches and the readiness score in the
+dashboard but left them in the API. They are now removed from the pqc
+service:
+
+- **Removed: `GET`/`PUT /svc/pqc/pqc/policy`** and the `pqc_policies`
+  table (migration 003). Per field: `require_pqc_for_new_keys` never reached
+  key creation; `profile_id`, `default_kem`, `default_signature` and
+  `hqc_backup_enabled` changed only recommendation text;
+  `certificate_default_mode` changed nothing; `interface_default_mode` was
+  reported as the TLS mode of interfaces nobody measured; and
+  `flag_classical_usage`, `flag_classical_certificates` and
+  `flag_non_migrated_interfaces` only hid findings from the inventory. None
+  was kept as a preview: the real control already exists. **To require
+  post-quantum for new protection, add a Crypto Agility migration rule**
+  (`match_kind: quantum_vulnerable`, `action: decrypt_only`), which keycore
+  enforces on every key operation.
+- **Removed invented scores.** `readiness_score` (scans: 55% PQC-or-hybrid
+  share + 30% average QSL + 15% hybrid share; inventory: 85% of a readiness
+  percent that counted hybrid as 0.7, plus 15%), `quantum_readiness_percent`,
+  and a plan summary's `estimated_risk_reduced` (an average of hand-picked
+  priority weights). The measured counts they blended remain:
+  `total_assets`, `pqc_ready_assets`, `hybrid_assets`, `classical_assets`,
+  and per-inventory `{total, classical, hybrid, pqc_only}`.
+- **Interfaces are "not assessed".** The inventory reported an interface
+  whose `pqc_mode` was `inherit` as having the policy's default mode (hybrid
+  by default), which presented an unmeasured TLS mode as a measurement.
+  `interfaces` is now always `"not_assessed"`, and `non_migrated_interfaces`
+  is gone. Every classical key and certificate is always listed.
+- **Dashboard.** Compliance → PQC Migration Gaps shows "N of M classical"
+  instead of "x/100", key PQC/hybrid counts instead of the policy profile,
+  and "Interface TLS: not assessed". The Command Center KPI shows
+  "PQC or hybrid assets N / M" from the latest scan. The recommendation check
+  "PQC readiness has been assessed" passes when a scan exists, not on a
+  score threshold. System Administration → Interfaces says the per-interface
+  PQC mode is recorded only (it previously said "Classical + PQC handshake
+  path enabled").
+- **Audit.** `audit.pqc.policy_viewed`, `audit.pqc.policy_updated` and the
+  kernel actions `policy_read` / `policy_update_requested` are gone with the
+  routes. `audit.pqc.scan_completed` and `audit.pqc.inventory_viewed` carry
+  counts, not a score.
+- **Tests.** `TestPQCPolicyRemovedAndNoInventedScores`,
+  inventory counts in `TestPQCServiceReadinessPlanExecuteRollback`,
+  `TestPolicyAndScoreDroppedPostgres` (real Postgres).
+
+### Breaking
+- `/pqc/policy` returns 404. Clients reading `readiness_score`,
+  `quantum_readiness_percent`, `policy`, `non_migrated_interfaces`,
+  `effective_pqc_mode` or `estimated_risk_reduced` must use the counts.
+  `proto/pqc.proto` reserves `ReadinessScan` field 9.
+
+### Open
+- Keycore's per-interface `pqc_mode` (System Administration → Interfaces) is
+  still recorded and not enforced at any listener. It should be removed,
+  made a preview, or enforced.
+
 ## [6.2.0-beta] — 2026-09-29
 
 ### Crypto Agility: risk overview

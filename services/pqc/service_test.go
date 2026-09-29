@@ -22,42 +22,22 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 		t.Fatalf("expected scan audit events")
 	}
 
-	policy, err := svc.GetPolicy(ctx, tenantID)
-	if err != nil {
-		t.Fatalf("get policy: %v", err)
-	}
-	if policy.ProfileID == "" || policy.InterfaceDefaultMode == "" {
-		t.Fatalf("unexpected default policy: %+v", policy)
-	}
-	updatedPolicy, err := svc.UpdatePolicy(ctx, PQCPolicy{
-		TenantID:               tenantID,
-		ProfileID:              "quantum_first",
-		DefaultKEM:             "ML-KEM-1024",
-		DefaultSignature:       "ML-DSA-87",
-		InterfaceDefaultMode:   "pqc_only",
-		CertificateDefaultMode: "pqc_only",
-		HQCBackupEnabled:       true,
-		FlagClassicalUsage:     true,
-		FlagClassicalCerts:     true,
-		FlagNonMigratedIfaces:  true,
-		RequirePQCForNewKeys:   true,
-		UpdatedBy:              "tester",
-	})
-	if err != nil {
-		t.Fatalf("update policy: %v", err)
-	}
-	if updatedPolicy.ProfileID != "quantum_first" || updatedPolicy.DefaultSignature != "ML-DSA-87" {
-		t.Fatalf("unexpected updated policy: %+v", updatedPolicy)
-	}
 	inventory, err := svc.GetInventory(ctx, tenantID)
 	if err != nil {
 		t.Fatalf("inventory: %v", err)
 	}
-	if inventory.Keys.Total == 0 || inventory.Interfaces.Total == 0 || inventory.Certificates.Total == 0 {
-		t.Fatalf("unexpected inventory: %+v", inventory)
+	// Counts come from each asset's algorithm (fakes: RSA / hybrid / ML-DSA
+	// keys; RSA / hybrid / ML-DSA certificates). Interface TLS is never
+	// measured, so it is reported as not assessed rather than as a mode.
+	if k := inventory.Keys; k.Total != 3 || k.Classical != 1 || k.Hybrid != 1 || k.PQCOnly != 1 ||
+		inventory.Certificates.Total != 3 || inventory.Certificates.Classical != 1 || inventory.Certificates.Hybrid != 1 || inventory.Certificates.PQCOnly != 1 {
+		t.Fatalf("unexpected inventory counts: keys=%+v certs=%+v", inventory.Keys, inventory.Certificates)
 	}
-	if len(inventory.NonMigratedInterfaces) == 0 || len(inventory.NonMigratedCertificates) == 0 {
-		t.Fatalf("expected migration gaps: %+v", inventory)
+	if inventory.Interfaces != "not_assessed" {
+		t.Fatalf("interfaces = %q, want not_assessed", inventory.Interfaces)
+	}
+	if len(inventory.ClassicalUsage) != 2 || len(inventory.NonMigratedCertificates) != 1 {
+		t.Fatalf("expected every classical asset listed: %+v", inventory)
 	}
 	report, err := svc.GetMigrationReport(ctx, tenantID)
 	if err != nil {
@@ -65,7 +45,7 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 	}
 	// No plan has a deadline yet, so there is no timeline: the product sets
 	// no dates of its own.
-	if report.Inventory.ReadinessScore <= 0 || len(report.TopRisks) == 0 || len(report.Timeline) != 0 {
+	if report.Inventory.Keys.Total == 0 || len(report.TopRisks) == 0 || len(report.Timeline) != 0 {
 		t.Fatalf("unexpected migration report: %+v", report)
 	}
 
@@ -163,7 +143,7 @@ func TestPQCTimelineAndCBOM(t *testing.T) {
 	if err != nil {
 		t.Fatalf("timeline: %v", err)
 	}
-	if len(milestones) == 0 || readiness.ReadinessScore <= 0 {
+	if len(milestones) == 0 || readiness.TotalAssets == 0 {
 		t.Fatalf("unexpected timeline readiness: milestones=%d readiness=%+v", len(milestones), readiness)
 	}
 	doc, err := svc.ExportCBOM(ctx, tenantID)

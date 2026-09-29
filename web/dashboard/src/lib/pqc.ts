@@ -1,22 +1,6 @@
 import type { AuthSession } from "./auth";
 import { serviceRequest } from "./serviceApi";
 
-export type PQCPolicy = {
-  tenant_id: string;
-  profile_id: string;
-  default_kem: string;
-  default_signature: string;
-  interface_default_mode: "classical" | "hybrid" | "pqc_only" | string;
-  certificate_default_mode: "classical" | "hybrid" | "pqc_only" | string;
-  hqc_backup_enabled: boolean;
-  flag_classical_usage: boolean;
-  flag_classical_certificates: boolean;
-  flag_non_migrated_interfaces: boolean;
-  require_pqc_for_new_keys: boolean;
-  updated_by?: string;
-  updated_at?: string;
-};
-
 export type InventoryBreakdown = {
   total: number;
   classical: number;
@@ -35,21 +19,6 @@ export type ClassicalUsageItem = {
   reason: string;
 };
 
-export type InterfacePQCItem = {
-  interface_name: string;
-  description: string;
-  bind_address: string;
-  port: number;
-  protocol: string;
-  pqc_mode: string;
-  effective_pqc_mode: string;
-  enabled: boolean;
-  status: string;
-  certificate_source: string;
-  ca_id?: string;
-  certificate_id?: string;
-};
-
 export type CertificatePQCItem = {
   cert_id: string;
   subject_cn: string;
@@ -60,17 +29,16 @@ export type CertificatePQCItem = {
   migration_state: string;
 };
 
+// Keys and certificates counted by the algorithm each actually has; there is
+// no score. Interface TLS key exchange is never measured, so interfaces is
+// always "not_assessed".
 export type PQCInventory = {
   tenant_id: string;
   generated_at: string;
-  policy: PQCPolicy;
-  readiness_score: number;
-  quantum_readiness_percent: number;
   keys: InventoryBreakdown;
   certificates: InventoryBreakdown;
-  interfaces: InventoryBreakdown;
+  interfaces: "not_assessed";
   classical_usage: ClassicalUsageItem[];
-  non_migrated_interfaces: InterfacePQCItem[];
   non_migrated_certificates: CertificatePQCItem[];
   recommendations: string[];
 };
@@ -97,7 +65,6 @@ export type PQCReadinessScan = {
   hybrid_assets: number;
   classical_assets: number;
   average_qsl: number;
-  readiness_score: number;
   algorithm_summary: Record<string, number>;
   risk_items: PQCAssetRisk[];
   created_at?: string;
@@ -119,7 +86,6 @@ export type PQCTimelineMilestone = {
 export type PQCMigrationReport = {
   tenant_id: string;
   generated_at: string;
-  policy: PQCPolicy;
   inventory: PQCInventory;
   latest_readiness: PQCReadinessScan;
   timeline: PQCTimelineMilestone[];
@@ -129,19 +95,6 @@ export type PQCMigrationReport = {
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
-}
-
-export async function getPQCPolicy(session: AuthSession): Promise<PQCPolicy> {
-  const out = await serviceRequest<{ policy: PQCPolicy }>(session, "pqc", `/pqc/policy?${tenantQuery(session)}`);
-  return (out?.policy || {}) as PQCPolicy;
-}
-
-export async function updatePQCPolicy(session: AuthSession, input: Partial<PQCPolicy>): Promise<PQCPolicy> {
-  const out = await serviceRequest<{ policy: PQCPolicy }>(session, "pqc", `/pqc/policy?${tenantQuery(session)}`, {
-    method: "PUT",
-    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
-  });
-  return (out?.policy || {}) as PQCPolicy;
 }
 
 export async function getPQCInventory(session: AuthSession): Promise<PQCInventory> {

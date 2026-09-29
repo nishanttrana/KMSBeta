@@ -423,7 +423,7 @@ const INTERFACE_CERT_SOURCE_LABELS: Record<InterfaceCertSource, string> = {
 };
 
 const INTERFACE_PQC_MODE_LABELS: Record<InterfacePQCMode, string> = {
-  inherit: "Inherit PQC Policy",
+  inherit: "Not set",
   classical: "Classical Only",
   hybrid: "Hybrid PQC",
   pqc_only: "PQC Only"
@@ -2698,8 +2698,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <FG label="Certificate Source">
           <Inp value={interfaceTLSRequired ? INTERFACE_CERT_SOURCE_LABELS[ifCertSource] : "Not required"} readOnly/>
         </FG>
-        <FG label="Hybrid TLS Guidance"><Inp value={interfaceTLSRequired ? (ifPQCMode==="hybrid" ? "Classical + PQC handshake path enabled" : ifPQCMode==="pqc_only" ? "PQC-only handshake target" : ifPQCMode==="classical" ? "Legacy TLS only" : "Uses tenant PQC policy default") : "Not applicable"} readOnly/></FG>
-        <FG label="Policy Source"><Inp value={interfaceTLSRequired ? (ifPQCMode==="inherit" ? "Inherited from Post-Quantum Crypto policy" : "Interface override") : "Classical only"} readOnly/></FG>
+        <FG label="PQC Mode Effect"><Inp value={interfaceTLSRequired ? "Recorded only: the listener's key exchange is not changed or measured" : "Not applicable"} readOnly/></FG>
       </Row3>
       {interfaceTLSRequired&&<>
         <FG label="TLS Binding Source"><Inp value="Managed by Runtime Crypto -> Configure TLS" readOnly/></FG>
@@ -2711,15 +2710,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             : ifCertSource==="pki_ca"
               ? `This interface will request or renew a certificate from ${selectedTLSCAName||"the CA selected in Configure TLS"}.`
               : `This interface will bind ${selectedTLSCertificateName||"the certificate selected in Configure TLS"}.`}
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>
-          {ifPQCMode==="hybrid"
-            ? "Hybrid mode keeps a classical compatibility path while advertising PQC migration intent for this listener."
-            : ifPQCMode==="pqc_only"
-              ? "PQC-only mode marks this listener as migration-complete and removes classical fallback from readiness reporting."
-              : ifPQCMode==="classical"
-                ? "Classical-only mode will be reported as non-migrated in PQC readiness and compliance views."
-                : "Inherit mode follows the tenant PQC policy profile from the Post-Quantum Crypto tab."}
         </div>
         <div style={{fontSize:10,color:C.amber,marginTop:4}}>
           Interface-level TLS certificate overrides are disabled. Change certificate source, issuing CA, or uploaded certificate from Runtime Crypto -&gt; Configure TLS.

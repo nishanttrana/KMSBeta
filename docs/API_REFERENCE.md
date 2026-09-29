@@ -16,7 +16,7 @@ Complete endpoint reference for all 27 Vecta KMS services.
 | reporting | /svc/reporting/ | Alerts, reports, scheduled jobs |
 | workload | /svc/workload/ | SPIFFE/SVID, token exchange |
 | confidential | /svc/confidential/ | TEE attestation, attested key release |
-| pqc | /svc/pqc/ | PQC policy, inventory, migration |
+| pqc | /svc/pqc/ | PQC inventory, readiness scans, migration |
 | keyaccess | /svc/keyaccess/ | Access justification rules |
 | dataprotect | /svc/dataprotect/ | Tokenization, masking, field encryption |
 | payment | /svc/payment/ | TR-31, PIN blocks, ISO 20022 |
@@ -2132,59 +2132,50 @@ Single release record with full evaluation detail.
 
 ## Service 11: PQC (`/svc/pqc/`)
 
-Post-quantum crypto policy, inventory classification, migration planning, and readiness scoring.
+Post-quantum inventory by algorithm, readiness scans and migration planning.
 
 Every route is served by the `pkg/route` kernel behind a verified JWT (since
 5.2.0-beta): the tenant comes from the token (a conflicting `tenant_id` is
 refused as `tenant_mismatch`), each call emits its own `audit.pqc.<action>`
 event, refusals included, and the actor recorded for plan creation,
-execution, rollback and policy changes is the verified caller (body `actor`,
-`created_by` and `updated_by` are ignored). Permissions: `pqc.read`,
-`pqc.write` (policy, scans, plans, execute, rollback). Kernel actions:
-`policy_read`, `policy_update_requested`, `inventory_read`, `scan_requested`,
-`scans_listed`, `scan_read`, `readiness_read`, `migration_report_read`,
-`plan_create_requested`, `plans_listed`, `plan_read`,
-`plan_execute_requested`, `plan_rollback_requested`, `plan_runs_listed`,
-`timeline_read`, `cbom_exported`.
+execution and rollback is the verified caller (body `actor` and
+`created_by` are ignored). Permissions: `pqc.read`, `pqc.write` (scans,
+plans, execute, rollback). Kernel actions: `inventory_read`,
+`scan_requested`, `scans_listed`, `scan_read`, `readiness_read`,
+`migration_report_read`, `plan_create_requested`, `plans_listed`,
+`plan_read`, `plan_execute_requested`, `plan_rollback_requested`,
+`plan_runs_listed`, `timeline_read`, `cbom_exported`.
 
----
-
-### GET /svc/pqc/pqc/policy
-
-Returns the tenant PQC policy profile.
-
-**Response 200**:
-| Field | Type | Description |
-|-------|------|-------------|
-| mode | string | classical / hybrid / pqc-only |
-| allowedClassicalAlgorithms | string[] | Classical algorithms still permitted |
-| requiredHybridAlgorithms | string[] | Required hybrid combinations |
-| preferredPqcAlgorithms | string[] | Preferred PQC algorithms |
-| newKeysMustBePqc | boolean | Enforce PQC on all new keys |
-| hybridSigningRequired | boolean | Require hybrid signing |
-| migrationDeadline | string | Target migration completion date |
-| warnOnClassical | boolean | Raise posture findings for classical usage |
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/policy?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
-```
-
----
-
-### PUT /svc/pqc/pqc/policy
-
-Updates the PQC policy profile. Response: updated policy.
+**Removed in 6.3.0-beta:** `GET`/`PUT /svc/pqc/pqc/policy` (the tenant PQC
+policy: `profile_id`, `default_kem`, `default_signature`,
+`interface_default_mode`, `certificate_default_mode`, `hqc_backup_enabled`,
+the three `flag_*` switches and `require_pqc_for_new_keys`). Nothing enforced
+them. To refuse new protection with quantum-vulnerable keys, add a Crypto
+Agility migration rule with `match_kind: quantum_vulnerable` and `action:
+decrypt_only` (`POST /svc/keycore/agility/policy/rules`), which keycore
+enforces on every key operation. Also removed: `readiness_score` (scans, report),
+`readiness_score` and `quantum_readiness_percent` (inventory), `policy`
+(inventory, report), `non_migrated_interfaces`, and a plan summary's
+`readiness_score` and `estimated_risk_reduced`. They were hand-weighted
+numbers; the counts they blended are still returned.
 
 ---
 
 ### GET /svc/pqc/pqc/inventory
 
-Returns the PQC inventory — all crypto assets classified by algorithm family.
+Returns `{"inventory": {...}}`, the tenant's keys (keycore) and certificates
+(certs), each counted by the algorithm it actually has:
 
-**Query Parameters**: `algorithmFamily`, `pqcReady`, `pageSize`, `pageToken`
+| Field | Description |
+|---|---|
+| `keys`, `certificates` | `{total, classical, hybrid, pqc_only, algorithms}` |
+| `interfaces` | always `"not_assessed"`: the key exchange a listener negotiates is never measured, and the interface `pqc_mode` in keycore is not enforced |
+| `classical_usage` | every RSA / ECC key and certificate still active |
+| `non_migrated_certificates` | every classical certificate |
+| `recommendations` | only for what the counts found; empty when nothing is classical |
 
-**Response 200**: Paginated inventory items — id, resourceType (key/certificate/interface), resourceId, algorithm, algorithmFamily (classical/hybrid/pqc), pqcReady, strength, deprecated, tenantId
+Event: `audit.pqc.inventory_viewed` (`key_count`, `certificate_count`,
+`classical_usage_count`, `non_migrated_cert_count`).
 
 ---
 
@@ -2246,9 +2237,10 @@ AES-256); a key step with no target is `manual_required`.
 
 ### GET /svc/pqc/pqc/migration/report
 
-Returns the current migration status report.
-
-**Response 200**: `{"migratedCount": 8, "inProgressCount": 3, "remainingCount": 31, "lastUpdatedAt": "..."}`
+Returns `{"report": {tenant_id, generated_at, inventory, latest_readiness,
+timeline, top_risks, next_actions}}`: the inventory above, the latest scan,
+the customer's plan deadlines, the first eight risk items and the
+inventory's recommendations. There is no score.
 
 ---
 
@@ -4223,8 +4215,6 @@ from the code; do not edit by hand.
 - `POST /svc/pqc/pqc/migration/plans/{id}/rollback`
 - `GET /svc/pqc/pqc/migration/plans/{id}/runs`
 - `GET /svc/pqc/pqc/migration/report`
-- `GET /svc/pqc/pqc/policy`
-- `PUT /svc/pqc/pqc/policy`
 - `GET /svc/pqc/pqc/readiness`
 - `POST /svc/pqc/pqc/scan`
 - `GET /svc/pqc/pqc/scans`
