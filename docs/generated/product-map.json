@@ -8656,6 +8656,156 @@
       "service": "keycore"
     },
     {
+      "action": "caraf_assessment_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.getCarafAssessment",
+      "line": 20,
+      "match_key": "keycore|GET|/agility/caraf/assessment",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assessment",
+      "path": "/agility/caraf/assessment",
+      "permission": "key.agility.read",
+      "registration": "kernel",
+      "resource": "caraf",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_threats_listed",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.listCarafThreats",
+      "line": 21,
+      "match_key": "keycore|GET|/agility/caraf/threats",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "permission": "key.agility.read",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_threat_created",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.createCarafThreat",
+      "line": 22,
+      "match_key": "keycore|POST|/agility/caraf/threats",
+      "method": "POST",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_threat_updated",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.updateCarafThreat",
+      "line": 23,
+      "match_key": "keycore|PUT|/agility/caraf/threats/{param}",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_threat_deleted",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.deleteCarafThreat",
+      "line": 24,
+      "match_key": "keycore|DELETE|/agility/caraf/threats/{param}",
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_assets_listed",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.listCarafAssets",
+      "line": 25,
+      "match_key": "keycore|GET|/agility/caraf/assets",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "permission": "key.agility.read",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_asset_created",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.createCarafAsset",
+      "line": 26,
+      "match_key": "keycore|POST|/agility/caraf/assets",
+      "method": "POST",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_asset_updated",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.updateCarafAsset",
+      "line": 27,
+      "match_key": "keycore|PUT|/agility/caraf/assets/{param}",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_asset_deleted",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.deleteCarafAsset",
+      "line": 28,
+      "match_key": "keycore|DELETE|/agility/caraf/assets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_decision_recorded",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.setCarafDecision",
+      "line": 29,
+      "match_key": "keycore|PUT|/agility/caraf/assets/{param}/decision",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}/decision",
+      "path": "/agility/caraf/assets/{id}/decision",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
       "action": "create_requested",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_admin.go",
@@ -16893,6 +17043,81 @@
       "service": "keycore"
     },
     {
+      "action": "caraf_threat_created",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.createCarafThreat",
+      "line": 22,
+      "match_key": "keycore|POST|/agility/caraf/threats",
+      "method": "POST",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_threat_updated",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.updateCarafThreat",
+      "line": 23,
+      "match_key": "keycore|PUT|/agility/caraf/threats/{param}",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_threat",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_assets_listed",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.listCarafAssets",
+      "line": 25,
+      "match_key": "keycore|GET|/agility/caraf/assets",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "permission": "key.agility.read",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_asset_created",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.createCarafAsset",
+      "line": 26,
+      "match_key": "keycore|POST|/agility/caraf/assets",
+      "method": "POST",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
+      "action": "caraf_asset_updated",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_caraf.go",
+      "handler": "h.updateCarafAsset",
+      "line": 27,
+      "match_key": "keycore|PUT|/agility/caraf/assets/{param}",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{id}",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "caraf_asset",
+      "service": "keycore"
+    },
+    {
       "action": "bulk_import_requested",
       "code_scope": "keycore",
       "file": "services/keycore/handler_key_admin.go",
@@ -18198,36 +18423,6 @@
       "service": "pqc"
     },
     {
-      "action": "plan_create_requested",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.createPlan",
-      "line": 53,
-      "match_key": "pqc|POST|/pqc/migration/plans",
-      "method": "POST",
-      "normalized_path": "/pqc/migration/plans",
-      "path": "/pqc/migration/plans",
-      "permission": "pqc.write",
-      "registration": "kernel",
-      "resource": "pqc_plan",
-      "service": "pqc"
-    },
-    {
-      "action": "plans_listed",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.listPlans",
-      "line": 54,
-      "match_key": "pqc|GET|/pqc/migration/plans",
-      "method": "GET",
-      "normalized_path": "/pqc/migration/plans",
-      "path": "/pqc/migration/plans",
-      "permission": "pqc.read",
-      "registration": "kernel",
-      "resource": "pqc_plan",
-      "service": "pqc"
-    },
-    {
       "action": "plan_read",
       "code_scope": "pqc",
       "file": "services/pqc/handler.go",
@@ -18238,36 +18433,6 @@
       "normalized_path": "/pqc/migration/plans/{param}",
       "path": "/pqc/migration/plans/{id}",
       "permission": "pqc.read",
-      "registration": "kernel",
-      "resource": "pqc_plan",
-      "service": "pqc"
-    },
-    {
-      "action": "plan_execute_requested",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.executePlan",
-      "line": 56,
-      "match_key": "pqc|POST|/pqc/migration/plans/{param}/execute",
-      "method": "POST",
-      "normalized_path": "/pqc/migration/plans/{param}/execute",
-      "path": "/pqc/migration/plans/{id}/execute",
-      "permission": "pqc.write",
-      "registration": "kernel",
-      "resource": "pqc_plan",
-      "service": "pqc"
-    },
-    {
-      "action": "plan_rollback_requested",
-      "code_scope": "pqc",
-      "file": "services/pqc/handler.go",
-      "handler": "h.rollbackPlan",
-      "line": 57,
-      "match_key": "pqc|POST|/pqc/migration/plans/{param}/rollback",
-      "method": "POST",
-      "normalized_path": "/pqc/migration/plans/{param}/rollback",
-      "path": "/pqc/migration/plans/{id}/rollback",
-      "permission": "pqc.write",
       "registration": "kernel",
       "resource": "pqc_plan",
       "service": "pqc"
@@ -21552,27 +21717,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border",
       "label": "Retry",
-      "line": 136,
-      "tabs": [
-        "crypto_agility"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
-      "handler": "onClose} style={{ background: \"transparent\", border: `1px solid ${C.border",
-      "label": "Cancel",
-      "line": 160,
-      "tabs": [
-        "crypto_agility"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
-      "handler": "onSave",
-      "label": "(icon or dynamic label)",
-      "line": 161,
+      "line": 119,
       "tabs": [
         "crypto_agility"
       ],
@@ -21582,7 +21727,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo...",
-      "line": 459,
+      "line": 416,
       "tabs": [
         "crypto_agility"
       ],
@@ -21592,7 +21737,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $...",
-      "line": 462,
+      "line": 419,
       "tabs": [
         "crypto_agility"
       ],
@@ -21602,7 +21747,17 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "setShowPlanModal(true)} disabled= style={ }> Create Migration Plan",
-      "line": 465,
+      "line": 422,
+      "tabs": [
+        "crypto_agility"
+      ],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
+      "handler": "",
+      "label": "setView(id)} style={{ background: \"transparent\", border: \"none\", borderBottom...",
+      "line": 430,
       "tabs": [
         "crypto_agility"
       ],
@@ -21612,7 +21767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "setRuleModal( )} style= >",
-      "line": 536,
+      "line": 502,
       "tabs": [
         "crypto_agility"
       ],
@@ -21622,7 +21777,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "handleDeleteRule(r)} style= >",
-      "line": 537,
+      "line": 503,
       "tabs": [
         "crypto_agility"
       ],
@@ -23983,30 +24138,6 @@
       "tag": "Btn"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx",
-      "handler": "",
-      "label": "void refresh(false)} disabled= >",
-      "line": 133,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx",
-      "handler": "",
-      "label": "void scanNow()} disabled= >",
-      "line": 134,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/PostQuantumTab.tsx",
-      "handler": "",
-      "label": "void savePolicy()} disabled= >",
-      "line": 135,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
@@ -25075,6 +25206,126 @@
       "line": 479,
       "tabs": [],
       "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setThreatModal( )}> Add threat",
+      "line": 307,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setThreatModal( )}>",
+      "line": 321,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "void remove(\"threat\", t.id, t.name)}>",
+      "line": 322,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setAssetModal( )}> Add asset",
+      "line": 332,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setDecisionFor(x)}> Decide",
+      "line": 362,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setAssetModal( )}>",
+      "line": 363,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "void remove(\"asset\", x.asset.id, x.asset.name)}>",
+      "line": 364,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "void act(\"scan\", async () => { const s = await runPQCScan(session); return `S...",
+      "line": 98,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "setShowPlan(true)}> Build execution plan",
+      "line": 101,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "setOpen(expanded ? null : p.id)}> {expanded ? : }",
+      "line": 148,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "void act(`dry-$ `, async () => { await executePQCPlan(session, p.id, true); r...",
+      "line": 159,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "{ if (!window.confirm(`Execute \"$ \"? Each key step creates a new key of its t...",
+      "line": 162,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx",
+      "handler": "",
+      "label": "{ if (!window.confirm(`Roll back \"$ \"? The successor keys it created are deac...",
+      "line": 168,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/ui.tsx",
+      "handler": "onClose} style={{ background: \"transparent\", border: `1px solid ${C.border",
+      "label": "Cancel",
+      "line": 72,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/ui.tsx",
+      "handler": "onSave",
+      "label": "(icon or dynamic label)",
+      "line": 73,
+      "tabs": [],
+      "tag": "button"
     },
     {
       "file": "web/dashboard/src/modules/admin/ExposurePanel.tsx",
@@ -28793,7 +29044,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/posture\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 118,
+      "line": 117,
       "match_key": "keycore|GET|/agility/posture",
       "method": "GET",
       "normalized_path": "/agility/posture",
@@ -28806,7 +29057,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 123,
+      "line": 122,
       "match_key": "keycore|GET|/agility/policy/rules",
       "method": "GET",
       "normalized_path": "/agility/policy/rules",
@@ -28819,7 +29070,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 128,
+      "line": 127,
       "match_key": "keycore|POST|/agility/policy/rules",
       "method": "POST",
       "normalized_path": "/agility/policy/rules",
@@ -28832,7 +29083,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 133,
+      "line": 132,
       "match_key": "keycore|PUT|/agility/policy/rules/{param}",
       "method": "PUT",
       "normalized_path": "/agility/policy/rules/{param}",
@@ -28845,7 +29096,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 138,
+      "line": 137,
       "match_key": "keycore|DELETE|/agility/policy/rules/{param}",
       "method": "DELETE",
       "normalized_path": "/agility/policy/rules/{param}",
@@ -28858,7 +29109,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 142,
+      "line": 141,
       "match_key": "keycore|GET|/agility/migration-plans",
       "method": "GET",
       "normalized_path": "/agility/migration-plans",
@@ -28871,7 +29122,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 157,
+      "line": 156,
       "match_key": "keycore|POST|/agility/migration-plans",
       "method": "POST",
       "normalized_path": "/agility/migration-plans",
@@ -28884,11 +29135,76 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/migration-plans/${encodeURIComponent(id)}`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 162,
+      "line": 161,
       "match_key": "keycore|PATCH|/agility/migration-plans/{param}",
       "method": "PATCH",
       "normalized_path": "/agility/migration-plans/{param}",
       "path": "/agility/migration-plans/{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 243,
+      "match_key": "keycore|GET|/agility/caraf/assessment",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assessment",
+      "path": "/agility/caraf/assessment",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 248,
+      "match_key": "keycore|GET|/agility/caraf/threats",
+      "method": "GET",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 259,
+      "match_key": "keycore|DELETE|/agility/caraf/threats/{param}",
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 269,
+      "match_key": "keycore|DELETE|/agility/caraf/assets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 273,
+      "match_key": "keycore|PUT|/agility/caraf/assets/{param}/decision",
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}/decision",
+      "path": "/agility/caraf/assets/{param}/decision",
       "service": "keycore",
       "service_key": "keycore",
       "source": "serviceRequest"
@@ -32261,6 +32577,58 @@
       "source": "serviceRequest"
     },
     {
+      "dynamic": true,
+      "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
+      "file": "web/dashboard/src/lib/pqc.ts",
+      "line": 212,
+      "match_key": "pqc|GET|/pqc/migration/plans",
+      "method": "GET",
+      "normalized_path": "/pqc/migration/plans",
+      "path": "/pqc/migration/plans?tenant_id={param}&limit=50",
+      "service": "pqc",
+      "service_key": "pqc",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
+      "file": "web/dashboard/src/lib/pqc.ts",
+      "line": 217,
+      "match_key": "pqc|POST|/pqc/migration/plans",
+      "method": "POST",
+      "normalized_path": "/pqc/migration/plans",
+      "path": "/pqc/migration/plans",
+      "service": "pqc",
+      "service_key": "pqc",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
+      "file": "web/dashboard/src/lib/pqc.ts",
+      "line": 225,
+      "match_key": "pqc|POST|/pqc/migration/plans/{param}/execute",
+      "method": "POST",
+      "normalized_path": "/pqc/migration/plans/{param}/execute",
+      "path": "/pqc/migration/plans/{param}/execute",
+      "service": "pqc",
+      "service_key": "pqc",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
+      "file": "web/dashboard/src/lib/pqc.ts",
+      "line": 233,
+      "match_key": "pqc|POST|/pqc/migration/plans/{param}/rollback",
+      "method": "POST",
+      "normalized_path": "/pqc/migration/plans/{param}/rollback",
+      "path": "/pqc/migration/plans/{param}/rollback",
+      "service": "pqc",
+      "service_key": "pqc",
+      "source": "serviceRequest"
+    },
+    {
       "dynamic": false,
       "expression": "trackedFetch(`${BASE}/compliance/regulatory`)",
       "file": "web/dashboard/src/lib/regulatory.ts",
@@ -33392,7 +33760,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T00:24:44Z",
+  "generated_at": "2026-09-29T00:36:00Z",
   "navigation": [
     {
       "group": "Overview",
@@ -70492,7 +70860,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/posture\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 118,
+          "line": 117,
           "source": "serviceRequest"
         }
       ],
@@ -70503,7 +70871,7 @@
         "posture"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 56,
+      "handler_line": 52,
       "handler_name": "getAgilityPosture",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70530,7 +70898,7 @@
         "posture"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 68,
+      "handler_line": 64,
       "handler_name": "getAlgorithmInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70561,7 +70929,7 @@
         "ListKeysByAlgorithm"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 76,
+      "handler_line": 72,
       "handler_name": "getKeysByAlgorithm",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70586,7 +70954,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 142,
+          "line": 141,
           "source": "serviceRequest"
         }
       ],
@@ -70600,7 +70968,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 117,
+      "handler_line": 113,
       "handler_name": "listMigrationPlans",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70625,7 +70993,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 157,
+          "line": 156,
           "source": "serviceRequest"
         }
       ],
@@ -70643,7 +71011,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 144,
+      "handler_line": 140,
       "handler_name": "createMigrationPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70668,7 +71036,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/migration-plans/${encodeURIComponent(id)}`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 162,
+          "line": 161,
           "source": "serviceRequest"
         }
       ],
@@ -70682,7 +71050,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 198,
+      "handler_line": 194,
       "handler_name": "updateMigrationPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70707,7 +71075,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 123,
+          "line": 122,
           "source": "serviceRequest"
         }
       ],
@@ -70719,7 +71087,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 297,
+      "handler_line": 304,
       "handler_name": "listAgilityRules",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70744,7 +71112,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 128,
+          "line": 127,
           "source": "serviceRequest"
         }
       ],
@@ -70760,7 +71128,7 @@
         "auditRule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 307,
+      "handler_line": 314,
       "handler_name": "createAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70798,7 +71166,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 133,
+          "line": 132,
           "source": "serviceRequest"
         }
       ],
@@ -70813,7 +71181,7 @@
         "auditRule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 328,
+      "handler_line": 335,
       "handler_name": "updateAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70851,7 +71219,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 138,
+          "line": 137,
           "source": "serviceRequest"
         }
       ],
@@ -70864,7 +71232,7 @@
         "invalidateAgilityRules"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 353,
+      "handler_line": 360,
       "handler_name": "deleteAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71048,6 +71416,364 @@
       "path": "/canary/keys/{id}",
       "route_file": "services/keycore/handler_canary.go",
       "route_line": 50,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 243,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.getCarafAssessment",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "ListCarafAssets",
+        "Error",
+        "ListCarafThreats",
+        "GetKey",
+        "computeCarafAssessment"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 32,
+      "handler_name": "getCarafAssessment",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListCarafAssets",
+        "ListCarafThreats",
+        "GetKey"
+      ],
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assessment",
+      "path": "/agility/caraf/assessment",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 20,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 248,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listCarafThreats",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "ListCarafThreats",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 98,
+      "handler_name": "listCarafThreats",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListCarafThreats"
+      ],
+      "method": "GET",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 21,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.createCarafThreat",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "threatFromRequest",
+        "Error",
+        "newID",
+        "CreateCarafThreat",
+        "auditThreat"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 107,
+      "handler_name": "createCarafThreat",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "CreateCarafThreat"
+      ],
+      "method": "POST",
+      "normalized_path": "/agility/caraf/threats",
+      "path": "/agility/caraf/threats",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 22,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.updateCarafThreat",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "threatFromRequest",
+        "Error",
+        "UpdateCarafThreat",
+        "storeOK",
+        "auditThreat"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 127,
+      "handler_name": "updateCarafThreat",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "UpdateCarafThreat"
+      ],
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{id}",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 23,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 259,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.deleteCarafThreat",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "storeOK",
+        "DeleteCarafThreat"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 146,
+      "handler_name": "deleteCarafThreat",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "DeleteCarafThreat"
+      ],
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/threats/{param}",
+      "path": "/agility/caraf/threats/{id}",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 24,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.listCarafAssets",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "ListCarafAssets",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 236,
+      "handler_name": "listCarafAssets",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListCarafAssets"
+      ],
+      "method": "GET",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 25,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.createCarafAsset",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "assetFromRequest",
+        "Error",
+        "newID",
+        "CreateCarafAsset",
+        "auditAsset"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 245,
+      "handler_name": "createCarafAsset",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "CreateCarafAsset"
+      ],
+      "method": "POST",
+      "normalized_path": "/agility/caraf/assets",
+      "path": "/agility/caraf/assets",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 26,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.updateCarafAsset",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "assetFromRequest",
+        "Error",
+        "UpdateCarafAsset",
+        "storeOK",
+        "auditAsset"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 265,
+      "handler_name": "updateCarafAsset",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "UpdateCarafAsset"
+      ],
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{id}",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 27,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 269,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.deleteCarafAsset",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "storeOK",
+        "DeleteCarafAsset"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 284,
+      "handler_name": "deleteCarafAsset",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "DeleteCarafAsset"
+      ],
+      "method": "DELETE",
+      "normalized_path": "/agility/caraf/assets/{param}",
+      "path": "/agility/caraf/assets/{id}",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 28,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 273,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.setCarafDecision",
+      "handler_external_package_calls": [
+        "time.Now"
+      ],
+      "handler_file": "services/keycore/handler_caraf.go",
+      "handler_helper_calls": [
+        "decisionFromRequest",
+        "Error",
+        "SetCarafDecision",
+        "storeOK"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 354,
+      "handler_name": "setCarafDecision",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "SetCarafDecision"
+      ],
+      "method": "PUT",
+      "normalized_path": "/agility/caraf/assets/{param}/decision",
+      "path": "/agility/caraf/assets/{id}/decision",
+      "route_file": "services/keycore/handler_caraf.go",
+      "route_line": 29,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83050,7 +83776,14 @@
       "service_store_calls": []
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
+          "file": "web/dashboard/src/lib/pqc.ts",
+          "line": 217,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.createPlan",
       "handler_external_package_calls": [],
       "handler_file": "services/pqc/handler.go",
@@ -83121,7 +83854,14 @@
       ]
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
+          "file": "web/dashboard/src/lib/pqc.ts",
+          "line": 212,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.listPlans",
       "handler_external_package_calls": [],
       "handler_file": "services/pqc/handler.go",
@@ -83228,7 +83968,14 @@
       ]
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
+          "file": "web/dashboard/src/lib/pqc.ts",
+          "line": 225,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.executePlan",
       "handler_external_package_calls": [],
       "handler_file": "services/pqc/handler.go",
@@ -83309,7 +84056,14 @@
       ]
     },
     {
-      "frontend_call_sites": [],
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
+          "file": "web/dashboard/src/lib/pqc.ts",
+          "line": 233,
+          "source": "serviceRequest"
+        }
+      ],
       "handler": "h.rollbackPlan",
       "handler_external_package_calls": [],
       "handler_file": "services/pqc/handler.go",
@@ -90615,7 +91369,7 @@
       "hsm-connector": 12,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 164,
+      "keycore": 174,
       "kmip": 12,
       "payment": 42,
       "policy": 12,
@@ -90649,11 +91403,11 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 115,
+      "keycore": 120,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
-      "pqc": 6,
+      "pqc": 10,
       "reconciler": 1,
       "reporting": 24,
       "sbom": 12,
@@ -90850,17 +91604,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 899,
+    "backend_routes": 909,
     "backend_services": 30,
-    "button_inventory": 758,
-    "frontend_call_sites": 565,
-    "matched_frontend_call_sites": 520,
+    "button_inventory": 769,
+    "frontend_call_sites": 574,
+    "matched_frontend_call_sites": 529,
     "nav_items": 27,
-    "request_flows": 899,
-    "request_flows_with_frontend": 527,
+    "request_flows": 909,
+    "request_flows_with_frontend": 536,
     "request_flows_with_internal_package_calls": 159,
     "request_flows_with_service_calls": 543,
-    "request_flows_with_store_calls": 643,
+    "request_flows_with_store_calls": 653,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -90973,7 +91727,7 @@
       "support_files": []
     },
     {
-      "call_count": 8,
+      "call_count": 13,
       "component": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "group": "Keys & lifecycle",
       "id": "crypto_agility",
@@ -91145,7 +91899,7 @@
       ]
     },
     {
-      "call_count": 44,
+      "call_count": 48,
       "component": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "group": "Security & compliance",
       "id": "compliance",
@@ -111728,13 +112482,13 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/posture\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 118,
+            "line": 117,
             "source": "serviceRequest"
           }
         ],
         "handler": "getAgilityPosture",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 56,
+        "handlerLine": 52,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111757,7 +112511,7 @@
         "frontendSites": [],
         "handler": "getAlgorithmInventory",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 68,
+        "handlerLine": 64,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111782,7 +112536,7 @@
         "frontendSites": [],
         "handler": "getKeysByAlgorithm",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 76,
+        "handlerLine": 72,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111808,13 +112562,13 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 142,
+            "line": 141,
             "source": "serviceRequest"
           }
         ],
         "handler": "listMigrationPlans",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 117,
+        "handlerLine": 113,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111842,13 +112596,13 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/migration-plans\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 157,
+            "line": 156,
             "source": "serviceRequest"
           }
         ],
         "handler": "createMigrationPlan",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 144,
+        "handlerLine": 140,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111874,13 +112628,13 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/migration-plans/${encodeURIComponent(id)}`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 162,
+            "line": 161,
             "source": "serviceRequest"
           }
         ],
         "handler": "updateMigrationPlan",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 198,
+        "handlerLine": 194,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PATCH",
@@ -111906,13 +112660,13 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 123,
+            "line": 122,
             "source": "serviceRequest"
           }
         ],
         "handler": "listAgilityRules",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 297,
+        "handlerLine": 304,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111938,13 +112692,13 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/policy/rules\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 128,
+            "line": 127,
             "source": "serviceRequest"
           }
         ],
         "handler": "createAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 307,
+        "handlerLine": 314,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111972,13 +112726,13 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 133,
+            "line": 132,
             "source": "serviceRequest"
           }
         ],
         "handler": "updateAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 328,
+        "handlerLine": 335,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -112006,13 +112760,13 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/policy/rules/${encodeURIComponent(id)}`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 138,
+            "line": 137,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 353,
+        "handlerLine": 360,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112177,6 +112931,297 @@
           "Key Management",
           "Certificates / PKI",
           "crypto"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 243,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "getCarafAssessment",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 32,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/agility/caraf/assessment",
+        "path": "/agility/caraf/assessment",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/agility/caraf/assessment",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListCarafAssets",
+          "ListCarafThreats",
+          "GetKey"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 248,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listCarafThreats",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 98,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/agility/caraf/threats",
+        "path": "/agility/caraf/threats",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/agility/caraf/threats",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListCarafThreats"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "createCarafThreat",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 107,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/agility/caraf/threats",
+        "path": "/agility/caraf/threats",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|POST|/agility/caraf/threats",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "CreateCarafThreat"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "updateCarafThreat",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 127,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/agility/caraf/threats/{param}",
+        "path": "/agility/caraf/threats/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|PUT|/agility/caraf/threats/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "UpdateCarafThreat"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 259,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "deleteCarafThreat",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 146,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/agility/caraf/threats/{param}",
+        "path": "/agility/caraf/threats/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|DELETE|/agility/caraf/threats/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "DeleteCarafThreat"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "listCarafAssets",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 236,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/agility/caraf/assets",
+        "path": "/agility/caraf/assets",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/agility/caraf/assets",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListCarafAssets"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "createCarafAsset",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 245,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/agility/caraf/assets",
+        "path": "/agility/caraf/assets",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|POST|/agility/caraf/assets",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "CreateCarafAsset"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "updateCarafAsset",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 265,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/agility/caraf/assets/{param}",
+        "path": "/agility/caraf/assets/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|PUT|/agility/caraf/assets/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "UpdateCarafAsset"
+        ],
+        "uiLabels": [
+          "API only"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 269,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "deleteCarafAsset",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 284,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/agility/caraf/assets/{param}",
+        "path": "/agility/caraf/assets/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|DELETE|/agility/caraf/assets/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "DeleteCarafAsset"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 273,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "setCarafDecision",
+        "handlerFile": "services/keycore/handler_caraf.go",
+        "handlerLine": 354,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/agility/caraf/assets/{param}/decision",
+        "path": "/agility/caraf/assets/{id}/decision",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|PUT|/agility/caraf/assets/{param}/decision",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "SetCarafDecision"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
         ]
       },
       {
@@ -118393,11 +119438,18 @@
         "externalPackages": [
           "strings.TrimSpace"
         ],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
+            "file": "web/dashboard/src/lib/pqc.ts",
+            "line": 217,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "createPlan",
         "handlerFile": "services/pqc/handler.go",
         "handlerLine": 134,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/pqc/migration/plans",
@@ -118415,7 +119467,7 @@
           "GetMigrationPlan"
         ],
         "uiLabels": [
-          "API only"
+          "Compliance"
         ]
       },
       {
@@ -118423,11 +119475,18 @@
         "externalPackages": [
           "strings.TrimSpace"
         ],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
+            "file": "web/dashboard/src/lib/pqc.ts",
+            "line": 212,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "listPlans",
         "handlerFile": "services/pqc/handler.go",
         "handlerLine": 157,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/pqc/migration/plans",
@@ -118444,7 +119503,7 @@
           "ListMigrationPlans"
         ],
         "uiLabels": [
-          "API only"
+          "Compliance"
         ]
       },
       {
@@ -118482,11 +119541,18 @@
           "errors.Is",
           "strings.TrimSpace"
         ],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
+            "file": "web/dashboard/src/lib/pqc.ts",
+            "line": 225,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "executePlan",
         "handlerFile": "services/pqc/handler.go",
         "handlerLine": 176,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/pqc/migration/plans/{param}/execute",
@@ -118506,7 +119572,7 @@
           "UpdateMigrationRun"
         ],
         "uiLabels": [
-          "API only"
+          "Compliance"
         ]
       },
       {
@@ -118514,11 +119580,18 @@
         "externalPackages": [
           "strings.TrimSpace"
         ],
-        "frontendSites": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
+            "file": "web/dashboard/src/lib/pqc.ts",
+            "line": 233,
+            "source": "serviceRequest"
+          }
+        ],
         "handler": "rollbackPlan",
         "handlerFile": "services/pqc/handler.go",
         "handlerLine": 191,
-        "hasFrontend": false,
+        "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/pqc/migration/plans/{param}/rollback",
@@ -118539,7 +119612,7 @@
           "CreateMigrationRun"
         ],
         "uiLabels": [
-          "API only"
+          "Compliance"
         ]
       },
       {
@@ -122830,7 +123903,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T00:24:44Z",
+    "generatedAt": "2026-09-29T00:36:00Z",
     "methods": [
       "DELETE",
       "GET",
@@ -122872,9 +123945,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 899,
-      "frontendBacked": 527,
-      "highRisk": 367,
+      "flows": 909,
+      "frontendBacked": 536,
+      "highRisk": 377,
       "services": 30
     }
   }

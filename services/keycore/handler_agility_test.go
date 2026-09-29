@@ -156,9 +156,9 @@ func TestAgilityPostureAgainstCustomerPolicy(t *testing.T) {
 		{Algorithm: "3DES", KeyCount: 1},
 		{Algorithm: "SLH-DSA-SHA2-128s", KeyCount: 1},
 		{Algorithm: "ECDSA", KeyCount: 1},
-	}, rules, "classical-128", now)
+	}, rules, now)
 	if !p.Assessed || p.TotalKeys != 8 || p.QuantumVulnerableKeys != 5 || p.PostQuantumKeys != 1 || p.WeakKeys != 1 ||
-		p.NotAssessedKeys != 1 || p.UncoveredKeys != 2 || p.PolicyRules != 3 || p.MinAlgorithmTier != "classical-128" {
+		p.NotAssessedKeys != 1 || p.UncoveredKeys != 2 || p.PolicyRules != 3 {
 		t.Fatalf("posture counts: %+v", p)
 	}
 	if p.StatusCounts[ActionDisallowed] != 1 || p.StatusCounts[ActionDeprecated] != 3 || p.StatusCounts["allowed"] != 4 {
@@ -304,34 +304,25 @@ func TestCryptoPolicyEnforcedOnKeyOperations(t *testing.T) {
 	}
 }
 
-// The tenant minimum algorithm tier (governance posture) was stored but not
-// enforced before 5.1.0-beta. It now refuses new protection below the floor
-// and fails closed on a floor that isn't a tier.
-func TestTenantMinAlgorithmTierEnforced(t *testing.T) {
-	pub := &captureKeycorePublisher{}
+// A quantum_vulnerable decrypt_only rule is the tenant's post-quantum floor:
+// new RSA keys are refused, ML-KEM keys (in the certified module, so every
+// FIPS mode allows them) are not.
+func TestQuantumVulnerableRuleActsAsPQCFloor(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	svc.events = pub
 	ctx := adminCtx()
-	create := func(alg string) error {
-		_, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k-" + alg, Algorithm: alg, KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
-		return err
-	}
-	if err := create("AES-128"); err != nil {
+	if _, err := svc.store.CreateAgilityRule(ctx, AgilityRule{ID: newID("agrule"), TenantID: "t1", Name: "PQC only for new protection",
+		MatchKind: MatchQuantumVulnerable, Action: ActionDecryptOnly, EffectiveDate: day("2020-01-01")}); err != nil {
 		t.Fatal(err)
 	}
-	svc.SetGovernancePostureControlsProvider(staticPostureControlsProvider{controls: GovernancePostureControls{MinAlgorithmTier: "classical-192"}})
+	create := func(alg, purpose string) error {
+		_, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k-" + alg, Algorithm: alg, KeyType: "asymmetric-private", Purpose: purpose, Owner: "ops", CreatedBy: "tester"})
+		return err
+	}
 	var refusal cryptoPolicyRefusal
-	if err := create("AES-128"); !errors.As(err, &refusal) || refusal.Reason != "below_min_algorithm_tier" {
-		t.Fatalf("AES-128 under classical-192: %v", err)
+	if err := create("RSA-3072", "sign-verify"); !errors.As(err, &refusal) || refusal.Reason != "crypto_policy_decrypt_only" {
+		t.Fatalf("RSA-3072 under a PQC floor: %v", err)
 	}
-	if d := pub.details(t, "audit.key.crypto_policy_refused"); d["reason"] != "below_min_algorithm_tier" {
-		t.Fatalf("refusal event %+v", d)
-	}
-	if err := create("AES-256"); err != nil {
-		t.Fatalf("AES-256 under classical-192: %v", err)
-	}
-	svc.SetGovernancePostureControlsProvider(staticPostureControlsProvider{controls: GovernancePostureControls{MinAlgorithmTier: "bogus"}})
-	if err := create("AES-256"); !errors.As(err, &refusal) || refusal.Reason != "invalid_min_algorithm_tier" {
-		t.Fatalf("invalid floor: %v", err)
+	if err := create("ML-KEM-768", "key-encapsulation"); err != nil {
+		t.Fatalf("ML-KEM-768 under a PQC floor: %v", err)
 	}
 }

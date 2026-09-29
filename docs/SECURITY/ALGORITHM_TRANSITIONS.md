@@ -42,13 +42,11 @@ in `checkPolicy`, which every key operation passes through
 - **Lifecycle:** export, destroy, approval and export-policy changes.
   - Never refused by the migration policy, so a key can always be retired.
 
-Keycore enforces a **minimum algorithm tier** from governance posture
-(`posture_min_algorithm_tier`) on the same new-protection operations, and a
-value that is not a tier refuses new protection until it is fixed (fail
-closed). **Governance does not store or return that field**, so in a
-deployment the floor is never set and this check never fires (see Open);
-`TestTenantMinAlgorithmTierEnforced` injects it directly. Until 5.1.0-beta
-this page said the tier was "stored and never enforced"; it was never stored.
+A floor is a rule: `quantum_vulnerable → decrypt_only` requires post-quantum
+algorithms for all new protection, and `below_strength 128 → decrypt_only`
+sets a strength floor. (5.1.0-beta also read a tenant "minimum algorithm
+tier" from governance posture, but governance has no such setting, so it
+could never be set; 5.4.0-beta removed the check.)
 
 Every refusal answers `403 policy_denied`. It emits
 `audit.key.crypto_policy_refused` with its reason and rule, and the
@@ -56,6 +54,41 @@ operation's own event carries the same reason. Both refusals and rule changes
 are Playbooks triggers (`crypto_policy_refused`, `crypto_policy_changed`).
 Rules are cached per tenant for up to 10 seconds, and local writes
 invalidate the cache.
+
+## Risk assessment (CARAF, 5.4.0-beta)
+
+Crypto Agility → Risk assessment (keycore `/agility/caraf/*`, tables
+`caraf_threats`, `caraf_assets`). The customer records:
+
+- **Threats**, each with the algorithms it breaks (the same match kinds as
+  rules) and **Z**, the years until they expect it (0 = now).
+- **Assets** (an application, a device fleet, a database) with their
+  ownership, implementation, post-quantum support, location, jurisdiction,
+  sensitivity, **X** (years the data or device must stay protected), **Y**
+  (years a migration would take), migration cost, and the keycore keys they
+  use (whose live algorithms are read from keycore) or other algorithms.
+
+Keycore computes, per asset, the soonest threat that reaches its
+algorithms. The asset is **exposed** when X + Y > Z, **at the limit** when
+equal, and has **time to spare** when less. It is **not assessed** until X
+and Y are recorded.
+
+The suggested mitigation follows the CARAF matrix:
+
+| | Low cost | High cost |
+|---|---|---|
+| Time to spare | Phase out | Accept |
+| Exposed | Secure | Phase out |
+
+Medium or unknown cost makes no suggestion.
+
+The customer records the decision (secure, accept, phase out or
+compensating control) with an owner and a due date. An acceptance needs a
+future review date and shows as expired after it. The roadmap lists
+decisions by date; overdue and lapsed ones are counted. Every write is a
+kernel event (`audit.key.caraf_*`). A recorded decision is the Playbooks
+trigger `crypto_risk_decision_recorded`. The product supplies no threat
+dates, bands or defaults.
 
 ## Where the facts are used
 
@@ -77,7 +110,7 @@ deadline has none.
 - `TestCryptoPolicyEnforcedOnKeyOperations`: `decrypt_only` refuses encrypt
   and key creation but allows decrypt; `disallowed` refuses decrypt; a
   future rule changes nothing; every refusal is audited.
-- `TestTenantMinAlgorithmTierEnforced`.
+- `TestQuantumVulnerableRuleActsAsPQCFloor`.
 - `TestAgilityPostureAgainstCustomerPolicy`,
   `TestAgilityPolicyRulesValidatedAndAudited`.
 - `TestTimelineIsTheCustomersPlanDeadlines` (pqc).
@@ -89,10 +122,5 @@ deadline has none.
 - A rule applies to keycore keys. Certificates, TLS endpoints and
   discovered assets are measured and planned (pqc, discovery), but the KMS
   cannot refuse their use.
-- CARAF assessment (threats, asset profiles, timeline and cost ratings,
-  decisions) is the next crypto-agility slice.
-- The minimum algorithm tier has no setting: governance has no
-  `posture_min_algorithm_tier` (column, API or UI), so keycore always reads
-  it empty. Either governance gains the setting, with its UI and audit, or
-  keycore's check is removed. Until then a floor is a policy's
-  `spec.minAlgorithmTier` or a migration policy rule.
+- CARAF decisions are recorded, not gated: accepting a risk needs a review
+  date, not a governance approval.

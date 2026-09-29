@@ -132,6 +132,30 @@ CLAUDE.md points to it.
 
 ---
 
+## 2026-09-29 — CARAF in keycore, readiness folded into Crypto Agility (5.4.0-beta)
+
+**Decision.** The risk assessment lives in keycore beside the migration
+policy (same router, permissions and match vocabulary), with threats and
+assets entered by the customer. The pqc service stays the scan and
+execution engine, now behind the route kernel (5.2.0-beta), and its UI is a
+view of the Crypto Agility tab instead of a separate tab.
+
+**Why.** One home per view: policy, risk and execution are one workflow.
+Assets link keycore keys directly, so exposure uses live algorithms.
+
+**Rejected.**
+- *Product-supplied rating bands or threat dates (CARAF's example tables).*
+  The customer decides; exposure is plain X + Y against Z in their years.
+- *Gate "accept" behind a governance approval.* Kept simple: an acceptance
+  must name an owner and a future review date and lapses visibly. A
+  Playbook on `crypto_risk_decision_recorded` can require approval.
+- *Keep the old tab's readiness score and PQC-policy switches.* The score
+  was an unsourced weighting; the switches are enforced nowhere.
+- *Add a governance tenant-tier setting.* A migration rule already expresses
+  every floor, with a date.
+
+---
+
 ## 2026-09-29 — Crypto agility: the customer's policy decides; no standards quoted (5.1.0-beta)
 
 **Decision.** The owner: "avoid quoting direct sources, drafts, references

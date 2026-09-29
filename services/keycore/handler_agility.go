@@ -27,12 +27,13 @@ func (h *Handler) agilityRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /agility/policy/rules", route.Spec{Action: "agility_policy_rule_created", Permission: "key.agility.write", Resource: "agility_policy_rule"}, h.createAgilityRule)
 	r.Handle("PUT /agility/policy/rules/{id}", route.Spec{Action: "agility_policy_rule_updated", Permission: "key.agility.write", Resource: "agility_policy_rule", TargetParam: "id"}, h.updateAgilityRule)
 	r.Handle("DELETE /agility/policy/rules/{id}", route.Spec{Action: "agility_policy_rule_deleted", Permission: "key.agility.write", Resource: "agility_policy_rule", TargetParam: "id"}, h.deleteAgilityRule)
+	h.carafRoutes(r)
 	return r
 }
 
 var migrationPlanStatuses = map[string]bool{"planned": true, "in_progress": true, "paused": true, "completed": true}
 
-// posture measures live keys against the tenant's rules and minimum tier.
+// posture measures live keys against the tenant's rules.
 func (h *Handler) posture(c *route.Call, code string) (AgilityPosture, bool) {
 	ctx := c.R.Context()
 	algos, err := h.svc.store.GetAlgorithmDistribution(ctx, c.Tenant)
@@ -45,12 +46,7 @@ func (h *Handler) posture(c *route.Call, code string) (AgilityPosture, bool) {
 		c.Error(http.StatusInternalServerError, code, err.Error())
 		return AgilityPosture{}, false
 	}
-	controls, err := h.svc.postureControls(ctx, c.Tenant)
-	if err != nil {
-		c.Error(http.StatusInternalServerError, code, err.Error())
-		return AgilityPosture{}, false
-	}
-	return computeAgilityPosture(algos, rules, controls.MinAlgorithmTier, time.Now()), true
+	return computeAgilityPosture(algos, rules, time.Now()), true
 }
 
 func (h *Handler) getAgilityPosture(c *route.Call) {
@@ -237,6 +233,26 @@ type agilityRuleRequest struct {
 	Note            string `json:"note"`
 }
 
+// validateMatch checks a match kind and value (rules and CARAF threats share
+// them) and returns the value to store.
+func validateMatch(kind, value string) (string, string) {
+	switch kind {
+	case MatchAlgorithm, MatchFamily:
+		if value == "" {
+			return value, "match_value names the " + kind
+		}
+	case MatchBelowStrength:
+		if n, err := strconv.Atoi(value); err != nil || n < 1 || n > 512 {
+			return value, "match_value for below_strength is a number of bits"
+		}
+	case MatchQuantumVulnerable, MatchWeak:
+		return "", ""
+	default:
+		return value, "match_kind must be algorithm, family, quantum_vulnerable, weak or below_strength"
+	}
+	return value, ""
+}
+
 // ruleFromRequest validates a rule. The customer chooses every value; the
 // only refusals are for rules that can't mean anything.
 func ruleFromRequest(req agilityRuleRequest) (AgilityRule, string) {
@@ -250,20 +266,11 @@ func ruleFromRequest(req agilityRuleRequest) (AgilityRule, string) {
 	if len(r.Note) > 500 {
 		return r, "note is at most 500 characters"
 	}
-	switch r.MatchKind {
-	case MatchAlgorithm, MatchFamily:
-		if r.MatchValue == "" {
-			return r, "match_value names the " + r.MatchKind
-		}
-	case MatchBelowStrength:
-		if n, err := strconv.Atoi(r.MatchValue); err != nil || n < 1 || n > 512 {
-			return r, "match_value for below_strength is a number of bits"
-		}
-	case MatchQuantumVulnerable, MatchWeak:
-		r.MatchValue = ""
-	default:
-		return r, "match_kind must be algorithm, family, quantum_vulnerable, weak or below_strength"
+	value, problem := validateMatch(r.MatchKind, r.MatchValue)
+	if problem != "" {
+		return r, problem
 	}
+	r.MatchValue = value
 	if _, ok := actionRank[r.Action]; !ok {
 		return r, "action must be deprecated, decrypt_only or disallowed"
 	}

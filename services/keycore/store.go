@@ -95,6 +95,16 @@ type Store interface {
 	CreateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
 	UpdateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
 	DeleteAgilityRule(ctx context.Context, tenantID, id string) error
+	ListCarafThreats(ctx context.Context, tenantID string) ([]CarafThreat, error)
+	CreateCarafThreat(ctx context.Context, t CarafThreat) (CarafThreat, error)
+	UpdateCarafThreat(ctx context.Context, t CarafThreat) (CarafThreat, error)
+	DeleteCarafThreat(ctx context.Context, tenantID, id string) error
+	ListCarafAssets(ctx context.Context, tenantID string) ([]CarafAsset, error)
+	GetCarafAsset(ctx context.Context, tenantID, id string) (CarafAsset, error)
+	CreateCarafAsset(ctx context.Context, a CarafAsset) (CarafAsset, error)
+	UpdateCarafAsset(ctx context.Context, a CarafAsset) (CarafAsset, error)
+	SetCarafDecision(ctx context.Context, tenantID, id string, d CarafDecision) (CarafAsset, error)
+	DeleteCarafAsset(ctx context.Context, tenantID, id string) error
 
 	// Ceremony
 	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)

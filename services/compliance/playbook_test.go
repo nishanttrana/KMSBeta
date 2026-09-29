@@ -1005,6 +1005,7 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.key.request_replay_detected":      {"services/keycore/handler.go", `"audit.key.request_replay_detected"`},
 		"audit.key.hsm_refused":                  {"services/keycore/hsm.go", `"audit.key.hsm_refused"`},
 		"audit.key.crypto_policy_refused":        {"services/keycore/agility_enforce.go", `"audit.key.crypto_policy_refused"`},
+		"audit.key.caraf_decision_recorded":      {"services/keycore/handler_caraf.go", `Action: "caraf_decision_recorded"`},
 		"audit.key.agility_policy_rule_created":  {"services/keycore/handler_agility.go", `Action: "agility_policy_rule_created"`},
 		"audit.key.agility_policy_rule_updated":  {"services/keycore/handler_agility.go", `Action: "agility_policy_rule_updated"`},
 		"audit.key.agility_policy_rule_deleted":  {"services/keycore/handler_agility.go", `Action: "agility_policy_rule_deleted"`},

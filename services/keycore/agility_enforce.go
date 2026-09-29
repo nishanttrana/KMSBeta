@@ -6,12 +6,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"vecta-kms/pkg/cbom"
 )
 
-// Operations that apply new protection: a decrypt_only rule or the tenant's
-// minimum algorithm tier refuses them. Operations that only process data
+// Operations that apply new protection: a decrypt_only rule refuses them. (A
+// quantum_vulnerable decrypt_only rule is how a tenant requires post-quantum
+// algorithms for new protection; a below_strength rule sets a strength
+// floor.) Operations that only process data
 // already protected stay allowed under decrypt_only. Lifecycle operations
 // (destroy, export, approval and export-policy changes) are never refused by
 // the migration policy, so a disallowed key can still be retired.
@@ -28,10 +28,10 @@ var (
 )
 
 // cryptoPolicyRefusal is a key operation refused by the tenant's migration
-// policy or minimum algorithm tier. It is also a policyDeniedError, so every
+// policy. It is also a policyDeniedError, so every
 // handler answers 403 policy_denied; the audit reason is specific.
 type cryptoPolicyRefusal struct {
-	Reason  string // crypto_policy_disallowed, crypto_policy_decrypt_only, below_min_algorithm_tier, invalid_min_algorithm_tier
+	Reason  string // crypto_policy_disallowed or crypto_policy_decrypt_only
 	Message string
 	Rule    *AgilityRule
 }
@@ -87,8 +87,8 @@ func (s *Service) invalidateAgilityRules(tenantID string) {
 	s.agilityCache.mu.Unlock()
 }
 
-// enforceCryptoPolicy applies the tenant's migration policy and minimum
-// algorithm tier to one key operation. A refusal is audited as
+// enforceCryptoPolicy applies the tenant's migration policy to one key
+// operation. A refusal is audited as
 // audit.key.crypto_policy_refused.
 func (s *Service) enforceCryptoPolicy(ctx context.Context, req PolicyEvaluateRequest) error {
 	alg, op := strings.TrimSpace(req.Algorithm), strings.TrimSpace(req.Operation)
@@ -108,24 +108,6 @@ func (s *Service) enforceCryptoPolicy(ctx context.Context, req PolicyEvaluateReq
 		case rule.Action == ActionDecryptOnly && protectOps[op]:
 			refusal = &cryptoPolicyRefusal{Reason: "crypto_policy_decrypt_only", Rule: rule,
 				Message: fmt.Sprintf("%s is limited to decrypt and verify by migration policy rule %q", alg, rule.Name)}
-		}
-	}
-	if refusal == nil && protectOps[op] {
-		controls, err := s.postureControls(ctx, req.TenantID)
-		if err != nil {
-			return fmt.Errorf("posture controls check failed: %w", err)
-		}
-		if floorName := strings.TrimSpace(controls.MinAlgorithmTier); floorName != "" {
-			floor, ok := cbom.ParseTier(floorName)
-			tier := cbom.ClassifyTier(alg, "")
-			switch {
-			case !ok:
-				refusal = &cryptoPolicyRefusal{Reason: "invalid_min_algorithm_tier",
-					Message: fmt.Sprintf("the tenant minimum algorithm tier %q is not a tier; new protection is refused until it is fixed", floorName)}
-			case !cbom.MeetsFloor(tier, floor):
-				refusal = &cryptoPolicyRefusal{Reason: "below_min_algorithm_tier",
-					Message: fmt.Sprintf("%s (%s) is below the tenant minimum algorithm tier %s", alg, tier, floor)}
-			}
 		}
 	}
 	if refusal == nil {

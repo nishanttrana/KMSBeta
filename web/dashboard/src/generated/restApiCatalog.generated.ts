@@ -13647,6 +13647,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-delete-agility-caraf-assets-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /agility/caraf/assets/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/agility/caraf/assets/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/agility/caraf/assets/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-delete-agility-caraf-threats-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /agility/caraf/threats/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/agility/caraf/threats/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/agility/caraf/threats/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-delete-agility-policy-rules-id",
     "group": "Key Management (keycore)",
     "title": "DELETE /agility/policy/rules/{id}",
@@ -13992,6 +14048,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/agility/algorithms?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-caraf-assessment",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/caraf/assessment",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/caraf/assessment?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/caraf/assessment?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-caraf-assets",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/caraf/assets",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/caraf/assets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/caraf/assets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-caraf-threats",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/caraf/threats",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/caraf/threats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/caraf/threats?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -15616,6 +15756,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/access/interface-ports?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-agility-caraf-assets",
+    "group": "Key Management (keycore)",
+    "title": "POST /agility/caraf/assets",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/agility/caraf/assets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/agility/caraf/assets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-agility-caraf-threats",
+    "group": "Key Management (keycore)",
+    "title": "POST /agility/caraf/threats",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/agility/caraf/threats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/agility/caraf/threats?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17884,6 +18080,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "PUT /svc/keycore/access/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-put-agility-caraf-assets-id",
+    "group": "Key Management (keycore)",
+    "title": "PUT /agility/caraf/assets/{id}",
+    "service": "keycore",
+    "method": "PUT",
+    "pathTemplate": "/agility/caraf/assets/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PUT /svc/keycore/agility/caraf/assets/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-put-agility-caraf-assets-id-decision",
+    "group": "Key Management (keycore)",
+    "title": "PUT /agility/caraf/assets/{id}/decision",
+    "service": "keycore",
+    "method": "PUT",
+    "pathTemplate": "/agility/caraf/assets/{id}/decision?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PUT /svc/keycore/agility/caraf/assets/{id}/decision?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-put-agility-caraf-threats-id",
+    "group": "Key Management (keycore)",
+    "title": "PUT /agility/caraf/threats/{id}",
+    "service": "keycore",
+    "method": "PUT",
+    "pathTemplate": "/agility/caraf/threats/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PUT /svc/keycore/agility/caraf/threats/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

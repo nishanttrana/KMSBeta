@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T00:24:44Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T00:36:00Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `899`
-- Routes with exact frontend call sites: `527`
+- Backend routes analyzed: `909`
+- Routes with exact frontend call sites: `536`
 - Routes whose handlers call `h.svc.*`: `543`
-- Routes with detected store calls: `643`
+- Routes with detected store calls: `653`
 - Routes with detected internal `pkg/*` calls: `159`
 
 ## How To Trace One Frontend Click
@@ -362,18 +362,23 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/access/interface-ports | GET /access/interface-ports | listInterfacePorts (services/keycore/handler_access.go:294) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1291 |
 | keycore\|POST\|/access/interface-ports | POST /access/interface-ports | upsertInterfacePort (services/keycore/handler_access.go:303) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1325 |
 | keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | deleteInterfacePort (services/keycore/handler_access.go:326) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1337 |
-| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:56) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:118 |
-| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:117) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:142 |
-| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:144) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:157 |
-| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:198) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:162 |
-| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:297) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:123 |
-| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:307) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:128 |
-| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:328) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:133 |
-| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:353) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:138 |
+| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:52) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:117 |
+| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:113) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:141 |
+| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:140) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:156 |
+| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:194) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:161 |
+| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:304) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:122 |
+| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:314) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:127 |
+| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:335) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:132 |
+| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:360) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:137 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
 | keycore\|DELETE\|/canary/keys/{param} | DELETE /canary/keys/{id} | deactivateCanaryKey (services/keycore/handler_canary.go:106) |  | DeactivateCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1467 |
+| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:243 |
+| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:248 |
+| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:259 |
+| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:269 |
+| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:218) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:259) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:293) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:711 |
@@ -471,6 +476,10 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:94) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
 | pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:126) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
 | pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:149) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
+| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:134) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:217 |
+| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:157) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:212 |
+| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:176) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:225 |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:191) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:233 |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
 | reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
 | reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
@@ -1119,20 +1128,30 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/access/interface-ports | GET /access/interface-ports | listInterfacePorts (services/keycore/handler_access.go:294) | ListKeyInterfacePorts | GetKeyInterfaceTLSConfig, ListKeyInterfacePorts |  |  | web/dashboard/src/lib/keycore.ts:1291 |
 | keycore\|POST\|/access/interface-ports | POST /access/interface-ports | upsertInterfacePort (services/keycore/handler_access.go:303) | UpsertKeyInterfacePort | GetKeyInterfaceTLSConfig, UpsertKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1325 |
 | keycore\|DELETE\|/access/interface-ports/{param} | DELETE /access/interface-ports/{name} | deleteInterfacePort (services/keycore/handler_access.go:326) | DeleteKeyInterfacePort | DeleteKeyInterfacePort |  |  | web/dashboard/src/lib/keycore.ts:1337 |
-| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:56) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:118 |
-| keycore\|GET\|/agility/algorithms | GET /agility/algorithms | getAlgorithmInventory (services/keycore/handler_agility.go:68) |  |  |  |  |  |
-| keycore\|GET\|/agility/keys-by-algorithm | GET /agility/keys-by-algorithm | getKeysByAlgorithm (services/keycore/handler_agility.go:76) |  | ListKeysByAlgorithm |  |  |  |
-| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:117) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:142 |
-| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:144) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:157 |
-| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:198) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:162 |
-| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:297) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:123 |
-| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:307) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:128 |
-| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:328) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:133 |
-| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:353) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:138 |
+| keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:52) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:117 |
+| keycore\|GET\|/agility/algorithms | GET /agility/algorithms | getAlgorithmInventory (services/keycore/handler_agility.go:64) |  |  |  |  |  |
+| keycore\|GET\|/agility/keys-by-algorithm | GET /agility/keys-by-algorithm | getKeysByAlgorithm (services/keycore/handler_agility.go:72) |  | ListKeysByAlgorithm |  |  |  |
+| keycore\|GET\|/agility/migration-plans | GET /agility/migration-plans | listMigrationPlans (services/keycore/handler_agility.go:113) |  | ListMigrationPlans |  |  | web/dashboard/src/lib/cryptoAgility.ts:141 |
+| keycore\|POST\|/agility/migration-plans | POST /agility/migration-plans | createMigrationPlan (services/keycore/handler_agility.go:140) |  | CreateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:156 |
+| keycore\|PATCH\|/agility/migration-plans/{param} | PATCH /agility/migration-plans/{id} | updateMigrationPlan (services/keycore/handler_agility.go:194) |  | UpdateMigrationPlan |  |  | web/dashboard/src/lib/cryptoAgility.ts:161 |
+| keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:304) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:122 |
+| keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:314) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:127 |
+| keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:335) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:132 |
+| keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:360) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:137 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
 | keycore\|DELETE\|/canary/keys/{param} | DELETE /canary/keys/{id} | deactivateCanaryKey (services/keycore/handler_canary.go:106) |  | DeactivateCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1467 |
+| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:243 |
+| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:248 |
+| keycore\|POST\|/agility/caraf/threats | POST /agility/caraf/threats | createCarafThreat (services/keycore/handler_caraf.go:107) |  | CreateCarafThreat |  |  |  |
+| keycore\|PUT\|/agility/caraf/threats/{param} | PUT /agility/caraf/threats/{id} | updateCarafThreat (services/keycore/handler_caraf.go:127) |  | UpdateCarafThreat |  |  |  |
+| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:259 |
+| keycore\|GET\|/agility/caraf/assets | GET /agility/caraf/assets | listCarafAssets (services/keycore/handler_caraf.go:236) |  | ListCarafAssets |  |  |  |
+| keycore\|POST\|/agility/caraf/assets | POST /agility/caraf/assets | createCarafAsset (services/keycore/handler_caraf.go:245) |  | CreateCarafAsset |  |  |  |
+| keycore\|PUT\|/agility/caraf/assets/{param} | PUT /agility/caraf/assets/{id} | updateCarafAsset (services/keycore/handler_caraf.go:265) |  | UpdateCarafAsset |  |  |  |
+| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:269 |
+| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:218) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:259) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:293) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:711 |
@@ -1317,11 +1336,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|GET\|/pqc/scans/{param} | GET /pqc/scans/{id} | getScan (services/pqc/handler.go:118) | GetReadinessScan | GetReadinessScan |  |  |  |
 | pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:126) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
 | pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:149) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
-| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:134) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  |  |
-| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:157) | ListMigrationPlans | ListMigrationPlans |  |  |  |
+| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:134) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:217 |
+| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:157) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:212 |
 | pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | getPlan (services/pqc/handler.go:166) | GetMigrationPlan | GetMigrationPlan |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:176) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:191) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  |  |
+| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:176) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:225 |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:191) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:233 |
 | pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | listRuns (services/pqc/handler.go:204) | ListMigrationRuns | ListMigrationRuns |  |  |  |
 | pqc\|GET\|/pqc/timeline | GET /pqc/timeline | timeline (services/pqc/handler.go:212) | Timeline |  |  |  |  |
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | exportCBOM (services/pqc/handler.go:224) | ExportCBOM |  |  |  |  |

@@ -1,9 +1,12 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   AlertTriangle, ArrowRight, Plus, RefreshCw, CheckCircle, Clock, Pause, Activity, XCircle,
   Atom, HelpCircle, KeyRound, CalendarClock, ShieldAlert, Pencil, Trash2, ListChecks,
 } from "lucide-react";
 import { C } from "../../v3/theme";
+import { daysUntil, errText, inputStyle, labelStyle, Modal, StatCard } from "./agility/ui";
+import { CarafPanel } from "./agility/CarafPanel";
+import { PqcExecutionPanel } from "./agility/PqcExecutionPanel";
 import {
   getAgilityPosture,
   listAgilityRules,
@@ -87,12 +90,6 @@ function planStatusColor(s: string) {
     default: return C.dim;
   }
 }
-function errText(e: unknown) {
-  return e instanceof Error ? e.message : String(e);
-}
-function daysUntil(date: string) {
-  return Math.ceil((Date.parse(date.slice(0, 10) + "T00:00:00Z") - Date.now()) / 86_400_000);
-}
 function describeMatch(r: Pick<AgilityRule, "match_kind" | "match_value">) {
   switch (r.match_kind) {
     case "algorithm": return r.match_value || "";
@@ -109,20 +106,6 @@ function StatusBadge({ status }: { status?: PolicyStatus | undefined }) {
   return <span style={{ background: bg, color: fg, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{STATUS_LABEL[status]}</span>;
 }
 
-interface StatCardProps { icon: ReactNode; label: string; value: string | number; sub?: string; color?: string; bg?: string }
-function StatCard({ icon, label, value, sub, color = C.accent, bg = C.accentTint }: StatCardProps) {
-  return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 14px", display: "flex", alignItems: "flex-start", gap: 10, flex: 1, minWidth: 140 }}>
-      <div style={{ background: bg, border: `1px solid ${color}22`, borderRadius: 8, padding: 8, flexShrink: 0, color }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.text, lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: 11, color: C.dim, marginTop: 3 }}>{label}</div>
-        {sub && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{sub}</div>}
-      </div>
-    </div>
-  );
-}
-
 function Unavailable({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 28, display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -136,36 +119,6 @@ function Unavailable({ error, onRetry }: { error: string; onRetry: () => void })
         <button onClick={onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>
           <RefreshCw size={13} /> Retry
         </button>
-      </div>
-    </div>
-  );
-}
-
-const inputStyle: CSSProperties = {
-  background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6,
-  color: C.text, padding: "8px 10px", fontSize: 13, width: "100%", fontFamily: "IBM Plex Sans, sans-serif", outline: "none",
-};
-const labelStyle: CSSProperties = { fontSize: 11, color: C.dim, marginBottom: 4 };
-
-function Modal({ title, hint, children, onClose, onSave, saving, valid, saveLabel }: {
-  title: string; hint: string; children: ReactNode; onClose: () => void; onSave: () => void; saving: boolean; valid: boolean; saveLabel: string;
-}) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: C.card, border: `1px solid ${C.borderHi}`, borderRadius: 12, padding: 28, width: 500, maxWidth: "calc(100vw - 32px)", maxHeight: "calc(100vh - 32px)", overflowY: "auto", boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 6 }}>{title}</div>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 18 }}>{hint}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 22 }}>
-          <button onClick={onClose} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.dim, padding: "8px 16px", cursor: "pointer", fontSize: 13 }}>Cancel</button>
-          <button
-            onClick={onSave}
-            disabled={saving || !valid}
-            style={{ background: C.accent, border: "none", borderRadius: 6, color: C.bg, padding: "8px 18px", cursor: saving || !valid ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, opacity: saving || !valid ? 0.6 : 1 }}
-          >
-            {saving ? "Saving…" : saveLabel}
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -356,7 +309,11 @@ function CreatePlanModal({ algorithms, onClose, onSave }: {
 }
 
 /* ─── Main Component ─────────────────────────────────────── */
-export function CryptoAgilityTab({ session }: Props) {
+type View = "policy" | "risk" | "execution";
+const VIEWS: [View, string][] = [["policy", "Migration policy"], ["risk", "Risk assessment"], ["execution", "Readiness & execution"]];
+
+export function CryptoAgilityTab({ session, keyCatalog }: Props) {
+  const [view, setView] = useState<View>("policy");
   const [posture, setPosture] = useState<AgilityPosture | null>(null);
   const [rules, setRules] = useState<AgilityRule[]>([]);
   const [plans, setPlans] = useState<MigrationPlan[]>([]);
@@ -451,11 +408,11 @@ export function CryptoAgilityTab({ session }: Props) {
         <div>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Crypto Agility</div>
           <div style={{ fontSize: 12, color: C.dim, marginTop: 2, maxWidth: 720 }}>
-            Your live keys measured against your own migration policy. You decide which algorithms to move off and when; keycore enforces each rule from its effective date.
+            You decide which algorithms to move off and when; keycore enforces your rules on every key operation. Assess the risk of your systems, then plan and execute the migration.
             {posture?.as_of && <> Statuses as of {posture.as_of}.</>}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {view === "policy" && <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button onClick={() => load(true)} disabled={refreshing} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.dim, padding: "7px 13px", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
             <RefreshCw size={13} style={refreshing ? { animation: "spin 1s linear infinite" } : {}} /> Refresh
           </button>
@@ -465,10 +422,21 @@ export function CryptoAgilityTab({ session }: Props) {
           <button onClick={() => setShowPlanModal(true)} disabled={Boolean(error)} style={{ background: C.accent, border: "none", borderRadius: 7, color: C.bg, padding: "7px 14px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
             <Plus size={13} /> Create Migration Plan
           </button>
-        </div>
+        </div>}
       </div>
 
-      {error || !posture ? (
+      <div role="tablist" style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `1px solid ${C.border}` }}>
+        {VIEWS.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)}
+            style={{ background: "transparent", border: "none", borderBottom: `2px solid ${view === id ? C.accent : "transparent"}`, color: view === id ? C.text : C.dim, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: view === id ? 600 : 400 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "risk" ? <CarafPanel session={session} keyCatalog={Array.isArray(keyCatalog) ? keyCatalog : []} />
+      : view === "execution" ? <PqcExecutionPanel session={session} />
+      : error || !posture ? (
         <Unavailable error={error ?? "no data returned"} onRetry={() => load()} />
       ) : (
         <>
@@ -503,9 +471,7 @@ export function CryptoAgilityTab({ session }: Props) {
             <span style={{ fontSize: 11, color: C.muted }}>{rules.length} {rules.length === 1 ? "rule" : "rules"}</span>
           </div>
           <div style={sectionHint}>
-            Tenant minimum algorithm tier: {posture.min_algorithm_tier
-              ? <><b style={{ color: C.text }}>{posture.min_algorithm_tier}</b>, enforced on new keys and new protection (set in Governance → Posture).</>
-              : "not set (Governance → Posture)."}
+            Each rule applies from its effective date to every key operation. To require post-quantum algorithms for new protection, add a "every quantum-vulnerable algorithm → decrypt/verify only" rule.
           </div>
           {rules.length === 0 ? (
             <div style={empty}>No migration rules yet. Add one to decide when keys on an algorithm become deprecated, decrypt/verify only or disallowed.</div>

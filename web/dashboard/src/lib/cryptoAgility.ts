@@ -76,7 +76,6 @@ export interface AgilityPosture {
   weak_keys: number;
   uncovered_keys: number; // weak or quantum-vulnerable with no rule
   policy_rules: number;
-  min_algorithm_tier?: string;
   status_counts: Partial<Record<PolicyStatus, number>>;
   milestones: PolicyMilestone[];
   algorithms: AlgorithmUsage[];
@@ -160,5 +159,117 @@ export async function createMigrationPlan(
 
 export async function updateMigrationPlanStatus(session: AuthSession, id: string, status: MigrationPlanStatus): Promise<MigrationPlan> {
   const res = await serviceRequest<{ data: MigrationPlan }>(session, "keycore", `/agility/migration-plans/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }) });
+  return res.data;
+}
+
+// ---- Crypto agility risk assessment (CARAF), keycore /agility/caraf ----
+// Every input is the customer's: threats with the years they expect each
+// (Z), assets with shelf life (X), migration time (Y), cost and the keys they
+// use. Keycore computes exposure (X + Y against the soonest threat) and
+// tracks the decision recorded for each asset.
+
+export type CarafTimeline = "exposed" | "at_limit" | "time_to_spare" | "not_assessed" | "no_threat";
+export type CarafDecisionKind = "secure" | "accept" | "phase_out" | "compensating_control";
+
+export interface CarafThreat {
+  id: string;
+  name: string;
+  category: "quantum" | "cryptanalytic" | "regulatory" | "business" | "other";
+  match_kind: MatchKind;
+  match_value?: string;
+  years_to_threat: number;
+  note?: string;
+}
+export type NewCarafThreat = Omit<CarafThreat, "id">;
+
+export interface CarafDecision {
+  decision?: CarafDecisionKind;
+  owner?: string;
+  due?: string;
+  review_by?: string;
+  status?: "open" | "in_progress" | "done";
+  note?: string;
+  decided_by?: string;
+  decided_at?: string;
+}
+
+export interface CarafAsset {
+  id: string;
+  name: string;
+  description?: string;
+  owner?: string;
+  ownership: string;
+  implementation: string;
+  pqc_support: string;
+  location: string;
+  jurisdiction?: string;
+  sensitivity: string;
+  shelf_life_years?: number;
+  migration_years?: number;
+  cost: string;
+  algorithms: string[];
+  key_ids: string[];
+  decision: CarafDecision;
+}
+export type NewCarafAsset = Omit<CarafAsset, "id" | "decision">;
+
+export interface CarafAssetAssessment {
+  asset: CarafAsset;
+  algorithms: string[];
+  missing_keys: string[];
+  threats: { id: string; name: string; years_to_threat: number; algorithms: string[] }[];
+  x?: number;
+  y?: number;
+  z?: number;
+  timeline: CarafTimeline;
+  margin_years?: number;
+  missing: string[];
+  suggestion?: "secure" | "accept" | "phase_out";
+  decision_state: string; // undecided, accepted, acceptance_expired, open, in_progress, done, overdue
+}
+
+export interface CarafAssessment {
+  as_of: string;
+  summary: {
+    assets: number; threats: number; exposed: number; at_limit: number; time_to_spare: number;
+    not_assessed: number; no_threat: number; undecided_at_risk: number; overdue: number; acceptance_expired: number;
+  };
+  assets: CarafAssetAssessment[];
+  roadmap: { asset_id: string; asset: string; decision: CarafDecisionKind; owner: string; date: string; state: string }[];
+  findings: string[];
+}
+
+export async function getCarafAssessment(session: AuthSession): Promise<CarafAssessment> {
+  const res = await serviceRequest<{ data: CarafAssessment }>(session, "keycore", "/agility/caraf/assessment");
+  return res.data;
+}
+
+export async function listCarafThreats(session: AuthSession): Promise<CarafThreat[]> {
+  const res = await serviceRequest<{ data: CarafThreat[] }>(session, "keycore", "/agility/caraf/threats");
+  return res.data ?? [];
+}
+
+export async function saveCarafThreat(session: AuthSession, threat: NewCarafThreat, id?: string): Promise<CarafThreat> {
+  const path = id ? `/agility/caraf/threats/${encodeURIComponent(id)}` : "/agility/caraf/threats";
+  const res = await serviceRequest<{ data: CarafThreat }>(session, "keycore", path, { method: id ? "PUT" : "POST", body: JSON.stringify(threat) });
+  return res.data;
+}
+
+export async function deleteCarafThreat(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(session, "keycore", `/agility/caraf/threats/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function saveCarafAsset(session: AuthSession, asset: NewCarafAsset, id?: string): Promise<CarafAsset> {
+  const path = id ? `/agility/caraf/assets/${encodeURIComponent(id)}` : "/agility/caraf/assets";
+  const res = await serviceRequest<{ data: CarafAsset }>(session, "keycore", path, { method: id ? "PUT" : "POST", body: JSON.stringify(asset) });
+  return res.data;
+}
+
+export async function deleteCarafAsset(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(session, "keycore", `/agility/caraf/assets/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function setCarafDecision(session: AuthSession, id: string, decision: CarafDecision): Promise<CarafAsset> {
+  const res = await serviceRequest<{ data: CarafAsset }>(session, "keycore", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`, { method: "PUT", body: JSON.stringify(decision) });
   return res.data;
 }

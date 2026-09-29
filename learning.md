@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A check that reads a setting nobody can write is dead code with a test
+- **What happened:** 5.1.0-beta enforced a tenant "minimum algorithm tier"
+  read from governance posture, and a unit test injected the value and
+  passed. Governance has no such column, API or UI, so in a deployment the
+  value was always empty and the check never ran. The parallel docs audit
+  found it.
+- **Rule:** a control is real only if the setting it reads can be set in
+  the product; trace a new control back to the screen or API that writes
+  it, not just to a test fixture.
 ### A feature table written with the code, never re-read against it
 - **What happened:** `docs/AUTOMATION_ALKM_PQC.md` was written in one
   "hardening wave" alongside the code it described. Of its 27 "At a glance"

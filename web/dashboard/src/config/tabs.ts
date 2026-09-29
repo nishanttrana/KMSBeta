@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
-  Atom,
   BellRing,
   Building2,
   Cloud,
@@ -76,7 +75,6 @@ export type TabId =
   | "audit_log"
   | "vault"
   | "certificates"
-  | "pqc"
   | "tokenize_mask"
   | "payment"
   | "autokey"
@@ -137,7 +135,6 @@ export const tabConfig: TabConfig[] = [
 
   // ── CRYPTO & PKI ────────────────────────────────────────────────────
   { id: "certificates", label: "Certificates / PKI", shortLabel: "Certs",   group: "crypto_pki",            description: "Internal mini PKI and protocol operations",                                                              icon: FileCheck2,        emoji: "C"  },
-  { id: "pqc",          label: "Post-Quantum Crypto", shortLabel: "PQC",    group: "crypto_pki",            description: "ML-KEM, ML-DSA, SLH-DSA readiness scanning, migration plans, and per-asset timeline",                   icon: Atom,              emoji: "Q"  },
   { id: "crypto_console", label: "Crypto Console", shortLabel: "Console",   group: "crypto_pki",            description: "Ad-hoc cryptographic operation simulator",                                                               icon: SlidersHorizontal, emoji: "C"  },
 
   // ── DATA & POLICY ───────────────────────────────────────────────────

@@ -156,7 +156,6 @@ type AgilityPosture struct {
 	WeakKeys              int               `json:"weak_keys"`
 	UncoveredKeys         int               `json:"uncovered_keys"` // weak or quantum-vulnerable with no rule
 	PolicyRules           int               `json:"policy_rules"`
-	MinAlgorithmTier      string            `json:"min_algorithm_tier,omitempty"`
 	StatusCounts          map[string]int    `json:"status_counts"` // live keys by policy status today
 	Milestones            []PolicyMilestone `json:"milestones"`
 	Algorithms            []AlgorithmUsage  `json:"algorithms"`
@@ -193,9 +192,9 @@ func changeOf(r *AgilityRule) *PolicyChange {
 
 // computeAgilityPosture annotates the live-key distribution with catalogue
 // facts and the tenant's rules, on day now.
-func computeAgilityPosture(algos []AlgorithmUsage, rules []AgilityRule, minTier string, now time.Time) AgilityPosture {
+func computeAgilityPosture(algos []AlgorithmUsage, rules []AgilityRule, now time.Time) AgilityPosture {
 	p := AgilityPosture{
-		AsOf: now.UTC().Format("2006-01-02"), Algorithms: algos, PolicyRules: len(rules), MinAlgorithmTier: minTier,
+		AsOf: now.UTC().Format("2006-01-02"), Algorithms: algos, PolicyRules: len(rules),
 		StatusCounts: map[string]int{}, Milestones: []PolicyMilestone{}, Findings: []string{},
 	}
 	for i := range algos {

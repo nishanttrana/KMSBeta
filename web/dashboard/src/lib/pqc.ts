@@ -166,3 +166,73 @@ export async function runPQCScan(session: AuthSession, trigger = "manual"): Prom
   });
   return (out?.scan || {}) as PQCReadinessScan;
 }
+
+// Migration plans built from the latest readiness scan. Executing one changes
+// keys in keycore (a successor key of the target algorithm per key step);
+// certificate, TLS and code steps are manual. The pqc service records the
+// verified caller as the actor.
+export type PQCMigrationStep = {
+  id: string;
+  asset_id: string;
+  asset_type: string;
+  name: string;
+  current_algorithm: string;
+  target_algorithm: string;
+  phase: string;
+  status: string; // pending, successor_created, rotated, manual_required, failed, rolled_back
+  reason: string;
+  metadata?: Record<string, unknown>;
+  executed_at?: string;
+  executed_by?: string;
+};
+
+export type PQCMigrationPlan = {
+  id: string;
+  name: string;
+  status: string;
+  target_profile: string;
+  timeline_standard: string;
+  deadline?: string;
+  summary: Record<string, unknown>;
+  steps: PQCMigrationStep[];
+  created_by: string;
+  created_at: string;
+  executed_at?: string;
+};
+
+export type PQCMigrationRun = {
+  id: string;
+  plan_id: string;
+  status: string;
+  dry_run: boolean;
+  summary: Record<string, unknown>;
+};
+
+export async function listPQCPlans(session: AuthSession): Promise<PQCMigrationPlan[]> {
+  const out = await serviceRequest<{ items: PQCMigrationPlan[] }>(session, "pqc", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`);
+  return out?.items ?? [];
+}
+
+export async function createPQCPlan(session: AuthSession, input: { name: string; deadline?: string; timeline_standard?: string }): Promise<PQCMigrationPlan> {
+  const out = await serviceRequest<{ plan: PQCMigrationPlan }>(session, "pqc", "/pqc/migration/plans", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.plan;
+}
+
+export async function executePQCPlan(session: AuthSession, id: string, dryRun: boolean): Promise<PQCMigrationRun> {
+  const out = await serviceRequest<{ run: PQCMigrationRun }>(session, "pqc", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`, {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, dry_run: dryRun })
+  });
+  return out.run;
+}
+
+export async function rollbackPQCPlan(session: AuthSession, id: string): Promise<PQCMigrationPlan> {
+  const out = await serviceRequest<{ plan: PQCMigrationPlan }>(session, "pqc", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`, {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId })
+  });
+  return out.plan;
+}

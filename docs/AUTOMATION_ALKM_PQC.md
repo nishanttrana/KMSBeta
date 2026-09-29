@@ -92,10 +92,10 @@ Governance's posture controls that keycore reads are
 `posture_force_quorum_destructive_ops`, `posture_require_step_up_auth`,
 `posture_pause_connector_sync` and `posture_guardrail_policy_required`.
 
-Keycore also reads `posture_min_algorithm_tier` and, since 5.1.0-beta,
-refuses new protection below it. **Governance does not store or return that
-field**, so in a deployment it is always empty and the check never fires
-(open item in [ALGORITHM_TRANSITIONS.md](SECURITY/ALGORITHM_TRANSITIONS.md)).
+Keycore read `posture_min_algorithm_tier` from 5.1.0-beta, but governance
+never stored that field, so the check could never fire; 5.4.0-beta removed
+it. A tenant floor is a Crypto Agility migration rule
+([ALGORITHM_TRANSITIONS.md](SECURITY/ALGORITHM_TRANSITIONS.md)).
 A floor that takes effect today is a policy's `spec.minAlgorithmTier` or a
 migration policy rule.
 
@@ -174,8 +174,6 @@ use the same `pkg/cryptocatalog` facts.
 
 ## Open items
 
-- Governance has no `posture_min_algorithm_tier` setting, so keycore's
-  tenant minimum-tier check never fires in a deployment.
 - `SetKeyStatus` doesn't enforce the lifecycle state table (a compromised key
   can be set active again).
 - Manifest policies are created once; edits and deletions in a manifest

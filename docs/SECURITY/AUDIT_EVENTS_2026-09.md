@@ -363,12 +363,10 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 
 | Event | When | Test |
 |---|---|---|
-| `audit.key.crypto_policy_refused` | A key operation refused by the tenant's migration policy (`reason` `crypto_policy_decrypt_only` or `crypto_policy_disallowed`, with `rule_id`, `rule_name`, `rule_action`) or minimum algorithm tier (`below_min_algorithm_tier`, `invalid_min_algorithm_tier`); `result: refused`, `operation`, `algorithm`, `key_id`. The operation's own `audit.key.<op>` carries the same `reason`. Playbooks trigger `crypto_policy_refused` | `TestCryptoPolicyEnforcedOnKeyOperations`, `TestTenantMinAlgorithmTierEnforced` |
+| `audit.key.crypto_policy_refused` | A key operation refused by the tenant's migration policy (`reason` `crypto_policy_decrypt_only` or `crypto_policy_disallowed`, with `rule_id`, `rule_name`, `rule_action`); `result: refused`, `operation`, `algorithm`, `key_id`. The operation's own `audit.key.<op>` carries the same `reason`. Playbooks trigger `crypto_policy_refused` | `TestCryptoPolicyEnforcedOnKeyOperations`, `TestQuantumVulnerableRuleActsAsPQCFloor` |
 | `audit.key.agility_policy_rules_listed`, `agility_policy_rule_created`, `agility_policy_rule_updated`, `agility_policy_rule_deleted` | Kernel events for migration rules (details `name`, `match_kind`, `match_value`, `action`, `effective_date`, `target_algorithm`; refusals `result: refused`). Changes are Playbooks trigger `crypto_policy_changed` | `TestAgilityPolicyRulesValidatedAndAudited`, `TestAgilityRoutesRefusalsAudited` |
-
-The `below_min_algorithm_tier` / `invalid_min_algorithm_tier` reasons need a
-tier from governance posture, which governance does not store yet, so a
-deployment never emits them (docs/SECURITY/ALGORITHM_TRANSITIONS.md, Open).
+| `audit.key.caraf_assessment_read`, `caraf_threats_listed`, `caraf_threat_created`, `caraf_threat_updated`, `caraf_threat_deleted`, `caraf_assets_listed`, `caraf_asset_created`, `caraf_asset_updated`, `caraf_asset_deleted` | Kernel events for the risk assessment (details: threat `years_to_threat` and match; asset X, Y, cost, ownership, sensitivity, linked key count; refusals `result: refused`) | `TestCarafRoutesValidatedAndAudited`, `TestAgilityRoutesRefusalsAudited` |
+| `audit.key.caraf_decision_recorded` | A risk decision recorded or cleared (warning; `decision`, `owner`, `status`, `due`, `review_by`; the verified caller is `decided_by`). Playbooks trigger `crypto_risk_decision_recorded` | `TestCarafRoutesValidatedAndAudited` |
 
 ## Automation signals (5.3.0-beta, docs/AUTOMATION_ALKM_PQC.md)
 

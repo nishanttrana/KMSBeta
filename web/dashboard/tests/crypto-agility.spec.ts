@@ -19,8 +19,7 @@ const posture = {
   "weak_keys": 1,
   "uncovered_keys": 2,
   "policy_rules": 2,
-  "min_algorithm_tier": "classical-128",
-  "status_counts": {
+    "status_counts": {
     "allowed": 13,
     "disallowed": 1
   },
@@ -206,7 +205,6 @@ test("the tab shows the customer's policy, schedule and inventory, and quotes no
   await expect(rsaRule.getByText("Decrypt/verify only")).toBeVisible();
   await expect(rsaRule.getByText("2027-06-30")).toBeVisible();
   await expect(page.locator("tr", { hasText: "Weak algorithms out" }).getByText("in force")).toBeVisible();
-  await expect(page.getByText("classical-128", { exact: true })).toBeVisible();
 
   // Schedule and inventory follow the rules.
   await expect(page.getByText("Your migration schedule")).toBeVisible();

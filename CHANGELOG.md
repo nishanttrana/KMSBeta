@@ -4,6 +4,47 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [5.4.0-beta] — 2026-09-29
+
+### Crypto Agility: risk assessment (CARAF) and readiness & execution
+The tab now has three views: **Migration policy** (5.1.0-beta), **Risk
+assessment** and **Readiness & execution**.
+
+- **Risk assessment (CARAF).** Keycore `/agility/caraf/*`, tables
+  `caraf_threats` and `caraf_assets` (migration 029). The customer records:
+  - threats (the algorithms each breaks and the years until they expect it,
+    Z);
+  - assets (ownership, implementation, post-quantum support, location,
+    jurisdiction, sensitivity, the years their data or device must stay
+    protected X, the years a migration would take Y, cost, and linked keycore
+    keys whose live algorithms are read from keycore).
+
+  Keycore computes per asset whether X + Y exceeds the soonest applicable
+  Z (exposed, at the limit, time to spare, not assessed), suggests a
+  mitigation from the CARAF matrix, and tracks the decision (secure, accept
+  with a future review date, phase out, compensating control) with owner,
+  due date and status. It also keeps a roadmap by date and findings for
+  exposed-undecided assets, lapsed acceptances, overdue decisions and
+  linked keys no longer live. Every value is the customer's; the product
+  supplies no threat dates or defaults. Every write is audited
+  (`audit.key.caraf_*`), and a recorded decision is the Playbooks trigger
+  `crypto_risk_decision_recorded`.
+- **Readiness & execution** replaces the orphaned Post-Quantum tab
+  (`PostQuantumTab.tsx` deleted). It shows the pqc service's scan across
+  keys, certificates, discovered TLS endpoints and cloud keys; the assets to
+  migrate with targets; and execution plans with dry run, execute (a
+  successor key per key step; other steps manual) and rollback. The old
+  tab's 0-100 readiness score and its PQC-policy switches (require PQC for
+  new keys, HQC backup, default modes) are not shown: the score was an
+  unsourced weighting and the switches are stored by pqc but enforced
+  nowhere.
+- **Removed: the tenant minimum algorithm tier check (5.1.0-beta).** It read
+  `posture_min_algorithm_tier` from governance, which has no such setting,
+  so it could never fire. A floor is a migration rule:
+  `quantum_vulnerable → decrypt_only` requires post-quantum algorithms for
+  new protection (`TestQuantumVulnerableRuleActsAsPQCFloor`).
+- **Open:** the pqc policy's record-only switches and readiness score remain
+  in the pqc API; enforce or remove them.
 ## [5.3.0-beta] — 2026-09-29
 
 ### Automation/ALKM/PQC: the guide now matches the code, and dead or fake code is gone

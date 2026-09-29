@@ -584,10 +584,20 @@ rule in force applies. A refusal answers `403 policy_denied` and emits
 `rule_name`, `rule_action`); the operation's own event carries the same
 `reason`. Rules are cached per tenant for up to 10 seconds.
 
-**Tenant minimum algorithm tier.** Governance posture
-`posture_min_algorithm_tier` is enforced by keycore on the same new-protection
-operations: an algorithm below it, or a value that is not a tier, is refused
-(`reason` `below_min_algorithm_tier` or `invalid_min_algorithm_tier`).
+**Floors are rules.** `quantum_vulnerable → decrypt_only` requires
+post-quantum algorithms for new protection; `below_strength` sets a strength
+floor. (The 5.1.0-beta tenant-tier check read a governance setting that does
+not exist and was removed in 5.4.0-beta.)
+
+**Risk assessment (CARAF).** Every value is the customer's; keycore computes
+exposure (X + Y against the soonest threat's Z) and tracks decisions.
+
+| Route | Permission | Audit | Response `data` |
+|---|---|---|---|
+| `GET /agility/caraf/assessment` | `key.agility.read` | `audit.key.caraf_assessment_read` (details `assets`, `exposed`, `undecided_at_risk`) | `as_of`, `summary` (`assets`, `threats`, `exposed`, `at_limit`, `time_to_spare`, `not_assessed`, `no_threat`, `undecided_at_risk`, `overdue`, `acceptance_expired`), `assets` (`[{asset, algorithms, missing_keys, threats, x, y, z, timeline, margin_years, missing, suggestion, decision_state}]`), `roadmap`, `findings` |
+| `GET\|POST /agility/caraf/threats`, `PUT\|DELETE /agility/caraf/threats/{id}` | read / `key.agility.write` | `audit.key.caraf_threats_listed`, `caraf_threat_created`, `caraf_threat_updated`, `caraf_threat_deleted` | threats: `name`, `category` (`quantum`, `cryptanalytic`, `regulatory`, `business`, `other`), `match_kind`/`match_value` (as rules), `years_to_threat` (required, 0-100), `note` |
+| `GET\|POST /agility/caraf/assets`, `PUT\|DELETE /agility/caraf/assets/{id}` | read / `key.agility.write` | `audit.key.caraf_assets_listed`, `caraf_asset_created`, `caraf_asset_updated`, `caraf_asset_deleted` | assets: `name`, `description`, `owner`, `ownership` (`enterprise`, `third_party`), `implementation` (`software`, `hardware`, `hsm`, `cloud_service`, `embedded`), `pqc_support` (`supported`, `planned`, `none`), `location` (`on_prem`, `cloud`, `hybrid`, `edge`), `jurisdiction`, `sensitivity` (`low`…`critical`), `shelf_life_years` (X), `migration_years` (Y), `cost` (`low`, `medium`, `high`), `algorithms`, `key_ids` (must be keys of the tenant); omitted enums are `unknown`. An update keeps the decision |
+| `PUT /agility/caraf/assets/{id}/decision` | `key.agility.write` | `audit.key.caraf_decision_recorded` (warning; details `asset`, `decision`, `owner`, `status`, `due`, `review_by`) | the asset. Body `decision` (`secure`, `accept`, `phase_out`, `compensating_control`; empty clears), `owner`, `due` (required except for accept), `review_by` (required and future for accept), `status` (`open`, `in_progress`, `done`), `note`. `decided_by` is the verified caller |
 
 - Create body: `name`, `from_algorithm`, `to_algorithm` (must differ),
   optional `target_date` (`YYYY-MM-DD` or RFC3339). Unknown fields are
@@ -1644,7 +1654,7 @@ this.
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
   `key_hsm_refused`, `crypto_policy_refused`
-  (`audit.key.crypto_policy_refused`), `crypto_policy_changed` (a migration
+  (`audit.key.crypto_policy_refused`), `crypto_risk_decision_recorded` (`audit.key.caraf_decision_recorded`), `crypto_policy_changed` (a migration
   rule created, updated or deleted), `cert_revoked`, `cert_renewal_window_missed`,
   `cert_mass_renewal_risk`, `crl_generation_failed`, `login_failed`,
   `account_locked`, `dpop_replay_detected`, `posture_changed`,
@@ -3272,7 +3282,7 @@ Selected events with dedicated audit classification:
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
 - `audit.security.sustained_risk_detected` (audit's sustained-risk signal: 3 events scoring ≥80 on one target within 5 minutes, once per window; `target_type` / `target_id` name the key, target or tenant, details `reason`, `score_threshold`, `window_seconds`, `result: warning`). It changes nothing itself; the `sustained_risk_detected` playbook trigger responds. Replaced `audit.security.auto_quarantined` in 5.3.0-beta, which quarantined nothing
 - `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
-- `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy or minimum algorithm tier; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
+- `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
 - `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
@@ -3928,6 +3938,16 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/access/settings`
 - `PUT /svc/keycore/access/settings`
 - `GET /svc/keycore/agility/algorithms`
+- `GET /svc/keycore/agility/caraf/assessment`
+- `GET /svc/keycore/agility/caraf/assets`
+- `POST /svc/keycore/agility/caraf/assets`
+- `DELETE /svc/keycore/agility/caraf/assets/{id}`
+- `PUT /svc/keycore/agility/caraf/assets/{id}`
+- `PUT /svc/keycore/agility/caraf/assets/{id}/decision`
+- `GET /svc/keycore/agility/caraf/threats`
+- `POST /svc/keycore/agility/caraf/threats`
+- `DELETE /svc/keycore/agility/caraf/threats/{id}`
+- `PUT /svc/keycore/agility/caraf/threats/{id}`
 - `GET /svc/keycore/agility/keys-by-algorithm`
 - `GET /svc/keycore/agility/migration-plans`
 - `POST /svc/keycore/agility/migration-plans`
