@@ -24,6 +24,7 @@ type Service struct {
 	audit               AuditClient
 	compliance          ComplianceClient
 	posture             PostureClient
+	tenants             TenantLister
 	events              route.Emitter // background events via pkg/audit
 	hub                 *feedHub
 	telemetryRetention  time.Duration
@@ -78,15 +79,31 @@ func (s *Service) StartScheduler(ctx context.Context) {
 	}()
 }
 
-// SyncAlertsAllTenants turns new audit events into alerts for every tenant
-// reporting knows (any alert, rule, override, channel or report) and root, so
-// the header's unread count moves without anyone opening the Alert Center.
-// The scheduler runs it on the primary only: alerts are replicated.
+// TenantLister returns every active tenant ID (auth, for the reporting
+// service identity only).
+type TenantLister interface {
+	ListTenantIDs(ctx context.Context) ([]string, error)
+}
+
+// SetTenantLister wires auth's tenant list into the scheduled alert sync.
+func (s *Service) SetTenantLister(t TenantLister) { s.tenants = t }
+
+// SyncAlertsAllTenants turns new audit events into alerts for every tenant,
+// so the header's unread count moves without anyone opening the Alert
+// Center. Tenants come from auth; if auth can't be reached, the sync still
+// covers root and every tenant reporting already holds rows for. The
+// scheduler runs it on the primary only: alerts are replicated.
 func (s *Service) SyncAlertsAllTenants(ctx context.Context) {
 	tenants, err := s.store.ListKnownTenants(ctx)
 	if err != nil {
 		logger.Printf("alert sync: list tenants: %v", err)
-		return
+	}
+	if s.tenants != nil {
+		if ids, err := s.tenants.ListTenantIDs(ctx); err != nil {
+			logger.Printf("alert sync: auth tenant list unavailable, using known tenants: %v", err)
+		} else {
+			tenants = append(tenants, ids...)
+		}
 	}
 	seen := map[string]bool{}
 	for _, tenantID := range append([]string{"root"}, tenants...) {

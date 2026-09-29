@@ -54,6 +54,7 @@ func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *met
 	}
 	h.mux = h.routes()
 	h.mountKernel(h.mux, h.delegatedRouter())
+	h.mountKernel(h.mux, h.tenantIDsRouter())
 	return h
 }
 

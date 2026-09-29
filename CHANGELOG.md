@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.22.0-beta] — 2026-09-30
+
+### Threat alerts reach every tenant, including one that never used reporting
+Closes the 2.0.0-beta open item. The scheduled alert sync covered only
+root and tenants reporting already held rows for, so a new tenant's first
+critical or high threat signal became an alert only after someone opened
+its Alert Center.
+- **Reporting now asks auth for the tenant list.** It calls the new
+  `GET /internal/tenant-ids` as `kms-reporting` every minute on the primary.
+  The response holds active tenant IDs only.
+- **Only reporting can call it.** Any other caller is refused and audited
+  (`audit.auth.tenant_ids_listed`, `reason: service_identity_required`).
+- **If auth can't be reached,** the sync still covers root and the known
+  tenants, and logs the error.
+
 ## [6.21.0-beta] — 2026-09-30
 
 ### sbom reads never write

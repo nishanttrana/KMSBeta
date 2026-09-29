@@ -51,6 +51,21 @@ func TestThreatSignalsBecomeAlertsOnScheduledSync(t *testing.T) {
 }
 
 // A cluster member serves replicated alerts and never creates them.
+type staticTenants []string
+
+func (s staticTenants) ListTenantIDs(context.Context) ([]string, error) { return s, nil }
+
+// A tenant reporting holds no rows for is still synced once auth lists it.
+func TestThreatAlertForTenantOnlyAuthKnows(t *testing.T) {
+	svc, store, audit, _, _, _ := newReportingService(t)
+	svc.SetTenantLister(staticTenants{"t-new"})
+	audit.events["t-new"] = []map[string]interface{}{threatAuditEvent("n1", "critical")}
+	svc.SyncAlertsAllTenants(context.Background())
+	if items, _ := store.ListAlerts(context.Background(), "t-new", AlertQuery{Limit: 10}); len(items) != 1 {
+		t.Fatalf("new tenant alerts: %+v", items)
+	}
+}
+
 func TestListAlertsDoesNotSyncOnMember(t *testing.T) {
 	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{NodeID: "n2", Role: clusterstate.RoleFollower, PrimaryURL: "https://primary:8443", ForwardCredential: "cred"}))
 	t.Cleanup(func() { clusterstate.SetDefault(nil) })

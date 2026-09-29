@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A service that learns tenants from its own tables never sees a new one
+- **What happened:** reporting's scheduled alert sync listed tenants from
+  its own tables. A tenant with no alert, rule or channel was never synced,
+  so its first threat alert waited until someone opened its Alert Center.
+- **Rule:** a job that must cover every tenant gets the list from auth, the
+  owner of tenants, through a caller-restricted internal route, and falls
+  back to what it knows when auth is down.
+
 ### Fix the pattern, not the instance (sbom bootstrap-on-read)
 - **What happened:** 1.37.0-beta removed the first-read snapshot generation
   from `ListCBOMHistory` but left the same `"bootstrap"` generation in

@@ -88,6 +88,7 @@ func main() {
 		NewHTTPPostureClient(envOr("POSTURE_URL", "https://posture:8220"), 5*time.Second),
 		audit,
 	)
+	svc.SetTenantLister(NewHTTPAuthTenantClient(envOr("AUTH_URL", "https://auth:8001"), 5*time.Second))
 	svc.ConfigureTelemetryRetention(
 		time.Duration(envOrInt("REPORTING_TELEMETRY_RETENTION_DAYS", 30))*24*time.Hour,
 		envOrInt("REPORTING_TELEMETRY_PURGE_BATCH", 10000),

@@ -772,6 +772,14 @@ a critical `canary_tripped` threat signal. Its ID is minted like a real key ID
   `GET /canary/{id}/trips`, `GET /canary/summary`, and
   `POST /canary/{id}/trip`, which recorded a trip that never happened.
 
+### Tenant IDs for the alert sync: /svc/auth/internal/tenant-ids
+
+`GET /internal/tenant-ids` returns `{"items": [<active tenant IDs>]}`. It is
+a kernel route (`audit.auth.tenant_ids_listed`, detail `count`). Only the
+`kms-reporting` service identity may call it; anything else is refused with
+`reason: service_identity_required`. Reporting uses it so the scheduled
+alert sync covers every tenant.
+
 ### Threat detection (keycore → posture → reporting)
 
 Keycore's `ThreatSweeper` evaluates four rules over each node's key usage
@@ -3367,6 +3375,7 @@ Selected events with dedicated audit classification:
 - `audit.sbom.*` request events (route kernel): `sbom_generate_requested`, `sbom_latest_read`, `sbom_history_listed`, `sbom_diff_read`, `sbom_exported`, `sbom_read`, `cbom_generate_requested`, `cbom_latest_read`, `cbom_history_listed`, `cbom_summary_read`, `cbom_pqc_readiness_read`, `cbom_diff_read`, `cbom_exported`, `cbom_read`; handler refusal reason `platform_tenant_required`
 - `audit.reporting.*` request events (route kernel): `alerts_listed`, `alerts_feed_streamed`, `alerts_unread_counted`, `alert_read`, `alert_updated` (`operation`: acknowledge / resolve / false_positive / escalate; replaces `alert_escalated`), `alerts_bulk_acknowledged`, `alerts_bulk_resolved`, `incidents_listed`, `incident_read`, `incident_status_updated`, `incident_assigned`, `rules_listed`, `rule_created`, `rule_updated`, `rule_deleted`, `rule_tested` (2.13.0-beta: `POST /svc/reporting/alerts/rules/test` checks a rule without saving it, with details `valid`, `replay_hours`, `replay_matched`, `replay_fired`; see docs/GOVERNANCE_AND_COMPLIANCE.md §4.1), `severity_config_read`, `severity_config_updated`, `channels_listed`, `channels_updated`, `report_templates_listed`, `report_requested`, `report_jobs_listed`, `report_job_read`, `report_downloaded`, `report_deleted`, `scheduled_reports_listed`, `report_scheduled`, `error_telemetry_captured`, `error_telemetry_listed`, `alert_stats_read`, `mttd_stats_viewed`, `mttr_stats_read`, `top_sources_read`. Background: `audit.reporting.alert_created`, `audit.reporting.report_requested` (`trigger: scheduled`), `audit.reporting.evidence_pack_requested`
 - `audit.compliance.*` playbook events (2.5.0-beta). Route kernel: `playbook_catalog_read`, `playbook_summary_read`, `playbooks_listed`, `playbook_created`, `playbook_read`, `playbook_updated`, `playbook_deleted`, `playbook_run_requested`, `playbook_dry_run`, `playbook_runs_listed`, `playbook_runs_searched`, `playbook_run_read`, `playbook_run_cancelled`, `playbook_run_retried`, `connections_listed`, `connection_created`, `connection_updated`, `connection_deleted`, `connection_tested`, `connection_resolved`, `connection_imported` (2.10.0-beta; refusals `service_identity_required`, `connection_use_unsupported`) (refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `action_permission_denied`, `user_required`, `url_blocked`, `connection_invalid`, `playbook_invalid`, `connection_in_use`, `connection_usage_unverified`, `run_not_cancellable`, `run_not_retryable`). Engine: `playbook_triggered` (`success` with `run_id`, or `refused` with `reason` `playbook_not_authorized` / `authority_revoked` / `authority_unverified` / `cooldown` / `cooldown_unavailable` / `stale_event` / `threshold_unavailable`), `playbook_action_executed` (per action: `success`, `pending` (`outcome` `pending_approval` or `awaiting_approval`), `skipped`, `failure`, or `refused` with `reason` `action_removed` / `approval_mismatch` / `approval_unverified` / `definition_changed` / `authority_revoked` / `authority_unverified`), `playbook_approval_requested`, `playbook_approval_granted`, `playbook_run_completed` (`status`; `refused` for cancelled, denied or expired approvals), `playbook_action` (the `create_audit_event` action), `playbook_connections_migrated` (inline credentials sealed; `refused` with `seal_failed`), and the `pkg/mek` events `audit.compliance.mek_*`
+- `audit.auth.tenant_ids_listed` (kernel event, `count`; refusals `service_identity_required`, `unauthenticated`): tenant IDs for reporting's alert sync (6.22.0-beta)
 - `audit.auth.delegated_authority_checked`, `audit.auth.delegated_user_disabled`, `audit.auth.delegated_api_key_revoked`, `audit.auth.delegated_client_revoked` (kernel events; `on_behalf_of`, `via: kms-compliance`, `playbook_run_id`; refusals `service_identity_required`, `delegator_unknown`, `delegator_inactive`, `delegator_lacks_permission`, `self_target`, `last_administrator`, `service_identity_protected`): playbook delegated operations (2.5.0-beta)
 - `audit.governance.notify_connections_migrated` (plaintext Slack/Teams approval-notice URLs moved into compliance connections; `connection_ids`), `audit.governance.webhook_sent` / `audit.governance.webhook_failed` (one per approval notice and channel), `audit.governance.webhook_tested` (also `refused` with `reason: ad_hoc_url_refused`) (2.10.0-beta)
 - `audit.governance.notification_email_sent` (kernel event; refusals `service_identity_required`, `recipient_not_tenant_user`; failures `smtp_not_configured`, `send_failed`): playbook email (2.5.0-beta)
@@ -3601,6 +3610,7 @@ from the code; do not edit by hand.
 - `PUT /svc/auth/auth/users/{id}/role`
 - `PUT /svc/auth/auth/users/{id}/status`
 - `POST /svc/auth/auth/workload-token`
+- `GET /svc/auth/internal/tenant-ids`
 - `GET /svc/auth/scim/v2/Groups`
 - `POST /svc/auth/scim/v2/Groups`
 - `DELETE /svc/auth/scim/v2/Groups/{id}`

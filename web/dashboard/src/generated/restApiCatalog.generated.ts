@@ -11960,6 +11960,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-get-internal-tenant-ids",
+    "group": "Identity & Access (auth)",
+    "title": "GET /internal/tenant-ids",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/internal/tenant-ids?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/internal/tenant-ids?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-get-scim-v2-groups",
     "group": "Identity & Access (auth)",
     "title": "GET /scim/v2/Groups",
@@ -15364,6 +15392,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/keys/{id}/kcv?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-keys-id-public-key",
+    "group": "Key Management (keycore)",
+    "title": "GET /keys/{id}/public-key",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys/{id}/public-key?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/keys/{id}/public-key?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
