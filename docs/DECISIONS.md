@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Public key read: the per-key read decision, delegated as usage `read` (6.18.0-beta)
+
+**Decision.** Keycore serves an asymmetric key's current public key at
+`GET /keys/{id}/public-key` (PEM SubjectPublicKeyInfo), decided like every
+other per-key read: the key must be visible to the caller
+(KEY_ACCESS_MODEL.md section 8). ekm reads it for the user it serves with
+the new delegated usage `read`, so the user's view decides, and asks keycore
+on every request instead of serving its cache. A delegated `read` is refused
+on any key operation (`delegation_usage_mismatch`).
+**Why.** A public key is not secret; whoever may see a key's metadata may
+read its public half, the same as its KCV. A stricter check (an explicit
+`read` grant) would hide the public key from a user who holds `wrap` or
+`verify` on the key and needs it to use it. Keycore's delegation replaces the
+decision's operation with the delegated usage, so without the mismatch
+refusal a `read` grant forwarded by a service would have authorized a key
+operation.
+**Rejected.** Adding the public key to `GET /keys/{id}` (every metadata read
+of a software key pair would decrypt its private key); a separate
+`public-key-read` grant operation (a new usage with nothing it protects
+beyond visibility); serving post-quantum raw public keys under an SPKI or
+`opaque` label (they are refused, `spki_unavailable`); ekm serving its cached
+copy (stale after rotation, and a second decision in front of keycore's).
+**Enforced by.** `TestPublicKeyReadOfAHiddenKeyIsRefused`,
+`TestDelegatedPublicKeyReadUsesTheUsersView`,
+`TestDelegatedReadCannotPerformAKeyOperation`,
+`TestTDEPublicKeyFollowsRotation`, `TestTDEPublicKeyReadCarriesTheUsersToken`.
+
 ## 2026-09-29 — EKM agents never hold the TDE key; no export route (6.15.0-beta)
 
 **Decision.** The EKM agent sends every DEK wrap and unwrap to the KMS. The

@@ -1068,6 +1068,24 @@ export async function exportKey(
   );
 }
 
+export type KeyPublicKey = {
+  key_id: string;
+  version: number;
+  algorithm: string;
+  format: string;
+  public_key_pem: string;
+};
+
+// The current version's public key (PEM SubjectPublicKeyInfo). Keycore refuses
+// a key with no public half (409 not_asymmetric) or no SPKI encoding
+// (409 spki_unavailable), and hides a key the caller can't see (404).
+export async function getKeyPublicKey(session: AuthSession, keyId: string): Promise<KeyPublicKey> {
+  return apiRequest<KeyPublicKey>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/public-key?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+}
+
 export async function destroyKey(
   session: AuthSession,
   keyId: string,

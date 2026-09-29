@@ -547,6 +547,8 @@ func (s *SQLStore) UpdateTDEKeyRotation(ctx context.Context, tenantID string, ke
 UPDATE ekm_tde_keys
 SET current_version = CASE WHEN $1 = '' THEN current_version ELSE $1 END,
 	status = 'active',
+	public_key_cache = '',
+	public_key_format = '',
 	rotated_at = $2,
 	updated_at = CURRENT_TIMESTAMP
 WHERE tenant_id = $3 AND id = $4

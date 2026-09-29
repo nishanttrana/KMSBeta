@@ -11,11 +11,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/delegation"
 )
 
-// Keycore gives no public key: the key is created with an empty cache and the
-// public key request is refused with 424 public_key_unavailable and audited
-// as refused. Until 6.12.0-beta ekm returned, stored and audited as a success
+// Keycore gives no public key (409, e.g. a key with no public half): the key
+// is created with an empty cache and the public key request is refused with
+// 424 public_key_unavailable and audited as refused. Until 6.12.0-beta ekm returned, stored and audited as a success
 // "EKM-PUBLIC-" + a hash of tenant and key ID.
 func TestTDEPublicKeyUnavailableRefuses(t *testing.T) {
 	svc, store, keycore, pub := newEKMService(t)
@@ -156,5 +159,114 @@ func TestAgentStatusCarriesAssignedKeyAlgorithm(t *testing.T) {
 	if st.Agent.AssignedKeyID == "" || st.AssignedKeyAlgorithm != DefaultTDEAlgorithm {
 		raw, _ := json.Marshal(st)
 		t.Fatalf("status = %s, want assigned key algorithm %s", raw, DefaultTDEAlgorithm)
+	}
+}
+
+// Every read asks keycore: after a rotation the new version's key is served,
+// never the cached copy of the old one.
+func TestTDEPublicKeyFollowsRotation(t *testing.T) {
+	svc, store, _, _ := newEKMService(t)
+	ctx := context.Background()
+	key, err := svc.CreateTDEKey(ctx, CreateTDEKeyRequest{TenantID: "tenant-rot", Name: "rot"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v1, err := svc.GetTDEPublicKey(ctx, "tenant-rot", key.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RotateTDEKey(ctx, key.ID, RotateTDEKeyRequest{TenantID: "tenant-rot"}); err != nil {
+		t.Fatal(err)
+	}
+	stored, _ := store.GetTDEKey(ctx, "tenant-rot", key.ID)
+	v2, err := svc.GetTDEPublicKey(ctx, "tenant-rot", key.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2.KeyVersion != "v2" || v2.PublicKey == v1.PublicKey || stored.PublicKey != strings.TrimSpace(v2.PublicKey) {
+		t.Fatalf("after rotation: v1=%+v v2=%+v cached=%q", v1, v2, stored.PublicKey)
+	}
+}
+
+// Keycore's refusal of the user ekm acts for is passed on with its status
+// and reason, and audited as refused; nothing cached is served instead.
+func TestTDEPublicKeyKeycoreRefusalPassedOn(t *testing.T) {
+	svc, _, keycore, pub := newEKMService(t)
+	ctx := context.Background()
+	key, err := svc.CreateTDEKey(ctx, CreateTDEKeyRequest{TenantID: "tenant-rf", Name: "rf"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.PublicKey == "" {
+		t.Fatal("creation did not cache keycore's public key")
+	}
+	for _, refusal := range []*keycoreError{
+		{Status: http.StatusNotFound, Code: "not_found", Msg: "key not found"},
+		{Status: http.StatusForbidden, Code: "delegation_refused", Msg: "delegation_token_invalid"},
+	} {
+		keycore.refuse = refusal
+		_, err := svc.GetTDEPublicKey(ctx, "tenant-rf", key.ID)
+		var se serviceError
+		if !errors.As(err, &se) || se.HTTPStatus != refusal.Status || se.Code != refusal.Code {
+			t.Fatalf("err = %v, want %d %s", err, refusal.Status, refusal.Code)
+		}
+		if ev := pub.Last("audit.ekm.tde_key_accessed"); ev["result"] != "refused" || ev["reason"] != refusal.Code {
+			t.Fatalf("audit = %v, want refused %s", ev, refusal.Code)
+		}
+	}
+}
+
+// The request's verified token reaches the keycore call, so keycore decides
+// for the user (pkg/delegation), not for ekm.
+func TestTDEPublicKeyReadCarriesTheUsersToken(t *testing.T) {
+	h, svc, keycore, _ := newEKMHandler(t)
+	key, err := svc.CreateTDEKey(context.Background(), CreateTDEKeyRequest{TenantID: "tenant-h1", Name: "tok"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, authed(httptest.NewRequest(http.MethodGet, "/ekm/tde/keys/"+key.ID+"/public?tenant_id=tenant-h1", nil)))
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), "BEGIN PUBLIC KEY") {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if keycore.publicKeyToken != "jwt:tenant-h1:admin" {
+		t.Fatalf("keycore call carried token %q, want the caller's", keycore.publicKeyToken)
+	}
+}
+
+// The HTTP client reads keycore's real response and forwards the user's
+// token with usage "read"; a refusal keeps keycore's status and reason.
+func TestHTTPKeyCoreClientPublicKey(t *testing.T) {
+	const pemKey = "-----BEGIN PUBLIC KEY-----\nAAAA\n-----END PUBLIC KEY-----\n"
+	var gotToken, gotUsage, gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotToken, gotUsage, gotPath = r.Header.Get(delegation.HeaderToken), r.Header.Get(delegation.HeaderUsage), r.URL.RequestURI()
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "/denied/") {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"error":{"code":"delegation_refused","message":"delegation_token_invalid"}}`))
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"key_id": "k1", "version": 3, "algorithm": "RSA-3072", "format": "spki-pem", "public_key_pem": pemKey})
+	}))
+	defer srv.Close()
+	c := NewHTTPKeyCoreClient(srv.URL, time.Second)
+	user := &pkgauth.Claims{UserID: "alice", TenantID: "t1", Role: "operator"}
+	ctx := pkgauth.ContextWithVerifiedToken(pkgauth.ContextWithClaims(context.Background(), user), "alice-token")
+
+	pk, err := c.PublicKey(ctx, "t1", "k1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pk.Version != 3 || pk.Algorithm != "RSA-3072" || pk.PublicKeyPEM != pemKey || gotPath != "/keys/k1/public-key?tenant_id=t1" {
+		t.Fatalf("pk=%+v path=%s", pk, gotPath)
+	}
+	if gotToken != "alice-token" || gotUsage != "read" {
+		t.Fatalf("forwarded token=%q usage=%q", gotToken, gotUsage)
+	}
+	_, err = c.PublicKey(ctx, "t1", "denied/k2")
+	var kerr *keycoreError
+	if !errors.As(err, &kerr) || kerr.Status != http.StatusForbidden || kerr.Code != "delegation_refused" {
+		t.Fatalf("err = %v, want keycore's 403 delegation_refused", err)
 	}
 }

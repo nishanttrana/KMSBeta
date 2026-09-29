@@ -295,6 +295,17 @@ key type, size or curve, and the HSM's own `local`, `sensitive`,
 `extractable`, `never_extractable`, `always_sensitive` and usage flags; key
 values are never read). A key with no HSM versions answers `409 not_hsm_key`.
 
+`GET /svc/keycore/keys/{id}/public-key` (any verified identity; kernel
+event `audit.key.public_key_read`, details `algorithm`, `version`; 6.18.0-beta)
+returns the current version's public key: `key_id`, `version`, `algorithm`,
+`format: spki-pem` and `public_key_pem` (PEM SubjectPublicKeyInfo). The key
+must be visible to the caller (hidden or missing: `404 not_found`).
+Refused, `result: refused`: `409 not_asymmetric` (no public half),
+`409 key_deleted`, `409 spki_unavailable` (ML-KEM, ML-DSA and SLH-DSA
+public keys have no SPKI encoding here yet). A software key pair's public
+key is derived from its stored private key; an HSM key pair's is the one
+the HSM returned.
+
 `GET /svc/keycore/keys/{id}/consumers` (`key.usage.read`; kernel event
 `audit.key.key_consumers_read`, detail `consumers`) lists the key's callers
 from keycore's usage trail, which every successful crypto operation writes:
@@ -991,7 +1002,7 @@ answer for a destroyed key.
 **Key visibility (5.0.0-beta).** `GET /keys` and every per-key read
 (`GET /keys/{id}`, `/versions`, `/versions/{ver}`, `/kcv`, `/usage`,
 `/approval`, `/iv-log`, `/iv-log/{ref}`, `/rotation-metrics`, `/health`,
-`/consumers`, `/access-policy`, `/hsm`) return only keys the caller can
+`/consumers`, `/public-key`, `/access-policy`, `/hsm`) return only keys the caller can
 see: keys they created, keys an active grant gives them (directly or through
 a group; any operation, including the view-only `read`), keys their
 workload is bound to, or every key for tenant admins, service identities
@@ -1002,7 +1013,7 @@ not_found` as a missing one and emits `audit.key.access_refused`
 
 **Delegated key use (6.0.0-beta).** A platform service performing a user's
 request sends `X-Vecta-Delegated-Token` (the user's bearer token) and
-`X-Vecta-Key-Usage` (one of `encrypt`, `decrypt`, `wrap`, `unwrap`,
+`X-Vecta-Key-Usage` (one of `read`, `encrypt`, `decrypt`, `wrap`, `unwrap`,
 `export`, `sign`, `verify`, `mac`, `fpe-encrypt`, `fpe-decrypt`,
 `tokenize`, `detokenize`, `translate-wrap`, `translate-unwrap`,
 `translate-encrypt`, `translate-decrypt`, `certificate-sign`, `crl-sign`).
@@ -1010,7 +1021,9 @@ Keycore verifies the token, accepts it only from a service identity and for
 a user of the key's tenant, and decides key access as that user for that
 usage; otherwise `403 delegation_refused` with the reason. These headers are
 internal: Envoy removes them from outside requests. Grants accept the
-usages above as operations.
+usages above as operations. `read` is a per-key read (ekm's public-key
+read, 6.18.0-beta): it is decided by the user's view of the key, and on any
+key operation it is refused (`403`, `reason: delegation_usage_mismatch`).
 
 The actor is the verified token's. `updated_by` in `PUT
 /keys/{id}/access-policy` and `created_by` in `POST /access/groups` are
@@ -1598,7 +1611,7 @@ Audit:
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
-- `audit.ekm.tde_key_accessed` with `operation: public`, `result: refused`, `reason: public_key_unavailable` (EKM `424`: keycore holds no public key for the TDE key; 6.12.0-beta)
+- `audit.ekm.tde_key_accessed` with `operation: public`: `result: success` with `key_version`, or `result: refused` with `reason: public_key_unavailable` (EKM `424`: keycore gave no public key; 6.12.0-beta) or keycore's own refusal reason (`not_found`, `delegation_refused`, ...; 6.18.0-beta)
 - `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `import`, `rotate`, `sync`, same reasons, `result: refused`)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
@@ -3244,11 +3257,17 @@ only through `POST /ekm/tde/keys/{id}/wrap` and `/unwrap`. The agent
 settings `key_cache_enabled` and `key_cache_ttl_sec` (`KEY_CACHE_ENABLED`,
 `KEY_CACHE_TTL_SEC`) are gone and ignored if still set.
 
-**EKM TDE public key.** `GET /ekm/tde/keys/{id}/public` returns only the
-public key keycore holds for the key (`format: pem` or `opaque`). Without one
-it refuses with `424 public_key_unavailable` (`audit.ekm.tde_key_accessed`,
-`result: refused`); it no longer returns an `EKM-PUBLIC-` value derived from
-the tenant and key ID (6.12.0-beta). `GET /ekm/agents/{id}/status` carries
+**EKM TDE public key.** `GET /ekm/tde/keys/{id}/public` returns the key's
+current public key read from keycore's `GET /keys/{id}/public-key` on every
+call (`format: pem`, `key_version`), for the caller: ekm forwards the
+caller's verified token with usage `read`, so keycore decides by the user's
+view (6.18.0-beta). Keycore's refusal is returned with its status and reason
+(`403`, or `404` for a key the user can't see); any other failure is
+`424 public_key_unavailable`. Each is audited as
+`audit.ekm.tde_key_accessed`, `result: refused` with the reason. It no longer
+returns an `EKM-PUBLIC-` value derived from the tenant and key ID
+(6.12.0-beta). A rotation clears the stored copy and refreshes it from
+keycore. `GET /ekm/agents/{id}/status` carries
 `assigned_key_algorithm`, the algorithm of the agent's assigned TDE key.
 Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
 `/hyok/v1/health`) needs a verified token; changes need a tenant
@@ -3354,6 +3373,7 @@ Selected events with dedicated audit classification:
 - `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
+- `audit.key.public_key_read` (kernel event for `GET /keys/{id}/public-key`; details `algorithm`, `version`; refusals `not_asymmetric`, `key_deleted`, `spki_unavailable` and the kernel's own): an asymmetric key's public key read (6.18.0-beta)
 - `audit.audit.webhooks_listed`, `audit.audit.webhook_created`, `audit.audit.webhook_updated`, `audit.audit.webhook_deleted`, `audit.audit.webhook_tested`, `audit.audit.webhook_deliveries_listed` (kernel events; also refused with `reason: url_blocked`), `audit.audit.webhook_delivered` (every delivery, `result` success/failure), `audit.audit.webhook_credentials_sealed` / `audit.audit.webhook_credentials_seal_refused` (plaintext rows from before 1.25.0-beta), `audit.audit.webhook_migrated` / `audit.audit.webhook_migration_refused` (legacy streams moved into compliance connections, 2.10.0-beta; also refused on create/update with `connection_not_streamable`), `audit.audit.mek_exposure_recorded` and the `audit.audit.mek_*` master-key events: webhooks
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
@@ -4142,6 +4162,7 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/kem/decapsulate`
 - `POST /svc/keycore/keys/{id}/kem/encapsulate`
 - `POST /svc/keycore/keys/{id}/mac`
+- `GET /svc/keycore/keys/{id}/public-key`
 - `POST /svc/keycore/keys/{id}/rotate`
 - `GET /svc/keycore/keys/{id}/rotation-metrics`
 - `POST /svc/keycore/keys/{id}/rotation-metrics`

@@ -31,8 +31,11 @@ const (
 )
 
 // Usages a service may perform for a user. Each is a grant operation in
-// keycore and has an enforcement point in the service that names it.
+// keycore and has an enforcement point in the service that names it. "read"
+// is a per-key read (a public key): keycore decides it by the user's view of
+// the key and refuses it for any key operation.
 var Usages = map[string]bool{
+	"read":    true,
 	"encrypt": true, "decrypt": true, "wrap": true, "unwrap": true, "export": true,
 	"sign": true, "verify": true, "mac": true,
 	"fpe-encrypt": true, "fpe-decrypt": true,

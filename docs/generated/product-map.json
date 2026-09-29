@@ -5870,7 +5870,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRegisterAgent",
-      "line": 53,
+      "line": 55,
       "match_key": "ekm|POST|/ekm/agents/register",
       "method": "POST",
       "normalized_path": "/ekm/agents/register",
@@ -5885,7 +5885,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListAgents",
-      "line": 54,
+      "line": 56,
       "match_key": "ekm|GET|/ekm/agents",
       "method": "GET",
       "normalized_path": "/ekm/agents",
@@ -5900,7 +5900,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentStatus",
-      "line": 55,
+      "line": 57,
       "match_key": "ekm|GET|/ekm/agents/{param}/status",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/status",
@@ -5915,7 +5915,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentHealth",
-      "line": 56,
+      "line": 58,
       "match_key": "ekm|GET|/ekm/agents/{param}/health",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/health",
@@ -5930,7 +5930,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentLogs",
-      "line": 57,
+      "line": 59,
       "match_key": "ekm|GET|/ekm/agents/{param}/logs",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/logs",
@@ -5945,7 +5945,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentDeployPackage",
-      "line": 58,
+      "line": 60,
       "match_key": "ekm|GET|/ekm/agents/{param}/deploy",
       "method": "GET",
       "normalized_path": "/ekm/agents/{param}/deploy",
@@ -5960,7 +5960,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRotateAgent",
-      "line": 59,
+      "line": 61,
       "match_key": "ekm|POST|/ekm/agents/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/rotate",
@@ -5975,7 +5975,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteAgent",
-      "line": 60,
+      "line": 62,
       "match_key": "ekm|DELETE|/ekm/agents/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/agents/{param}",
@@ -5990,7 +5990,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentHeartbeat",
-      "line": 61,
+      "line": 63,
       "match_key": "ekm|POST|/ekm/agents/{param}/heartbeat",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/heartbeat",
@@ -6005,7 +6005,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleSDKOverview",
-      "line": 62,
+      "line": 64,
       "match_key": "ekm|GET|/ekm/sdk/overview",
       "method": "GET",
       "normalized_path": "/ekm/sdk/overview",
@@ -6020,7 +6020,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleSDKDownload",
-      "line": 63,
+      "line": 65,
       "match_key": "ekm|GET|/ekm/sdk/download",
       "method": "GET",
       "normalized_path": "/ekm/sdk/download",
@@ -6035,7 +6035,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRegisterBitLockerClient",
-      "line": 65,
+      "line": 67,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/register",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/register",
@@ -6050,7 +6050,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListBitLockerClients",
-      "line": 66,
+      "line": 68,
       "match_key": "ekm|GET|/ekm/bitlocker/clients",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients",
@@ -6065,7 +6065,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetBitLockerClient",
-      "line": 67,
+      "line": 69,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}",
@@ -6080,7 +6080,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerDeletePreview",
-      "line": 68,
+      "line": 70,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/delete-preview",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/delete-preview",
@@ -6095,7 +6095,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteBitLockerClient",
-      "line": 69,
+      "line": 71,
       "match_key": "ekm|DELETE|/ekm/bitlocker/clients/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/bitlocker/clients/{param}",
@@ -6110,7 +6110,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerHeartbeat",
-      "line": 70,
+      "line": 72,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/heartbeat",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/heartbeat",
@@ -6125,7 +6125,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleQueueBitLockerOperation",
-      "line": 71,
+      "line": 73,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/operations",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/operations",
@@ -6140,7 +6140,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListBitLockerJobs",
-      "line": 72,
+      "line": 74,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/jobs",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs",
@@ -6155,7 +6155,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handlePollBitLockerJob",
-      "line": 73,
+      "line": 75,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/jobs/next",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/next",
@@ -6170,7 +6170,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerJobResult",
-      "line": 74,
+      "line": 76,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/jobs/{param}/result",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/{param}/result",
@@ -6185,7 +6185,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListBitLockerRecovery",
-      "line": 75,
+      "line": 77,
       "match_key": "ekm|GET|/ekm/bitlocker/recovery",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/recovery",
@@ -6200,7 +6200,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerNetworkScan",
-      "line": 76,
+      "line": 78,
       "match_key": "ekm|POST|/ekm/bitlocker/network/scan",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/network/scan",
@@ -6215,7 +6215,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerDeployPackage",
-      "line": 77,
+      "line": 79,
       "match_key": "ekm|GET|/ekm/bitlocker/clients/{param}/deploy",
       "method": "GET",
       "normalized_path": "/ekm/bitlocker/clients/{param}/deploy",
@@ -6230,7 +6230,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateTDEKey",
-      "line": 79,
+      "line": 81,
       "match_key": "ekm|POST|/ekm/tde/keys",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys",
@@ -6245,7 +6245,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleWrapDEK",
-      "line": 80,
+      "line": 82,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/wrap",
@@ -6260,7 +6260,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleUnwrapDEK",
-      "line": 81,
+      "line": 83,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/unwrap",
@@ -6275,7 +6275,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRotateTDEKey",
-      "line": 82,
+      "line": 84,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/rotate",
@@ -6290,7 +6290,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetPublicKey",
-      "line": 83,
+      "line": 85,
       "match_key": "ekm|GET|/ekm/tde/keys/{param}/public",
       "method": "GET",
       "normalized_path": "/ekm/tde/keys/{param}/public",
@@ -6305,7 +6305,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRevokeTDEKey",
-      "line": 85,
+      "line": 87,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/revoke",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/revoke",
@@ -6320,7 +6320,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRegisterDatabase",
-      "line": 87,
+      "line": 89,
       "match_key": "ekm|POST|/ekm/databases",
       "method": "POST",
       "normalized_path": "/ekm/databases",
@@ -6335,7 +6335,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListDatabases",
-      "line": 88,
+      "line": 90,
       "match_key": "ekm|GET|/ekm/databases",
       "method": "GET",
       "normalized_path": "/ekm/databases",
@@ -6350,7 +6350,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetDatabase",
-      "line": 89,
+      "line": 91,
       "match_key": "ekm|GET|/ekm/databases/{param}",
       "method": "GET",
       "normalized_path": "/ekm/databases/{param}",
@@ -6365,7 +6365,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRevokeDatabaseTDE",
-      "line": 90,
+      "line": 92,
       "match_key": "ekm|POST|/ekm/databases/{param}/revoke-tde",
       "method": "POST",
       "normalized_path": "/ekm/databases/{param}/revoke-tde",
@@ -6380,7 +6380,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleValidateDeployment",
-      "line": 92,
+      "line": 94,
       "match_key": "ekm|POST|/ekm/agents/{param}/validate-deploy",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/validate-deploy",
@@ -6395,7 +6395,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateAzureConfig",
-      "line": 95,
+      "line": 97,
       "match_key": "ekm|POST|/ekm/azure/configs",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs",
@@ -6410,7 +6410,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListAzureConfigs",
-      "line": 96,
+      "line": 98,
       "match_key": "ekm|GET|/ekm/azure/configs",
       "method": "GET",
       "normalized_path": "/ekm/azure/configs",
@@ -6425,7 +6425,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetAzureConfig",
-      "line": 97,
+      "line": 99,
       "match_key": "ekm|GET|/ekm/azure/configs/{param}",
       "method": "GET",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -6440,7 +6440,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleUpdateAzureConfig",
-      "line": 98,
+      "line": 100,
       "match_key": "ekm|PUT|/ekm/azure/configs/{param}",
       "method": "PUT",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -6455,7 +6455,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteAzureConfig",
-      "line": 99,
+      "line": 101,
       "match_key": "ekm|DELETE|/ekm/azure/configs/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/azure/configs/{param}",
@@ -6470,7 +6470,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleTestAzureConnection",
-      "line": 100,
+      "line": 102,
       "match_key": "ekm|POST|/ekm/azure/configs/{param}/test",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs/{param}/test",
@@ -6485,7 +6485,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleSyncAzureKeys",
-      "line": 101,
+      "line": 103,
       "match_key": "ekm|POST|/ekm/azure/configs/{param}/sync",
       "method": "POST",
       "normalized_path": "/ekm/azure/configs/{param}/sync",
@@ -6500,7 +6500,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateAzureMapping",
-      "line": 102,
+      "line": 104,
       "match_key": "ekm|POST|/ekm/azure/mappings",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings",
@@ -6515,7 +6515,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListAzureMappings",
-      "line": 103,
+      "line": 105,
       "match_key": "ekm|GET|/ekm/azure/mappings",
       "method": "GET",
       "normalized_path": "/ekm/azure/mappings",
@@ -6530,7 +6530,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteAzureMapping",
-      "line": 104,
+      "line": 106,
       "match_key": "ekm|DELETE|/ekm/azure/mappings/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/azure/mappings/{param}",
@@ -6545,7 +6545,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleImportKeyToAzure",
-      "line": 105,
+      "line": 107,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/import",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/import",
@@ -6560,7 +6560,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRotateAzureKey",
-      "line": 106,
+      "line": 108,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/rotate",
@@ -6575,7 +6575,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAzureWrapKey",
-      "line": 107,
+      "line": 109,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/wrap",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/wrap",
@@ -6590,7 +6590,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAzureUnwrapKey",
-      "line": 108,
+      "line": 110,
       "match_key": "ekm|POST|/ekm/azure/mappings/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/azure/mappings/{param}/unwrap",
@@ -6605,7 +6605,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateGoogleCSEConfig",
-      "line": 111,
+      "line": 113,
       "match_key": "ekm|POST|/ekm/google-cse/configs",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/configs",
@@ -6620,7 +6620,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListGoogleCSEConfigs",
-      "line": 112,
+      "line": 114,
       "match_key": "ekm|GET|/ekm/google-cse/configs",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/configs",
@@ -6635,7 +6635,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetGoogleCSEConfig",
-      "line": 113,
+      "line": 115,
       "match_key": "ekm|GET|/ekm/google-cse/configs/{param}",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -6650,7 +6650,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleUpdateGoogleCSEConfig",
-      "line": 114,
+      "line": 116,
       "match_key": "ekm|PUT|/ekm/google-cse/configs/{param}",
       "method": "PUT",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -6665,7 +6665,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteGoogleCSEConfig",
-      "line": 115,
+      "line": 117,
       "match_key": "ekm|DELETE|/ekm/google-cse/configs/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -6680,7 +6680,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateGoogleCSEKey",
-      "line": 116,
+      "line": 118,
       "match_key": "ekm|POST|/ekm/google-cse/keys",
       "method": "POST",
       "normalized_path": "/ekm/google-cse/keys",
@@ -6695,7 +6695,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListGoogleCSEKeys",
-      "line": 117,
+      "line": 119,
       "match_key": "ekm|GET|/ekm/google-cse/keys",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/keys",
@@ -6710,7 +6710,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleDeleteGoogleCSEKey",
-      "line": 118,
+      "line": 120,
       "match_key": "ekm|DELETE|/ekm/google-cse/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/ekm/google-cse/keys/{param}",
@@ -6725,7 +6725,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSStatus",
-      "line": 121,
+      "line": 123,
       "match_key": "ekm|GET|/ekm/kacls/status",
       "method": "GET",
       "normalized_path": "/ekm/kacls/status",
@@ -6740,7 +6740,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSWrap",
-      "line": 122,
+      "line": 124,
       "match_key": "ekm|POST|/ekm/kacls/wrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/wrap",
@@ -6755,7 +6755,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSUnwrap",
-      "line": 123,
+      "line": 125,
       "match_key": "ekm|POST|/ekm/kacls/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/unwrap",
@@ -6770,7 +6770,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSPrivilegedUnwrap",
-      "line": 124,
+      "line": 126,
       "match_key": "ekm|POST|/ekm/kacls/privilegedunwrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/privilegedunwrap",
@@ -8105,7 +8105,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 232,
+      "line": 233,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -8120,7 +8120,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 233,
+      "line": 234,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -8135,7 +8135,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 234,
+      "line": 235,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -8150,7 +8150,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMEncapsulate",
-      "line": 235,
+      "line": 236,
       "match_key": "keycore|POST|/keys/{param}/kem/encapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/encapsulate",
@@ -8165,7 +8165,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleKEMDecapsulate",
-      "line": 236,
+      "line": 237,
       "match_key": "keycore|POST|/keys/{param}/kem/decapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/decapsulate",
@@ -8180,7 +8180,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleHash",
-      "line": 237,
+      "line": 238,
       "match_key": "keycore|POST|/crypto/hash",
       "method": "POST",
       "normalized_path": "/crypto/hash",
@@ -8195,7 +8195,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRandom",
-      "line": 238,
+      "line": 239,
       "match_key": "keycore|POST|/crypto/random",
       "method": "POST",
       "normalized_path": "/crypto/random",
@@ -8210,7 +8210,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 249,
+      "line": 250,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -8225,7 +8225,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 252,
+      "line": 253,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -8240,7 +8240,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 253,
+      "line": 254,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -8255,7 +8255,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 256,
+      "line": 257,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -8270,7 +8270,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 262,
+      "line": 263,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -8285,7 +8285,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 268,
+      "line": 269,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -10303,6 +10303,21 @@
       "permission": "key.inventory.read",
       "registration": "kernel",
       "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
+      "action": "public_key_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/public_key.go",
+      "handler": "h.getPublicKey",
+      "line": 38,
+      "match_key": "keycore|GET|/keys/{param}/public-key",
+      "method": "GET",
+      "normalized_path": "/keys/{param}/public-key",
+      "path": "/keys/{id}/public-key",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "key",
       "service": "keycore"
     },
     {
@@ -16072,7 +16087,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleAgentHeartbeat",
-      "line": 61,
+      "line": 63,
       "match_key": "ekm|POST|/ekm/agents/{param}/heartbeat",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/heartbeat",
@@ -16087,7 +16102,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerHeartbeat",
-      "line": 70,
+      "line": 72,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/heartbeat",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/heartbeat",
@@ -16102,7 +16117,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handlePollBitLockerJob",
-      "line": 73,
+      "line": 75,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/jobs/next",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/next",
@@ -16117,7 +16132,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleBitLockerJobResult",
-      "line": 74,
+      "line": 76,
       "match_key": "ekm|POST|/ekm/bitlocker/clients/{param}/jobs/{param}/result",
       "method": "POST",
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/{param}/result",
@@ -16132,7 +16147,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleCreateTDEKey",
-      "line": 79,
+      "line": 81,
       "match_key": "ekm|POST|/ekm/tde/keys",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys",
@@ -16147,7 +16162,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleWrapDEK",
-      "line": 80,
+      "line": 82,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/wrap",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/wrap",
@@ -16162,7 +16177,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleUnwrapDEK",
-      "line": 81,
+      "line": 83,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/unwrap",
@@ -16177,7 +16192,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleRotateTDEKey",
-      "line": 82,
+      "line": 84,
       "match_key": "ekm|POST|/ekm/tde/keys/{param}/rotate",
       "method": "POST",
       "normalized_path": "/ekm/tde/keys/{param}/rotate",
@@ -16192,7 +16207,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetPublicKey",
-      "line": 83,
+      "line": 85,
       "match_key": "ekm|GET|/ekm/tde/keys/{param}/public",
       "method": "GET",
       "normalized_path": "/ekm/tde/keys/{param}/public",
@@ -16207,7 +16222,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListDatabases",
-      "line": 88,
+      "line": 90,
       "match_key": "ekm|GET|/ekm/databases",
       "method": "GET",
       "normalized_path": "/ekm/databases",
@@ -16222,7 +16237,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetDatabase",
-      "line": 89,
+      "line": 91,
       "match_key": "ekm|GET|/ekm/databases/{param}",
       "method": "GET",
       "normalized_path": "/ekm/databases/{param}",
@@ -16237,7 +16252,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleValidateDeployment",
-      "line": 92,
+      "line": 94,
       "match_key": "ekm|POST|/ekm/agents/{param}/validate-deploy",
       "method": "POST",
       "normalized_path": "/ekm/agents/{param}/validate-deploy",
@@ -16252,7 +16267,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleGetGoogleCSEConfig",
-      "line": 113,
+      "line": 115,
       "match_key": "ekm|GET|/ekm/google-cse/configs/{param}",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/configs/{param}",
@@ -16267,7 +16282,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleListGoogleCSEKeys",
-      "line": 117,
+      "line": 119,
       "match_key": "ekm|GET|/ekm/google-cse/keys",
       "method": "GET",
       "normalized_path": "/ekm/google-cse/keys",
@@ -16282,7 +16297,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSStatus",
-      "line": 121,
+      "line": 123,
       "match_key": "ekm|GET|/ekm/kacls/status",
       "method": "GET",
       "normalized_path": "/ekm/kacls/status",
@@ -16297,7 +16312,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSWrap",
-      "line": 122,
+      "line": 124,
       "match_key": "ekm|POST|/ekm/kacls/wrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/wrap",
@@ -16312,7 +16327,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSUnwrap",
-      "line": 123,
+      "line": 125,
       "match_key": "ekm|POST|/ekm/kacls/unwrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/unwrap",
@@ -16327,7 +16342,7 @@
       "code_scope": "ekm",
       "file": "services/ekm/handler.go",
       "handler": "h.handleKACLSPrivilegedUnwrap",
-      "line": 124,
+      "line": 126,
       "match_key": "ekm|POST|/ekm/kacls/privilegedunwrap",
       "method": "POST",
       "normalized_path": "/ekm/kacls/privilegedunwrap",
@@ -16987,7 +17002,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterJoinKey",
-      "line": 232,
+      "line": 233,
       "match_key": "keycore|POST|/cluster/mek/join-key",
       "method": "POST",
       "normalized_path": "/cluster/mek/join-key",
@@ -17002,7 +17017,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKExport",
-      "line": 233,
+      "line": 234,
       "match_key": "keycore|POST|/cluster/mek/export",
       "method": "POST",
       "normalized_path": "/cluster/mek/export",
@@ -17017,7 +17032,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleClusterMEKImport",
-      "line": 234,
+      "line": 235,
       "match_key": "keycore|POST|/cluster/mek/import",
       "method": "POST",
       "normalized_path": "/cluster/mek/import",
@@ -17032,7 +17047,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleListKeyRotationMetrics)",
-      "line": 249,
+      "line": 250,
       "match_key": "keycore|GET|/keys/{param}/rotation-metrics",
       "method": "GET",
       "normalized_path": "/keys/{param}/rotation-metrics",
@@ -17047,7 +17062,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.visibleKeyRoute(h.handleGetKeyHealth)",
-      "line": 252,
+      "line": 253,
       "match_key": "keycore|GET|/keys/{param}/health",
       "method": "GET",
       "normalized_path": "/keys/{param}/health",
@@ -17062,7 +17077,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleGetAlgorithmBenchmarks",
-      "line": 253,
+      "line": 254,
       "match_key": "keycore|GET|/analytics/algorithms",
       "method": "GET",
       "normalized_path": "/analytics/algorithms",
@@ -17077,7 +17092,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleAttestationPublicKey",
-      "line": 256,
+      "line": 257,
       "match_key": "keycore|GET|/attestation/public-key",
       "method": "GET",
       "normalized_path": "/attestation/public-key",
@@ -17092,7 +17107,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "h.handleRNGHealth",
-      "line": 262,
+      "line": 263,
       "match_key": "keycore|GET|/fips/rng-health",
       "method": "GET",
       "normalized_path": "/fips/rng-health",
@@ -17107,7 +17122,7 @@
       "code_scope": "keycore",
       "file": "services/keycore/handler.go",
       "handler": "internalauth.RequireToken(h.handleDueForLifecycle)",
-      "line": 268,
+      "line": 269,
       "match_key": "keycore|GET|/keys/due-for-lifecycle",
       "method": "GET",
       "normalized_path": "/keys/due-for-lifecycle",
@@ -23371,7 +23386,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "void refreshKeyInventory()} style={{height:40,padding:\"0 16px\",borderRadius:1...",
-      "line": 1781,
+      "line": 1803,
       "tabs": [
         "keys"
       ],
@@ -23381,7 +23396,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} primary style={ } > Create Key",
-      "line": 1784,
+      "line": 1806,
       "tabs": [
         "keys"
       ],
@@ -23391,7 +23406,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"form-key\")} style={{height:40,padding:\"0 20px\",borderRadius:10,font...",
-      "line": 1791,
+      "line": 1813,
       "tabs": [
         "keys"
       ],
@@ -23401,7 +23416,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={{height:40,padding:\"0 20px\",borderRadius:10,fontSize:12,fontWeight:7...",
-      "line": 1794,
+      "line": 1816,
       "tabs": [
         "keys"
       ],
@@ -23411,7 +23426,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"generate-pqc\")} style={{height:40,padding:\"0 20px\",borderRadius:10,...",
-      "line": 1797,
+      "line": 1819,
       "tabs": [
         "keys"
       ],
@@ -23421,7 +23436,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(\"canary\")} style={{height:40,padding:\"0 20px\",borderRadius:10,fontSi...",
-      "line": 1800,
+      "line": 1822,
       "tabs": [
         "keys"
       ],
@@ -23431,7 +23446,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const next=!showColumnMenu; if(next) setShowColumnMenu...",
-      "line": 1810,
+      "line": 1832,
       "tabs": [
         "keys"
       ],
@@ -23441,7 +23456,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{ e.stopPropagation(); const isOpen=openActionMenuId===k.id; if(isOpen) const...",
-      "line": 1938,
+      "line": 1960,
       "tabs": [
         "keys"
       ],
@@ -23451,26 +23466,6 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Edit Key Policy",
-      "line": 1980,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "} style={ } > Rotate",
-      "line": 1989,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "} style={ } > Verify Integrity",
       "line": 2002,
       "tabs": [
         "keys"
@@ -23480,8 +23475,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "} style={ } > Attest",
-      "line": 2008,
+      "label": "} style={ } > Rotate",
+      "line": 2011,
       "tabs": [
         "keys"
       ],
@@ -23490,17 +23485,7 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
-      "label": "} disabled= style={ } > Deactivate",
-      "line": 2014,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "} disabled= style={ } > Activate",
+      "label": "} style={ } > Verify Integrity",
       "line": 2024,
       "tabs": [
         "keys"
@@ -23510,8 +23495,38 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
+      "label": "} style={ } > Attest",
+      "line": 2030,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
+      "label": "} disabled= style={ } > Deactivate",
+      "line": 2036,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
+      "label": "} disabled= style={ } > Activate",
+      "line": 2046,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
       "label": "} disabled= style={ } > Disable",
-      "line": 2034,
+      "line": 2056,
       "tabs": [
         "keys"
       ],
@@ -23521,7 +23536,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Export",
-      "line": 2044,
+      "line": 2066,
       "tabs": [
         "keys"
       ],
@@ -23531,7 +23546,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "} style={ } > Delete",
-      "line": 2057,
+      "line": 2079,
       "tabs": [
         "keys"
       ],
@@ -23541,7 +23556,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 2090,
+      "line": 2112,
       "tabs": [
         "keys"
       ],
@@ -23551,7 +23566,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next",
-      "line": 2092,
+      "line": 2114,
       "tabs": [
         "keys"
       ],
@@ -23561,7 +23576,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setCreateTags((prev)=>prev.filter((t)=>t!==tag))} style={ } >",
-      "line": 2213,
+      "line": 2235,
       "tabs": [
         "keys"
       ],
@@ -23571,7 +23586,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags",
-      "line": 2223,
+      "line": 2245,
       "tabs": [
         "keys"
       ],
@@ -23581,7 +23596,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2241,
+      "line": 2263,
       "tabs": [
         "keys"
       ],
@@ -23591,7 +23606,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addCustomerKey} disabled={creating",
       "label": "(icon or dynamic label)",
-      "line": 2242,
+      "line": 2264,
       "tabs": [
         "keys"
       ],
@@ -23601,7 +23616,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2363,
+      "line": 2385,
       "tabs": [
         "keys"
       ],
@@ -23611,7 +23626,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitFormKey} disabled={forming",
       "label": "(icon or dynamic label)",
-      "line": 2364,
+      "line": 2386,
       "tabs": [
         "keys"
       ],
@@ -23621,7 +23636,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2470,
+      "line": 2492,
       "tabs": [
         "keys"
       ],
@@ -23631,7 +23646,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "submitImportKey} disabled={importing",
       "label": "(icon or dynamic label)",
-      "line": 2471,
+      "line": 2493,
       "tabs": [
         "keys"
       ],
@@ -23641,7 +23656,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"deactivated\")} disabled= >",
-      "line": 2529,
+      "line": 2551,
       "tabs": [
         "keys"
       ],
@@ -23651,7 +23666,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"active\")} disabled= >",
-      "line": 2530,
+      "line": 2552,
       "tabs": [
         "keys"
       ],
@@ -23661,16 +23676,6 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(comp,\"disabled\")} disabled= >",
-      "line": 2531,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "}> Rotate",
       "line": 2553,
       "tabs": [
         "keys"
@@ -23680,8 +23685,28 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
+      "label": "}> Rotate",
+      "line": 2575,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
       "label": "}> Export",
-      "line": 2554,
+      "line": 2576,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "downloadSelectedPublicKey",
+      "label": "Public key (PEM)",
+      "line": 2577,
       "tabs": [
         "keys"
       ],
@@ -23691,7 +23716,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "openPolicyEditor(selectedKey)}>Edit Key Policy",
-      "line": 2555,
+      "line": 2578,
       "tabs": [
         "keys"
       ],
@@ -23701,7 +23726,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"deactivated\")} disabled= >",
-      "line": 2556,
+      "line": 2579,
       "tabs": [
         "keys"
       ],
@@ -23711,7 +23736,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"active\")} disabled= >",
-      "line": 2557,
+      "line": 2580,
       "tabs": [
         "keys"
       ],
@@ -23721,7 +23746,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "updateKeyStatus(selectedKey,\"disabled\")} disabled= >",
-      "line": 2558,
+      "line": 2581,
       "tabs": [
         "keys"
       ],
@@ -23731,7 +23756,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "}> Delete",
-      "line": 2559,
+      "line": 2582,
       "tabs": [
         "keys"
       ],
@@ -23741,7 +23766,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "addPolicyGrant",
       "label": "Add Assignment",
-      "line": 2625,
+      "line": 2648,
       "tabs": [
         "keys"
       ],
@@ -23751,26 +23776,6 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "removePolicyGrant(subjectType,subjectID)}>Remove",
-      "line": 2647,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "",
-      "label": "setModal(null)}>Cancel",
-      "line": 2669,
-      "tabs": [
-        "keys"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
-      "handler": "saveKeyPolicy} disabled={policySaving",
-      "label": "(icon or dynamic label)",
       "line": 2670,
       "tabs": [
         "keys"
@@ -23781,7 +23786,27 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2687,
+      "line": 2692,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "saveKeyPolicy} disabled={policySaving",
+      "label": "(icon or dynamic label)",
+      "line": 2693,
+      "tabs": [
+        "keys"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
+      "handler": "",
+      "label": "setModal(null)}>Cancel",
+      "line": 2710,
       "tabs": [
         "keys"
       ],
@@ -23791,7 +23816,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "rotateSelectedKey} disabled={rotating",
       "label": "(icon or dynamic label)",
-      "line": 2687,
+      "line": 2710,
       "tabs": [
         "keys"
       ],
@@ -23801,7 +23826,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2717,
+      "line": 2740,
       "tabs": [
         "keys"
       ],
@@ -23811,7 +23836,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "exportSelectedKey} disabled={exporting",
       "label": "(icon or dynamic label)",
-      "line": 2718,
+      "line": 2741,
       "tabs": [
         "keys"
       ],
@@ -23821,7 +23846,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2743,
+      "line": 2766,
       "tabs": [
         "keys"
       ],
@@ -23831,7 +23856,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "destroySelectedKey} disabled={!destroyReady",
       "label": "(icon or dynamic label)",
-      "line": 2744,
+      "line": 2767,
       "tabs": [
         "keys"
       ],
@@ -23841,7 +23866,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setModal(null)}>Cancel",
-      "line": 2766,
+      "line": 2789,
       "tabs": [
         "keys"
       ],
@@ -23851,7 +23876,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "generatePQCKey} disabled={pqcGenerating",
       "label": "(icon or dynamic label)",
-      "line": 2766,
+      "line": 2789,
       "tabs": [
         "keys"
       ],
@@ -23861,7 +23886,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "setAttestResult(null)}>Close",
-      "line": 2772,
+      "line": 2795,
       "tabs": [
         "keys"
       ],
@@ -23871,7 +23896,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "{const b=new Blob([JSON.stringify(attestResult,null,2)], );const a=document.c...",
-      "line": 2779,
+      "line": 2802,
       "tabs": [
         "keys"
       ],
@@ -23881,7 +23906,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "handler": "",
       "label": "navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy",
-      "line": 2780,
+      "line": 2803,
       "tabs": [
         "keys"
       ],
@@ -31548,9 +31573,22 @@
     },
     {
       "dynamic": true,
+      "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/public-key?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+      "file": "web/dashboard/src/lib/keycore.ts",
+      "line": 1083,
+      "match_key": "keycore|GET|/keys/{param}/public-key",
+      "method": "GET",
+      "normalized_path": "/keys/{param}/public-key",
+      "path": "/keys/{param}/public-key?tenant_id={param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "keycore.apiRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1076,
+      "line": 1094,
       "match_key": "keycore|POST|/keys/{param}/destroy",
       "method": "POST",
       "normalized_path": "/keys/{param}/destroy",
@@ -31563,7 +31601,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1087,
+      "line": 1105,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31576,7 +31614,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1099,
+      "line": 1117,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31589,7 +31627,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1113,
+      "line": 1131,
       "match_key": "keycore|POST|/keys/{param}/deactivate",
       "method": "POST",
       "normalized_path": "/keys/{param}/deactivate",
@@ -31602,7 +31640,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1121,
+      "line": 1139,
       "match_key": "keycore|POST|/keys/{param}/disable",
       "method": "POST",
       "normalized_path": "/keys/{param}/disable",
@@ -31615,7 +31653,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1134,
+      "line": 1152,
       "match_key": "keycore|PUT|/keys/{param}/usage/limit",
       "method": "PUT",
       "normalized_path": "/keys/{param}/usage/limit",
@@ -31628,7 +31666,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1152,
+      "line": 1170,
       "match_key": "keycore|PUT|/keys/{param}/export-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/export-policy",
@@ -31641,7 +31679,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1168,
+      "line": 1186,
       "match_key": "keycore|GET|/keys/{param}/access-policy",
       "method": "GET",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31654,7 +31692,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1181,
+      "line": 1199,
       "match_key": "keycore|PUT|/keys/{param}/access-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31667,7 +31705,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1192,
+      "line": 1210,
       "match_key": "keycore|GET|/access/settings",
       "method": "GET",
       "normalized_path": "/access/settings",
@@ -31680,7 +31718,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1203,
+      "line": 1221,
       "match_key": "keycore|PUT|/access/settings",
       "method": "PUT",
       "normalized_path": "/access/settings",
@@ -31693,7 +31731,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1219,
+      "line": 1237,
       "match_key": "keycore|GET|/access/interface-policies",
       "method": "GET",
       "normalized_path": "/access/interface-policies",
@@ -31706,7 +31744,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1230,
+      "line": 1248,
       "match_key": "keycore|POST|/access/interface-policies",
       "method": "POST",
       "normalized_path": "/access/interface-policies",
@@ -31719,7 +31757,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1242,
+      "line": 1260,
       "match_key": "keycore|DELETE|/access/interface-policies/{param}",
       "method": "DELETE",
       "normalized_path": "/access/interface-policies/{param}",
@@ -31732,7 +31770,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1250,
+      "line": 1268,
       "match_key": "keycore|GET|/access/groups",
       "method": "GET",
       "normalized_path": "/access/groups",
@@ -31745,7 +31783,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1261,
+      "line": 1279,
       "match_key": "keycore|POST|/access/groups",
       "method": "POST",
       "normalized_path": "/access/groups",
@@ -31758,7 +31796,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1276,
+      "line": 1294,
       "match_key": "keycore|DELETE|/access/groups/{param}",
       "method": "DELETE",
       "normalized_path": "/access/groups/{param}",
@@ -31771,7 +31809,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1288,
+      "line": 1306,
       "match_key": "keycore|PUT|/access/groups/{param}/members",
       "method": "PUT",
       "normalized_path": "/access/groups/{param}/members",
@@ -31784,7 +31822,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1301,
+      "line": 1319,
       "match_key": "keycore|GET|/tags",
       "method": "GET",
       "normalized_path": "/tags",
@@ -31797,7 +31835,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1313,
+      "line": 1331,
       "match_key": "keycore|POST|/tags",
       "method": "POST",
       "normalized_path": "/tags",
@@ -31810,7 +31848,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1328,
+      "line": 1346,
       "match_key": "keycore|DELETE|/tags/{param}",
       "method": "DELETE",
       "normalized_path": "/tags/{param}",
@@ -31823,7 +31861,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1359,
+      "line": 1377,
       "match_key": "keycore|GET|/canary/keys",
       "method": "GET",
       "normalized_path": "/canary/keys",
@@ -31836,7 +31874,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/canary/keys\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1364,
+      "line": 1382,
       "match_key": "keycore|POST|/canary/keys",
       "method": "POST",
       "normalized_path": "/canary/keys",
@@ -31849,7 +31887,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1372,
+      "line": 1390,
       "match_key": "keycore|DELETE|/canary/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/canary/keys/{param}",
@@ -31862,7 +31900,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1376,
+      "line": 1394,
       "match_key": "keycore|GET|/canary/keys/{param}/trips",
       "method": "GET",
       "normalized_path": "/canary/keys/{param}/trips",
@@ -33848,7 +33886,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T18:24:53Z",
+  "generated_at": "2026-09-29T18:34:54Z",
   "navigation": [
     {
       "group": "Overview",
@@ -58006,7 +58044,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 155,
+      "handler_line": 157,
       "handler_name": "handleRegisterAgent",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58017,7 +58055,7 @@
       "normalized_path": "/ekm/agents/register",
       "path": "/ekm/agents/register",
       "route_file": "services/ekm/handler.go",
-      "route_line": 53,
+      "route_line": 55,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -58099,7 +58137,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 180,
+      "handler_line": 182,
       "handler_name": "handleListAgents",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58110,7 +58148,7 @@
       "normalized_path": "/ekm/agents",
       "path": "/ekm/agents",
       "route_file": "services/ekm/handler.go",
-      "route_line": 54,
+      "route_line": 56,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -58164,7 +58202,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 195,
+      "handler_line": 197,
       "handler_name": "handleAgentStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58175,7 +58213,7 @@
       "normalized_path": "/ekm/agents/{param}/status",
       "path": "/ekm/agents/{id}/status",
       "route_file": "services/ekm/handler.go",
-      "route_line": 55,
+      "route_line": 57,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -58241,7 +58279,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 210,
+      "handler_line": 212,
       "handler_name": "handleAgentHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58252,7 +58290,7 @@
       "normalized_path": "/ekm/agents/{param}/health",
       "path": "/ekm/agents/{id}/health",
       "route_file": "services/ekm/handler.go",
-      "route_line": 56,
+      "route_line": 58,
       "service": "ekm",
       "service_external_package_calls": [
         "fmt.Sprintf",
@@ -58291,7 +58329,7 @@
             "normalizeAgentStatus"
           ],
           "internal_package_calls": [],
-          "line": 906,
+          "line": 898,
           "name": "GetAgentHealth",
           "receiver_calls": [],
           "store_calls": [
@@ -58327,7 +58365,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 225,
+      "handler_line": 227,
       "handler_name": "handleAgentLogs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58338,7 +58376,7 @@
       "normalized_path": "/ekm/agents/{param}/logs",
       "path": "/ekm/agents/{id}/logs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 57,
+      "route_line": 59,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -58361,7 +58399,7 @@
             "ListKeyAccessByAgent"
           ],
           "internal_package_calls": [],
-          "line": 989,
+          "line": 981,
           "name": "ListAgentLogs",
           "receiver_calls": [],
           "store_calls": [
@@ -58398,7 +58436,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 286,
+      "handler_line": 288,
       "handler_name": "handleAgentDeployPackage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58409,7 +58447,7 @@
       "normalized_path": "/ekm/agents/{param}/deploy",
       "path": "/ekm/agents/{id}/deploy",
       "route_file": "services/ekm/handler.go",
-      "route_line": 58,
+      "route_line": 60,
       "service": "ekm",
       "service_external_package_calls": [
         "fmt.Sprintf",
@@ -58454,7 +58492,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1161,
+          "line": 1153,
           "name": "BuildAgentDeployPackage",
           "receiver_calls": [],
           "store_calls": [
@@ -58490,7 +58528,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 246,
+      "handler_line": 248,
       "handler_name": "handleRotateAgent",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58501,7 +58539,7 @@
       "normalized_path": "/ekm/agents/{param}/rotate",
       "path": "/ekm/agents/{id}/rotate",
       "route_file": "services/ekm/handler.go",
-      "route_line": 59,
+      "route_line": 61,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -58530,7 +58568,7 @@
             "BumpAgentConfigVersion"
           ],
           "internal_package_calls": [],
-          "line": 1001,
+          "line": 993,
           "name": "RotateAgentAssignedKey",
           "receiver_calls": [],
           "store_calls": [
@@ -58570,7 +58608,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 266,
+      "handler_line": 268,
       "handler_name": "handleDeleteAgent",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58581,7 +58619,7 @@
       "normalized_path": "/ekm/agents/{param}",
       "path": "/ekm/agents/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 60,
+      "route_line": 62,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -58620,7 +58658,7 @@
             "PurgeAgent"
           ],
           "internal_package_calls": [],
-          "line": 1038,
+          "line": 1030,
           "name": "DeleteAgent",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -58659,7 +58697,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 302,
+      "handler_line": 304,
       "handler_name": "handleAgentHeartbeat",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58670,7 +58708,7 @@
       "normalized_path": "/ekm/agents/{param}/heartbeat",
       "path": "/ekm/agents/{id}/heartbeat",
       "route_file": "services/ekm/handler.go",
-      "route_line": 61,
+      "route_line": 63,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -58742,7 +58780,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 323,
+      "handler_line": 325,
       "handler_name": "handleSDKOverview",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58753,7 +58791,7 @@
       "normalized_path": "/ekm/sdk/overview",
       "path": "/ekm/sdk/overview",
       "route_file": "services/ekm/handler.go",
-      "route_line": 62,
+      "route_line": 64,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -58811,7 +58849,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 341,
+      "handler_line": 343,
       "handler_name": "handleSDKDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58822,7 +58860,7 @@
       "normalized_path": "/ekm/sdk/download",
       "path": "/ekm/sdk/download",
       "route_file": "services/ekm/handler.go",
-      "route_line": 63,
+      "route_line": 65,
       "service": "ekm",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -58887,7 +58925,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 361,
+      "handler_line": 363,
       "handler_name": "handleRegisterBitLockerClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58898,7 +58936,7 @@
       "normalized_path": "/ekm/bitlocker/clients/register",
       "path": "/ekm/bitlocker/clients/register",
       "route_file": "services/ekm/handler.go",
-      "route_line": 65,
+      "route_line": 67,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -58977,7 +59015,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 382,
+      "handler_line": 384,
       "handler_name": "handleListBitLockerClients",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -58988,7 +59026,7 @@
       "normalized_path": "/ekm/bitlocker/clients",
       "path": "/ekm/bitlocker/clients",
       "route_file": "services/ekm/handler.go",
-      "route_line": 66,
+      "route_line": 68,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -59042,7 +59080,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 403,
+      "handler_line": 405,
       "handler_name": "handleGetBitLockerClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59053,7 +59091,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}",
       "path": "/ekm/bitlocker/clients/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 67,
+      "route_line": 69,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -59107,7 +59145,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 418,
+      "handler_line": 420,
       "handler_name": "handleBitLockerDeletePreview",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59118,7 +59156,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/delete-preview",
       "path": "/ekm/bitlocker/clients/{id}/delete-preview",
       "route_file": "services/ekm/handler.go",
-      "route_line": 68,
+      "route_line": 70,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -59187,7 +59225,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 433,
+      "handler_line": 435,
       "handler_name": "handleDeleteBitLockerClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59198,7 +59236,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}",
       "path": "/ekm/bitlocker/clients/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 69,
+      "route_line": 71,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -59264,7 +59302,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 454,
+      "handler_line": 456,
       "handler_name": "handleBitLockerHeartbeat",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59275,7 +59313,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/heartbeat",
       "path": "/ekm/bitlocker/clients/{id}/heartbeat",
       "route_file": "services/ekm/handler.go",
-      "route_line": 70,
+      "route_line": 72,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -59354,7 +59392,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 475,
+      "handler_line": 477,
       "handler_name": "handleQueueBitLockerOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59365,7 +59403,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/operations",
       "path": "/ekm/bitlocker/clients/{id}/operations",
       "route_file": "services/ekm/handler.go",
-      "route_line": 71,
+      "route_line": 73,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -59442,7 +59480,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 496,
+      "handler_line": 498,
       "handler_name": "handleListBitLockerJobs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59453,7 +59491,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs",
       "path": "/ekm/bitlocker/clients/{id}/jobs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 72,
+      "route_line": 74,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -59498,7 +59536,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 517,
+      "handler_line": 519,
       "handler_name": "handlePollBitLockerJob",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59509,7 +59547,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/next",
       "path": "/ekm/bitlocker/clients/{id}/jobs/next",
       "route_file": "services/ekm/handler.go",
-      "route_line": 73,
+      "route_line": 75,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -59569,7 +59607,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 532,
+      "handler_line": 534,
       "handler_name": "handleBitLockerJobResult",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59580,7 +59618,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/jobs/{param}/result",
       "path": "/ekm/bitlocker/clients/{id}/jobs/{job_id}/result",
       "route_file": "services/ekm/handler.go",
-      "route_line": 74,
+      "route_line": 76,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -59683,7 +59721,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 553,
+      "handler_line": 555,
       "handler_name": "handleListBitLockerRecovery",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59694,7 +59732,7 @@
       "normalized_path": "/ekm/bitlocker/recovery",
       "path": "/ekm/bitlocker/recovery",
       "route_file": "services/ekm/handler.go",
-      "route_line": 75,
+      "route_line": 77,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -59749,7 +59787,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 575,
+      "handler_line": 577,
       "handler_name": "handleBitLockerNetworkScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59760,7 +59798,7 @@
       "normalized_path": "/ekm/bitlocker/network/scan",
       "path": "/ekm/bitlocker/network/scan",
       "route_file": "services/ekm/handler.go",
-      "route_line": 76,
+      "route_line": 78,
       "service": "ekm",
       "service_external_package_calls": [
         "sort.Slice",
@@ -59828,7 +59866,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 596,
+      "handler_line": 598,
       "handler_name": "handleBitLockerDeployPackage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59839,7 +59877,7 @@
       "normalized_path": "/ekm/bitlocker/clients/{param}/deploy",
       "path": "/ekm/bitlocker/clients/{id}/deploy",
       "route_file": "services/ekm/handler.go",
-      "route_line": 77,
+      "route_line": 79,
       "service": "ekm",
       "service_external_package_calls": [
         "encoding/json.MarshalIndent",
@@ -59901,7 +59939,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 612,
+      "handler_line": 614,
       "handler_name": "handleCreateTDEKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59912,7 +59950,7 @@
       "normalized_path": "/ekm/tde/keys",
       "path": "/ekm/tde/keys",
       "route_file": "services/ekm/handler.go",
-      "route_line": 79,
+      "route_line": 81,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -59960,7 +59998,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 633,
+      "handler_line": 635,
       "handler_name": "handleWrapDEK",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -59971,7 +60009,7 @@
       "normalized_path": "/ekm/tde/keys/{param}/wrap",
       "path": "/ekm/tde/keys/{id}/wrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 80,
+      "route_line": 82,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -60024,7 +60062,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 493,
+          "line": 490,
           "name": "WrapDEK",
           "receiver_calls": [
             "s.keycore.Wrap"
@@ -60063,7 +60101,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 658,
+      "handler_line": 660,
       "handler_name": "handleUnwrapDEK",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60074,7 +60112,7 @@
       "normalized_path": "/ekm/tde/keys/{param}/unwrap",
       "path": "/ekm/tde/keys/{id}/unwrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 81,
+      "route_line": 83,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -60127,7 +60165,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 601,
+          "line": 598,
           "name": "UnwrapDEK",
           "receiver_calls": [
             "s.keycore.Unwrap"
@@ -60166,7 +60204,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 683,
+      "handler_line": 685,
       "handler_name": "handleRotateTDEKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60177,7 +60215,7 @@
       "normalized_path": "/ekm/tde/keys/{param}/rotate",
       "path": "/ekm/tde/keys/{id}/rotate",
       "route_file": "services/ekm/handler.go",
-      "route_line": 82,
+      "route_line": 84,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -60198,6 +60236,8 @@
         "parseVersionID",
         "strconvItoa",
         "UpdateTDEKeyRotation",
+        "PublicKey",
+        "UpdateTDEKeyMetadata",
         "ListDatabasesByKey",
         "BumpAgentConfigVersion",
         "publishAudit"
@@ -60225,30 +60265,36 @@
             "parseVersionID",
             "strconvItoa",
             "UpdateTDEKeyRotation",
+            "PublicKey",
+            "UpdateTDEKeyMetadata",
             "ListDatabasesByKey",
             "BumpAgentConfigVersion",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 712,
+          "line": 709,
           "name": "RotateTDEKey",
           "receiver_calls": [
-            "s.keycore.RotateKey"
+            "s.keycore.RotateKey",
+            "s.keycore.PublicKey"
           ],
           "store_calls": [
             "GetTDEKey",
             "UpdateTDEKeyRotation",
+            "UpdateTDEKeyMetadata",
             "ListDatabasesByKey",
             "BumpAgentConfigVersion"
           ]
         }
       ],
       "service_receiver_calls": [
-        "s.keycore.RotateKey"
+        "s.keycore.RotateKey",
+        "s.keycore.PublicKey"
       ],
       "service_store_calls": [
         "GetTDEKey",
         "UpdateTDEKeyRotation",
+        "UpdateTDEKeyMetadata",
         "ListDatabasesByKey",
         "BumpAgentConfigVersion"
       ]
@@ -60266,7 +60312,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 708,
+      "handler_line": 710,
       "handler_name": "handleGetPublicKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60277,23 +60323,22 @@
       "normalized_path": "/ekm/tde/keys/{param}/public",
       "path": "/ekm/tde/keys/{id}/public",
       "route_file": "services/ekm/handler.go",
-      "route_line": 83,
+      "route_line": 85,
       "service": "ekm",
       "service_external_package_calls": [
+        "errors.As",
         "strings.TrimSpace",
-        "strings.Contains",
         "time.Now"
       ],
       "service_helper_calls": [
         "newServiceError",
         "GetTDEKey",
-        "GetKey",
-        "firstString",
-        "defaultString",
-        "extractInt",
-        "strconvItoa",
         "refusePublicKey",
+        "PublicKey",
+        "defaultString",
+        "Error",
         "UpdateTDEKeyMetadata",
+        "strconvItoa",
         "TouchTDEKeyAccess",
         "RecordKeyAccess",
         "newID",
@@ -60303,31 +60348,30 @@
       "service_method_details": [
         {
           "external_package_calls": [
+            "errors.As",
             "strings.TrimSpace",
-            "strings.Contains",
             "time.Now"
           ],
           "file": "services/ekm/service.go",
           "helper_calls": [
             "newServiceError",
             "GetTDEKey",
-            "GetKey",
-            "firstString",
-            "defaultString",
-            "extractInt",
-            "strconvItoa",
             "refusePublicKey",
+            "PublicKey",
+            "defaultString",
+            "Error",
             "UpdateTDEKeyMetadata",
+            "strconvItoa",
             "TouchTDEKeyAccess",
             "RecordKeyAccess",
             "newID",
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 817,
+          "line": 822,
           "name": "GetTDEPublicKey",
           "receiver_calls": [
-            "s.keycore.GetKey"
+            "s.keycore.PublicKey"
           ],
           "store_calls": [
             "GetTDEKey",
@@ -60338,7 +60382,7 @@
         }
       ],
       "service_receiver_calls": [
-        "s.keycore.GetKey"
+        "s.keycore.PublicKey"
       ],
       "service_store_calls": [
         "GetTDEKey",
@@ -60370,7 +60414,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 778,
+      "handler_line": 780,
       "handler_name": "handleRevokeTDEKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60381,7 +60425,7 @@
       "normalized_path": "/ekm/tde/keys/{param}/revoke",
       "path": "/ekm/tde/keys/{id}/revoke",
       "route_file": "services/ekm/handler.go",
-      "route_line": 85,
+      "route_line": 87,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -60424,7 +60468,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2034,
+          "line": 2026,
           "name": "RevokeTDEKey",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -60472,7 +60516,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 723,
+      "handler_line": 725,
       "handler_name": "handleRegisterDatabase",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60483,7 +60527,7 @@
       "normalized_path": "/ekm/databases",
       "path": "/ekm/databases",
       "route_file": "services/ekm/handler.go",
-      "route_line": 87,
+      "route_line": 89,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -60570,7 +60614,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 748,
+      "handler_line": 750,
       "handler_name": "handleListDatabases",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60581,7 +60625,7 @@
       "normalized_path": "/ekm/databases",
       "path": "/ekm/databases",
       "route_file": "services/ekm/handler.go",
-      "route_line": 88,
+      "route_line": 90,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -60626,7 +60670,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 763,
+      "handler_line": 765,
       "handler_name": "handleGetDatabase",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60637,7 +60681,7 @@
       "normalized_path": "/ekm/databases/{param}",
       "path": "/ekm/databases/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 89,
+      "route_line": 91,
       "service": "ekm",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -60692,7 +60736,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 799,
+      "handler_line": 801,
       "handler_name": "handleRevokeDatabaseTDE",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60703,7 +60747,7 @@
       "normalized_path": "/ekm/databases/{param}/revoke-tde",
       "path": "/ekm/databases/{id}/revoke-tde",
       "route_file": "services/ekm/handler.go",
-      "route_line": 90,
+      "route_line": 92,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -60732,7 +60776,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2109,
+          "line": 2101,
           "name": "RevokeDatabaseTDE",
           "receiver_calls": [],
           "store_calls": [
@@ -60763,7 +60807,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 820,
+      "handler_line": 822,
       "handler_name": "handleValidateDeployment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -60774,7 +60818,7 @@
       "normalized_path": "/ekm/agents/{param}/validate-deploy",
       "path": "/ekm/agents/{id}/validate-deploy",
       "route_file": "services/ekm/handler.go",
-      "route_line": 92,
+      "route_line": 94,
       "service": "ekm",
       "service_external_package_calls": [
         "errors.Is",
@@ -60809,7 +60853,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2146,
+          "line": 2138,
           "name": "ValidateDeployment",
           "receiver_calls": [],
           "store_calls": [
@@ -60864,7 +60908,7 @@
       "normalized_path": "/ekm/azure/configs",
       "path": "/ekm/azure/configs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 95,
+      "route_line": 97,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -60905,7 +60949,7 @@
       "normalized_path": "/ekm/azure/configs",
       "path": "/ekm/azure/configs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 96,
+      "route_line": 98,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -60946,7 +60990,7 @@
       "normalized_path": "/ekm/azure/configs/{param}",
       "path": "/ekm/azure/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 97,
+      "route_line": 99,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -60996,7 +61040,7 @@
       "normalized_path": "/ekm/azure/configs/{param}",
       "path": "/ekm/azure/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 98,
+      "route_line": 100,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61037,7 +61081,7 @@
       "normalized_path": "/ekm/azure/configs/{param}",
       "path": "/ekm/azure/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 99,
+      "route_line": 101,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61081,7 +61125,7 @@
       "normalized_path": "/ekm/azure/configs/{param}/test",
       "path": "/ekm/azure/configs/{id}/test",
       "route_file": "services/ekm/handler.go",
-      "route_line": 100,
+      "route_line": 102,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61135,7 +61179,7 @@
       "normalized_path": "/ekm/azure/configs/{param}/sync",
       "path": "/ekm/azure/configs/{id}/sync",
       "route_file": "services/ekm/handler.go",
-      "route_line": 101,
+      "route_line": 103,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61184,7 +61228,7 @@
       "normalized_path": "/ekm/azure/mappings",
       "path": "/ekm/azure/mappings",
       "route_file": "services/ekm/handler.go",
-      "route_line": 102,
+      "route_line": 104,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61226,7 +61270,7 @@
       "normalized_path": "/ekm/azure/mappings",
       "path": "/ekm/azure/mappings",
       "route_file": "services/ekm/handler.go",
-      "route_line": 103,
+      "route_line": 105,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61267,7 +61311,7 @@
       "normalized_path": "/ekm/azure/mappings/{param}",
       "path": "/ekm/azure/mappings/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 104,
+      "route_line": 106,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61319,7 +61363,7 @@
       "normalized_path": "/ekm/azure/mappings/{param}/import",
       "path": "/ekm/azure/mappings/{id}/import",
       "route_file": "services/ekm/handler.go",
-      "route_line": 105,
+      "route_line": 107,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61366,7 +61410,7 @@
       "normalized_path": "/ekm/azure/mappings/{param}/rotate",
       "path": "/ekm/azure/mappings/{id}/rotate",
       "route_file": "services/ekm/handler.go",
-      "route_line": 106,
+      "route_line": 108,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61410,7 +61454,7 @@
       "normalized_path": "/ekm/azure/mappings/{param}/wrap",
       "path": "/ekm/azure/mappings/{id}/wrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 107,
+      "route_line": 109,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61454,7 +61498,7 @@
       "normalized_path": "/ekm/azure/mappings/{param}/unwrap",
       "path": "/ekm/azure/mappings/{id}/unwrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 108,
+      "route_line": 110,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61503,7 +61547,7 @@
       "normalized_path": "/ekm/google-cse/configs",
       "path": "/ekm/google-cse/configs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 111,
+      "route_line": 113,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61544,7 +61588,7 @@
       "normalized_path": "/ekm/google-cse/configs",
       "path": "/ekm/google-cse/configs",
       "route_file": "services/ekm/handler.go",
-      "route_line": 112,
+      "route_line": 114,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61578,7 +61622,7 @@
       "normalized_path": "/ekm/google-cse/configs/{param}",
       "path": "/ekm/google-cse/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 113,
+      "route_line": 115,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61629,7 +61673,7 @@
       "normalized_path": "/ekm/google-cse/configs/{param}",
       "path": "/ekm/google-cse/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 114,
+      "route_line": 116,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61670,7 +61714,7 @@
       "normalized_path": "/ekm/google-cse/configs/{param}",
       "path": "/ekm/google-cse/configs/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 115,
+      "route_line": 117,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61753,7 +61797,7 @@
       "normalized_path": "/ekm/google-cse/keys",
       "path": "/ekm/google-cse/keys",
       "route_file": "services/ekm/handler.go",
-      "route_line": 116,
+      "route_line": 118,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61788,7 +61832,7 @@
       "normalized_path": "/ekm/google-cse/keys",
       "path": "/ekm/google-cse/keys",
       "route_file": "services/ekm/handler.go",
-      "route_line": 117,
+      "route_line": 119,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61829,7 +61873,7 @@
       "normalized_path": "/ekm/google-cse/keys/{param}",
       "path": "/ekm/google-cse/keys/{id}",
       "route_file": "services/ekm/handler.go",
-      "route_line": 118,
+      "route_line": 120,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61856,7 +61900,7 @@
       "normalized_path": "/ekm/kacls/status",
       "path": "/ekm/kacls/status",
       "route_file": "services/ekm/handler.go",
-      "route_line": 121,
+      "route_line": 123,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61896,7 +61940,7 @@
       "normalized_path": "/ekm/kacls/wrap",
       "path": "/ekm/kacls/wrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 122,
+      "route_line": 124,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61936,7 +61980,7 @@
       "normalized_path": "/ekm/kacls/unwrap",
       "path": "/ekm/kacls/unwrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 123,
+      "route_line": 125,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -61977,7 +62021,7 @@
       "normalized_path": "/ekm/kacls/privilegedunwrap",
       "path": "/ekm/kacls/privilegedunwrap",
       "route_file": "services/ekm/handler.go",
-      "route_line": 124,
+      "route_line": 126,
       "service": "ekm",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -67586,7 +67630,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 506,
+      "handler_line": 507,
       "handler_name": "handleListKeys",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67734,7 +67778,7 @@
         "renderKey"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 563,
+      "handler_line": 564,
       "handler_name": "handleGetKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -67831,7 +67875,7 @@
         "writeHSMError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 834,
+      "handler_line": 835,
       "handler_name": "handleExportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68264,7 +68308,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 913,
+      "handler_line": 914,
       "handler_name": "handleListVersions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68317,7 +68361,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 931,
+      "handler_line": 932,
       "handler_name": "handleGetVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68373,7 +68417,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 987,
+      "handler_line": 988,
       "handler_name": "handleGetKCV",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68454,7 +68498,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1001,
+      "handler_line": 1002,
       "handler_name": "handleGetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68503,7 +68547,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1176,
+      "handler_line": 1177,
       "handler_name": "handleGetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68555,7 +68599,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1292,
+      "handler_line": 1293,
       "handler_name": "handleGetIVLog",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68589,7 +68633,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1318,
+      "handler_line": 1319,
       "handler_name": "handleGetIVByRef",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68614,7 +68658,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1301,
+          "line": 1319,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68630,7 +68674,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1211,
+      "handler_line": 1212,
       "handler_name": "handleListTags",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68697,7 +68741,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1376,
+      "handler_line": 1377,
       "handler_name": "handleEncrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68731,7 +68775,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1415,
+      "handler_line": 1416,
       "handler_name": "handleDecrypt",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68765,7 +68809,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1454,
+      "handler_line": 1455,
       "handler_name": "handleSign",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68808,7 +68852,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1458,
+      "handler_line": 1459,
       "handler_name": "handleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -68900,7 +68944,7 @@
         "handleEncryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1490,
+      "handler_line": 1491,
       "handler_name": "handleWrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68927,7 +68971,7 @@
         "handleDecryptWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1494,
+      "handler_line": 1495,
       "handler_name": "handleUnwrap",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68954,7 +68998,7 @@
         "handleSignWithOperation"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1498,
+      "handler_line": 1499,
       "handler_name": "handleMAC",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -68998,7 +69042,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1502,
+      "handler_line": 1503,
       "handler_name": "handleDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69098,7 +69142,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1545,
+      "handler_line": 1546,
       "handler_name": "handleServiceDerive",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69157,7 +69201,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2316,
+      "handler_line": 2317,
       "handler_name": "handleClusterJoinKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69168,7 +69212,7 @@
       "normalized_path": "/cluster/mek/join-key",
       "path": "/cluster/mek/join-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 232,
+      "route_line": 233,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69219,7 +69263,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2326,
+      "handler_line": 2327,
       "handler_name": "handleClusterMEKExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69230,7 +69274,7 @@
       "normalized_path": "/cluster/mek/export",
       "path": "/cluster/mek/export",
       "route_file": "services/keycore/handler.go",
-      "route_line": 233,
+      "route_line": 234,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69283,7 +69327,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 2345,
+      "handler_line": 2346,
       "handler_name": "handleClusterMEKImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69294,7 +69338,7 @@
       "normalized_path": "/cluster/mek/import",
       "path": "/cluster/mek/import",
       "route_file": "services/keycore/handler.go",
-      "route_line": 234,
+      "route_line": 235,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69377,7 +69421,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1575,
+      "handler_line": 1576,
       "handler_name": "handleKEMEncapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69388,7 +69432,7 @@
       "normalized_path": "/keys/{param}/kem/encapsulate",
       "path": "/keys/{id}/kem/encapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 235,
+      "route_line": 236,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69475,7 +69519,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1615,
+      "handler_line": 1616,
       "handler_name": "handleKEMDecapsulate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69486,7 +69530,7 @@
       "normalized_path": "/keys/{param}/kem/decapsulate",
       "path": "/keys/{id}/kem/decapsulate",
       "route_file": "services/keycore/handler.go",
-      "route_line": 236,
+      "route_line": 237,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69572,7 +69616,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1654,
+      "handler_line": 1655,
       "handler_name": "handleHash",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69583,7 +69627,7 @@
       "normalized_path": "/crypto/hash",
       "path": "/crypto/hash",
       "route_file": "services/keycore/handler.go",
-      "route_line": 237,
+      "route_line": 238,
       "service": "keycore",
       "service_external_package_calls": [
         "errors.New",
@@ -69643,7 +69687,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1682,
+      "handler_line": 1683,
       "handler_name": "handleRandom",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69654,7 +69698,7 @@
       "normalized_path": "/crypto/random",
       "path": "/crypto/random",
       "route_file": "services/keycore/handler.go",
-      "route_line": 238,
+      "route_line": 239,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/rand.Read",
@@ -69735,7 +69779,7 @@
       "normalized_path": "/keys/{param}/rotation-metrics",
       "path": "/keys/{id}/rotation-metrics",
       "route_file": "services/keycore/handler.go",
-      "route_line": 249,
+      "route_line": 250,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69777,7 +69821,7 @@
       "normalized_path": "/keys/{param}/health",
       "path": "/keys/{id}/health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 252,
+      "route_line": 253,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -69861,7 +69905,7 @@
       "normalized_path": "/analytics/algorithms",
       "path": "/analytics/algorithms",
       "route_file": "services/keycore/handler.go",
-      "route_line": 253,
+      "route_line": 254,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69895,7 +69939,7 @@
       "normalized_path": "/attestation/public-key",
       "path": "/attestation/public-key",
       "route_file": "services/keycore/handler.go",
-      "route_line": 256,
+      "route_line": 257,
       "service": "keycore",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -69951,7 +69995,7 @@
       "normalized_path": "/fips/rng-health",
       "path": "/fips/rng-health",
       "route_file": "services/keycore/handler.go",
-      "route_line": 262,
+      "route_line": 263,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -69987,7 +70031,7 @@
       "normalized_path": "/keys/due-for-lifecycle",
       "path": "/keys/due-for-lifecycle",
       "route_file": "services/keycore/handler.go",
-      "route_line": 268,
+      "route_line": 269,
       "service": "keycore",
       "service_external_package_calls": [
         "time.Now"
@@ -70022,7 +70066,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1168,
+          "line": 1186,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70063,7 +70107,7 @@
             "ListKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 467,
+          "line": 472,
           "name": "GetKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70081,7 +70125,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1181,
+          "line": 1199,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70155,7 +70199,7 @@
             "ReplaceKeyAccessGrants"
           ],
           "internal_package_calls": [],
-          "line": 482,
+          "line": 487,
           "name": "ReplaceKeyAccessPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70175,7 +70219,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1250,
+          "line": 1268,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70215,7 +70259,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 583,
+          "line": 588,
           "name": "ListAccessGroups",
           "receiver_calls": [],
           "store_calls": [
@@ -70233,7 +70277,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1261,
+          "line": 1279,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70278,7 +70322,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 590,
+          "line": 595,
           "name": "CreateAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70296,7 +70340,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1276,
+          "line": 1294,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70336,7 +70380,7 @@
           "file": "services/keycore/access_control.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 613,
+          "line": 618,
           "name": "DeleteAccessGroup",
           "receiver_calls": [],
           "store_calls": [
@@ -70354,7 +70398,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1288,
+          "line": 1306,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70398,7 +70442,7 @@
             "ReplaceAccessGroupMembers"
           ],
           "internal_package_calls": [],
-          "line": 625,
+          "line": 630,
           "name": "SetAccessGroupMembers",
           "receiver_calls": [],
           "store_calls": [
@@ -70416,7 +70460,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1192,
+          "line": 1210,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70480,7 +70524,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1203,
+          "line": 1221,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70566,7 +70610,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1219,
+          "line": 1237,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70631,7 +70675,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1230,
+          "line": 1248,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70688,7 +70732,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1242,
+          "line": 1260,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71296,7 +71340,7 @@
         {
           "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1359,
+          "line": 1377,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71333,7 +71377,7 @@
         {
           "expression": "apiRequest(\"/canary/keys\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1364,
+          "line": 1382,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71375,7 +71419,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1376,
+          "line": 1394,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71418,7 +71462,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1372,
+          "line": 1390,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71836,7 +71880,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 273,
+      "handler_line": 274,
       "handler_name": "handleCreateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71919,7 +71963,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 314,
+      "handler_line": 315,
       "handler_name": "handleImportKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71998,7 +72042,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 348,
+      "handler_line": 349,
       "handler_name": "handleFormKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72086,7 +72130,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 383,
+      "handler_line": 384,
       "handler_name": "handleBulkImport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72154,7 +72198,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 410,
+      "handler_line": 411,
       "handler_name": "handleBulkRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72258,7 +72302,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 445,
+      "handler_line": 446,
       "handler_name": "handleBulkDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72350,7 +72394,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 583,
+      "handler_line": 584,
       "handler_name": "handleUpdateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72429,7 +72473,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 601,
+      "handler_line": 602,
       "handler_name": "handleRotateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72523,13 +72567,13 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1087,
+          "line": 1105,
           "source": "keycore.apiRequest"
         },
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1099,
+          "line": 1117,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72551,7 +72595,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 637,
+      "handler_line": 638,
       "handler_name": "handleActivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72619,7 +72663,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1113,
+          "line": 1131,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72630,7 +72674,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 675,
+      "handler_line": 676,
       "handler_name": "handleDeactivateKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72653,7 +72697,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1121,
+          "line": 1139,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72664,7 +72708,7 @@
         "keyStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 678,
+      "handler_line": 679,
       "handler_name": "handleDisableKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72687,7 +72731,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1076,
+          "line": 1094,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72716,7 +72760,7 @@
         "DestroyKeyImmediately"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 681,
+      "handler_line": 682,
       "handler_name": "handleDestroyKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72877,7 +72921,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1152,
+          "line": 1170,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72898,7 +72942,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1094,
+      "handler_line": 1095,
       "handler_name": "handleSetExportPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -72970,7 +73014,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 946,
+      "handler_line": 947,
       "handler_name": "handleActivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -72997,7 +73041,7 @@
         "versionStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 949,
+      "handler_line": 950,
       "handler_name": "handleDeactivateVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -73033,7 +73077,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 968,
+      "handler_line": 969,
       "handler_name": "handleDeleteVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73091,7 +73135,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1134,
+          "line": 1152,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73108,7 +73152,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1022,
+      "handler_line": 1023,
       "handler_name": "handleSetUsageLimit",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73167,7 +73211,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1132,
+      "handler_line": 1133,
       "handler_name": "handleResetUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73230,7 +73274,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1145,
+      "handler_line": 1146,
       "handler_name": "handleSetApproval",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73302,7 +73346,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1190,
+      "handler_line": 1191,
       "handler_name": "handleSetIVMode",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73360,7 +73404,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1313,
+          "line": 1331,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73377,7 +73421,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1236,
+      "handler_line": 1237,
       "handler_name": "handleUpsertTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73441,7 +73485,7 @@
         {
           "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1328,
+          "line": 1346,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73459,7 +73503,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1272,
+      "handler_line": 1273,
       "handler_name": "handleDeleteTag",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -73928,7 +73972,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1043,
+      "handler_line": 1044,
       "handler_name": "handleMeterUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77528,6 +77572,92 @@
       "service_store_calls": [
         "GetKeyUsageMetricSummary",
         "ListKeyHotspots"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/public-key?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+          "file": "web/dashboard/src/lib/keycore.ts",
+          "line": 1083,
+          "source": "keycore.apiRequest"
+        }
+      ],
+      "handler": "h.getPublicKey",
+      "handler_external_package_calls": [
+        "encoding/pem.EncodeToMemory",
+        "errors.Is",
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/keycore/public_key.go",
+      "handler_helper_calls": [
+        "visibleKey",
+        "GetKey",
+        "refuseKeyOp",
+        "isDeletedLike",
+        "CurrentPublicKey",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 44,
+      "handler_name": "getPublicKey",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "CurrentPublicKey"
+      ],
+      "handler_store_calls": [
+        "GetKey"
+      ],
+      "method": "GET",
+      "normalized_path": "/keys/{param}/public-key",
+      "path": "/keys/{id}/public-key",
+      "route_file": "services/keycore/public_key.go",
+      "route_line": 38,
+      "service": "keycore",
+      "service_external_package_calls": [
+        "crypto/x509.ParsePKCS1PublicKey",
+        "crypto/x509.MarshalPKIXPublicKey",
+        "crypto/x509.ParsePKIXPublicKey"
+      ],
+      "service_helper_calls": [
+        "GetVersion",
+        "isPublicComponentKey",
+        "decryptMaterial",
+        "inferKeyTypeFromAlgorithm",
+        "derivePublicFromPrivateMaterial"
+      ],
+      "service_internal_package_calls": [
+        "pkg/crypto.Zeroize"
+      ],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/x509.ParsePKCS1PublicKey",
+            "crypto/x509.MarshalPKIXPublicKey",
+            "crypto/x509.ParsePKIXPublicKey"
+          ],
+          "file": "services/keycore/public_key.go",
+          "helper_calls": [
+            "GetVersion",
+            "isPublicComponentKey",
+            "decryptMaterial",
+            "inferKeyTypeFromAlgorithm",
+            "derivePublicFromPrivateMaterial"
+          ],
+          "internal_package_calls": [
+            "pkg/crypto.Zeroize"
+          ],
+          "line": 83,
+          "name": "CurrentPublicKey",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetVersion"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetVersion"
       ]
     },
     {
@@ -91308,7 +91438,7 @@
       "hsm-connector": 12,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 171,
+      "keycore": 172,
       "kmip": 12,
       "payment": 42,
       "policy": 12,
@@ -91342,7 +91472,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 117,
+      "keycore": 118,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
@@ -91543,17 +91673,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 914,
+    "backend_routes": 915,
     "backend_services": 30,
-    "button_inventory": 765,
-    "frontend_call_sites": 574,
-    "matched_frontend_call_sites": 529,
+    "button_inventory": 766,
+    "frontend_call_sites": 575,
+    "matched_frontend_call_sites": 530,
     "nav_items": 27,
-    "request_flows": 914,
-    "request_flows_with_frontend": 538,
-    "request_flows_with_internal_package_calls": 162,
-    "request_flows_with_service_calls": 538,
-    "request_flows_with_store_calls": 649,
+    "request_flows": 915,
+    "request_flows_with_frontend": 539,
+    "request_flows_with_internal_package_calls": 163,
+    "request_flows_with_service_calls": 539,
+    "request_flows_with_store_calls": 650,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -91590,7 +91720,7 @@
       ]
     },
     {
-      "call_count": 196,
+      "call_count": 197,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -91639,7 +91769,7 @@
       ]
     },
     {
-      "call_count": 93,
+      "call_count": 94,
       "component": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "group": "Keys & lifecycle",
       "id": "keys",
@@ -91679,7 +91809,7 @@
       ]
     },
     {
-      "call_count": 100,
+      "call_count": 101,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "PKI & certificates",
       "id": "certs",
@@ -91951,7 +92081,7 @@
       ]
     },
     {
-      "call_count": 48,
+      "call_count": 49,
       "component": "web/dashboard/src/components/v3/tabs/CryptoTab.tsx",
       "group": "UNLISTED",
       "id": "crypto",
@@ -106194,7 +106324,7 @@
         ],
         "handler": "handleRegisterAgent",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 155,
+        "handlerLine": 157,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -106232,7 +106362,7 @@
         ],
         "handler": "handleListAgents",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 180,
+        "handlerLine": 182,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106270,7 +106400,7 @@
         ],
         "handler": "handleAgentStatus",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 195,
+        "handlerLine": 197,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106311,7 +106441,7 @@
         ],
         "handler": "handleAgentHealth",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 210,
+        "handlerLine": 212,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106349,7 +106479,7 @@
         ],
         "handler": "handleAgentLogs",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 225,
+        "handlerLine": 227,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106390,7 +106520,7 @@
         ],
         "handler": "handleAgentDeployPackage",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 286,
+        "handlerLine": 288,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106427,7 +106557,7 @@
         ],
         "handler": "handleRotateAgent",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 246,
+        "handlerLine": 248,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -106469,7 +106599,7 @@
         ],
         "handler": "handleDeleteAgent",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 266,
+        "handlerLine": 268,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -106505,7 +106635,7 @@
         "frontendSites": [],
         "handler": "handleAgentHeartbeat",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 302,
+        "handlerLine": 304,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -106544,7 +106674,7 @@
         ],
         "handler": "handleSDKOverview",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 323,
+        "handlerLine": 325,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106581,7 +106711,7 @@
         ],
         "handler": "handleSDKDownload",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 341,
+        "handlerLine": 343,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106619,7 +106749,7 @@
         ],
         "handler": "handleRegisterBitLockerClient",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 361,
+        "handlerLine": 363,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -106659,7 +106789,7 @@
         ],
         "handler": "handleListBitLockerClients",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 382,
+        "handlerLine": 384,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106696,7 +106826,7 @@
         ],
         "handler": "handleGetBitLockerClient",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 403,
+        "handlerLine": 405,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106734,7 +106864,7 @@
         ],
         "handler": "handleBitLockerDeletePreview",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 418,
+        "handlerLine": 420,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106774,7 +106904,7 @@
         ],
         "handler": "handleDeleteBitLockerClient",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 433,
+        "handlerLine": 435,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -106809,7 +106939,7 @@
         "frontendSites": [],
         "handler": "handleBitLockerHeartbeat",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 454,
+        "handlerLine": 456,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -106849,7 +106979,7 @@
         ],
         "handler": "handleQueueBitLockerOperation",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 475,
+        "handlerLine": 477,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -106889,7 +107019,7 @@
         ],
         "handler": "handleListBitLockerJobs",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 496,
+        "handlerLine": 498,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -106921,7 +107051,7 @@
         "frontendSites": [],
         "handler": "handlePollBitLockerJob",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 517,
+        "handlerLine": 519,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -106953,7 +107083,7 @@
         "frontendSites": [],
         "handler": "handleBitLockerJobResult",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 532,
+        "handlerLine": 534,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.EncryptEnvelope",
@@ -106996,7 +107126,7 @@
         ],
         "handler": "handleListBitLockerRecovery",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 553,
+        "handlerLine": 555,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -107037,7 +107167,7 @@
         ],
         "handler": "handleBitLockerNetworkScan",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 575,
+        "handlerLine": 577,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -107074,7 +107204,7 @@
         ],
         "handler": "handleBitLockerDeployPackage",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 596,
+        "handlerLine": 598,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -107104,7 +107234,7 @@
         "frontendSites": [],
         "handler": "handleCreateTDEKey",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 612,
+        "handlerLine": 614,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -107133,7 +107263,7 @@
         "frontendSites": [],
         "handler": "handleWrapDEK",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 633,
+        "handlerLine": 635,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -107170,7 +107300,7 @@
         "frontendSites": [],
         "handler": "handleUnwrapDEK",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 658,
+        "handlerLine": 660,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -107198,7 +107328,7 @@
         ]
       },
       {
-        "complexity": 5,
+        "complexity": 7,
         "externalPackages": [
           "strings.EqualFold",
           "strings.TrimSpace",
@@ -107207,14 +107337,15 @@
         "frontendSites": [],
         "handler": "handleRotateTDEKey",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 683,
+        "handlerLine": 685,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/ekm/tde/keys/{param}/rotate",
         "path": "/ekm/tde/keys/{id}/rotate",
         "receiverCalls": [
-          "s.keycore.RotateKey"
+          "s.keycore.RotateKey",
+          "s.keycore.PublicKey"
         ],
         "risk": "medium",
         "routeKey": "ekm|POST|/ekm/tde/keys/{param}/rotate",
@@ -107226,6 +107357,7 @@
         "storeCalls": [
           "GetTDEKey",
           "UpdateTDEKeyRotation",
+          "UpdateTDEKeyMetadata",
           "ListDatabasesByKey",
           "BumpAgentConfigVersion"
         ],
@@ -107236,21 +107368,21 @@
       {
         "complexity": 5,
         "externalPackages": [
+          "errors.As",
           "strings.TrimSpace",
-          "strings.Contains",
           "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleGetPublicKey",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 708,
+        "handlerLine": 710,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/ekm/tde/keys/{param}/public",
         "path": "/ekm/tde/keys/{id}/public",
         "receiverCalls": [
-          "s.keycore.GetKey"
+          "s.keycore.PublicKey"
         ],
         "risk": "medium",
         "routeKey": "ekm|GET|/ekm/tde/keys/{param}/public",
@@ -107287,7 +107419,7 @@
         ],
         "handler": "handleRevokeTDEKey",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 778,
+        "handlerLine": 780,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -107332,7 +107464,7 @@
         ],
         "handler": "handleRegisterDatabase",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 723,
+        "handlerLine": 725,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -107366,7 +107498,7 @@
         "frontendSites": [],
         "handler": "handleListDatabases",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 748,
+        "handlerLine": 750,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -107395,7 +107527,7 @@
         "frontendSites": [],
         "handler": "handleGetDatabase",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 763,
+        "handlerLine": 765,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -107432,7 +107564,7 @@
         ],
         "handler": "handleRevokeDatabaseTDE",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 799,
+        "handlerLine": 801,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -107466,7 +107598,7 @@
         "frontendSites": [],
         "handler": "handleValidateDeployment",
         "handlerFile": "services/ekm/handler.go",
-        "handlerLine": 820,
+        "handlerLine": 822,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110790,7 +110922,7 @@
         ],
         "handler": "handleListKeys",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 506,
+        "handlerLine": 507,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.Enforce",
@@ -110836,7 +110968,7 @@
         "frontendSites": [],
         "handler": "handleGetKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 563,
+        "handlerLine": 564,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110901,7 +111033,7 @@
         ],
         "handler": "handleExportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 834,
+        "handlerLine": 835,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -110994,7 +111126,7 @@
         ],
         "handler": "handleListVersions",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 913,
+        "handlerLine": 914,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111028,7 +111160,7 @@
         "frontendSites": [],
         "handler": "handleGetVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 931,
+        "handlerLine": 932,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111059,7 +111191,7 @@
         "frontendSites": [],
         "handler": "handleGetKCV",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 987,
+        "handlerLine": 988,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111092,7 +111224,7 @@
         "frontendSites": [],
         "handler": "handleGetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1001,
+        "handlerLine": 1002,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111119,7 +111251,7 @@
         "frontendSites": [],
         "handler": "handleGetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1176,
+        "handlerLine": 1177,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111148,7 +111280,7 @@
         "frontendSites": [],
         "handler": "handleGetIVLog",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1292,
+        "handlerLine": 1293,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111173,7 +111305,7 @@
         "frontendSites": [],
         "handler": "handleGetIVByRef",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1318,
+        "handlerLine": 1319,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111203,13 +111335,13 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1301,
+            "line": 1319,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleListTags",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1211,
+        "handlerLine": 1212,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111247,7 +111379,7 @@
         ],
         "handler": "handleEncrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1376,
+        "handlerLine": 1377,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111280,7 +111412,7 @@
         ],
         "handler": "handleDecrypt",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1415,
+        "handlerLine": 1416,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111313,7 +111445,7 @@
         ],
         "handler": "handleSign",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1454,
+        "handlerLine": 1455,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111352,7 +111484,7 @@
         ],
         "handler": "handleVerify",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1458,
+        "handlerLine": 1459,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111386,7 +111518,7 @@
         "frontendSites": [],
         "handler": "handleWrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1490,
+        "handlerLine": 1491,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111409,7 +111541,7 @@
         "frontendSites": [],
         "handler": "handleUnwrap",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1494,
+        "handlerLine": 1495,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111432,7 +111564,7 @@
         "frontendSites": [],
         "handler": "handleMAC",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1498,
+        "handlerLine": 1499,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111471,7 +111603,7 @@
         ],
         "handler": "handleDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1502,
+        "handlerLine": 1503,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111503,7 +111635,7 @@
         "frontendSites": [],
         "handler": "handleServiceDerive",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1545,
+        "handlerLine": 1546,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -111530,7 +111662,7 @@
         "frontendSites": [],
         "handler": "handleClusterJoinKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2316,
+        "handlerLine": 2317,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.NewKEMRecipient"
@@ -111560,7 +111692,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKExport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2326,
+        "handlerLine": 2327,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.KEMSeal"
@@ -111596,7 +111728,7 @@
         "frontendSites": [],
         "handler": "handleClusterMEKImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 2345,
+        "handlerLine": 2346,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111638,7 +111770,7 @@
         ],
         "handler": "handleKEMEncapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1575,
+        "handlerLine": 1576,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111681,7 +111813,7 @@
         ],
         "handler": "handleKEMDecapsulate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1615,
+        "handlerLine": 1616,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -111722,7 +111854,7 @@
         ],
         "handler": "handleHash",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1654,
+        "handlerLine": 1655,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111763,7 +111895,7 @@
         ],
         "handler": "handleRandom",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1682,
+        "handlerLine": 1683,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -111965,7 +112097,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1168,
+            "line": 1186,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112011,7 +112143,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1181,
+            "line": 1199,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112052,7 +112184,7 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1250,
+            "line": 1268,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112092,7 +112224,7 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1261,
+            "line": 1279,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112132,7 +112264,7 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1276,
+            "line": 1294,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112172,7 +112304,7 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1288,
+            "line": 1306,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112212,7 +112344,7 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1192,
+            "line": 1210,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112252,7 +112384,7 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1203,
+            "line": 1221,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112294,7 +112426,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1219,
+            "line": 1237,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112331,7 +112463,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1230,
+            "line": 1248,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112371,7 +112503,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1242,
+            "line": 1260,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112797,7 +112929,7 @@
           {
             "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1359,
+            "line": 1377,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112834,7 +112966,7 @@
           {
             "expression": "apiRequest(\"/canary/keys\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1364,
+            "line": 1382,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112872,7 +113004,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1376,
+            "line": 1394,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112908,7 +113040,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1372,
+            "line": 1390,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113246,7 +113378,7 @@
         ],
         "handler": "handleCreateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 273,
+        "handlerLine": 274,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113289,7 +113421,7 @@
         ],
         "handler": "handleImportKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 314,
+        "handlerLine": 315,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113334,7 +113466,7 @@
         ],
         "handler": "handleFormKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 348,
+        "handlerLine": 349,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113367,7 +113499,7 @@
         "frontendSites": [],
         "handler": "handleBulkImport",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 383,
+        "handlerLine": 384,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -113398,7 +113530,7 @@
         "frontendSites": [],
         "handler": "handleBulkRotate",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 410,
+        "handlerLine": 411,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -113437,7 +113569,7 @@
         "frontendSites": [],
         "handler": "handleBulkDelete",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 445,
+        "handlerLine": 446,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113466,7 +113598,7 @@
         "frontendSites": [],
         "handler": "handleUpdateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 583,
+        "handlerLine": 584,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113509,7 +113641,7 @@
         ],
         "handler": "handleRotateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 601,
+        "handlerLine": 602,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -113551,19 +113683,19 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1087,
+            "line": 1105,
             "source": "keycore.apiRequest"
           },
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1099,
+            "line": 1117,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleActivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 637,
+        "handlerLine": 638,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113596,13 +113728,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1113,
+            "line": 1131,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleDeactivateKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 675,
+        "handlerLine": 676,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113629,13 +113761,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1121,
+            "line": 1139,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleDisableKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 678,
+        "handlerLine": 679,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113671,13 +113803,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1076,
+            "line": 1094,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleDestroyKey",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 681,
+        "handlerLine": 682,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -113722,13 +113854,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1152,
+            "line": 1170,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleSetExportPolicy",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1094,
+        "handlerLine": 1095,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113760,7 +113892,7 @@
         "frontendSites": [],
         "handler": "handleActivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 946,
+        "handlerLine": 947,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113783,7 +113915,7 @@
         "frontendSites": [],
         "handler": "handleDeactivateVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 949,
+        "handlerLine": 950,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113810,7 +113942,7 @@
         "frontendSites": [],
         "handler": "handleDeleteVersion",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 968,
+        "handlerLine": 969,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -113840,13 +113972,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1134,
+            "line": 1152,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleSetUsageLimit",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1022,
+        "handlerLine": 1023,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -113878,7 +114010,7 @@
         "frontendSites": [],
         "handler": "handleResetUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1132,
+        "handlerLine": 1133,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -113909,7 +114041,7 @@
         "frontendSites": [],
         "handler": "handleSetApproval",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1145,
+        "handlerLine": 1146,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113940,7 +114072,7 @@
         "frontendSites": [],
         "handler": "handleSetIVMode",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1190,
+        "handlerLine": 1191,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -113976,13 +114108,13 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1313,
+            "line": 1331,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleUpsertTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1236,
+        "handlerLine": 1237,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -114021,13 +114153,13 @@
           {
             "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1328,
+            "line": 1346,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "handleDeleteTag",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1272,
+        "handlerLine": 1273,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -114372,7 +114504,7 @@
         "frontendSites": [],
         "handler": "handleMeterUsage",
         "handlerFile": "services/keycore/handler.go",
-        "handlerLine": 1043,
+        "handlerLine": 1044,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -116458,6 +116590,53 @@
         ],
         "uiLabels": [
           "API only"
+        ]
+      },
+      {
+        "complexity": 3,
+        "externalPackages": [
+          "encoding/pem.EncodeToMemory",
+          "errors.Is",
+          "strings.TrimSpace",
+          "crypto/x509.ParsePKCS1PublicKey",
+          "crypto/x509.MarshalPKIXPublicKey",
+          "crypto/x509.ParsePKIXPublicKey"
+        ],
+        "frontendSites": [
+          {
+            "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/public-key?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+            "file": "web/dashboard/src/lib/keycore.ts",
+            "line": 1083,
+            "source": "keycore.apiRequest"
+          }
+        ],
+        "handler": "getPublicKey",
+        "handlerFile": "services/keycore/public_key.go",
+        "handlerLine": 44,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/crypto.Zeroize"
+        ],
+        "method": "GET",
+        "normalizedPath": "/keys/{param}/public-key",
+        "path": "/keys/{id}/public-key",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/keys/{param}/public-key",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [
+          "CurrentPublicKey"
+        ],
+        "storeCalls": [
+          "GetKey",
+          "GetVersion"
+        ],
+        "uiLabels": [
+          "Operations",
+          "Key Management",
+          "Certificates / PKI",
+          "crypto"
         ]
       },
       {
@@ -123959,7 +124138,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T18:24:53Z",
+    "generatedAt": "2026-09-29T18:34:54Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124001,9 +124180,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 914,
-      "frontendBacked": 538,
-      "highRisk": 374,
+      "flows": 915,
+      "frontendBacked": 539,
+      "highRisk": 375,
       "services": 30
     }
   }

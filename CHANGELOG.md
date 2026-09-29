@@ -4,6 +4,65 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.18.0-beta] — 2026-09-30
+
+### Keycore serves an asymmetric key's public key; EKM TDE public keys work
+- **New `GET /keys/{id}/public-key`** (keycore, route kernel, any verified
+  identity; kernel event `audit.key.public_key_read`): the current
+  version's public key as PEM SubjectPublicKeyInfo (`format: spki-pem`,
+  with `version` and `algorithm`). The decision is the per-key read: the
+  key must be visible to the caller (KEY_ACCESS_MODEL.md section 8); a
+  hidden key is `404` and `audit.key.access_refused` (`not_visible`).
+- **Where the key comes from.** An HSM key pair's version holds its PKIX
+  public key. A software key pair holds only its encrypted PKCS#8 private
+  key, so keycore derives the public half and zeroizes the private
+  material. An imported public component is served as itself (PKCS#1 is
+  re-encoded as SPKI).
+- **Refused, and audited as refused:** a key with no public half (`409
+  not_asymmetric`), a deleted key (`409 key_deleted`), and a public key with
+  no SubjectPublicKeyInfo encoding in this release (`409 spki_unavailable`:
+  ML-KEM, ML-DSA and SLH-DSA are held as raw bytes and are never labelled as
+  SPKI).
+- **EKM reads it for the user it serves.** `GET /ekm/tde/keys/{id}/public`
+  asks keycore on every call, forwarding the caller's verified token with
+  the new delegated usage `read` (pkg/delegation), so keycore decides by the
+  user's view of the key. Before, keycore had no public-key route, so after
+  6.12.0-beta the endpoint refused (`424 public_key_unavailable`) for every
+  TDE key. Keycore's refusal is passed on with its status and reason (`403`,
+  or `404` for a key the user can't see); anything else is still `424`.
+  `audit.ekm.tde_key_accessed` carries `key_version` on success and
+  keycore's reason on refusal.
+- **Fixed: a stale public key after rotation.** ekm served its cached copy
+  first, which after a rotation was the old version's key. The cache is now
+  cleared by the rotation, refreshed from keycore, and never served in place
+  of a keycore read. TDE key creation fills it from the same route.
+- **A delegated `read` can't use a key.** Keycore refuses a delegated
+  request with usage `read` on any key operation (`403`,
+  `audit.key.access_refused` `reason: delegation_usage_mismatch`), so a read
+  grant can't be turned into a use by a service.
+- **Dashboard:** Keys > key detail has "Public key (PEM)" for asymmetric
+  keys, which downloads the file from the new route and shows keycore's
+  refusal if there is one.
+
+### Tests
+- keycore: `TestPublicKeyReadReturnsTheKeysSPKI` (the PEM is the public
+  half of the stored private key), `TestPublicKeyReadRefusals`,
+  `TestPublicKeyReadOfAHiddenKeyIsRefused`,
+  `TestDelegatedPublicKeyReadUsesTheUsersView`,
+  `TestDelegatedReadCannotPerformAKeyOperation`,
+  `TestPublicKeyRouteRefusalsAudited`; `TestHSMResidentSigningKeys` now
+  checks the route serves the HSM's own public key (run on real SoftHSM2).
+- ekm: `TestTDEPublicKeyFollowsRotation`,
+  `TestTDEPublicKeyKeycoreRefusalPassedOn`,
+  `TestTDEPublicKeyReadCarriesTheUsersToken`,
+  `TestHTTPKeyCoreClientPublicKey` (client against keycore's response and
+  error shape). The ekm keycore fake no longer returns `public_key_pem` from
+  `GET /keys/{id}`, which the real keycore never did.
+
+### Open
+- Post-quantum public keys (ML-KEM, ML-DSA, SLH-DSA) have no SPKI encoding
+  here yet and are refused rather than served in another format.
+
 ## [6.17.0-beta] — 2026-09-30
 
 ### Reconciler: manifest policies converge

@@ -41,7 +41,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.jwtParser != nil {
 		if raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer")); raw != "" {
 			if claims, err := h.jwtParser(raw); err == nil && claims != nil {
-				r = r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims))
+				// The verified token is kept so keycore calls made for this
+				// user carry it (pkg/delegation).
+				r = r.WithContext(pkgauth.ContextWithVerifiedToken(pkgauth.ContextWithClaims(r.Context(), claims), raw))
 			}
 		}
 	}

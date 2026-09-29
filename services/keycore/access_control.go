@@ -359,6 +359,11 @@ func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation stri
 	// translate-wrap, ...): the user's grants must allow that usage, whatever
 	// keycore operation the service needs to carry it out.
 	if actor.Usage != "" {
+		// "read" is a per-key read (visibility, not this decision): it never
+		// stands in for a key operation, or a read grant would authorize one.
+		if actor.Usage == "read" {
+			return refuse("delegation_usage_mismatch", "access denied: a delegated read cannot perform a key operation")
+		}
 		operation = actor.Usage
 	}
 	if actor.Via != "" && !strings.EqualFold(actor.TenantID, key.TenantID) {

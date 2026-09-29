@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	stdcrypto "crypto"
 	"crypto/ecdsa"
@@ -179,6 +180,10 @@ func TestHSMResidentSigningKeys(t *testing.T) {
 		// The public half can be exported (for verifiers outside the KMS).
 		if exp, err := svc.ExportPublicComponentPlaintext(ctx, "t1", key.ID); err != nil || exp.PublicKeyPlaintext != b64(ver.PublicKey) {
 			t.Fatalf("%s public export: %v", alg, err)
+		}
+		// The public-key route serves the key the HSM returned.
+		if der, _, err := svc.CurrentPublicKey(ctx, key); err != nil || !bytes.Equal(der, ver.PublicKey) {
+			t.Fatalf("%s public key read: %v", alg, err)
 		}
 		for name, d := range map[string][]byte{"valid": data, "tampered": []byte("release manifesT")} {
 			res, err := svc.Verify(ctx, key.ID, VerifyRequest{TenantID: "t1", DataB64: b64(d), SignatureB64: sig.SignatureB64})

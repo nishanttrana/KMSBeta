@@ -151,6 +151,14 @@ operation (`fpe-encrypt` → encrypt); its key binding still applies.
 | dataprotect | `POST /keys/{id}/usage/meter`, made before every key operation and before `service-derive` | `fpe-encrypt`, `fpe-decrypt`, `tokenize`, `detokenize`, `encrypt`/`decrypt` (field, searchable, mask), `wrap`/`unwrap` (envelope) |
 | payment | `POST /keys/{id}/export` for key material; `encrypt`, `decrypt`, `sign`, `verify` (ISO 20022) | `translate-decrypt`/`translate-encrypt` (PIN), `translate-unwrap`/`translate-wrap` (TR-31 translate), `export` (TR-31 create payload), `wrap`/`unwrap` (KBPK), `mac` (PVV, offset, CVV, MAC, LAU) |
 | certs | `POST /keys/{id}/sign` (HSM CA keys and the `keycore` backend) | `certificate-sign` (issuance, sub-CA), `crl-sign` |
+| ekm | `GET /keys/{id}/public-key` (TDE public key, on every request and at key creation and rotation) | `read` (6.18.0-beta) |
+
+`read` is the one usage that is not a key operation: it is a per-key read
+(section 8), decided by the user's view of the key, not by
+`evaluateKeyAccess`. Because a delegated usage replaces the operation keycore
+checks, a delegated `read` on any key operation is refused
+(`delegation_usage_mismatch`); otherwise a `read` grant forwarded by a
+service would allow a use (`TestDelegatedReadCannotPerformAKeyOperation`).
 
 Not delegated, and why:
 - `service-derive` stays service-only; dataprotect's metering call before it

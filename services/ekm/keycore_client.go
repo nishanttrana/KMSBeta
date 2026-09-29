@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/delegation"
 	"vecta-kms/pkg/servicetoken"
 )
 
 type KeyCoreClient interface {
 	CreateAsymmetricKey(ctx context.Context, tenantID string, name string, algorithm string, labels map[string]string) (string, error)
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
+	PublicKey(ctx context.Context, tenantID string, keyID string) (KeyCorePublicKey, error)
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) (map[string]interface{}, error)
 	DestroyKeyImmediately(ctx context.Context, tenantID string, keyID string, keyName string, justification string) error
 	Wrap(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error)
@@ -72,6 +75,45 @@ func (c *HTTPKeyCoreClient) GetKey(ctx context.Context, tenantID string, keyID s
 	return map[string]interface{}{}, nil
 }
 
+// KeyCorePublicKey is keycore's GET /keys/{id}/public-key response: the
+// current version's public key as PEM SubjectPublicKeyInfo.
+type KeyCorePublicKey struct {
+	KeyID        string `json:"key_id"`
+	Version      int    `json:"version"`
+	Algorithm    string `json:"algorithm"`
+	Format       string `json:"format"`
+	PublicKeyPEM string `json:"public_key_pem"`
+}
+
+// keycoreError is a refusal or failure keycore answered with.
+type keycoreError struct {
+	Status int
+	Code   string
+	Msg    string
+}
+
+func (e *keycoreError) Error() string { return e.Msg }
+
+// PublicKey reads the key's current public key as the user ctx serves
+// (pkg/delegation, usage "read"): keycore decides by the user's view of the
+// key, not ekm's tenant-wide trust.
+func (c *HTTPKeyCoreClient) PublicKey(ctx context.Context, tenantID string, keyID string) (KeyCorePublicKey, error) {
+	path := "/keys/" + url.PathEscape(strings.TrimSpace(keyID)) + "/public-key?tenant_id=" + url.QueryEscape(strings.TrimSpace(tenantID))
+	out, err := c.do(ctx, http.MethodGet, path, nil, "read")
+	if err != nil {
+		return KeyCorePublicKey{}, err
+	}
+	var pk KeyCorePublicKey
+	raw, _ := json.Marshal(out)
+	if err := json.Unmarshal(raw, &pk); err != nil {
+		return KeyCorePublicKey{}, err
+	}
+	if !strings.Contains(pk.PublicKeyPEM, "BEGIN PUBLIC KEY") {
+		return KeyCorePublicKey{}, errors.New("keycore public key response carries no PEM public key")
+	}
+	return pk, nil
+}
+
 func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyID string, reason string) (map[string]interface{}, error) {
 	path := "/keys/" + strings.TrimSpace(keyID) + "/rotate?tenant_id=" + strings.TrimSpace(tenantID)
 	return c.doJSON(ctx, http.MethodPost, path, map[string]interface{}{
@@ -115,6 +157,11 @@ func (c *HTTPKeyCoreClient) Unwrap(ctx context.Context, tenantID string, keyID s
 }
 
 func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path string, payload interface{}) (map[string]interface{}, error) {
+	return c.do(ctx, method, path, payload, "")
+}
+
+// do calls keycore as ekm; with a usage it forwards the user ctx serves.
+func (c *HTTPKeyCoreClient) do(ctx context.Context, method string, path string, payload interface{}, usage string) (map[string]interface{}, error) {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, errors.New("keycore base url is empty")
 	}
@@ -131,6 +178,9 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 		return nil, err
 	}
 	servicetoken.Authorize(ctx, req)
+	if usage != "" {
+		delegation.Attach(ctx, req, usage)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -146,7 +196,7 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 		if msg == "" {
 			msg = "keycore request failed"
 		}
-		return nil, errors.New(msg)
+		return nil, &keycoreError{Status: resp.StatusCode, Code: extractErrorCode(out), Msg: msg}
 	}
 	return out, nil
 }
@@ -162,4 +212,10 @@ func extractErrorMessage(v map[string]interface{}) string {
 	}
 	msg, _ := errMap["message"].(string)
 	return strings.TrimSpace(msg)
+}
+
+func extractErrorCode(v map[string]interface{}) string {
+	errMap, _ := v["error"].(map[string]interface{})
+	code, _ := errMap["code"].(string)
+	return strings.TrimSpace(code)
 }

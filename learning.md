@@ -17,6 +17,25 @@ store is unique on (`metadata.name`), not the manifest's own `id`.
 
 ## 2026-09-29
 
+### A field on a record isn't a field of every record
+- **What happened:** the plan for keycore's public-key route was "return
+  `KeyVersion.PublicKey`". Only HSM key pairs fill it. A software key pair
+  (every EKM TDE key: RSA-3072) stores only its encrypted PKCS#8 private
+  key, so the field is empty and the route would have refused the keys it
+  was built for. The route derives the public half from the private
+  material instead, and the test compares the result with the stored
+  private key's own public key, not just "it parses".
+- **Also found:** ekm's public-key getter served its cached copy first.
+  After a rotation that copy was the previous version's key, and serving it
+  skipped keycore's decision for the user. A cache in front of a
+  decision is a second decision; the getter now always asks keycore.
+- **Why it slipped through:** the ekm keycore fake returned
+  `public_key_pem` from `GET /keys/{id}`, which the real keycore never did,
+  so no test could see that there was no route to read a public key. **Rule:**
+  a fake answers only what the real route answers (compare with
+  `renderKey`), and the HTTP client gets a test against the real response
+  and error shape.
+
 ### A setting with a default and no reader looks like a feature
 - The EKM agent's `rotate_path` had a config field, an env override and a
   per-mode default, but no code used it. Found while removing the dead

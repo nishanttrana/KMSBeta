@@ -9,6 +9,7 @@ import {
   disableKey,
   exportKey,
   formKey,
+  getKeyPublicKey,
   importKey,
   listKeyAccessGroups,
   listKeys,
@@ -1366,6 +1367,27 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     }
   };
 
+  const downloadSelectedPublicKey=async()=>{
+    if(!session||!selectedKey?.id){
+      return;
+    }
+    try{
+      const out=await getKeyPublicKey(session,selectedKey.id);
+      const blob=new Blob([out.public_key_pem],{type:"application/x-pem-file"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;
+      a.download=`${String(selectedKey.name||out.key_id||"key").replace(/[^a-z0-9._-]+/gi,"-")}.v${out.version}.pub.pem`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      onToast?.(`Public key downloaded: ${selectedKey.name} v${out.version}`);
+    }catch(error){
+      onToast?.(`Public key unavailable: ${errMsg(error)}`);
+    }
+  };
+
   const exportSelectedKey=async()=>{
     if(!session||!selectedKey?.id){
       return;
@@ -2552,6 +2574,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <div style={{display:"flex",gap:6,marginTop:12}}>
         {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
         {selectedCanExport&&<Btn onClick={()=>{setExportWrappingKeyId("");setExportMode(isPublicComponentLike(selectedKey)?"public-plaintext":"wrapped");setModal("export");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}
+        {isAsymmetricKeyLike(selectedKey)&&!selectedDeletedLike&&<Btn onClick={downloadSelectedPublicKey}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ArrowDownToLine size={12}/>Public key (PEM)</span></Btn>}
         {selectedCanEditPolicy&&<Btn onClick={()=>openPolicyEditor(selectedKey)}>Edit Key Policy</Btn>}
         {selectedNormState==="active"&&<Btn onClick={()=>updateKeyStatus(selectedKey,"deactivated")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Deactivate"}</Btn>}
         {(selectedNormState==="deactivated"||selectedNormState==="pre-active"||selectedNormState==="disabled")&&<Btn onClick={()=>updateKeyStatus(selectedKey,"active")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Activate"}</Btn>}

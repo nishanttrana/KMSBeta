@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"net/http"
 	"strings"
@@ -51,9 +52,15 @@ type fakeEKMKeyCore struct {
 	mu      sync.Mutex
 	counter int
 	keys    map[string]*fakeEKMKey
-	// noPublicKey makes GetKey answer as keycore does today: key metadata
-	// with no public key field.
+	// noPublicKey makes PublicKey answer as keycore does for a key it can't
+	// give a public key for (409, e.g. not_asymmetric).
 	noPublicKey bool
+	// refuse, when set, is keycore's refusal of the user ekm acts for (403,
+	// or 404 for a key the user can't see).
+	refuse *keycoreError
+	// publicKeyToken is the verified user token ctx carried on the last
+	// PublicKey call: what delegation.Attach forwards to keycore.
+	publicKeyToken string
 }
 
 type fakeEKMKey struct {
@@ -61,7 +68,6 @@ type fakeEKMKey struct {
 	KeyID     string
 	Algorithm string
 	Version   int
-	PublicKey string
 }
 
 func newFakeEKMKeyCore() *fakeEKMKeyCore {
@@ -83,7 +89,6 @@ func (f *fakeEKMKeyCore) CreateAsymmetricKey(_ context.Context, tenantID string,
 		KeyID:     keyID,
 		Algorithm: algorithm,
 		Version:   1,
-		PublicKey: "-----BEGIN PUBLIC KEY-----\nFAKE-" + keyID + "\n-----END PUBLIC KEY-----",
 	}
 	return keyID, nil
 }
@@ -95,16 +100,36 @@ func (f *fakeEKMKeyCore) GetKey(_ context.Context, tenantID string, keyID string
 	if !ok {
 		return nil, errors.New("key not found")
 	}
-	out := map[string]interface{}{
+	// Keycore's GET /keys/{id} (renderKey) carries no public key.
+	return map[string]interface{}{
 		"id":              k.KeyID,
 		"tenant_id":       k.TenantID,
 		"algorithm":       k.Algorithm,
 		"current_version": k.Version,
+	}, nil
+}
+
+// PublicKey answers as keycore's GET /keys/{id}/public-key: the current
+// version's key as PEM SubjectPublicKeyInfo, or keycore's refusal. The PEM
+// body names the key and version so a stale copy is detectable.
+func (f *fakeEKMKeyCore) PublicKey(ctx context.Context, tenantID string, keyID string) (KeyCorePublicKey, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.publicKeyToken, _ = pkgauth.VerifiedTokenFromContext(ctx)
+	if f.refuse != nil {
+		return KeyCorePublicKey{}, f.refuse
 	}
-	if !f.noPublicKey {
-		out["public_key_pem"] = k.PublicKey
+	k, ok := f.keys[tenantID+":"+keyID]
+	if !ok {
+		return KeyCorePublicKey{}, &keycoreError{Status: http.StatusNotFound, Code: "not_found", Msg: "key not found"}
 	}
-	return out, nil
+	if f.noPublicKey {
+		return KeyCorePublicKey{}, &keycoreError{Status: http.StatusConflict, Code: "not_asymmetric", Msg: "the key has no public key: it is not an asymmetric key"}
+	}
+	return KeyCorePublicKey{
+		KeyID: k.KeyID, Version: k.Version, Algorithm: k.Algorithm, Format: "spki-pem",
+		PublicKeyPEM: string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: []byte(k.KeyID + "/v" + strconvItoa(k.Version))})),
+	}, nil
 }
 
 func (f *fakeEKMKeyCore) RotateKey(_ context.Context, tenantID string, keyID string, _ string) (map[string]interface{}, error) {
