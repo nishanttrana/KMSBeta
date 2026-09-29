@@ -286,8 +286,6 @@ var NodeLocal = map[string]string{
 	"kdf_derivation_log":                  "per-node derivation log written during crypto operations",
 	"key_access_decisions":                "per-node access decision log",
 	"key_analytics_metrics":               "per-node operation metrics",
-	"key_interface_ports":                 "network listeners of this node",
-	"key_interface_tls_defaults":          "TLS listener defaults of this node",
 	"key_iv_log":                          "per-node IV log written during crypto operations",
 	"key_request_nonce_cache":             "anti-replay nonces are checked where the request lands",
 	"key_usage_events":                    "per-node crypto-operation log (written on every node)",

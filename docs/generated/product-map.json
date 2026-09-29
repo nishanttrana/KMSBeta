@@ -3481,6 +3481,36 @@
       "service": "certs"
     },
     {
+      "action": "edge_tls_read",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeRead",
+      "line": 39,
+      "match_key": "certs|GET|/certs/edge-tls",
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls",
+      "permission": "cert.internal_mtls.read",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
+      "action": "edge_tls_policy_updated",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgePolicy",
+      "line": 42,
+      "match_key": "certs|PUT|/certs/edge-tls",
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls",
+      "permission": "cert.internal_mtls.write",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
       "action": "internal_enroll",
       "code_scope": "certs",
       "file": "services/certs/internal_tls.go",
@@ -8368,81 +8398,6 @@
       "permission": "key.access.admin",
       "registration": "kernel",
       "resource": "interface_policy",
-      "service": "keycore"
-    },
-    {
-      "action": "interface_tls_config_read",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_access.go",
-      "handler": "h.getInterfaceTLSConfig",
-      "line": 43,
-      "match_key": "keycore|GET|/access/interface-tls-config",
-      "method": "GET",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config",
-      "permission": "key.access.read",
-      "registration": "kernel",
-      "resource": "interface_tls_config",
-      "service": "keycore"
-    },
-    {
-      "action": "interface_tls_config_updated",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_access.go",
-      "handler": "h.putInterfaceTLSConfig",
-      "line": 44,
-      "match_key": "keycore|PUT|/access/interface-tls-config",
-      "method": "PUT",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config",
-      "permission": "key.access.admin",
-      "registration": "kernel",
-      "resource": "interface_tls_config",
-      "service": "keycore"
-    },
-    {
-      "action": "interface_ports_listed",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_access.go",
-      "handler": "h.listInterfacePorts",
-      "line": 45,
-      "match_key": "keycore|GET|/access/interface-ports",
-      "method": "GET",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports",
-      "permission": "key.access.read",
-      "registration": "kernel",
-      "resource": "interface_port",
-      "service": "keycore"
-    },
-    {
-      "action": "interface_port_upserted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_access.go",
-      "handler": "h.upsertInterfacePort",
-      "line": 46,
-      "match_key": "keycore|POST|/access/interface-ports",
-      "method": "POST",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports",
-      "permission": "key.access.admin",
-      "registration": "kernel",
-      "resource": "interface_port",
-      "service": "keycore"
-    },
-    {
-      "action": "interface_port_deleted",
-      "code_scope": "keycore",
-      "file": "services/keycore/handler_access.go",
-      "handler": "h.deleteInterfacePort",
-      "line": 47,
-      "match_key": "keycore|DELETE|/access/interface-ports/{param}",
-      "method": "DELETE",
-      "normalized_path": "/access/interface-ports/{param}",
-      "path": "/access/interface-ports/{name}",
-      "permission": "key.access.admin",
-      "registration": "kernel",
-      "resource": "interface_port",
       "service": "keycore"
     },
     {
@@ -24513,7 +24468,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind...",
-      "line": 133,
+      "line": 145,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24521,7 +24476,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => rotateInternalMTLS(session, i.identity, \"graceful\"...",
-      "line": 137,
+      "line": 149,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24529,7 +24484,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "{ setConfirmForce(\"\"); void run(i.identity, () => rotateInternalMTLS(session,...",
-      "line": 142,
+      "line": 154,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24537,7 +24492,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "setConfirmForce(i.identity)}>Force restart",
-      "line": 147,
+      "line": 159,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24545,7 +24500,15 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(\"rotate-all\", async () => { const out = await rotateAllInternalMTLS(...",
-      "line": 180,
+      "line": 192,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "void run(\"edge\", async () => , \"Edge key exchange saved; Envoy and KMIP apply...",
+      "line": 234,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25387,7 +25350,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 10, bo...",
-      "line": 297,
+      "line": 287,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25395,7 +25358,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ onFileChange(null); if (inputRef.current) }} style={ } > Clear",
-      "line": 311,
+      "line": 301,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25403,7 +25366,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:6,b...",
-      "line": 812,
+      "line": 560,
       "tabs": [],
       "tag": "button"
     },
@@ -25411,7 +25374,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restartAllAllowedServices()} disabled= >",
-      "line": 2149,
+      "line": 1388,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25419,7 +25382,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadHealth()}>",
-      "line": 2156,
+      "line": 1395,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25427,7 +25390,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restartSvc(name)} disabled= >",
-      "line": 2185,
+      "line": 1424,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25435,15 +25398,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2249,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "}>Configure TLS",
-      "line": 2250,
+      "line": 1488,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25451,7 +25406,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(true)}>Configure FIPS",
-      "line": 2251,
+      "line": 1489,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25459,7 +25414,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"enabled\");}}>Enable FIPS",
-      "line": 2263,
+      "line": 1501,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25467,7 +25422,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"disabled\");}}>Disable FIPS",
-      "line": 2264,
+      "line": 1502,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25475,7 +25430,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(false)}>Cancel",
-      "line": 2320,
+      "line": 1557,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25483,31 +25438,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveFipsConfig()} disabled= >",
-      "line": 2321,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "}>Open Interfaces",
-      "line": 2367,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "}>Cancel",
-      "line": 2369,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "void saveTLSConfig()} disabled= >",
-      "line": 2370,
+      "line": 1558,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25515,7 +25446,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2377,
+      "line": 1565,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25523,7 +25454,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void testSnmpSettings()} disabled= >",
-      "line": 2378,
+      "line": 1566,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25531,7 +25462,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSnmpSettings()} disabled= >",
-      "line": 2379,
+      "line": 1567,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25539,7 +25470,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadTags()}>Refresh",
-      "line": 2461,
+      "line": 1649,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25547,7 +25478,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void addTag()} disabled= >",
-      "line": 2466,
+      "line": 1654,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25555,7 +25486,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void removeTag(name,usageCount)} disabled= >Delete",
-      "line": 2481,
+      "line": 1669,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25563,7 +25494,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadPasswordPolicy()} disabled= >",
-      "line": 2491,
+      "line": 1679,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25571,7 +25502,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void savePasswordPolicy()} disabled= >",
-      "line": 2491,
+      "line": 1679,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25579,7 +25510,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSecurityPolicy()} disabled= >",
-      "line": 2516,
+      "line": 1704,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25587,7 +25518,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadAccessHardening()} disabled= >",
-      "line": 2535,
+      "line": 1723,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25595,63 +25526,15 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveAccessHardening()} disabled= >",
-      "line": 2536,
+      "line": 1724,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
-      "label": "void Promise.all([loadAccessHardening(),loadHealth()])} disabled= >",
-      "line": 2567,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "openNetIfModal()} disabled= >+ Add Interface",
-      "line": 2568,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "void toggleNetIfEnabled(iface)}>",
-      "line": 2599,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "openNetIfModal(iface)}>Edit",
-      "line": 2600,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "void deleteNetIf(iface.interface_name)}>Delete",
-      "line": 2601,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "}>Cancel",
-      "line": 2659,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "void saveNetIf()}>",
-      "line": 2660,
+      "label": "void loadHealth()} disabled= >",
+      "line": 1754,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25659,7 +25542,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2666,
+      "line": 1785,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25667,7 +25550,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2666,
+      "line": 1785,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25675,7 +25558,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setPanel(\"interfaces\")}>Open Interfaces",
-      "line": 2733,
+      "line": 1851,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25683,7 +25566,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 2743,
+      "line": 1861,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25691,7 +25574,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 2750,
+      "line": 1868,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25699,7 +25582,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 2763,
+      "line": 1881,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25707,7 +25590,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 2794,
+      "line": 1912,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25715,7 +25598,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 2797,
+      "line": 1915,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25723,7 +25606,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 2804,
+      "line": 1922,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25731,7 +25614,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
-      "line": 2810,
+      "line": 1928,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25739,7 +25622,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover...",
-      "line": 2818,
+      "line": 1936,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25747,7 +25630,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadJobs()}>",
-      "line": 2825,
+      "line": 1943,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25755,7 +25638,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 2839,
+      "line": 1957,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25763,7 +25646,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 2863,
+      "line": 1981,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25771,7 +25654,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 2866,
+      "line": 1984,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25779,7 +25662,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 2894,
+      "line": 2012,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25787,7 +25670,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 2895,
+      "line": 2013,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25795,7 +25678,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 2900,
+      "line": 2018,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25803,7 +25686,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 2901,
+      "line": 2019,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25811,7 +25694,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 2915,
+      "line": 2033,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25819,7 +25702,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 2915,
+      "line": 2033,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25827,7 +25710,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 2915,
+      "line": 2033,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25835,7 +25718,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 2921,
+      "line": 2039,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25843,7 +25726,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 2921,
+      "line": 2039,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25851,7 +25734,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 2938,
+      "line": 2056,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25859,7 +25742,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 2941,
+      "line": 2059,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25867,7 +25750,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 2942,
+      "line": 2060,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25875,7 +25758,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleTestRule()} disabled= >",
-      "line": 2997,
+      "line": 2115,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25883,7 +25766,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 3010,
+      "line": 2128,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25891,7 +25774,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 3011,
+      "line": 2129,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25899,7 +25782,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 3018,
+      "line": 2136,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25907,7 +25790,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 3019,
+      "line": 2137,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25915,7 +25798,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 3055,
+      "line": 2173,
       "tabs": [],
       "tag": "button"
     },
@@ -25923,7 +25806,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 3056,
+      "line": 2174,
       "tabs": [],
       "tag": "button"
     },
@@ -25931,7 +25814,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 3129,
+      "line": 2247,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25939,7 +25822,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 3130,
+      "line": 2248,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25947,7 +25830,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 3173,
+      "line": 2291,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25955,7 +25838,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 3174,
+      "line": 2292,
       "tabs": [],
       "tag": "Btn"
     },
@@ -28459,6 +28342,32 @@
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/rotate-all",
       "path": "/certs/internal-mtls/rotate-all?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/certs.ts",
+      "line": 1160,
+      "match_key": "certs|GET|/certs/edge-tls",
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/certs.ts",
+      "line": 1165,
+      "match_key": "certs|PUT|/certs/edge-tls",
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls?{param}",
       "service": "certs",
       "service_key": "certs",
       "source": "serviceRequest"
@@ -31119,7 +31028,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 546,
+      "line": 506,
       "match_key": "keycore|GET|/keys",
       "method": "GET",
       "normalized_path": "/keys",
@@ -31132,7 +31041,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 586,
+      "line": 546,
       "match_key": "keycore|POST|/keys",
       "method": "POST",
       "normalized_path": "/keys",
@@ -31145,7 +31054,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 676,
+      "line": 636,
       "match_key": "keycore|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -31158,7 +31067,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 682,
+      "line": 642,
       "match_key": "keycore|GET|/keys/{param}/hsm",
       "method": "GET",
       "normalized_path": "/keys/{param}/hsm",
@@ -31171,7 +31080,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 695,
+      "line": 655,
       "match_key": "keycore|GET|/hsm/settings",
       "method": "GET",
       "normalized_path": "/hsm/settings",
@@ -31184,7 +31093,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/hsm/settings\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 702,
+      "line": 662,
       "match_key": "keycore|PUT|/hsm/settings",
       "method": "PUT",
       "normalized_path": "/hsm/settings",
@@ -31197,7 +31106,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys/form\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 710,
+      "line": 670,
       "match_key": "keycore|POST|/keys/form",
       "method": "POST",
       "normalized_path": "/keys/form",
@@ -31210,7 +31119,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys/import\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 741,
+      "line": 701,
       "match_key": "keycore|POST|/keys/import",
       "method": "POST",
       "normalized_path": "/keys/import",
@@ -31223,7 +31132,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 776,
+      "line": 736,
       "match_key": "keycore|POST|/keys/{param}/rotate",
       "method": "POST",
       "normalized_path": "/keys/{param}/rotate",
@@ -31236,7 +31145,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 785,
+      "line": 745,
       "match_key": "keycore|POST|/keys/{param}/verify-material",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify-material",
@@ -31249,7 +31158,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 795,
+      "line": 755,
       "match_key": "keycore|POST|/keys/{param}/attest",
       "method": "POST",
       "normalized_path": "/keys/{param}/attest",
@@ -31262,7 +31171,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 804,
+      "line": 764,
       "match_key": "keycore|GET|/keys/{param}/versions",
       "method": "GET",
       "normalized_path": "/keys/{param}/versions",
@@ -31275,7 +31184,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 834,
+      "line": 794,
       "match_key": "keycore|POST|/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/encrypt",
@@ -31288,7 +31197,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 871,
+      "line": 831,
       "match_key": "keycore|POST|/keys/{param}/generate-data-key",
       "method": "POST",
       "normalized_path": "/keys/{param}/generate-data-key",
@@ -31301,7 +31210,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 898,
+      "line": 858,
       "match_key": "keycore|POST|/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/decrypt",
@@ -31314,7 +31223,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 922,
+      "line": 882,
       "match_key": "keycore|POST|/keys/{param}/sign",
       "method": "POST",
       "normalized_path": "/keys/{param}/sign",
@@ -31327,7 +31236,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 940,
+      "line": 900,
       "match_key": "keycore|POST|/keys/{param}/verify",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify",
@@ -31340,7 +31249,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/crypto/hash\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 965,
+      "line": 925,
       "match_key": "keycore|POST|/crypto/hash",
       "method": "POST",
       "normalized_path": "/crypto/hash",
@@ -31353,7 +31262,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/crypto/random\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 986,
+      "line": 946,
       "match_key": "keycore|POST|/crypto/random",
       "method": "POST",
       "normalized_path": "/crypto/random",
@@ -31366,7 +31275,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1015,
+      "line": 975,
       "match_key": "keycore|POST|/keys/{param}/derive",
       "method": "POST",
       "normalized_path": "/keys/{param}/derive",
@@ -31379,7 +31288,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1043,
+      "line": 1003,
       "match_key": "keycore|POST|/keys/{param}/kem/encapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/encapsulate",
@@ -31392,7 +31301,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1072,
+      "line": 1032,
       "match_key": "keycore|POST|/keys/{param}/kem/decapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/decapsulate",
@@ -31405,7 +31314,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1098,
+      "line": 1058,
       "match_key": "keycore|POST|/keys/{param}/export",
       "method": "POST",
       "normalized_path": "/keys/{param}/export",
@@ -31418,7 +31327,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1116,
+      "line": 1076,
       "match_key": "keycore|POST|/keys/{param}/destroy",
       "method": "POST",
       "normalized_path": "/keys/{param}/destroy",
@@ -31431,7 +31340,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1127,
+      "line": 1087,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31444,7 +31353,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1139,
+      "line": 1099,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31457,7 +31366,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1153,
+      "line": 1113,
       "match_key": "keycore|POST|/keys/{param}/deactivate",
       "method": "POST",
       "normalized_path": "/keys/{param}/deactivate",
@@ -31470,7 +31379,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1161,
+      "line": 1121,
       "match_key": "keycore|POST|/keys/{param}/disable",
       "method": "POST",
       "normalized_path": "/keys/{param}/disable",
@@ -31483,7 +31392,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1174,
+      "line": 1134,
       "match_key": "keycore|PUT|/keys/{param}/usage/limit",
       "method": "PUT",
       "normalized_path": "/keys/{param}/usage/limit",
@@ -31496,7 +31405,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1192,
+      "line": 1152,
       "match_key": "keycore|PUT|/keys/{param}/export-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/export-policy",
@@ -31509,7 +31418,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1208,
+      "line": 1168,
       "match_key": "keycore|GET|/keys/{param}/access-policy",
       "method": "GET",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31522,7 +31431,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1221,
+      "line": 1181,
       "match_key": "keycore|PUT|/keys/{param}/access-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31535,7 +31444,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1232,
+      "line": 1192,
       "match_key": "keycore|GET|/access/settings",
       "method": "GET",
       "normalized_path": "/access/settings",
@@ -31548,7 +31457,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1243,
+      "line": 1203,
       "match_key": "keycore|PUT|/access/settings",
       "method": "PUT",
       "normalized_path": "/access/settings",
@@ -31561,7 +31470,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1259,
+      "line": 1219,
       "match_key": "keycore|GET|/access/interface-policies",
       "method": "GET",
       "normalized_path": "/access/interface-policies",
@@ -31574,7 +31483,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1270,
+      "line": 1230,
       "match_key": "keycore|POST|/access/interface-policies",
       "method": "POST",
       "normalized_path": "/access/interface-policies",
@@ -31587,7 +31496,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1282,
+      "line": 1242,
       "match_key": "keycore|DELETE|/access/interface-policies/{param}",
       "method": "DELETE",
       "normalized_path": "/access/interface-policies/{param}",
@@ -31598,74 +31507,9 @@
     },
     {
       "dynamic": true,
-      "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1290,
-      "match_key": "keycore|GET|/access/interface-ports",
-      "method": "GET",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports?tenant_id={param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "keycore.apiRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1298,
-      "match_key": "keycore|GET|/access/interface-tls-config",
-      "method": "GET",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config?tenant_id={param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "keycore.apiRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1309,
-      "match_key": "keycore|PUT|/access/interface-tls-config",
-      "method": "PUT",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config?tenant_id={param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "keycore.apiRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1324,
-      "match_key": "keycore|POST|/access/interface-ports",
-      "method": "POST",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports?tenant_id={param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "keycore.apiRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-      "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1336,
-      "match_key": "keycore|DELETE|/access/interface-ports/{param}",
-      "method": "DELETE",
-      "normalized_path": "/access/interface-ports/{param}",
-      "path": "/access/interface-ports/{param}?tenant_id={param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "keycore.apiRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1344,
+      "line": 1250,
       "match_key": "keycore|GET|/access/groups",
       "method": "GET",
       "normalized_path": "/access/groups",
@@ -31678,7 +31522,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1355,
+      "line": 1261,
       "match_key": "keycore|POST|/access/groups",
       "method": "POST",
       "normalized_path": "/access/groups",
@@ -31691,7 +31535,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1370,
+      "line": 1276,
       "match_key": "keycore|DELETE|/access/groups/{param}",
       "method": "DELETE",
       "normalized_path": "/access/groups/{param}",
@@ -31704,7 +31548,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1382,
+      "line": 1288,
       "match_key": "keycore|PUT|/access/groups/{param}/members",
       "method": "PUT",
       "normalized_path": "/access/groups/{param}/members",
@@ -31717,7 +31561,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1395,
+      "line": 1301,
       "match_key": "keycore|GET|/tags",
       "method": "GET",
       "normalized_path": "/tags",
@@ -31730,7 +31574,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1407,
+      "line": 1313,
       "match_key": "keycore|POST|/tags",
       "method": "POST",
       "normalized_path": "/tags",
@@ -31743,7 +31587,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1422,
+      "line": 1328,
       "match_key": "keycore|DELETE|/tags/{param}",
       "method": "DELETE",
       "normalized_path": "/tags/{param}",
@@ -31756,7 +31600,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1453,
+      "line": 1359,
       "match_key": "keycore|GET|/canary/keys",
       "method": "GET",
       "normalized_path": "/canary/keys",
@@ -31769,7 +31613,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/canary/keys\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1458,
+      "line": 1364,
       "match_key": "keycore|POST|/canary/keys",
       "method": "POST",
       "normalized_path": "/canary/keys",
@@ -31782,7 +31626,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1466,
+      "line": 1372,
       "match_key": "keycore|DELETE|/canary/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/canary/keys/{param}",
@@ -31795,7 +31639,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1470,
+      "line": 1376,
       "match_key": "keycore|GET|/canary/keys/{param}/trips",
       "method": "GET",
       "normalized_path": "/canary/keys/{param}/trips",
@@ -33768,7 +33612,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T09:11:56Z",
+  "generated_at": "2026-09-29T12:55:25Z",
   "navigation": [
     {
       "group": "Overview",
@@ -47201,7 +47045,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 48,
+      "handler_line": 56,
       "handler_name": "handleMTLSInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47240,7 +47084,7 @@
         "mtlsDetails"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 77,
+      "handler_line": 85,
       "handler_name": "handleMTLSPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47279,7 +47123,7 @@
         "mtlsDetails"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 105,
+      "handler_line": 113,
       "handler_name": "handleMTLSRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47317,7 +47161,7 @@
         "refuseMTLS"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 134,
+      "handler_line": 142,
       "handler_name": "handleMTLSRotateAll",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47327,6 +47171,82 @@
       "path": "/certs/internal-mtls/rotate-all",
       "route_file": "services/certs/internal_mtls_routes.go",
       "route_line": 34,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/certs.ts",
+          "line": 1160,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "s.handleEdgeRead",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "rootOnly",
+        "EdgeInventory",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 186,
+      "handler_name": "handleEdgeRead",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 39,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/certs.ts",
+          "line": 1165,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "s.handleEdgePolicy",
+      "handler_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "rootOnly",
+        "SetEdgeKX",
+        "refuseMTLS"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/svctls.EnvoyCurves"
+      ],
+      "handler_line": 200,
+      "handler_name": "handleEdgePolicy",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls",
+      "path": "/certs/edge-tls",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 42,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -67178,7 +67098,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 871,
+          "line": 831,
           "source": "keycore.apiRequest"
         }
       ],
@@ -67351,7 +67271,7 @@
         {
           "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 546,
+          "line": 506,
           "source": "keycore.apiRequest"
         }
       ],
@@ -67596,7 +67516,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1098,
+          "line": 1058,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68035,7 +67955,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 804,
+          "line": 764,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68404,7 +68324,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1395,
+          "line": 1301,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68476,7 +68396,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 834,
+          "line": 794,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68510,7 +68430,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 898,
+          "line": 858,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68544,7 +68464,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 922,
+          "line": 882,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68578,7 +68498,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 940,
+          "line": 900,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68767,7 +68687,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1015,
+          "line": 975,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69147,7 +69067,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1043,
+          "line": 1003,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69245,7 +69165,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1072,
+          "line": 1032,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69343,7 +69263,7 @@
         {
           "expression": "apiRequest(\"/crypto/hash\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 965,
+          "line": 925,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69412,7 +69332,7 @@
         {
           "expression": "apiRequest(\"/crypto/random\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 986,
+          "line": 946,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69812,7 +69732,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1208,
+          "line": 1168,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69825,7 +69745,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 68,
+      "handler_line": 63,
       "handler_name": "getKeyAccessPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69871,7 +69791,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1221,
+          "line": 1181,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69887,7 +69807,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 80,
+      "handler_line": 75,
       "handler_name": "putKeyAccessPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -69965,7 +69885,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1344,
+          "line": 1250,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69977,7 +69897,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 105,
+      "handler_line": 100,
       "handler_name": "listAccessGroups",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70023,7 +69943,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1355,
+          "line": 1261,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70036,7 +69956,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 114,
+      "handler_line": 109,
       "handler_name": "createAccessGroup",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70086,7 +70006,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1370,
+          "line": 1276,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70098,7 +70018,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
+      "handler_line": 127,
       "handler_name": "deleteAccessGroup",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70144,7 +70064,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1382,
+          "line": 1288,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70156,7 +70076,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 135,
       "handler_name": "setAccessGroupMembers",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70206,7 +70126,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1232,
+          "line": 1192,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70218,7 +70138,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 162,
+      "handler_line": 157,
       "handler_name": "getAccessSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70252,7 +70172,7 @@
             "normalizeKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 448,
+          "line": 257,
           "name": "GetKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70270,7 +70190,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1243,
+          "line": 1203,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70284,7 +70204,7 @@
         "UpdateKeyAccessSettings"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 171,
+      "handler_line": 166,
       "handler_name": "putAccessSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70320,7 +70240,7 @@
             "normalizeKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 448,
+          "line": 257,
           "name": "GetKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70337,7 +70257,7 @@
             "UpsertKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 463,
+          "line": 272,
           "name": "UpdateKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70356,7 +70276,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1259,
+          "line": 1219,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70371,7 +70291,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 231,
+      "handler_line": 226,
       "handler_name": "listInterfacePolicies",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70403,7 +70323,7 @@
             "normalizeInterfaceName"
           ],
           "internal_package_calls": [],
-          "line": 475,
+          "line": 284,
           "name": "ListKeyInterfaceSubjectPolicies",
           "receiver_calls": [],
           "store_calls": [
@@ -70421,7 +70341,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1270,
+          "line": 1230,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70434,7 +70354,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 240,
+      "handler_line": 235,
       "handler_name": "upsertInterfacePolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70460,7 +70380,7 @@
             "normalizeInterfacePolicy"
           ],
           "internal_package_calls": [],
-          "line": 483,
+          "line": 292,
           "name": "UpsertKeyInterfaceSubjectPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70478,7 +70398,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1282,
+          "line": 1242,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70490,7 +70410,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 260,
+      "handler_line": 255,
       "handler_name": "deleteInterfacePolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70518,7 +70438,7 @@
           "file": "services/keycore/access_hardening.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 495,
+          "line": 304,
           "name": "DeleteKeyInterfaceSubjectPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70529,336 +70449,6 @@
       "service_receiver_calls": [],
       "service_store_calls": [
         "DeleteKeyInterfaceSubjectPolicy"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1298,
-          "source": "keycore.apiRequest"
-        }
-      ],
-      "handler": "h.getInterfaceTLSConfig",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_access.go",
-      "handler_helper_calls": [
-        "GetKeyInterfaceTLSConfig",
-        "Error"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 268,
-      "handler_name": "getInterfaceTLSConfig",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "GetKeyInterfaceTLSConfig"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config",
-      "route_file": "services/keycore/handler_access.go",
-      "route_line": 43,
-      "service": "keycore",
-      "service_external_package_calls": [
-        "errors.New",
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "normalizeInterfaceTLSConfig"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "errors.New",
-            "strings.TrimSpace"
-          ],
-          "file": "services/keycore/access_hardening.go",
-          "helper_calls": [
-            "normalizeInterfaceTLSConfig"
-          ],
-          "internal_package_calls": [],
-          "line": 527,
-          "name": "GetKeyInterfaceTLSConfig",
-          "receiver_calls": [],
-          "store_calls": [
-            "GetKeyInterfaceTLSConfig"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "GetKeyInterfaceTLSConfig"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1309,
-          "source": "keycore.apiRequest"
-        }
-      ],
-      "handler": "h.putInterfaceTLSConfig",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_access.go",
-      "handler_helper_calls": [
-        "actorOf",
-        "UpdateKeyInterfaceTLSConfig",
-        "Error"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 277,
-      "handler_name": "putInterfaceTLSConfig",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "UpdateKeyInterfaceTLSConfig"
-      ],
-      "handler_store_calls": [],
-      "method": "PUT",
-      "normalized_path": "/access/interface-tls-config",
-      "path": "/access/interface-tls-config",
-      "route_file": "services/keycore/handler_access.go",
-      "route_line": 44,
-      "service": "keycore",
-      "service_external_package_calls": [],
-      "service_helper_calls": [
-        "normalizeInterfaceTLSConfig",
-        "UpsertKeyInterfaceTLSConfig",
-        "ListKeyInterfacePorts",
-        "applyInterfacePortDefaults",
-        "interfaceProtocolUsesCertificate",
-        "applyTLSConfigToPort",
-        "UpsertKeyInterfacePort"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/keycore/access_hardening.go",
-          "helper_calls": [
-            "normalizeInterfaceTLSConfig",
-            "UpsertKeyInterfaceTLSConfig",
-            "ListKeyInterfacePorts",
-            "applyInterfacePortDefaults",
-            "interfaceProtocolUsesCertificate",
-            "applyTLSConfigToPort",
-            "UpsertKeyInterfacePort"
-          ],
-          "internal_package_calls": [],
-          "line": 539,
-          "name": "UpdateKeyInterfaceTLSConfig",
-          "receiver_calls": [],
-          "store_calls": [
-            "UpsertKeyInterfaceTLSConfig",
-            "ListKeyInterfacePorts",
-            "UpsertKeyInterfacePort"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "UpsertKeyInterfaceTLSConfig",
-        "ListKeyInterfacePorts",
-        "UpsertKeyInterfacePort"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1290,
-          "source": "keycore.apiRequest"
-        }
-      ],
-      "handler": "h.listInterfacePorts",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_access.go",
-      "handler_helper_calls": [
-        "ListKeyInterfacePorts",
-        "Error"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 294,
-      "handler_name": "listInterfacePorts",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "ListKeyInterfacePorts"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports",
-      "route_file": "services/keycore/handler_access.go",
-      "route_line": 45,
-      "service": "keycore",
-      "service_external_package_calls": [
-        "errors.New",
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "GetKeyInterfaceTLSConfig",
-        "defaultInterfacePorts",
-        "applyInterfacePortDefaults",
-        "applyTLSConfigToPort"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "errors.New",
-            "strings.TrimSpace"
-          ],
-          "file": "services/keycore/access_hardening.go",
-          "helper_calls": [
-            "GetKeyInterfaceTLSConfig",
-            "defaultInterfacePorts",
-            "applyInterfacePortDefaults",
-            "applyTLSConfigToPort"
-          ],
-          "internal_package_calls": [],
-          "line": 504,
-          "name": "ListKeyInterfacePorts",
-          "receiver_calls": [],
-          "store_calls": [
-            "GetKeyInterfaceTLSConfig",
-            "ListKeyInterfacePorts"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "GetKeyInterfaceTLSConfig",
-        "ListKeyInterfacePorts"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1324,
-          "source": "keycore.apiRequest"
-        }
-      ],
-      "handler": "h.upsertInterfacePort",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_access.go",
-      "handler_helper_calls": [
-        "actorOf",
-        "UpsertKeyInterfacePort",
-        "Error"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 303,
-      "handler_name": "upsertInterfacePort",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "UpsertKeyInterfacePort"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/access/interface-ports",
-      "path": "/access/interface-ports",
-      "route_file": "services/keycore/handler_access.go",
-      "route_line": 46,
-      "service": "keycore",
-      "service_external_package_calls": [],
-      "service_helper_calls": [
-        "normalizePortConfig",
-        "GetKeyInterfaceTLSConfig",
-        "applyTLSConfigToPort"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/keycore/access_hardening.go",
-          "helper_calls": [
-            "normalizePortConfig",
-            "GetKeyInterfaceTLSConfig",
-            "applyTLSConfigToPort"
-          ],
-          "internal_package_calls": [],
-          "line": 566,
-          "name": "UpsertKeyInterfacePort",
-          "receiver_calls": [],
-          "store_calls": [
-            "GetKeyInterfaceTLSConfig",
-            "UpsertKeyInterfacePort"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "GetKeyInterfaceTLSConfig",
-        "UpsertKeyInterfacePort"
-      ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-          "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1336,
-          "source": "keycore.apiRequest"
-        }
-      ],
-      "handler": "h.deleteInterfacePort",
-      "handler_external_package_calls": [],
-      "handler_file": "services/keycore/handler_access.go",
-      "handler_helper_calls": [
-        "DeleteKeyInterfacePort",
-        "storeErr"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 325,
-      "handler_name": "deleteInterfacePort",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "DeleteKeyInterfacePort"
-      ],
-      "handler_store_calls": [],
-      "method": "DELETE",
-      "normalized_path": "/access/interface-ports/{param}",
-      "path": "/access/interface-ports/{name}",
-      "route_file": "services/keycore/handler_access.go",
-      "route_line": 47,
-      "service": "keycore",
-      "service_external_package_calls": [
-        "errors.New",
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "normalizeInterfaceName"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "errors.New",
-            "strings.TrimSpace"
-          ],
-          "file": "services/keycore/access_hardening.go",
-          "helper_calls": [
-            "normalizeInterfaceName"
-          ],
-          "internal_package_calls": [],
-          "line": 583,
-          "name": "DeleteKeyInterfacePort",
-          "receiver_calls": [],
-          "store_calls": [
-            "DeleteKeyInterfacePort"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "DeleteKeyInterfacePort"
       ]
     },
     {
@@ -71416,7 +71006,7 @@
         {
           "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1453,
+          "line": 1359,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71453,7 +71043,7 @@
         {
           "expression": "apiRequest(\"/canary/keys\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1458,
+          "line": 1364,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71495,7 +71085,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1470,
+          "line": 1376,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71538,7 +71128,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1466,
+          "line": 1372,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71933,7 +71523,7 @@
         {
           "expression": "apiRequest(\"/keys\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 586,
+          "line": 546,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72018,7 +71608,7 @@
         {
           "expression": "apiRequest(\"/keys/import\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 741,
+          "line": 701,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72097,7 +71687,7 @@
         {
           "expression": "apiRequest(\"/keys/form\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 710,
+          "line": 670,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72526,7 +72116,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 776,
+          "line": 736,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72643,13 +72233,13 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1127,
+          "line": 1087,
           "source": "keycore.apiRequest"
         },
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1139,
+          "line": 1099,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72739,7 +72329,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1153,
+          "line": 1113,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72773,7 +72363,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1161,
+          "line": 1121,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72807,7 +72397,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1116,
+          "line": 1076,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72997,7 +72587,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1192,
+          "line": 1152,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73211,7 +72801,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1174,
+          "line": 1134,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73480,7 +73070,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1407,
+          "line": 1313,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73561,7 +73151,7 @@
         {
           "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1422,
+          "line": 1328,
           "source": "keycore.apiRequest"
         }
       ],
@@ -75849,7 +75439,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 795,
+          "line": 755,
           "source": "keycore.apiRequest"
         }
       ],
@@ -75932,7 +75522,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 785,
+          "line": 745,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76432,7 +76022,7 @@
         {
           "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 695,
+          "line": 655,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76498,7 +76088,7 @@
         {
           "expression": "apiRequest(\"/hsm/settings\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 702,
+          "line": 662,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76579,7 +76169,7 @@
         {
           "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 676,
+          "line": 636,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76658,7 +76248,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 682,
+          "line": 642,
           "source": "keycore.apiRequest"
         }
       ],
@@ -91323,7 +90913,7 @@
       "auth": 86,
       "autokey": 15,
       "backup": 11,
-      "certs": 63,
+      "certs": 65,
       "cloud": 14,
       "cluster-manager": 21,
       "compliance": 54,
@@ -91335,7 +90925,7 @@
       "hsm-connector": 12,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 176,
+      "keycore": 171,
       "kmip": 12,
       "payment": 42,
       "policy": 12,
@@ -91358,7 +90948,7 @@
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 47,
+      "certs": 49,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 19,
@@ -91369,7 +90959,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 122,
+      "keycore": 117,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
@@ -91570,17 +91160,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 909,
+    "backend_routes": 906,
     "backend_services": 30,
-    "button_inventory": 770,
-    "frontend_call_sites": 574,
-    "matched_frontend_call_sites": 529,
+    "button_inventory": 761,
+    "frontend_call_sites": 571,
+    "matched_frontend_call_sites": 526,
     "nav_items": 27,
-    "request_flows": 909,
-    "request_flows_with_frontend": 536,
-    "request_flows_with_internal_package_calls": 159,
-    "request_flows_with_service_calls": 542,
-    "request_flows_with_store_calls": 653,
+    "request_flows": 906,
+    "request_flows_with_frontend": 533,
+    "request_flows_with_internal_package_calls": 160,
+    "request_flows_with_service_calls": 537,
+    "request_flows_with_store_calls": 648,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -91617,7 +91207,7 @@
       ]
     },
     {
-      "call_count": 196,
+      "call_count": 193,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -91666,7 +91256,7 @@
       ]
     },
     {
-      "call_count": 98,
+      "call_count": 93,
       "component": "web/dashboard/src/components/v3/tabs/KeysTab.tsx",
       "group": "Keys & lifecycle",
       "id": "keys",
@@ -91706,7 +91296,7 @@
       ]
     },
     {
-      "call_count": 100,
+      "call_count": 97,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "PKI & certificates",
       "id": "certs",
@@ -91978,7 +91568,7 @@
       ]
     },
     {
-      "call_count": 53,
+      "call_count": 48,
       "component": "web/dashboard/src/components/v3/tabs/CryptoTab.tsx",
       "group": "UNLISTED",
       "id": "crypto",
@@ -92040,7 +91630,7 @@
       ]
     },
     {
-      "call_count": 106,
+      "call_count": 108,
       "component": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "group": "UNLISTED",
       "id": "restapi",
@@ -100755,7 +100345,7 @@
         ],
         "handler": "handleMTLSInventory",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 48,
+        "handlerLine": 56,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100789,7 +100379,7 @@
         ],
         "handler": "handleMTLSPolicy",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 77,
+        "handlerLine": 85,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -100823,7 +100413,7 @@
         ],
         "handler": "handleMTLSRotate",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 105,
+        "handlerLine": 113,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100857,7 +100447,7 @@
         ],
         "handler": "handleMTLSRotateAll",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 134,
+        "handlerLine": 142,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100866,6 +100456,74 @@
         "receiverCalls": [],
         "risk": "medium",
         "routeKey": "certs|POST|/certs/internal-mtls/rotate-all",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Certificates / PKI",
+          "restapi"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/certs.ts",
+            "line": 1160,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleEdgeRead",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 186,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/edge-tls",
+        "path": "/certs/edge-tls",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/edge-tls",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Certificates / PKI",
+          "restapi"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/certs.ts",
+            "line": 1165,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleEdgePolicy",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 200,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/svctls.EnvoyCurves"
+        ],
+        "method": "PUT",
+        "normalizedPath": "/certs/edge-tls",
+        "path": "/certs/edge-tls",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|PUT|/certs/edge-tls",
         "sensitive": true,
         "service": "certs",
         "serviceCalls": [],
@@ -110542,7 +110200,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 871,
+            "line": 831,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110625,7 +110283,7 @@
           {
             "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 546,
+            "line": 506,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110736,7 +110394,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1098,
+            "line": 1058,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110829,7 +110487,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 804,
+            "line": 764,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111044,7 +110702,7 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1395,
+            "line": 1301,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111082,7 +110740,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 834,
+            "line": 794,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111115,7 +110773,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 898,
+            "line": 858,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111148,7 +110806,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 922,
+            "line": 882,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111187,7 +110845,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 940,
+            "line": 900,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111306,7 +110964,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1015,
+            "line": 975,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111473,7 +111131,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1043,
+            "line": 1003,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111516,7 +111174,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1072,
+            "line": 1032,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111557,7 +111215,7 @@
           {
             "expression": "apiRequest(\"/crypto/hash\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 965,
+            "line": 925,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111598,7 +111256,7 @@
           {
             "expression": "apiRequest(\"/crypto/random\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 986,
+            "line": 946,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111806,13 +111464,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1208,
+            "line": 1168,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "getKeyAccessPolicy",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 68,
+        "handlerLine": 63,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111852,13 +111510,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1221,
+            "line": 1181,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "putKeyAccessPolicy",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 80,
+        "handlerLine": 75,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -111893,13 +111551,13 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1344,
+            "line": 1250,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "listAccessGroups",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 105,
+        "handlerLine": 100,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111933,13 +111591,13 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1355,
+            "line": 1261,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "createAccessGroup",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 114,
+        "handlerLine": 109,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111973,13 +111631,13 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1370,
+            "line": 1276,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "deleteAccessGroup",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 132,
+        "handlerLine": 127,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112013,13 +111671,13 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1382,
+            "line": 1288,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "setAccessGroupMembers",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 140,
+        "handlerLine": 135,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -112053,13 +111711,13 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1232,
+            "line": 1192,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "getAccessSettings",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 162,
+        "handlerLine": 157,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -112093,13 +111751,13 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1243,
+            "line": 1203,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "putAccessSettings",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 171,
+        "handlerLine": 166,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -112135,13 +111793,13 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1259,
+            "line": 1219,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "listInterfacePolicies",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 231,
+        "handlerLine": 226,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -112172,13 +111830,13 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1270,
+            "line": 1230,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "upsertInterfacePolicy",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 240,
+        "handlerLine": 235,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -112212,13 +111870,13 @@
           {
             "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1282,
+            "line": 1242,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "deleteInterfacePolicy",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 260,
+        "handlerLine": 255,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112234,204 +111892,6 @@
         ],
         "storeCalls": [
           "DeleteKeyInterfaceSubjectPolicy"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Key Management",
-          "Certificates / PKI",
-          "crypto"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.New",
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1298,
-            "source": "keycore.apiRequest"
-          }
-        ],
-        "handler": "getInterfaceTLSConfig",
-        "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 268,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/access/interface-tls-config",
-        "path": "/access/interface-tls-config",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|GET|/access/interface-tls-config",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [
-          "GetKeyInterfaceTLSConfig"
-        ],
-        "storeCalls": [
-          "GetKeyInterfaceTLSConfig"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Key Management",
-          "Certificates / PKI",
-          "crypto"
-        ]
-      },
-      {
-        "complexity": 3,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1309,
-            "source": "keycore.apiRequest"
-          }
-        ],
-        "handler": "putInterfaceTLSConfig",
-        "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 277,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "PUT",
-        "normalizedPath": "/access/interface-tls-config",
-        "path": "/access/interface-tls-config",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|PUT|/access/interface-tls-config",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [
-          "UpdateKeyInterfaceTLSConfig"
-        ],
-        "storeCalls": [
-          "UpsertKeyInterfaceTLSConfig",
-          "ListKeyInterfacePorts",
-          "UpsertKeyInterfacePort"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Key Management",
-          "Certificates / PKI",
-          "crypto"
-        ]
-      },
-      {
-        "complexity": 2,
-        "externalPackages": [
-          "errors.New",
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1290,
-            "source": "keycore.apiRequest"
-          }
-        ],
-        "handler": "listInterfacePorts",
-        "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 294,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/access/interface-ports",
-        "path": "/access/interface-ports",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|GET|/access/interface-ports",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [
-          "ListKeyInterfacePorts"
-        ],
-        "storeCalls": [
-          "GetKeyInterfaceTLSConfig",
-          "ListKeyInterfacePorts"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Key Management",
-          "Certificates / PKI",
-          "crypto"
-        ]
-      },
-      {
-        "complexity": 2,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1324,
-            "source": "keycore.apiRequest"
-          }
-        ],
-        "handler": "upsertInterfacePort",
-        "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 303,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/access/interface-ports",
-        "path": "/access/interface-ports",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|POST|/access/interface-ports",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [
-          "UpsertKeyInterfacePort"
-        ],
-        "storeCalls": [
-          "GetKeyInterfaceTLSConfig",
-          "UpsertKeyInterfacePort"
-        ],
-        "uiLabels": [
-          "Operations",
-          "Key Management",
-          "Certificates / PKI",
-          "crypto"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "errors.New",
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
-            "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1336,
-            "source": "keycore.apiRequest"
-          }
-        ],
-        "handler": "deleteInterfacePort",
-        "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 325,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "DELETE",
-        "normalizedPath": "/access/interface-ports/{param}",
-        "path": "/access/interface-ports/{name}",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "keycore|DELETE|/access/interface-ports/{param}",
-        "sensitive": true,
-        "service": "keycore",
-        "serviceCalls": [
-          "DeleteKeyInterfacePort"
-        ],
-        "storeCalls": [
-          "DeleteKeyInterfacePort"
         ],
         "uiLabels": [
           "Operations",
@@ -112836,7 +112296,7 @@
           {
             "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1453,
+            "line": 1359,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112873,7 +112333,7 @@
           {
             "expression": "apiRequest(\"/canary/keys\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1458,
+            "line": 1364,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112911,7 +112371,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1470,
+            "line": 1376,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112947,7 +112407,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1466,
+            "line": 1372,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113279,7 +112739,7 @@
           {
             "expression": "apiRequest(\"/keys\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 586,
+            "line": 546,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113322,7 +112782,7 @@
           {
             "expression": "apiRequest(\"/keys/import\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 741,
+            "line": 701,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113367,7 +112827,7 @@
           {
             "expression": "apiRequest(\"/keys/form\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 710,
+            "line": 670,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113542,7 +113002,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 776,
+            "line": 736,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113590,13 +113050,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1127,
+            "line": 1087,
             "source": "keycore.apiRequest"
           },
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1139,
+            "line": 1099,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113635,7 +113095,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1153,
+            "line": 1113,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113668,7 +113128,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1161,
+            "line": 1121,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113710,7 +113170,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1116,
+            "line": 1076,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113761,7 +113221,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1192,
+            "line": 1152,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113879,7 +113339,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1174,
+            "line": 1134,
             "source": "keycore.apiRequest"
           }
         ],
@@ -114015,7 +113475,7 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1407,
+            "line": 1313,
             "source": "keycore.apiRequest"
           }
         ],
@@ -114060,7 +113520,7 @@
           {
             "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1422,
+            "line": 1328,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115402,7 +114862,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 795,
+            "line": 755,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115447,7 +114907,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 785,
+            "line": 745,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115789,7 +115249,7 @@
           {
             "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 695,
+            "line": 655,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115832,7 +115292,7 @@
           {
             "expression": "apiRequest(\"/hsm/settings\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 702,
+            "line": 662,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115882,7 +115342,7 @@
           {
             "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 676,
+            "line": 636,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115926,7 +115386,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 682,
+            "line": 642,
             "source": "keycore.apiRequest"
           }
         ],
@@ -123870,7 +123330,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T09:11:56Z",
+    "generatedAt": "2026-09-29T12:55:25Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123912,9 +123372,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 909,
-      "frontendBacked": 536,
-      "highRisk": 379,
+      "flows": 906,
+      "frontendBacked": 533,
+      "highRisk": 374,
       "services": 30
     }
   }

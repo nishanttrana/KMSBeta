@@ -4,6 +4,76 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.8.0-beta] — 2026-09-29
+
+### The external edge's key exchange is a real, measured control
+- **One profile for both external listeners.** Certificates / PKI > Service
+  mTLS > External edge key exchange sets the TLS 1.3 groups the HTTPS edge
+  (Envoy, 443) and the KMIP listener (5696) accept: PQC required (hybrid
+  ML-KEM only), PQC preferred (the default) or classical. Until now Envoy's
+  edge set no `ecdh_curves` and KMIP no `CurvePreferences`, so both used
+  their library's defaults and nothing in the product chose them.
+- **Applied without dropping connections.** Certs publishes the profile in
+  `mtls-policy.json` (`edge`) and Envoy's group list in `edge-ecdh-curves`.
+  The new `infra/envoy/entry.sh` writes the list into the edge listener and
+  hot-restarts Envoy (`--restart-epoch`) when it changes; an invalid list is
+  refused at start and ignored later. KMIP reads the profile on every
+  handshake (`svctls.WatchEdge`).
+- **Measured, not assumed.** Certs completes a TLS 1.3 handshake with each
+  listener once per group (`svctls.ProbeGroups`) and records what it
+  accepts, the group it negotiates and its certificate serial. "In force"
+  and `audit.certs.edge_tls_applied` come only from that measurement.
+- **FIPS.** With FIPS mode on, X25519 alone is dropped from the edge
+  profiles, as for internal mTLS, and is not measured. The FIPS impact
+  notes say so.
+- **Audit.** `audit.certs.edge_tls_read`, `audit.certs.edge_tls_policy_updated`
+  (refusals `not_root_tenant`, `invalid_policy`, `unchanged`),
+  `audit.certs.edge_tls_applied`.
+- **Fixed:** certs' `platform_mtls_observed` upsert dropped
+  `last_handshake_group` and `last_handshake_at`.
+- **Tests.** `TestEdgeProfileAppliedPerHandshakeAndMeasured`,
+  `TestEdgePolicyUnreadableKeepsCurrent`, `TestEnvoyCurves` (svctls, real
+  handshakes); `TestEdgeTLSRoutesPublishAndAudit`,
+  `TestEdgeTLSAppliedOnlyWhenMeasured`, `TestEdgeProbeUnreachableIsNotApplied`
+  (certs); `TestEdgeProfileAppliedByRealEnvoy` runs Envoy v1.39.1 with the
+  repository's `envoy.yaml` and `entry.sh`, measures pqc-required then
+  classical through a hot restart, and checks an invalid list is ignored
+  (CI step "Edge key exchange through a real Envoy");
+  `TestMTLSStorePostgres` covers the edge rows on Postgres.
+
+### Removed: interface records no listener read
+- **Keycore's interface ports and TLS defaults are gone.** `GET/POST
+  /access/interface-ports`, `DELETE /access/interface-ports/{name}` and
+  `GET/PUT /access/interface-tls-config` stored a bind address, port,
+  protocol, "enabled" flag and certificate source per interface. No
+  listener, Envoy config or certificate materializer read them: ports come
+  from the deployment and the edge and KMIP certificates from
+  `vecta-runtime-root`. Saving showed "TLS defaults updated and applied to
+  TLS-enabled interfaces", which was not true.
+- **Migration 032** drops `key_interface_ports` and
+  `key_interface_tls_defaults`; 004 no longer creates the first, and 006,
+  007 and 031 are deleted.
+- **Dashboard.** System Administration > Interfaces lists the ports the
+  container runtime reports as published, read-only. The "Configure TLS"
+  dialog in Runtime Crypto is gone.
+- **Tests.** `TestInterfacePortRoutesRemoved`,
+  `TestInterfacePortTablesDroppedPostgres` (fresh and upgraded schema).
+
+### Breaking
+- The five interface routes return 404. Their audit subjects
+  (`interface_ports_listed`, `interface_port_upserted`,
+  `interface_port_deleted`, `interface_tls_config_read`,
+  `interface_tls_config_updated`) are no longer emitted.
+- The Envoy container's entry point is `infra/envoy/entry.sh`; a custom
+  deployment that runs Envoy with its own command gets the `envoy.yaml`
+  default (PQC preferred) and no hot restart.
+
+### Open
+- Choosing another CA for the edge certificate (INTERNAL_TLS.md slice 4) is
+  not built; the certificate comes from `vecta-runtime-root`.
+- The pqc inventory still reports interfaces as `not_assessed`; the edge
+  measurement is on the Service mTLS page.
+
 ## [6.7.0-beta] — 2026-09-29
 
 ### Keycore: destroying an HSM key with no HSM connector is audited

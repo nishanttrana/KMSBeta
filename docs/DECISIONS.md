@@ -7,6 +7,44 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — External edge key exchange: one node-wide profile, hot restart, measured by handshake (6.8.0-beta)
+
+**Decision.** The HTTPS edge (Envoy) and the KMIP listener share one
+key-exchange profile, set by a root administrator in Service mTLS, stored
+in the replicated certs policy table as `vecta-edge`. Envoy applies it by a
+hot restart from an entry script; KMIP per handshake. Certs measures both by
+handshake. The keycore interface records (ports, bind addresses, TLS
+certificate source) were removed rather than made real.
+
+**Why.**
+- A listener is per node and serves every tenant, so the choice is
+  platform administration (root tenant), not a tenant row.
+- Envoy can't change `ecdh_curves` at runtime and SDS can't carry TLS
+  parameters. Rendering the config and hot-restarting keeps connections up;
+  moving the listener to file-based LDS would have split `envoy.yaml`,
+  which the route checks and product map parse.
+- Envoy can't read JSON, so certs also writes a plain group list; the entry
+  script validates every name and fails closed at start.
+- Measurement uses the real listener: one TLS 1.3 handshake per group, the
+  way a client would see it. Nothing is marked applied from the stored
+  value.
+- The interface records couldn't be made real without the KMS managing
+  compose port mappings and Envoy listeners, which belong to the
+  deployment. Choosing the edge certificate's CA stays the planned slice 4
+  of INTERNAL_TLS.md.
+
+**Rejected.** A per-listener profile (two listeners, one security decision,
+and KMIP clients are often older than browsers: the refusal is shown
+instead); keeping the interface editor as a preview (the honest answer to
+every field was "not applied").
+
+**Enforced by.** `TestEdgeProfileAppliedByRealEnvoy`,
+`TestEdgeTLSAppliedOnlyWhenMeasured`,
+`TestEdgeProfileAppliedPerHandshakeAndMeasured`,
+`TestInterfacePortRoutesRemoved`, `TestInterfacePortTablesDroppedPostgres`.
+
+---
+
 ## 2026-09-29 — Interface PQC mode: remove it; svctls kx_profile is the listener control (6.4.0-beta)
 
 **Decision.** Keycore's per-interface `pqc_mode` was removed (option a)

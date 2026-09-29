@@ -30,9 +30,6 @@ func (s *Service) keycoreSyncRequest(ctx context.Context, subject string, tenant
 	case strings.HasPrefix(action, "interface_policy_"):
 		entityType = "interface_policy"
 		entityID = firstNonEmptyAny(data, "id")
-	case strings.HasPrefix(action, "interface_port_"):
-		entityType = "interface_port"
-		entityID = firstNonEmptyAny(data, "interface_name", "name")
 	case action == "access_settings_updated":
 		entityType = "access_settings"
 		entityID = strings.TrimSpace(tenantID)
@@ -152,8 +149,6 @@ func isKeycoreWriteAction(action string) bool {
 		"access_settings_updated",
 		"interface_policy_upserted",
 		"interface_policy_deleted",
-		"interface_port_upserted",
-		"interface_port_deleted",
 		"iv_mode_updated",
 		"version_activated",
 		"version_deactivated",

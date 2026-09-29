@@ -3,10 +3,13 @@ import { B, Btn, Card, Inp, Section, Sel } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
+  getEdgeTLS,
   getInternalMTLS,
   rotateAllInternalMTLS,
   rotateInternalMTLS,
+  setEdgeTLS,
   setInternalMTLSPolicy,
+  type EdgeTLS,
   type MTLSIdentity,
   type MTLSInventory,
   type MTLSRestartMode
@@ -47,6 +50,9 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
   const [allMode, setAllMode] = useState<MTLSRestartMode>("graceful");
   const [allConfirm, setAllConfirm] = useState("");
   const [filter, setFilter] = useState("");
+  const [edge, setEdge] = useState<EdgeTLS | null>(null);
+  const [edgeError, setEdgeError] = useState("");
+  const [edgeDraft, setEdgeDraft] = useState("");
 
   const load = useCallback(async () => {
     if (!session?.token) return;
@@ -56,10 +62,16 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
     } catch (e) {
       setError(errMsg(e));
     }
+    try {
+      setEdge(await getEdgeTLS(session));
+      setEdgeError("");
+    } catch (e) {
+      setEdgeError(errMsg(e));
+    }
   }, [session]);
 
   useEffect(() => { void load(); }, [load]);
-  const pending = useMemo(() => (inv?.items || []).filter((i) => !i.applied).length, [inv]);
+  const pending = useMemo(() => (inv?.items || []).filter((i) => !i.applied).length + (edge && !edge.applied ? 1 : 0), [inv, edge]);
   // Poll while changes are being applied (services restart and report back).
   useEffect(() => {
     const id = window.setInterval(() => void load(), pending > 0 ? 5000 : 30000);
@@ -186,6 +198,51 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
             Rotate every certificate
           </Btn>
         </div>
+      </Card>
+      <Card style={{ padding: 12, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>External edge key exchange</div>
+        {edgeError ? (
+          <div style={{ fontSize: 11, color: C.red, marginTop: 4 }}>Edge key exchange unavailable: {edgeError}</div>
+        ) : !edge ? (
+          <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>Loading...</div>
+        ) : (
+          <>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+              The TLS 1.3 groups the HTTPS edge (Envoy) and the KMIP listener accept from clients outside the platform. One
+              choice for this node; Envoy applies it by a hot restart (no connection refused), KMIP on the next handshake.
+              The groups below are measured by a handshake with each listener, one group at a time.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8, marginTop: 8, fontSize: 11 }}>
+              {edge.listeners.map((l) => (
+                <div key={l.name} style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 8 }}>
+                  <div><div style={{ fontWeight: 700, color: C.text }}>{l.name}</div><div style={{ color: C.dim, fontSize: 10 }}>{l.address}</div></div>
+                  <div>
+                    <div style={{ color: C.text }}>{l.observed ? `accepts ${(l.observed.server_groups || []).join(", ") || "no probed group"}` : "not measured yet"}</div>
+                    <div style={{ color: C.dim, fontSize: 10 }}>
+                      required: {l.expected_groups.join(", ")}
+                      {l.observed?.last_handshake_at ? ` · measured ${ago(l.observed.last_handshake_at)}` : ""}
+                    </div>
+                  </div>
+                  <div>{l.applied ? <B c="green">in force</B> : <B c="amber" pulse>{l.observed ? "differs from the choice" : "not measured"}</B>}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+              <Sel value={edgeDraft || edge.policy.kx_profile} onChange={(e: any) => setEdgeDraft(String(e.target.value))} w={320}>
+                {edge.kx_profiles.map((p) => <option key={p} value={p}>{PROFILE_LABEL[p] || p}</option>)}
+              </Sel>
+              <Btn small primary disabled={busy !== "" || !edgeDraft || edgeDraft === edge.policy.kx_profile}
+                onClick={() => void run("edge", async () => { await setEdgeTLS(session, edgeDraft, reason); setEdgeDraft(""); },
+                  "Edge key exchange saved; Envoy and KMIP apply it within about 20 s")}>
+                Apply to the edge
+              </Btn>
+              <div style={{ fontSize: 10, color: C.dim }}>
+                {PROFILE_LABEL[edgeDraft || edge.policy.kx_profile]}: {(edge.groups[edgeDraft || edge.policy.kx_profile] || []).join(", ")}.
+                {" "}PQC required refuses clients without ML-KEM support, including every TLS 1.2 KMIP client.
+              </div>
+            </div>
+          </>
+        )}
       </Card>
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", fontSize: 10, fontWeight: 700, color: C.dim }}>

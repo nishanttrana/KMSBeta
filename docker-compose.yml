@@ -352,12 +352,12 @@ services:
     restart: unless-stopped
     image: envoyproxy/envoy:v1.39.1
     user: "100:101"
-    entrypoint: ["/bin/sh"]
-    command:
-      - -ec
-      - for i in $(seq 1 180); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/envoy-client/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy-client/tls.key ] && [ -s /run/vecta/trust/internal-ca.crt ] && break; sleep 1; done; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge --service-node vecta-edge
+    # Applies the edge key exchange published by certs (hot restart on a
+    # change); docs/SECURITY/INTERNAL_TLS.md.
+    entrypoint: ["/bin/sh", "/etc/envoy/entry.sh"]
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./infra/envoy/entry.sh:/etc/envoy/entry.sh:ro
       # File-based SDS: certificates reload when certs renews them.
       - ./infra/envoy/sds:/etc/envoy/sds:ro
       - runtime-certs:/run/vecta/runtime-certs:ro

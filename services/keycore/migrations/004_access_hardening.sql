@@ -43,18 +43,6 @@ CREATE TABLE IF NOT EXISTS key_interface_subject_policies (
 CREATE INDEX IF NOT EXISTS idx_key_if_subject_lookup
     ON key_interface_subject_policies (tenant_id, interface_name, subject_type, subject_id);
 
-CREATE TABLE IF NOT EXISTS key_interface_ports (
-    tenant_id        TEXT NOT NULL,
-    interface_name   TEXT NOT NULL,
-    bind_address     TEXT NOT NULL DEFAULT '0.0.0.0',
-    port             INTEGER NOT NULL,
-    enabled          BOOLEAN NOT NULL DEFAULT TRUE,
-    description      TEXT,
-    updated_by       TEXT,
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (tenant_id, interface_name)
-);
-
 CREATE TABLE IF NOT EXISTS key_request_nonce_cache (
     tenant_id        TEXT NOT NULL,
     nonce            TEXT NOT NULL,
@@ -68,7 +56,6 @@ CREATE INDEX IF NOT EXISTS idx_key_request_nonce_expiry
 
 ALTER TABLE key_access_policy_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE key_interface_subject_policies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE key_interface_ports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE key_request_nonce_cache ENABLE ROW LEVEL SECURITY;
 
 DO $$
@@ -78,9 +65,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_key_interface_subject_policies') THEN
         EXECUTE 'CREATE POLICY tenant_isolation_key_interface_subject_policies ON key_interface_subject_policies USING (tenant_id = current_setting(''app.tenant_id'', true))';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_key_interface_ports') THEN
-        EXECUTE 'CREATE POLICY tenant_isolation_key_interface_ports ON key_interface_ports USING (tenant_id = current_setting(''app.tenant_id'', true))';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_key_request_nonce_cache') THEN
         EXECUTE 'CREATE POLICY tenant_isolation_key_request_nonce_cache ON key_request_nonce_cache USING (tenant_id = current_setting(''app.tenant_id'', true))';

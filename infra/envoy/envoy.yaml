@@ -42,6 +42,10 @@ static_resources:
           common_tls_context:
             tls_params:
               tls_minimum_protocol_version: TLSv1_3
+              # The edge key exchange chosen in Certificates / PKI > Service
+              # mTLS; infra/envoy/entry.sh rewrites this line (PQC preferred
+              # until certs publishes a choice).
+              ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]  # vecta:edge-ecdh-curves
             tls_certificate_sds_secret_configs:
             - name: edge_server
               sds_config:

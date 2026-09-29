@@ -40,11 +40,6 @@ func (h *Handler) accessRouter(audit route.Emitter) *route.Router {
 	r.Handle("GET /access/interface-policies", read("interface_policies_listed", "interface_policy"), h.listInterfacePolicies)
 	r.Handle("POST /access/interface-policies", admin("interface_policy_upserted", "interface_policy", ""), h.upsertInterfacePolicy)
 	r.Handle("DELETE /access/interface-policies/{id}", admin("interface_policy_deleted", "interface_policy", "id"), h.deleteInterfacePolicy)
-	r.Handle("GET /access/interface-tls-config", read("interface_tls_config_read", "interface_tls_config"), h.getInterfaceTLSConfig)
-	r.Handle("PUT /access/interface-tls-config", admin("interface_tls_config_updated", "interface_tls_config", ""), h.putInterfaceTLSConfig)
-	r.Handle("GET /access/interface-ports", read("interface_ports_listed", "interface_port"), h.listInterfacePorts)
-	r.Handle("POST /access/interface-ports", admin("interface_port_upserted", "interface_port", ""), h.upsertInterfacePort)
-	r.Handle("DELETE /access/interface-ports/{name}", admin("interface_port_deleted", "interface_port", "name"), h.deleteInterfacePort)
 	return r
 }
 
@@ -260,71 +255,6 @@ func (h *Handler) upsertInterfacePolicy(c *route.Call) {
 func (h *Handler) deleteInterfacePolicy(c *route.Call) {
 	if err := h.svc.DeleteKeyInterfaceSubjectPolicy(c.R.Context(), c.Tenant, c.R.PathValue("id")); err != nil {
 		storeErr(c, err, http.StatusBadRequest, "delete_interface_policy_failed")
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"status": "ok"})
-}
-
-func (h *Handler) getInterfaceTLSConfig(c *route.Call) {
-	cfg, err := h.svc.GetKeyInterfaceTLSConfig(c.R.Context(), c.Tenant)
-	if err != nil {
-		c.Error(http.StatusInternalServerError, "get_interface_tls_config_failed", err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"config": cfg})
-}
-
-func (h *Handler) putInterfaceTLSConfig(c *route.Call) {
-	var req KeyInterfaceTLSConfig
-	if !c.Decode(&req) {
-		return
-	}
-	req.TenantID, req.UpdatedBy = c.Tenant, actorOf(c)
-	out, err := h.svc.UpdateKeyInterfaceTLSConfig(c.R.Context(), req)
-	if err != nil {
-		c.Error(http.StatusBadRequest, "put_interface_tls_config_failed", err.Error())
-		return
-	}
-	c.Detail("certificate_source", out.CertSource)
-	c.Detail("ca_id", out.CAID)
-	c.Detail("certificate_id", out.CertificateID)
-	c.JSON(http.StatusOK, map[string]interface{}{"config": out})
-}
-
-func (h *Handler) listInterfacePorts(c *route.Call) {
-	items, err := h.svc.ListKeyInterfacePorts(c.R.Context(), c.Tenant)
-	if err != nil {
-		c.Error(http.StatusInternalServerError, "list_interface_ports_failed", err.Error())
-		return
-	}
-	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
-}
-
-func (h *Handler) upsertInterfacePort(c *route.Call) {
-	var req KeyInterfacePort
-	if !c.Decode(&req) {
-		return
-	}
-	req.TenantID, req.UpdatedBy = c.Tenant, actorOf(c)
-	out, err := h.svc.UpsertKeyInterfacePort(c.R.Context(), req)
-	if err != nil {
-		c.Error(http.StatusBadRequest, "upsert_interface_port_failed", err.Error())
-		return
-	}
-	c.Target(out.InterfaceName)
-	c.Detail("bind_address", out.BindAddress)
-	c.Detail("port", out.Port)
-	c.Detail("protocol", out.Protocol)
-	c.Detail("cert_source", out.CertSource)
-	c.Detail("ca_id", out.CAID)
-	c.Detail("certificate_id", out.CertificateID)
-	c.Detail("enabled", out.Enabled)
-	c.JSON(http.StatusOK, map[string]interface{}{"item": out})
-}
-
-func (h *Handler) deleteInterfacePort(c *route.Call) {
-	if err := h.svc.DeleteKeyInterfacePort(c.R.Context(), c.Tenant, c.R.PathValue("name")); err != nil {
-		storeErr(c, err, http.StatusBadRequest, "delete_interface_port_failed")
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"status": "ok"})

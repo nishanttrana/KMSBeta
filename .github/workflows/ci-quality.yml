@@ -112,6 +112,11 @@ jobs:
       - name: Integration tests (run serially; they share the database)
         run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./pkg/mek
 
+      - name: Edge key exchange through a real Envoy (hot restart, measured by handshake)
+        env:
+          VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
+        run: go test -count=1 -run 'TestEdgeProfileAppliedByRealEnvoy' ./services/certs
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest

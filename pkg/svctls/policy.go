@@ -58,6 +58,8 @@ type PolicyFile struct {
 	Version   int                      `json:"version"`
 	UpdatedAt time.Time                `json:"updated_at"`
 	Services  map[string]ServicePolicy `json:"services"`
+	// Edge is the external listeners' key exchange (edge.go).
+	Edge *EdgePolicy `json:"edge,omitempty"`
 }
 
 // DefaultPolicy is what an identity without an entry uses.

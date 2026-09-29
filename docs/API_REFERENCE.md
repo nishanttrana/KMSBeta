@@ -934,10 +934,10 @@ roles need the permission named here. Service principals are allowed.
 |---|---|---|
 | `GET /keys/{id}/access-policy` | `key.access.read` | `access_policy_read` |
 | `PUT /keys/{id}/access-policy` | `key.access.manage`, and the caller created the key or is a tenant admin (else `403 not_key_owner`) | `access_policy_updated` |
-| `GET /access/groups`, `/access/settings`, `/access/interface-policies`, `/access/interface-tls-config`, `/access/interface-ports` | `key.access.read` | `access_groups_listed`, `access_settings_read`, `interface_policies_listed`, `interface_tls_config_read`, `interface_ports_listed` |
+| `GET /access/groups`, `/access/settings`, `/access/interface-policies` | `key.access.read` | `access_groups_listed`, `access_settings_read`, `interface_policies_listed` |
 | `POST /access/groups`, `DELETE /access/groups/{id}`, `PUT /access/groups/{id}/members` | `key.access.admin` | `access_group_created`, `access_group_deleted`, `access_group_members_updated` |
 | `PUT /access/settings` | `key.access.admin` | `access_settings_updated` |
-| `POST /access/interface-policies`, `DELETE /access/interface-policies/{id}`, `PUT /access/interface-tls-config`, `POST /access/interface-ports`, `DELETE /access/interface-ports/{name}` | `key.access.admin` | `interface_policy_upserted` / `_deleted`, `interface_tls_config_updated`, `interface_port_upserted` / `_deleted` |
+| `POST /access/interface-policies`, `DELETE /access/interface-policies/{id}` | `key.access.admin` | `interface_policy_upserted` / `_deleted` |
 | `POST /keys` | `key.create` | `create_requested` |
 | `POST /keys/import`, `POST /keys/bulk-import` | `key.import` | `import_requested`, `bulk_import_requested` |
 | `POST /keys/form` | `key.form` | `form_requested` |
@@ -1102,6 +1102,31 @@ Every call is audited as `audit.certs.<action>`, refusals included.
   - **Staggering:** services restart one every 20 s, certs last; daemons
     are reissued at once.
   - **Refusal:** without the confirmation, `confirmation_required`.
+
+### External edge key exchange: `/svc/certs/certs/edge-tls` (6.8.0, root tenant only)
+
+The TLS 1.3 groups the external listeners accept: Envoy's HTTPS edge and
+the KMIP listener (docs/SECURITY/INTERNAL_TLS.md, "External edge key
+exchange"). Same permissions as Service mTLS; another tenant is refused with
+`not_root_tenant`.
+
+- **`GET /certs/edge-tls`** (`edge_tls_read`): `edge.policy`
+  (`kx_profile`, `generation`), `edge.listeners` (each with
+  `expected_groups`, `observed`: the groups it accepted in the last
+  measurement, the group negotiated when every group is offered, the
+  certificate serial and the time, and `applied`), `edge.applied`, and the
+  groups of each profile.
+- **`PUT /certs/edge-tls`** (`edge_tls_policy_updated`):
+  - **Body:** `{"kx_profile": "pqc-required|pqc-preferred|classical", "reason": "..."}`.
+  - Published to `mtls-policy.json` (`edge`, read by KMIP on every
+    handshake) and `edge-ecdh-curves` (Envoy's list; `infra/envoy/entry.sh`
+    hot-restarts Envoy with it).
+  - **Refusals:** `invalid_policy`, `unchanged`.
+- **Measurement:** certs completes a TLS 1.3 handshake with each listener
+  (`CERTS_EDGE_PROBE_TARGETS`, default `envoy=envoy:443,kmip=kmip:5696`),
+  once per group, every 15 s while a change is pending and every 5 min
+  after. `audit.certs.edge_tls_applied` is emitted once per generation when
+  every listener accepts exactly the new groups.
 
 **How a service learns its policy:**
 - Certs publishes it as `/run/vecta/trust/mtls-policy.json`, which is
@@ -2810,7 +2835,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
-- `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`, `interface_tls_config_read`, `interface_tls_config_updated`, `interface_ports_listed`, `interface_port_upserted`, `interface_port_deleted`: keycore access management (kernel, 4.0.0-beta)
+- `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`: keycore access management (kernel, 4.0.0-beta). `interface_tls_config_*` and `interface_port*` were removed with their routes in 6.8.0-beta
 - `audit.key.<action>_requested` for `create`, `import`, `form`, `bulk_import`, `bulk_rotate`, `bulk_delete`, `update`, `rotate`, `activate`, `deactivate`, `disable`, `destroy`, `export_policy_update`, `version_activate`, `version_deactivate`, `version_delete`, `usage_limit_update`, `usage_reset`, `approval_update`, `iv_mode_update`, `tag_upsert`, `tag_delete`: keycore key-management requests (kernel, 4.0.0-beta)
 - `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
@@ -3197,7 +3222,7 @@ Selected events with dedicated audit classification:
 - `audit.cert.internal_subca_created`, `audit.certs.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
-- `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
+- `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.edge_tls_read`, `audit.certs.edge_tls_policy_updated` (refusals: `not_root_tenant`, `invalid_policy`, `unchanged`), `audit.certs.edge_tls_applied` (every external listener was measured accepting exactly the new groups), `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.cert.pqc_issuance_refused` (`reason: pqc_certificates_removed`), `audit.certs.pqc_profile_removed`: post-quantum and hybrid certificates are removed (1.19.0); `POST /certs/validate-pqc`, `POST /certs/pqc/migrate/{id}`, `GET /certs/pqc-readiness` and `GET /certs/ots-status/{ca_id}` no longer exist, and `audit.cert.pqc_cert_issued`, `pqc_cert_validated` and `pqc_migration_executed` are no longer emitted
 - `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
@@ -3481,6 +3506,8 @@ from the code; do not edit by hand.
 - `GET /svc/certs/certs/clm/status`
 - `GET /svc/certs/certs/crl`
 - `GET /svc/certs/certs/download/{id}`
+- `GET /svc/certs/certs/edge-tls`
+- `PUT /svc/certs/certs/edge-tls`
 - `GET /svc/certs/certs/internal-mtls`
 - `POST /svc/certs/certs/internal-mtls/rotate-all`
 - `PUT /svc/certs/certs/internal-mtls/{identity}/policy`
@@ -3837,11 +3864,6 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/access/interface-policies`
 - `POST /svc/keycore/access/interface-policies`
 - `DELETE /svc/keycore/access/interface-policies/{id}`
-- `GET /svc/keycore/access/interface-ports`
-- `POST /svc/keycore/access/interface-ports`
-- `DELETE /svc/keycore/access/interface-ports/{name}`
-- `GET /svc/keycore/access/interface-tls-config`
-- `PUT /svc/keycore/access/interface-tls-config`
 - `GET /svc/keycore/access/settings`
 - `PUT /svc/keycore/access/settings`
 - `GET /svc/keycore/agility/algorithms`

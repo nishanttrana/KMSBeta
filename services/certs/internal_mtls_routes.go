@@ -35,6 +35,14 @@ func (s *Service) RegisterInternalMTLSRoutes(k *route.Router) {
 		Action: "internal_mtls_rotated_all", Permission: permInternalMTLSWrite, Resource: "internal_mtls_identity",
 		Severity: "critical",
 	}, s.handleMTLSRotateAll)
+	// The external listeners' key exchange (edge_tls.go).
+	k.Handle("GET /certs/edge-tls", route.Spec{
+		Action: "edge_tls_read", Permission: permInternalMTLSRead, Resource: "edge_tls",
+	}, s.handleEdgeRead)
+	k.Handle("PUT /certs/edge-tls", route.Spec{
+		Action: "edge_tls_policy_updated", Permission: permInternalMTLSWrite, Resource: "edge_tls",
+		Severity: "warning",
+	}, s.handleEdgePolicy)
 }
 
 func rootOnly(c *route.Call) bool {
@@ -173,4 +181,44 @@ func (s *Service) mtlsDetails(c *route.Call, res mtlsChangeResult) {
 	c.Detail("restart_mode", res.Policy.RestartMode)
 	c.Detail("certificates_revoked", res.Revoked)
 	c.Detail("reissued", res.Reissued)
+}
+
+func (s *Service) handleEdgeRead(c *route.Call) {
+	if !rootOnly(c) {
+		return
+	}
+	v, err := s.EdgeInventory(c.R.Context())
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "edge_tls_unavailable", err.Error())
+		return
+	}
+	c.Detail("kx_profile", v.Policy.KXProfile)
+	c.Detail("applied", v.Applied)
+	c.JSON(http.StatusOK, map[string]interface{}{"edge": v})
+}
+
+func (s *Service) handleEdgePolicy(c *route.Call) {
+	if !rootOnly(c) {
+		return
+	}
+	var req struct {
+		KXProfile string `json:"kx_profile"`
+		Reason    string `json:"reason"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Target(svctls.EdgeIdentity)
+	c.Detail("requested_kx_profile", req.KXProfile)
+	c.Detail("reason", req.Reason)
+	res, err := s.SetEdgeKX(c.R.Context(), strings.TrimSpace(req.KXProfile), req.Reason, c.Actor())
+	if err != nil {
+		s.refuseMTLS(c, err)
+		return
+	}
+	c.Detail("kx_profile", res.Policy.KXProfile)
+	c.Detail("previous_kx_profile", res.Previous.KXProfile)
+	c.Detail("generation", res.Policy.Generation)
+	c.Detail("envoy_groups", svctls.EnvoyCurves(res.Policy.KXProfile))
+	c.JSON(http.StatusOK, map[string]interface{}{"result": res})
 }

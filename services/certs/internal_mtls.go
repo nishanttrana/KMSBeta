@@ -146,13 +146,20 @@ FROM platform_mtls_observed ORDER BY identity, instance`)
 
 func (s *SQLStore) UpsertMTLSObserved(ctx context.Context, r mtlsObservedRow) error {
 	groups, _ := json.Marshal(r.ServerGroups)
+	var lastAt interface{}
+	if !r.LastHandshakeAt.IsZero() {
+		lastAt = r.LastHandshakeAt.UTC()
+	}
 	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO platform_mtls_observed (identity, instance, serial, not_after, key_algorithm, kx_profile, server_groups, generation, started_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)
+INSERT INTO platform_mtls_observed (identity, instance, serial, not_after, key_algorithm, kx_profile, server_groups, generation,
+	last_handshake_group, last_handshake_at, started_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP)
 ON CONFLICT (identity, instance) DO UPDATE SET serial = EXCLUDED.serial, not_after = EXCLUDED.not_after,
 	key_algorithm = EXCLUDED.key_algorithm, kx_profile = EXCLUDED.kx_profile, server_groups = EXCLUDED.server_groups,
-	generation = EXCLUDED.generation, started_at = EXCLUDED.started_at, updated_at = CURRENT_TIMESTAMP`,
-		r.Identity, r.Instance, r.Serial, r.NotAfter.UTC(), r.KeyAlgorithm, r.KXProfile, string(groups), r.Generation, r.StartedAt.UTC())
+	generation = EXCLUDED.generation, last_handshake_group = EXCLUDED.last_handshake_group,
+	last_handshake_at = EXCLUDED.last_handshake_at, started_at = EXCLUDED.started_at, updated_at = CURRENT_TIMESTAMP`,
+		r.Identity, r.Instance, r.Serial, r.NotAfter.UTC(), r.KeyAlgorithm, r.KXProfile, string(groups), r.Generation,
+		r.LastHandshakeGroup, lastAt, r.StartedAt.UTC())
 	return err
 }
 
@@ -205,8 +212,9 @@ func effectivePolicy(identity string, rows map[string]mtlsPolicyRow) svctls.Serv
 	return p
 }
 
-// PublishMTLSPolicy writes the policy of every service identity to
-// dir/mtls-policy.json (public: algorithms and generations only).
+// PublishMTLSPolicy writes the policy of every service identity, and the
+// edge key exchange, to dir/mtls-policy.json (public: algorithms and
+// generations only), and Envoy's edge groups to dir/edge-ecdh-curves.
 func (s *Service) PublishMTLSPolicy(ctx context.Context, dir string) error {
 	st, err := s.mtls()
 	if err != nil {
@@ -226,9 +234,20 @@ func (s *Service) PublishMTLSPolicy(ctx context.Context, dir string) error {
 			}
 		}
 	}
+	edge, rec := edgePolicy(rows)
+	if rec != nil {
+		f.Edge = &edge
+		if rec.UpdatedAt.After(latest) {
+			latest = rec.UpdatedAt
+		}
+	}
 	f.UpdatedAt = latest.UTC()
 	raw, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
+		return err
+	}
+	// Envoy's list first: a reader never sees a policy newer than it.
+	if err := publishEdgeCurves(dir, edge); err != nil {
 		return err
 	}
 	path := filepath.Join(dir, svctls.PolicyFileName)

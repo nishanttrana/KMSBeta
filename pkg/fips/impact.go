@@ -41,11 +41,13 @@ func TransitionImpact(from, to string) (stops, starts []Impact, notes []string) 
 	if from == ModeOff {
 		notes = append(notes,
 			"TLS is limited to FIPS-approved versions, cipher suites and key exchanges; clients offering only non-approved options can no longer connect.",
+			"The external edge (HTTPS on Envoy, and KMIP) stops accepting X25519 on its own: the classical and PQC-preferred edge profiles fall back to P-256 and P-384; hybrid X25519MLKEM768 is unchanged (Certificates / PKI > Service mTLS).",
 			"Every service runs the FIPS 140-3 power-on self-tests at startup.")
 	}
 	if to == ModeOff {
 		notes = append(notes,
-			"Security downgrade: the platform no longer runs a validated cryptographic module. FIPS posture, compliance evidence and the dashboard report \"not validated\".")
+			"Security downgrade: the platform no longer runs a validated cryptographic module. FIPS posture, compliance evidence and the dashboard report \"not validated\".",
+			"The external edge (HTTPS on Envoy, and KMIP) accepts X25519 again under the classical and PQC-preferred edge profiles.")
 	}
 	if to == ModeOn && from == ModeOnly {
 		notes = append(notes, "Security downgrade: the Go runtime stops refusing non-approved algorithms; platform policy and per-tenant FIPS Policy still apply.")

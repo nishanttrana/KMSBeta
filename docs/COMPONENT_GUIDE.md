@@ -73,7 +73,6 @@ Common APIs:
 - `GET /svc/keycore/keys?tenant_id=root`
 - `POST /svc/keycore/keys/{id}/encrypt?tenant_id=root`
 - `POST /svc/keycore/keys/{id}/sign?tenant_id=root`
-- `GET /svc/keycore/access/interface-ports?tenant_id=root`
 
 Sample:
 

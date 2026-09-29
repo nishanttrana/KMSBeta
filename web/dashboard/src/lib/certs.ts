@@ -1137,3 +1137,33 @@ export async function rotateAllInternalMTLS(
     body: JSON.stringify({ mode, reason, confirm })
   });
 }
+
+// The external listeners' key exchange (Envoy's HTTPS edge and KMIP): one
+// node-wide profile, measured by handshake (docs/SECURITY/INTERNAL_TLS.md).
+export type EdgeTLSListener = {
+  name: string;
+  address: string;
+  expected_groups: string[];
+  observed?: MTLSObserved;
+  applied: boolean;
+};
+export type EdgeTLS = {
+  policy: { kx_profile: string; generation: number };
+  policy_record?: { reason?: string; updated_by?: string; updated_at?: string };
+  listeners: EdgeTLSListener[];
+  applied: boolean;
+  kx_profiles: string[];
+  groups: Record<string, string[]>;
+};
+
+export async function getEdgeTLS(session: AuthSession): Promise<EdgeTLS> {
+  const out = await serviceRequest<{ edge: EdgeTLS }>(session, "certs", `/certs/edge-tls?${tenantQuery(session)}`);
+  return out.edge;
+}
+
+export async function setEdgeTLS(session: AuthSession, kxProfile: string, reason: string): Promise<void> {
+  await serviceRequest(session, "certs", `/certs/edge-tls?${tenantQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify({ kx_profile: kxProfile, reason })
+  });
+}

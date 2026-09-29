@@ -353,4 +353,28 @@ func TestMTLSStorePostgres(t *testing.T) {
 		!obs[1].LastHandshakeAt.Equal(started) || len(obs[1].ServerGroups) != 1 || !obs[0].LastHandshakeAt.IsZero() {
 		t.Fatalf("observed rows: %+v", obs)
 	}
+
+	// The edge policy row (no certificate key of ours) and a measured
+	// listener, with the handshake it was measured by.
+	if err := st.UpsertMTLSPolicy(ctx, mtlsPolicyRow{Identity: svctls.EdgeIdentity, KXProfile: svctls.KXPQCRequired, Generation: 3, RestartMode: svctls.RestartGraceful}); err != nil {
+		t.Fatal(err)
+	}
+	rows, _ = st.ListMTLSPolicies(ctx)
+	if p, rec := edgePolicy(rows); rec == nil || p.KXProfile != svctls.KXPQCRequired || p.Generation != 3 {
+		t.Fatalf("edge policy row: %+v", p)
+	}
+	if err := st.UpsertMTLSObserved(ctx, mtlsObservedRow{Identity: svctls.EdgeIdentity, Instance: "edge:envoy", ServerGroups: []string{"X25519MLKEM768"},
+		KXProfile: svctls.KXPQCRequired, Generation: 3, LastHandshakeGroup: "X25519MLKEM768", LastHandshakeAt: started, StartedAt: started}); err != nil {
+		t.Fatal(err)
+	}
+	obs, _ = st.ListMTLSObserved(ctx)
+	var edge *mtlsObservedRow
+	for i := range obs {
+		if obs[i].Identity == svctls.EdgeIdentity {
+			edge = &obs[i]
+		}
+	}
+	if edge == nil || edge.LastHandshakeGroup != "X25519MLKEM768" || !edge.LastHandshakeAt.Equal(started) || edge.Generation != 3 {
+		t.Fatalf("edge measurement: %+v", edge)
+	}
 }

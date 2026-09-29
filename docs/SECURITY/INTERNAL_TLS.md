@@ -66,6 +66,34 @@ mTLS). There are two independent choices:
   certificate key chosen the same way. Certs writes their files, and their
   TLS groups are the daemon's own configuration.
 
+## External edge key exchange
+
+The two listeners outside the platform network, Envoy's HTTPS edge (443) and
+the KMIP listener (5696), accept the TLS 1.3 groups of one profile, chosen
+in Service mTLS > External edge key exchange (`PUT /certs/edge-tls`, root
+tenant). The profiles are the ones above; Envoy is given only the groups it
+can name (`X25519MLKEM768`, X25519, P-256, P-384), so under PQC required it
+accepts `X25519MLKEM768` alone.
+
+- **Stored** as the `vecta-edge` row of `cert_internal_mtls_policy`
+  (replicated: every node applies it).
+- **Published** by certs every 15 s: `edge` in `mtls-policy.json`, and
+  Envoy's list in `edge-ecdh-curves` on the trust volume.
+- **Envoy** runs `infra/envoy/entry.sh`. It writes the list into the edge
+  listener's `ecdh_curves` line (tagged `vecta:edge-ecdh-curves`) and, when
+  the list changes, starts Envoy with the next `--restart-epoch`: the new
+  process takes the sockets and the old one drains (10 s) and exits (20 s).
+  A list naming an unknown group stops the container at start and is
+  ignored later; a config Envoy rejects keeps the old process.
+- **KMIP** reads the profile on every handshake (`svctls.WatchEdge`).
+  TLS 1.2 KMIP clients (`KMIP_ALLOW_TLS12`) can't use ML-KEM, so PQC
+  required refuses them.
+- **Measured** by certs (`svctls.ProbeGroups`): a handshake offering every
+  group, then one per group. The listener is "in force" when the groups it
+  accepted are exactly the profile's; only then is
+  `audit.certs.edge_tls_applied` emitted, once per generation. With FIPS
+  mode on, Go won't offer X25519 alone, so it is not measured.
+
 ## How a change reaches a service
 
 1. **Publish.** Certs publishes the policy of every service identity in the
@@ -199,7 +227,8 @@ from the host:
   service, which removes the old key. Until the restart completes, peers
   still accept the old certificate.
 - **The edge certificate** still comes from `vecta-runtime-root`, chosen in
-  code, and port 80 still answers with a redirect. That's slice 4.
+  code, and port 80 still answers with a redirect. That's slice 4. (The
+  edge key exchange is chosen and measured since 6.8.0-beta.)
 
 ## Delivery plan
 

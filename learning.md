@@ -5,6 +5,32 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A settings page is not a listener
+- **What happened:** System Administration > Interfaces let an admin set a
+  bind address, port, protocol, "enabled" and a certificate source per
+  interface, and said the TLS defaults were "applied to TLS-enabled
+  interfaces". Keycore stored them; nothing else read them. Ports came from
+  docker-compose, the edge and KMIP certificates from certs' runtime
+  materializer, and Envoy's edge had no key-exchange setting at all, so it
+  ran BoringSSL's defaults while the product showed a "Quantum Mode".
+- **How it slipped through:** the feature looked complete from the UI and
+  the API down to the table, with audit events and RLS. Nobody followed the
+  value to the place that opens the socket. 6.4.0-beta removed one field
+  (`pqc_mode`) and kept the rest of the record without asking the same
+  question of it.
+- **Rule:** before calling a listener setting real, find the code that
+  builds the listener (`tls.Config`, Envoy's `DownstreamTlsContext`, the
+  compose port) and show it reads the value; then prove the result with a
+  handshake against the real server, not a check of the stored value. When
+  one field of a record turns out to be fake, check every field.
+
+### certs' observed-row upsert silently dropped two columns
+- `UpsertMTLSObserved` wrote every column except `last_handshake_group` and
+  `last_handshake_at`; the services report through a different statement,
+  so nothing noticed until the edge probe needed them. Tests compared the
+  fields they set, not what came back from the store. The edge tests now
+  read the row back.
+
 ### A guard that returns early can hide the failure it guards
 - **What happened:** `destroyHSMObjects` began with
   `if !resident || s.hsm == nil { return }`. The first condition means

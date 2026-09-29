@@ -73,29 +73,6 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			not_before TIMESTAMP, expires_at TIMESTAMP, justification TEXT, ticket_id TEXT,
 			PRIMARY KEY (tenant_id, key_id, subject_type, subject_id)
 		);`,
-		`CREATE TABLE key_interface_ports (
-			tenant_id TEXT NOT NULL,
-			interface_name TEXT NOT NULL,
-			bind_address TEXT NOT NULL,
-			port INTEGER NOT NULL,
-			protocol TEXT NOT NULL DEFAULT '',
-			certificate_source TEXT NOT NULL DEFAULT '',
-			ca_id TEXT,
-			certificate_id TEXT,
-			enabled BOOLEAN NOT NULL DEFAULT 1,
-			description TEXT,
-			updated_by TEXT,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY (tenant_id, interface_name)
-		);`,
-		`CREATE TABLE key_interface_tls_defaults (
-			tenant_id TEXT PRIMARY KEY,
-			certificate_source TEXT NOT NULL DEFAULT 'internal_ca',
-			ca_id TEXT,
-			certificate_id TEXT,
-			updated_by TEXT,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);`,
 		`CREATE TABLE rotation_policies (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, target_type TEXT NOT NULL DEFAULT 'key', target_filter TEXT NOT NULL DEFAULT '', interval_days INT NOT NULL DEFAULT 90, cron_expr TEXT, auto_rotate BOOLEAN NOT NULL DEFAULT FALSE, notify_days_before INT NOT NULL DEFAULT 7, enabled BOOLEAN NOT NULL DEFAULT TRUE, status TEXT NOT NULL DEFAULT 'active', last_rotation_at TIMESTAMP, next_rotation_at TIMESTAMP, total_rotations INT NOT NULL DEFAULT 0, last_error TEXT, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE rotation_runs (id TEXT NOT NULL, tenant_id TEXT NOT NULL, policy_id TEXT NOT NULL, policy_name TEXT NOT NULL, target_id TEXT NOT NULL, target_name TEXT NOT NULL, target_type TEXT NOT NULL DEFAULT 'key', status TEXT NOT NULL DEFAULT 'running', triggered_by TEXT NOT NULL DEFAULT 'schedule', started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TIMESTAMP, error TEXT, PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE key_rotation_metrics (
@@ -670,39 +647,5 @@ func TestStoreActivateDueKeys(t *testing.T) {
 	}
 	if got.ActivationDate != nil {
 		t.Fatalf("expected activation_date cleared, got %v", got.ActivationDate)
-	}
-}
-
-func TestStoreInterfaceTLSDefaultsRoundTrip(t *testing.T) {
-	s := newStoreForTest(t)
-	ctx := context.Background()
-
-	cfg, err := s.GetKeyInterfaceTLSConfig(ctx, "t1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.CertSource != "internal_ca" {
-		t.Fatalf("expected default internal_ca, got %q", cfg.CertSource)
-	}
-
-	out, err := s.UpsertKeyInterfaceTLSConfig(ctx, KeyInterfaceTLSConfig{
-		TenantID:   "t1",
-		CertSource: "pki_ca",
-		CAID:       "ca_ops",
-		UpdatedBy:  "tester",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out.CertSource != "pki_ca" || out.CAID != "ca_ops" {
-		t.Fatalf("unexpected stored tls config: %+v", out)
-	}
-
-	got, err := s.GetKeyInterfaceTLSConfig(ctx, "t1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.CertSource != "pki_ca" || got.CAID != "ca_ops" || got.CertificateID != "" {
-		t.Fatalf("unexpected fetched tls config: %+v", got)
 	}
 }

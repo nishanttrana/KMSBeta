@@ -177,10 +177,9 @@ pqc reports measured counts only:
 - A rule applies to keycore keys. Certificates, TLS endpoints and
   discovered assets are measured and planned (pqc, discovery), but the KMS
   cannot refuse their use.
-- The key exchange a KMS listener negotiates is not measured by the pqc
-  inventory. Internal listeners apply their svctls `kx_profile`; the Envoy
-  edge listener sets no `ecdh_curves` and uses Envoy's default, with no
-  product control. (Keycore's record-only interface `pqc_mode` was removed
-  in 6.4.0-beta.)
+- The pqc inventory still reports listeners as `not_assessed`. Their key
+  exchange is set and measured elsewhere: internal listeners by their svctls
+  `kx_profile`, the external edge (Envoy HTTPS and KMIP) by the edge profile
+  in Service mTLS, which certs measures by handshake (6.8.0-beta).
 - CARAF decisions are recorded, not gated: accepting a risk needs a review
   date, not a governance approval.

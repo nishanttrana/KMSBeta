@@ -108,6 +108,10 @@ func main() {
 	if err != nil {
 		logger.Fatalf("tls config failed: %v", err)
 	}
+	// The external edge key exchange chosen in Certificates / PKI > Service
+	// mTLS, applied to every new handshake (docs/SECURITY/INTERNAL_TLS.md).
+	edge := pkgsvctls.WatchEdge(ctx, pkgsvctls.Current().PolicyFile(), logger.Printf)
+	tlsCfg = edge.ServerConfig(tlsCfg)
 	kmipPort := envOr("KMIP_PORT", KMIPPort)
 	ln, err := tls.Listen("tcp", ":"+kmipPort, tlsCfg)
 	if err != nil {

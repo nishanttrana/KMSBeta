@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -35,7 +34,7 @@ func managementCalls(keyID string) []struct{ method, path, body string } {
 		{http.MethodPost, "/keys/" + keyID + "/rotate", `{}`},
 		{http.MethodPut, "/access/settings", `{"deny_by_default":false}`},
 		{http.MethodPost, "/access/groups", `{"name":"g"}`},
-		{http.MethodPost, "/access/interface-ports", `{"interface_name":"rest"}`},
+		{http.MethodPost, "/access/interface-policies", `{"interface_name":"rest"}`},
 		{http.MethodPost, "/keys", `{"name":"k","algorithm":"AES-256"}`},
 	}
 }
@@ -183,42 +182,22 @@ func TestCreateKeyRefusesAnotherTenantInBody(t *testing.T) {
 	}
 }
 
-// An interface's pqc_mode was stored but no listener read it, so it is gone
-// (6.4.0-beta). A write that still sends it is rejected and audited, nothing
-// is stored, and neither the response nor the event carries the field.
-func TestInterfacePortPQCModeRemoved(t *testing.T) {
-	h, svc, _ := newActorTestHandler(t)
-	rec := &routetest.Recorder{}
-	h.kernelAudit = rec
-	w := httptest.NewRecorder()
-	serveAsAdmin(h, w, httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1",
-		bytes.NewBufferString(`{"interface_name":"kmip","port":5696,"protocol":"mtls","pqc_mode":"pqc_only"}`)))
-	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "pqc_mode") {
-		t.Fatalf("pqc_mode write: %d %s, want 400 naming the field", w.Code, w.Body)
-	}
-	ev := rec.Last(t)
-	if ev.Event.Result != route.ResultFailure || ev.Event.Details["error_code"] != "bad_request" || !strings.Contains(ev.Event.ErrorMessage, "pqc_mode") {
-		t.Fatalf("rejected write audited as %s %s %+v %q", ev.Action, ev.Event.Result, ev.Event.Details, ev.Event.ErrorMessage)
-	}
-	ports, err := svc.ListKeyInterfacePorts(t.Context(), "t1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range ports {
-		if p.InterfaceName == "kmip" && p.UpdatedBy != "" {
-			t.Fatalf("rejected write was stored: %+v", p)
+// The interface port and TLS-default records were read by no listener, so
+// their routes are gone (6.8.0-beta): nothing can be written that pretends
+// to configure a listener.
+func TestInterfacePortRoutesRemoved(t *testing.T) {
+	h, _, _ := newActorTestHandler(t)
+	for _, c := range []struct{ method, path, body string }{
+		{http.MethodGet, "/access/interface-ports", ""},
+		{http.MethodPost, "/access/interface-ports", `{"interface_name":"kmip","port":5696}`},
+		{http.MethodDelete, "/access/interface-ports/kmip", ""},
+		{http.MethodGet, "/access/interface-tls-config", ""},
+		{http.MethodPut, "/access/interface-tls-config", `{"certificate_source":"internal_ca"}`},
+	} {
+		w := httptest.NewRecorder()
+		serveAsAdmin(h, w, httptest.NewRequest(c.method, c.path+"?tenant_id=t1", bytes.NewBufferString(c.body)))
+		if w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s: %d, want the route gone (%s)", c.method, c.path, w.Code, w.Body)
 		}
-	}
-
-	rec.Reset()
-	w = httptest.NewRecorder()
-	serveAsAdmin(h, w, httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1",
-		bytes.NewBufferString(`{"interface_name":"kmip","port":5696,"protocol":"mtls","enabled":true}`)))
-	if w.Code != http.StatusOK || strings.Contains(w.Body.String(), "pqc_mode") {
-		t.Fatalf("upsert: %d %s", w.Code, w.Body)
-	}
-	ev = rec.Last(t)
-	if _, ok := ev.Event.Details["pqc_mode"]; ok || ev.Event.Result != route.ResultSuccess || ev.Event.Details["protocol"] != "mtls" {
-		t.Fatalf("upsert audited as %s %+v", ev.Event.Result, ev.Event.Details)
 	}
 }

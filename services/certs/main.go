@@ -173,15 +173,29 @@ func main() {
 	// Service mTLS (docs/SECURITY/INTERNAL_TLS.md): publish the per-service
 	// policy for every service to apply (all nodes, from the replicated
 	// table), and audit each change once its services run it (primary).
+	// The external edge's key exchange is measured by handshake: every
+	// pass while a change is pending, every 5 minutes once it is in force.
 	go func() {
-		for {
+		for pass := 0; ; pass++ {
 			pctx, cancel := context.WithTimeout(rt.Ctx, 10*time.Second)
 			if err := svc.PublishMTLSPolicy(pctx, trustDir); err != nil {
 				logger.Printf("mTLS policy not published: %v", err)
 			}
+			cancel()
+			if ev, err := svc.EdgeInventory(rt.Ctx); err == nil && (!ev.Applied || pass%20 == 0) {
+				ectx, ecancel := context.WithTimeout(rt.Ctx, 60*time.Second)
+				if err := svc.ProbeEdge(ectx); err != nil {
+					logger.Printf("edge key-exchange probe: %v", err)
+				}
+				ecancel()
+			}
+			pctx, cancel = context.WithTimeout(rt.Ctx, 10*time.Second)
 			if clusterstate.RunsPrimaryJobs(pctx) {
 				if err := svc.AuditAppliedMTLS(pctx, enrollAudit); err != nil {
 					logger.Printf("mTLS applied-audit: %v", err)
+				}
+				if err := svc.AuditAppliedEdge(pctx, enrollAudit); err != nil {
+					logger.Printf("edge applied-audit: %v", err)
 				}
 			}
 			cancel()

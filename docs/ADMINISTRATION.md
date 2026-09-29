@@ -1658,74 +1658,62 @@ If the platform has been operating in non-FIPS mode and needs to migrate to FIPS
 
 ## 11. Network Configuration
 
-Network configuration controls how Vecta KMS exposes itself to the network — which addresses it binds to, which ports it listens on, and how TLS is configured per interface.
+Listeners, ports and bind addresses are set by the deployment
+(`docker-compose.yml`, `install.sh`), not in the KMS. The KMS decides the
+certificates its external listeners serve and the key exchange they accept.
 
-### 11.1 Interface Types and Default Ports
+### 11.1 External listeners
 
-| Interface | Protocol | Default Port | Purpose |
+| Listener | Served by | Port | Certificate |
 |---|---|---|---|
-| REST / Dashboard | HTTP/HTTPS | 5173 | Dashboard UI and REST API |
-| KMIP | TLS | 5696 | KMIP protocol for KMIP-native clients |
-| gRPC | TLS | 50051 | Internal and SDK gRPC communication |
-| Payment TCP | TLS | (configurable) | Payment protocol surfaces |
-| EKM Agent | TLS | (configurable) | Database EKM and TDE integration |
+| HTTPS (dashboard and REST API) | Envoy | 443 (`HTTPS_PORT`) | `vecta-runtime-root`, written by certs |
+| HTTP | Envoy | 80 (`HTTP_PORT`) | none: redirects to HTTPS |
+| KMIP | kmip service (Envoy passes TCP through) | 5696 | `vecta-runtime-root`, written by certs; clients need a certificate |
 
-### 11.2 Configuring Interfaces
+Everything else (services, Postgres, NATS, Valkey, Consul) is internal mTLS
+on the platform network ([INTERNAL_TLS.md](SECURITY/INTERNAL_TLS.md)).
 
-Interface configuration is managed through the Governance service and applied atomically to avoid partial configuration states.
+### 11.2 External edge key exchange
 
-Interface configuration fields:
+Certificates / PKI > Service mTLS > **External edge key exchange** sets the
+TLS 1.3 groups HTTPS and KMIP accept, for the whole node:
 
-| Field | Description |
+| Profile | Accepted groups |
 |---|---|
-| `bind_address` | IP address to bind to. `0.0.0.0` for all interfaces, `127.0.0.1` for loopback only. |
-| `port` | TCP port to listen on. |
-| `tls_mode` | `none` (plain), `tls` (server TLS), `mtls` (mutual TLS). |
-| `tls_cert_source` | Source for TLS certificate: `internal_ca`, `file`, `acme`. |
-| `tls_cert_path` | Path to certificate file if `file` source. |
-| `tls_key_path` | Path to private key file if `file` source. |
+| PQC required | `X25519MLKEM768` (KMIP also `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`); a client without ML-KEM, and every TLS 1.2 KMIP client, is refused |
+| PQC preferred (default) | the hybrid groups, then X25519 (FIPS mode off only), P-256, P-384 |
+| Classical | X25519 (FIPS mode off only), P-256, P-384 |
 
-An interface has no PQC or key-exchange setting (the record-only `pqc_mode`
-was removed in 6.4.0-beta). Internal listeners' TLS 1.3 groups are set per
-service under Certificates / PKI > Service mTLS (`kx_profile`).
+- Envoy applies a change by a hot restart (no connection is refused); KMIP
+  applies it on the next handshake.
+- Certs measures each listener with one handshake per group and shows what
+  it accepts. "In force" means the measured groups are exactly the
+  profile's. With FIPS mode on, X25519 alone is not measured.
+- API: `GET` / `PUT /svc/certs/certs/edge-tls` (root tenant,
+  [API_REFERENCE.md](API_REFERENCE.md)).
 
-### 11.3 Applying Network Configuration Changes
+### 11.3 Dashboard: Interfaces
 
-Interface ports, bind addresses and TLS are set in System Administration >
-Interfaces and take effect through the services that own those listeners.
+System Administration > Interfaces lists the ports the container runtime
+reports as published, with their status. It changes nothing. Until
+6.8.0-beta it offered bind address, port, protocol, "enabled" and a TLS
+certificate source per interface; no listener read them, and they were
+removed ([DECISIONS.md](DECISIONS.md)).
+
 There is no "apply network configuration" call: the former
 `POST /governance/system/network/apply` (and the management IP, cluster IP,
 DNS, NTP and proxy fields it read) changed nothing on the host and was removed
 in 1.27.0-beta ([REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)). Host
 networking belongs to the host or orchestrator.
 
-### 11.4 TLS Certificate Sources
-
-| Source | Description | Use Case |
-|---|---|---|
-| `internal_ca` | Certificate issued by the KMS internal PKI | Default for all services in an integrated deployment |
-| `file` | Static certificate and key files on disk | Externally managed PKI, bring-your-own certificates |
-| `acme` | Automatically issued via ACME (Let's Encrypt or internal ACME CA) | Public-facing endpoints where automated renewal is preferred |
-
-### 11.5 Network Security Recommendations
+### 11.4 Network security recommendations
 
 | Concern | Recommendation |
 |---|---|
-| Dashboard exposure | Bind to a management network or VPN interface, not `0.0.0.0` in production |
-| KMIP exposure | Use mTLS with client certificate pinning. Restrict to known client IP ranges. |
-| gRPC exposure | Bind to loopback `127.0.0.1` unless cross-host gRPC is required |
-| Payment TCP | Enable mTLS and IP allowlisting. Consider a dedicated VLAN. |
-| TLS cipher selection | Apply FIPS mode if compliance is required. Otherwise prefer TLS 1.3 with ECDHE. |
-
-### 11.6 Dashboard: Network Configuration
-
-**Navigation path:** `Admin → System → Network` or `Infrastructure → Interfaces`
-
-The Interfaces pane shows:
-- Current bind address and port for each interface
-- TLS mode and certificate source
-- Listening status (active/inactive)
-- Edit and Apply buttons
+| Dashboard and API exposure | Publish 443 on a management network or VPN, not every interface, in production |
+| KMIP exposure | Clients authenticate with certificates; restrict 5696 to known client ranges |
+| Post-quantum | Choose PQC required for the edge once every client supports ML-KEM |
+| FIPS | Turn FIPS mode on if compliance requires it (System Administration) |
 
 ---
 
@@ -1872,7 +1860,7 @@ Use this checklist immediately after installation before onboarding any users or
 - [ ] Configure the password policy (`min_length` ≥ 14, require complexity)
 - [ ] Configure the security policy (`max_failed_attempts` ≤ 5, reasonable `lockout_minutes`)
 - [ ] Decide whether the REST interface should stay on HTTP or move to HTTPS
-- [ ] If HTTPS: configure TLS on the REST interface, confirm certificate is valid
+- [ ] HTTPS: confirm the edge certificate is valid and the edge key exchange is in force (Service mTLS)
 - [ ] Verify the internal CA is initialized (check Certificates → CA Hierarchy)
 
 ### Tenant and User Setup
@@ -1946,7 +1934,7 @@ Use this checklist immediately after installation before onboarding any users or
    ├── REST + EKM      → database TDE environments
    └── All interfaces  → full production deployment
 
-2. Configure TLS for each enabled interface
+2. Choose the edge key exchange (Certificates / PKI > Service mTLS)
 
 3. Verify all interfaces show healthy in System Health
 ```

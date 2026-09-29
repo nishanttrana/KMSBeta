@@ -2872,7 +2872,7 @@ const SectionConfigNetwork = () => (
     ]} />
     <H2>TLS Configuration</H2>
     <P>Runtime Crypto controls the TLS runtime mode and the authoritative certificate binding for request interfaces. Interfaces controls which request endpoints are exposed, the bind address, the port, and whether a listener uses HTTP, HTTPS, TLS 1.3, or mTLS.</P>
-    <P>When a request-handling interface uses HTTPS, TLS 1.3, or mTLS, the certificate source selected in Runtime Crypto takes precedence over any per-interface certificate fields. The interface layer inherits one shared certificate binding from either the internal CA, a CA from the PKI tab, or an uploaded certificate from the PKI tab.</P>
+    <P>The certs service writes the edge (Envoy) and KMIP server certificates from <IC>vecta-runtime-root</IC> and renews them before they expire. Choosing another CA for the edge certificate is not built yet.</P>
     <Code>{`# TLS paths
 CERTS_RUNTIME_MATERIALIZER_ENABLED=true
 CERTS_RUNTIME_MATERIALIZER_DIR=/run/vecta/certs
@@ -2880,8 +2880,9 @@ CERTS_RUNTIME_MATERIALIZER_INTERVAL=5m
 CERTS_RUNTIME_ENVOY_CN=vecta-envoy
 CERTS_RUNTIME_ENVOY_SANS=localhost,envoy,127.0.0.1`}</Code>
     <P>When Redis is configured with <IC>rediss://</IC>, the runtime cache client enforces a TLS 1.3 minimum and applies bounded dial, read, write, pool, idle, and lifetime limits so cache transport stays aligned with the platform TLS baseline.</P>
-    <H2>Runtime TLS APIs</H2>
-    <P>Use <IC>GET /svc/keycore/access/interface-tls-config?tenant_id=root</IC> to read the current interface TLS binding and <IC>PUT /svc/keycore/access/interface-tls-config</IC> to change it. Use <IC>GET /svc/keycore/access/interface-ports?tenant_id=root</IC> to inspect the effective request interfaces after TLS defaults are applied.</P>
+    <H2>External edge key exchange</H2>
+    <P>Certificates / PKI &gt; Service mTLS &gt; External edge key exchange sets the TLS 1.3 groups the HTTPS edge (Envoy, 443) and the KMIP listener (5696) accept: PQC required (hybrid ML-KEM only), PQC preferred (the default) or classical. Envoy applies a change by a hot restart and KMIP on the next handshake. The certs service measures each listener with one handshake per group and shows what it accepts. API: <IC>GET</IC> / <IC>PUT /svc/certs/certs/edge-tls?tenant_id=root</IC>.</P>
+    <P>Listeners, ports and bind addresses are set by the deployment (docker-compose, install.sh). System Administration &gt; Interfaces shows the ports the container runtime reports as published.</P>
     <H2>Firewall</H2>
     <P>Built-in firewall with port allowlists per interface: management (443, 5696, 9443), cluster (2379, 2380, 5432, 4222, 8160), hsm (2300, 2310).</P>
     <H2>Syslog</H2>
