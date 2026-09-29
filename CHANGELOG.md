@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.17.0-beta] — 2026-09-30
+
+### Reconciler: manifest policies converge
+- **What was wrong.** The tenant reconciler POSTed every manifest policy to
+  `POST /policies` on each 30 s tick. The policies table is unique on
+  (tenant, name), so after the first apply every tick got a 400 that was
+  only logged, and an edit to a policy's YAML in the manifest was never
+  applied.
+- **Now.** Each tick lists the tenant's policies and, per manifest entry
+  (matched on `metadata.name`), creates it when absent, `PUT`s it when the
+  YAML differs, and does nothing when identical, so unchanged ticks emit no
+  policy create/update audit. A manifest edit now reaches the policy service
+  as a new policy version; the manifest wins over UI edits to policies it
+  names.
+- **Failures surface.** List, parse and write failures are returned from the
+  controller and appear as its `last_error` in `GET /reconciler/status`
+  instead of only in the log.
+- **Removal does not delete.** A policy removed from a manifest stays and is
+  no longer managed (docs/AUTOMATION_ALKM_PQC.md).
+- Tests: `TestManifestPoliciesConverge`, `TestManifestPolicyFailuresSurface`
+  (`services/reconciler`).
+
 ## [6.16.0-beta] — 2026-09-29
 
 ### EKM agent: unused `rotate_path` setting removed

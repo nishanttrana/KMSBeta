@@ -3,6 +3,18 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-30
+
+### A create-only apply against a unique key is a one-shot, not a reconciler
+
+The tenant reconciler "applied" manifest policies by POSTing them every
+tick. The unique (tenant, name) index turned every tick after the first into
+a 400, and because the error was only logged the controller reported healthy
+while manifest edits were silently dropped. A declarative controller must
+read current state and diff (create / update / no-op), and its failures must
+reach the controller's status, not the log. The fix matches on the key the
+store is unique on (`metadata.name`), not the manifest's own `id`.
+
 ## 2026-09-29
 
 ### A setting with a default and no reader looks like a feature

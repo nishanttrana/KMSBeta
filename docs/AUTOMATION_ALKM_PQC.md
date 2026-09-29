@@ -113,12 +113,25 @@ reads them every tick (30 s) and applies two things:
 - `tenant.ops_budget_per_day` becomes the tenant's policy quota. It is
   re-applied every tick, so the policy service's in-memory tracker recovers
   after a restart.
-- each entry in `policies` is created under the tenant. The policy service
-  refuses a second policy with the same name, so a policy is created once:
-  **a later edit to it in the manifest is not applied** (the refusal is
-  logged). Change an existing policy in the Policies UI or API.
+- each entry in `policies` converges on the tenant's policy with the same
+  `metadata.name` (the policy service keys policies on tenant and name).
+  Each tick lists the tenant's policies (`GET /policies?tenant_id=`), then
+  per entry: absent → `POST /policies`; YAML differs →
+  `PUT /policies/{id}` (a new policy version, actor `reconciler`);
+  identical → nothing. An unchanged tick writes nothing, so it emits no
+  policy create/update event; its one list read is recorded by the policy
+  service as `audit.policy.listed`, like every read.
+- the manifest is the source of truth for the policies it names: an edit
+  made in the Policies UI or API to such a policy is replaced by the
+  manifest's YAML on the next tick. Change it in the manifest instead.
+- any failure (list, parse, missing `metadata.name`, a refused create or
+  update) is returned from the controller and shown as its `last_error` in
+  `GET /reconciler/status`; the other policies still apply.
 
-Removing a manifest, or a policy from one, removes nothing. Other keys in
+Removing a manifest, or a policy from one, removes nothing: the policy
+stays, and is no longer managed. Deleting it is a deliberate act in the
+Policies UI or API, so a truncated or mis-mounted manifest directory can't
+wipe a tenant's policies. Other keys in
 the file are ignored.
 
 ```yaml
@@ -176,8 +189,6 @@ use the same `pkg/cryptocatalog` facts.
 
 - `SetKeyStatus` doesn't enforce the lifecycle state table (a compromised key
   can be set active again).
-- Manifest policies are created once; edits and deletions in a manifest
-  aren't applied.
 - Cryptoperiods have no operator setting.
 - Hybrid (composite) keys and stateful hash-based signatures are not
   implemented; creation refuses them.
