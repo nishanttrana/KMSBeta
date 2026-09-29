@@ -151,6 +151,7 @@ are per tenant, with actor type `service`, and carry `item_type`, `count`
 | `audit.posture.events_ingested` (scheduled) | the engine scheduler synced audit events into posture (`inserted`, `source: scheduled_audit_sync`), under the synced tenant | info | `TestScheduledAuditSyncAudited` |
 | `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info | `TestSystemKeyRouteIsServiceOnlyAndAudited` |
 | `audit.key.system_key_created` | keycore created a service's system key | info | `TestEnsureSystemKeyIsIdempotentAndServiceBound` |
+| `audit.key.status_transition_refused` | an operator key status change (activate, disable, deactivate, suspend, compromise) the lifecycle state table doesn't allow was refused, for example compromised to active (`from`, `to`, `reason`, `result: refused`) | high | `TestSetKeyStatusEnforcesLifecycleTable` |
 | `audit.key.system_key_change_refused` | destroy, disable, version delete or export of a system key was refused (`operation`, `reason: system_key_protected`) | critical | `TestSystemKeyIsProtectedFromDestruction` |
 | `audit.governance.backup_create_refused` | a backup wasn't taken (`reason`, for example a service couldn't re-wrap a row under a public key, or `BACKUP_HSM_WRAP_SECRET` is missing or short) | warning | `TestBackupReprotectPostgres`, `TestSplitBackupKeyRestorePostgres` |
 | `audit.governance.backup_key_downloaded` | an HSM-bound backup's wrapped key file was downloaded again | warning | `TestHSMBoundBackupPostgres` |

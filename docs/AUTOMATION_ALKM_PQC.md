@@ -16,7 +16,7 @@ remembers them can see why they're gone.
 | Tenant manifests | `reconciler` | YAML in `RECONCILER_MANIFEST_DIR`; applies `ops_budget_per_day` and creates `policies` ([below](#reconciler-manifests)) |
 | Key lifecycle rotation | `reconciler` + `keycore` | every 30 s: `GET /keys/due-for-lifecycle` (internal token), then `POST /keys/{id}/rotate` as `kms-reconciler` |
 | Cryptoperiods | `keycore` | built-in SP 800-57 table, input to the lifecycle scan |
-| Lifecycle state table | `keycore` | consulted only by compromise detection's automatic suspend |
+| Lifecycle state table | `keycore` | every status change: operator (`/keys/{id}/{activate,disable,deactivate,...}`, playbooks) and compromise detection's automatic suspend; refusals `409 status_transition_refused`, `audit.key.status_transition_refused` |
 | Quota auto-throttle | `policy` | `PUT /policy/quota/{tenant_id}` (or manifest `ops_budget_per_day`) |
 | Policy lint / dry-run | `policy` | `POST /policies/lint`, `POST /policies/dry-run` |
 | Crypto floor | `policy` | a policy's `spec.minAlgorithmTier` ([ALGORITHM_TRANSITIONS.md](SECURITY/ALGORITHM_TRANSITIONS.md)) |
@@ -61,10 +61,17 @@ lifecycle scan above.
 ### Lifecycle state table
 
 `lifecycle_state.go` lists the allowed moves between pre-active, active,
-suspended, deactivated, compromised and destroyed. Only compromise
-detection's automatic suspend (`enterprise_audit_service.go`) checks it.
-`SetKeyStatus` doesn't, so an operator can move a compromised key back to
-active. That is open (see [Open items](#open-items)).
+suspended, disabled, deactivated, compromised and destroyed. Every status
+change checks it: operator changes (`SetKeyStatus`, and immediate activation
+through `POST /keys/{id}/activate`, which playbook `activate_key` calls) as
+operator moves, compromise detection's automatic suspend as an automated
+move. Compromised only moves to destroyed and destroyed is terminal, so a
+compromised key can't be activated, suspended, disabled or deactivated.
+Disabled is an operator hold, treated like suspended: active ↔ disabled,
+then on to deactivated or compromised. A move to the current status is
+refused as a no-op. A refused move returns `409 status_transition_refused`
+and emits `audit.key.status_transition_refused` (`from`, `to`, `reason`,
+`result: refused`); a playbook step that hits it fails with that status.
 
 ### Sustained-risk signal
 
@@ -187,8 +194,6 @@ use the same `pkg/cryptocatalog` facts.
 
 ## Open items
 
-- `SetKeyStatus` doesn't enforce the lifecycle state table (a compromised key
-  can be set active again).
 - Cryptoperiods have no operator setting.
 - Hybrid (composite) keys and stateful hash-based signatures are not
   implemented; creation refuses them.

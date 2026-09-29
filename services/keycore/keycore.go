@@ -2048,6 +2048,11 @@ func (s *Service) ConfigureKeyActivation(ctx context.Context, tenantID string, k
 	if err != nil {
 		return Key{}, err
 	}
+	if current := normalizeLifecycleStatus(key.Status); current != nextStatus {
+		if err := s.checkOperatorTransition(ctx, tenantID, keyID, current, nextStatus); err != nil {
+			return Key{}, err
+		}
+	}
 	op := "key.activate"
 	if nextStatus == "pre-active" {
 		op = "key.activate.schedule"
@@ -2082,6 +2087,25 @@ func (s *Service) ConfigureKeyActivation(ctx context.Context, tenantID string, k
 	return s.GetKey(ctx, tenantID, keyID)
 }
 
+// errKeyTransitionRefused marks a status change the lifecycle state table
+// (lifecycle_state.go) does not allow for an operator, for example
+// compromised back to active.
+var errKeyTransitionRefused = errors.New("key status transition refused")
+
+// checkOperatorTransition refuses, and audits, an operator status change the
+// lifecycle state table doesn't allow.
+func (s *Service) checkOperatorTransition(ctx context.Context, tenantID, keyID, from, to string) error {
+	err := CanTransition(from, to, false)
+	if err == nil {
+		return nil
+	}
+	_ = s.publishAudit(ctx, "audit.key.status_transition_refused", tenantID, map[string]any{
+		"key_id": keyID, "from": from, "to": to, "result": "refused", "reason": err.Error(), "severity": "high",
+		"description": "refused a key status change the lifecycle state table does not allow",
+	})
+	return fmt.Errorf("%w: %s to %s: %v", errKeyTransitionRefused, from, to, err)
+}
+
 func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error {
 	nextStatus := normalizeLifecycleStatus(status)
 	switch nextStatus {
@@ -2096,6 +2120,9 @@ func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID strin
 	currentStatus := normalizeLifecycleStatus(key.Status)
 	if isDeletedLike(currentStatus) {
 		return errors.New("cannot change status for deleted keys")
+	}
+	if err := s.checkOperatorTransition(ctx, tenantID, keyID, currentStatus, nextStatus); err != nil {
+		return err
 	}
 	op := "key.status.update"
 	switch nextStatus {

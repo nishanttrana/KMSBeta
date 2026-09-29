@@ -5,21 +5,23 @@ import (
 	"strings"
 )
 
-// Key lifecycle states. The set matches NIST SP 800-57 with one explicit
-// addition (suspended) for the auto-quarantine workflow.
+// Key lifecycle states. The set matches NIST SP 800-57 with two explicit
+// additions: suspended (the auto-quarantine workflow) and disabled (an
+// operator hold), which behave alike: use stops and an operator may resume.
 const (
 	StatePreActive   = "pre-active"
 	StateActive      = "active"
 	StateSuspended   = "suspended"
+	StateDisabled    = "disabled"
 	StateDeactivated = "deactivated"
 	StateCompromised = "compromised"
 	StateDestroyed   = "destroyed"
 )
 
-// LifecycleTransition captures one allowed move between states. Only
-// compromise detection's automatic suspend (enterprise_audit_service.go)
-// consults this table today; SetKeyStatus does not, so an operator's
-// status change is not checked against it (docs/AUTOMATION_ALKM_PQC.md).
+// LifecycleTransition captures one allowed move between states. Every
+// status change consults this table: operator changes in SetKeyStatus
+// (automated=false, refusals audited as audit.key.status_transition_refused)
+// and compromise detection's automatic suspend (automated=true).
 type LifecycleTransition struct {
 	From       string
 	To         string
@@ -32,12 +34,18 @@ type LifecycleTransition struct {
 //   - Destroyed is terminal; no transitions out.
 //   - Compromised only flows forward to destroyed.
 //   - Deactivated may be re-activated by an operator, never automatically.
+//   - Disabled is entered and left only by an operator, like a suspension.
 var allowedLifecycleTransitions = []LifecycleTransition{
 	{From: StatePreActive, To: StateActive, AllowAuto: true, AllowAdmin: true},
 	{From: StatePreActive, To: StateDestroyed, AllowAdmin: true},
+	{From: StatePreActive, To: StateCompromised, AllowAuto: true, AllowAdmin: true},
 	{From: StateActive, To: StateSuspended, AllowAuto: true, AllowAdmin: true},
 	{From: StateActive, To: StateDeactivated, AllowAuto: true, AllowAdmin: true},
 	{From: StateActive, To: StateCompromised, AllowAuto: true, AllowAdmin: true},
+	{From: StateActive, To: StateDisabled, AllowAdmin: true},
+	{From: StateDisabled, To: StateActive, AllowAdmin: true},
+	{From: StateDisabled, To: StateDeactivated, AllowAuto: true, AllowAdmin: true},
+	{From: StateDisabled, To: StateCompromised, AllowAuto: true, AllowAdmin: true},
 	{From: StateSuspended, To: StateActive, AllowAdmin: true},
 	{From: StateSuspended, To: StateDeactivated, AllowAuto: true, AllowAdmin: true},
 	{From: StateSuspended, To: StateCompromised, AllowAuto: true, AllowAdmin: true},

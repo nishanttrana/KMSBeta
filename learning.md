@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A state table only protects the paths that consult it
+
+`lifecycle_state.go` said a compromised key could only be destroyed, and the
+docs quoted it, but only the automatic suspend called `CanTransition`.
+`SetKeyStatus` and `ConfigureKeyActivation` each wrote status directly, so
+compromised → active worked from the API and from playbook `activate_key`.
+The second path was easy to miss: `activate_key` calls `/activate`, which
+goes through activation, not `SetKeyStatus`. When a rule lives in a table,
+find every writer of the column (`store.SetKeyStatus`, `SetKeyActivation`)
+and put the check in front of each, with a test per path.
+
 ### A create-only apply against a unique key is a one-shot, not a reconciler
 
 The tenant reconciler "applied" manifest policies by POSTing them every

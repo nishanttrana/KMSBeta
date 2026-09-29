@@ -1047,6 +1047,12 @@ marked compromised, have a version deleted, or be made exportable:
 `409 system_key_protected` and `audit.key.system_key_change_refused`. Rotate
 and deactivate are allowed. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
 
+Every key status change (`/activate`, `/disable`, `/deactivate`, suspend,
+compromise) must be a move the lifecycle state table allows
+(`services/keycore/lifecycle_state.go`, docs/AUTOMATION_ALKM_PQC.md). A
+compromised key only moves to destroyed. Anything else returns
+`409 status_transition_refused` and emits `audit.key.status_transition_refused`.
+
 ---
 
 ## Service 3: Certs (`/svc/certs/`)
@@ -2967,6 +2973,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance, workload: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
+- `audit.key.status_transition_refused`: keycore refused a key status change the lifecycle state table does not allow
 - `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
 - `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`: keycore access management (kernel, 4.0.0-beta). `interface_tls_config_*` and `interface_port*` were removed with their routes in 6.8.0-beta
 - `audit.key.<action>_requested` for `create`, `import`, `form`, `bulk_import`, `bulk_rotate`, `bulk_delete`, `update`, `rotate`, `activate`, `deactivate`, `disable`, `destroy`, `export_policy_update`, `version_activate`, `version_deactivate`, `version_delete`, `usage_limit_update`, `usage_reset`, `approval_update`, `iv_mode_update`, `tag_upsert`, `tag_delete`: keycore key-management requests (kernel, 4.0.0-beta)

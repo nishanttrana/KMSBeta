@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.19.0-beta] — 2026-09-30
+
+### Keycore enforces the key lifecycle state table (breaking)
+- **What was wrong.** `SetKeyStatus` and immediate activation
+  (`POST /keys/{id}/activate`, used by playbook `activate_key`) accepted any
+  target status from any live status. The state table in
+  `lifecycle_state.go`, which says a compromised key only moves to destroyed,
+  was consulted only by compromise detection's auto-suspend, so an operator
+  or playbook could put a compromised key back into use.
+- **Now.** Both paths check `CanTransition(from, to, false)`. A refused move
+  returns `409 status_transition_refused` and emits
+  `audit.key.status_transition_refused` (`from`, `to`, `reason`,
+  `result: refused`); nothing changes and no success event fires. A playbook
+  `activate_key` step on a compromised key fails with that status.
+- `disabled` joins the table as an operator hold like suspended
+  (active ↔ disabled, disabled → deactivated or compromised), and
+  pre-active → compromised is allowed.
+- Breaking: setting a key to its current status, and moves outside the
+  table (for example deactivated → disabled), are now refused.
+- Test: `TestSetKeyStatusEnforcesLifecycleTable`.
+
 ## [6.18.0-beta] — 2026-09-30
 
 ### Keycore serves an asymmetric key's public key; EKM TDE public keys work

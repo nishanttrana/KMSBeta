@@ -660,6 +660,10 @@ func (h *Handler) handleActivateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
 			return
 		}
+		if errors.Is(err, errKeyTransitionRefused) {
+			writeErr(w, http.StatusConflict, "status_transition_refused", err.Error(), reqID, tenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "activation_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -824,6 +828,10 @@ func (h *Handler) keyStatus(w http.ResponseWriter, r *http.Request, status strin
 		}
 		if errors.Is(err, errSystemKeyProtected) {
 			writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
+			return
+		}
+		if errors.Is(err, errKeyTransitionRefused) {
+			writeErr(w, http.StatusConflict, "status_transition_refused", err.Error(), reqID, tenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "status_failed", err.Error(), reqID, tenantID)
