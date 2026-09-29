@@ -160,6 +160,10 @@ Not delegated, and why:
   CA and holds no grant on the key made a moment before).
 - dataprotect lease receipts meter operations already authorized when the
   lease was issued.
+- EKM has no export: a TDE key's material never goes to an agent. The
+  agent sends each DEK wrap and unwrap to `POST /ekm/tde/keys/{id}/wrap` /
+  `/unwrap`, and keycore decides every use (6.15.0-beta,
+  `TestAgentHasNoKeyExportPath`).
 
 Open:
 - **Bare service identities are not yet limited to their usages.** A

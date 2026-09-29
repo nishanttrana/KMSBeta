@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — EKM agents never hold the TDE key; no export route (6.15.0-beta)
+
+**Decision.** The EKM agent sends every DEK wrap and unwrap to the KMS. The
+dead local-cache path (`GET /ekm/tde/keys/{id}`, `POST .../export`) is removed,
+not built.
+
+**Why.** Exporting the TDE master key would put it in the memory of every
+database host, a customer-side process outside the module boundary. Every
+use there would then escape keycore's per-use decision and audit. The routes
+never existed, so removing the path loses no working capability. Wrapping a
+DEK is one small round-trip per database key load, not per I/O, so the
+latency case for a cache is weak.
+
+**Rejected.** Building the export routes, which do not exist, behind
+keycore's export policy. It would work, but it widens key egress for a
+performance gain nobody measured.
+
+**Enforced by** `TestAgentCallsOnlyRegisteredEKMRoutes` and
+`TestAgentHasNoKeyExportPath` (services/ekm-agent).
+
+---
+
 ## 2026-09-29 — No port 80; KMIP certificate chosen like the edge's; KMIP fails closed (6.14.0-beta)
 
 **Decision.**

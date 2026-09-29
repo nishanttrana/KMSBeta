@@ -104,7 +104,6 @@ const NAV = [
   { id: "api-ekm-bitlocker", label: "API: BitLocker" },
   { id: "api-ekm-sdk", label: "API: PKCS#11/JCA" },
   { id: "guide-agent-deploy", label: "Guide: Agent Deploy" },
-  { id: "guide-key-cache", label: "Guide: Key Cache" },
   { id: "api-mpc", label: "API: MPC / FROST" },
   { id: "api-qkd", label: "API: QKD" },
   { id: "api-compliance", label: "API: Compliance" },
@@ -1648,7 +1647,6 @@ const SectionGuideAgentDeploy = () => (
     <P>  api_base_url: KMS URL (e.g., "https://kms.example.com/svc/ekm")</P>
     <P>  db_engine: "mssql" or "oracle"</P>
     <P>  For mTLS: mtls_cert_path, mtls_key_path, mtls_ca_path</P>
-    <P>  For key caching: key_cache_enabled=true, key_cache_ttl_sec=300</P>
 
     <H2>Step 3: Install on Windows</H2>
     <P>Run the PowerShell installer from an elevated prompt:</P>
@@ -1665,42 +1663,6 @@ const SectionGuideAgentDeploy = () => (
 
     <H2>Oracle TDE Walkthrough</H2>
     <P>For Oracle, the agent checks V$ENCRYPTION_WALLET for wallet status. Configure Oracle to use an external keystore pointing to the Vecta PKCS#11 provider: ALTER SYSTEM SET ENCRYPTION WALLET OPEN IDENTIFIED BY "vecta-external".</P>
-  </div>
-);
-
-const SectionGuideKeyCache = () => (
-  <div>
-    <div style={S.h1}>Guide: Local Key Cache Architecture</div>
-    <P>How Vecta agents optimize crypto performance with local key caching.</P>
-
-    <H2>Export-or-Remote Pattern</H2>
-    <P>When an agent starts or a key is assigned, it checks the key's export_allowed flag:</P>
-    <P>- If exportable: The key material is exported from KMS (wrapped in transit), unwrapped locally, and stored in locked memory (mlock). Subsequent encrypt/decrypt operations use the local copy — no network round-trip.</P>
-    <P>- If not exportable: All crypto operations are proxied to the KMS server. This is slower but ensures key material never leaves the KMS boundary.</P>
-
-    <H2>Cache Behavior</H2>
-    <P>TTL: Cached keys expire after key_cache_ttl_sec (default 300s). After expiry, the agent re-exports from KMS.</P>
-    <P>Eviction: A background goroutine runs every 30s to remove expired entries.</P>
-    <P>Shutdown: All cached material is zeroized (overwritten with zeros) and munlocked on agent shutdown.</P>
-
-    <H2>Memory Security</H2>
-    <P>Key material is stored in mlock'd pages — the OS kernel will not swap these pages to disk, preventing key exposure via swap files. On agent shutdown or cache eviction, material is explicitly zeroized before munlocking.</P>
-    <P>Functions used: crypto.Mlock() (lock pages), crypto.Munlock() (unlock pages), crypto.Zeroize() (overwrite with zeros).</P>
-
-    <H2>Supported Algorithms</H2>
-    <P>Local cache operations currently support AES-GCM only (128/192/256-bit). Asymmetric operations (RSA, ECDSA) are always proxied to KMS regardless of cache settings.</P>
-
-    <H2>When to Enable</H2>
-    <P>Enable key caching (key_cache_enabled=true) when:</P>
-    <P>- High-throughput encryption (hundreds of ops/sec)</P>
-    <P>- Low latency requirements (sub-millisecond encrypt/decrypt)</P>
-    <P>- Offline resilience (agent can continue encrypting during brief KMS outages within TTL window)</P>
-    <P>Keep caching disabled when:</P>
-    <P>- Compliance requires all crypto operations in the HSM/KMS boundary</P>
-    <P>- Keys are marked non-exportable by policy</P>
-
-    <H2>Tuning</H2>
-    <P>key_cache_ttl_sec: Lower values = more frequent re-export (better security, higher latency). Higher values = fewer round-trips (better performance, longer key exposure window). Recommended: 300s for most workloads, 60s for high-security environments.</P>
   </div>
 );
 
@@ -3360,7 +3322,6 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-ekm-bitlocker": SectionApiEkmBitlocker,
   "api-ekm-sdk": SectionApiEkmSdk,
   "guide-agent-deploy": SectionGuideAgentDeploy,
-  "guide-key-cache": SectionGuideKeyCache,
   "api-mpc": SectionApiMpc,
   "api-qkd": SectionApiQkd,
   "api-compliance": SectionApiCompliance,

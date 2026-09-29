@@ -3237,6 +3237,13 @@ isn't deployed the request runs with `key_access_reason:
 key_access_not_deployed`. The same holds for EKM TDE and cloud BYOK
 operations. `approver_emails` is no longer accepted.
 
+**EKM TDE keys have no read or export route.** `GET /ekm/tde/keys/{id}` and
+`POST /ekm/tde/keys/{id}/export` do not exist; the EKM agent that called them
+had its local key cache removed (6.15.0-beta). Agents wrap and unwrap DEKs
+only through `POST /ekm/tde/keys/{id}/wrap` and `/unwrap`. The agent
+settings `key_cache_enabled` and `key_cache_ttl_sec` (`KEY_CACHE_ENABLED`,
+`KEY_CACHE_TTL_SEC`) are gone and ignored if still set.
+
 **EKM TDE public key.** `GET /ekm/tde/keys/{id}/public` returns only the
 public key keycore holds for the key (`format: pem` or `opaque`). Without one
 it refuses with `424 public_key_unavailable` (`audit.ekm.tde_key_accessed`,

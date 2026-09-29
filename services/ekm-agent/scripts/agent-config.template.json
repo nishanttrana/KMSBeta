@@ -16,8 +16,6 @@
   "mtls_ca_path": "",
   "api_key": "",
   "jwt_endpoint": "",
-  "key_cache_enabled": false,
-  "key_cache_ttl_sec": 300,
   "tls_skip_verify": false,
   "heartbeat_interval_sec": 30,
   "rotation_cycle_days": 90,

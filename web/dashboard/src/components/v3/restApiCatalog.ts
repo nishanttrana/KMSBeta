@@ -3375,10 +3375,10 @@ export const REST_API_CATALOG = [
     service: "ekm",
     method: "POST",
     pathTemplate: "/ekm/tde/keys",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "label": "mssql-prod-dek",\n  "algorithm": "AES-256-GCM",\n  "export_allowed": true\n}',
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mssql-prod-tde",\n  "algorithm": "RSA-3072"\n}',
     description: "Creates a new TDE encryption key for database transparent data encryption.",
     requestExample: "POST /svc/ekm/ekm/tde/keys",
-    responseExample: { key: { key_id: "tde-key-001", label: "mssql-prod-dek", algorithm: "AES-256-GCM", version: 1, created_at: "2026-03-05T12:00:00Z" } },
+    responseExample: { key: { id: "tde-key-001", keycore_key_id: "key_...", name: "mssql-prod-tde", algorithm: "RSA-3072", status: "active", current_version: "1", created_at: "2026-03-05T12:00:00Z" } },
     errorCodes: [
       { code: 400, meaning: "Invalid key parameters" },
       { code: 401, meaning: "JWT missing/invalid/expired" }
@@ -3442,12 +3442,13 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/ekm/tde/keys/{{key_id}}/public",
     bodyTemplate: "",
-    description: "Returns public metadata for a TDE key: algorithm, version, export status. No key material exposed.",
+    description: "Returns the public key keycore holds for a TDE key (pem or opaque). TDE key material never leaves the KMS; 424 public_key_unavailable when keycore holds none.",
     requestExample: "GET /svc/ekm/ekm/tde/keys/tde-key-001/public",
-    responseExample: { key_id: "tde-key-001", algorithm: "AES-256-GCM", version: 3, export_allowed: true },
+    responseExample: { public_key: { key_id: "tde-key-001", algorithm: "RSA-3072", public_key: "-----BEGIN PUBLIC KEY-----...", format: "pem", key_version: "3" } },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
-      { code: 404, meaning: "Key not found" }
+      { code: 404, meaning: "Key not found" },
+      { code: 424, meaning: "public_key_unavailable: keycore holds no public key for it" }
     ]
   },
 

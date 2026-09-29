@@ -21,7 +21,6 @@ import (
 
 	"vecta-kms/pkg/agentauth"
 	pkgaudit "vecta-kms/pkg/audit"
-	"vecta-kms/pkg/keycache"
 )
 
 type program struct {
@@ -133,13 +132,6 @@ func (p *program) runLoop() {
 		p.logger.Printf("register failed: %v", err)
 	}
 
-	// Attempt key export into local cache after registration
-	if runner.keyCache.Enabled() && strings.TrimSpace(p.cfg.ActiveKeyID) != "" {
-		if err := runner.TryExportKey(ctx, p.cfg.ActiveKeyID); err != nil {
-			p.logger.Printf("key export to cache failed (will use remote): %v", err)
-		}
-	}
-
 	interval := time.Duration(maxInt(p.cfg.HeartbeatIntervalSec, 5)) * time.Second
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -159,11 +151,9 @@ func (p *program) runLoop() {
 		select {
 		case <-p.stopCh:
 			p.logger.Printf("stop requested")
-			runner.keyCache.Close()
 			return
 		case <-sigCtx.Done():
 			p.logger.Printf("signal received, stopping")
-			runner.keyCache.Close()
 			return
 		case <-ticker.C:
 			hbCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -191,7 +181,6 @@ type AgentRunner struct {
 	logger     *log.Logger
 	inspector  TDEInspector
 	auth       *agentauth.Provider
-	keyCache   *keycache.Cache
 	audit      *pkgaudit.HTTPEmitter
 }
 
@@ -228,13 +217,6 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		Transport: transport,
 	}
 
-	cacheTTL := time.Duration(cfg.KeyCacheTTLSec) * time.Second
-	kc := keycache.New(cfg.KeyCacheEnabled, cacheTTL)
-	if cfg.KeyCacheEnabled {
-		kc.StartEvictionLoop(30 * time.Second)
-		logger.Printf("key cache enabled, ttl=%ds", cfg.KeyCacheTTLSec)
-	}
-
 	var auditEmitter *pkgaudit.HTTPEmitter
 	if cfg.AuditBaseURL != "" {
 		auditEmitter, err = pkgaudit.NewHTTPEmitter(cfg.AuditBaseURL, "ekm-agent", cfg.AgentID, client, auth)
@@ -251,7 +233,6 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		logger:     logger,
 		inspector:  NewTDEInspector(cfg),
 		auth:       auth,
-		keyCache:   kc,
 		audit:      auditEmitter,
 	}
 }

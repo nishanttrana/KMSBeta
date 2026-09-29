@@ -8,7 +8,6 @@ Demonstrations of agent registration, authentication, and cryptographic operatio
 | `02-register-mtls.sh` | Register using mutual TLS certificates |
 | `03-check-agent-status.sh` | List agents, get status, check health |
 | `04-rotate-key.sh` | Trigger TDE key rotation |
-| `05-export-key-local-crypto.go` | Export key, cache locally, AES-GCM encrypt/decrypt |
 
 ## Authentication Methods
 

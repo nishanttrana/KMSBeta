@@ -45,10 +45,6 @@ type AgentConfig struct {
 	APIKey       string `json:"api_key"`
 	JWTEndpoint  string `json:"jwt_endpoint"`
 
-	// Local key cache (new)
-	KeyCacheEnabled bool `json:"key_cache_enabled"`
-	KeyCacheTTLSec  int  `json:"key_cache_ttl_sec"`
-
 	ActiveKeyID      string `json:"active_key_id"`
 	ActiveKeyVersion string `json:"active_key_version"`
 	ConfigVersionAck int    `json:"config_version_ack"`
@@ -102,8 +98,6 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.MTLSCAPath = envOr("MTLS_CA_PATH", cfg.MTLSCAPath)
 	cfg.APIKey = envOr("API_KEY", cfg.APIKey)
 	cfg.JWTEndpoint = envOr("JWT_ENDPOINT", cfg.JWTEndpoint)
-	cfg.KeyCacheEnabled = envBoolOr("KEY_CACHE_ENABLED", cfg.KeyCacheEnabled)
-	cfg.KeyCacheTTLSec = envIntOr("KEY_CACHE_TTL_SEC", cfg.KeyCacheTTLSec)
 	cfg.ActiveKeyID = envOr("ACTIVE_KEY_ID", cfg.ActiveKeyID)
 	cfg.ActiveKeyVersion = envOr("ACTIVE_KEY_VERSION", cfg.ActiveKeyVersion)
 
@@ -171,9 +165,6 @@ func applyDefaults(cfg *AgentConfig) {
 	}
 	if strings.TrimSpace(cfg.BitLockerProtector) == "" {
 		cfg.BitLockerProtector = "recovery_password"
-	}
-	if cfg.KeyCacheTTLSec <= 0 {
-		cfg.KeyCacheTTLSec = 300
 	}
 	if cfg.HeartbeatIntervalSec <= 0 {
 		cfg.HeartbeatIntervalSec = 30

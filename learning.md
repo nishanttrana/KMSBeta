@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A client of a route nobody registered fails quietly for ever
+- **What happened:** the EKM agent's local key cache fetched
+  `GET /ekm/tde/keys/{id}` and then `POST .../export`. The EKM service never
+  registered either route, and TDE keys have no export setting. The failure
+  was logged as "will use remote" and start-up carried on, so the feature
+  looked optional rather than broken. `Encrypt`/`Decrypt`, which read the
+  cache, had no callers, so no test ever reached the export.
+- **How it slipped through:** `check-doc-routes.py` checks that routes named
+  in docs and OpenAPI are registered, but not routes a Go client builds with
+  `fmt.Sprintf`. A dashboard guide and a sample described the feature as
+  working.
+- **Fix:** the path is removed. The TDE key stays in the KMS, which is also
+  the stronger design. `TestAgentCallsOnlyRegisteredEKMRoutes` checks every
+  agent path against the EKM route table.
+- **Rule:** a client that calls another service gets a contract test against
+  that service's route table. A fallback that swallows "route not found" is
+  a bug report nobody reads.
+
+
 ### A "dev" fallback in a production code path is the production behaviour
 - **What happened:** KMIP's TLS loader returned a self-generated
   development config, with `RequireAnyClientCert`, whenever the configured

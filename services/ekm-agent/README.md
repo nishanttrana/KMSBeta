@@ -19,15 +19,11 @@ The agent supports four authentication methods (in priority order):
 | **API Key** | `api_key` | Sent as `X-API-Key` header |
 | **Bearer** | `auth_token` | Static token (fallback) |
 
-## Key Cache (Local Crypto)
+## Key custody
 
-When `key_cache_enabled: true`, the agent attempts to export the active TDE key
-(if `export_allowed` on the KMS side) and caches it in locked memory (`mlock`).
-Subsequent encrypt/decrypt operations use local AES-GCM instead of round-tripping
-to the KMS server. Non-exportable keys always proxy to KMS.
-
-- `key_cache_ttl_sec`: How long cached keys are valid (default: 300s)
-- Memory is securely zeroized on eviction or agent shutdown
+The TDE master key never leaves the KMS. The agent sends every wrap and unwrap
+of a database DEK to the KMS (`POST /ekm/tde/keys/{id}/wrap`, `/unwrap`); there
+is no local key cache and no key export path.
 
 ## BitLocker Mode
 

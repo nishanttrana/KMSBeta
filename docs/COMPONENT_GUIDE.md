@@ -401,7 +401,6 @@ Use cases:
 
 - database encryption for MSSQL and Oracle
 - BitLocker orchestration on managed Windows hosts
-- local cached crypto for supported workloads
 
 References:
 

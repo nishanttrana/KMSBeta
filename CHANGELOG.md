@@ -4,6 +4,31 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.15.0-beta] — 2026-09-29
+
+### EKM agent: the TDE key never leaves the KMS; dead export path removed
+- **Removed** the agent's local key cache. At start-up `TryExportKey` called
+  `GET /ekm/tde/keys/{id}` and `POST /ekm/tde/keys/{id}/export`. Neither
+  route exists, and EKM TDE keys have no export setting. So with
+  `key_cache_enabled: true` the agent only logged a fetch error and carried
+  on without a cache. Its local `Encrypt`/`Decrypt` had no callers. The
+  agent sends every DEK wrap and unwrap to the KMS
+  (`POST /ekm/tde/keys/{id}/wrap`, `/unwrap`), where keycore decides each
+  use.
+- **Removed with it:** `pkg/keycache`, `samples/05-export-key-local-crypto.go`,
+  the `key_cache_enabled` / `key_cache_ttl_sec` settings and their
+  `KEY_CACHE_*` environment variables, and the dashboard's "Guide: Key
+  Cache" page. An old config file that still sets them is ignored, not
+  rejected: the settings never did anything.
+- **REST catalogue corrected:** the TDE create example no longer sends
+  `export_allowed`, which EKM ignores. It uses `name` and the real default
+  algorithm (RSA-3072). The public-key example shows what the route really
+  returns, including `424 public_key_unavailable`.
+- **Enforced by** `TestAgentCallsOnlyRegisteredEKMRoutes`: every EKM path
+  the agent calls, from its default config or a literal in its code, must be
+  a route that `services/ekm` registers. `TestAgentHasNoKeyExportPath`
+  keeps the export path from coming back. Both fail on the removed code.
+
 ## [6.14.0-beta] — 2026-09-29
 
 ### No plain HTTP at the edge
