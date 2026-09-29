@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### An optional dependency needs a deployment signal, or its callers fail open
+- **What happened:** ekm, cloud and hyok allowed key operations whenever
+  keyaccess returned an error, because keyaccess is optional (compose
+  profile `key_access_justifications`) and compose set `KEY_ACCESS_URL` for
+  them unconditionally. "Not deployed" and "down" looked the same, so the
+  callers chose the convenient answer. Fixed in 6.10.0-beta: compose passes
+  `COMPOSE_PROFILES` as `VECTA_DEPLOYED_PROFILES`, and `pkg/keyaccess.Gate`
+  allows only when the profile is known to be off.
+- **Why it slipped through:** a URL looks like a deployment signal but isn't
+  one when compose sets it for every profile. hyok's fail-closed switch was
+  named for the policy engine, so it read as covering key access too.
+- **Rule:** a caller of an optional service reads whether it is deployed
+  from the deployment itself. Unknown fails closed, and "not deployed" is
+  recorded as the reason on the allowed operation.
+
 ### A client that never authenticates turns a fail-open fallback into the normal path
 - **What happened:** `pkg/keyaccess.HTTPClient` never set an
   `Authorization` header, while keyaccess wrapped every route in

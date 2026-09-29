@@ -11,18 +11,28 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 
 	pkgdb "vecta-kms/pkg/db"
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
 type nopEKMPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *nopEKMPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *nopEKMPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
 	return nil
+}
+
+// Last returns the data of the newest event on subject, or nil.
+func (p *nopEKMPublisher) Last(subject string) map[string]interface{} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return lastEventData(p.subjects, p.payloads, subject)
 }
 
 func (p *nopEKMPublisher) Count(subject string) int {
@@ -174,6 +184,7 @@ func newEKMService(t *testing.T) (*Service, *SQLStore, *fakeEKMKeyCore, *nopEKMP
 	keycore := newFakeEKMKeyCore()
 	pub := &nopEKMPublisher{}
 	svc := NewService(store, keycore, pub, []byte("01234567890123456789012345678901"))
+	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
 	return svc, store, keycore, pub
 }
 

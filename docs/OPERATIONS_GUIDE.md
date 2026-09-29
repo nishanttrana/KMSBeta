@@ -329,6 +329,17 @@ Examples:
 - cluster profile should reflect enabled optional services
 - optional services such as `autokey`, `workload`, `confidential`, and `pqc` should appear in health and dashboard state
 - auth startup should include SCIM schema readiness before the tenant provisioning UI is treated as healthy
+- `ekm`, `cloud` and `hyok` learn whether key access justifications are deployed from `VECTA_DEPLOYED_PROFILES` (compose sets it from `COMPOSE_PROFILES`). Change `key_access_justifications` in `deployment.yaml` and restart with `start-kms`; don't add the profile only with `docker compose --profile`. Each logs `key access justifications deployed=<bool>` at start.
+
+### "EKM, BYOK or HYOK operations fail with `424 key_access_unavailable`"
+
+Key access justifications are deployed (or the profile list reached the
+service empty, which fails closed) and `keyaccess` didn't answer. Check:
+
+- `keyaccess` is running and healthy (`docker compose ps keyaccess`)
+- the service's start log line `key access justifications deployed=...`
+- `audit.ekm.key_access_denied`, `audit.cloud.key_access_denied` or `audit.hyok.request_denied` events with `reason: key_access_unavailable` and their `error`
+- if the feature is meant to be off, set `key_access_justifications: false` in `deployment.yaml` and restart with `start-kms`; operations then run with `key_access_reason: key_access_not_deployed`
 
 ## Posture Remediation Approvals
 

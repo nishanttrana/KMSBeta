@@ -26,7 +26,7 @@ type Service struct {
 	policy           PolicyClient
 	governance       GovernanceClient
 	events           EventPublisher
-	keyAccess        pkgkeyaccess.Client
+	keyAccess        pkgkeyaccess.Gate
 	policyFailClosed bool
 }
 
@@ -41,8 +41,10 @@ func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governa
 	}
 }
 
-func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
-	s.keyAccess = client
+// SetKeyAccess wires the key access gate. Until it is set the zero gate
+// refuses every key operation (fail closed).
+func (s *Service) SetKeyAccess(g pkgkeyaccess.Gate) {
+	s.keyAccess = g
 }
 
 func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (EndpointConfig, error) {
@@ -338,7 +340,10 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	}
 
 	keyAccessResult := pkgkeyaccess.EvaluateResponse{Action: "allow"}
-	if s.keyAccess != nil && approvedBy == "" {
+	// A redeemed approval was already released by governance. Otherwise the
+	// gate decides; a deployed key access service that gives no decision
+	// refuses the request, whatever HYOK_POLICY_FAIL_CLOSED says.
+	if approvedBy == "" {
 		keyAccessResult, err = s.keyAccess.Evaluate(ctx, pkgkeyaccess.EvaluateRequest{
 			TenantID:          tenantID,
 			Service:           "hyok",
@@ -360,15 +365,12 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 			},
 		})
 		if err != nil {
-			if s.policyFailClosed {
-				_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", "key access service unavailable", "", policyDecision)
-				_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
-					"request_id": logEntry.ID, "protocol": protocol, "operation": operation, "key_id": keyID,
-					"reason": "key_access_unavailable", "result": "refused", "severity": "warning",
-				})
-				return ProxyCryptoResponse{}, newServiceError(http.StatusFailedDependency, "key_access_unavailable", "key access justification service is unavailable")
-			}
-			keyAccessResult = pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key_access_unavailable_fail_open"}
+			_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", pkgkeyaccess.ReasonUnavailable, "", policyDecision)
+			_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
+				"request_id": logEntry.ID, "protocol": protocol, "operation": operation, "key_id": keyID,
+				"reason": pkgkeyaccess.ReasonUnavailable, "error": err.Error(), "result": "refused", "severity": "warning",
+			})
+			return ProxyCryptoResponse{}, newServiceError(http.StatusFailedDependency, pkgkeyaccess.ReasonUnavailable, pkgkeyaccess.ErrUnavailable.Error())
 		}
 	}
 	if strings.EqualFold(keyAccessResult.Action, "deny") {

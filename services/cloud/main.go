@@ -108,7 +108,9 @@ func main() {
 		keyring.Current(),
 	)
 	svc.SetKeyring(keyring)
-	svc.SetKeyAccessClient(pkgkeyaccess.NewHTTPClient(envOr("KEY_ACCESS_URL", ""), 3*time.Second))
+	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
+	svc.SetKeyAccess(keyAccess)
+	logger.Printf("key access justifications deployed=%v (%s)", keyAccess.IsDeployed(), pkgkeyaccess.ProfilesEnv)
 	handler := NewHandler(svc)
 	kernel := route.New("cloud", audit, logger)
 	keyring.Routes(kernel, "cloud")

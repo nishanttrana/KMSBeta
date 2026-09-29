@@ -24,7 +24,7 @@ type Service struct {
 	keycore   KeyCoreClient
 	events    EventPublisher
 	mek       []byte
-	keyAccess pkgkeyaccess.Client
+	keyAccess pkgkeyaccess.Gate
 	exposure  *mek.Keyring // exposure register; nil in tests
 }
 
@@ -47,8 +47,10 @@ func NewService(store Store, keycore KeyCoreClient, events EventPublisher, mek [
 	}
 }
 
-func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
-	s.keyAccess = client
+// SetKeyAccess wires the key access gate. Until it is set the zero gate
+// refuses every key operation (fail closed).
+func (s *Service) SetKeyAccess(g pkgkeyaccess.Gate) {
+	s.keyAccess = g
 }
 
 func (s *Service) RegisterAgent(ctx context.Context, req RegisterAgentRequest, tlsClientCN string) (Agent, *TDEKeyRecord, error) {
@@ -499,7 +501,7 @@ func (s *Service) WrapDEK(ctx context.Context, keyID string, req WrapDEKRequest)
 	if err != nil {
 		return WrapDEKResponse{}, err
 	}
-	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+	kaReq := pkgkeyaccess.EvaluateRequest{
 		TenantID:          req.TenantID,
 		Service:           "ekm",
 		Connector:         "tde",
@@ -512,7 +514,8 @@ func (s *Service) WrapDEK(ctx context.Context, keyID string, req WrapDEKRequest)
 		JustificationCode: strings.TrimSpace(req.JustificationCode),
 		JustificationText: strings.TrimSpace(req.JustificationText),
 		Metadata:          buildEKMKeyAccessMetadata("", req.AgentID, req.DatabaseID),
-	})
+	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, kaReq)
 	if err != nil {
 		return WrapDEKResponse{}, err
 	}
@@ -528,15 +531,7 @@ func (s *Service) WrapDEK(ctx context.Context, keyID string, req WrapDEKRequest)
 			ErrorMessage: keyAccessResult.Reason,
 			CreatedAt:    time.Now().UTC(),
 		})
-		_ = s.publishAudit(ctx, "audit.ekm.tde_key_accessed", req.TenantID, map[string]interface{}{
-			"key_id":             keyID,
-			"operation":          "wrap",
-			"agent_id":           req.AgentID,
-			"database_id":        req.DatabaseID,
-			"status":             "denied",
-			"justification_code": req.JustificationCode,
-			"reason":             keyAccessResult.Reason,
-		})
+		s.auditKeyAccessRefused(ctx, kaReq, firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"), "")
 		return WrapDEKResponse{}, newServiceError(http.StatusForbidden, "key_access_denied", firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"))
 	}
 	if keyAccessResult.ApprovalRequired {
@@ -580,10 +575,11 @@ func (s *Service) WrapDEK(ctx context.Context, keyID string, req WrapDEKRequest)
 		CreatedAt:  time.Now().UTC(),
 	})
 	_ = s.publishAudit(ctx, "audit.ekm.tde_key_accessed", req.TenantID, map[string]interface{}{
-		"key_id":      keyID,
-		"operation":   "wrap",
-		"agent_id":    req.AgentID,
-		"database_id": req.DatabaseID,
+		"key_id":            keyID,
+		"operation":         "wrap",
+		"agent_id":          req.AgentID,
+		"database_id":       req.DatabaseID,
+		"key_access_reason": keyAccessResult.Reason,
 	})
 	return WrapDEKResponse{
 		KeyID:         strings.TrimSpace(firstString(out["key_id"], keyID)),
@@ -613,7 +609,7 @@ func (s *Service) UnwrapDEK(ctx context.Context, keyID string, req UnwrapDEKRequ
 	if err != nil {
 		return UnwrapDEKResponse{}, err
 	}
-	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+	kaReq := pkgkeyaccess.EvaluateRequest{
 		TenantID:          req.TenantID,
 		Service:           "ekm",
 		Connector:         "tde",
@@ -626,7 +622,8 @@ func (s *Service) UnwrapDEK(ctx context.Context, keyID string, req UnwrapDEKRequ
 		JustificationCode: strings.TrimSpace(req.JustificationCode),
 		JustificationText: strings.TrimSpace(req.JustificationText),
 		Metadata:          buildEKMKeyAccessMetadata("", req.AgentID, req.DatabaseID),
-	})
+	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, kaReq)
 	if err != nil {
 		return UnwrapDEKResponse{}, err
 	}
@@ -642,6 +639,7 @@ func (s *Service) UnwrapDEK(ctx context.Context, keyID string, req UnwrapDEKRequ
 			ErrorMessage: keyAccessResult.Reason,
 			CreatedAt:    time.Now().UTC(),
 		})
+		s.auditKeyAccessRefused(ctx, kaReq, firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"), "")
 		return UnwrapDEKResponse{}, newServiceError(http.StatusForbidden, "key_access_denied", firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"))
 	}
 	if keyAccessResult.ApprovalRequired {
@@ -689,10 +687,11 @@ func (s *Service) UnwrapDEK(ctx context.Context, keyID string, req UnwrapDEKRequ
 		CreatedAt:  time.Now().UTC(),
 	})
 	_ = s.publishAudit(ctx, "audit.ekm.tde_key_accessed", req.TenantID, map[string]interface{}{
-		"key_id":      keyID,
-		"operation":   "unwrap",
-		"agent_id":    req.AgentID,
-		"database_id": req.DatabaseID,
+		"key_id":            keyID,
+		"operation":         "unwrap",
+		"agent_id":          req.AgentID,
+		"database_id":       req.DatabaseID,
+		"key_access_reason": keyAccessResult.Reason,
 	})
 	return UnwrapDEKResponse{
 		KeyID:        strings.TrimSpace(firstString(out["key_id"], keyID)),
@@ -715,7 +714,7 @@ func (s *Service) RotateTDEKey(ctx context.Context, keyID string, req RotateTDEK
 	if err != nil {
 		return RotateTDEKeyResponse{}, err
 	}
-	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+	kaReq := pkgkeyaccess.EvaluateRequest{
 		TenantID:          req.TenantID,
 		Service:           "ekm",
 		Connector:         "tde",
@@ -728,11 +727,13 @@ func (s *Service) RotateTDEKey(ctx context.Context, keyID string, req RotateTDEK
 		JustificationCode: strings.TrimSpace(req.JustificationCode),
 		JustificationText: strings.TrimSpace(req.JustificationText),
 		Metadata:          map[string]interface{}{"reason": req.Reason},
-	})
+	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, kaReq)
 	if err != nil {
 		return RotateTDEKeyResponse{}, err
 	}
 	if strings.EqualFold(keyAccessResult.Action, "deny") {
+		s.auditKeyAccessRefused(ctx, kaReq, firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"), "")
 		return RotateTDEKeyResponse{}, newServiceError(http.StatusForbidden, "key_access_denied", firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy"))
 	}
 	if keyAccessResult.ApprovalRequired {
@@ -792,6 +793,7 @@ func (s *Service) RotateTDEKey(ctx context.Context, keyID string, req RotateTDEK
 		"version_id":         versionID,
 		"reason":             req.Reason,
 		"affected_agent_ids": affected,
+		"key_access_reason":  keyAccessResult.Reason,
 	})
 	return RotateTDEKeyResponse{
 		KeyID:            keyID,

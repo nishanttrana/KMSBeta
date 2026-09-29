@@ -783,6 +783,9 @@ services:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
       KEY_ACCESS_URL: https://keyaccess:8270
+      # Key access is evaluated only when the key_access_justifications
+      # profile is deployed; an empty list is unknown and fails closed.
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8080"
       GRPC_PORT: "18080"
     ports:
@@ -810,6 +813,9 @@ services:
       POLICY_URL: https://policy:8040
       GOVERNANCE_URL: https://governance:8050
       KEY_ACCESS_URL: https://keyaccess:8270
+      # Key access is evaluated only when the key_access_justifications
+      # profile is deployed; an empty list is unknown and fails closed.
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8120"
       GRPC_PORT: "18120"
     ports:
@@ -868,6 +874,9 @@ services:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
       KEY_ACCESS_URL: https://keyaccess:8270
+      # Key access is evaluated only when the key_access_justifications
+      # profile is deployed; an empty list is unknown and fails closed.
+      VECTA_DEPLOYED_PROFILES: ${COMPOSE_PROFILES:-}
       HTTP_PORT: "8130"
       GRPC_PORT: "18130"
     ports:

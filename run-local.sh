@@ -31,6 +31,10 @@ export GOFIPS140="${GOFIPS140:-v1.0.0}"
 export VECTA_FIPS_MODE="${VECTA_FIPS_MODE:-on}"
 export GODEBUG="${GODEBUG:+$GODEBUG,}fips140=${VECTA_FIPS_MODE}"
 export SQLITE_FALLBACK="false"
+# This script starts keyaccess, so ekm, cloud and hyok must consult it and
+# refuse when it doesn't answer (docs/SECURITY/KEY_ACCESS_MODEL.md).
+export KEY_ACCESS_URL="https://localhost:8270"
+export VECTA_DEPLOYED_PROFILES="key_access_justifications"
 
 # Auth bootstrap defaults
 export AUTH_BOOTSTRAP_TENANT_ID="root"

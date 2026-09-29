@@ -14,18 +14,28 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 
 	pkgdb "vecta-kms/pkg/db"
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
 type nopHYOKPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *nopHYOKPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *nopHYOKPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
 	return nil
+}
+
+// Last returns the data of the newest event on subject, or nil.
+func (p *nopHYOKPublisher) Last(subject string) map[string]interface{} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return lastEventData(p.subjects, p.payloads, subject)
 }
 
 func (p *nopHYOKPublisher) Count(subject string) int {
@@ -230,6 +240,7 @@ func newHYOKService(t *testing.T) (*Service, *SQLStore, *fakeHYOKKeyCore, *fakeH
 	governance := &fakeHYOKGovernance{id: "apr_test_1"}
 	pub := &nopHYOKPublisher{}
 	svc := NewService(store, keycore, policy, governance, pub, true)
+	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
 	return svc, store, keycore, policy, governance, pub
 }
 

@@ -407,6 +407,23 @@ service identity may name. The other routes need `keyaccess.read` or
 `pkg/keyaccess` sent no token, so every evaluation got 401 and ekm and cloud
 treated it as "service unavailable".
 
+**When keyaccess isn't there (6.10.0-beta).** ekm, cloud and hyok read the
+deployment's profiles from `VECTA_DEPLOYED_PROFILES`, which
+`docker-compose.yml` sets from `COMPOSE_PROFILES` (derived from
+`infra/deployment/deployment.yaml` by the installers and `start-kms`):
+
+| Deployment | Result |
+|---|---|
+| `key_access_justifications` profile off | The operation runs; its success event carries `key_access_reason: key_access_not_deployed` |
+| Profile on, or the profile list unset or empty (unknown) | keyaccess decides. If it can't be reached, answers an error, or returns no action, the operation is refused with `424 key_access_unavailable` and audited with `result: refused` and `reason: key_access_unavailable` (`audit.ekm.key_access_denied`, `audit.cloud.key_access_denied`, `audit.hyok.request_denied`) |
+
+A failure is never turned into an allow, and hyok's `HYOK_POLICY_FAIL_CLOSED`
+no longer affects key access (it governs only the policy engine). Each
+service logs `key access justifications deployed=<bool>` at start. Adding the
+profile only with `docker compose --profile` on the command line, not in
+`COMPOSE_PROFILES`, leaves the callers treating it as not deployed: enable
+features in `deployment.yaml`.
+
 ---
 
 ## Section 4: Post-quantum cryptography
@@ -728,11 +745,6 @@ handed to the operator as a key file. Backups are not wrapped under ML-KEM.
   proof. The primary keeps accepted proofs for two minutes in memory: a
   restart or failover inside that window forgets them. JWT-SVIDs are bearer
   credentials by design, reusable until they expire.
-- **Key access justifications fail open** in `ekm` and `cloud` when the
-  keyaccess service can't be reached, and in `hyok` unless its policy is
-  fail-closed. Failing closed needs each caller to tell "keyaccess isn't
-  deployed" (the `key_access_justifications` profile is off) from
-  "keyaccess is down"; today `KEY_ACCESS_URL` is set in every deployment.
 
 ---
 

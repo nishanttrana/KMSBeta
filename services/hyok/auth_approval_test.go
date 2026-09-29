@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
@@ -118,23 +120,67 @@ func TestHYOKGovernanceApprovalReleasesOperationOnce(t *testing.T) {
 	}
 }
 
-type failingKeyAccess struct{}
-
-func (failingKeyAccess) Evaluate(context.Context, pkgkeyaccess.EvaluateRequest) (pkgkeyaccess.EvaluateResponse, error) {
-	return pkgkeyaccess.EvaluateResponse{}, errors.New("unreachable")
+func lastEventData(subjects []string, payloads [][]byte, subject string) map[string]interface{} {
+	for i := len(subjects) - 1; i >= 0; i-- {
+		if subjects[i] == subject {
+			var ev struct {
+				Data map[string]interface{} `json:"data"`
+			}
+			_ = json.Unmarshal(payloads[i], &ev)
+			return ev.Data
+		}
+	}
+	return nil
 }
 
-// When the key-access service cannot answer, a fail-closed proxy refuses.
+// When key access is deployed but unreachable the proxy refuses with 424
+// key_access_unavailable, even with HYOK_POLICY_FAIL_CLOSED off. Until
+// 6.10.0-beta that setting turned the error into an allow.
 func TestHYOKKeyAccessFailsClosed(t *testing.T) {
-	svc, _, keycore, _, _, _ := newHYOKService(t)
+	svc, _, keycore, _, _, pub := newHYOKService(t)
 	ctx := context.Background()
 	keycore.Seed("tenant-k", "key-k", "AES-256")
-	svc.SetKeyAccessClient(failingKeyAccess{})
+	svc.policyFailClosed = false
+	srv := httptest.NewServer(http.NotFoundHandler())
+	url := srv.URL
+	srv.Close()
+	svc.SetKeyAccess(pkgkeyaccess.Deployed(pkgkeyaccess.NewHTTPClient(url, time.Second)))
 	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{TenantID: "tenant-k", Protocol: ProtocolGeneric, Enabled: true, AuthMode: AuthModeJWT}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := svc.ProcessCrypto(ctx, "tenant-k", ProtocolGeneric, "wrap", "key-k", "/p", AuthIdentity{Mode: "jwt"}, ProxyCryptoRequest{PlaintextB64: "aGVsbG8="})
-	if err == nil {
-		t.Fatal("operation allowed while key access was unavailable")
+	var se serviceError
+	if !errors.As(err, &se) || se.HTTPStatus != http.StatusFailedDependency || se.Code != pkgkeyaccess.ReasonUnavailable {
+		t.Fatalf("got %v, want 424 key_access_unavailable", err)
+	}
+	ev := pub.Last("audit.hyok.request_denied")
+	if ev["result"] != "refused" || ev["reason"] != pkgkeyaccess.ReasonUnavailable {
+		t.Fatalf("refusal event %+v", ev)
+	}
+	if pub.Count(protocolEventSubject(ProtocolGeneric, "wrap")) != 0 {
+		t.Fatal("operation ran while key access was unavailable")
+	}
+}
+
+// Key access not deployed: the request runs and records why no
+// justification was checked.
+func TestHYOKKeyAccessNotDeployedAllows(t *testing.T) {
+	svc, _, keycore, _, _, pub := newHYOKService(t)
+	ctx := context.Background()
+	keycore.Seed("tenant-k", "key-k", "AES-256")
+	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
+	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{TenantID: "tenant-k", Protocol: ProtocolGeneric, Enabled: true, AuthMode: AuthModeJWT}); err != nil {
+		t.Fatal(err)
+	}
+	out, err := svc.ProcessCrypto(ctx, "tenant-k", ProtocolGeneric, "wrap", "key-k", "/p", AuthIdentity{Mode: "jwt"}, ProxyCryptoRequest{PlaintextB64: "aGVsbG8="})
+	if err != nil || out.Status != "ok" {
+		t.Fatalf("not-deployed request refused: %+v %v", out, err)
+	}
+	ev := pub.Last(protocolEventSubject(ProtocolGeneric, "wrap"))
+	if ev["key_access_reason"] != pkgkeyaccess.ReasonNotDeployed {
+		t.Fatalf("request event %+v, want key_access_reason %s", ev, pkgkeyaccess.ReasonNotDeployed)
+	}
+	if pub.Count("audit.hyok.request_denied") != 0 {
+		t.Fatal("not-deployed allow audited as a refusal")
 	}
 }

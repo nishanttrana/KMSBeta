@@ -1545,10 +1545,11 @@ Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
 - `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), `builtin_policy_required` (disabling or narrowing the playbook policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
-- `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
+- `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable`, `result: refused` (key access deployed but unreachable)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
+- `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `import`, `rotate`, `sync`, same reasons, `result: refused`)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
 
@@ -3162,9 +3163,13 @@ refused (`400 auth_mode_unavailable`), stored `mtls_or_jwt` reads as `jwt`.
 A `202 pending_approval` response carries `approval_request_id`; retrying the
 same request body with `"approval_request_id"` runs it once the approval is
 approved for that key, operation and payload (`403 approval_invalid`
-otherwise; `audit.hyok.approval_refused`). With `HYOK_POLICY_FAIL_CLOSED`
-(default true) an unreachable key-access service refuses (`424
-key_access_unavailable`). `approver_emails` is no longer accepted.
+otherwise; `audit.hyok.approval_refused`). When the
+`key_access_justifications` profile is deployed (or the deployment's profiles
+are unknown) an unreachable key-access service refuses (`424
+key_access_unavailable`), whatever `HYOK_POLICY_FAIL_CLOSED` says; when it
+isn't deployed the request runs with `key_access_reason:
+key_access_not_deployed`. The same holds for EKM TDE and cloud BYOK
+operations. `approver_emails` is no longer accepted.
 Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
 `/hyok/v1/health`) needs a verified token; changes need a tenant
 administrator (`audit.hyok.admin_refused`).
@@ -3227,6 +3232,9 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.workload.* | Workload identity |
 | audit.confidential.* | Attestation verdicts and attested key release |
 | audit.keyaccess.* | Key access justification policy and decisions |
+| audit.ekm.* | EKM agents and TDE keys; `audit.ekm.key_access_denied` for a TDE operation refused by key access (deny, or `key_access_unavailable`) |
+| audit.cloud.* | Cloud BYOK accounts, bindings and sync; `audit.cloud.key_access_denied` for a refusal by key access |
+| audit.hyok.* | HYOK proxy requests; `audit.hyok.request_denied` for policy and key access refusals |
 | audit.security.* | Audit-side detection signals (sustained risk) |
 | audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |

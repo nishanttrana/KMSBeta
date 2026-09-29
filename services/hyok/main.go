@@ -98,7 +98,9 @@ func main() {
 		publisher,
 		policyFailClosed,
 	)
-	svc.SetKeyAccessClient(pkgkeyaccess.NewHTTPClient(envOr("KEY_ACCESS_URL", ""), 3*time.Second))
+	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
+	svc.SetKeyAccess(keyAccess)
+	logger.Printf("key access justifications deployed=%v (%s)", keyAccess.IsDeployed(), pkgkeyaccess.ProfilesEnv)
 	handler := NewHandler(svc, jwtParser)
 
 	httpPort := envOr("HTTP_PORT", "8120")

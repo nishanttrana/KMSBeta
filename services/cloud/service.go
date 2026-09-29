@@ -23,7 +23,7 @@ type Service struct {
 	providers *ProviderRegistry
 	events    EventPublisher
 	mek       []byte
-	keyAccess pkgkeyaccess.Client
+	keyAccess pkgkeyaccess.Gate
 	exposure  *mek.Keyring // exposure register; nil in tests
 }
 
@@ -48,8 +48,10 @@ func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry,
 // key before 1.2.0-beta stay listed until the account is deleted.
 func (s *Service) SetKeyring(k *mek.Keyring) { s.exposure = k }
 
-func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
-	s.keyAccess = client
+// SetKeyAccess wires the key access gate. Until it is set the zero gate
+// refuses every key operation (fail closed).
+func (s *Service) SetKeyAccess(g pkgkeyaccess.Gate) {
+	s.keyAccess = g
 }
 
 func (s *Service) RegisterAccount(ctx context.Context, req RegisterCloudAccountRequest) (CloudAccount, error) {
@@ -245,6 +247,7 @@ func (s *Service) ImportKeyToCloud(ctx context.Context, req ImportKeyToCloudRequ
 			"operation":          "import",
 			"justification_code": req.JustificationCode,
 			"reason":             reason,
+			"result":             "refused",
 		})
 		return CloudKeyBinding{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
 	}
@@ -315,13 +318,14 @@ func (s *Service) ImportKeyToCloud(ctx context.Context, req ImportKeyToCloudRequ
 		return CloudKeyBinding{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.cloud.key_imported", req.TenantID, map[string]interface{}{
-		"binding_id":    out.ID,
-		"key_id":        out.KeyID,
-		"provider":      out.Provider,
-		"account_id":    out.AccountID,
-		"cloud_key_id":  out.CloudKeyID,
-		"cloud_key_ref": out.CloudKeyRef,
-		"region":        out.Region,
+		"binding_id":        out.ID,
+		"key_id":            out.KeyID,
+		"provider":          out.Provider,
+		"account_id":        out.AccountID,
+		"cloud_key_id":      out.CloudKeyID,
+		"cloud_key_ref":     out.CloudKeyRef,
+		"region":            out.Region,
+		"key_access_reason": keyAccessResult.Reason,
 	})
 	return out, nil
 }
@@ -385,6 +389,7 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 			"operation":          "rotate",
 			"justification_code": req.JustificationCode,
 			"reason":             reason,
+			"result":             "refused",
 		})
 		return CloudKeyBinding{}, "", newServiceError(http.StatusForbidden, "key_access_denied", reason)
 	}
@@ -476,10 +481,11 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 		"cloud_key":  out.CloudKeyID,
 	})
 	_ = s.publishAudit(ctx, "audit.cloud.key_rotated", req.TenantID, map[string]interface{}{
-		"binding_id": out.ID,
-		"provider":   out.Provider,
-		"key_id":     out.KeyID,
-		"cloud_key":  out.CloudKeyID,
+		"binding_id":        out.ID,
+		"provider":          out.Provider,
+		"key_id":            out.KeyID,
+		"cloud_key":         out.CloudKeyID,
+		"key_access_reason": keyAccessResult.Reason,
 	})
 	versionID, _ := rot["version_id"].(string)
 	return out, strings.TrimSpace(versionID), nil
@@ -534,6 +540,7 @@ func (s *Service) SyncCloudKeys(ctx context.Context, req SyncCloudKeysRequest) (
 			"mode":               req.Mode,
 			"justification_code": req.JustificationCode,
 			"reason":             reason,
+			"result":             "refused",
 		})
 		return SyncJob{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
 	}
@@ -574,10 +581,11 @@ func (s *Service) SyncCloudKeys(ctx context.Context, req SyncCloudKeysRequest) (
 		return SyncJob{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.cloud.sync_started", req.TenantID, map[string]interface{}{
-		"job_id":     job.ID,
-		"provider":   job.Provider,
-		"account_id": job.AccountID,
-		"mode":       job.Mode,
+		"job_id":            job.ID,
+		"provider":          job.Provider,
+		"account_id":        job.AccountID,
+		"mode":              job.Mode,
+		"key_access_reason": keyAccessResult.Reason,
 	})
 
 	bindings, err := s.store.ListBindings(ctx, req.TenantID, req.Provider, req.AccountID, "", 10_000, 0)
@@ -851,13 +859,25 @@ func mergeMetadata(existing string, updates map[string]interface{}) string {
 	return string(raw)
 }
 
+// evaluateKeyAccess asks the key access gate. When key access is deployed
+// (or its deployment is unknown) and gives no decision, the operation is
+// refused with 424 key_access_unavailable and audited; it never falls back
+// to allow. Without the service the decision reason is key_access_not_deployed.
 func (s *Service) evaluateKeyAccess(ctx context.Context, req pkgkeyaccess.EvaluateRequest) (pkgkeyaccess.EvaluateResponse, error) {
-	if s.keyAccess == nil {
-		return pkgkeyaccess.EvaluateResponse{Action: "allow"}, nil
-	}
 	out, err := s.keyAccess.Evaluate(ctx, req)
 	if err != nil {
-		return pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key access justifications service unavailable"}, nil
+		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
+			"provider":           req.Connector,
+			"key_id":             req.KeyID,
+			"resource_id":        req.ResourceID,
+			"operation":          req.Operation,
+			"justification_code": req.JustificationCode,
+			"reason":             pkgkeyaccess.ReasonUnavailable,
+			"error":              err.Error(),
+			"result":             "refused",
+			"severity":           "warning",
+		})
+		return pkgkeyaccess.EvaluateResponse{}, newServiceError(http.StatusFailedDependency, pkgkeyaccess.ReasonUnavailable, pkgkeyaccess.ErrUnavailable.Error())
 	}
 	return out, nil
 }

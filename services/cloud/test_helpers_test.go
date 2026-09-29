@@ -7,18 +7,28 @@ import (
 	"testing"
 
 	pkgdb "vecta-kms/pkg/db"
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
 type nopCloudPublisher struct {
 	mu       sync.Mutex
 	subjects []string
+	payloads [][]byte
 }
 
-func (p *nopCloudPublisher) Publish(_ context.Context, subject string, _ []byte) error {
+func (p *nopCloudPublisher) Publish(_ context.Context, subject string, payload []byte) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.subjects = append(p.subjects, subject)
+	p.payloads = append(p.payloads, payload)
 	return nil
+}
+
+// Last returns the data of the newest event on subject, or nil.
+func (p *nopCloudPublisher) Last(subject string) map[string]interface{} {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return lastEventData(p.subjects, p.payloads, subject)
 }
 
 func (p *nopCloudPublisher) Count(subject string) int {
@@ -126,6 +136,7 @@ func newCloudService(t *testing.T) (*Service, *SQLStore, *fakeCloudKeyCore, *nop
 	publisher := &nopCloudPublisher{}
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
 	svc := NewService(store, keycore, newMockProviderRegistry(), publisher, mek)
+	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
 	return svc, store, keycore, publisher
 }
 

@@ -4,6 +4,45 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.10.0-beta] — 2026-09-29
+
+### Key access justifications fail closed in EKM, cloud BYOK and HYOK (breaking)
+Until now ekm and cloud turned any key access error into an allow, and hyok
+did so unless `HYOK_POLICY_FAIL_CLOSED` was set, because a caller could not
+tell "keyaccess isn't deployed" from "keyaccess is down" (`KEY_ACCESS_URL` is
+set in every deployment). Since 6.9.0-beta evaluation authenticates, so an
+error now really means unreachable.
+
+- **A real deployment signal.** `docker-compose.yml` passes the deployment's
+  `COMPOSE_PROFILES` (which the installers and `start-kms.sh` / `.ps1` derive
+  from `infra/deployment/deployment.yaml`) to ekm, cloud and hyok as
+  `VECTA_DEPLOYED_PROFILES`. `run-local.sh`, which always starts keyaccess,
+  sets it to `key_access_justifications`. Each service logs
+  `key access justifications deployed=<bool>` at start.
+- **Deployed, or unknown (unset or empty):** keyaccess decides. If it can't
+  be reached, returns an error, or answers without an action, the operation
+  is refused with `424 key_access_unavailable` and audited with
+  `result: refused`, `reason: key_access_unavailable`:
+  `audit.ekm.key_access_denied` (new), `audit.cloud.key_access_denied`,
+  `audit.hyok.request_denied`. `HYOK_POLICY_FAIL_CLOSED` now governs only the
+  policy engine.
+- **Not deployed:** the operation runs, and its success event
+  (`audit.ekm.tde_key_accessed`, `tde_key_rotated`, `audit.cloud.key_imported`,
+  `key_rotated`, `sync_started`, hyok's request event) records
+  `key_access_reason: key_access_not_deployed`, not an unexplained allow.
+- **EKM deny decisions on unwrap and rotate are now audited**
+  (`audit.ekm.key_access_denied`); before, only wrap's was, as
+  `tde_key_accessed` with `status: denied`, which it no longer is. Cloud's
+  deny events now carry `result: refused`.
+- One gate, `pkg/keyaccess.Gate`, holds the decision for all three services;
+  its zero value refuses.
+- **Upgrade note:** enable or disable key access justifications in
+  `deployment.yaml` and restart with `start-kms`. A profile added only with
+  `docker compose --profile` isn't seen by the callers.
+
+Docs: IDENTITY_AND_PQC (open item removed), API_REFERENCE,
+SECURITY/AUDIT_EVENTS_2026-09, OPERATIONS_GUIDE, DECISIONS.
+
 ## [6.9.0-beta] — 2026-09-29
 
 ### Workload identity, key access and confidential: every route authenticates the caller (breaking)

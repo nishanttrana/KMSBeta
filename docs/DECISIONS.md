@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Key access: deployed means the compose profile, unknown fails closed (6.10.0-beta)
+
+**Decision.** ekm, cloud and hyok decide whether key access justifications
+are deployed from `VECTA_DEPLOYED_PROFILES`, which `docker-compose.yml` sets
+from `COMPOSE_PROFILES`. Not in a known list: allow, with reason
+`key_access_not_deployed`. In the list, or the list empty/unset: evaluate,
+and refuse with `424 key_access_unavailable` (audited) on any failure.
+`pkg/keyaccess.Gate` is the one implementation; its zero value refuses.
+
+**Why.** `COMPOSE_PROFILES` is already the single output of
+`parse-deployment.sh` / `.ps1`, exported by `start-kms` and written to `.env`
+by `install.sh`, so every install path carries it without new installer
+logic (and nothing new has to run under bash 3.2).
+
+**Rejected.** Passing `KEY_ACCESS_URL` only when the profile is enabled:
+compose can't make an environment entry conditional on a profile, so each
+installer would compute it, in bash and PowerShell. A dedicated
+`KEY_ACCESS_DEPLOYED` flag: the same duplication. Keeping
+`HYOK_POLICY_FAIL_CLOSED` as the key access switch: a configuration that
+makes an outage an allow is not a customer choice we offer.
+
+**Enforced by** `TestGateFromEnvDeployment`, `TestGateNeverAllowsOnFailure`,
+and per service `Test{EKM,Cloud}KeyAccessUnavailableRefuses`,
+`TestHYOKKeyAccessFailsClosed` and the `...NotDeployedAllows` tests.
+
+---
+
 ## 2026-09-29 — Workload token exchange: the SVID is the credential; keyaccess evaluate only for its three callers (6.9.0-beta)
 
 **Decision.** The workload, keyaccess and confidential routes moved onto the

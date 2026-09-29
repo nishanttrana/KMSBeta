@@ -33612,7 +33612,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T12:59:16Z",
+  "generated_at": "2026-09-29T13:15:06Z",
   "navigation": [
     {
       "group": "Overview",
@@ -47350,7 +47350,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.EncryptEnvelope"
           ],
-          "line": 55,
+          "line": 57,
           "name": "RegisterAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -47411,7 +47411,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 103,
+          "line": 105,
           "name": "ListAccounts",
           "receiver_calls": [],
           "store_calls": [
@@ -47481,7 +47481,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 116,
+          "line": 118,
           "name": "DeleteAccount",
           "receiver_calls": [
             "s.exposure.Retire"
@@ -47556,7 +47556,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 138,
+          "line": 140,
           "name": "SetRegionMapping",
           "receiver_calls": [],
           "store_calls": [
@@ -47617,7 +47617,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 172,
+          "line": 174,
           "name": "ListRegionMappings",
           "receiver_calls": [],
           "store_calls": [
@@ -47726,7 +47726,7 @@
             "GetBinding"
           ],
           "internal_package_calls": [],
-          "line": 185,
+          "line": 187,
           "name": "ImportKeyToCloud",
           "receiver_calls": [
             "s.keycore.GetKey",
@@ -47838,7 +47838,7 @@
             "UpdateBinding"
           ],
           "internal_package_calls": [],
-          "line": 329,
+          "line": 333,
           "name": "RotateCloudKey",
           "receiver_calls": [
             "s.providers.Get",
@@ -47969,7 +47969,7 @@
             "GetSyncJob"
           ],
           "internal_package_calls": [],
-          "line": 488,
+          "line": 494,
           "name": "SyncCloudKeys",
           "receiver_calls": [
             "s.providers.Get"
@@ -48058,7 +48058,7 @@
             "Name"
           ],
           "internal_package_calls": [],
-          "line": 668,
+          "line": 676,
           "name": "DiscoverInventory",
           "receiver_calls": [],
           "store_calls": [
@@ -48122,7 +48122,7 @@
             "normalizeProvider"
           ],
           "internal_package_calls": [],
-          "line": 716,
+          "line": 724,
           "name": "ListBindings",
           "receiver_calls": [],
           "store_calls": [
@@ -48176,7 +48176,7 @@
           "file": "services/cloud/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 731,
+          "line": 739,
           "name": "GetBinding",
           "receiver_calls": [],
           "store_calls": [
@@ -57678,7 +57678,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 54,
+          "line": 56,
           "name": "RegisterAgent",
           "receiver_calls": [],
           "store_calls": [
@@ -57745,7 +57745,7 @@
             "refreshAgentConnectivity"
           ],
           "internal_package_calls": [],
-          "line": 162,
+          "line": 164,
           "name": "ListAgents",
           "receiver_calls": [],
           "store_calls": [
@@ -57816,7 +57816,7 @@
             "ListDatabases"
           ],
           "internal_package_calls": [],
-          "line": 182,
+          "line": 184,
           "name": "GetAgentStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -57901,7 +57901,7 @@
             "normalizeAgentStatus"
           ],
           "internal_package_calls": [],
-          "line": 868,
+          "line": 870,
           "name": "GetAgentHealth",
           "receiver_calls": [],
           "store_calls": [
@@ -57971,7 +57971,7 @@
             "ListKeyAccessByAgent"
           ],
           "internal_package_calls": [],
-          "line": 951,
+          "line": 953,
           "name": "ListAgentLogs",
           "receiver_calls": [],
           "store_calls": [
@@ -58064,7 +58064,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1123,
+          "line": 1125,
           "name": "BuildAgentDeployPackage",
           "receiver_calls": [],
           "store_calls": [
@@ -58140,7 +58140,7 @@
             "BumpAgentConfigVersion"
           ],
           "internal_package_calls": [],
-          "line": 963,
+          "line": 965,
           "name": "RotateAgentAssignedKey",
           "receiver_calls": [],
           "store_calls": [
@@ -58230,7 +58230,7 @@
             "PurgeAgent"
           ],
           "internal_package_calls": [],
-          "line": 1000,
+          "line": 1002,
           "name": "DeleteAgent",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -58315,7 +58315,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 221,
+          "line": 223,
           "name": "AgentHeartbeat",
           "receiver_calls": [],
           "store_calls": [
@@ -59543,7 +59543,7 @@
             "createTDEKey"
           ],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "CreateTDEKey",
           "receiver_calls": [],
           "store_calls": []
@@ -59591,15 +59591,16 @@
       "service_helper_calls": [
         "newServiceError",
         "GetTDEKey",
-        "evaluateKeyAccess",
         "firstNonEmpty",
         "newID",
         "buildEKMKeyAccessMetadata",
+        "evaluateKeyAccess",
         "RecordKeyAccess",
-        "publishAudit",
+        "auditKeyAccessRefused",
         "Wrap",
         "Error",
         "TouchTDEKeyAccess",
+        "publishAudit",
         "firstString",
         "extractInt"
       ],
@@ -59617,22 +59618,23 @@
           "helper_calls": [
             "newServiceError",
             "GetTDEKey",
-            "evaluateKeyAccess",
             "firstNonEmpty",
             "newID",
             "buildEKMKeyAccessMetadata",
+            "evaluateKeyAccess",
             "RecordKeyAccess",
-            "publishAudit",
+            "auditKeyAccessRefused",
             "Wrap",
             "Error",
             "TouchTDEKeyAccess",
+            "publishAudit",
             "firstString",
             "extractInt"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 482,
+          "line": 484,
           "name": "WrapDEK",
           "receiver_calls": [
             "s.keycore.Wrap"
@@ -59692,11 +59694,12 @@
       "service_helper_calls": [
         "newServiceError",
         "GetTDEKey",
-        "evaluateKeyAccess",
         "firstNonEmpty",
         "newID",
         "buildEKMKeyAccessMetadata",
+        "evaluateKeyAccess",
         "RecordKeyAccess",
+        "auditKeyAccessRefused",
         "Unwrap",
         "Error",
         "firstString",
@@ -59718,11 +59721,12 @@
           "helper_calls": [
             "newServiceError",
             "GetTDEKey",
-            "evaluateKeyAccess",
             "firstNonEmpty",
             "newID",
             "buildEKMKeyAccessMetadata",
+            "evaluateKeyAccess",
             "RecordKeyAccess",
+            "auditKeyAccessRefused",
             "Unwrap",
             "Error",
             "firstString",
@@ -59733,7 +59737,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 596,
+          "line": 592,
           "name": "UnwrapDEK",
           "receiver_calls": [
             "s.keycore.Unwrap"
@@ -59793,8 +59797,9 @@
       "service_helper_calls": [
         "newServiceError",
         "GetTDEKey",
-        "evaluateKeyAccess",
         "newID",
+        "evaluateKeyAccess",
+        "auditKeyAccessRefused",
         "firstNonEmpty",
         "RotateKey",
         "Error",
@@ -59819,8 +59824,9 @@
           "helper_calls": [
             "newServiceError",
             "GetTDEKey",
-            "evaluateKeyAccess",
             "newID",
+            "evaluateKeyAccess",
+            "auditKeyAccessRefused",
             "firstNonEmpty",
             "RotateKey",
             "Error",
@@ -59834,7 +59840,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 704,
+          "line": 703,
           "name": "RotateTDEKey",
           "receiver_calls": [
             "s.keycore.RotateKey"
@@ -59935,7 +59941,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 803,
+          "line": 805,
           "name": "GetTDEPublicKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -60035,7 +60041,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1996,
+          "line": 1998,
           "name": "RevokeTDEKey",
           "receiver_calls": [
             "s.keycore.DestroyKeyImmediately"
@@ -60145,7 +60151,7 @@
             "GetDatabase"
           ],
           "internal_package_calls": [],
-          "line": 266,
+          "line": 268,
           "name": "RegisterDatabase",
           "receiver_calls": [],
           "store_calls": [
@@ -60211,7 +60217,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 369,
+          "line": 371,
           "name": "ListDatabases",
           "receiver_calls": [],
           "store_calls": [
@@ -60267,7 +60273,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 377,
+          "line": 379,
           "name": "GetDatabase",
           "receiver_calls": [],
           "store_calls": [
@@ -60343,7 +60349,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2071,
+          "line": 2073,
           "name": "RevokeDatabaseTDE",
           "receiver_calls": [],
           "store_calls": [
@@ -60420,7 +60426,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2108,
+          "line": 2110,
           "name": "ValidateDeployment",
           "receiver_calls": [],
           "store_calls": [
@@ -65315,7 +65321,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 611,
+          "line": 613,
           "name": "GetMicrosoftDKEKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65406,7 +65412,7 @@
             "dkeRequesterEmail"
           ],
           "internal_package_calls": [],
-          "line": 721,
+          "line": 723,
           "name": "ProcessMicrosoftDKEDecrypt",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65526,7 +65532,7 @@
             "mustJSON"
           ],
           "internal_package_calls": [],
-          "line": 521,
+          "line": 523,
           "name": "GetDKEPublicKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65924,7 +65930,7 @@
             "defaultEndpointConfig"
           ],
           "internal_package_calls": [],
-          "line": 81,
+          "line": 83,
           "name": "ListEndpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -66114,7 +66120,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 48,
+          "line": 50,
           "name": "ConfigureEndpoint",
           "receiver_calls": [
             "s.keyAccess.Evaluate",
@@ -66220,7 +66226,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 106,
+          "line": 108,
           "name": "DeleteEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -66291,7 +66297,7 @@
             "ListRequestLogs"
           ],
           "internal_package_calls": [],
-          "line": 121,
+          "line": 123,
           "name": "ListRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -66349,7 +66355,7 @@
           "file": "services/hyok/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 135,
+          "line": 137,
           "name": "Health",
           "receiver_calls": [],
           "store_calls": []
@@ -123137,7 +123143,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T12:59:16Z",
+    "generatedAt": "2026-09-29T13:15:06Z",
     "methods": [
       "DELETE",
       "GET",
