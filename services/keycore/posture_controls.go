@@ -24,10 +24,6 @@ type GovernancePostureControls struct {
 	RequireStepUpAuth         bool
 	PauseConnectorSync        bool
 	GuardrailPolicyRequired   bool
-	// MinAlgorithmTier is the floor agility_enforce.go applies to new
-	// protection. Governance does not store posture_min_algorithm_tier yet,
-	// so from governance it is always empty (docs/SECURITY/ALGORITHM_TRANSITIONS.md).
-	MinAlgorithmTier string
 }
 
 type GovernancePostureControlsProvider interface {
@@ -119,11 +115,10 @@ func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, _ str
 
 	var payload struct {
 		State struct {
-			ForceQuorumDestructiveOps bool   `json:"posture_force_quorum_destructive_ops"`
-			RequireStepUpAuth         bool   `json:"posture_require_step_up_auth"`
-			PauseConnectorSync        bool   `json:"posture_pause_connector_sync"`
-			GuardrailPolicyRequired   bool   `json:"posture_guardrail_policy_required"`
-			MinAlgorithmTier          string `json:"posture_min_algorithm_tier"`
+			ForceQuorumDestructiveOps bool `json:"posture_force_quorum_destructive_ops"`
+			RequireStepUpAuth         bool `json:"posture_require_step_up_auth"`
+			PauseConnectorSync        bool `json:"posture_pause_connector_sync"`
+			GuardrailPolicyRequired   bool `json:"posture_guardrail_policy_required"`
 		} `json:"state"`
 		Error struct {
 			Message string `json:"message"`
@@ -144,7 +139,6 @@ func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, _ str
 		RequireStepUpAuth:         payload.State.RequireStepUpAuth,
 		PauseConnectorSync:        payload.State.PauseConnectorSync,
 		GuardrailPolicyRequired:   payload.State.GuardrailPolicyRequired,
-		MinAlgorithmTier:          payload.State.MinAlgorithmTier,
 	}, nil
 }
 

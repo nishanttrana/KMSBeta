@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Removing a check leaves its input behind
+- **What happened:** 5.4.0-beta removed the minimum-tier check, but the
+  posture field it read stayed parsed in `posture_controls.go`, still
+  suggesting governance supplies it.
+- **Rule:** when a check goes, remove the field that fed it in the same
+  commit (grep for readers of the field, not just the check).
+
+## 2026-09-30
+
 ### A service that learns tenants from its own tables never sees a new one
 - **What happened:** reporting's scheduled alert sync listed tenants from
   its own tables. A tenant with no alert, rule or channel was never synced,

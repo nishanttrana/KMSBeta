@@ -4,6 +4,14 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.23.0-beta] — 2026-09-30
+
+### Keycore no longer parses the posture minimum algorithm tier
+- 5.4.0-beta removed the tenant minimum-tier check (governance never stored
+  `posture_min_algorithm_tier`), but keycore still parsed the field. It is
+  gone. A floor is a policy's `spec.minAlgorithmTier` or a Crypto Agility
+  migration rule.
+
 ## [6.22.0-beta] — 2026-09-30
 
 ### Threat alerts reach every tenant, including one that never used reporting
