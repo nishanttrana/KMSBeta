@@ -9,7 +9,6 @@
   "api_base_url": "https://kms.example.com/svc/ekm",
   "register_path": "/ekm/agents/register",
   "heartbeat_path": "/ekm/agents/{agent_id}/heartbeat",
-  "rotate_path": "/ekm/agents/{agent_id}/rotate",
   "auth_token": "",
   "mtls_cert_path": "",
   "mtls_key_path": "",

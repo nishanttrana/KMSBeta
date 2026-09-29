@@ -21,7 +21,6 @@ type AgentConfig struct {
 	AuditBaseURL         string `json:"audit_base_url"`
 	RegisterPath         string `json:"register_path"`
 	HeartbeatPath        string `json:"heartbeat_path"`
-	RotatePath           string `json:"rotate_path"`
 	JobsNextPath         string `json:"jobs_next_path"`
 	JobResultPath        string `json:"job_result_path"`
 	AuthToken            string `json:"auth_token"`
@@ -83,7 +82,6 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.AuditBaseURL = envOr("EKM_AUDIT_BASE_URL", cfg.AuditBaseURL)
 	cfg.RegisterPath = envOr("EKM_REGISTER_PATH", cfg.RegisterPath)
 	cfg.HeartbeatPath = envOr("EKM_HEARTBEAT_PATH", cfg.HeartbeatPath)
-	cfg.RotatePath = envOr("EKM_ROTATE_PATH", cfg.RotatePath)
 	cfg.JobsNextPath = envOr("BITLOCKER_JOBS_NEXT_PATH", cfg.JobsNextPath)
 	cfg.JobResultPath = envOr("BITLOCKER_JOB_RESULT_PATH", cfg.JobResultPath)
 	cfg.AuthToken = envOr("EKM_AUTH_TOKEN", cfg.AuthToken)
@@ -145,13 +143,6 @@ func applyDefaults(cfg *AgentConfig) {
 			cfg.HeartbeatPath = "/ekm/bitlocker/clients/{agent_id}/heartbeat"
 		} else {
 			cfg.HeartbeatPath = "/ekm/agents/{agent_id}/heartbeat"
-		}
-	}
-	if strings.TrimSpace(cfg.RotatePath) == "" {
-		if cfg.AgentMode == "bitlocker" {
-			cfg.RotatePath = "/ekm/bitlocker/clients/{agent_id}/operations"
-		} else {
-			cfg.RotatePath = "/ekm/agents/{agent_id}/rotate"
 		}
 	}
 	if strings.TrimSpace(cfg.JobsNextPath) == "" {

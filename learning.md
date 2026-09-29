@@ -5,6 +5,13 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A setting with a default and no reader looks like a feature
+- The EKM agent's `rotate_path` had a config field, an env override and a
+  per-mode default, but no code used it. Found while removing the dead
+  export path (6.15.0-beta). **Rule:** a config field is removed with the
+  last code that reads it.
+
+
 ### A client of a route nobody registered fails quietly for ever
 - **What happened:** the EKM agent's local key cache fetched
   `GET /ekm/tde/keys/{id}` and then `POST .../export`. The EKM service never
