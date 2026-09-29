@@ -420,7 +420,6 @@ Check:
 Check:
 
 - certificate inventory classification
-- interface PQC mode
 - key inventory freshness
 - migration report inputs
 

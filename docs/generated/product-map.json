@@ -25403,7 +25403,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:6,b...",
-      "line": 843,
+      "line": 812,
       "tabs": [],
       "tag": "button"
     },
@@ -25411,7 +25411,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restartAllAllowedServices()} disabled= >",
-      "line": 2201,
+      "line": 2149,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25419,7 +25419,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadHealth()}>",
-      "line": 2208,
+      "line": 2156,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25427,7 +25427,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restartSvc(name)} disabled= >",
-      "line": 2237,
+      "line": 2185,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25435,7 +25435,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2301,
+      "line": 2249,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25443,7 +25443,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Configure TLS",
-      "line": 2302,
+      "line": 2250,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25451,7 +25451,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(true)}>Configure FIPS",
-      "line": 2303,
+      "line": 2251,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25459,7 +25459,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"enabled\");}}>Enable FIPS",
-      "line": 2315,
+      "line": 2263,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25467,7 +25467,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{setSystemState((p)=>( ));onFipsModeChange(\"disabled\");}}>Disable FIPS",
-      "line": 2316,
+      "line": 2264,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25475,7 +25475,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setFipsConfigModalOpen(false)}>Cancel",
-      "line": 2372,
+      "line": 2320,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25483,7 +25483,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveFipsConfig()} disabled= >",
-      "line": 2373,
+      "line": 2321,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25491,7 +25491,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Open Interfaces",
-      "line": 2419,
+      "line": 2367,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25499,7 +25499,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 2421,
+      "line": 2369,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25507,7 +25507,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveTLSConfig()} disabled= >",
-      "line": 2422,
+      "line": 2370,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25515,7 +25515,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2429,
+      "line": 2377,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25523,7 +25523,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void testSnmpSettings()} disabled= >",
-      "line": 2430,
+      "line": 2378,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25531,7 +25531,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSnmpSettings()} disabled= >",
-      "line": 2431,
+      "line": 2379,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25539,7 +25539,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadTags()}>Refresh",
-      "line": 2513,
+      "line": 2461,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25547,7 +25547,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void addTag()} disabled= >",
-      "line": 2518,
+      "line": 2466,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25555,7 +25555,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void removeTag(name,usageCount)} disabled= >Delete",
-      "line": 2533,
+      "line": 2481,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25563,7 +25563,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadPasswordPolicy()} disabled= >",
-      "line": 2543,
+      "line": 2491,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25571,7 +25571,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void savePasswordPolicy()} disabled= >",
-      "line": 2543,
+      "line": 2491,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25579,7 +25579,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSecurityPolicy()} disabled= >",
-      "line": 2568,
+      "line": 2516,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25587,7 +25587,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadAccessHardening()} disabled= >",
-      "line": 2587,
+      "line": 2535,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25595,7 +25595,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveAccessHardening()} disabled= >",
-      "line": 2588,
+      "line": 2536,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25603,7 +25603,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void Promise.all([loadAccessHardening(),loadHealth()])} disabled= >",
-      "line": 2619,
+      "line": 2567,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25611,7 +25611,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openNetIfModal()} disabled= >+ Add Interface",
-      "line": 2620,
+      "line": 2568,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25619,7 +25619,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void toggleNetIfEnabled(iface)}>",
-      "line": 2651,
+      "line": 2599,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25627,7 +25627,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openNetIfModal(iface)}>Edit",
-      "line": 2652,
+      "line": 2600,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25635,7 +25635,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void deleteNetIf(iface.interface_name)}>Delete",
-      "line": 2653,
+      "line": 2601,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25643,7 +25643,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 2720,
+      "line": 2659,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25651,7 +25651,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveNetIf()}>",
-      "line": 2721,
+      "line": 2660,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25659,7 +25659,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2727,
+      "line": 2666,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25667,7 +25667,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2727,
+      "line": 2666,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25675,7 +25675,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setPanel(\"interfaces\")}>Open Interfaces",
-      "line": 2794,
+      "line": 2733,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25683,7 +25683,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 2804,
+      "line": 2743,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25691,7 +25691,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 2811,
+      "line": 2750,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25699,7 +25699,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 2824,
+      "line": 2763,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25707,7 +25707,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 2855,
+      "line": 2794,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25715,7 +25715,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 2858,
+      "line": 2797,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25723,7 +25723,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 2865,
+      "line": 2804,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25731,7 +25731,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
-      "line": 2871,
+      "line": 2810,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25739,7 +25739,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try{await testGover...",
-      "line": 2879,
+      "line": 2818,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25747,7 +25747,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadJobs()}>",
-      "line": 2886,
+      "line": 2825,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25755,7 +25755,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 2900,
+      "line": 2839,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25763,7 +25763,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 2924,
+      "line": 2863,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25771,7 +25771,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 2927,
+      "line": 2866,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25779,7 +25779,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 2955,
+      "line": 2894,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25787,7 +25787,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 2956,
+      "line": 2895,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25795,7 +25795,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 2961,
+      "line": 2900,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25803,7 +25803,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 2962,
+      "line": 2901,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25811,7 +25811,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 2976,
+      "line": 2915,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25819,7 +25819,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 2976,
+      "line": 2915,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25827,7 +25827,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 2976,
+      "line": 2915,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25835,7 +25835,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 2982,
+      "line": 2921,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25843,7 +25843,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 2982,
+      "line": 2921,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25851,7 +25851,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 2999,
+      "line": 2938,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25859,7 +25859,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 3002,
+      "line": 2941,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25867,7 +25867,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 3003,
+      "line": 2942,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25875,7 +25875,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleTestRule()} disabled= >",
-      "line": 3058,
+      "line": 2997,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25883,7 +25883,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 3071,
+      "line": 3010,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25891,7 +25891,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 3072,
+      "line": 3011,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25899,7 +25899,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 3079,
+      "line": 3018,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25907,7 +25907,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 3080,
+      "line": 3019,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25915,7 +25915,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 3116,
+      "line": 3055,
       "tabs": [],
       "tag": "button"
     },
@@ -25923,7 +25923,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 3117,
+      "line": 3056,
       "tabs": [],
       "tag": "button"
     },
@@ -25931,7 +25931,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 3190,
+      "line": 3129,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25939,7 +25939,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 3191,
+      "line": 3130,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25947,7 +25947,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 3234,
+      "line": 3173,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25955,7 +25955,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 3235,
+      "line": 3174,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31119,7 +31119,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 547,
+      "line": 546,
       "match_key": "keycore|GET|/keys",
       "method": "GET",
       "normalized_path": "/keys",
@@ -31132,7 +31132,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 587,
+      "line": 586,
       "match_key": "keycore|POST|/keys",
       "method": "POST",
       "normalized_path": "/keys",
@@ -31145,7 +31145,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 677,
+      "line": 676,
       "match_key": "keycore|GET|/hsm/objects",
       "method": "GET",
       "normalized_path": "/hsm/objects",
@@ -31158,7 +31158,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 683,
+      "line": 682,
       "match_key": "keycore|GET|/keys/{param}/hsm",
       "method": "GET",
       "normalized_path": "/keys/{param}/hsm",
@@ -31171,7 +31171,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 696,
+      "line": 695,
       "match_key": "keycore|GET|/hsm/settings",
       "method": "GET",
       "normalized_path": "/hsm/settings",
@@ -31184,7 +31184,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/hsm/settings\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 703,
+      "line": 702,
       "match_key": "keycore|PUT|/hsm/settings",
       "method": "PUT",
       "normalized_path": "/hsm/settings",
@@ -31197,7 +31197,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys/form\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 711,
+      "line": 710,
       "match_key": "keycore|POST|/keys/form",
       "method": "POST",
       "normalized_path": "/keys/form",
@@ -31210,7 +31210,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/keys/import\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 742,
+      "line": 741,
       "match_key": "keycore|POST|/keys/import",
       "method": "POST",
       "normalized_path": "/keys/import",
@@ -31223,7 +31223,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 777,
+      "line": 776,
       "match_key": "keycore|POST|/keys/{param}/rotate",
       "method": "POST",
       "normalized_path": "/keys/{param}/rotate",
@@ -31236,7 +31236,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 786,
+      "line": 785,
       "match_key": "keycore|POST|/keys/{param}/verify-material",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify-material",
@@ -31249,7 +31249,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 796,
+      "line": 795,
       "match_key": "keycore|POST|/keys/{param}/attest",
       "method": "POST",
       "normalized_path": "/keys/{param}/attest",
@@ -31262,7 +31262,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 805,
+      "line": 804,
       "match_key": "keycore|GET|/keys/{param}/versions",
       "method": "GET",
       "normalized_path": "/keys/{param}/versions",
@@ -31275,7 +31275,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 835,
+      "line": 834,
       "match_key": "keycore|POST|/keys/{param}/encrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/encrypt",
@@ -31288,7 +31288,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 872,
+      "line": 871,
       "match_key": "keycore|POST|/keys/{param}/generate-data-key",
       "method": "POST",
       "normalized_path": "/keys/{param}/generate-data-key",
@@ -31301,7 +31301,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 899,
+      "line": 898,
       "match_key": "keycore|POST|/keys/{param}/decrypt",
       "method": "POST",
       "normalized_path": "/keys/{param}/decrypt",
@@ -31314,7 +31314,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 923,
+      "line": 922,
       "match_key": "keycore|POST|/keys/{param}/sign",
       "method": "POST",
       "normalized_path": "/keys/{param}/sign",
@@ -31327,7 +31327,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 941,
+      "line": 940,
       "match_key": "keycore|POST|/keys/{param}/verify",
       "method": "POST",
       "normalized_path": "/keys/{param}/verify",
@@ -31340,7 +31340,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/crypto/hash\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 966,
+      "line": 965,
       "match_key": "keycore|POST|/crypto/hash",
       "method": "POST",
       "normalized_path": "/crypto/hash",
@@ -31353,7 +31353,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/crypto/random\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 987,
+      "line": 986,
       "match_key": "keycore|POST|/crypto/random",
       "method": "POST",
       "normalized_path": "/crypto/random",
@@ -31366,7 +31366,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1016,
+      "line": 1015,
       "match_key": "keycore|POST|/keys/{param}/derive",
       "method": "POST",
       "normalized_path": "/keys/{param}/derive",
@@ -31379,7 +31379,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1044,
+      "line": 1043,
       "match_key": "keycore|POST|/keys/{param}/kem/encapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/encapsulate",
@@ -31392,7 +31392,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1073,
+      "line": 1072,
       "match_key": "keycore|POST|/keys/{param}/kem/decapsulate",
       "method": "POST",
       "normalized_path": "/keys/{param}/kem/decapsulate",
@@ -31405,7 +31405,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1099,
+      "line": 1098,
       "match_key": "keycore|POST|/keys/{param}/export",
       "method": "POST",
       "normalized_path": "/keys/{param}/export",
@@ -31418,7 +31418,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1117,
+      "line": 1116,
       "match_key": "keycore|POST|/keys/{param}/destroy",
       "method": "POST",
       "normalized_path": "/keys/{param}/destroy",
@@ -31431,7 +31431,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1128,
+      "line": 1127,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31444,7 +31444,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1140,
+      "line": 1139,
       "match_key": "keycore|POST|/keys/{param}/activate",
       "method": "POST",
       "normalized_path": "/keys/{param}/activate",
@@ -31457,7 +31457,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1154,
+      "line": 1153,
       "match_key": "keycore|POST|/keys/{param}/deactivate",
       "method": "POST",
       "normalized_path": "/keys/{param}/deactivate",
@@ -31470,7 +31470,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1162,
+      "line": 1161,
       "match_key": "keycore|POST|/keys/{param}/disable",
       "method": "POST",
       "normalized_path": "/keys/{param}/disable",
@@ -31483,7 +31483,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1175,
+      "line": 1174,
       "match_key": "keycore|PUT|/keys/{param}/usage/limit",
       "method": "PUT",
       "normalized_path": "/keys/{param}/usage/limit",
@@ -31496,7 +31496,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1193,
+      "line": 1192,
       "match_key": "keycore|PUT|/keys/{param}/export-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/export-policy",
@@ -31509,7 +31509,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1209,
+      "line": 1208,
       "match_key": "keycore|GET|/keys/{param}/access-policy",
       "method": "GET",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31522,7 +31522,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1222,
+      "line": 1221,
       "match_key": "keycore|PUT|/keys/{param}/access-policy",
       "method": "PUT",
       "normalized_path": "/keys/{param}/access-policy",
@@ -31535,7 +31535,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1233,
+      "line": 1232,
       "match_key": "keycore|GET|/access/settings",
       "method": "GET",
       "normalized_path": "/access/settings",
@@ -31548,7 +31548,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1244,
+      "line": 1243,
       "match_key": "keycore|PUT|/access/settings",
       "method": "PUT",
       "normalized_path": "/access/settings",
@@ -31561,7 +31561,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1260,
+      "line": 1259,
       "match_key": "keycore|GET|/access/interface-policies",
       "method": "GET",
       "normalized_path": "/access/interface-policies",
@@ -31574,7 +31574,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1271,
+      "line": 1270,
       "match_key": "keycore|POST|/access/interface-policies",
       "method": "POST",
       "normalized_path": "/access/interface-policies",
@@ -31587,7 +31587,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1283,
+      "line": 1282,
       "match_key": "keycore|DELETE|/access/interface-policies/{param}",
       "method": "DELETE",
       "normalized_path": "/access/interface-policies/{param}",
@@ -31600,7 +31600,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1291,
+      "line": 1290,
       "match_key": "keycore|GET|/access/interface-ports",
       "method": "GET",
       "normalized_path": "/access/interface-ports",
@@ -31613,7 +31613,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1299,
+      "line": 1298,
       "match_key": "keycore|GET|/access/interface-tls-config",
       "method": "GET",
       "normalized_path": "/access/interface-tls-config",
@@ -31626,7 +31626,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1310,
+      "line": 1309,
       "match_key": "keycore|PUT|/access/interface-tls-config",
       "method": "PUT",
       "normalized_path": "/access/interface-tls-config",
@@ -31639,7 +31639,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1325,
+      "line": 1324,
       "match_key": "keycore|POST|/access/interface-ports",
       "method": "POST",
       "normalized_path": "/access/interface-ports",
@@ -31652,7 +31652,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1337,
+      "line": 1336,
       "match_key": "keycore|DELETE|/access/interface-ports/{param}",
       "method": "DELETE",
       "normalized_path": "/access/interface-ports/{param}",
@@ -31665,7 +31665,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1345,
+      "line": 1344,
       "match_key": "keycore|GET|/access/groups",
       "method": "GET",
       "normalized_path": "/access/groups",
@@ -31678,7 +31678,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1356,
+      "line": 1355,
       "match_key": "keycore|POST|/access/groups",
       "method": "POST",
       "normalized_path": "/access/groups",
@@ -31691,7 +31691,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1371,
+      "line": 1370,
       "match_key": "keycore|DELETE|/access/groups/{param}",
       "method": "DELETE",
       "normalized_path": "/access/groups/{param}",
@@ -31704,7 +31704,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1383,
+      "line": 1382,
       "match_key": "keycore|PUT|/access/groups/{param}/members",
       "method": "PUT",
       "normalized_path": "/access/groups/{param}/members",
@@ -31717,7 +31717,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1396,
+      "line": 1395,
       "match_key": "keycore|GET|/tags",
       "method": "GET",
       "normalized_path": "/tags",
@@ -31730,7 +31730,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1408,
+      "line": 1407,
       "match_key": "keycore|POST|/tags",
       "method": "POST",
       "normalized_path": "/tags",
@@ -31743,7 +31743,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1423,
+      "line": 1422,
       "match_key": "keycore|DELETE|/tags/{param}",
       "method": "DELETE",
       "normalized_path": "/tags/{param}",
@@ -31756,7 +31756,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1454,
+      "line": 1453,
       "match_key": "keycore|GET|/canary/keys",
       "method": "GET",
       "normalized_path": "/canary/keys",
@@ -31769,7 +31769,7 @@
       "dynamic": false,
       "expression": "apiRequest(\"/canary/keys\")",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1459,
+      "line": 1458,
       "match_key": "keycore|POST|/canary/keys",
       "method": "POST",
       "normalized_path": "/canary/keys",
@@ -31782,7 +31782,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1467,
+      "line": 1466,
       "match_key": "keycore|DELETE|/canary/keys/{param}",
       "method": "DELETE",
       "normalized_path": "/canary/keys/{param}",
@@ -31795,7 +31795,7 @@
       "dynamic": true,
       "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
       "file": "web/dashboard/src/lib/keycore.ts",
-      "line": 1471,
+      "line": 1470,
       "match_key": "keycore|GET|/canary/keys/{param}/trips",
       "method": "GET",
       "normalized_path": "/canary/keys/{param}/trips",
@@ -33768,7 +33768,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T08:53:34Z",
+  "generated_at": "2026-09-29T08:59:55Z",
   "navigation": [
     {
       "group": "Overview",
@@ -67178,7 +67178,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 872,
+          "line": 871,
           "source": "keycore.apiRequest"
         }
       ],
@@ -67351,7 +67351,7 @@
         {
           "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 547,
+          "line": 546,
           "source": "keycore.apiRequest"
         }
       ],
@@ -67596,7 +67596,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1099,
+          "line": 1098,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68035,7 +68035,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 805,
+          "line": 804,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68404,7 +68404,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1396,
+          "line": 1395,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68476,7 +68476,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 835,
+          "line": 834,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68510,7 +68510,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 899,
+          "line": 898,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68544,7 +68544,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 923,
+          "line": 922,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68578,7 +68578,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 941,
+          "line": 940,
           "source": "keycore.apiRequest"
         }
       ],
@@ -68767,7 +68767,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1016,
+          "line": 1015,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69147,7 +69147,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1044,
+          "line": 1043,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69245,7 +69245,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1073,
+          "line": 1072,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69343,7 +69343,7 @@
         {
           "expression": "apiRequest(\"/crypto/hash\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 966,
+          "line": 965,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69412,7 +69412,7 @@
         {
           "expression": "apiRequest(\"/crypto/random\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 987,
+          "line": 986,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69812,7 +69812,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1209,
+          "line": 1208,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69871,7 +69871,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1222,
+          "line": 1221,
           "source": "keycore.apiRequest"
         }
       ],
@@ -69965,7 +69965,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1345,
+          "line": 1344,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70023,7 +70023,7 @@
         {
           "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1356,
+          "line": 1355,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70086,7 +70086,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1371,
+          "line": 1370,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70144,7 +70144,7 @@
         {
           "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1383,
+          "line": 1382,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70206,7 +70206,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1233,
+          "line": 1232,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70252,7 +70252,7 @@
             "normalizeKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 468,
+          "line": 448,
           "name": "GetKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70270,7 +70270,7 @@
         {
           "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1244,
+          "line": 1243,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70320,7 +70320,7 @@
             "normalizeKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 468,
+          "line": 448,
           "name": "GetKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70337,7 +70337,7 @@
             "UpsertKeyAccessSettings"
           ],
           "internal_package_calls": [],
-          "line": 483,
+          "line": 463,
           "name": "UpdateKeyAccessSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -70356,7 +70356,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1260,
+          "line": 1259,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70403,7 +70403,7 @@
             "normalizeInterfaceName"
           ],
           "internal_package_calls": [],
-          "line": 495,
+          "line": 475,
           "name": "ListKeyInterfaceSubjectPolicies",
           "receiver_calls": [],
           "store_calls": [
@@ -70421,7 +70421,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1271,
+          "line": 1270,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70460,7 +70460,7 @@
             "normalizeInterfacePolicy"
           ],
           "internal_package_calls": [],
-          "line": 503,
+          "line": 483,
           "name": "UpsertKeyInterfaceSubjectPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70478,7 +70478,7 @@
         {
           "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1283,
+          "line": 1282,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70518,7 +70518,7 @@
           "file": "services/keycore/access_hardening.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 515,
+          "line": 495,
           "name": "DeleteKeyInterfaceSubjectPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -70536,7 +70536,7 @@
         {
           "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1299,
+          "line": 1298,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70580,7 +70580,7 @@
             "normalizeInterfaceTLSConfig"
           ],
           "internal_package_calls": [],
-          "line": 547,
+          "line": 527,
           "name": "GetKeyInterfaceTLSConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -70598,7 +70598,7 @@
         {
           "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1310,
+          "line": 1309,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70649,7 +70649,7 @@
             "UpsertKeyInterfacePort"
           ],
           "internal_package_calls": [],
-          "line": 559,
+          "line": 539,
           "name": "UpdateKeyInterfaceTLSConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -70671,7 +70671,7 @@
         {
           "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1291,
+          "line": 1290,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70721,7 +70721,7 @@
             "applyTLSConfigToPort"
           ],
           "internal_package_calls": [],
-          "line": 524,
+          "line": 504,
           "name": "ListKeyInterfacePorts",
           "receiver_calls": [],
           "store_calls": [
@@ -70741,7 +70741,7 @@
         {
           "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1325,
+          "line": 1324,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70784,7 +70784,7 @@
             "applyTLSConfigToPort"
           ],
           "internal_package_calls": [],
-          "line": 586,
+          "line": 566,
           "name": "UpsertKeyInterfacePort",
           "receiver_calls": [],
           "store_calls": [
@@ -70804,7 +70804,7 @@
         {
           "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1337,
+          "line": 1336,
           "source": "keycore.apiRequest"
         }
       ],
@@ -70816,7 +70816,7 @@
         "storeErr"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 326,
+      "handler_line": 325,
       "handler_name": "deleteInterfacePort",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -70848,7 +70848,7 @@
             "normalizeInterfaceName"
           ],
           "internal_package_calls": [],
-          "line": 603,
+          "line": 583,
           "name": "DeleteKeyInterfacePort",
           "receiver_calls": [],
           "store_calls": [
@@ -71416,7 +71416,7 @@
         {
           "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1454,
+          "line": 1453,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71453,7 +71453,7 @@
         {
           "expression": "apiRequest(\"/canary/keys\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1459,
+          "line": 1458,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71495,7 +71495,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1471,
+          "line": 1470,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71538,7 +71538,7 @@
         {
           "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1467,
+          "line": 1466,
           "source": "keycore.apiRequest"
         }
       ],
@@ -71933,7 +71933,7 @@
         {
           "expression": "apiRequest(\"/keys\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 587,
+          "line": 586,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72018,7 +72018,7 @@
         {
           "expression": "apiRequest(\"/keys/import\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 742,
+          "line": 741,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72097,7 +72097,7 @@
         {
           "expression": "apiRequest(\"/keys/form\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 711,
+          "line": 710,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72526,7 +72526,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 777,
+          "line": 776,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72643,13 +72643,13 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1128,
+          "line": 1127,
           "source": "keycore.apiRequest"
         },
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1140,
+          "line": 1139,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72739,7 +72739,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1154,
+          "line": 1153,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72773,7 +72773,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1162,
+          "line": 1161,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72807,7 +72807,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1117,
+          "line": 1116,
           "source": "keycore.apiRequest"
         }
       ],
@@ -72997,7 +72997,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1193,
+          "line": 1192,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73211,7 +73211,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1175,
+          "line": 1174,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73480,7 +73480,7 @@
         {
           "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1408,
+          "line": 1407,
           "source": "keycore.apiRequest"
         }
       ],
@@ -73561,7 +73561,7 @@
         {
           "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 1423,
+          "line": 1422,
           "source": "keycore.apiRequest"
         }
       ],
@@ -75849,7 +75849,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 796,
+          "line": 795,
           "source": "keycore.apiRequest"
         }
       ],
@@ -75932,7 +75932,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 786,
+          "line": 785,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76462,7 +76462,7 @@
         {
           "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 696,
+          "line": 695,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76528,7 +76528,7 @@
         {
           "expression": "apiRequest(\"/hsm/settings\")",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 703,
+          "line": 702,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76609,7 +76609,7 @@
         {
           "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 677,
+          "line": 676,
           "source": "keycore.apiRequest"
         }
       ],
@@ -76688,7 +76688,7 @@
         {
           "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/keycore.ts",
-          "line": 683,
+          "line": 682,
           "source": "keycore.apiRequest"
         }
       ],
@@ -110572,7 +110572,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/generate-data-key`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 872,
+            "line": 871,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110655,7 +110655,7 @@
           {
             "expression": "apiRequest(`/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? \"t...",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 547,
+            "line": 546,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110766,7 +110766,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1099,
+            "line": 1098,
             "source": "keycore.apiRequest"
           }
         ],
@@ -110859,7 +110859,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 805,
+            "line": 804,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111074,7 +111074,7 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1396,
+            "line": 1395,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111112,7 +111112,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/encrypt`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 835,
+            "line": 834,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111145,7 +111145,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/decrypt`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 899,
+            "line": 898,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111178,7 +111178,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/sign`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 923,
+            "line": 922,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111217,7 +111217,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 941,
+            "line": 940,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111336,7 +111336,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/derive`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1016,
+            "line": 1015,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111503,7 +111503,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/encapsulate`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1044,
+            "line": 1043,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111546,7 +111546,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/kem/decapsulate`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1073,
+            "line": 1072,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111587,7 +111587,7 @@
           {
             "expression": "apiRequest(\"/crypto/hash\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 966,
+            "line": 965,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111628,7 +111628,7 @@
           {
             "expression": "apiRequest(\"/crypto/random\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 987,
+            "line": 986,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111836,7 +111836,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1209,
+            "line": 1208,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111882,7 +111882,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1222,
+            "line": 1221,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111923,7 +111923,7 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1345,
+            "line": 1344,
             "source": "keycore.apiRequest"
           }
         ],
@@ -111963,7 +111963,7 @@
           {
             "expression": "apiRequest(`/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1356,
+            "line": 1355,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112003,7 +112003,7 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1371,
+            "line": 1370,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112043,7 +112043,7 @@
           {
             "expression": "apiRequest(`/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1383,
+            "line": 1382,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112083,7 +112083,7 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1233,
+            "line": 1232,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112123,7 +112123,7 @@
           {
             "expression": "apiRequest(`/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1244,
+            "line": 1243,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112165,7 +112165,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1260,
+            "line": 1259,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112202,7 +112202,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1271,
+            "line": 1270,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112242,7 +112242,7 @@
           {
             "expression": "apiRequest(`/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1283,
+            "line": 1282,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112282,7 +112282,7 @@
           {
             "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1299,
+            "line": 1298,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112319,7 +112319,7 @@
           {
             "expression": "apiRequest(`/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1310,
+            "line": 1309,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112361,7 +112361,7 @@
           {
             "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1291,
+            "line": 1290,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112399,7 +112399,7 @@
           {
             "expression": "apiRequest(`/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1325,
+            "line": 1324,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112440,13 +112440,13 @@
           {
             "expression": "apiRequest(`/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1337,
+            "line": 1336,
             "source": "keycore.apiRequest"
           }
         ],
         "handler": "deleteInterfacePort",
         "handlerFile": "services/keycore/handler_access.go",
-        "handlerLine": 326,
+        "handlerLine": 325,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112866,7 +112866,7 @@
           {
             "expression": "apiRequest(`/canary/keys?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1454,
+            "line": 1453,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112903,7 +112903,7 @@
           {
             "expression": "apiRequest(\"/canary/keys\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1459,
+            "line": 1458,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112941,7 +112941,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}/trips?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1471,
+            "line": 1470,
             "source": "keycore.apiRequest"
           }
         ],
@@ -112977,7 +112977,7 @@
           {
             "expression": "apiRequest(`/canary/keys/${encodeURIComponent(id)}?${tenantQ(session)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1467,
+            "line": 1466,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113309,7 +113309,7 @@
           {
             "expression": "apiRequest(\"/keys\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 587,
+            "line": 586,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113352,7 +113352,7 @@
           {
             "expression": "apiRequest(\"/keys/import\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 742,
+            "line": 741,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113397,7 +113397,7 @@
           {
             "expression": "apiRequest(\"/keys/form\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 711,
+            "line": 710,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113572,7 +113572,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 777,
+            "line": 776,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113620,13 +113620,13 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1128,
+            "line": 1127,
             "source": "keycore.apiRequest"
           },
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/activate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1140,
+            "line": 1139,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113665,7 +113665,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/deactivate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1154,
+            "line": 1153,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113698,7 +113698,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/disable?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1162,
+            "line": 1161,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113740,7 +113740,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/destroy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1117,
+            "line": 1116,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113791,7 +113791,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/export-policy?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1193,
+            "line": 1192,
             "source": "keycore.apiRequest"
           }
         ],
@@ -113909,7 +113909,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/usage/limit?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1175,
+            "line": 1174,
             "source": "keycore.apiRequest"
           }
         ],
@@ -114045,7 +114045,7 @@
           {
             "expression": "apiRequest(`/tags?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1408,
+            "line": 1407,
             "source": "keycore.apiRequest"
           }
         ],
@@ -114090,7 +114090,7 @@
           {
             "expression": "apiRequest(`/tags/${encodeURIComponent(name)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 1423,
+            "line": 1422,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115432,7 +115432,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 796,
+            "line": 795,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115477,7 +115477,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 786,
+            "line": 785,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115823,7 +115823,7 @@
           {
             "expression": "apiRequest(`/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 696,
+            "line": 695,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115866,7 +115866,7 @@
           {
             "expression": "apiRequest(\"/hsm/settings\")",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 703,
+            "line": 702,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115916,7 +115916,7 @@
           {
             "expression": "apiRequest(`/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 677,
+            "line": 676,
             "source": "keycore.apiRequest"
           }
         ],
@@ -115960,7 +115960,7 @@
           {
             "expression": "apiRequest(`/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/keycore.ts",
-            "line": 683,
+            "line": 682,
             "source": "keycore.apiRequest"
           }
         ],
@@ -123904,7 +123904,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T08:53:34Z",
+    "generatedAt": "2026-09-29T08:59:55Z",
     "methods": [
       "DELETE",
       "GET",

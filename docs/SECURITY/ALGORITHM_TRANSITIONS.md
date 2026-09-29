@@ -143,8 +143,10 @@ pqc reports measured counts only:
   `estimated_risk_reduced` were removed.
 - Interfaces are `not_assessed`. The inventory used to report an
   interface with `pqc_mode: inherit` as having the policy's default mode,
-  so a TLS mode that was never measured appeared as measured. The
-  interface `pqc_mode` in keycore is recorded but not enforced.
+  so a TLS mode that was never measured appeared as measured. Keycore's
+  interface `pqc_mode` was removed in 6.4.0-beta: no listener read it.
+  Internal listeners' key exchange is each identity's svctls `kx_profile`
+  (Certificates / PKI → Service mTLS).
 
 ## How it is enforced
 
@@ -159,6 +161,8 @@ pqc reports measured counts only:
 - `TestTimelineIsTheCustomersPlanDeadlines` (pqc).
 - `TestDrillMeasuresRealRoundTrips`, `TestAgilityDrillRouteValidatedAndAudited`,
   `TestAgilityDrillStrictRefusesNonModuleAlgorithm` (swap drill).
+- `TestInterfacePortPQCModeRemoved`, `TestInterfacePQCModeDroppedPostgres`
+  (keycore): the interface `pqc_mode` is rejected and its column dropped.
 - `TestPQCPolicyRemovedAndNoInventedScores` (pqc): `/pqc/policy` is gone,
   and inventory, readiness and report carry no score, policy or interface
   mode. `TestPQCServiceReadinessPlanExecuteRollback` checks the inventory
@@ -173,8 +177,10 @@ pqc reports measured counts only:
 - A rule applies to keycore keys. Certificates, TLS endpoints and
   discovered assets are measured and planned (pqc, discovery), but the KMS
   cannot refuse their use.
-- The key exchange a KMS listener negotiates is not measured, and keycore's
-  per-interface `pqc_mode` is recorded only. It should be removed, or made a
-  preview (`409 feature_preview`), or enforced at the listener.
+- The key exchange a KMS listener negotiates is not measured by the pqc
+  inventory. Internal listeners apply their svctls `kx_profile`; the Envoy
+  edge listener sets no `ecdh_curves` and uses Envoy's default, with no
+  product control. (Keycore's record-only interface `pqc_mode` was removed
+  in 6.4.0-beta.)
 - CARAF decisions are recorded, not gated: accepting a risk needs a review
   date, not a governance approval.

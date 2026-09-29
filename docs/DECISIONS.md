@@ -7,6 +7,41 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Interface PQC mode: remove it; svctls kx_profile is the listener control (6.4.0-beta)
+
+**Decision.** Keycore's per-interface `pqc_mode` was removed (option a)
+rather than enforced (b) or listed as a preview (c).
+
+**Why.**
+- Nothing honoured it. No `tls.Config`, Envoy context or KMIP listener read
+  it, and its only reader (the pqc inventory) had already stopped.
+- The real need is covered where the KMS owns the listener: svctls gives
+  every internal identity a `kx_profile` (`pqc-required` / `pqc-preferred` /
+  `classical`) that sets the server's `CurvePreferences`, is chosen per
+  service in Certificates / PKI → Service mTLS, and is tested by real handshakes
+  (`TestMutualTLSBetweenServices` asserts the negotiated ML-KEM group;
+  `TestPQCRequiredServerRefusesClassicalOnlyPeers`,
+  `TestClassicalServerRefusesHybridOnlyPeers`).
+- Enforcing it (b) was the wrong shape: `key_interface_ports` rows are
+  per tenant, but a listener is per node and shared by every tenant. Two
+  tenants could set `pqc_only` and `classical` on the same port. A real
+  edge control is node-wide and owned by root administration.
+- A preview (c) keeps a selector whose honest answer is always "not
+  applied", for a need that is already met or needs a different design.
+
+**Rejected.** Mapping `pqc_mode` onto svctls `kx_profile` (two settings for
+one listener, and the tenant-scoped one would override a platform one).
+
+**Open.** The Envoy edge listener sets no `ecdh_curves`, so its key exchange
+is Envoy's default. If customers need to require hybrid at the edge, build
+a node-wide edge profile that writes the Envoy config and prove it with a
+handshake test.
+
+**Enforced by.** `TestInterfacePortPQCModeRemoved` (the kernel's strict
+decode rejects the field), `TestInterfacePQCModeDroppedPostgres`.
+
+---
+
 ## 2026-09-29 — PQC policy: remove it; migration rules are the only PQC switch (6.3.0-beta)
 
 **Decision.** Every field of the pqc service's tenant policy was removed

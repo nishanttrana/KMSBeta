@@ -2169,7 +2169,7 @@ Returns `{"inventory": {...}}`, the tenant's keys (keycore) and certificates
 | Field | Description |
 |---|---|
 | `keys`, `certificates` | `{total, classical, hybrid, pqc_only, algorithms}` |
-| `interfaces` | always `"not_assessed"`: the key exchange a listener negotiates is never measured, and the interface `pqc_mode` in keycore is not enforced |
+| `interfaces` | always `"not_assessed"`: the key exchange a listener negotiates is never measured |
 | `classical_usage` | every RSA / ECC key and certificate still active |
 | `non_migrated_certificates` | every classical certificate |
 | `recommendations` | only for what the counts found; empty when nothing is classical |

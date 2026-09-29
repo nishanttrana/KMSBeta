@@ -270,10 +270,7 @@ Operators can review:
 
 The PQC feature set turns migration into an operational program rather than a lab-only toggle. It provides:
 
-- tenant policy profiles
-- inventory classification
-- hybrid and PQC mode signaling for interfaces
-- readiness scoring
+- inventory classification (counts of classical, hybrid and PQC-only keys and certificates)
 - migration reporting
 
 ### Why Teams Use It

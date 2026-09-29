@@ -315,7 +315,6 @@ func (h *Handler) upsertInterfacePort(c *route.Call) {
 	c.Detail("bind_address", out.BindAddress)
 	c.Detail("port", out.Port)
 	c.Detail("protocol", out.Protocol)
-	c.Detail("pqc_mode", out.PQCMode)
 	c.Detail("cert_source", out.CertSource)
 	c.Detail("ca_id", out.CAID)
 	c.Detail("certificate_id", out.CertificateID)

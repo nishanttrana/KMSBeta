@@ -4,6 +4,42 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.4.0-beta] — 2026-09-29
+
+### Interfaces: the record-only PQC mode is removed
+- **Removed keycore's per-interface `pqc_mode`** (`inherit`, `classical`,
+  `hybrid`, `pqc_only`) from `POST /access/interface-ports`, its responses,
+  the `interface_port_upserted` audit details, the store, and System
+  Administration → Interfaces (the "Quantum Mode" column and selector and
+  the "PQC Mode Effect" line). No listener read it: Envoy, svctls and the
+  KMIP listener never consulted it, the pqc inventory stopped reporting it
+  in 6.3.0-beta, and `inherit` pointed at the tenant PQC policy removed in
+  6.3.0-beta. It was not kept as a preview because the real control already
+  exists for the listeners the KMS owns.
+- **Where key exchange is really set.** Each internal identity's TLS 1.3
+  groups come from its svctls `kx_profile` (`pqc-required`: hybrid ML-KEM
+  only; `pqc-preferred`, the default; `classical`), chosen in Certificates /
+  PKI → Service mTLS, applied by a restart and audited. Envoy's connections
+  to services offer `X25519MLKEM768` first (`infra/envoy/envoy.yaml`).
+- **Migration 031** drops `key_interface_ports.pqc_mode`; migration 008,
+  which added it, is deleted.
+- **Tests.** `TestInterfacePortPQCModeRemoved` (a write that sends
+  `pqc_mode` is rejected with 400 and audited as a failure, nothing is
+  stored; a normal upsert carries no `pqc_mode` in the response or the
+  event), `TestInterfacePQCModeDroppedPostgres` (031 on real Postgres, on a
+  fresh schema and on one that still has the column).
+
+### Breaking
+- `POST /access/interface-ports` with a `pqc_mode` field returns
+  `400 bad_request` (unknown field). Drop the field.
+
+### Open
+- The external edge listener (Envoy `DownstreamTlsContext`) sets no
+  `ecdh_curves`, so its key exchange is Envoy's default and the product
+  offers no control over it. A real control would be a node-wide edge
+  profile written into the Envoy config and proved by a handshake test, not
+  a per-tenant interface row.
+
 ## [6.3.0-beta] — 2026-09-29
 
 ### PQC: the record-only policy and the invented readiness scores are gone
@@ -60,7 +96,7 @@ service:
 ### Open
 - Keycore's per-interface `pqc_mode` (System Administration → Interfaces) is
   still recorded and not enforced at any listener. It should be removed,
-  made a preview, or enforced.
+  made a preview, or enforced. (Removed in 6.4.0-beta.)
 
 ## [6.2.0-beta] — 2026-09-29
 

@@ -89,8 +89,7 @@ type CertificatePQCItem struct {
 // PQCInventory counts keys and certificates by the algorithm each one
 // actually has. There is no score: the counts are the measurement.
 // Interfaces is "not_assessed": the key exchange an interface negotiates is
-// never measured, and its configured pqc_mode is not enforced, so the
-// inventory does not report one (6.3.0-beta).
+// never measured, so the inventory does not report one (6.3.0-beta).
 type PQCInventory struct {
 	TenantID                string               `json:"tenant_id"`
 	GeneratedAt             time.Time            `json:"generated_at"`

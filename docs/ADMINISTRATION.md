@@ -1684,7 +1684,10 @@ Interface configuration fields:
 | `tls_cert_source` | Source for TLS certificate: `internal_ca`, `file`, `acme`. |
 | `tls_cert_path` | Path to certificate file if `file` source. |
 | `tls_key_path` | Path to private key file if `file` source. |
-| `pqc_mode` | `inherit`, `classical`, `hybrid`, `pqc_only`. |
+
+An interface has no PQC or key-exchange setting (the record-only `pqc_mode`
+was removed in 6.4.0-beta). Internal listeners' TLS 1.3 groups are set per
+service under Certificates / PKI > Service mTLS (`kx_profile`).
 
 ### 11.3 Applying Network Configuration Changes
 

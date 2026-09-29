@@ -46,7 +46,6 @@ type KeyInterfacePort struct {
 	BindAddress   string    `json:"bind_address"`
 	Port          int       `json:"port"`
 	Protocol      string    `json:"protocol,omitempty"`
-	PQCMode       string    `json:"pqc_mode,omitempty"`
 	CertSource    string    `json:"certificate_source,omitempty"`
 	CAID          string    `json:"ca_id,omitempty"`
 	CertificateID string    `json:"certificate_id,omitempty"`
@@ -83,12 +82,12 @@ type RESTClientSecurityBinding struct {
 
 func defaultInterfacePorts(tenantID string) []KeyInterfacePort {
 	return []KeyInterfacePort{
-		{TenantID: tenantID, InterfaceName: "dashboard-ui", BindAddress: "0.0.0.0", Port: 5173, Protocol: "http", PQCMode: "classical", CertSource: "none", Enabled: true, Description: "Direct Web Dashboard UI"},
-		{TenantID: tenantID, InterfaceName: "rest", BindAddress: "0.0.0.0", Port: 443, Protocol: "https", PQCMode: "inherit", CertSource: "internal_ca", Enabled: true, Description: "REST API"},
-		{TenantID: tenantID, InterfaceName: "kmip", BindAddress: "0.0.0.0", Port: 5696, Protocol: "mtls", PQCMode: "inherit", CertSource: "internal_ca", Enabled: true, Description: "KMIP Protocol Interface"},
-		{TenantID: tenantID, InterfaceName: "ekm", BindAddress: "0.0.0.0", Port: 8130, Protocol: "http", PQCMode: "classical", CertSource: "none", Enabled: true, Description: "EKM / TDE Endpoint"},
-		{TenantID: tenantID, InterfaceName: "payment-tcp", BindAddress: "0.0.0.0", Port: 9170, Protocol: "tcp", PQCMode: "classical", CertSource: "none", Enabled: true, Description: "Payment Crypto TCP"},
-		{TenantID: tenantID, InterfaceName: "hyok", BindAddress: "0.0.0.0", Port: 8120, Protocol: "http", PQCMode: "classical", CertSource: "none", Enabled: true, Description: "HYOK API"},
+		{TenantID: tenantID, InterfaceName: "dashboard-ui", BindAddress: "0.0.0.0", Port: 5173, Protocol: "http", CertSource: "none", Enabled: true, Description: "Direct Web Dashboard UI"},
+		{TenantID: tenantID, InterfaceName: "rest", BindAddress: "0.0.0.0", Port: 443, Protocol: "https", CertSource: "internal_ca", Enabled: true, Description: "REST API"},
+		{TenantID: tenantID, InterfaceName: "kmip", BindAddress: "0.0.0.0", Port: 5696, Protocol: "mtls", CertSource: "internal_ca", Enabled: true, Description: "KMIP Protocol Interface"},
+		{TenantID: tenantID, InterfaceName: "ekm", BindAddress: "0.0.0.0", Port: 8130, Protocol: "http", CertSource: "none", Enabled: true, Description: "EKM / TDE Endpoint"},
+		{TenantID: tenantID, InterfaceName: "payment-tcp", BindAddress: "0.0.0.0", Port: 9170, Protocol: "tcp", CertSource: "none", Enabled: true, Description: "Payment Crypto TCP"},
+		{TenantID: tenantID, InterfaceName: "hyok", BindAddress: "0.0.0.0", Port: 8120, Protocol: "http", CertSource: "none", Enabled: true, Description: "HYOK API"},
 	}
 }
 
@@ -211,7 +210,6 @@ func applyInterfacePortDefaults(in KeyInterfacePort) KeyInterfacePort {
 		out.BindAddress = "0.0.0.0"
 	}
 	out.Protocol = normalizeInterfaceProtocol(out.InterfaceName, out.Protocol)
-	out.PQCMode = normalizeInterfacePQCMode(out.PQCMode, out.Protocol)
 	out.CertSource = normalizeInterfaceCertSource(out.Protocol, out.CertSource)
 	out.CAID = strings.TrimSpace(out.CAID)
 	out.CertificateID = strings.TrimSpace(out.CertificateID)
@@ -223,24 +221,6 @@ func applyInterfacePortDefaults(in KeyInterfacePort) KeyInterfacePort {
 	out.Description = strings.TrimSpace(out.Description)
 	out.UpdatedBy = strings.TrimSpace(out.UpdatedBy)
 	return out
-}
-
-func normalizeInterfacePQCMode(raw string, protocol string) string {
-	if !interfaceProtocolUsesCertificate(protocol) {
-		return "classical"
-	}
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", "inherit", "default":
-		return "inherit"
-	case "classical", "legacy", "classical_only":
-		return "classical"
-	case "hybrid", "hybrid_pqc", "hybrid-pqc":
-		return "hybrid"
-	case "pqc", "pqc_only", "pqc-only", "post_quantum":
-		return "pqc_only"
-	default:
-		return "inherit"
-	}
 }
 
 func normalizeInterfaceTLSConfig(in KeyInterfaceTLSConfig) (KeyInterfaceTLSConfig, error) {

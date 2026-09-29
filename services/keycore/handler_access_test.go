@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -179,5 +180,45 @@ func TestCreateKeyRefusesAnotherTenantInBody(t *testing.T) {
 	}
 	if ev := rec.Last(t); ev.Action != "create_requested" || ev.Event.Details["reason"] != route.ReasonTenantMismatch {
 		t.Fatalf("audited as %s %+v", ev.Action, ev.Event.Details)
+	}
+}
+
+// An interface's pqc_mode was stored but no listener read it, so it is gone
+// (6.4.0-beta). A write that still sends it is rejected and audited, nothing
+// is stored, and neither the response nor the event carries the field.
+func TestInterfacePortPQCModeRemoved(t *testing.T) {
+	h, svc, _ := newActorTestHandler(t)
+	rec := &routetest.Recorder{}
+	h.kernelAudit = rec
+	w := httptest.NewRecorder()
+	serveAsAdmin(h, w, httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1",
+		bytes.NewBufferString(`{"interface_name":"kmip","port":5696,"protocol":"mtls","pqc_mode":"pqc_only"}`)))
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "pqc_mode") {
+		t.Fatalf("pqc_mode write: %d %s, want 400 naming the field", w.Code, w.Body)
+	}
+	ev := rec.Last(t)
+	if ev.Event.Result != route.ResultFailure || ev.Event.Details["error_code"] != "bad_request" || !strings.Contains(ev.Event.ErrorMessage, "pqc_mode") {
+		t.Fatalf("rejected write audited as %s %s %+v %q", ev.Action, ev.Event.Result, ev.Event.Details, ev.Event.ErrorMessage)
+	}
+	ports, err := svc.ListKeyInterfacePorts(t.Context(), "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range ports {
+		if p.InterfaceName == "kmip" && p.UpdatedBy != "" {
+			t.Fatalf("rejected write was stored: %+v", p)
+		}
+	}
+
+	rec.Reset()
+	w = httptest.NewRecorder()
+	serveAsAdmin(h, w, httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1",
+		bytes.NewBufferString(`{"interface_name":"kmip","port":5696,"protocol":"mtls","enabled":true}`)))
+	if w.Code != http.StatusOK || strings.Contains(w.Body.String(), "pqc_mode") {
+		t.Fatalf("upsert: %d %s", w.Code, w.Body)
+	}
+	ev = rec.Last(t)
+	if _, ok := ev.Event.Details["pqc_mode"]; ok || ev.Event.Result != route.ResultSuccess || ev.Event.Details["protocol"] != "mtls" {
+		t.Fatalf("upsert audited as %s %+v", ev.Event.Result, ev.Event.Details)
 	}
 }

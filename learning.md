@@ -5,6 +5,27 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A field that follows a removed policy is a dangling switch
+- **What happened:** keycore's interface `pqc_mode` was added with the pqc
+  tenant policy, whose default mode `inherit` resolved to. The only reader
+  was the pqc inventory, which turned `inherit` into "hybrid" and reported
+  that as the interface's key exchange. 6.3.0-beta removed the policy and
+  made interfaces "not assessed", but the field, its column, its audit
+  detail and its selector stayed, now pointing at nothing. The UI
+  honestly said "Recorded only", which kept it from looking broken, and so
+  from being removed.
+- **How it slipped through:** "no listener reads it" was never checked when
+  the field was added; an audit event (`pqc_mode` in
+  `interface_port_upserted` details) and a Postgres column made it look
+  like a control. The real listener setting, svctls `kx_profile`, was built
+  later in a different tab and nobody joined the two.
+- **Rule:** when a policy or reader is removed, `git grep` every field that
+  refers to it and remove, preview or enforce each in the same change. A
+  "recorded only" label is a to-do, not a resolution. Before building a
+  per-listener setting, find the code that configures that listener's
+  `tls.Config` or Envoy context; if it doesn't read the setting, the
+  setting isn't real.
+
 ### Hiding a switch in the UI doesn't remove it
 - **What happened:** 5.4.0-beta deleted the Post-Quantum tab and hid the
   pqc policy switches and readiness score in the new panel, because they

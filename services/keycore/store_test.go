@@ -79,7 +79,6 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			bind_address TEXT NOT NULL,
 			port INTEGER NOT NULL,
 			protocol TEXT NOT NULL DEFAULT '',
-			pqc_mode TEXT NOT NULL DEFAULT 'inherit',
 			certificate_source TEXT NOT NULL DEFAULT '',
 			ca_id TEXT,
 			certificate_id TEXT,

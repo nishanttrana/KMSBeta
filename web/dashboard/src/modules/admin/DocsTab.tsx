@@ -2471,7 +2471,7 @@ const SectionUIPqc = () => (
     <H2>Migration Report</H2>
     <P>Inspect the latest readiness scan, projected milestones, top risks, and recommended actions. Operators can use this report to sequence migration work across keys, certificates, and externally exposed listeners.</P>
     <H2>Interfaces</H2>
-    <P>The PQC mode on <IC>Administration -&gt; Interfaces</IC> is recorded only: it does not change or measure the listener's key exchange, and the PQC inventory does not report it.</P>
+    <P>Interfaces have no PQC setting. Each internal service's TLS 1.3 key exchange (PQC required, preferred or classical) is set under <IC>Certificates / PKI -&gt; Service mTLS</IC>. The PQC inventory does not measure a listener's key exchange.</P>
   </div>
 );
 
