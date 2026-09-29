@@ -200,16 +200,6 @@ func (s *Service) UpdateAttestationPolicy(ctx context.Context, in AttestationPol
 	if err != nil {
 		return AttestationPolicy{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.confidential.policy_updated", item.TenantID, map[string]interface{}{
-		"provider":               item.Provider,
-		"mode":                   item.Mode,
-		"approved_image_count":   len(item.ApprovedImages),
-		"key_scope_count":        len(item.KeyScopes),
-		"cluster_scope":          item.ClusterScope,
-		"fallback_action":        item.FallbackAction,
-		"require_secure_boot":    item.RequireSecureBoot,
-		"require_debug_disabled": item.RequireDebugDisabled,
-	})
 	return item, nil
 }
 
@@ -521,40 +511,15 @@ func (s *Service) evaluate(ctx context.Context, in AttestedReleaseRequest) (Atte
 // EvaluateAttestedRelease returns the verdict for the evidence and records it
 // (unless dry_run). No key material is released here.
 func (s *Service) EvaluateAttestedRelease(ctx context.Context, in AttestedReleaseRequest) (AttestedReleaseDecision, error) {
-	result, record, evaluated, err := s.evaluate(ctx, in)
+	result, record, _, err := s.evaluate(ctx, in)
 	if err != nil {
 		return AttestedReleaseDecision{}, err
 	}
-	releaseID := result.ReleaseID
 	if !in.DryRun {
 		if err := s.store.InsertReleaseRecord(ctx, record); err != nil {
 			return AttestedReleaseDecision{}, err
 		}
 	}
-
-	_ = s.publishAudit(ctx, "audit.confidential.key_release_evaluated", in.TenantID, map[string]interface{}{
-		"release_id":                  releaseID,
-		"key_id":                      in.KeyID,
-		"key_scope":                   evaluated.KeyScope,
-		"provider":                    evaluated.Provider,
-		"decision":                    result.Decision,
-		"allowed":                     result.Allowed,
-		"measurement_hash":            result.MeasurementHash,
-		"claims_hash":                 result.ClaimsHash,
-		"policy_version":              result.PolicyVersion,
-		"cluster_node_id":             evaluated.ClusterNodeID,
-		"workload_identity":           evaluated.WorkloadIdentity,
-		"image_digest":                evaluated.ImageDigest,
-		"image_ref":                   evaluated.ImageRef,
-		"attester":                    evaluated.Attester,
-		"cryptographically_verified":  result.CryptographicallyVerified,
-		"verification_mode":           result.VerificationMode,
-		"verification_issuer":         result.VerificationIssuer,
-		"verification_key_id":         result.VerificationKeyID,
-		"attestation_document_hash":   result.AttestationDocumentHash,
-		"attestation_document_format": result.AttestationDocumentFormat,
-		"dry_run":                     in.DryRun,
-	})
 
 	return result, nil
 }

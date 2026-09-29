@@ -25,6 +25,8 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -62,10 +64,14 @@ func main() {
 		logger.Fatalf("migration failed: %v", err)
 	}
 
-	var publisher EventPublisher
+	var publisher pkgauditmw.EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.workload.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "workload"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -78,9 +84,10 @@ func main() {
 		NewSQLStore(dbConn),
 		NewHTTPAuthClient(authURL, sharedSecret),
 		NewHTTPAuditClient(auditURL),
-		publisher,
 	)
-	handler := NewHandler(svc)
+	// Every route needs a verified JWT except the token exchange, which the
+	// workload's SVID authenticates (docs/DECISIONS.md 2026-09-29).
+	handler := pkgjwtauth.MustWrapRouter("WORKLOAD", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 
 	httpPort := envOr("HTTP_PORT", "8250")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "workload"))

@@ -158,6 +158,19 @@ func (rt *Router) Routes() []Route {
 
 func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) { rt.mux.ServeHTTP(w, r) }
 
+// Public reports whether r is routed to a route declared Public. The JWT
+// layer uses it to let a request without a bearer token reach such a route,
+// whose handler authenticates it another way (pkg/jwtauth.MustWrapRouter).
+func (rt *Router) Public(r *http.Request) bool {
+	_, pattern := rt.mux.Handler(r)
+	for _, x := range rt.routes {
+		if x.Pattern == pattern {
+			return x.Spec.Public
+		}
+	}
+	return false
+}
+
 // MountOn registers every route on a legacy mux, delegating to the kernel.
 // A service still on the route-kernel burn-down list uses it to add routes
 // that get the kernel's guarantees before its handler is migrated.
@@ -207,6 +220,8 @@ type Call struct {
 	errMsg  string
 	target  string
 	details map[string]interface{}
+	// verified is the identity a Public route authenticated itself.
+	verified, verifiedType string
 }
 
 // Target records the audit target ID (overrides Spec.TargetParam).
@@ -220,8 +235,18 @@ func (c *Call) Detail(key string, value interface{}) {
 	c.details[key] = value
 }
 
+// Authenticated records the identity a Public route verified from its own
+// credential (an SVID, an HMAC proof) as the event's actor, with its type.
+// Call it only after the credential has verified; never with a claimed value.
+func (c *Call) Authenticated(actor, actorType string) {
+	c.verified, c.verifiedType = strings.TrimSpace(actor), strings.TrimSpace(actorType)
+}
+
 // Actor is the verified caller's identity, "" when unauthenticated.
 func (c *Call) Actor() string {
+	if c.Claims == nil && c.verified != "" {
+		return c.verified
+	}
 	if c.Claims == nil {
 		return ""
 	}
@@ -488,7 +513,7 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 	evt := pkgaudit.Event{
 		TenantID:      c.Tenant,
 		ActorID:       c.Actor(),
-		ActorType:     actorType(c.Claims),
+		ActorType:     c.actorType(),
 		TargetType:    spec.Resource,
 		TargetID:      c.target,
 		Result:        result,
@@ -515,6 +540,13 @@ func (rt *Router) emit(c *Call, spec Spec, status int, took time.Duration) {
 	if err := rt.audit.Emit(ctx, spec.Action, evt); err != nil {
 		rt.logger.Printf("route: audit emit %s.%s failed: %v", rt.service, spec.Action, err)
 	}
+}
+
+func (c *Call) actorType() string {
+	if c.Claims == nil && c.verified != "" {
+		return c.verifiedType
+	}
+	return actorType(c.Claims)
 }
 
 func actorType(claims *pkgauth.Claims) string {

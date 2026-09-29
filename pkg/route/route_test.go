@@ -229,3 +229,32 @@ func TestMeteredRouteMarksEveryEvent(t *testing.T) {
 	}()
 	r.Handle("POST /bad", route.Spec{Action: "bad", Permission: "demo.use", Metered: "Not Valid"}, func(c *route.Call) {})
 }
+
+// A Public route that verifies its own credential records that identity as
+// the actor; one that doesn't records none, and a token's identity always
+// wins over a handler's claim.
+func TestPublicRouteRecordsVerifiedActor(t *testing.T) {
+	rec := &routetest.Recorder{}
+	r := route.New("demo", rec, nil)
+	r.Handle("POST /exchange", route.Spec{Action: "exchanged", Public: true, Tenancy: route.PlatformScoped}, func(c *route.Call) {
+		if c.R.URL.Query().Get("ok") == "1" {
+			c.Authenticated("spiffe://td/w", "workload")
+		}
+		c.JSON(http.StatusOK, nil)
+	})
+	if !r.Public(httptest.NewRequest("POST", "/exchange", nil)) || r.Public(httptest.NewRequest("GET", "/exchange", nil)) {
+		t.Fatal("Public() must match only the registered public pattern")
+	}
+	serve(t, r, "POST", "/exchange?ok=1", "", nil)
+	if ev := rec.Last(t).Event; ev.ActorID != "spiffe://td/w" || ev.ActorType != "workload" {
+		t.Fatalf("verified actor not recorded: %+v", ev)
+	}
+	serve(t, r, "POST", "/exchange", "", nil)
+	if ev := rec.Last(t).Event; ev.ActorID != "" || ev.ActorType != "" {
+		t.Fatalf("unverified call recorded an actor: %+v", ev)
+	}
+	serve(t, r, "POST", "/exchange?ok=1", "", claims("t1"))
+	if ev := rec.Last(t).Event; ev.ActorID != "u1" || ev.ActorType != "user" {
+		t.Fatalf("token identity must win: %+v", ev)
+	}
+}

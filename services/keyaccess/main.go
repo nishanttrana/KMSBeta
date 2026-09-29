@@ -27,6 +27,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -66,9 +67,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.keyaccess.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "keyaccess"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -76,9 +81,10 @@ func main() {
 	svc := NewService(
 		NewSQLStore(dbConn),
 		NewHTTPGovernanceClient(envOr("GOVERNANCE_URL", "https://governance:8050"), 5*time.Second),
-		publisher,
 	)
-	handler := NewHandler(svc)
+	// Every route needs a verified JWT; the kernel binds the tenant to it
+	// and enforces each route's permission (CLAUDE.md rule 4).
+	handler := NewHandler(svc, audit, logger)
 
 	httpPort := envOr("HTTP_PORT", "8270")
 	authedHandler := pkgjwtauth.MustWrap("KEYACCESS", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)

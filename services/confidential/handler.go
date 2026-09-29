@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -9,13 +10,25 @@ import (
 	"vecta-kms/pkg/route"
 )
 
+// Permissions of the confidential routes (docs/API_REFERENCE.md).
+const (
+	permRead     = "confidential.read"
+	permWrite    = "confidential.write"    // the tenant attestation policy
+	permEvaluate = "confidential.evaluate" // a verdict, recorded; no key leaves keycore
+	permRelease  = "confidential.release"  // handler_release.go
+)
+
+// Handler serves every confidential route through the pkg/route kernel:
+// the verified token names the tenant and the actor, the route's permission
+// is enforced, and each request emits audit.confidential.<action>, refusals
+// included.
 type Handler struct {
-	svc   *Service
-	mux   *http.ServeMux
-	audit route.Emitter
+	svc    *Service
+	router *route.Router
+	audit  route.Emitter
 }
 
-// SetAuditClient wires the unified audit client used by kernel routes.
+// SetAuditClient wires the unified audit client used by the kernel.
 func (h *Handler) SetAuditClient(a route.Emitter) { h.audit = a }
 
 type kernelEmitter struct{ h *Handler }
@@ -29,160 +42,128 @@ func (e kernelEmitter) Emit(ctx context.Context, action string, evt pkgaudit.Eve
 
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
-	h.mux = h.routes()
-	h.releaseRouter(kernelEmitter{h}).MountOn(h.mux)
+	r := route.New("confidential", kernelEmitter{h}, nil)
+	r.Handle("GET /confidential/policy", route.Spec{Action: "policy_viewed", Permission: permRead, Resource: "attestation_policy"}, h.getPolicy)
+	r.Handle("PUT /confidential/policy", route.Spec{Action: "policy_updated", Permission: permWrite, Resource: "attestation_policy", Severity: "warning"}, h.setPolicy)
+	r.Handle("GET /confidential/summary", route.Spec{Action: "summary_viewed", Permission: permRead, Resource: "attestation_policy"}, h.getSummary)
+	r.Handle("POST /confidential/evaluate", route.Spec{Action: "key_release_evaluated", Permission: permEvaluate, Resource: "key"}, h.evaluate)
+	r.Handle("GET /confidential/releases", route.Spec{Action: "releases_viewed", Permission: permRead, Resource: "attested_release"}, h.listReleases)
+	r.Handle("GET /confidential/releases/{id}", route.Spec{Action: "release_viewed", Permission: permRead, Resource: "attested_release", TargetParam: "id"}, h.getRelease)
+	h.handleRelease(r)
+	h.router = r
 	return h
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
-}
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.router.ServeHTTP(w, r) }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /confidential/policy", h.handleGetPolicy)
-	mux.HandleFunc("PUT /confidential/policy", h.handleSetPolicy)
-	mux.HandleFunc("GET /confidential/summary", h.handleGetSummary)
-	mux.HandleFunc("POST /confidential/evaluate", h.handleEvaluate)
-	mux.HandleFunc("GET /confidential/releases", h.handleListReleases)
-	mux.HandleFunc("GET /confidential/releases/{id}", h.handleGetRelease)
-	return mux
-}
-
-func (h *Handler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
-	item, err := h.svc.GetAttestationPolicy(r.Context(), tenantID)
+func (h *Handler) getPolicy(c *route.Call) {
+	item, err := h.svc.GetAttestationPolicy(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
 }
 
-func (h *Handler) handleSetPolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
+func (h *Handler) setPolicy(c *route.Call) {
 	var req AttestationPolicy
-	if err := decodeJSON(r, &req); err != nil {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstNonEmpty(req.TenantID, tenantID)
-	if req.TenantID != tenantID {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context"), reqID, tenantID)
-		return
-	}
-	item, err := h.svc.UpdateAttestationPolicy(r.Context(), req)
+	req.TenantID = c.Tenant
+	req.UpdatedBy = c.Actor()
+	item, err := h.svc.UpdateAttestationPolicy(c.R.Context(), req)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+	c.Detail("provider", item.Provider)
+	c.Detail("mode", item.Mode)
+	c.Detail("enabled", item.Enabled)
+	c.Detail("approved_image_count", len(item.ApprovedImages))
+	c.Detail("key_scope_count", len(item.KeyScopes))
+	c.Detail("cluster_scope", item.ClusterScope)
+	c.Detail("fallback_action", item.FallbackAction)
+	c.Detail("require_secure_boot", item.RequireSecureBoot)
+	c.Detail("require_debug_disabled", item.RequireDebugDisabled)
+	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
 }
 
-func (h *Handler) handleGetSummary(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
-	item, err := h.svc.GetAttestationSummary(r.Context(), tenantID)
+func (h *Handler) getSummary(c *route.Call) {
+	item, err := h.svc.GetAttestationSummary(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"summary": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"summary": item})
 }
 
-func (h *Handler) handleEvaluate(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
+func (h *Handler) evaluate(c *route.Call) {
 	var req AttestedReleaseRequest
-	if err := decodeJSON(r, &req); err != nil {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstNonEmpty(req.TenantID, tenantID)
-	if req.TenantID != tenantID {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context"), reqID, tenantID)
-		return
-	}
-	item, err := h.svc.EvaluateAttestedRelease(r.Context(), req)
+	req.TenantID = c.Tenant
+	req.Requester = c.Actor()
+	c.Target(req.KeyID)
+	item, err := h.svc.EvaluateAttestedRelease(c.R.Context(), req)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"result": item, "request_id": reqID})
+	c.Detail("release_id", item.ReleaseID)
+	c.Detail("decision", item.Decision)
+	c.Detail("allowed", item.Allowed)
+	c.Detail("provider", item.Provider)
+	c.Detail("measurement_hash", item.MeasurementHash)
+	c.Detail("claims_hash", item.ClaimsHash)
+	c.Detail("policy_version", item.PolicyVersion)
+	c.Detail("cryptographically_verified", item.CryptographicallyVerified)
+	c.Detail("verification_mode", item.VerificationMode)
+	c.Detail("verification_issuer", item.VerificationIssuer)
+	c.Detail("verification_key_id", item.VerificationKeyID)
+	c.Detail("attestation_document_hash", item.AttestationDocumentHash)
+	c.Detail("attestation_document_format", item.AttestationDocumentFormat)
+	c.Detail("key_scope", req.KeyScope)
+	c.Detail("cluster_node_id", item.ClusterNodeID)
+	c.Detail("workload_identity", req.WorkloadIdentity)
+	c.Detail("image_digest", req.ImageDigest)
+	c.Detail("image_ref", req.ImageRef)
+	c.Detail("attester", req.Attester)
+	c.Detail("dry_run", req.DryRun)
+	c.JSON(http.StatusOK, map[string]interface{}{"result": item})
 }
 
-func (h *Handler) handleListReleases(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
+func (h *Handler) listReleases(c *route.Call) {
 	limit := 100
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil {
-			limit = parsed
-		}
+	if parsed, err := strconv.Atoi(c.R.URL.Query().Get("limit")); err == nil {
+		limit = parsed
 	}
-	items, err := h.svc.ListReleaseHistory(r.Context(), tenantID, limit)
+	items, err := h.svc.ListReleaseHistory(c.R.Context(), c.Tenant, limit)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.Detail("count", len(items))
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetRelease(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
-		return
-	}
-	item, err := h.svc.GetReleaseRecord(r.Context(), tenantID, r.PathValue("id"))
+func (h *Handler) getRelease(c *route.Call) {
+	item, err := h.svc.GetReleaseRecord(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		writeServiceError(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"item": item})
 }
 
-func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
-	status := httpStatusForErr(err)
-	code := "internal_error"
-	// A05: avoid leaking internal error details for 5xx responses
-	message := "internal server error"
-	if status < 500 {
-		message = err.Error()
+// writeServiceError maps a service error onto the kernel's error envelope;
+// server errors never leak their detail (OWASP A05).
+func writeServiceError(c *route.Call, err error) {
+	var se serviceError
+	if errors.As(err, &se) {
+		c.Error(se.HTTPStatus, se.Code, se.Message)
+		return
 	}
-	if svcErr, ok := err.(serviceError); ok {
-		code = svcErr.Code
-		message = svcErr.Message
-	}
-	writeJSON(w, status, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": reqID,
-			"tenant_id":  tenantID,
-		},
-	})
+	c.Error(http.StatusInternalServerError, "internal_error", "internal server error")
 }

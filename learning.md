@@ -5,6 +5,36 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A client that never authenticates turns a fail-open fallback into the normal path
+- **What happened:** `pkg/keyaccess.HTTPClient` never set an
+  `Authorization` header, while keyaccess wrapped every route in
+  `jwtauth.MustWrap`. Every evaluation from ekm, cloud and hyok got 401.
+  EKM and cloud map any error to `Action: "allow"` ("justifications service
+  unavailable"), so key-access justifications were never enforced there,
+  and nothing looked broken. Fixed in 6.9.0-beta.
+- **Why it slipped through:** each side was tested alone. The keyaccess
+  service had no tests, the callers stub `pkg/keyaccess.Client`, and the
+  fail-open branch made a 401 indistinguishable from an outage.
+- **Rule:** an internal client test asserts the credential it sends
+  (`TestEvaluateSendsServiceToken`). A fallback taken on every call is a
+  bug, not resilience; count or audit fallbacks so a 100% rate shows.
+
+### A certificate is not a credential, and a registration ID is not an identity
+- **What happened:** the workload token exchange accepted an X.509-SVID
+  chain with no proof of possession (anyone who saw the certificate in a TLS
+  handshake could exchange it), took `registration_id` from the body without
+  checking it belonged to the verified SPIFFE ID (any SVID bought any
+  workload's permissions), skipped the tenant's audience policy whenever the
+  request named an audience, and used federated bundles with federation off.
+  Found while deciding how the route authenticates without a bearer token,
+  fixed in 6.9.0-beta.
+- **Why it slipped through:** the route sat behind "no authentication at
+  all" (the whole service was unauthenticated), so its own checks were never
+  treated as the security boundary. There were no workload tests.
+- **Rule:** when a route's credential is something other than a bearer
+  token, list what that credential proves and bind every request field to
+  it. Public data (a certificate, an ID) needs a signature; a selector in
+  the body must match the verified subject.
 ### A settings page is not a listener
 - **What happened:** System Administration > Interfaces let an admin set a
   bind address, port, protocol, "enabled" and a certificate source per

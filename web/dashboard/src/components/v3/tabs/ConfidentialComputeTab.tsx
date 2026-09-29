@@ -141,7 +141,6 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
     secure_boot: true,
     debug_disabled: true,
     cluster_node_id: "vecta-kms-01",
-    requester: "",
     release_reason: "Authorize payment service in enclave runtime",
     dry_run: true
   });
@@ -174,8 +173,7 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
       setReleaseInput((prev: any) => ({
         ...prev,
         provider: String(hydratedPolicy.provider || prev.provider || "aws_nitro_enclaves"),
-        key_scope: String(hydratedPolicy.key_scopes?.[0] || prev.key_scope || ""),
-        requester: String(prev.requester || session.username || "")
+        key_scope: String(hydratedPolicy.key_scopes?.[0] || prev.key_scope || "")
       }));
     } catch (error) {
       onToast?.(`Confidential Compute load failed: ${errMsg(error)}`);
@@ -454,9 +452,6 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                 </FG>
                 <FG label="Nonce">
                   <Inp value={releaseInput.nonce} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, nonce: e.target.value }))} />
-                </FG>
-                <FG label="Requester">
-                  <Inp value={releaseInput.requester} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, requester: e.target.value }))} />
                 </FG>
                 {providerRequiresDocument ? (
                   <FG label="Attestation Format">

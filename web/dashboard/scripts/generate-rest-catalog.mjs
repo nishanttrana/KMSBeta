@@ -437,7 +437,6 @@ const ENDPOINT_OVERRIDES = {
         trust_domain: "root",
         federation_enabled: true,
         token_exchange_enabled: true,
-        disable_static_api_keys: true,
         default_x509_ttl_seconds: 43200,
         default_jwt_ttl_seconds: 1800,
         rotation_window_seconds: 1800,
@@ -449,14 +448,13 @@ const ENDPOINT_OVERRIDES = {
   },
   "workload|PUT|/workload-identity/settings": {
     title: "Update Workload Identity Settings",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "enabled": true,\n  "trust_domain": "root",\n  "federation_enabled": true,\n  "token_exchange_enabled": true,\n  "disable_static_api_keys": true,\n  "default_x509_ttl_seconds": 43200,\n  "default_jwt_ttl_seconds": 1800,\n  "rotation_window_seconds": 1800,\n  "allowed_audiences": ["kms", "kms-workload", "kms-rest"]\n}',
-    description: "Creates or updates the tenant workload-identity policy, including the SPIFFE trust domain and whether static API keys should be phased out for workloads.",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "enabled": true,\n  "trust_domain": "root",\n  "federation_enabled": true,\n  "token_exchange_enabled": true,\n  "default_x509_ttl_seconds": 43200,\n  "default_jwt_ttl_seconds": 1800,\n  "rotation_window_seconds": 1800,\n  "allowed_audiences": ["kms", "kms-workload", "kms-rest"]\n}',
+    description: "Creates or updates the tenant workload-identity policy: the SPIFFE trust domain, whether federated trust domains and token exchange are accepted, SVID lifetimes and the JWT-SVID audiences accepted for exchange. Needs workload.write.",
     responseExample: {
       settings: {
         tenant_id: "root",
         enabled: true,
         trust_domain: "root",
-        disable_static_api_keys: true,
         updated_at: "2026-03-19T09:02:00Z"
       }
     }
@@ -504,8 +502,8 @@ const ENDPOINT_OVERRIDES = {
   },
   "workload|POST|/workload-identity/issue": {
     title: "Issue SVID",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "registration_id": "wid_01J123EXAMPLE",\n  "svid_type": "jwt",\n  "audiences": ["kms"],\n  "ttl_seconds": 1800,\n  "requested_by": "platform-ops"\n}',
-    description: "Issues a JWT-SVID or X.509-SVID for a registered workload using the tenant trust domain signer material.",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "registration_id": "wid_01J123EXAMPLE",\n  "svid_type": "jwt",\n  "audiences": ["kms"],\n  "ttl_seconds": 1800\n}',
+    description: "Issues a JWT-SVID or X.509-SVID for a registered workload using the tenant trust domain signer material. Needs workload.issue: an X.509-SVID response carries the workload's private key.",
     responseExample: {
       issued: {
         issuance_id: "iss_01J123EXAMPLE",
@@ -522,7 +520,7 @@ const ENDPOINT_OVERRIDES = {
   "workload|POST|/workload-identity/token/exchange": {
     title: "Exchange SVID For KMS Token",
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "registration_id": "wid_01J123EXAMPLE",\n  "interface_name": "rest",\n  "audience": "kms",\n  "requested_permissions": ["key.encrypt", "key.decrypt"],\n  "requested_key_ids": ["key_payments_prod"],\n  "jwt_svid": "eyJhbGciOiJFZERTQSIsImtpZCI6IndpZC1yb290In0..."\n}',
-    description: "Validates a presented SVID against the tenant or federated trust bundle, applies interface and key scoping, and returns a short-lived KMS bearer token.",
+    description: "Needs no bearer token: the SVID is the credential. Verifies it against the tenant's trust anchors (federated bundles only when federation is on), requires the audience to be one the tenant allows and the registration to be the SVID's own, applies interface and key scoping, and returns a short-lived KMS bearer token. An X.509-SVID also needs x509_svid_proof: a signature by its private key over the tenant, the leaf certificate's SHA-256 and signed_at, accepted once within two minutes.",
     responseExample: {
       exchange: {
         tenant_id: "root",

@@ -29,3 +29,26 @@ func MustWrap(prefix, issuer, audience string, next http.Handler, logger *log.Lo
 	}
 	return pkgauth.HTTPMiddleware(next, parser)
 }
+
+// PublicRouter is a handler that knows which requests reach a route that
+// authenticates without a bearer token (*route.Router satisfies it).
+type PublicRouter interface {
+	http.Handler
+	Public(r *http.Request) bool
+}
+
+// MustWrapRouter is MustWrap for a pkg/route router that has Public routes.
+// A request without an Authorization header that the router sends to a
+// Public route reaches it unauthenticated; the route's handler verifies its
+// own credential (for example an SVID) and the kernel audits the call. Every
+// other request, and any request that carries a token, needs a valid token.
+func MustWrapRouter(prefix, issuer, audience string, rt PublicRouter, logger *log.Logger) http.Handler {
+	authed := MustWrap(prefix, issuer, audience, rt, logger)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" && rt.Public(r) {
+			rt.ServeHTTP(w, r)
+			return
+		}
+		authed.ServeHTTP(w, r)
+	})
+}

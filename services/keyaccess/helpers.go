@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -279,23 +278,6 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func publishAudit(ctx context.Context, publisher EventPublisher, subject string, tenantID string, payload map[string]interface{}) error {
-	if publisher == nil || strings.TrimSpace(subject) == "" {
-		return nil
-	}
-	if payload == nil {
-		payload = map[string]interface{}{}
-	}
-	if strings.TrimSpace(tenantID) != "" && payload["tenant_id"] == nil {
-		payload["tenant_id"] = strings.TrimSpace(tenantID)
-	}
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	return publisher.Publish(ctx, subject, raw)
 }
 
 func trimLimit(raw string, max int) string {

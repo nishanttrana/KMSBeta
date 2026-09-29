@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type AuditClient interface {
@@ -41,6 +43,13 @@ func (c *HTTPAuditClient) ListEvents(ctx context.Context, tenantID string, limit
 	if err != nil {
 		return nil, err
 	}
+	// The audit service decides with the caller's own verified token, so a
+	// usage view shows only what the caller may read in the audit log.
+	token, ok := pkgauth.VerifiedTokenFromContext(ctx)
+	if !ok {
+		return nil, errors.New("no verified caller token to read the audit log with")
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+token)
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, err

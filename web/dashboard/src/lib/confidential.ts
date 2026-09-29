@@ -56,7 +56,6 @@ export type AttestedReleaseRequest = {
   secure_boot?: boolean;
   debug_disabled?: boolean;
   cluster_node_id?: string;
-  requester?: string;
   release_reason?: string;
   dry_run?: boolean;
 };

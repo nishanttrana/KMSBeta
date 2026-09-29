@@ -7,7 +7,6 @@ export type WorkloadIdentitySettings = {
   trust_domain: string;
   federation_enabled: boolean;
   token_exchange_enabled: boolean;
-  disable_static_api_keys: boolean;
   default_x509_ttl_seconds: number;
   default_jwt_ttl_seconds: number;
   rotation_window_seconds: number;
@@ -83,7 +82,6 @@ export type WorkloadIdentitySummary = {
   trust_domain: string;
   federation_enabled: boolean;
   token_exchange_enabled: boolean;
-  disable_static_api_keys: boolean;
   registration_count: number;
   enabled_registration_count: number;
   federated_trust_domain_count: number;
@@ -98,6 +96,7 @@ export type WorkloadIdentitySummary = {
   last_exchange_at?: string;
   last_key_use_at?: string;
   rotation_healthy: boolean;
+  key_usage_unavailable?: string;
 };
 
 export type WorkloadAuthorizationGraph = {
@@ -105,6 +104,7 @@ export type WorkloadAuthorizationGraph = {
   generated_at: string;
   nodes: Array<{ id: string; label: string; kind: string; status: string; detail?: string }>;
   edges: Array<{ source: string; target: string; label: string; kind: string; weight?: number }>;
+  key_usage_unavailable?: string;
 };
 
 export type IssuedSVID = {
@@ -206,7 +206,7 @@ export async function deleteWorkloadFederationBundle(session: AuthSession, id: s
 
 export async function issueWorkloadSVID(
   session: AuthSession,
-  input: { registration_id?: string; spiffe_id?: string; svid_type: string; audiences?: string[]; ttl_seconds?: number; requested_by?: string }
+  input: { registration_id?: string; spiffe_id?: string; svid_type: string; audiences?: string[]; ttl_seconds?: number }
 ): Promise<IssuedSVID> {
   const out = await serviceRequest<{ issued: IssuedSVID }>(session, "workload", "/workload-identity/issue", {
     method: "POST",
@@ -222,7 +222,16 @@ export async function listWorkloadIssuances(session: AuthSession, limit = 100): 
 
 export async function exchangeWorkloadToken(
   session: AuthSession,
-  input: { registration_id?: string; interface_name: string; client_id?: string; audience?: string; jwt_svid?: string; x509_svid_chain_pem?: string; requested_permissions?: string[]; requested_key_ids?: string[] }
+  input: {
+    registration_id?: string;
+    interface_name: string;
+    audience?: string;
+    jwt_svid?: string;
+    x509_svid_chain_pem?: string;
+    x509_svid_proof?: X509ExchangeProof;
+    requested_permissions?: string[];
+    requested_key_ids?: string[];
+  }
 ): Promise<TokenExchangeResult> {
   const out = await serviceRequest<{ exchange: TokenExchangeResult }>(session, "workload", "/workload-identity/token/exchange", {
     method: "POST",
@@ -239,4 +248,39 @@ export async function getWorkloadAuthorizationGraph(session: AuthSession): Promi
 export async function listWorkloadUsage(session: AuthSession, limit = 100): Promise<WorkloadUsageRecord[]> {
   const out = await serviceRequest<{ items: WorkloadUsageRecord[] }>(session, "workload", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`);
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+// The token exchange needs no bearer token: the SVID is the credential. An
+// X.509-SVID chain is public, so it goes with this proof of possession: a
+// signature by the SVID's private key over the tenant, the leaf certificate's
+// SHA-256 and the signing time (services/workload/proof.go). Accepted once,
+// within two minutes.
+export type X509ExchangeProof = { signed_at: string; signature: string };
+
+function pemBlocks(pem: string, type: string): Uint8Array<ArrayBuffer>[] {
+  const re = new RegExp(`-----BEGIN ${type}-----([^-]+)-----END ${type}-----`, "g");
+  const out: Uint8Array<ArrayBuffer>[] = [];
+  for (const m of pem.matchAll(re)) {
+    const bin = atob(String(m[1] || "").replace(/\s+/g, ""));
+    out.push(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+  }
+  return out;
+}
+
+function toHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function signX509ExchangeProof(tenantId: string, certificatePEM: string, privateKeyPEM: string): Promise<X509ExchangeProof> {
+  const [leaf] = pemBlocks(certificatePEM, "CERTIFICATE");
+  const [pkcs8] = pemBlocks(privateKeyPEM, "PRIVATE KEY");
+  if (!leaf || !pkcs8) {
+    throw new Error("the SVID certificate and its PKCS#8 private key are required to sign the proof");
+  }
+  const signedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const leafSHA256 = toHex(await crypto.subtle.digest("SHA-256", leaf));
+  const message = `vecta-kms/workload-token-exchange/v1\ntenant=${tenantId}\nleaf-sha256=${leafSHA256}\nsigned-at=${signedAt}`;
+  const key = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(message)));
+  return { signed_at: signedAt, signature: btoa(String.fromCharCode(...sig)) };
 }

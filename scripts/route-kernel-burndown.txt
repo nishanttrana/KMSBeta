@@ -16,17 +16,14 @@ services/certs/handler.go
 services/cloud/handler.go
 services/cluster-manager/handler.go
 services/compliance/handler.go
-services/confidential/handler.go
 services/dataprotect/handler.go
 services/discovery/handler.go
 services/ekm/handler.go
 services/governance/handler.go
 services/hyok/handler.go
-services/keyaccess/handler.go
 services/keycore/handler.go
 services/kmip/handler.go
 services/kmip/http_api.go
 services/payment/handler.go
 services/policy/handler.go
 services/signing/handler.go
-services/workload/handler.go

@@ -4,6 +4,103 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.9.0-beta] — 2026-09-29
+
+### Workload identity, key access and confidential: every route authenticates the caller (breaking)
+The workload and keyaccess services and confidential's policy, summary,
+evaluate and release-history routes sat on a legacy mux. Workload verified no
+token at all: anyone who reached it could change a tenant's trust settings
+and issue SVIDs, X.509 private keys included, for any tenant named in
+`tenant_id` / `X-Tenant-ID`. Keyaccess and confidential verified a token but
+checked no permission, and keyaccess took the tenant from the request. All
+three are now on the `pkg/route` kernel and leave the route-kernel burn-down
+list:
+
+- **The tenant comes from the verified token.** A `tenant_id` naming another
+  tenant is refused (`tenant_mismatch`) and audited.
+- **New permissions:** `workload.read`, `workload.write`, `workload.issue`
+  (issuing an SVID; an X.509 response carries the private key);
+  `keyaccess.read`, `keyaccess.write`, `keyaccess.evaluate`;
+  `confidential.read`, `confidential.write`, `confidential.evaluate`
+  (`confidential.release` unchanged). Roles holding `*` or `<domain>.*` keep
+  working; none of the three domains is covered by `kms.read` / `kms.write`.
+- **Every request emits its own event**, refusals included:
+  `audit.workload.<action>`, `audit.keyaccess.<action>`,
+  `audit.confidential.<action>`. Existing subject names are kept. New:
+  `audit.workload.settings_viewed`, `audit.confidential.policy_viewed`,
+  `summary_viewed`, `releases_viewed`, `release_viewed`.
+  `audit.keyaccess.approval_required` is gone: `decision_evaluated` carries
+  `approval_required` and `approval_request_id`. Actor fields (`updated_by`,
+  confidential `requester`) come from the token, never the body.
+- **New playbook triggers:** `workload_svid_issued`, `workload_trust_changed`,
+  `key_access_policy_changed`, `attestation_policy_changed`.
+
+### Workload token exchange: the SVID is the credential (breaking)
+`POST /workload-identity/token/exchange` needs no bearer token, so a workload
+holding only an SVID can call it, and it now really authenticates that SVID
+(docs/DECISIONS.md, 2026-09-29):
+
+- **X.509-SVIDs need proof of possession.** A certificate chain is public,
+  so it used to buy a token for anyone who had seen it. The request now
+  carries `x509_svid_proof` (`signed_at`, `signature` by the SVID's private
+  key over the tenant, leaf SHA-256 and time), accepted once within two
+  minutes. The dashboard signs it in the browser for an SVID it just issued.
+- **An SVID gets only its own registration.** A `registration_id` for
+  another workload used to hand over that workload's permissions; now 403
+  `svid_registration_mismatch`.
+- **The audience must be one the tenant allows,** even when the request
+  names it. Before, naming any audience skipped the `allowed_audiences`
+  check.
+- **Federated bundles apply only while `federation_enabled` is on.** The
+  setting was recorded but never consulted.
+- `client_id` was removed from the request: the minted token's client is the
+  registration. Refusals are audited under `audit.workload.token_exchanged`
+  with the verified SPIFFE ID as actor, and a reason (`svid_invalid`,
+  `audience_not_allowed`, `svid_proof_*`, `registration_not_found`, …).
+
+### Keyaccess evaluate: only ekm, cloud and hyok, with their service token
+`pkg/keyaccess` sent no `Authorization` header, and keyaccess sat behind its
+JWT middleware, so **every evaluation got 401**. EKM and cloud treated that
+as "service unavailable" and allowed the operation; HYOK (fail-closed by
+default) refused it. The client now sends the caller's service JWT, and
+`POST /key-access/evaluate` answers only the `kms-ekm`, `kms-cloud` and
+`kms-hyok-proxy` identities, each for its own service
+(`evaluator_identity_required`, `service_mismatch`). Once deployed, a tenant
+with justification enforcement on gets real decisions in ekm and cloud
+instead of silent allows.
+
+### Record-only settings removed (breaking)
+- Workload `disable_static_api_keys` and `rotation_alert_enabled` /
+  `rotation_warn_hours` / `rotation_critical_hours`: nothing acted on them.
+  The dashboard checkbox and the Posture line that quoted it are gone.
+  Sending them is now a 400. The `disable_static_api_keys` column stays in
+  the table, unread.
+- Keyaccess rule `allowed_time_windows` / `outside_window_action`: in the
+  API type, never stored or enforced.
+- `requested_by` on SVID issue and the confidential evaluate `requester`
+  field in the dashboard (the verified caller is recorded).
+
+### Workload key usage says "unavailable" instead of 0
+Usage, the summary's key-use counts and the graph's usage edges are read
+from the audit log. The workload service called it with no token, so they
+were always empty or 0. It now forwards the caller's verified token.
+When the audit log can't be read, the summary and graph carry
+`key_usage_unavailable`, `GET .../usage` returns 502 `audit_unavailable`, and
+the dashboard shows "unavailable". Settings TTLs edited in the dashboard are
+now sent as numbers (a string used to fail the save).
+
+### Kernel
+`route.Router.Public(r)`, `route.Call.Authenticated(actor, type)` (a Public
+route records the identity it verified itself) and
+`pkg/jwtauth.MustWrapRouter`.
+
+### Open (documented, not fixed here)
+- The workload CA and JWT signer private keys are still stored as PEM, not
+  sealed under `pkg/mek`.
+- EKM and cloud still allow an operation when keyaccess can't be reached,
+  and HYOK does unless it is fail-closed.
+- The X.509 proof replay cache is in the primary's memory; a restart inside
+  the two-minute window forgets it.
 ## [6.8.0-beta] — 2026-09-29
 
 ### The external edge's key exchange is a real, measured control

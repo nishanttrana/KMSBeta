@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ type verificationResult struct {
 	DocumentHash  string
 	SerialOrKeyID string
 	Audiences     []string
+	leaf          *x509.Certificate // X.509-SVIDs: the key a proof must come from
 }
 
 func generateSigningMaterial(trustDomain string) (string, string, string, string, string, string, error) {
@@ -250,7 +252,12 @@ func verifyJWTSVID(tokenString string, settings WorkloadIdentitySettings, bundle
 		jwt.WithExpirationRequired(),
 		jwt.WithIssuedAt(),
 	}
+	// The audience is always one the tenant accepts: a JWT-SVID minted for
+	// another relying party must not buy a KMS token by naming its audience.
 	if expectedAudience != "" {
+		if !containsFold(settings.AllowedAudiences, expectedAudience) {
+			return verificationResult{}, newServiceError(http.StatusUnauthorized, "audience_not_allowed", "audience is not allowed by tenant policy")
+		}
 		parserOpts = append(parserOpts, jwt.WithAudience(expectedAudience))
 	}
 	verified, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -265,8 +272,8 @@ func verifyJWTSVID(tokenString string, settings WorkloadIdentitySettings, bundle
 	verifiedClaims, _ := verified.Claims.(jwt.MapClaims)
 	exp, _ := verifiedClaims.GetExpirationTime()
 	aud, _ := verifiedClaims.GetAudience()
-	if expectedAudience == "" && len(settings.AllowedAudiences) > 0 && !audienceIntersects(aud, settings.AllowedAudiences) {
-		return verificationResult{}, errors.New("jwt_svid audience is not allowed by tenant policy")
+	if !audienceIntersects(aud, settings.AllowedAudiences) {
+		return verificationResult{}, newServiceError(http.StatusUnauthorized, "audience_not_allowed", "jwt_svid audience is not allowed by tenant policy")
 	}
 	return verificationResult{
 		SpiffeID:      subject,
@@ -330,6 +337,7 @@ func verifyX509SVID(chainPEM string, settings WorkloadIdentitySettings, bundles 
 		ExpiresAt:     leaf.NotAfter.UTC(),
 		DocumentHash:  sha256Hex(chainPEM),
 		SerialOrKeyID: leaf.SerialNumber.String(),
+		leaf:          leaf,
 	}, nil
 }
 

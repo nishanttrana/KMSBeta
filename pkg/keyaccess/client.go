@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type EvaluateRequest struct {
@@ -74,6 +76,9 @@ func (c *HTTPClient) Evaluate(ctx context.Context, req EvaluateRequest) (Evaluat
 		return EvaluateResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	// keyaccess admits only the evaluator service identities (kms-ekm,
+	// kms-cloud, kms-hyok-proxy); the caller's service JWT proves which.
+	servicetoken.Authorize(ctx, httpReq)
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return EvaluateResponse{}, err

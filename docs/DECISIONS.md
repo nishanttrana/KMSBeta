@@ -7,6 +7,77 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Workload token exchange: the SVID is the credential; keyaccess evaluate only for its three callers (6.9.0-beta)
+
+**Decision.** The workload, keyaccess and confidential routes moved onto the
+`pkg/route` kernel. One route is `Public` to the JWT layer:
+`POST /workload-identity/token/exchange`. It authenticates with the
+workload's SVID, not a bearer token:
+
+- **JWT-SVID:** signature against the tenant's own JWT signer (or a federated
+  JWKS, only while `federation_enabled`), expiry, and an audience in the
+  tenant's `allowed_audiences`, including when the request names one.
+- **X.509-SVID:** the chain must verify to the tenant CA (or a federated
+  bundle) with `clientAuth`, *and* the request carries a proof of
+  possession: a signature by the SVID's private key over the tenant, the leaf
+  certificate's SHA-256 and a `signed_at` within two minutes, accepted once.
+- The verified SPIFFE ID must own the registration a `registration_id`
+  names. The minted token's client is the registration, not a body
+  `client_id`.
+- `tenant_id` in the request only selects whose trust anchors verify the
+  SVID. A request that also carries a bearer token must name its tenant.
+- The kernel audits it as `audit.workload.token_exchanged`, with the
+  verified SPIFFE ID as actor (`route.Call.Authenticated`) and every refusal
+  under its reason. `pkg/jwtauth.MustWrapRouter` lets only a tokenless
+  request that the router matches to a `Public` route skip the JWT layer.
+
+`POST /key-access/evaluate` needs `keyaccess.evaluate`, and the handler
+admits only the `kms-ekm`, `kms-cloud` and `kms-hyok-proxy` service
+principals (`tenantcheck.IsServicePrincipal` plus client ID), each for its
+own service name. `pkg/keyaccess` now sends the caller's service JWT.
+
+**Why.**
+- A workload that has only an SVID must be able to get a KMS token; a
+  bearer-token requirement would need a static credential, the thing the
+  exchange exists to replace.
+- Presenting an X.509 chain proves nothing: the certificate is public (every
+  TLS peer sees it). Identity from the TLS peer certificate is ruled out too:
+  behind Envoy the peer is always Envoy (CLAUDE.md rule 4). So possession is
+  proved by a signature in the body.
+- Before this change a caller could name another registration's
+  `registration_id` with its own SVID and receive that registration's
+  permissions, name any `audience` to bypass the tenant's audience policy,
+  and have federated bundles honoured with federation switched off.
+- An evaluation creates a decision record, and possibly a governance
+  approval, in the name of the service that asked. Only the service that
+  will act on it may ask, so "any authenticated caller" and even tenant
+  administrators are refused.
+
+**Rejected.**
+- *mTLS client-certificate authentication for X.509-SVIDs:* the service
+  never sees the workload's certificate behind Envoy, and trusting a
+  forwarded header is identity from an unverified source.
+- *A server-issued nonce (challenge round trip) instead of a timestamped
+  signature:* it adds a stateful endpoint and replicated nonce storage for
+  little gain over a two-minute window plus a replay cache. Exchanges are
+  writes, so cluster members forward them to the primary, which holds the
+  cache (in memory; a restart inside the window forgets it, listed as open).
+- *Keeping `client_id` in the exchange:* a body-chosen label on a minted
+  token lets one workload appear as another in downstream audit.
+
+**CoarseDomains.** None of `workload`, `keyaccess` or `confidential` joins
+`route.CoarseDomains`. Workload identity and key-access policy are
+administration of who may use keys, and confidential governs key release;
+`kms.read` / `kms.write` grants must not reach them.
+
+**Enforced by.** `TestExchangeWithJWTSVID`, `TestExchangeRefusals`,
+`TestExchangeWithX509SVIDNeedsProofOfPossession`,
+`TestFederatedSVIDNeedsFederationEnabled`,
+`TestEvaluateRestrictedToEvaluatorIdentities`,
+`TestMustWrapRouterAdmitsOnlyPublicRoutesWithoutToken`,
+`TestPublicRouteRecordsVerifiedActor`, `routetest.RefusalsAudited` per
+service, and the `route-kernel` conformance rule (the three handlers left
+the burn-down list).
 ## 2026-09-29 — External edge key exchange: one node-wide profile, hot restart, measured by handshake (6.8.0-beta)
 
 **Decision.** The HTTPS edge (Envoy) and the KMIP listener share one

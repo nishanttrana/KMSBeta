@@ -21,7 +21,6 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
-	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -88,24 +87,9 @@ func main() {
 		handler.SetAuditClient(auditClient)
 	}
 
-	// JWT middleware (fail-closed). The confidential service governs
-	// attested key release; before 1562c827 it derived tenant from an
-	// unsigned X-Tenant-ID header / tenant_id query param. The
-	// middleware below rejects every request without a valid Bearer
-	// token, and tenantFromRequest now binds the tenant to the JWT
-	// claim (security review vuln #2, May 2026).
-	jwtParser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{
-		Prefix:   "CONFIDENTIAL",
-		Issuer:   cfg.JWTIssuer,
-		Audience: cfg.JWTAudience,
-	})
-	if err != nil {
-		logger.Fatalf("jwt parser init failed: %v", err)
-	}
-	if jwtParser == nil {
-		logger.Fatalf("CONFIDENTIAL_JWT_PUBLIC_KEY_PEM (or _B64) is required to start confidential service")
-	}
-	authedHandler := pkgauth.HTTPMiddleware(handler, jwtParser)
+	// Every route needs a verified JWT; the kernel binds the tenant and the
+	// actor to it and enforces each route's permission (CLAUDE.md rule 4).
+	authedHandler := pkgjwtauth.MustWrap("CONFIDENTIAL", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 
 	httpPort := envOr("HTTP_PORT", "8240")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "confidential"))

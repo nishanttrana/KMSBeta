@@ -4771,93 +4771,93 @@
       "service": "compliance"
     },
     {
-      "action": "",
+      "action": "policy_viewed",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleGetPolicy",
-      "line": 43,
+      "handler": "h.getPolicy",
+      "line": 46,
       "match_key": "confidential|GET|/confidential/policy",
       "method": "GET",
       "normalized_path": "/confidential/policy",
       "path": "/confidential/policy",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.read",
+      "registration": "kernel",
+      "resource": "attestation_policy",
       "service": "confidential"
     },
     {
-      "action": "",
+      "action": "policy_updated",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleSetPolicy",
-      "line": 44,
+      "handler": "h.setPolicy",
+      "line": 47,
       "match_key": "confidential|PUT|/confidential/policy",
       "method": "PUT",
       "normalized_path": "/confidential/policy",
       "path": "/confidential/policy",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.write",
+      "registration": "kernel",
+      "resource": "attestation_policy",
       "service": "confidential"
     },
     {
-      "action": "",
+      "action": "summary_viewed",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleGetSummary",
-      "line": 45,
+      "handler": "h.getSummary",
+      "line": 48,
       "match_key": "confidential|GET|/confidential/summary",
       "method": "GET",
       "normalized_path": "/confidential/summary",
       "path": "/confidential/summary",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.read",
+      "registration": "kernel",
+      "resource": "attestation_policy",
       "service": "confidential"
     },
     {
-      "action": "",
+      "action": "key_release_evaluated",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleEvaluate",
-      "line": 46,
+      "handler": "h.evaluate",
+      "line": 49,
       "match_key": "confidential|POST|/confidential/evaluate",
       "method": "POST",
       "normalized_path": "/confidential/evaluate",
       "path": "/confidential/evaluate",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.evaluate",
+      "registration": "kernel",
+      "resource": "key",
       "service": "confidential"
     },
     {
-      "action": "",
+      "action": "releases_viewed",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleListReleases",
-      "line": 47,
+      "handler": "h.listReleases",
+      "line": 50,
       "match_key": "confidential|GET|/confidential/releases",
       "method": "GET",
       "normalized_path": "/confidential/releases",
       "path": "/confidential/releases",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.read",
+      "registration": "kernel",
+      "resource": "attested_release",
       "service": "confidential"
     },
     {
-      "action": "",
+      "action": "release_viewed",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
-      "handler": "h.handleGetRelease",
-      "line": 48,
+      "handler": "h.getRelease",
+      "line": 51,
       "match_key": "confidential|GET|/confidential/releases/{param}",
       "method": "GET",
       "normalized_path": "/confidential/releases/{param}",
       "path": "/confidential/releases/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "confidential.read",
+      "registration": "kernel",
+      "resource": "attested_release",
       "service": "confidential"
     },
     {
@@ -4865,7 +4865,7 @@
       "code_scope": "confidential",
       "file": "services/confidential/handler_release.go",
       "handler": "h.releaseKey",
-      "line": 16,
+      "line": 14,
       "match_key": "confidential|POST|/confidential/release",
       "method": "POST",
       "normalized_path": "/confidential/release",
@@ -7561,138 +7561,138 @@
       "service": "hyok"
     },
     {
-      "action": "",
+      "action": "settings_viewed",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleGetSettings",
-      "line": 30,
+      "handler": "h.getSettings",
+      "line": 48,
       "match_key": "keyaccess|GET|/key-access/settings",
       "method": "GET",
       "normalized_path": "/key-access/settings",
       "path": "/key-access/settings",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.read",
+      "registration": "kernel",
+      "resource": "key_access_settings",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "settings_updated",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handlePutSettings",
-      "line": 31,
+      "handler": "h.putSettings",
+      "line": 49,
       "match_key": "keyaccess|PUT|/key-access/settings",
       "method": "PUT",
       "normalized_path": "/key-access/settings",
       "path": "/key-access/settings",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "key_access_settings",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "summary_viewed",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleGetSummary",
-      "line": 32,
+      "handler": "h.getSummary",
+      "line": 50,
       "match_key": "keyaccess|GET|/key-access/summary",
       "method": "GET",
       "normalized_path": "/key-access/summary",
       "path": "/key-access/summary",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.read",
+      "registration": "kernel",
+      "resource": "key_access_settings",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "codes_viewed",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleListRules",
-      "line": 33,
+      "handler": "h.listRules",
+      "line": 51,
       "match_key": "keyaccess|GET|/key-access/codes",
       "method": "GET",
       "normalized_path": "/key-access/codes",
       "path": "/key-access/codes",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.read",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "code_upserted",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleUpsertRule",
-      "line": 34,
+      "handler": "h.upsertRule",
+      "line": 52,
       "match_key": "keyaccess|POST|/key-access/codes",
       "method": "POST",
       "normalized_path": "/key-access/codes",
       "path": "/key-access/codes",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "code_upserted",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleUpsertRule",
-      "line": 35,
+      "handler": "h.upsertRule",
+      "line": 53,
       "match_key": "keyaccess|PUT|/key-access/codes/{param}",
       "method": "PUT",
       "normalized_path": "/key-access/codes/{param}",
       "path": "/key-access/codes/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "code_deleted",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleDeleteRule",
-      "line": 36,
+      "handler": "h.deleteRule",
+      "line": 54,
       "match_key": "keyaccess|DELETE|/key-access/codes/{param}",
       "method": "DELETE",
       "normalized_path": "/key-access/codes/{param}",
       "path": "/key-access/codes/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "decisions_viewed",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleListDecisions",
-      "line": 37,
+      "handler": "h.listDecisions",
+      "line": 55,
       "match_key": "keyaccess|GET|/key-access/decisions",
       "method": "GET",
       "normalized_path": "/key-access/decisions",
       "path": "/key-access/decisions",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.read",
+      "registration": "kernel",
+      "resource": "key_access_decision",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "decision_evaluated",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleEvaluate",
-      "line": 38,
+      "handler": "h.evaluate",
+      "line": 56,
       "match_key": "keyaccess|POST|/key-access/evaluate",
       "method": "POST",
       "normalized_path": "/key-access/evaluate",
       "path": "/key-access/evaluate",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.evaluate",
+      "registration": "kernel",
+      "resource": "key",
       "service": "keyaccess"
     },
     {
@@ -12901,243 +12901,243 @@
       "service": "watchdog"
     },
     {
-      "action": "",
+      "action": "settings_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleGetSettings",
-      "line": 26,
+      "handler": "h.getSettings",
+      "line": 31,
       "match_key": "workload|GET|/workload-identity/settings",
       "method": "GET",
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "workload_identity_settings",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "settings_updated",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handlePutSettings",
-      "line": 27,
+      "handler": "h.putSettings",
+      "line": 32,
       "match_key": "workload|PUT|/workload-identity/settings",
       "method": "PUT",
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_identity_settings",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "summary_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleGetSummary",
-      "line": 28,
+      "handler": "h.getSummary",
+      "line": 33,
       "match_key": "workload|GET|/workload-identity/summary",
       "method": "GET",
       "normalized_path": "/workload-identity/summary",
       "path": "/workload-identity/summary",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "workload_identity_settings",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "registrations_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleListRegistrations",
-      "line": 29,
+      "handler": "h.listRegistrations",
+      "line": 34,
       "match_key": "workload|GET|/workload-identity/registrations",
       "method": "GET",
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "registration_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertRegistration",
-      "line": 30,
+      "handler": "h.upsertRegistration",
+      "line": 35,
       "match_key": "workload|POST|/workload-identity/registrations",
       "method": "POST",
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "registration_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertRegistration",
-      "line": 31,
+      "handler": "h.upsertRegistration",
+      "line": 36,
       "match_key": "workload|PUT|/workload-identity/registrations/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "registration_deleted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleDeleteRegistration",
-      "line": 32,
+      "handler": "h.deleteRegistration",
+      "line": 37,
       "match_key": "workload|DELETE|/workload-identity/registrations/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleListFederation",
-      "line": 33,
+      "handler": "h.listFederation",
+      "line": 38,
       "match_key": "workload|GET|/workload-identity/federation",
       "method": "GET",
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_bundle_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertFederation",
-      "line": 34,
+      "handler": "h.upsertFederation",
+      "line": 39,
       "match_key": "workload|POST|/workload-identity/federation",
       "method": "POST",
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_bundle_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertFederation",
-      "line": 35,
+      "handler": "h.upsertFederation",
+      "line": 40,
       "match_key": "workload|PUT|/workload-identity/federation/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_bundle_deleted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleDeleteFederation",
-      "line": 36,
+      "handler": "h.deleteFederation",
+      "line": 41,
       "match_key": "workload|DELETE|/workload-identity/federation/{param}",
       "method": "DELETE",
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "svid_issued",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleIssueSVID",
-      "line": 37,
+      "handler": "h.issueSVID",
+      "line": 42,
       "match_key": "workload|POST|/workload-identity/issue",
       "method": "POST",
       "normalized_path": "/workload-identity/issue",
       "path": "/workload-identity/issue",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.issue",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "issuance_history_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleListIssuances",
-      "line": 38,
+      "handler": "h.listIssuances",
+      "line": 43,
       "match_key": "workload|GET|/workload-identity/issuances",
       "method": "GET",
       "normalized_path": "/workload-identity/issuances",
       "path": "/workload-identity/issuances",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "svid_issuance",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "token_exchanged",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleExchangeToken",
-      "line": 39,
+      "handler": "h.exchangeToken",
+      "line": 46,
       "match_key": "workload|POST|/workload-identity/token/exchange",
       "method": "POST",
       "normalized_path": "/workload-identity/token/exchange",
       "path": "/workload-identity/token/exchange",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "public",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "graph_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleGetGraph",
-      "line": 40,
+      "handler": "h.getGraph",
+      "line": 47,
       "match_key": "workload|GET|/workload-identity/graph",
       "method": "GET",
       "normalized_path": "/workload-identity/graph",
       "path": "/workload-identity/graph",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "key_usage_viewed",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleListUsage",
-      "line": 41,
+      "handler": "h.listUsage",
+      "line": 48,
       "match_key": "workload|GET|/workload-identity/usage",
       "method": "GET",
       "normalized_path": "/workload-identity/usage",
       "path": "/workload-identity/usage",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.read",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
@@ -15517,7 +15517,7 @@
       "code_scope": "confidential",
       "file": "services/confidential/handler_release.go",
       "handler": "h.releaseKey",
-      "line": 16,
+      "line": 14,
       "match_key": "confidential|POST|/confidential/release",
       "method": "POST",
       "normalized_path": "/confidential/release",
@@ -16593,48 +16593,48 @@
       "service": "hyok"
     },
     {
-      "action": "",
+      "action": "code_upserted",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleUpsertRule",
-      "line": 34,
+      "handler": "h.upsertRule",
+      "line": 52,
       "match_key": "keyaccess|POST|/key-access/codes",
       "method": "POST",
       "normalized_path": "/key-access/codes",
       "path": "/key-access/codes",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "code_upserted",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleUpsertRule",
-      "line": 35,
+      "handler": "h.upsertRule",
+      "line": 53,
       "match_key": "keyaccess|PUT|/key-access/codes/{param}",
       "method": "PUT",
       "normalized_path": "/key-access/codes/{param}",
       "path": "/key-access/codes/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.write",
+      "registration": "kernel",
+      "resource": "justification_code",
       "service": "keyaccess"
     },
     {
-      "action": "",
+      "action": "decision_evaluated",
       "code_scope": "keyaccess",
       "file": "services/keyaccess/handler.go",
-      "handler": "h.handleEvaluate",
-      "line": 38,
+      "handler": "h.evaluate",
+      "line": 56,
       "match_key": "keyaccess|POST|/key-access/evaluate",
       "method": "POST",
       "normalized_path": "/key-access/evaluate",
       "path": "/key-access/evaluate",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "keyaccess.evaluate",
+      "registration": "kernel",
+      "resource": "key",
       "service": "keyaccess"
     },
     {
@@ -18858,63 +18858,63 @@
       "service": "signing"
     },
     {
-      "action": "",
+      "action": "registration_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertRegistration",
-      "line": 30,
+      "handler": "h.upsertRegistration",
+      "line": 35,
       "match_key": "workload|POST|/workload-identity/registrations",
       "method": "POST",
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "registration_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertRegistration",
-      "line": 31,
+      "handler": "h.upsertRegistration",
+      "line": 36,
       "match_key": "workload|PUT|/workload-identity/registrations/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "workload_registration",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_bundle_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertFederation",
-      "line": 34,
+      "handler": "h.upsertFederation",
+      "line": 39,
       "match_key": "workload|POST|/workload-identity/federation",
       "method": "POST",
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
-      "action": "",
+      "action": "federation_bundle_upserted",
       "code_scope": "workload",
       "file": "services/workload/handler.go",
-      "handler": "h.handleUpsertFederation",
-      "line": 35,
+      "handler": "h.upsertFederation",
+      "line": 40,
       "match_key": "workload|PUT|/workload-identity/federation/{param}",
       "method": "PUT",
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "workload.write",
+      "registration": "kernel",
+      "resource": "federation_bundle",
       "service": "workload"
     },
     {
@@ -21632,7 +21632,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
-      "line": 292,
+      "line": 290,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21640,7 +21640,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Reload",
-      "line": 325,
+      "line": 323,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21648,7 +21648,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void savePolicy()} disabled= >",
-      "line": 326,
+      "line": 324,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21656,7 +21656,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void runEvaluation()} disabled= >",
-      "line": 432,
+      "line": 430,
       "tabs": [],
       "tag": "Btn"
     },
@@ -21664,7 +21664,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh History",
-      "line": 605,
+      "line": 600,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24116,7 +24116,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 910,
+      "line": 905,
       "tabs": [
         "posture"
       ],
@@ -24126,7 +24126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1146,
+      "line": 1141,
       "tabs": [
         "posture"
       ],
@@ -24136,7 +24136,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1147,
+      "line": 1142,
       "tabs": [
         "posture"
       ],
@@ -24146,7 +24146,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1148,
+      "line": 1143,
       "tabs": [
         "posture"
       ],
@@ -24156,7 +24156,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1149,
+      "line": 1144,
       "tabs": [
         "posture"
       ],
@@ -24166,7 +24166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1240,
+      "line": 1235,
       "tabs": [
         "posture"
       ],
@@ -24176,7 +24176,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1242,
+      "line": 1237,
       "tabs": [
         "posture"
       ],
@@ -25094,7 +25094,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "load(false)}>",
-      "line": 270,
+      "line": 289,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25102,7 +25102,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveSettings} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 309,
+      "line": 327,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25110,7 +25110,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveRegistration} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 359,
+      "line": 377,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25118,7 +25118,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setRegistrationDraft( )}>Edit",
-      "line": 379,
+      "line": 397,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25126,7 +25126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 380,
+      "line": 398,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25134,7 +25134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveFederation} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 400,
+      "line": 418,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25142,7 +25142,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setFederationDraft( )}>Edit",
-      "line": 415,
+      "line": 433,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25150,7 +25150,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 416,
+      "line": 434,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25158,7 +25158,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runIssue} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 449,
+      "line": 467,
       "tabs": [],
       "tag": "Btn"
     },
@@ -25166,7 +25166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runExchange} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 479,
+      "line": 508,
       "tabs": [],
       "tag": "Btn"
     },
@@ -28844,7 +28844,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 138,
+      "line": 137,
       "match_key": "confidential|GET|/confidential/policy",
       "method": "GET",
       "normalized_path": "/confidential/policy",
@@ -28857,7 +28857,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 150,
+      "line": 149,
       "match_key": "confidential|PUT|/confidential/policy",
       "method": "PUT",
       "normalized_path": "/confidential/policy",
@@ -28870,7 +28870,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"confidential\", `/confidential/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 166,
+      "line": 165,
       "match_key": "confidential|GET|/confidential/summary",
       "method": "GET",
       "normalized_path": "/confidential/summary",
@@ -28883,7 +28883,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"confidential\", \"/confidential/evaluate\")",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 178,
+      "line": 177,
       "match_key": "confidential|POST|/confidential/evaluate",
       "method": "POST",
       "normalized_path": "/confidential/evaluate",
@@ -28896,7 +28896,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"confidential\", `/confidential/releases?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 197,
+      "line": 196,
       "match_key": "confidential|GET|/confidential/releases",
       "method": "GET",
       "normalized_path": "/confidential/releases",
@@ -28909,7 +28909,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"confidential\", `/confidential/releases/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/confidential.ts",
-      "line": 209,
+      "line": 208,
       "match_key": "confidential|GET|/confidential/releases/{param}",
       "method": "GET",
       "normalized_path": "/confidential/releases/{param}",
@@ -33576,7 +33576,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 227,
+      "line": 236,
       "match_key": "workload|POST|/workload-identity/token/exchange",
       "method": "POST",
       "normalized_path": "/workload-identity/token/exchange",
@@ -33589,7 +33589,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 235,
+      "line": 244,
       "match_key": "workload|GET|/workload-identity/graph",
       "method": "GET",
       "normalized_path": "/workload-identity/graph",
@@ -33602,7 +33602,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 240,
+      "line": 249,
       "match_key": "workload|GET|/workload-identity/usage",
       "method": "GET",
       "normalized_path": "/workload-identity/usage",
@@ -33612,7 +33612,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T12:55:25Z",
+  "generated_at": "2026-09-29T12:59:16Z",
   "navigation": [
     {
       "group": "Overview",
@@ -52736,24 +52736,20 @@
         {
           "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 138,
+          "line": 137,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetPolicy",
+      "handler": "h.getPolicy",
       "handler_external_package_calls": [],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
         "GetAttestationPolicy",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 52,
-      "handler_name": "handleGetPolicy",
+      "handler_line": 59,
+      "handler_name": "getPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetAttestationPolicy"
@@ -52763,7 +52759,7 @@
       "normalized_path": "/confidential/policy",
       "path": "/confidential/policy",
       "route_file": "services/confidential/handler.go",
-      "route_line": 43,
+      "route_line": 46,
       "service": "confidential",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -52804,27 +52800,20 @@
         {
           "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 150,
+          "line": 149,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleSetPolicy",
+      "handler": "h.setPolicy",
       "handler_external_package_calls": [],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
-        "decodeJSON",
-        "Error",
-        "firstNonEmpty",
         "UpdateAttestationPolicy",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 67,
-      "handler_name": "handleSetPolicy",
+      "handler_line": 68,
+      "handler_name": "setPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpdateAttestationPolicy"
@@ -52834,14 +52823,13 @@
       "normalized_path": "/confidential/policy",
       "path": "/confidential/policy",
       "route_file": "services/confidential/handler.go",
-      "route_line": 44,
+      "route_line": 47,
       "service": "confidential",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "normalizeAttestationPolicy",
         "newServiceError",
-        "UpsertAttestationPolicy",
-        "publishAudit"
+        "UpsertAttestationPolicy"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -52851,8 +52839,7 @@
           "helper_calls": [
             "normalizeAttestationPolicy",
             "newServiceError",
-            "UpsertAttestationPolicy",
-            "publishAudit"
+            "UpsertAttestationPolicy"
           ],
           "internal_package_calls": [],
           "line": 188,
@@ -52873,24 +52860,20 @@
         {
           "expression": "serviceRequest(\"confidential\", `/confidential/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 166,
+          "line": 165,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetSummary",
+      "handler": "h.getSummary",
       "handler_external_package_calls": [],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
         "GetAttestationSummary",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
       "handler_line": 92,
-      "handler_name": "handleGetSummary",
+      "handler_name": "getSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetAttestationSummary"
@@ -52900,7 +52883,7 @@
       "normalized_path": "/confidential/summary",
       "path": "/confidential/summary",
       "route_file": "services/confidential/handler.go",
-      "route_line": 45,
+      "route_line": 48,
       "service": "confidential",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -52923,7 +52906,7 @@
             "ListReleaseRecords"
           ],
           "internal_package_calls": [],
-          "line": 239,
+          "line": 229,
           "name": "GetAttestationSummary",
           "receiver_calls": [],
           "store_calls": [
@@ -52941,27 +52924,20 @@
         {
           "expression": "serviceRequest(\"confidential\", \"/confidential/evaluate\")",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 178,
+          "line": 177,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleEvaluate",
+      "handler": "h.evaluate",
       "handler_external_package_calls": [],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
-        "decodeJSON",
-        "Error",
-        "firstNonEmpty",
         "EvaluateAttestedRelease",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 107,
-      "handler_name": "handleEvaluate",
+      "handler_line": 101,
+      "handler_name": "evaluate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "EvaluateAttestedRelease"
@@ -52971,13 +52947,12 @@
       "normalized_path": "/confidential/evaluate",
       "path": "/confidential/evaluate",
       "route_file": "services/confidential/handler.go",
-      "route_line": 46,
+      "route_line": 49,
       "service": "confidential",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "evaluate",
-        "InsertReleaseRecord",
-        "publishAudit"
+        "InsertReleaseRecord"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -52986,11 +52961,10 @@
           "file": "services/confidential/service.go",
           "helper_calls": [
             "evaluate",
-            "InsertReleaseRecord",
-            "publishAudit"
+            "InsertReleaseRecord"
           ],
           "internal_package_calls": [],
-          "line": 523,
+          "line": 513,
           "name": "EvaluateAttestedRelease",
           "receiver_calls": [],
           "store_calls": [
@@ -53008,26 +52982,22 @@
         {
           "expression": "serviceRequest(\"confidential\", `/confidential/releases?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 197,
+          "line": 196,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListReleases",
+      "handler": "h.listReleases",
       "handler_external_package_calls": [
         "strconv.Atoi"
       ],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
         "ListReleaseHistory",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
-      "handler_name": "handleListReleases",
+      "handler_line": 137,
+      "handler_name": "listReleases",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListReleaseHistory"
@@ -53037,7 +53007,7 @@
       "normalized_path": "/confidential/releases",
       "path": "/confidential/releases",
       "route_file": "services/confidential/handler.go",
-      "route_line": 47,
+      "route_line": 50,
       "service": "confidential",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -53058,7 +53028,7 @@
             "ListReleaseRecords"
           ],
           "internal_package_calls": [],
-          "line": 216,
+          "line": 206,
           "name": "ListReleaseHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -53076,24 +53046,20 @@
         {
           "expression": "serviceRequest(\"confidential\", `/confidential/releases/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/confidential.ts",
-          "line": 209,
+          "line": 208,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetRelease",
+      "handler": "h.getRelease",
       "handler_external_package_calls": [],
       "handler_file": "services/confidential/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
-        "writeServiceError",
-        "newServiceError",
         "GetReleaseRecord",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 153,
-      "handler_name": "handleGetRelease",
+      "handler_line": 151,
+      "handler_name": "getRelease",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetReleaseRecord"
@@ -53103,7 +53069,7 @@
       "normalized_path": "/confidential/releases/{param}",
       "path": "/confidential/releases/{id}",
       "route_file": "services/confidential/handler.go",
-      "route_line": 48,
+      "route_line": 51,
       "service": "confidential",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -53122,7 +53088,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 224,
+          "line": 214,
           "name": "GetReleaseRecord",
           "receiver_calls": [],
           "store_calls": [
@@ -53148,7 +53114,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 22,
+      "handler_line": 19,
       "handler_name": "releaseKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -53159,7 +53125,7 @@
       "normalized_path": "/confidential/release",
       "path": "/confidential/release",
       "route_file": "services/confidential/handler_release.go",
-      "route_line": 16,
+      "route_line": 14,
       "service": "confidential",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66401,19 +66367,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetSettings",
+      "handler": "h.getSettings",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "GetSettings",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 87,
-      "handler_name": "handleGetSettings",
+      "handler_line": 63,
+      "handler_name": "getSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetSettings"
@@ -66423,12 +66386,11 @@
       "normalized_path": "/key-access/settings",
       "path": "/key-access/settings",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 30,
+      "route_line": 48,
       "service": "keyaccess",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66436,11 +66398,10 @@
           "external_package_calls": [],
           "file": "services/keyaccess/service.go",
           "helper_calls": [
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 44,
+          "line": 42,
           "name": "GetSettings",
           "receiver_calls": [],
           "store_calls": []
@@ -66458,23 +66419,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handlePutSettings",
+      "handler": "h.putSettings",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpdateSettings",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 98,
-      "handler_name": "handlePutSettings",
+      "handler_line": 72,
+      "handler_name": "putSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpdateSettings"
@@ -66484,14 +66438,13 @@
       "normalized_path": "/key-access/settings",
       "path": "/key-access/settings",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 31,
+      "route_line": 49,
       "service": "keyaccess",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "normalizeSettings",
         "newServiceError",
-        "UpsertSettings",
-        "publishAudit"
+        "UpsertSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66501,11 +66454,10 @@
           "helper_calls": [
             "normalizeSettings",
             "newServiceError",
-            "UpsertSettings",
-            "publishAudit"
+            "UpsertSettings"
           ],
           "internal_package_calls": [],
-          "line": 56,
+          "line": 50,
           "name": "UpdateSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -66527,19 +66479,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetSummary",
+      "handler": "h.getSummary",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "GetSummary",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 114,
-      "handler_name": "handleGetSummary",
+      "handler_line": 93,
+      "handler_name": "getSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetSummary"
@@ -66549,7 +66498,7 @@
       "normalized_path": "/key-access/summary",
       "path": "/key-access/summary",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 32,
+      "route_line": 50,
       "service": "keyaccess",
       "service_external_package_calls": [
         "sort.Slice",
@@ -66561,8 +66510,7 @@
         "ensureSettings",
         "ListRules",
         "ListDecisions",
-        "firstNonEmpty",
-        "publishAudit"
+        "firstNonEmpty"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66578,11 +66526,10 @@
             "ensureSettings",
             "ListRules",
             "ListDecisions",
-            "firstNonEmpty",
-            "publishAudit"
+            "firstNonEmpty"
           ],
           "internal_package_calls": [],
-          "line": 117,
+          "line": 95,
           "name": "GetSummary",
           "receiver_calls": [],
           "store_calls": [
@@ -66606,19 +66553,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListRules",
+      "handler": "h.listRules",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListRules",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 125,
-      "handler_name": "handleListRules",
+      "handler_line": 102,
+      "handler_name": "listRules",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListRules"
@@ -66628,12 +66572,11 @@
       "normalized_path": "/key-access/codes",
       "path": "/key-access/codes",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 33,
+      "route_line": 51,
       "service": "keyaccess",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66641,11 +66584,10 @@
           "external_package_calls": [],
           "file": "services/keyaccess/service.go",
           "helper_calls": [
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 75,
+          "line": 62,
           "name": "ListRules",
           "receiver_calls": [],
           "store_calls": [
@@ -66660,23 +66602,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertRule",
+      "handler": "h.upsertRule",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertRule",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 136,
-      "handler_name": "handleUpsertRule",
+      "handler_line": 112,
+      "handler_name": "upsertRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertRule"
@@ -66686,14 +66621,13 @@
       "normalized_path": "/key-access/codes",
       "path": "/key-access/codes",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 34,
+      "route_line": 52,
       "service": "keyaccess",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "normalizeRule",
         "newServiceError",
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66703,11 +66637,10 @@
           "helper_calls": [
             "normalizeRule",
             "newServiceError",
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 87,
+          "line": 73,
           "name": "UpsertRule",
           "receiver_calls": [],
           "store_calls": [
@@ -66722,23 +66655,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertRule",
+      "handler": "h.upsertRule",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertRule",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 136,
-      "handler_name": "handleUpsertRule",
+      "handler_line": 112,
+      "handler_name": "upsertRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertRule"
@@ -66748,14 +66674,13 @@
       "normalized_path": "/key-access/codes/{param}",
       "path": "/key-access/codes/{id}",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 35,
+      "route_line": 53,
       "service": "keyaccess",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "normalizeRule",
         "newServiceError",
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -66765,11 +66690,10 @@
           "helper_calls": [
             "normalizeRule",
             "newServiceError",
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 87,
+          "line": 73,
           "name": "UpsertRule",
           "receiver_calls": [],
           "store_calls": [
@@ -66791,19 +66715,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleDeleteRule",
+      "handler": "h.deleteRule",
       "handler_external_package_calls": [],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "DeleteRule",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 153,
-      "handler_name": "handleDeleteRule",
+      "handler_line": 136,
+      "handler_name": "deleteRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "DeleteRule"
@@ -66813,26 +66734,18 @@
       "normalized_path": "/key-access/codes/{param}",
       "path": "/key-access/codes/{id}",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 36,
+      "route_line": 54,
       "service": "keyaccess",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "publishAudit"
-      ],
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
+          "external_package_calls": [],
           "file": "services/keyaccess/service.go",
-          "helper_calls": [
-            "publishAudit"
-          ],
+          "helper_calls": [],
           "internal_package_calls": [],
-          "line": 109,
+          "line": 88,
           "name": "DeleteRule",
           "receiver_calls": [],
           "store_calls": [
@@ -66854,22 +66767,20 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListDecisions",
+      "handler": "h.listDecisions",
       "handler_external_package_calls": [
         "strconv.Atoi",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "strings.ToLower"
       ],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListDecisions",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 163,
-      "handler_name": "handleListDecisions",
+      "handler_line": 144,
+      "handler_name": "listDecisions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListDecisions"
@@ -66879,30 +66790,22 @@
       "normalized_path": "/key-access/decisions",
       "path": "/key-access/decisions",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 37,
+      "route_line": 55,
       "service": "keyaccess",
-      "service_external_package_calls": [
-        "strings.ToLower",
-        "strings.TrimSpace"
-      ],
+      "service_external_package_calls": [],
       "service_helper_calls": [
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [
-            "strings.ToLower",
-            "strings.TrimSpace"
-          ],
+          "external_package_calls": [],
           "file": "services/keyaccess/service.go",
           "helper_calls": [
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 188,
+          "line": 160,
           "name": "ListDecisions",
           "receiver_calls": [],
           "store_calls": [
@@ -66917,23 +66820,23 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleEvaluate",
-      "handler_external_package_calls": [],
+      "handler": "h.evaluate",
+      "handler_external_package_calls": [
+        "strings.ToLower",
+        "strings.TrimSpace",
+        "strings.ToUpper"
+      ],
       "handler_file": "services/keyaccess/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
         "firstNonEmpty",
         "Evaluate",
-        "writeJSON"
+        "writeServiceError"
       ],
-      "handler_internal_package_calls": [],
-      "handler_line": 180,
-      "handler_name": "handleEvaluate",
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 163,
+      "handler_name": "evaluate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "Evaluate"
@@ -66943,7 +66846,7 @@
       "normalized_path": "/key-access/evaluate",
       "path": "/key-access/evaluate",
       "route_file": "services/keyaccess/handler.go",
-      "route_line": 38,
+      "route_line": 56,
       "service": "keyaccess",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -66956,7 +66859,6 @@
         "newID",
         "trimLimit",
         "CreateDecision",
-        "publishAudit",
         "matchRule",
         "containsScope",
         "normalizeDecisionAction",
@@ -66979,7 +66881,6 @@
             "newID",
             "trimLimit",
             "CreateDecision",
-            "publishAudit",
             "matchRule",
             "containsScope",
             "normalizeDecisionAction",
@@ -66988,7 +66889,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 204,
+          "line": 171,
           "name": "Evaluate",
           "receiver_calls": [
             "s.governance.CreateApprovalRequest"
@@ -88833,19 +88734,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetSettings",
+      "handler": "h.getSettings",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "GetSettings",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 45,
-      "handler_name": "handleGetSettings",
+      "handler_line": 59,
+      "handler_name": "getSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetSettings"
@@ -88855,7 +88753,7 @@
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
       "route_file": "services/workload/handler.go",
-      "route_line": 26,
+      "route_line": 31,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -88872,7 +88770,7 @@
             "sanitizeSettings"
           ],
           "internal_package_calls": [],
-          "line": 116,
+          "line": 111,
           "name": "GetSettings",
           "receiver_calls": [],
           "store_calls": []
@@ -88890,23 +88788,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handlePutSettings",
+      "handler": "h.putSettings",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpdateSettings",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 56,
-      "handler_name": "handlePutSettings",
+      "handler_line": 68,
+      "handler_name": "putSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpdateSettings"
@@ -88916,7 +88807,7 @@
       "normalized_path": "/workload-identity/settings",
       "path": "/workload-identity/settings",
       "route_file": "services/workload/handler.go",
-      "route_line": 27,
+      "route_line": 32,
       "service": "workload",
       "service_external_package_calls": [
         "strings.EqualFold"
@@ -88926,7 +88817,6 @@
         "normalizeSettings",
         "generateSigningMaterial",
         "UpsertSettings",
-        "publishAudit",
         "sanitizeSettings"
       ],
       "service_internal_package_calls": [],
@@ -88941,11 +88831,10 @@
             "normalizeSettings",
             "generateSigningMaterial",
             "UpsertSettings",
-            "publishAudit",
             "sanitizeSettings"
           ],
           "internal_package_calls": [],
-          "line": 124,
+          "line": 119,
           "name": "UpdateSettings",
           "receiver_calls": [],
           "store_calls": [
@@ -88967,19 +88856,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetSummary",
+      "handler": "h.getSummary",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "GetSummary",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 72,
-      "handler_name": "handleGetSummary",
+      "handler_line": 90,
+      "handler_name": "getSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetSummary"
@@ -88989,7 +88875,7 @@
       "normalized_path": "/workload-identity/summary",
       "path": "/workload-identity/summary",
       "route_file": "services/workload/handler.go",
-      "route_line": 28,
+      "route_line": 33,
       "service": "workload",
       "service_external_package_calls": [
         "time.Duration"
@@ -89001,8 +88887,8 @@
         "ListIssuanceRecords",
         "collectKeyUsage",
         "isOverPrivileged",
-        "maxInt",
-        "publishAudit"
+        "Error",
+        "maxInt"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89018,11 +88904,11 @@
             "ListIssuanceRecords",
             "collectKeyUsage",
             "isOverPrivileged",
-            "maxInt",
-            "publishAudit"
+            "Error",
+            "maxInt"
           ],
           "internal_package_calls": [],
-          "line": 541,
+          "line": 515,
           "name": "GetSummary",
           "receiver_calls": [],
           "store_calls": [
@@ -89048,19 +88934,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListRegistrations",
+      "handler": "h.listRegistrations",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListRegistrations",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 83,
-      "handler_name": "handleListRegistrations",
+      "handler_line": 99,
+      "handler_name": "listRegistrations",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListRegistrations"
@@ -89070,12 +88953,11 @@
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
       "route_file": "services/workload/handler.go",
-      "route_line": 29,
+      "route_line": 34,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89083,11 +88965,10 @@
           "external_package_calls": [],
           "file": "services/workload/service.go",
           "helper_calls": [
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 218,
+          "line": 205,
           "name": "ListRegistrations",
           "receiver_calls": [],
           "store_calls": [
@@ -89102,23 +88983,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertRegistration",
+      "handler": "h.upsertRegistration",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertRegistration",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
-      "handler_name": "handleUpsertRegistration",
+      "handler_line": 109,
+      "handler_name": "upsertRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertRegistration"
@@ -89128,13 +89002,12 @@
       "normalized_path": "/workload-identity/registrations",
       "path": "/workload-identity/registrations",
       "route_file": "services/workload/handler.go",
-      "route_line": 30,
+      "route_line": 35,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
-        "normalizeRegistration",
-        "publishAudit"
+        "normalizeRegistration"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89143,11 +89016,10 @@
           "file": "services/workload/service.go",
           "helper_calls": [
             "ensureSettings",
-            "normalizeRegistration",
-            "publishAudit"
+            "normalizeRegistration"
           ],
           "internal_package_calls": [],
-          "line": 230,
+          "line": 216,
           "name": "UpsertRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89162,23 +89034,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertRegistration",
+      "handler": "h.upsertRegistration",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertRegistration",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
-      "handler_name": "handleUpsertRegistration",
+      "handler_line": 109,
+      "handler_name": "upsertRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertRegistration"
@@ -89188,13 +89053,12 @@
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 31,
+      "route_line": 36,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
-        "normalizeRegistration",
-        "publishAudit"
+        "normalizeRegistration"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89203,11 +89067,10 @@
           "file": "services/workload/service.go",
           "helper_calls": [
             "ensureSettings",
-            "normalizeRegistration",
-            "publishAudit"
+            "normalizeRegistration"
           ],
           "internal_package_calls": [],
-          "line": 230,
+          "line": 216,
           "name": "UpsertRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89229,19 +89092,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleDeleteRegistration",
+      "handler": "h.deleteRegistration",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "DeleteRegistration",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 111,
-      "handler_name": "handleDeleteRegistration",
+      "handler_line": 134,
+      "handler_name": "deleteRegistration",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "DeleteRegistration"
@@ -89251,22 +89111,18 @@
       "normalized_path": "/workload-identity/registrations/{param}",
       "path": "/workload-identity/registrations/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 32,
+      "route_line": 37,
       "service": "workload",
       "service_external_package_calls": [],
-      "service_helper_calls": [
-        "publishAudit"
-      ],
+      "service_helper_calls": [],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [],
           "file": "services/workload/service.go",
-          "helper_calls": [
-            "publishAudit"
-          ],
+          "helper_calls": [],
           "internal_package_calls": [],
-          "line": 256,
+          "line": 232,
           "name": "DeleteRegistration",
           "receiver_calls": [],
           "store_calls": [
@@ -89288,19 +89144,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListFederation",
+      "handler": "h.listFederation",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListFederationBundles",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 121,
-      "handler_name": "handleListFederation",
+      "handler_line": 142,
+      "handler_name": "listFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListFederationBundles"
@@ -89310,12 +89163,11 @@
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
       "route_file": "services/workload/handler.go",
-      "route_line": 33,
+      "route_line": 38,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ensureSettings",
-        "publishAudit"
+        "ensureSettings"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89323,11 +89175,10 @@
           "external_package_calls": [],
           "file": "services/workload/service.go",
           "helper_calls": [
-            "ensureSettings",
-            "publishAudit"
+            "ensureSettings"
           ],
           "internal_package_calls": [],
-          "line": 264,
+          "line": 239,
           "name": "ListFederationBundles",
           "receiver_calls": [],
           "store_calls": [
@@ -89342,23 +89193,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertFederation",
+      "handler": "h.upsertFederation",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertFederationBundle",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
-      "handler_name": "handleUpsertFederation",
+      "handler_line": 152,
+      "handler_name": "upsertFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertFederationBundle"
@@ -89368,14 +89212,13 @@
       "normalized_path": "/workload-identity/federation",
       "path": "/workload-identity/federation",
       "route_file": "services/workload/handler.go",
-      "route_line": 34,
+      "route_line": 39,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
         "normalizeFederationBundle",
-        "newServiceError",
-        "publishAudit"
+        "newServiceError"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89385,11 +89228,10 @@
           "helper_calls": [
             "ensureSettings",
             "normalizeFederationBundle",
-            "newServiceError",
-            "publishAudit"
+            "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 276,
+          "line": 250,
           "name": "UpsertFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89404,23 +89246,16 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleUpsertFederation",
+      "handler": "h.upsertFederation",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "UpsertFederationBundle",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
-      "handler_name": "handleUpsertFederation",
+      "handler_line": 152,
+      "handler_name": "upsertFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "UpsertFederationBundle"
@@ -89430,14 +89265,13 @@
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 35,
+      "route_line": 40,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
         "normalizeFederationBundle",
-        "newServiceError",
-        "publishAudit"
+        "newServiceError"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89447,11 +89281,10 @@
           "helper_calls": [
             "ensureSettings",
             "normalizeFederationBundle",
-            "newServiceError",
-            "publishAudit"
+            "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 276,
+          "line": 250,
           "name": "UpsertFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89473,19 +89306,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleDeleteFederation",
+      "handler": "h.deleteFederation",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "DeleteFederationBundle",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 149,
-      "handler_name": "handleDeleteFederation",
+      "handler_line": 175,
+      "handler_name": "deleteFederation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "DeleteFederationBundle"
@@ -89495,22 +89325,18 @@
       "normalized_path": "/workload-identity/federation/{param}",
       "path": "/workload-identity/federation/{id}",
       "route_file": "services/workload/handler.go",
-      "route_line": 36,
+      "route_line": 41,
       "service": "workload",
       "service_external_package_calls": [],
-      "service_helper_calls": [
-        "publishAudit"
-      ],
+      "service_helper_calls": [],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [],
           "file": "services/workload/service.go",
-          "helper_calls": [
-            "publishAudit"
-          ],
+          "helper_calls": [],
           "internal_package_calls": [],
-          "line": 300,
+          "line": 268,
           "name": "DeleteFederationBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -89532,23 +89358,16 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleIssueSVID",
+      "handler": "h.issueSVID",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "IssueSVID",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 159,
-      "handler_name": "handleIssueSVID",
+      "handler_line": 183,
+      "handler_name": "issueSVID",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "IssueSVID"
@@ -89558,7 +89377,7 @@
       "normalized_path": "/workload-identity/issue",
       "path": "/workload-identity/issue",
       "route_file": "services/workload/handler.go",
-      "route_line": 37,
+      "route_line": 42,
       "service": "workload",
       "service_external_package_calls": [
         "time.Duration"
@@ -89575,8 +89394,7 @@
         "sha256Hex",
         "issuanceStatus",
         "InsertIssuanceRecord",
-        "TouchRegistrationIssued",
-        "publishAudit"
+        "TouchRegistrationIssued"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89597,11 +89415,10 @@
             "sha256Hex",
             "issuanceStatus",
             "InsertIssuanceRecord",
-            "TouchRegistrationIssued",
-            "publishAudit"
+            "TouchRegistrationIssued"
           ],
           "internal_package_calls": [],
-          "line": 320,
+          "line": 286,
           "name": "IssueSVID",
           "receiver_calls": [],
           "store_calls": [
@@ -89625,22 +89442,17 @@
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListIssuances",
-      "handler_external_package_calls": [
-        "strconv.Atoi",
-        "strings.TrimSpace"
-      ],
+      "handler": "h.listIssuances",
+      "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListIssuances",
-        "writeServiceError",
-        "writeJSON"
+        "queryLimit",
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 175,
-      "handler_name": "handleListIssuances",
+      "handler_line": 205,
+      "handler_name": "listIssuances",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListIssuances"
@@ -89650,13 +89462,12 @@
       "normalized_path": "/workload-identity/issuances",
       "path": "/workload-identity/issuances",
       "route_file": "services/workload/handler.go",
-      "route_line": 38,
+      "route_line": 43,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
-        "ListIssuanceRecords",
-        "publishAudit"
+        "ListIssuanceRecords"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89665,11 +89476,10 @@
           "file": "services/workload/service.go",
           "helper_calls": [
             "ensureSettings",
-            "ListIssuanceRecords",
-            "publishAudit"
+            "ListIssuanceRecords"
           ],
           "internal_package_calls": [],
-          "line": 308,
+          "line": 275,
           "name": "ListIssuances",
           "receiver_calls": [],
           "store_calls": [
@@ -89687,27 +89497,22 @@
         {
           "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 227,
+          "line": 236,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleExchangeToken",
-      "handler_external_package_calls": [],
+      "handler": "h.exchangeToken",
+      "handler_external_package_calls": [
+        "errors.As"
+      ],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeServiceError",
-        "newServiceError",
-        "Error",
-        "tenantFromRequest",
-        "firstNonEmpty",
         "ExchangeToken",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 192,
-      "handler_name": "handleExchangeToken",
+      "handler_line": 219,
+      "handler_name": "exchangeToken",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ExchangeToken"
@@ -89717,10 +89522,13 @@
       "normalized_path": "/workload-identity/token/exchange",
       "path": "/workload-identity/token/exchange",
       "route_file": "services/workload/handler.go",
-      "route_line": 39,
+      "route_line": 46,
       "service": "workload",
       "service_external_package_calls": [
+        "errors.As",
+        "errors.Is",
         "strings.TrimSpace",
+        "strings.EqualFold",
         "time.Until",
         "time.Duration"
       ],
@@ -89730,22 +89538,25 @@
         "ListFederationBundles",
         "verifyJWTSVID",
         "verifyX509SVID",
+        "verify",
+        "Error",
         "resolveRegistration",
         "normalizeInterfaces",
         "containsFold",
         "intersectPermissions",
         "intersectValues",
         "IssueWorkloadToken",
-        "firstNonEmpty",
         "minInt",
-        "TouchRegistrationUsed",
-        "publishAudit"
+        "TouchRegistrationUsed"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
+            "errors.As",
+            "errors.Is",
             "strings.TrimSpace",
+            "strings.EqualFold",
             "time.Until",
             "time.Duration"
           ],
@@ -89756,21 +89567,22 @@
             "ListFederationBundles",
             "verifyJWTSVID",
             "verifyX509SVID",
+            "verify",
+            "Error",
             "resolveRegistration",
             "normalizeInterfaces",
             "containsFold",
             "intersectPermissions",
             "intersectValues",
             "IssueWorkloadToken",
-            "firstNonEmpty",
             "minInt",
-            "TouchRegistrationUsed",
-            "publishAudit"
+            "TouchRegistrationUsed"
           ],
           "internal_package_calls": [],
-          "line": 382,
+          "line": 346,
           "name": "ExchangeToken",
           "receiver_calls": [
+            "s.proofs.verify",
             "s.auth.IssueWorkloadToken"
           ],
           "store_calls": [
@@ -89780,6 +89592,7 @@
         }
       ],
       "service_receiver_calls": [
+        "s.proofs.verify",
         "s.auth.IssueWorkloadToken"
       ],
       "service_store_calls": [
@@ -89792,23 +89605,20 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 235,
+          "line": 244,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetGraph",
+      "handler": "h.getGraph",
       "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "GetGraph",
-        "writeServiceError",
-        "writeJSON"
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 208,
-      "handler_name": "handleGetGraph",
+      "handler_line": 251,
+      "handler_name": "getGraph",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "GetGraph"
@@ -89818,7 +89628,7 @@
       "normalized_path": "/workload-identity/graph",
       "path": "/workload-identity/graph",
       "route_file": "services/workload/handler.go",
-      "route_line": 40,
+      "route_line": 47,
       "service": "workload",
       "service_external_package_calls": [
         "sort.Slice",
@@ -89832,7 +89642,7 @@
         "firstNonEmpty",
         "mapValues",
         "mapEdgeValues",
-        "publishAudit"
+        "Error"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89850,10 +89660,10 @@
             "firstNonEmpty",
             "mapValues",
             "mapEdgeValues",
-            "publishAudit"
+            "Error"
           ],
           "internal_package_calls": [],
-          "line": 483,
+          "line": 455,
           "name": "GetGraph",
           "receiver_calls": [],
           "store_calls": [
@@ -89871,26 +89681,21 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 240,
+          "line": 249,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListUsage",
-      "handler_external_package_calls": [
-        "strconv.Atoi",
-        "strings.TrimSpace"
-      ],
+      "handler": "h.listUsage",
+      "handler_external_package_calls": [],
       "handler_file": "services/workload/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "tenantFromRequest",
         "ListUsage",
-        "writeServiceError",
-        "writeJSON"
+        "queryLimit",
+        "writeServiceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 219,
-      "handler_name": "handleListUsage",
+      "handler_line": 262,
+      "handler_name": "listUsage",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListUsage"
@@ -89900,13 +89705,14 @@
       "normalized_path": "/workload-identity/usage",
       "path": "/workload-identity/usage",
       "route_file": "services/workload/handler.go",
-      "route_line": 41,
+      "route_line": 48,
       "service": "workload",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ensureSettings",
         "collectKeyUsage",
-        "publishAudit"
+        "newServiceError",
+        "Error"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -89916,10 +89722,11 @@
           "helper_calls": [
             "ensureSettings",
             "collectKeyUsage",
-            "publishAudit"
+            "newServiceError",
+            "Error"
           ],
           "internal_package_calls": [],
-          "line": 471,
+          "line": 444,
           "name": "ListUsage",
           "receiver_calls": [],
           "store_calls": []
@@ -91168,7 +90975,7 @@
     "nav_items": 27,
     "request_flows": 906,
     "request_flows_with_frontend": 533,
-    "request_flows_with_internal_package_calls": 160,
+    "request_flows_with_internal_package_calls": 161,
     "request_flows_with_service_calls": 537,
     "request_flows_with_store_calls": 648,
     "subpane_groups": 8,
@@ -103344,13 +103151,13 @@
           {
             "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 138,
+            "line": 137,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetPolicy",
+        "handler": "getPolicy",
         "handlerFile": "services/confidential/handler.go",
-        "handlerLine": 52,
+        "handlerLine": 59,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103378,13 +103185,13 @@
           {
             "expression": "serviceRequest(\"confidential\", `/confidential/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 150,
+            "line": 149,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleSetPolicy",
+        "handler": "setPolicy",
         "handlerFile": "services/confidential/handler.go",
-        "handlerLine": 67,
+        "handlerLine": 68,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -103415,11 +103222,11 @@
           {
             "expression": "serviceRequest(\"confidential\", `/confidential/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 166,
+            "line": 165,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetSummary",
+        "handler": "getSummary",
         "handlerFile": "services/confidential/handler.go",
         "handlerLine": 92,
         "hasFrontend": true,
@@ -103449,13 +103256,13 @@
           {
             "expression": "serviceRequest(\"confidential\", \"/confidential/evaluate\")",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 178,
+            "line": 177,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleEvaluate",
+        "handler": "evaluate",
         "handlerFile": "services/confidential/handler.go",
-        "handlerLine": 107,
+        "handlerLine": 101,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -103486,13 +103293,13 @@
           {
             "expression": "serviceRequest(\"confidential\", `/confidential/releases?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 197,
+            "line": 196,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListReleases",
+        "handler": "listReleases",
         "handlerFile": "services/confidential/handler.go",
-        "handlerLine": 132,
+        "handlerLine": 137,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103522,13 +103329,13 @@
           {
             "expression": "serviceRequest(\"confidential\", `/confidential/releases/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/confidential.ts",
-            "line": 209,
+            "line": 208,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetRelease",
+        "handler": "getRelease",
         "handlerFile": "services/confidential/handler.go",
-        "handlerLine": 153,
+        "handlerLine": 151,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -103559,7 +103366,7 @@
         "frontendSites": [],
         "handler": "releaseKey",
         "handlerFile": "services/confidential/handler_release.go",
-        "handlerLine": 22,
+        "handlerLine": 19,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -109860,9 +109667,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetSettings",
+        "handler": "getSettings",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 87,
+        "handlerLine": 63,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109892,9 +109699,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handlePutSettings",
+        "handler": "putSettings",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 98,
+        "handlerLine": 72,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -109931,9 +109738,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetSummary",
+        "handler": "getSummary",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 114,
+        "handlerLine": 93,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109966,9 +109773,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListRules",
+        "handler": "listRules",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 125,
+        "handlerLine": 102,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109993,9 +109800,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertRule",
+        "handler": "upsertRule",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 136,
+        "handlerLine": 112,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110020,9 +109827,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertRule",
+        "handler": "upsertRule",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 136,
+        "handlerLine": 112,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110045,9 +109852,7 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"keyaccess\", `/key-access/codes/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
@@ -110056,9 +109861,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleDeleteRule",
+        "handler": "deleteRule",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 153,
+        "handlerLine": 136,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -110094,9 +109899,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListDecisions",
+        "handler": "listDecisions",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 163,
+        "handlerLine": 144,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110118,16 +109923,20 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 4,
         "externalPackages": [
-          "strings.TrimSpace"
+          "strings.ToLower",
+          "strings.TrimSpace",
+          "strings.ToUpper"
         ],
         "frontendSites": [],
-        "handler": "handleEvaluate",
+        "handler": "evaluate",
         "handlerFile": "services/keyaccess/handler.go",
-        "handlerLine": 180,
+        "handlerLine": 163,
         "hasFrontend": false,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/tenantcheck.IsServicePrincipal"
+        ],
         "method": "POST",
         "normalizedPath": "/key-access/evaluate",
         "path": "/key-access/evaluate",
@@ -121978,9 +121787,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetSettings",
+        "handler": "getSettings",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 45,
+        "handlerLine": 59,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122012,9 +121821,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handlePutSettings",
+        "handler": "putSettings",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 56,
+        "handlerLine": 68,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -122048,9 +121857,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetSummary",
+        "handler": "getSummary",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 72,
+        "handlerLine": 90,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122084,9 +121893,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListRegistrations",
+        "handler": "listRegistrations",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 83,
+        "handlerLine": 99,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122111,9 +121920,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertRegistration",
+        "handler": "upsertRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 109,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -122138,9 +121947,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertRegistration",
+        "handler": "upsertRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 109,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -122172,9 +121981,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleDeleteRegistration",
+        "handler": "deleteRegistration",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 111,
+        "handlerLine": 134,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -122206,9 +122015,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListFederation",
+        "handler": "listFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 121,
+        "handlerLine": 142,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122233,9 +122042,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertFederation",
+        "handler": "upsertFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 132,
+        "handlerLine": 152,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -122260,9 +122069,9 @@
         "complexity": 1,
         "externalPackages": [],
         "frontendSites": [],
-        "handler": "handleUpsertFederation",
+        "handler": "upsertFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 132,
+        "handlerLine": 152,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -122294,9 +122103,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleDeleteFederation",
+        "handler": "deleteFederation",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 149,
+        "handlerLine": 175,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -122330,9 +122139,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleIssueSVID",
+        "handler": "issueSVID",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 159,
+        "handlerLine": 183,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -122356,10 +122165,7 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "strconv.Atoi",
-          "strings.TrimSpace"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/issuances?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
@@ -122368,9 +122174,9 @@
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListIssuances",
+        "handler": "listIssuances",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 175,
+        "handlerLine": 205,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122392,9 +122198,12 @@
         ]
       },
       {
-        "complexity": 3,
+        "complexity": 4,
         "externalPackages": [
+          "errors.As",
+          "errors.Is",
           "strings.TrimSpace",
+          "strings.EqualFold",
           "time.Until",
           "time.Duration"
         ],
@@ -122402,19 +122211,20 @@
           {
             "expression": "serviceRequest(\"workload\", \"/workload-identity/token/exchange\")",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 227,
+            "line": 236,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleExchangeToken",
+        "handler": "exchangeToken",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 192,
+        "handlerLine": 219,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/workload-identity/token/exchange",
         "path": "/workload-identity/token/exchange",
         "receiverCalls": [
+          "s.proofs.verify",
           "s.auth.IssueWorkloadToken"
         ],
         "risk": "medium",
@@ -122442,13 +122252,13 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 235,
+            "line": 244,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetGraph",
+        "handler": "getGraph",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 208,
+        "handlerLine": 251,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -122471,21 +122281,18 @@
       },
       {
         "complexity": 0,
-        "externalPackages": [
-          "strconv.Atoi",
-          "strings.TrimSpace"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 240,
+            "line": 249,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListUsage",
+        "handler": "listUsage",
         "handlerFile": "services/workload/handler.go",
-        "handlerLine": 219,
+        "handlerLine": 262,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -123330,7 +123137,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T12:55:25Z",
+    "generatedAt": "2026-09-29T12:59:16Z",
     "methods": [
       "DELETE",
       "GET",

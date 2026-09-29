@@ -5,13 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
-	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
@@ -50,43 +48,6 @@ func newID(prefix string) string {
 	return prefix + "_" + hex.EncodeToString(b)
 }
 
-func requestID(r *http.Request) string {
-	if r == nil {
-		return newID("req")
-	}
-	if v := strings.TrimSpace(r.Header.Get("X-Request-ID")); v != "" {
-		return v
-	}
-	return newID("req")
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	if r == nil || r.Body == nil {
-		return errors.New("request body is required")
-	}
-	defer r.Body.Close() //nolint:errcheck
-	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-	if err != nil {
-		return err
-	}
-	if len(strings.TrimSpace(string(body))) == 0 {
-		return errors.New("request body is required")
-	}
-	if err := json.Unmarshal(body, out); err != nil {
-		return err
-	}
-	return nil
-}
-
-func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {
-	if w == nil {
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
 func firstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {
@@ -94,44 +55,6 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
-}
-
-// tenantFromRequest returns the tenant the request will operate
-// under. The JWT claim (populated by pkgauth.HTTPMiddleware in main.go)
-// is authoritative: callers supplying a header or query tenant must
-// match the claim. Root tokens — those with an empty TenantID claim —
-// may supply any tenant via the header or query, matching the wider
-// codebase posture (pkg/tenantcheck/tenantcheck.go:32-34).
-//
-// Returns "" when:
-//   - no JWT claims are in context (the middleware should have caught
-//     this already, but defence in depth);
-//   - a header / query tenant disagrees with the JWT claim (active
-//     spoofing attempt — the handler writes 403).
-//
-// Before this change, the helper returned the header / query value
-// verbatim with no JWT check, permitting trivial cross-tenant key
-// release (security review vuln #2, May 2026).
-func tenantFromRequest(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	claims, ok := pkgauth.ClaimsFromContext(r.Context())
-	if !ok || claims == nil {
-		return ""
-	}
-	claimTenant := strings.TrimSpace(claims.TenantID)
-	supplied := firstNonEmpty(
-		r.URL.Query().Get("tenant_id"),
-		r.Header.Get("X-Tenant-ID"),
-	)
-	if claimTenant == "" {
-		return supplied
-	}
-	if supplied != "" && !strings.EqualFold(supplied, claimTenant) {
-		return ""
-	}
-	return claimTenant
 }
 
 func parseTimeValue(v interface{}) time.Time {

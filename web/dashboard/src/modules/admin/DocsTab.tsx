@@ -1193,7 +1193,7 @@ const SectionApiKeyAccess = () => (
       <P>Rules bind a justification code to one or more services and operations. A rule can allow directly, deny, or send the request into Governance approval. Decision history is persisted and replicated as tenant control-plane state.</P>
     </Collapse>
     <H2>Audit Trail</H2>
-    <P>Audit records cover settings changes, rule lifecycle, summary views, decision views, evaluated requests, and approval-required branches. This is where operators answer who requested external key access, which code matched, and whether the request was bypassed or blocked.</P>
+    <P>Reading needs <IC>keyaccess.read</IC> and changing settings or codes <IC>keyaccess.write</IC>. <IC>POST /key-access/evaluate</IC> answers only the ekm, cloud and hyok service identities, each for its own service. Audit records cover settings changes, rule lifecycle, summary views, decision views and evaluated requests (with any approval request they opened). This is where operators answer who requested external key access, which code matched, and whether the request was bypassed or blocked.</P>
   </div>
 );
 
@@ -1260,7 +1260,7 @@ const SectionApiWorkload = () => (
         ["GET", "/workload-identity/issuances", "List recent SVID issuance history"],
         ["POST", "/workload-identity/token/exchange", "Exchange a valid SVID for a short-lived KMS access token"],
       ]} />
-      <P>Exchange verifies the presented SVID against the local or federated trust bundle, applies workload interface and key scoping, and mints a short-lived JWT that Keycore enforces during actual key operations.</P>
+      <P>Every route needs a bearer token and a permission (<IC>workload.read</IC>, <IC>workload.write</IC>, or <IC>workload.issue</IC> for issuance, since an X.509-SVID response carries the private key), except the token exchange: there the SVID is the credential. Exchange verifies it against the tenant's own trust anchors (federated bundles only while federation is enabled), requires an audience the tenant allows and the SVID's own registration, applies interface and key scoping, and mints a short-lived JWT that Keycore enforces during key operations. An X.509-SVID chain is public, so it must come with <IC>x509_svid_proof</IC>: a signature by its private key over the tenant, the leaf certificate's SHA-256 and <IC>signed_at</IC>, accepted once within two minutes.</P>
     </Collapse>
     <Collapse title="Usage & Authorization Graph">
       <EndpointTable rows={[
@@ -1281,7 +1281,6 @@ curl -X PUT http://localhost:8250/workload-identity/settings?tenant_id=root \\
     "trust_domain": "root",
     "federation_enabled": true,
     "token_exchange_enabled": true,
-    "disable_static_api_keys": true,
     "default_x509_ttl_seconds": 43200,
     "default_jwt_ttl_seconds": 1800,
     "rotation_window_seconds": 1800,
@@ -1304,9 +1303,8 @@ curl -X POST http://localhost:8250/workload-identity/registrations \\
     "enabled": true
   }'
 
-# Exchange a JWT-SVID for a short-lived KMS token
+# Exchange a JWT-SVID for a short-lived KMS token (no bearer token: the SVID is the credential)
 curl -X POST http://localhost:8250/workload-identity/token/exchange \\
-  -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
     "tenant_id": "root",

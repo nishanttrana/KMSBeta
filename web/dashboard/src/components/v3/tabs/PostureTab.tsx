@@ -597,12 +597,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Stat l="Expired SVIDs" v={String(Number(workloadSummary?.expired_svid_count || 0))} c={Number(workloadSummary?.expired_svid_count || 0) > 0 ? "red" : "green"} />
               <Stat l="Over-Privileged" v={String(Number(workloadSummary?.over_privileged_count || 0))} c={Number(workloadSummary?.over_privileged_count || 0) > 0 ? "amber" : "green"} />
               <Stat l="Trust Domain" v={String(workloadSummary?.trust_domain || "-")} c="accent" />
-              <Stat l="Key Use 24h" v={String(Number(workloadSummary?.key_usage_count_24h || 0))} c="blue" />
-            </div>
-            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
-              {Boolean(workloadSummary?.disable_static_api_keys)
-                ? "Static API keys are disabled for workload callers."
-                : "Static API keys are still allowed; move workload-facing clients to SPIFFE/SVID token exchange."}
+              <Stat l="Key Use 24h" v={workloadSummary?.key_usage_unavailable ? "unavailable" : String(Number(workloadSummary?.key_usage_count_24h || 0))} c="blue" />
             </div>
           </Card>
 

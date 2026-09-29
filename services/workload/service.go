@@ -2,31 +2,27 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 )
 
-type EventPublisher interface {
-	Publish(ctx context.Context, subject string, payload []byte) error
-}
-
 type Service struct {
 	store  Store
 	auth   AuthClient
 	audit  AuditClient
-	events EventPublisher
+	proofs *proofCache
 	now    func() time.Time
 }
 
-func NewService(store Store, auth AuthClient, audit AuditClient, events EventPublisher) *Service {
+func NewService(store Store, auth AuthClient, audit AuditClient) *Service {
 	return &Service{
 		store:  store,
 		auth:   auth,
 		audit:  audit,
-		events: events,
+		proofs: newProofCache(),
 		now:    func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -42,7 +38,6 @@ func defaultSettings(tenantID string) WorkloadIdentitySettings {
 		TrustDomain:           trustDomain,
 		FederationEnabled:     false,
 		TokenExchangeEnabled:  true,
-		DisableStaticAPIKeys:  false,
 		DefaultX509TTLSeconds: int((12 * time.Hour).Seconds()),
 		DefaultJWTTTLSeconds:  int((30 * time.Minute).Seconds()),
 		RotationWindowSeconds: int((30 * time.Minute).Seconds()),
@@ -152,14 +147,6 @@ func (s *Service) UpdateSettings(ctx context.Context, in WorkloadIdentitySetting
 	if err != nil {
 		return WorkloadIdentitySettings{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.settings_updated", item.TenantID, map[string]interface{}{
-		"trust_domain":             item.TrustDomain,
-		"federation_enabled":       item.FederationEnabled,
-		"token_exchange_enabled":   item.TokenExchangeEnabled,
-		"disable_static_api_keys":  item.DisableStaticAPIKeys,
-		"default_x509_ttl_seconds": item.DefaultX509TTLSeconds,
-		"default_jwt_ttl_seconds":  item.DefaultJWTTTLSeconds,
-	})
 	return sanitizeSettings(item), nil
 }
 
@@ -223,7 +210,6 @@ func (s *Service) ListRegistrations(ctx context.Context, tenantID string) ([]Wor
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.registrations_viewed", tenantID, map[string]interface{}{"count": len(items)})
 	return items, nil
 }
 
@@ -240,16 +226,6 @@ func (s *Service) UpsertRegistration(ctx context.Context, in WorkloadRegistratio
 	if err != nil {
 		return WorkloadRegistration{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.registration_upserted", item.TenantID, map[string]interface{}{
-		"registration_id":         item.ID,
-		"spiffe_id":               item.SpiffeID,
-		"issue_x509_svid":         item.IssueX509SVID,
-		"issue_jwt_svid":          item.IssueJWTSVID,
-		"allowed_interface_count": len(item.AllowedInterfaces),
-		"allowed_key_count":       len(item.AllowedKeyIDs),
-		"permission_count":        len(item.Permissions),
-		"enabled":                 item.Enabled,
-	})
 	return item, nil
 }
 
@@ -257,7 +233,6 @@ func (s *Service) DeleteRegistration(ctx context.Context, tenantID string, id st
 	if err := s.store.DeleteRegistration(ctx, tenantID, id); err != nil {
 		return err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.registration_deleted", tenantID, map[string]interface{}{"registration_id": id})
 	return nil
 }
 
@@ -269,7 +244,6 @@ func (s *Service) ListFederationBundles(ctx context.Context, tenantID string) ([
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.federation_viewed", tenantID, map[string]interface{}{"count": len(items)})
 	return items, nil
 }
 
@@ -288,12 +262,6 @@ func (s *Service) UpsertFederationBundle(ctx context.Context, in WorkloadFederat
 	if err != nil {
 		return WorkloadFederationBundle{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.federation_bundle_upserted", item.TenantID, map[string]interface{}{
-		"bundle_id":       item.ID,
-		"trust_domain":    item.TrustDomain,
-		"bundle_endpoint": item.BundleEndpoint,
-		"enabled":         item.Enabled,
-	})
 	return item, nil
 }
 
@@ -301,7 +269,6 @@ func (s *Service) DeleteFederationBundle(ctx context.Context, tenantID string, i
 	if err := s.store.DeleteFederationBundle(ctx, tenantID, id); err != nil {
 		return err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.federation_bundle_deleted", tenantID, map[string]interface{}{"bundle_id": id})
 	return nil
 }
 
@@ -313,7 +280,6 @@ func (s *Service) ListIssuances(ctx context.Context, tenantID string, limit int)
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.workload.issuance_history_viewed", tenantID, map[string]interface{}{"count": len(items)})
 	return items, nil
 }
 
@@ -369,65 +335,85 @@ func (s *Service) IssueSVID(ctx context.Context, in IssueSVIDRequest) (IssuedSVI
 		return IssuedSVID{}, err
 	}
 	_ = s.store.TouchRegistrationIssued(ctx, reg.TenantID, reg.ID, record.IssuedAt)
-	_ = s.publishAudit(ctx, "audit.workload.svid_issued", reg.TenantID, map[string]interface{}{
-		"registration_id":  reg.ID,
-		"spiffe_id":        reg.SpiffeID,
-		"svid_type":        out.SVIDType,
-		"serial_or_key_id": out.SerialOrKeyID,
-		"expires_at":       out.ExpiresAt.Format(time.RFC3339Nano),
-	})
 	return out, nil
 }
 
-func (s *Service) ExchangeToken(ctx context.Context, in TokenExchangeRequest) (TokenExchangeResult, error) {
+// ExchangeToken verifies the SVID in the request against the tenant's own
+// trust anchors (its SPIFFE CA and JWT signer, and federated bundles when
+// federation is on) and trades it for a KMS token scoped by the SVID's
+// registration. It returns what verified, even when it then refuses, so the
+// refusal is audited under the workload's identity.
+func (s *Service) ExchangeToken(ctx context.Context, in TokenExchangeRequest) (TokenExchangeResult, verificationResult, error) {
+	var verified verificationResult
 	settings, err := s.ensureSettings(ctx, in.TenantID)
 	if err != nil {
-		return TokenExchangeResult{}, err
+		return TokenExchangeResult{}, verified, err
 	}
 	if !settings.Enabled {
-		return TokenExchangeResult{}, newServiceError(http.StatusConflict, "disabled", "workload identity is disabled for this tenant")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusConflict, "workload_identity_disabled", "workload identity is disabled for this tenant")
 	}
 	if !settings.TokenExchangeEnabled {
-		return TokenExchangeResult{}, newServiceError(http.StatusConflict, "disabled", "token exchange is disabled for this tenant")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusConflict, "token_exchange_disabled", "token exchange is disabled for this tenant")
 	}
-	bundles, _ := s.store.ListFederationBundles(ctx, in.TenantID)
-	var verified verificationResult
+	var bundles []WorkloadFederationBundle
+	if settings.FederationEnabled {
+		if bundles, err = s.store.ListFederationBundles(ctx, in.TenantID); err != nil {
+			return TokenExchangeResult{}, verified, err
+		}
+	}
 	switch {
+	case strings.TrimSpace(in.JWTSVID) != "" && strings.TrimSpace(in.X509SVIDChainPEM) != "":
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusBadRequest, "bad_request", "send one of jwt_svid or x509_svid_chain_pem")
 	case strings.TrimSpace(in.JWTSVID) != "":
 		verified, err = verifyJWTSVID(in.JWTSVID, settings, bundles, strings.TrimSpace(in.Audience))
 	case strings.TrimSpace(in.X509SVIDChainPEM) != "":
 		verified, err = verifyX509SVID(in.X509SVIDChainPEM, settings, bundles)
+		if err == nil {
+			err = s.proofs.verify(in.TenantID, verified.leaf, in.X509SVIDProof, s.now())
+		}
 	default:
-		err = newServiceError(http.StatusBadRequest, "bad_request", "jwt_svid or x509_svid_chain_pem is required")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusBadRequest, "bad_request", "jwt_svid or x509_svid_chain_pem is required")
 	}
 	if err != nil {
-		return TokenExchangeResult{}, err
+		var se serviceError
+		if errors.As(err, &se) {
+			return TokenExchangeResult{}, verificationResult{}, err
+		}
+		return TokenExchangeResult{}, verificationResult{}, newServiceError(http.StatusUnauthorized, "svid_invalid", "SVID verification failed: "+err.Error())
 	}
 	reg, err := s.resolveRegistration(ctx, in.TenantID, in.RegistrationID, verified.SpiffeID)
+	if errors.Is(err, errNotFound) {
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusForbidden, "registration_not_found", "no registration for this SVID")
+	}
 	if err != nil {
-		return TokenExchangeResult{}, err
+		return TokenExchangeResult{}, verified, err
+	}
+	// The SVID authenticates one SPIFFE ID; a registration_id may only name
+	// that workload's own registration, never another's permissions.
+	if !strings.EqualFold(reg.SpiffeID, verified.SpiffeID) {
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusForbidden, "svid_registration_mismatch", "the SVID does not belong to this registration")
 	}
 	if !reg.Enabled {
-		return TokenExchangeResult{}, newServiceError(http.StatusConflict, "disabled", "registration is disabled")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusConflict, "registration_disabled", "registration is disabled")
 	}
 	interfaceName := normalizeInterfaces([]string{in.InterfaceName})
 	if len(interfaceName) == 0 {
-		return TokenExchangeResult{}, newServiceError(http.StatusBadRequest, "bad_request", "interface_name is required")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusBadRequest, "bad_request", "interface_name is required")
 	}
 	if !containsFold(reg.AllowedInterfaces, interfaceName[0]) && !containsFold(reg.AllowedInterfaces, "*") {
-		return TokenExchangeResult{}, newServiceError(http.StatusForbidden, "forbidden", "registration is not allowed on this interface")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusForbidden, "interface_not_allowed", "registration is not allowed on this interface")
 	}
 	allowedPerms := intersectPermissions(reg.Permissions, in.RequestedPermissions)
 	if len(allowedPerms) == 0 {
-		return TokenExchangeResult{}, newServiceError(http.StatusForbidden, "forbidden", "no permitted workload operations remain after request scoping")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusForbidden, "permissions_not_allowed", "no permitted workload operations remain after request scoping")
 	}
 	allowedKeys := intersectValues(reg.AllowedKeyIDs, in.RequestedKeyIDs)
 	if len(allowedKeys) == 0 && len(reg.AllowedKeyIDs) > 0 {
-		return TokenExchangeResult{}, newServiceError(http.StatusForbidden, "forbidden", "requested keys are not allowed for this workload")
+		return TokenExchangeResult{}, verified, newServiceError(http.StatusForbidden, "keys_not_allowed", "requested keys are not allowed for this workload")
 	}
 	authResp, err := s.auth.IssueWorkloadToken(ctx, AuthWorkloadTokenRequest{
 		TenantID:            reg.TenantID,
-		ClientID:            firstNonEmpty(strings.TrimSpace(in.ClientID), reg.ID),
+		ClientID:            reg.ID,
 		SubjectID:           reg.SpiffeID,
 		InterfaceName:       interfaceName[0],
 		Permissions:         allowedPerms,
@@ -436,22 +422,9 @@ func (s *Service) ExchangeToken(ctx context.Context, in TokenExchangeRequest) (T
 		TTLSeconds:          minInt(int(time.Until(verified.ExpiresAt).Seconds()), settings.DefaultJWTTTLSeconds),
 	})
 	if err != nil {
-		return TokenExchangeResult{}, err
+		return TokenExchangeResult{}, verified, err
 	}
-	now := s.now()
-	_ = s.store.TouchRegistrationUsed(ctx, reg.TenantID, reg.ID, now)
-	_ = s.publishAudit(ctx, "audit.workload.token_exchanged", reg.TenantID, map[string]interface{}{
-		"registration_id":   reg.ID,
-		"spiffe_id":         reg.SpiffeID,
-		"trust_domain":      verified.TrustDomain,
-		"svid_type":         verified.SVIDType,
-		"interface_name":    interfaceName[0],
-		"allowed_key_count": len(allowedKeys),
-		"allowed_key_ids":   allowedKeys,
-		"permission_count":  len(allowedPerms),
-		"document_hash":     verified.DocumentHash,
-		"serial_or_key_id":  verified.SerialOrKeyID,
-	})
+	_ = s.store.TouchRegistrationUsed(ctx, reg.TenantID, reg.ID, s.now())
 	return TokenExchangeResult{
 		TenantID:             reg.TenantID,
 		RegistrationID:       reg.ID,
@@ -465,7 +438,7 @@ func (s *Service) ExchangeToken(ctx context.Context, in TokenExchangeRequest) (T
 		KMSAccessTokenExpiry: authResp.ExpiresAt,
 		SVIDExpiresAt:        verified.ExpiresAt,
 		RotationDueAt:        verified.ExpiresAt.Add(-time.Duration(settings.RotationWindowSeconds) * time.Second),
-	}, nil
+	}, verified, nil
 }
 
 func (s *Service) ListUsage(ctx context.Context, tenantID string, limit int) ([]WorkloadUsageRecord, error) {
@@ -474,9 +447,8 @@ func (s *Service) ListUsage(ctx context.Context, tenantID string, limit int) ([]
 	}
 	items, err := s.collectKeyUsage(ctx, tenantID, limit)
 	if err != nil {
-		return nil, err
+		return nil, newServiceError(http.StatusBadGateway, "audit_unavailable", "key usage is unavailable: "+err.Error())
 	}
-	_ = s.publishAudit(ctx, "audit.workload.key_usage_viewed", tenantID, map[string]interface{}{"count": len(items)})
 	return items, nil
 }
 
@@ -488,7 +460,7 @@ func (s *Service) GetGraph(ctx context.Context, tenantID string) (WorkloadAuthor
 	if err != nil {
 		return WorkloadAuthorizationGraph{}, err
 	}
-	usage, _ := s.collectKeyUsage(ctx, tenantID, 250)
+	usage, usageErr := s.collectKeyUsage(ctx, tenantID, 250)
 	nodes := map[string]WorkloadGraphNode{}
 	edges := map[string]WorkloadGraphEdge{}
 	for _, reg := range regs {
@@ -530,11 +502,13 @@ func (s *Service) GetGraph(ctx context.Context, tenantID string) (WorkloadAuthor
 		edges[edgeKey] = edge
 	}
 	graph := WorkloadAuthorizationGraph{TenantID: tenantID, GeneratedAt: s.now(), Nodes: mapValues(nodes), Edges: mapEdgeValues(edges)}
+	if usageErr != nil {
+		graph.KeyUsageUnavailable = usageErr.Error()
+	}
 	sort.Slice(graph.Nodes, func(i, j int) bool { return graph.Nodes[i].ID < graph.Nodes[j].ID })
 	sort.Slice(graph.Edges, func(i, j int) bool {
 		return graph.Edges[i].Source+graph.Edges[i].Target < graph.Edges[j].Source+graph.Edges[j].Target
 	})
-	_ = s.publishAudit(ctx, "audit.workload.graph_viewed", tenantID, map[string]interface{}{"node_count": len(graph.Nodes), "edge_count": len(graph.Edges)})
 	return graph, nil
 }
 
@@ -555,7 +529,7 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (WorkloadIden
 	if err != nil {
 		return WorkloadIdentitySummary{}, err
 	}
-	usage, _ := s.collectKeyUsage(ctx, tenantID, 250)
+	usage, usageErr := s.collectKeyUsage(ctx, tenantID, 250)
 	now := s.now()
 	summary := WorkloadIdentitySummary{
 		TenantID:                  tenantID,
@@ -563,7 +537,6 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (WorkloadIden
 		TrustDomain:               settings.TrustDomain,
 		FederationEnabled:         settings.FederationEnabled,
 		TokenExchangeEnabled:      settings.TokenExchangeEnabled,
-		DisableStaticAPIKeys:      settings.DisableStaticAPIKeys,
 		RegistrationCount:         len(regs),
 		FederatedTrustDomainCount: len(bundles),
 	}
@@ -612,13 +585,10 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (WorkloadIden
 	}
 	summary.UniqueWorkloadsUsingKeys24h = len(workloadSet)
 	summary.UniqueKeysUsed24h = len(keySet)
+	if usageErr != nil {
+		summary.KeyUsageUnavailable = usageErr.Error()
+	}
 	summary.RotationHealthy = summary.ExpiredSVIDCount == 0 && summary.ExpiringSVIDCount <= maxInt(1, summary.EnabledRegistrationCount)
-	_ = s.publishAudit(ctx, "audit.workload.summary_viewed", tenantID, map[string]interface{}{
-		"registration_count": summary.RegistrationCount,
-		"federated_domains":  summary.FederatedTrustDomainCount,
-		"expired_svid_count": summary.ExpiredSVIDCount,
-		"over_privileged":    summary.OverPrivilegedCount,
-	})
 	return summary, nil
 }
 
@@ -636,7 +606,7 @@ func (s *Service) resolveRegistration(ctx context.Context, tenantID string, regi
 
 func (s *Service) collectKeyUsage(ctx context.Context, tenantID string, limit int) ([]WorkloadUsageRecord, error) {
 	if s.audit == nil {
-		return []WorkloadUsageRecord{}, nil
+		return nil, errors.New("audit log client is not configured")
 	}
 	if limit <= 0 || limit > 500 {
 		limit = 100
@@ -677,21 +647,6 @@ func (s *Service) collectKeyUsage(ctx context.Context, tenantID string, limit in
 		}
 	}
 	return out, nil
-}
-
-func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
-	if s.events == nil {
-		return nil
-	}
-	raw, err := json.Marshal(map[string]interface{}{
-		"tenant_id": tenantID,
-		"timestamp": s.now().Format(time.RFC3339Nano),
-		"data":      data,
-	})
-	if err != nil {
-		return err
-	}
-	return s.events.Publish(ctx, subject, raw)
 }
 
 func normalizeSVIDType(raw string) string {

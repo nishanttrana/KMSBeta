@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T12:55:25Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T12:59:16Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -262,11 +262,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 648 | compliance | Btn | void saveSchedule()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 666 | compliance | Btn | void runNow()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1142 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 292 | - | Btn | void refresh(false)}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 325 | - | Btn | void refresh(false)}>Reload |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 326 | - | Btn | void savePolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 432 | - | Btn | void runEvaluation()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 605 | - | Btn | void refresh(false)}>Refresh History |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 290 | - | Btn | void refresh(false)}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 323 | - | Btn | void refresh(false)}>Reload |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 324 | - | Btn | void savePolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 430 | - | Btn | void runEvaluation()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 600 | - | Btn | void refresh(false)}>Refresh History |  |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 120 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 424 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 427 | crypto_agility | button | setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $... |  |
@@ -521,13 +521,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 753 | playbooks | Btn | }>Cancel |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 518 | posture | Btn | load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 519 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 910 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1146 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1147 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1148 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1149 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1240 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1242 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 905 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1141 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1142 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1143 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1144 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1235 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1237 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 477 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 508 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 515 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |
@@ -630,16 +630,16 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 313 | - | button | {logOpen ? : } | onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 404 | - | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 411 | - | button | } style={ } > New stream |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 270 | - | Btn | load(false)}> |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 309 | - | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 359 | - | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 379 | - | Btn | setRegistrationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 380 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 400 | - | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 415 | - | Btn | setFederationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 416 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 449 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 479 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 289 | - | Btn | load(false)}> |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 327 | - | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 377 | - | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 397 | - | Btn | setRegistrationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 398 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 418 | - | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 433 | - | Btn | setFederationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 434 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 467 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 508 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setThreatModal( )}> Add threat |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 376 | - | button | setThreatModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 377 | - | button | void remove("threat", t.id, t.name)}> |  |

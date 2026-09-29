@@ -61,8 +61,8 @@ issuer and verifier for one trust domain per tenant. It:
    Both come from `pkg/crypto`.
 2. **Keeps registrations**: a SPIFFE ID in the tenant's trust domain, with
    the interfaces, key IDs and permissions that ID may be granted.
-3. **Issues SVIDs** for a registration, to a caller holding a KMS token that
-   can reach the route. **The service does not attest the workload.**
+3. **Issues SVIDs** for a registration, to a caller whose KMS token holds
+   `workload.issue`. **The service does not attest the workload.**
    `selectors` on a registration are stored and shown, never checked.
 4. **Verifies SVIDs**, its own or those of a federated trust domain whose
    bundle you added, and **exchanges** a verified SVID for a KMS access
@@ -70,8 +70,16 @@ issuer and verifier for one trust domain per tenant. It:
 5. **Reports** issuances, key usage by workload, and an authorization graph.
 
 There is no agent, no Workload API socket, and no Kubernetes, cloud, Docker,
-Unix or TPM attestor. A workload gets its SVID by calling the issue route
-itself, or from whatever deploys it.
+Unix or TPM attestor. A workload gets its SVID from whatever deploys it,
+using a token that holds `workload.issue`.
+
+**Access (6.9.0-beta).** Every route goes through the `pkg/route` kernel.
+The tenant is the verified token's, and each call emits
+`audit.workload.<action>`, refusals included. `workload.read` covers the
+reads, `workload.write` settings, registrations and federation, and
+`workload.issue` issuance. The token exchange is the one route without a
+bearer token: the workload's SVID is its credential (see
+[Token exchange](#token-exchange)).
 
 ### Tenant settings
 
@@ -83,12 +91,14 @@ itself, or from whatever deploys it.
 | `enabled` | `false` | Token exchange is refused (`409`) while false. Issuance doesn't check it. |
 | `trust_domain` | the tenant ID | Every registration's SPIFFE ID must be in this domain. |
 | `token_exchange_enabled` | `true` | Token exchange is refused (`409`) while false. |
-| `federation_enabled` | `false` | Stored and reported. Federated bundles are used for verification whether or not it is set. |
+| `federation_enabled` | `false` | Federated bundles verify SVIDs only while it is on (6.9.0-beta; before, they were used either way). |
 | `default_x509_ttl_seconds` | 43200 (12 h) | Lifetime of an X.509 SVID when the request names none. Values under 300 fall back to the default. |
 | `default_jwt_ttl_seconds` | 1800 (30 min) | Lifetime of a JWT SVID when the request names none, and the upper bound of an exchanged KMS token. Values under 120 fall back to the default. |
 | `rotation_window_seconds` | 1800 | `rotation_due_at` = expiry minus this window. |
-| `allowed_audiences` | `kms`, `kms-workload`, `kms-rest` | Audiences put in a JWT SVID when the request names none. |
-| `disable_static_api_keys`, `rotation_alert_enabled`, `rotation_warn_hours`, `rotation_critical_hours` | | Stored and returned only. Nothing acts on them ([Open items](#open-items)). |
+| `allowed_audiences` | `kms`, `kms-workload`, `kms-rest` | Audiences put in a JWT SVID when the request names none, and the only audiences a JWT-SVID exchange accepts. An empty list accepts none. |
+
+`disable_static_api_keys` and the `rotation_alert_*` settings were removed
+in 6.9.0-beta: nothing acted on them.
 
 The response also carries `local_ca_certificate_pem`, `local_bundle_jwks`
 and `jwt_signer_key_id`. The private keys are never returned.
@@ -112,10 +122,9 @@ and `jwt_signer_key_id`. The private keys are never returned.
 
 ```bash
 curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "tenant_id": "root",
     "name": "orders-service",
     "spiffe_id": "spiffe://root/ns/prod/sa/orders-service",
     "allowed_interfaces": ["rest"],
@@ -148,27 +157,64 @@ and audited as `audit.workload.svid_issued`.
 ### Federation bundles
 
 `GET` / `POST .../federation`, `PUT` / `DELETE .../federation/{id}` hold
-another trust domain's `jwks_json` and/or `ca_bundle_pem`. They are used to
-verify that domain's SVIDs during token exchange. `bundle_endpoint` is
-stored; the service doesn't fetch it.
+another trust domain's `jwks_json` and/or `ca_bundle_pem`. While
+`federation_enabled` is on, they verify that domain's SVIDs during token
+exchange. `bundle_endpoint` is stored; the service doesn't fetch it.
 
 ### Token exchange
 
-`POST /svc/workload/workload-identity/token/exchange` takes a `jwt_svid` (and
-the `audience` it was issued for) or an `x509_svid_chain_pem`, plus
-`interface_name` and optionally `requested_permissions` and
-`requested_key_ids`. It is **not** an OAuth 2.0 RFC 8693 endpoint and takes
-no `grant_type` / `subject_token`.
+`POST /svc/workload/workload-identity/token/exchange` takes `tenant_id`, one
+SVID, `interface_name`, and optionally `registration_id`,
+`requested_permissions` and `requested_key_ids`. It is **not** an OAuth 2.0
+RFC 8693 endpoint and takes no `grant_type` / `subject_token`.
 
-The service verifies the SVID (JWT: RS256 signature against the tenant or a
-federated JWKS, audience, expiry; X.509: chain to the tenant CA or a
-federated bundle, `clientAuth`), finds the registration for its SPIFFE ID,
-checks the interface, and intersects the requested permissions and keys with
-the registration's. It then asks auth (`POST /auth/workload-token`) for a
-KMS access token carrying those permissions, `allowed_key_ids` and the trust
-domain. The token lives no longer than the SVID or the tenant JWT TTL,
-whichever is shorter. The response key is `exchange`, and the exchange is
-audited as `audit.workload.token_exchanged`.
+**How it authenticates (6.9.0-beta).** The route needs no bearer token: a
+workload holding only an SVID must be able to call it, so the SVID is the
+credential ([DECISIONS.md](DECISIONS.md), 2026-09-29). `tenant_id` only
+selects whose trust anchors verify it. A request that does carry a bearer
+token must name the token's tenant.
+
+- **JWT-SVID** (`jwt_svid`): RS256 signature against the tenant's JWT
+  signer, or a federated JWKS while federation is on; expiry; and an
+  audience the tenant allows. An `audience` sent with the request must be
+  in `allowed_audiences`; without one, the SVID's `aud` must include an
+  allowed audience. A JWT-SVID minted for another relying party can't buy a
+  KMS token by naming its audience.
+- **X.509-SVID** (`x509_svid_chain_pem`): the chain must verify to the
+  tenant CA (or a federated bundle) with `clientAuth`. A certificate chain
+  is public, so it also needs `x509_svid_proof`: `signed_at` (RFC 3339 UTC)
+  and `signature`, made with the SVID's private key over
+
+  ```
+  vecta-kms/workload-token-exchange/v1
+  tenant=<tenant_id>
+  leaf-sha256=<lowercase hex SHA-256 of the leaf certificate DER>
+  signed-at=<signed_at as sent>
+  ```
+
+  with RSA PKCS#1 v1.5 or PSS / SHA-256, ECDSA / SHA-256, or Ed25519.
+  `signed_at` must be within two minutes of the server's clock, and each
+  signature is accepted once (cluster members forward the exchange to the
+  primary, which remembers accepted proofs in memory). The dashboard signs it in the
+  browser for an SVID it has just issued. For example, with OpenSSL:
+
+  ```bash
+  AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  LEAF=$(openssl x509 -in svid.pem -outform DER | openssl dgst -sha256 -r | cut -d' ' -f1)
+  printf 'vecta-kms/workload-token-exchange/v1\ntenant=%s\nleaf-sha256=%s\nsigned-at=%s' root "$LEAF" "$AT" \
+    | openssl dgst -sha256 -sign svid-key.pem | base64 | tr -d '\n'
+  ```
+
+The service then finds the registration for the verified SPIFFE ID. A
+`registration_id` may name only that SVID's own registration (403
+`svid_registration_mismatch` otherwise). It checks the interface and
+intersects the requested permissions and keys with the registration's. It
+then asks auth (`POST /auth/workload-token`) for a KMS access token whose
+client is the registration and which carries those permissions,
+`allowed_key_ids` and the trust domain. The token lives no longer than the
+SVID or the tenant JWT TTL, whichever is shorter. The response key is
+`exchange`. The exchange, and every refusal with its reason, is audited as
+`audit.workload.token_exchanged`, with the verified SPIFFE ID as the actor.
 
 Keycore enforces the token's `allowed_key_ids`: a key outside the list is
 refused and hidden from listings.
@@ -177,9 +223,9 @@ refused and hidden from listings.
 
 | Route | Returns |
 |---|---|
-| `GET .../summary` | Registration, issuance, exchange and key-use counts over 24 h; expiring and expired SVIDs; over-privileged registrations |
+| `GET .../summary` | Registration, issuance, exchange and key-use counts over 24 h; expiring and expired SVIDs; over-privileged registrations. `key_usage_unavailable` says why the key-use counts are missing |
 | `GET .../graph` | Nodes (`workload:`, `key:`) and edges: `policy` from a registration's `allowed_key_ids`, `usage` from recorded key use. Audited as `audit.workload.graph_viewed` |
-| `GET .../usage` | Key operations performed with workload tokens |
+| `GET .../usage` | Key operations performed with workload tokens, read from the audit log with the caller's own token (502 `audit_unavailable` if it can't be read) |
 | `GET .../issuances` | Issuance history |
 
 Using a JWT SVID with AWS STS, GCP STS or Azure AD federation is **not
@@ -247,7 +293,8 @@ OIDC evidence binds the recipient key (below).
   (`result`: `decision` `allow` / `deny` / `review`, `reasons`, matched and
   missing claims and measurements, `cryptographically_verified`,
   `attestation_document_hash`) and records it unless `dry_run`. No key
-  material moves. Audited as `audit.confidential.key_release_evaluated`.
+  material moves. Needs `confidential.evaluate`; the recorded requester is
+  the verified caller. Audited as `audit.confidential.key_release_evaluated`.
 - `POST /svc/confidential/confidential/release` (permission
   `confidential.release`, through the `pkg/route` kernel) evaluates the
   same way. On `allow` it has keycore release the key. It needs
@@ -279,6 +326,9 @@ AES-256-GCM with the given nonce and AAD.
 
 `GET .../releases?limit=` (default 100) and `GET .../releases/{id}` return
 recorded evaluations and releases. `GET .../summary` returns 24 h counts.
+These and `GET .../policy` need `confidential.read`; `PUT .../policy` needs
+`confidential.write`. Since 6.9.0-beta every confidential route is on the
+`pkg/route` kernel, with the tenant from the verified token.
 
 ---
 
@@ -343,9 +393,19 @@ creates a governance approval request (`external_key_access`); with no
 approval policy or governance unavailable, the request is denied.
 
 Every decision is stored (`GET .../decisions?service=&action=&limit=`) and
-audited as `audit.keyaccess.decision_evaluated`, plus
-`audit.keyaccess.approval_required` when an approval is opened.
+audited as `audit.keyaccess.decision_evaluated`, with `approval_required`
+and `approval_request_id` when an approval is opened.
 `GET .../summary` returns 24 h counts per service.
+
+**Who may ask (6.9.0-beta).** `POST /key-access/evaluate` answers only the
+`kms-ekm`, `kms-cloud` and `kms-hyok-proxy` service identities, each for its
+own service name; a tenant administrator, another service, or an evaluator
+naming another service is refused (`evaluator_identity_required`,
+`service_mismatch`) and audited. The tenant comes from the request, which a
+service identity may name. The other routes need `keyaccess.read` or
+`keyaccess.write` and a token for the tenant. Before 6.9.0-beta
+`pkg/keyaccess` sent no token, so every evaluation got 401 and ekm and cloud
+treated it as "service unavailable".
 
 ---
 
@@ -658,30 +718,21 @@ handed to the operator as a key file. Backups are not wrapped under ML-KEM.
 
 ## Open items
 
-- **No caller authentication on the legacy routes.** Every
-  `/svc/workload/...` and `/svc/keyaccess/...` route, and confidential's
-  policy, summary, evaluate and release-history routes, is on a legacy
-  `http.ServeMux` (`scripts/route-kernel-burndown.txt`). None of them
-  verifies a bearer token or checks a permission; the gateway has no JWT
-  filter; the tenant comes from `tenant_id` / `X-Tenant-ID`. Anyone who can
-  reach the gateway can change these settings for any tenant and issue
-  SVIDs, private keys included. Only `POST /svc/confidential/confidential/release`
-  is on the `pkg/route` kernel. Moving the rest onto it is open. Until then,
-  the `Authorization` headers in the examples above aren't checked by these
-  services.
 - **The workload CA and JWT signing keys** are stored in the workload
   database as PEM, not sealed under a `pkg/mek` service master key.
 - **X.509 SVID private keys are generated by the KMS** and returned in the
   issue response. Issuance from a workload-supplied public key (CSR) isn't
   implemented.
-- **Record-only workload settings:** `disable_static_api_keys` and the
-  `rotation_alert_*` settings are stored and returned, and nothing enforces
-  or acts on them.
+- **X.509-SVID proof replay is remembered in memory.** The exchange is a
+  write, so a cluster member forwards it to the primary, which checks every
+  proof. The primary keeps accepted proofs for two minutes in memory: a
+  restart or failover inside that window forgets them. JWT-SVIDs are bearer
+  credentials by design, reusable until they expire.
 - **Key access justifications fail open** in `ekm` and `cloud` when the
   keyaccess service can't be reached, and in `hyok` unless its policy is
-  fail-closed. Rules carry `allowed_time_windows` /
-  `outside_window_action` fields in the API type that are neither stored nor
-  enforced.
+  fail-closed. Failing closed needs each caller to tell "keyaccess isn't
+  deployed" (the `key_access_justifications` profile is off) from
+  "keyaccess is down"; today `KEY_ACCESS_URL` is set in every deployment.
 
 ---
 

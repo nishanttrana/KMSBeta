@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -31,51 +30,6 @@ func (e serviceError) Error() string {
 
 func newServiceError(status int, code string, message string) serviceError {
 	return serviceError{Code: strings.TrimSpace(code), Message: strings.TrimSpace(message), HTTPStatus: status}
-}
-
-func httpStatusForErr(err error) int {
-	var svcErr serviceError
-	if errors.As(err, &svcErr) {
-		return svcErr.HTTPStatus
-	}
-	if errors.Is(err, errNotFound) {
-		return http.StatusNotFound
-	}
-	return http.StatusInternalServerError
-}
-
-func requestID(r *http.Request) string {
-	for _, header := range []string{"X-Request-Id", "X-Request-ID"} {
-		if value := strings.TrimSpace(r.Header.Get(header)); value != "" {
-			return value
-		}
-	}
-	return newID("req")
-}
-
-func tenantFromRequest(r *http.Request) string {
-	for _, value := range []string{
-		r.URL.Query().Get("tenant_id"),
-		r.Header.Get("X-Tenant-ID"),
-		r.Header.Get("X-Tenant-Id"),
-	} {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	return dec.Decode(out)
-}
-
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
 }
 
 func newID(prefix string) string {

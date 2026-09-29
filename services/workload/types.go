@@ -8,20 +8,10 @@ type WorkloadIdentitySettings struct {
 	TrustDomain           string    `json:"trust_domain"`
 	FederationEnabled     bool      `json:"federation_enabled"`
 	TokenExchangeEnabled  bool      `json:"token_exchange_enabled"`
-	DisableStaticAPIKeys  bool      `json:"disable_static_api_keys"`
 	DefaultX509TTLSeconds int       `json:"default_x509_ttl_seconds"`
 	DefaultJWTTTLSeconds  int       `json:"default_jwt_ttl_seconds"`
 	RotationWindowSeconds int       `json:"rotation_window_seconds"`
 	AllowedAudiences      []string  `json:"allowed_audiences"`
-	// RotationAlertEnabled enables background scanning for SVIDs that are
-	// approaching expiry without evidence of rotation.
-	RotationAlertEnabled  bool      `json:"rotation_alert_enabled"`
-	// RotationWarnHours fires a "warning" alert this many hours before expiry
-	// if the SVID has not been rotated. Default 24.
-	RotationWarnHours     int       `json:"rotation_warn_hours"`
-	// RotationCriticalHours fires a "critical" alert this many hours before
-	// expiry. Default 4.
-	RotationCriticalHours int       `json:"rotation_critical_hours"`
 	LocalBundleJWKS       string    `json:"local_bundle_jwks,omitempty"`
 	LocalCACertificatePEM string    `json:"local_ca_certificate_pem,omitempty"`
 	JWTSignerKeyID        string    `json:"jwt_signer_key_id,omitempty"`
@@ -30,25 +20,6 @@ type WorkloadIdentitySettings struct {
 	LocalCAKeyPEM         string    `json:"-"`
 	JWTSignerPrivatePEM   string    `json:"-"`
 	JWTSignerPublicPEM    string    `json:"-"`
-}
-
-// SVIDRotationAlert is raised when an SVID approaches expiry without rotation.
-// AlertLevel: "warning" (RotationWarnHours), "critical" (RotationCriticalHours),
-// or "expired" (ExpiresAt already passed).
-type SVIDRotationAlert struct {
-	ID             string    `json:"id"`
-	TenantID       string    `json:"tenant_id"`
-	IssuanceID     string    `json:"issuance_id"`
-	RegistrationID string    `json:"registration_id"`
-	SpiffeID       string    `json:"spiffe_id"`
-	SVIDType       string    `json:"svid_type"` // "x509" or "jwt"
-	ExpiresAt      time.Time `json:"expires_at"`
-	RotationDueAt  time.Time `json:"rotation_due_at"`
-	AlertLevel     string    `json:"alert_level"` // "warning", "critical", "expired"
-	AlertedAt      time.Time `json:"alerted_at"`
-	Acknowledged   bool      `json:"acknowledged"`
-	AcknowledgedBy string    `json:"acknowledged_by,omitempty"`
-	AcknowledgedAt time.Time `json:"acknowledged_at,omitempty"`
 }
 
 type WorkloadRegistration struct {
@@ -115,7 +86,6 @@ type WorkloadIdentitySummary struct {
 	TrustDomain                 string    `json:"trust_domain"`
 	FederationEnabled           bool      `json:"federation_enabled"`
 	TokenExchangeEnabled        bool      `json:"token_exchange_enabled"`
-	DisableStaticAPIKeys        bool      `json:"disable_static_api_keys"`
 	RegistrationCount           int       `json:"registration_count"`
 	EnabledRegistrationCount    int       `json:"enabled_registration_count"`
 	FederatedTrustDomainCount   int       `json:"federated_trust_domain_count"`
@@ -130,6 +100,9 @@ type WorkloadIdentitySummary struct {
 	LastExchangeAt              time.Time `json:"last_exchange_at,omitempty"`
 	LastKeyUseAt                time.Time `json:"last_key_use_at,omitempty"`
 	RotationHealthy             bool      `json:"rotation_healthy"`
+	// KeyUsageUnavailable says why the key-usage figures above are missing
+	// (the audit log could not be read); they are then not zero, but unknown.
+	KeyUsageUnavailable string `json:"key_usage_unavailable,omitempty"`
 }
 
 type WorkloadGraphNode struct {
@@ -153,6 +126,8 @@ type WorkloadAuthorizationGraph struct {
 	GeneratedAt time.Time           `json:"generated_at"`
 	Nodes       []WorkloadGraphNode `json:"nodes"`
 	Edges       []WorkloadGraphEdge `json:"edges"`
+	// KeyUsageUnavailable says why usage edges are missing (audit unreadable).
+	KeyUsageUnavailable string `json:"key_usage_unavailable,omitempty"`
 }
 
 type IssueSVIDRequest struct {
@@ -162,7 +137,6 @@ type IssueSVIDRequest struct {
 	SVIDType       string   `json:"svid_type"`
 	Audiences      []string `json:"audiences,omitempty"`
 	TTLSeconds     int      `json:"ttl_seconds,omitempty"`
-	RequestedBy    string   `json:"requested_by,omitempty"`
 }
 
 type IssuedSVID struct {
@@ -182,15 +156,17 @@ type IssuedSVID struct {
 }
 
 type TokenExchangeRequest struct {
-	TenantID             string   `json:"tenant_id"`
-	RegistrationID       string   `json:"registration_id,omitempty"`
-	InterfaceName        string   `json:"interface_name"`
-	ClientID             string   `json:"client_id,omitempty"`
-	Audience             string   `json:"audience,omitempty"`
-	JWTSVID              string   `json:"jwt_svid,omitempty"`
-	X509SVIDChainPEM     string   `json:"x509_svid_chain_pem,omitempty"`
-	RequestedPermissions []string `json:"requested_permissions,omitempty"`
-	RequestedKeyIDs      []string `json:"requested_key_ids,omitempty"`
+	TenantID         string `json:"tenant_id"`
+	RegistrationID   string `json:"registration_id,omitempty"`
+	InterfaceName    string `json:"interface_name"`
+	Audience         string `json:"audience,omitempty"`
+	JWTSVID          string `json:"jwt_svid,omitempty"`
+	X509SVIDChainPEM string `json:"x509_svid_chain_pem,omitempty"`
+	// X509SVIDProof proves possession of the X.509-SVID's private key; the
+	// chain alone is public (proof.go).
+	X509SVIDProof        *X509SVIDProof `json:"x509_svid_proof,omitempty"`
+	RequestedPermissions []string       `json:"requested_permissions,omitempty"`
+	RequestedKeyIDs      []string       `json:"requested_key_ids,omitempty"`
 }
 
 type TokenExchangeResult struct {

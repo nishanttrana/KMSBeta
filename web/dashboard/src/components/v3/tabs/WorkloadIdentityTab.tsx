@@ -15,6 +15,7 @@ import {
   listWorkloadIssuances,
   listWorkloadRegistrations,
   listWorkloadUsage,
+  signX509ExchangeProof,
   updateWorkloadIdentitySettings,
   upsertWorkloadFederationBundle,
   upsertWorkloadRegistration
@@ -50,6 +51,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
   const [bundles, setBundles] = useState<any[]>([]);
   const [issuances, setIssuances] = useState<any[]>([]);
   const [usage, setUsage] = useState<any[]>([]);
+  const [usageError, setUsageError] = useState("");
   const [graph, setGraph] = useState<any>({ nodes: [], edges: [] });
 
   const [settingsDraft, setSettingsDraft] = useState<any>({});
@@ -81,6 +83,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
   const [exchangeDraft, setExchangeDraft] = useState<any>({
     registration_id: "",
     interface_name: "rest",
+    svid_type: "jwt",
     audience: "kms",
     requested_permissions: "key.encrypt, key.decrypt",
     requested_key_ids: "",
@@ -109,7 +112,9 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         listWorkloadRegistrations(session),
         listWorkloadFederationBundles(session),
         listWorkloadIssuances(session, 100),
-        listWorkloadUsage(session, 100),
+        // Usage is read from the audit log with the viewer's own token; if
+        // that fails the rest of the page still loads and usage says why.
+        listWorkloadUsage(session, 100).then((items) => { setUsageError(""); return items; }, (error) => { setUsageError(errMsg(error)); return null; }),
         getWorkloadAuthorizationGraph(session)
       ]);
       setSettings(settingsOut || {});
@@ -124,7 +129,6 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         trust_domain: String(settingsOut?.trust_domain || ""),
         federation_enabled: Boolean(settingsOut?.federation_enabled),
         token_exchange_enabled: Boolean(settingsOut?.token_exchange_enabled),
-        disable_static_api_keys: Boolean(settingsOut?.disable_static_api_keys),
         default_x509_ttl_seconds: Number(settingsOut?.default_x509_ttl_seconds || 43200),
         default_jwt_ttl_seconds: Number(settingsOut?.default_jwt_ttl_seconds || 1800),
         rotation_window_seconds: Number(settingsOut?.rotation_window_seconds || 1800),
@@ -148,6 +152,9 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
     try {
       await updateWorkloadIdentitySettings(session, {
         ...settingsDraft,
+        default_x509_ttl_seconds: Number(settingsDraft?.default_x509_ttl_seconds || 43200),
+        default_jwt_ttl_seconds: Number(settingsDraft?.default_jwt_ttl_seconds || 1800),
+        rotation_window_seconds: Number(settingsDraft?.rotation_window_seconds || 1800),
         allowed_audiences: csvToList(settingsDraft?.allowed_audiences)
       });
       onToast?.("Workload Identity settings saved");
@@ -215,14 +222,13 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         registration_id: issueDraft?.registration_id,
         svid_type: issueDraft?.svid_type,
         audiences: csvToList(issueDraft?.audiences),
-        ttl_seconds: Number(issueDraft?.ttl_seconds || 1800),
-        requested_by: String(session?.username || "dashboard")
+        ttl_seconds: Number(issueDraft?.ttl_seconds || 1800)
       });
       setLastIssued(out || null);
       if (String(out?.svid_type || "").trim() === "jwt") {
-        setExchangeDraft((prev: any) => ({ ...prev, registration_id: String(out?.registration_id || prev?.registration_id || ""), jwt_svid: String(out?.jwt_svid || "") }));
+        setExchangeDraft((prev: any) => ({ ...prev, svid_type: "jwt", registration_id: String(out?.registration_id || prev?.registration_id || ""), jwt_svid: String(out?.jwt_svid || "") }));
       } else {
-        setExchangeDraft((prev: any) => ({ ...prev, registration_id: String(out?.registration_id || prev?.registration_id || ""), x509_svid_chain_pem: `${String(out?.certificate_pem || "")}\n${String(out?.bundle_pem || "")}`.trim() }));
+        setExchangeDraft((prev: any) => ({ ...prev, svid_type: "x509", registration_id: String(out?.registration_id || prev?.registration_id || ""), x509_svid_chain_pem: `${String(out?.certificate_pem || "")}\n${String(out?.bundle_pem || "")}`.trim() }));
       }
       onToast?.("SVID issued");
       await load(true);
@@ -237,14 +243,27 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
     if (!session?.token) return;
     setBusy(true);
     try {
+      // One SVID per exchange. An X.509-SVID chain is public, so it goes with
+      // a proof signed by its private key: the one this page just issued.
+      const x509 = exchangeDraft?.svid_type === "x509";
+      const chain = String(exchangeDraft?.x509_svid_chain_pem || "").trim();
+      let proof = undefined;
+      if (x509) {
+        const issuedChain = `${String(lastIssued?.certificate_pem || "")}\n${String(lastIssued?.bundle_pem || "")}`.trim();
+        if (!lastIssued?.private_key_pem || issuedChain !== chain) {
+          throw new Error("an X.509-SVID exchange needs a proof signed with the SVID's private key; issue the X.509-SVID here first, or call the API with x509_svid_proof");
+        }
+        proof = await signX509ExchangeProof(session.tenantId, String(lastIssued.certificate_pem), String(lastIssued.private_key_pem));
+      }
       const out = await exchangeWorkloadToken(session, {
         registration_id: exchangeDraft?.registration_id,
         interface_name: exchangeDraft?.interface_name,
-        audience: exchangeDraft?.audience,
+        audience: x509 ? undefined : exchangeDraft?.audience,
         requested_permissions: csvToList(exchangeDraft?.requested_permissions),
         requested_key_ids: csvToList(exchangeDraft?.requested_key_ids),
-        jwt_svid: String(exchangeDraft?.jwt_svid || "").trim(),
-        x509_svid_chain_pem: String(exchangeDraft?.x509_svid_chain_pem || "").trim()
+        jwt_svid: x509 ? undefined : String(exchangeDraft?.jwt_svid || "").trim(),
+        x509_svid_chain_pem: x509 ? chain : undefined,
+        x509_svid_proof: proof
       });
       setLastExchange(out || null);
       onToast?.("Workload token exchanged");
@@ -275,7 +294,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         <Card><Stat l="Registrations" v={String(Number(summary?.registration_count || 0))} c="blue" s={`${Number(summary?.enabled_registration_count || 0)} active`} /></Card>
         <Card><Stat l="Federated Domains" v={String(Number(summary?.federated_trust_domain_count || 0))} c="accent" s={String(summary?.federation_enabled ? "enabled" : "local only")} /></Card>
         <Card><Stat l="SVID Rotation" v={summary?.rotation_healthy ? "Healthy" : "Attention"} c={healthTone(Boolean(summary?.rotation_healthy))} s={`${Number(summary?.expiring_svid_count || 0)} expiring / ${Number(summary?.expired_svid_count || 0)} expired`} /></Card>
-        <Card><Stat l="Key Usage 24h" v={String(Number(summary?.key_usage_count_24h || 0))} c="green" s={`${Number(summary?.unique_keys_used_24h || 0)} keys`} /></Card>
+        <Card><Stat l="Key Usage 24h" v={summary?.key_usage_unavailable ? "unavailable" : String(Number(summary?.key_usage_count_24h || 0))} c="green" s={summary?.key_usage_unavailable ? String(summary.key_usage_unavailable) : `${Number(summary?.unique_keys_used_24h || 0)} keys`} /></Card>
         <Card><Stat l="Over-Privileged" v={String(Number(summary?.over_privileged_count || 0))} c={Number(summary?.over_privileged_count || 0) > 0 ? "amber" : "green"} s="registrations needing review" /></Card>
       </Row2>
 
@@ -302,7 +321,6 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
               <Chk label="Enable Workload Identity" checked={Boolean(settingsDraft?.enabled)} onChange={() => setSettingsDraft((prev: any) => ({ ...prev, enabled: !prev?.enabled }))} />
               <Chk label="Enable Federation" checked={Boolean(settingsDraft?.federation_enabled)} onChange={() => setSettingsDraft((prev: any) => ({ ...prev, federation_enabled: !prev?.federation_enabled }))} />
               <Chk label="Enable Token Exchange" checked={Boolean(settingsDraft?.token_exchange_enabled)} onChange={() => setSettingsDraft((prev: any) => ({ ...prev, token_exchange_enabled: !prev?.token_exchange_enabled }))} />
-              <Chk label="Disable Static API Keys" checked={Boolean(settingsDraft?.disable_static_api_keys)} onChange={() => setSettingsDraft((prev: any) => ({ ...prev, disable_static_api_keys: !prev?.disable_static_api_keys }))} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <B c="blue">{String(settings?.jwt_signer_key_id || "local signer")}</B>
@@ -469,12 +487,23 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
               </FG>
             </Row2>
             <Row2>
-              <FG label="Audience"><Inp value={String(exchangeDraft?.audience || "kms")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, audience: e.target.value }))} /></FG>
+              <FG label="SVID" hint="The SVID is the credential. An X.509-SVID also needs a signature from its private key, made here for the SVID just issued.">
+                <Sel value={String(exchangeDraft?.svid_type || "jwt")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, svid_type: e.target.value }))}>
+                  <option value="jwt">JWT-SVID</option>
+                  <option value="x509">X.509-SVID</option>
+                </Sel>
+              </FG>
               <FG label="Requested Key IDs"><Inp value={String(exchangeDraft?.requested_key_ids || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, requested_key_ids: e.target.value }))} /></FG>
             </Row2>
             <FG label="Requested Permissions"><Inp value={String(exchangeDraft?.requested_permissions || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, requested_permissions: e.target.value }))} /></FG>
-            <FG label="JWT-SVID"><Txt rows={6} value={String(exchangeDraft?.jwt_svid || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, jwt_svid: e.target.value }))} /></FG>
-            <FG label="X.509-SVID Chain PEM"><Txt rows={8} value={String(exchangeDraft?.x509_svid_chain_pem || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, x509_svid_chain_pem: e.target.value }))} /></FG>
+            {exchangeDraft?.svid_type === "x509" ? (
+              <FG label="X.509-SVID Chain PEM"><Txt rows={8} value={String(exchangeDraft?.x509_svid_chain_pem || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, x509_svid_chain_pem: e.target.value }))} /></FG>
+            ) : (
+              <>
+                <FG label="Audience" hint="Must be one of the tenant's allowed audiences."><Inp value={String(exchangeDraft?.audience || "kms")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, audience: e.target.value }))} /></FG>
+                <FG label="JWT-SVID"><Txt rows={6} value={String(exchangeDraft?.jwt_svid || "")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, jwt_svid: e.target.value }))} /></FG>
+              </>
+            )}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Btn primary onClick={runExchange} disabled={busy}>{busy ? "Exchanging..." : "Exchange for KMS Token"}</Btn>
             </div>
@@ -516,6 +545,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <Card>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Recent Workload Key Usage</div>
+            {usageError && <div style={{ fontSize: 11, color: C.amber, marginBottom: 8 }}>Usage unavailable: {usageError}</div>}
             <div style={{ display: "grid", gap: 8 }}>
               {usage.map((item: any) => (
                 <div key={`${item.event_id}-${item.key_id}-${item.operation}`} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.card }}>

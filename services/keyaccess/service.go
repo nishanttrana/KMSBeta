@@ -11,15 +11,13 @@ import (
 type Service struct {
 	store      Store
 	governance GovernanceClient
-	events     EventPublisher
 	now        func() time.Time
 }
 
-func NewService(store Store, governance GovernanceClient, events EventPublisher) *Service {
+func NewService(store Store, governance GovernanceClient) *Service {
 	return &Service{
 		store:      store,
 		governance: governance,
-		events:     events,
 		now:        func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -46,10 +44,6 @@ func (s *Service) GetSettings(ctx context.Context, tenantID string) (KeyAccessSe
 	if err != nil {
 		return KeyAccessSettings{}, err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.settings_viewed", tenantID, map[string]interface{}{
-		"enabled": item.Enabled,
-		"mode":    item.Mode,
-	})
 	return item, nil
 }
 
@@ -62,13 +56,6 @@ func (s *Service) UpdateSettings(ctx context.Context, in KeyAccessSettings) (Key
 	if err != nil {
 		return KeyAccessSettings{}, err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.settings_updated", saved.TenantID, map[string]interface{}{
-		"enabled":                    saved.Enabled,
-		"mode":                       saved.Mode,
-		"default_action":             saved.DefaultAction,
-		"require_justification_code": saved.RequireJustificationCode,
-		"require_justification_text": saved.RequireJustificationText,
-	})
 	return saved, nil
 }
 
@@ -80,7 +67,6 @@ func (s *Service) ListRules(ctx context.Context, tenantID string) ([]KeyAccessRu
 	if err != nil {
 		return nil, err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.codes_viewed", tenantID, map[string]interface{}{"count": len(items)})
 	return items, nil
 }
 
@@ -96,13 +82,6 @@ func (s *Service) UpsertRule(ctx context.Context, in KeyAccessRule) (KeyAccessRu
 	if err != nil {
 		return KeyAccessRule{}, err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.code_upserted", saved.TenantID, map[string]interface{}{
-		"rule_id":    saved.ID,
-		"code":       saved.Code,
-		"action":     saved.Action,
-		"services":   saved.Services,
-		"operations": saved.Operations,
-	})
 	return saved, nil
 }
 
@@ -110,7 +89,6 @@ func (s *Service) DeleteRule(ctx context.Context, tenantID string, id string) er
 	if err := s.store.DeleteRule(ctx, tenantID, id); err != nil {
 		return err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.code_deleted", tenantID, map[string]interface{}{"rule_id": strings.TrimSpace(id)})
 	return nil
 }
 
@@ -176,12 +154,6 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (KeyAccessSum
 		summary.Services = append(summary.Services, *item)
 	}
 	sort.Slice(summary.Services, func(i, j int) bool { return summary.Services[i].Service < summary.Services[j].Service })
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.summary_viewed", tenantID, map[string]interface{}{
-		"rule_count":            summary.RuleCount,
-		"total_requests_24h":    summary.TotalRequests24h,
-		"unjustified_count_24h": summary.UnjustifiedCount24h,
-		"bypass_count_24h":      summary.BypassCount24h,
-	})
 	return summary, nil
 }
 
@@ -193,11 +165,6 @@ func (s *Service) ListDecisions(ctx context.Context, tenantID string, service st
 	if err != nil {
 		return nil, err
 	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.decisions_viewed", tenantID, map[string]interface{}{
-		"count":   len(items),
-		"service": strings.ToLower(strings.TrimSpace(service)),
-		"action":  strings.ToLower(strings.TrimSpace(action)),
-	})
 	return items, nil
 }
 
@@ -248,13 +215,6 @@ func (s *Service) Evaluate(ctx context.Context, in EvaluateKeyAccessInput) (Eval
 		if err := s.store.CreateDecision(ctx, decision); err != nil {
 			return EvaluateKeyAccessResult{}, err
 		}
-		_ = publishAudit(ctx, s.events, "audit.keyaccess.decision_evaluated", input.TenantID, map[string]interface{}{
-			"decision_id": decision.ID,
-			"service":     input.Service,
-			"operation":   input.Operation,
-			"decision":    decision.Decision,
-			"reason":      decision.Reason,
-		})
 		return result, nil
 	}
 
@@ -357,30 +317,6 @@ func (s *Service) Evaluate(ctx context.Context, in EvaluateKeyAccessInput) (Eval
 	if err := s.store.CreateDecision(ctx, decision); err != nil {
 		return EvaluateKeyAccessResult{}, err
 	}
-	if result.ApprovalRequestID != "" {
-		_ = publishAudit(ctx, s.events, "audit.keyaccess.approval_required", input.TenantID, map[string]interface{}{
-			"decision_id":          decision.ID,
-			"service":              input.Service,
-			"operation":            input.Operation,
-			"key_id":               input.KeyID,
-			"approval_request_id":  result.ApprovalRequestID,
-			"justification_code":   input.JustificationCode,
-			"matched_code":         result.MatchedCode,
-		})
-	}
-	_ = publishAudit(ctx, s.events, "audit.keyaccess.decision_evaluated", input.TenantID, map[string]interface{}{
-		"decision_id":         decision.ID,
-		"service":             input.Service,
-		"connector":           input.Connector,
-		"operation":           input.Operation,
-		"key_id":              input.KeyID,
-		"decision":            decision.Decision,
-		"reason":              decision.Reason,
-		"approval_request_id": decision.ApprovalRequestID,
-		"bypass_detected":     decision.BypassDetected,
-		"justification_code":  input.JustificationCode,
-		"matched_code":        decision.MatchedCode,
-	})
 	return result, nil
 }
 

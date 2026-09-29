@@ -38,7 +38,7 @@ func NewSQLStore(db *pkgdb.DB) *SQLStore {
 
 func (s *SQLStore) GetSettings(ctx context.Context, tenantID string) (WorkloadIdentitySettings, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled, disable_static_api_keys,
+SELECT tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
        default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
        local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
        jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
@@ -58,7 +58,6 @@ WHERE tenant_id = $1
 		&item.TrustDomain,
 		&item.FederationEnabled,
 		&item.TokenExchangeEnabled,
-		&item.DisableStaticAPIKeys,
 		&item.DefaultX509TTLSeconds,
 		&item.DefaultJWTTTLSeconds,
 		&item.RotationWindowSeconds,
@@ -85,20 +84,19 @@ WHERE tenant_id = $1
 func (s *SQLStore) UpsertSettings(ctx context.Context, item WorkloadIdentitySettings) (WorkloadIdentitySettings, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 INSERT INTO workload_identity_settings (
-  tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled, disable_static_api_keys,
+  tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
   default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
   local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
   jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
   updated_by, updated_at
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,CURRENT_TIMESTAMP
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
   enabled = EXCLUDED.enabled,
   trust_domain = EXCLUDED.trust_domain,
   federation_enabled = EXCLUDED.federation_enabled,
   token_exchange_enabled = EXCLUDED.token_exchange_enabled,
-  disable_static_api_keys = EXCLUDED.disable_static_api_keys,
   default_x509_ttl_sec = EXCLUDED.default_x509_ttl_sec,
   default_jwt_ttl_sec = EXCLUDED.default_jwt_ttl_sec,
   rotation_window_sec = EXCLUDED.rotation_window_sec,
@@ -111,7 +109,7 @@ ON CONFLICT (tenant_id) DO UPDATE SET
   jwt_signer_kid = EXCLUDED.jwt_signer_kid,
   updated_by = EXCLUDED.updated_by,
   updated_at = CURRENT_TIMESTAMP
-RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled, disable_static_api_keys,
+RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_enabled,
           default_x509_ttl_sec, default_jwt_ttl_sec, rotation_window_sec, allowed_audiences_json,
           local_bundle_jwks, local_ca_cert_pem, local_ca_key_pem,
           jwt_signer_private_pem, jwt_signer_public_pem, jwt_signer_kid,
@@ -121,7 +119,6 @@ RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_e
 		item.TrustDomain,
 		item.FederationEnabled,
 		item.TokenExchangeEnabled,
-		item.DisableStaticAPIKeys,
 		item.DefaultX509TTLSeconds,
 		item.DefaultJWTTTLSeconds,
 		item.RotationWindowSeconds,
@@ -146,7 +143,6 @@ RETURNING tenant_id, enabled, trust_domain, federation_enabled, token_exchange_e
 		&out.TrustDomain,
 		&out.FederationEnabled,
 		&out.TokenExchangeEnabled,
-		&out.DisableStaticAPIKeys,
 		&out.DefaultX509TTLSeconds,
 		&out.DefaultJWTTTLSeconds,
 		&out.RotationWindowSeconds,

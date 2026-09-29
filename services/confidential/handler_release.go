@@ -8,15 +8,12 @@ import (
 	"vecta-kms/pkg/route"
 )
 
-// releaseRouter serves POST /confidential/release through the pkg/route
-// kernel (authenticated, tenant-enforced, audited as
+// handleRelease registers POST /confidential/release (audited as
 // audit.confidential.key_release, refusals included).
-func (h *Handler) releaseRouter(audit route.Emitter) *route.Router {
-	r := route.New("confidential", audit, nil)
+func (h *Handler) handleRelease(r *route.Router) {
 	r.Handle("POST /confidential/release", route.Spec{
-		Action: "key_release", Permission: "confidential.release", Resource: "key", Severity: "warning",
+		Action: "key_release", Permission: permRelease, Resource: "key", Severity: "warning",
 	}, h.releaseKey)
-	return r
 }
 
 func (h *Handler) releaseKey(c *route.Call) {
