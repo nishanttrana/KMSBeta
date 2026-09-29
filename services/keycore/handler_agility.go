@@ -28,6 +28,7 @@ func (h *Handler) agilityRouter(audit route.Emitter) *route.Router {
 	r.Handle("PUT /agility/policy/rules/{id}", route.Spec{Action: "agility_policy_rule_updated", Permission: "key.agility.write", Resource: "agility_policy_rule", TargetParam: "id"}, h.updateAgilityRule)
 	r.Handle("DELETE /agility/policy/rules/{id}", route.Spec{Action: "agility_policy_rule_deleted", Permission: "key.agility.write", Resource: "agility_policy_rule", TargetParam: "id"}, h.deleteAgilityRule)
 	h.carafRoutes(r)
+	h.drillRoutes(r)
 	return r
 }
 

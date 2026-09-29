@@ -223,6 +223,8 @@ keycore,keycore,GET,/agility/caraf/threats,/agility/caraf/threats,False,serviceR
 keycore,keycore,DELETE,/agility/caraf/threats/{param},/agility/caraf/threats/{param},True,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,259,keycore|DELETE|/agility/caraf/threats/{param}
 keycore,keycore,DELETE,/agility/caraf/assets/{param},/agility/caraf/assets/{param},True,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,269,keycore|DELETE|/agility/caraf/assets/{param}
 keycore,keycore,PUT,/agility/caraf/assets/{param}/decision,/agility/caraf/assets/{param}/decision,True,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,273,keycore|PUT|/agility/caraf/assets/{param}/decision
+keycore,keycore,GET,/agility/drills,/agility/drills,False,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,306,keycore|GET|/agility/drills
+keycore,keycore,POST,/agility/drills,/agility/drills,False,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,311,keycore|POST|/agility/drills
 dataprotect,dataprotect,GET,/token-vaults?{param},/token-vaults,True,serviceRequest,web/dashboard/src/lib/dataprotect.ts,425,dataprotect|GET|/token-vaults
 dataprotect,dataprotect,POST,/token-vaults,/token-vaults,False,serviceRequest,web/dashboard/src/lib/dataprotect.ts,430,dataprotect|POST|/token-vaults
 dataprotect,dataprotect,DELETE,/token-vaults/{param}?{param},/token-vaults/{param},True,serviceRequest,web/dashboard/src/lib/dataprotect.ts,450,dataprotect|DELETE|/token-vaults/{param}

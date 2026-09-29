@@ -7,6 +7,7 @@ import { C } from "../../v3/theme";
 import { daysUntil, errText, inputStyle, labelStyle, Modal, StatCard } from "./agility/ui";
 import { CarafPanel } from "./agility/CarafPanel";
 import { PqcExecutionPanel } from "./agility/PqcExecutionPanel";
+import { DrillPanel } from "./agility/DrillPanel";
 import {
   getAgilityPosture,
   listAgilityRules,
@@ -309,8 +310,8 @@ function CreatePlanModal({ algorithms, onClose, onSave }: {
 }
 
 /* ─── Main Component ─────────────────────────────────────── */
-type View = "policy" | "risk" | "execution";
-const VIEWS: [View, string][] = [["policy", "Migration policy"], ["risk", "Risk assessment"], ["execution", "Readiness & execution"]];
+type View = "policy" | "risk" | "execution" | "drill";
+const VIEWS: [View, string][] = [["policy", "Migration policy"], ["risk", "Risk assessment"], ["execution", "Readiness & execution"], ["drill", "Swap drill"]];
 
 export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   const [view, setView] = useState<View>("policy");
@@ -323,6 +324,13 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [ruleModal, setRuleModal] = useState<{ rule: AgilityRule | null } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Drill suggestions are the tenant's own: algorithms in its inventory and
+  // the targets its rules name.
+  const drillSuggestions = [...new Set([
+    ...(posture?.algorithms ?? []).filter(a => a.assessed).map(a => a.canonical ?? a.algorithm),
+    ...rules.map(r => r.target_algorithm ?? "").filter(Boolean),
+  ])].sort();
 
   async function load(silent = false) {
     if (!silent) setLoading(true);
@@ -436,6 +444,7 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
 
       {view === "risk" ? <CarafPanel session={session} keyCatalog={Array.isArray(keyCatalog) ? keyCatalog : []} />
       : view === "execution" ? <PqcExecutionPanel session={session} />
+      : view === "drill" ? <DrillPanel session={session} suggestions={drillSuggestions} />
       : error || !posture ? (
         <Unavailable error={error ?? "no data returned"} onRetry={() => load()} />
       ) : (

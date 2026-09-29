@@ -572,6 +572,8 @@ keycore,GET,/agility/policy/rules,/agility/policy/rules,h.listAgilityRules,kerne
 keycore,POST,/agility/policy/rules,/agility/policy/rules,h.createAgilityRule,kernel,key.agility.write,agility_policy_rule_created,agility_policy_rule,services/keycore/handler_agility.go,27,keycore|POST|/agility/policy/rules
 keycore,PUT,/agility/policy/rules/{id},/agility/policy/rules/{param},h.updateAgilityRule,kernel,key.agility.write,agility_policy_rule_updated,agility_policy_rule,services/keycore/handler_agility.go,28,keycore|PUT|/agility/policy/rules/{param}
 keycore,DELETE,/agility/policy/rules/{id},/agility/policy/rules/{param},h.deleteAgilityRule,kernel,key.agility.write,agility_policy_rule_deleted,agility_policy_rule,services/keycore/handler_agility.go,29,keycore|DELETE|/agility/policy/rules/{param}
+keycore,GET,/agility/drills,/agility/drills,h.listAgilityDrills,kernel,key.agility.read,agility_drills_listed,agility_drill,services/keycore/handler_agility_drill.go,18,keycore|GET|/agility/drills
+keycore,POST,/agility/drills,/agility/drills,h.runAgilityDrill,kernel,key.agility.write,agility_drill_run,agility_drill,services/keycore/handler_agility_drill.go,19,keycore|POST|/agility/drills
 keycore,GET,/canary/keys,/canary/keys,h.listCanaryKeys,kernel,key.canary.read,canary_keys_listed,canary_key,services/keycore/handler_canary.go,47,keycore|GET|/canary/keys
 keycore,POST,/canary/keys,/canary/keys,h.createCanaryKey,kernel,key.canary.write,canary_key_created,canary_key,services/keycore/handler_canary.go,48,keycore|POST|/canary/keys
 keycore,GET,/canary/keys/{id}/trips,/canary/keys/{param}/trips,h.listCanaryTrips,kernel,key.canary.read,canary_trips_listed,canary_key,services/keycore/handler_canary.go,49,keycore|GET|/canary/keys/{param}/trips

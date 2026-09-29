@@ -599,6 +599,17 @@ exposure (X + Y against the soonest threat's Z) and tracks decisions.
 | `GET\|POST /agility/caraf/assets`, `PUT\|DELETE /agility/caraf/assets/{id}` | read / `key.agility.write` | `audit.key.caraf_assets_listed`, `caraf_asset_created`, `caraf_asset_updated`, `caraf_asset_deleted` | assets: `name`, `description`, `owner`, `ownership` (`enterprise`, `third_party`), `implementation` (`software`, `hardware`, `hsm`, `cloud_service`, `embedded`), `pqc_support` (`supported`, `planned`, `none`), `location` (`on_prem`, `cloud`, `hybrid`, `edge`), `jurisdiction`, `sensitivity` (`low`…`critical`), `shelf_life_years` (X), `migration_years` (Y), `cost` (`low`, `medium`, `high`), `algorithms`, `key_ids` (must be keys of the tenant); omitted enums are `unknown`. An update keeps the decision |
 | `PUT /agility/caraf/assets/{id}/decision` | `key.agility.write` | `audit.key.caraf_decision_recorded` (warning; details `asset`, `decision`, `owner`, `status`, `due`, `review_by`) | the asset. Body `decision` (`secure`, `accept`, `phase_out`, `compensating_control`; empty clears), `owner`, `due` (required except for accept), `review_by` (required and future for accept), `status` (`open`, `in_progress`, `done`), `note`. `decided_by` is the verified caller |
 
+**Swap drill.** A real rehearsal on the keycore node that serves the
+request: throwaway keys from keycore's key generation, checked round trips
+through the key engine, nothing added to the inventory. Both algorithms
+must pass the tenant's FIPS mode; the target must be allowed for new
+protection by the tenant's migration policy.
+
+| Route | Permission | Audit | Response |
+|---|---|---|---|
+| `POST /agility/drills` | `key.agility.write` | `audit.key.agility_drill_run` (details `from_algorithm`, `to_algorithm`, `iterations`, `drill_result`, `drill_error`; refused `fips_mode_violation`, `crypto_policy_disallowed`, `crypto_policy_decrypt_only`) | `201 data`: `id`, `from`/`to` (`algorithm`, `operation` `sign_verify`\|`encrypt_decrypt`\|`encapsulate_decapsulate`, medians `keygen_us`, `operation_us`, `check_us`, `private_key_bytes`, `public_key_bytes`, `output_bytes`, `round_trips`), `iterations`, `result` (`passed`, `failed` with `error`), `comparison` (`keygen_ratio`, `operation_ratio`, `check_ratio` target over source; `output_bytes_diff`, `public_key_bytes_diff`), `run_by`, `created_at`. Body `from_algorithm`, `to_algorithm` (parameter sets, must differ), `iterations` (1-10, default 5; each algorithm stops after 20 s, `round_trips` is what ran). `400 drill_unsupported` for a name without a parameter set or an algorithm with no round trip (ECDH); `409 drill_in_progress` while another drill runs on the node |
+| `GET /agility/drills` | `key.agility.read` | `audit.key.agility_drills_listed` | `items`: the latest 50 drills, newest first |
+
 - Create body: `name`, `from_algorithm`, `to_algorithm` (must differ),
   optional `target_date` (`YYYY-MM-DD` or RFC3339). Unknown fields are
   rejected: `affected_keys` is counted by keycore, never supplied.
@@ -3294,7 +3305,7 @@ Selected events with dedicated audit classification:
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
 - `audit.security.sustained_risk_detected` (audit's sustained-risk signal: 3 events scoring ≥80 on one target within 5 minutes, once per window; `target_type` / `target_id` name the key, target or tenant, details `reason`, `score_threshold`, `window_seconds`, `result: warning`). It changes nothing itself; the `sustained_risk_detected` playbook trigger responds. Replaced `audit.security.auto_quarantined` in 5.3.0-beta, which quarantined nothing
 - `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
-- `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
+- `audit.key.agility_drill_run`, `audit.key.agility_drills_listed` (swap drill kernel events, above), `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
 - `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
@@ -3960,6 +3971,8 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/agility/caraf/threats`
 - `DELETE /svc/keycore/agility/caraf/threats/{id}`
 - `PUT /svc/keycore/agility/caraf/threats/{id}`
+- `GET /svc/keycore/agility/drills`
+- `POST /svc/keycore/agility/drills`
 - `GET /svc/keycore/agility/keys-by-algorithm`
 - `GET /svc/keycore/agility/migration-plans`
 - `POST /svc/keycore/agility/migration-plans`

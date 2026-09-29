@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T00:42:38Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T08:09:55Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -267,13 +267,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 326 | - | Btn | void savePolicy()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 432 | - | Btn | void runEvaluation()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 605 | - | Btn | void refresh(false)}>Refresh History |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 119 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 416 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 419 | crypto_agility | button | setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $... |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 422 | crypto_agility | button | setShowPlanModal(true)} disabled= style={ }> Create Migration Plan |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 430 | crypto_agility | button | setView(id)} style={{ background: "transparent", border: "none", borderBottom... |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 502 | crypto_agility | button | setRuleModal( )} style= > |  |
-| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 503 | crypto_agility | button | handleDeleteRule(r)} style= > |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 120 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 424 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 427 | crypto_agility | button | setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $... |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 430 | crypto_agility | button | setShowPlanModal(true)} disabled= style={ }> Create Migration Plan |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 438 | crypto_agility | button | setView(id)} style={{ background: "transparent", border: "none", borderBottom... |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 511 | crypto_agility | button | setRuleModal( )} style= > |  |
+| web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 512 | crypto_agility | button | handleDeleteRule(r)} style= > |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 714 | crypto | button | selectAlgorithmFromRail(String(name),fipsApproved)} disabled= style={{ displa... |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 748 | crypto | button | { if(tabAllowed) }} disabled= style={{ background:op===item.id?C.accent:"tran... |  |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 870 | crypto | button | {busy?`Execute $ ...`:`Execute $ `} | runOperation |
@@ -646,6 +646,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setDecisionFor(x)}> Decide |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 363 | - | button | setAssetModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 364 | - | button | void remove("asset", x.asset.id, x.asset.name)}> |  |
+| web/dashboard/src/components/v3/tabs/agility/DrillPanel.tsx | 56 | - | button | void run()}> |  |
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 98 | - | button | void act("scan", async () => { const s = await runPQCScan(session); return `S... |  |
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 101 | - | button | setShowPlan(true)}> Build execution plan |  |
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 148 | - | button | setOpen(expanded ? null : p.id)}> {expanded ? : } |  |

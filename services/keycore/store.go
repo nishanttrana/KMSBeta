@@ -105,6 +105,8 @@ type Store interface {
 	UpdateCarafAsset(ctx context.Context, a CarafAsset) (CarafAsset, error)
 	SetCarafDecision(ctx context.Context, tenantID, id string, d CarafDecision) (CarafAsset, error)
 	DeleteCarafAsset(ctx context.Context, tenantID, id string) error
+	ListAgilityDrills(ctx context.Context, tenantID string, limit int) ([]AgilityDrill, error)
+	CreateAgilityDrill(ctx context.Context, d AgilityDrill) (AgilityDrill, error)
 
 	// Ceremony
 	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)

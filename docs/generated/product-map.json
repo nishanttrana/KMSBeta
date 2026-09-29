@@ -8596,6 +8596,36 @@
       "service": "keycore"
     },
     {
+      "action": "agility_drills_listed",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_agility_drill.go",
+      "handler": "h.listAgilityDrills",
+      "line": 18,
+      "match_key": "keycore|GET|/agility/drills",
+      "method": "GET",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
+      "permission": "key.agility.read",
+      "registration": "kernel",
+      "resource": "agility_drill",
+      "service": "keycore"
+    },
+    {
+      "action": "agility_drill_run",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_agility_drill.go",
+      "handler": "h.runAgilityDrill",
+      "line": 19,
+      "match_key": "keycore|POST|/agility/drills",
+      "method": "POST",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
+      "permission": "key.agility.write",
+      "registration": "kernel",
+      "resource": "agility_drill",
+      "service": "keycore"
+    },
+    {
       "action": "canary_keys_listed",
       "code_scope": "keycore",
       "file": "services/keycore/handler_canary.go",
@@ -21717,7 +21747,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border",
       "label": "Retry",
-      "line": 119,
+      "line": 120,
       "tabs": [
         "crypto_agility"
       ],
@@ -21727,7 +21757,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo...",
-      "line": 416,
+      "line": 424,
       "tabs": [
         "crypto_agility"
       ],
@@ -21737,7 +21767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $...",
-      "line": 419,
+      "line": 427,
       "tabs": [
         "crypto_agility"
       ],
@@ -21747,16 +21777,6 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "setShowPlanModal(true)} disabled= style={ }> Create Migration Plan",
-      "line": 422,
-      "tabs": [
-        "crypto_agility"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
-      "handler": "",
-      "label": "setView(id)} style={{ background: \"transparent\", border: \"none\", borderBottom...",
       "line": 430,
       "tabs": [
         "crypto_agility"
@@ -21766,8 +21786,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
+      "label": "setView(id)} style={{ background: \"transparent\", border: \"none\", borderBottom...",
+      "line": 438,
+      "tabs": [
+        "crypto_agility"
+      ],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
+      "handler": "",
       "label": "setRuleModal( )} style= >",
-      "line": 502,
+      "line": 511,
       "tabs": [
         "crypto_agility"
       ],
@@ -21777,7 +21807,7 @@
       "file": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "handler": "",
       "label": "handleDeleteRule(r)} style= >",
-      "line": 503,
+      "line": 512,
       "tabs": [
         "crypto_agility"
       ],
@@ -25260,6 +25290,14 @@
       "handler": "",
       "label": "void remove(\"asset\", x.asset.id, x.asset.name)}>",
       "line": 364,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/DrillPanel.tsx",
+      "handler": "",
+      "label": "void run()}>",
+      "line": 56,
       "tabs": [],
       "tag": "button"
     },
@@ -29205,6 +29243,32 @@
       "method": "PUT",
       "normalized_path": "/agility/caraf/assets/{param}/decision",
       "path": "/agility/caraf/assets/{param}/decision",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 306,
+      "match_key": "keycore|GET|/agility/drills",
+      "method": "GET",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
+      "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+      "file": "web/dashboard/src/lib/cryptoAgility.ts",
+      "line": 311,
+      "match_key": "keycore|POST|/agility/drills",
+      "method": "POST",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
       "service": "keycore",
       "service_key": "keycore",
       "source": "serviceRequest"
@@ -33760,7 +33824,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T00:42:38Z",
+  "generated_at": "2026-09-29T08:09:55Z",
   "navigation": [
     {
       "group": "Overview",
@@ -70869,7 +70933,7 @@
         "posture"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 52,
+      "handler_line": 53,
       "handler_name": "getAgilityPosture",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70896,7 +70960,7 @@
         "posture"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 64,
+      "handler_line": 65,
       "handler_name": "getAlgorithmInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70927,7 +70991,7 @@
         "ListKeysByAlgorithm"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 72,
+      "handler_line": 73,
       "handler_name": "getKeysByAlgorithm",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -70966,7 +71030,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 114,
       "handler_name": "listMigrationPlans",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -71009,7 +71073,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 141,
       "handler_name": "createMigrationPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -71048,7 +71112,7 @@
         "withProgress"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 194,
+      "handler_line": 195,
       "handler_name": "updateMigrationPlan",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -71085,7 +71149,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 304,
+      "handler_line": 305,
       "handler_name": "listAgilityRules",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -71126,7 +71190,7 @@
         "auditRule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 314,
+      "handler_line": 315,
       "handler_name": "createAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71179,7 +71243,7 @@
         "auditRule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 335,
+      "handler_line": 336,
       "handler_name": "updateAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71230,7 +71294,7 @@
         "invalidateAgilityRules"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 360,
+      "handler_line": 361,
       "handler_name": "deleteAgilityRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -71262,6 +71326,146 @@
       ],
       "service_receiver_calls": [],
       "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 306,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listAgilityDrills",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_agility_drill.go",
+      "handler_helper_calls": [
+        "ListAgilityDrills",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 22,
+      "handler_name": "listAgilityDrills",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListAgilityDrills"
+      ],
+      "method": "GET",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
+      "route_file": "services/keycore/handler_agility_drill.go",
+      "route_line": 18,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+          "file": "web/dashboard/src/lib/cryptoAgility.ts",
+          "line": 311,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.runAgilityDrill",
+      "handler_external_package_calls": [
+        "errors.Is",
+        "errors.As",
+        "strings.TrimSpace",
+        "strings.EqualFold",
+        "time.Now"
+      ],
+      "handler_file": "services/keycore/handler_agility_drill.go",
+      "handler_helper_calls": [
+        "Error",
+        "drillOperation",
+        "enforceFIPSKeyAlgorithm",
+        "As",
+        "agilityRules",
+        "policyRefusal",
+        "newID",
+        "measureAlgorithm",
+        "compareDrill",
+        "CreateAgilityDrill"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 38,
+      "handler_name": "runAgilityDrill",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "enforceFIPSKeyAlgorithm",
+        "agilityRules"
+      ],
+      "handler_store_calls": [
+        "CreateAgilityDrill"
+      ],
+      "method": "POST",
+      "normalized_path": "/agility/drills",
+      "path": "/agility/drills",
+      "route_file": "services/keycore/handler_agility_drill.go",
+      "route_line": 19,
+      "service": "keycore",
+      "service_external_package_calls": [
+        "crypto/fips140.Enforced",
+        "fmt.Errorf",
+        "strings.TrimSpace",
+        "time.Since",
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "isFIPSEnabled",
+        "isFIPSApprovedKeyAlgorithm",
+        "implementedOutsideValidatedModule",
+        "ListAgilityRules"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "crypto/fips140.Enforced",
+            "fmt.Errorf",
+            "strings.TrimSpace"
+          ],
+          "file": "services/keycore/fips_mode.go",
+          "helper_calls": [
+            "isFIPSEnabled",
+            "isFIPSApprovedKeyAlgorithm",
+            "implementedOutsideValidatedModule"
+          ],
+          "internal_package_calls": [],
+          "line": 245,
+          "name": "enforceFIPSKeyAlgorithm",
+          "receiver_calls": [],
+          "store_calls": []
+        },
+        {
+          "external_package_calls": [
+            "time.Since",
+            "time.Now"
+          ],
+          "file": "services/keycore/agility_enforce.go",
+          "helper_calls": [
+            "ListAgilityRules"
+          ],
+          "internal_package_calls": [],
+          "line": 64,
+          "name": "agilityRules",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListAgilityRules"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListAgilityRules"
+      ]
     },
     {
       "frontend_call_sites": [
@@ -91373,7 +91577,7 @@
       "hsm-connector": 12,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 174,
+      "keycore": 176,
       "kmip": 12,
       "payment": 42,
       "policy": 12,
@@ -91407,7 +91611,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 120,
+      "keycore": 122,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
@@ -91608,17 +91812,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 909,
+    "backend_routes": 911,
     "backend_services": 30,
-    "button_inventory": 769,
-    "frontend_call_sites": 574,
-    "matched_frontend_call_sites": 529,
+    "button_inventory": 770,
+    "frontend_call_sites": 576,
+    "matched_frontend_call_sites": 531,
     "nav_items": 27,
-    "request_flows": 909,
-    "request_flows_with_frontend": 536,
+    "request_flows": 911,
+    "request_flows_with_frontend": 538,
     "request_flows_with_internal_package_calls": 158,
-    "request_flows_with_service_calls": 543,
-    "request_flows_with_store_calls": 653,
+    "request_flows_with_service_calls": 544,
+    "request_flows_with_store_calls": 655,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -91731,7 +91935,7 @@
       "support_files": []
     },
     {
-      "call_count": 13,
+      "call_count": 15,
       "component": "web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx",
       "group": "Keys & lifecycle",
       "id": "crypto_agility",
@@ -112491,7 +112695,7 @@
         ],
         "handler": "getAgilityPosture",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 52,
+        "handlerLine": 53,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -112514,7 +112718,7 @@
         "frontendSites": [],
         "handler": "getAlgorithmInventory",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 64,
+        "handlerLine": 65,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -112539,7 +112743,7 @@
         "frontendSites": [],
         "handler": "getKeysByAlgorithm",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 72,
+        "handlerLine": 73,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -112571,7 +112775,7 @@
         ],
         "handler": "listMigrationPlans",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 113,
+        "handlerLine": 114,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -112605,7 +112809,7 @@
         ],
         "handler": "createMigrationPlan",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 140,
+        "handlerLine": 141,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -112637,7 +112841,7 @@
         ],
         "handler": "updateMigrationPlan",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 194,
+        "handlerLine": 195,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PATCH",
@@ -112669,7 +112873,7 @@
         ],
         "handler": "listAgilityRules",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 304,
+        "handlerLine": 305,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -112701,7 +112905,7 @@
         ],
         "handler": "createAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 314,
+        "handlerLine": 315,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -112735,7 +112939,7 @@
         ],
         "handler": "updateAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 335,
+        "handlerLine": 336,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -112769,7 +112973,7 @@
         ],
         "handler": "deleteAgilityRule",
         "handlerFile": "services/keycore/handler_agility.go",
-        "handlerLine": 360,
+        "handlerLine": 361,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -112785,6 +112989,83 @@
         ],
         "storeCalls": [
           "DeleteAgilityRule"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 306,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listAgilityDrills",
+        "handlerFile": "services/keycore/handler_agility_drill.go",
+        "handlerLine": 22,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/agility/drills",
+        "path": "/agility/drills",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/agility/drills",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListAgilityDrills"
+        ],
+        "uiLabels": [
+          "Crypto Agility"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "errors.Is",
+          "errors.As",
+          "strings.TrimSpace",
+          "strings.EqualFold",
+          "time.Now",
+          "crypto/fips140.Enforced",
+          "fmt.Errorf",
+          "time.Since"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
+            "file": "web/dashboard/src/lib/cryptoAgility.ts",
+            "line": 311,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "runAgilityDrill",
+        "handlerFile": "services/keycore/handler_agility_drill.go",
+        "handlerLine": 38,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/agility/drills",
+        "path": "/agility/drills",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|POST|/agility/drills",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [
+          "enforceFIPSKeyAlgorithm",
+          "agilityRules"
+        ],
+        "storeCalls": [
+          "CreateAgilityDrill",
+          "ListAgilityRules"
         ],
         "uiLabels": [
           "Crypto Agility"
@@ -123906,7 +124187,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T00:42:38Z",
+    "generatedAt": "2026-09-29T08:09:55Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123948,9 +124229,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 909,
-      "frontendBacked": 536,
-      "highRisk": 377,
+      "flows": 911,
+      "frontendBacked": 538,
+      "highRisk": 379,
       "services": 30
     }
   }

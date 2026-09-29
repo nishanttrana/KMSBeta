@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A benchmark labels its row with the name the user typed, not what ran
+- **What happened:** the first cut of the swap drill accepted `RSA`. Keycore
+  generated its default RSA size and the drill history would have shown a
+  measurement for "RSA", a label that doesn't say which key size produced
+  those numbers. The engine test caught it only because it listed `RSA` as
+  a name that must fail.
+- **Why it slipped:** `planKeyGeneration` is lenient on purpose (key
+  creation has always accepted bare names), and the drill reused it
+  without asking whether the label matches the work.
+- **Rule:** anything that records a measurement against an algorithm name
+  requires a name `pkg/cryptocatalog.Lookup` accepts (a parameter set), and
+  its test includes a bare family name that must be refused.
+
 ### A fake that answers what the code expects hides a contract nobody kept
 - **What happened:** payment fetched key material with `POST
   /keys/{id}/export` and read a plaintext `material` field. Keycore's export

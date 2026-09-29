@@ -273,3 +273,41 @@ export async function setCarafDecision(session: AuthSession, id: string, decisio
   const res = await serviceRequest<{ data: CarafAsset }>(session, "keycore", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`, { method: "PUT", body: JSON.stringify(decision) });
   return res.data;
 }
+
+// ---- Algorithm-swap drill (services/keycore/agility_drill.go) ----
+// A real rehearsal on a keycore node: throwaway keys from keycore's own key
+// generation, checked round trips through the key engine, medians in µs.
+
+export interface DrillMeasure {
+  algorithm: string;
+  operation: "sign_verify" | "encrypt_decrypt" | "encapsulate_decapsulate";
+  keygen_us: number;
+  operation_us: number;
+  check_us: number;
+  private_key_bytes: number;
+  public_key_bytes?: number;
+  output_bytes: number;
+  round_trips: number;
+}
+
+export interface AgilityDrill {
+  id: string;
+  from: DrillMeasure;
+  to: DrillMeasure;
+  iterations: number;
+  result: "passed" | "failed";
+  error?: string;
+  comparison: { keygen_ratio: number; operation_ratio: number; check_ratio: number; output_bytes_diff: number; public_key_bytes_diff: number };
+  run_by: string;
+  created_at: string;
+}
+
+export async function listAgilityDrills(session: AuthSession): Promise<AgilityDrill[]> {
+  const res = await serviceRequest<{ items: AgilityDrill[] }>(session, "keycore", "/agility/drills");
+  return res.items ?? [];
+}
+
+export async function runAgilityDrill(session: AuthSession, req: { from_algorithm: string; to_algorithm: string; iterations: number }): Promise<AgilityDrill> {
+  const res = await serviceRequest<{ data: AgilityDrill }>(session, "keycore", "/agility/drills", { method: "POST", body: JSON.stringify(req) });
+  return res.data;
+}

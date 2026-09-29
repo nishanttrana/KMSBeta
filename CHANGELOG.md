@@ -4,6 +4,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.1.0-beta] — 2026-09-29
+
+### Crypto Agility: algorithm-swap drill
+- **What it does.** Crypto Agility → Swap drill rehearses a move from one
+  algorithm to another before you schedule it. Keycore generates throwaway
+  keys for both with its own key generation. It runs each algorithm's
+  operation (sign and verify, encrypt and decrypt, or encapsulate and
+  decapsulate) through the same engine functions your keys use and checks
+  every round trip. It records median key-generation, operation and check
+  times on the node that served the request, plus the real sizes of the
+  private key, public key and output. The keys stay in memory and are
+  zeroised. Nothing enters the key inventory.
+- **Same rules as a real key.** Both algorithms must pass the tenant's FIPS
+  mode; in `only` mode a drill naming ML-DSA or SLH-DSA is refused, as the
+  key would be. The target must be allowed for new protection by the
+  tenant's migration policy: a `disallowed` or `decrypt_only` rule refuses
+  the drill with the same reasons key operations use (`policyRefusal` is
+  now shared). A name without a parameter set (`RSA`) is refused, so a
+  measurement is never labelled with a name that doesn't say what was
+  generated. ECDH has no round trip keycore can run and is refused.
+- **API.** `POST /agility/drills` (`from_algorithm`, `to_algorithm`,
+  `iterations` 1–10, default 5) and `GET /agility/drills` (latest 50).
+  Kernel events `audit.key.agility_drill_run` (details `from_algorithm`,
+  `to_algorithm`, `iterations`, `drill_result`, `drill_error`; refusals
+  `fips_mode_violation`, `crypto_policy_disallowed`,
+  `crypto_policy_decrypt_only`) and `audit.key.agility_drills_listed`. One
+  drill runs at a time per keycore process (`409 drill_in_progress`), and
+  each algorithm gets 20 seconds so a drill finishes inside the 60-second
+  server and gateway timeouts; `round_trips` says how many rounds ran.
+- **Storage.** Migration `030_agility_drills.sql`, replicated under keycore
+  (`pkg/clustercatalog`). A drill is a write, so a cluster member forwards
+  it and it runs on the primary.
+- **FIPS impact catalogue.** The ML-DSA / SLH-DSA entry now names drills.
+- **Not built:** a maturity-tier view. Tiers would be a scale taken from a
+  standards document, which the customer-decides rule keeps out of the
+  product (docs/DECISIONS.md).
+
 ## [6.0.0-beta] — 2026-09-29
 
 ### Security: services acting for a user now use keys as that user

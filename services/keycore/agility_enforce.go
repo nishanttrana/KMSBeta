@@ -90,6 +90,23 @@ func (s *Service) invalidateAgilityRules(tenantID string) {
 // enforceCryptoPolicy applies the tenant's migration policy to one key
 // operation. A refusal is audited as
 // audit.key.crypto_policy_refused.
+// policyRefusal is the rule decision for one operation on alg, nil when the
+// tenant's rules allow it. Key operations and the swap drill share it.
+func policyRefusal(rules []AgilityRule, alg, op string, now time.Time) *cryptoPolicyRefusal {
+	rule, _ := policyFor(rules, alg, now)
+	switch {
+	case rule == nil:
+		return nil
+	case rule.Action == ActionDisallowed:
+		return &cryptoPolicyRefusal{Reason: "crypto_policy_disallowed", Rule: rule,
+			Message: fmt.Sprintf("%s is disallowed by migration policy rule %q", alg, rule.Name)}
+	case rule.Action == ActionDecryptOnly && protectOps[op]:
+		return &cryptoPolicyRefusal{Reason: "crypto_policy_decrypt_only", Rule: rule,
+			Message: fmt.Sprintf("%s is limited to decrypt and verify by migration policy rule %q", alg, rule.Name)}
+	}
+	return nil
+}
+
 func (s *Service) enforceCryptoPolicy(ctx context.Context, req PolicyEvaluateRequest) error {
 	alg, op := strings.TrimSpace(req.Algorithm), strings.TrimSpace(req.Operation)
 	if alg == "" || (!protectOps[op] && !consumeOps[op]) {
@@ -99,17 +116,7 @@ func (s *Service) enforceCryptoPolicy(ctx context.Context, req PolicyEvaluateReq
 	if err != nil {
 		return fmt.Errorf("crypto policy check failed: %w", err)
 	}
-	var refusal *cryptoPolicyRefusal
-	if rule, _ := policyFor(rules, alg, time.Now()); rule != nil {
-		switch {
-		case rule.Action == ActionDisallowed:
-			refusal = &cryptoPolicyRefusal{Reason: "crypto_policy_disallowed", Rule: rule,
-				Message: fmt.Sprintf("%s is disallowed by migration policy rule %q", alg, rule.Name)}
-		case rule.Action == ActionDecryptOnly && protectOps[op]:
-			refusal = &cryptoPolicyRefusal{Reason: "crypto_policy_decrypt_only", Rule: rule,
-				Message: fmt.Sprintf("%s is limited to decrypt and verify by migration policy rule %q", alg, rule.Name)}
-		}
-	}
+	refusal := policyRefusal(rules, alg, op, time.Now())
 	if refusal == nil {
 		return nil
 	}

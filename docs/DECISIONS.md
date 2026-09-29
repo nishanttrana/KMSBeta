@@ -7,6 +7,34 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Swap drill runs in memory; no maturity tiers (6.1.0-beta)
+
+**Decision.** The algorithm-swap drill generates throwaway keys in keycore's
+memory and runs them through the key engine functions (`signWithKeyAlgorithm`,
+`encryptWithKeyAlgorithm`, `mlkemEncapsulate` and their checks). It does not
+create canary keys in the tenant's inventory. It passes the same FIPS check
+and the same migration-policy decision (`policyRefusal`) a real key would.
+
+**Why.** The drill must measure the code path customer keys use, on the
+customer's hardware, without side effects. Canary keys would appear in
+inventory, posture and CBOM counts, need destroy approvals, and could be
+left behind by a failed run. The HTTP and storage layers add the same cost
+to both algorithms, so leaving them out keeps the comparison about the
+algorithms.
+
+**Rejected.** Standard benchmark tables: numbers from other hardware, which
+is what the drill replaces. A maturity-tier view (tiers 1–4): its scale comes
+from a standards document, and the owner's rule is that the product quotes
+none and the customer decides. The facts a tier would summarise are shown
+where they are measured instead: rule coverage (posture), CARAF completeness
+and decisions (risk assessment), and drill history.
+
+**Enforced by.** `TestDrillMeasuresRealRoundTrips`,
+`TestAgilityDrillRouteValidatedAndAudited`,
+`TestAgilityDrillStrictRefusesNonModuleAlgorithm`.
+
+---
+
 ## 2026-09-29 — Delegated key use: forward the user's own token (6.0.0-beta)
 
 **Decision.** A service that performs a user's request forwards the user's

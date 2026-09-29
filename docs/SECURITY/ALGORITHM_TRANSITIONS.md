@@ -90,6 +90,19 @@ kernel event (`audit.key.caraf_*`). A recorded decision is the Playbooks
 trigger `crypto_risk_decision_recorded`. The product supplies no threat
 dates, bands or defaults.
 
+## Swap drill (6.1.0-beta)
+
+`POST /agility/drills` rehearses a swap on a keycore node. Throwaway keys
+come from keycore's own key generation, round trips run through the key
+engine and are checked, and medians and real sizes are recorded. Nothing
+enters the key inventory. Both algorithms must pass the tenant's FIPS mode
+and the target must pass the tenant's own migration policy, through the same
+`policyRefusal` decision as key operations. A name without a parameter set
+is refused so no measurement is mislabelled. Events:
+`audit.key.agility_drill_run` (refusals `fips_mode_violation`,
+`crypto_policy_disallowed`, `crypto_policy_decrypt_only`) and
+`audit.key.agility_drills_listed`.
+
 ## Where the facts are used
 
 - The Crypto Agility tab and keycore `/agility/*`.
@@ -114,6 +127,8 @@ deadline has none.
 - `TestAgilityPostureAgainstCustomerPolicy`,
   `TestAgilityPolicyRulesValidatedAndAudited`.
 - `TestTimelineIsTheCustomersPlanDeadlines` (pqc).
+- `TestDrillMeasuresRealRoundTrips`, `TestAgilityDrillRouteValidatedAndAudited`,
+  `TestAgilityDrillStrictRefusesNonModuleAlgorithm` (swap drill).
 - `web/dashboard/tests/crypto-agility.spec.ts` asserts that the tab shows no
   standards document, draft or reference.
 
