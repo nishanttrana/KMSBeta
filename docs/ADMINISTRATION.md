@@ -1667,8 +1667,10 @@ certificates its external listeners serve and the key exchange they accept.
 | Listener | Served by | Port | Certificate |
 |---|---|---|---|
 | HTTPS (dashboard and REST API) | Envoy | 443 (`HTTPS_PORT`) | chosen in Service mTLS > Edge certificate: `vecta-runtime-root` (default), a PKI CA, or an external CA |
-| HTTP | Envoy | 80 (`HTTP_PORT`) | none: redirects to HTTPS |
-| KMIP | kmip service (Envoy passes TCP through) | 5696 | `vecta-runtime-root`, written by certs; clients need a certificate |
+| KMIP | kmip service (Envoy passes TCP through) | 5696 | chosen in Service mTLS > KMIP certificate, like the HTTPS edge; clients need a certificate from the KMIP client CA |
+
+Nothing listens on port 80: there is no plain-HTTP redirect (removed in
+6.14.0-beta). Clients use `https://` directly.
 
 Everything else (services, Postgres, NATS, Valkey, Consul) is internal mTLS
 on the platform network ([INTERNAL_TLS.md](SECURITY/INTERNAL_TLS.md)).
@@ -1692,10 +1694,10 @@ TLS 1.3 groups HTTPS and KMIP accept, for the whole node:
 - API: `GET` / `PUT /svc/certs/certs/edge-tls` (root tenant,
   [API_REFERENCE.md](API_REFERENCE.md)).
 
-### 11.3 Edge certificate
+### 11.3 Edge and KMIP certificates
 
-Certificates / PKI > Service mTLS > **Edge certificate** chooses what the
-HTTPS edge serves:
+Certificates / PKI > Service mTLS > **Edge certificate** and **KMIP
+certificate** choose what each listener serves (independently):
 
 1. **vecta-runtime-root** (default) or **a CA from the PKI tab** (software
    CAs only): certs issues it, installs it on every node and renews it.
@@ -1705,7 +1707,10 @@ HTTPS edge serves:
    leaves the node. Renew before `not_after` with a new CSR; an expired
    external certificate is replaced by a `vecta-runtime-root` one.
 
-"Served" means certs' probe saw exactly that certificate on the edge.
+"Served" means certs' probe saw exactly that certificate on the listener.
+KMIP clients must trust the CA that issues the KMIP certificate; their own
+client certificates still come from the KMIP client CA and are always
+verified.
 
 ### 11.4 Dashboard: Interfaces
 

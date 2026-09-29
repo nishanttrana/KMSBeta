@@ -250,6 +250,7 @@ func (s *Service) handleEdgeCertSource(c *route.Call) {
 		return
 	}
 	var req struct {
+		Listener     string `json:"listener"`
 		Source       string `json:"source"`
 		CAID         string `json:"ca_id"`
 		KeyAlgorithm string `json:"key_algorithm"`
@@ -259,10 +260,11 @@ func (s *Service) handleEdgeCertSource(c *route.Call) {
 		return
 	}
 	c.Target(svctls.EdgeIdentity)
+	c.Detail("listener", listenerOrDefault(req.Listener))
 	c.Detail("requested_source", req.Source)
 	c.Detail("requested_ca_id", req.CAID)
 	c.Detail("reason", req.Reason)
-	prev, next, err := s.SetEdgeCertificateSource(c.R.Context(), c.Tenant, edgeCertChoice{
+	prev, next, err := s.SetEdgeCertificateSource(c.R.Context(), c.Tenant, req.Listener, edgeCertChoice{
 		Source: strings.TrimSpace(req.Source), CAID: strings.TrimSpace(req.CAID), KeyAlgorithm: strings.TrimSpace(req.KeyAlgorithm),
 		Reason: req.Reason, UpdatedBy: c.Actor(),
 	})
@@ -275,7 +277,7 @@ func (s *Service) handleEdgeCertSource(c *route.Call) {
 	c.Detail("key_algorithm", next.KeyAlgorithm)
 	c.Detail("previous_source", prev.Source)
 	c.Detail("previous_ca_id", prev.CAID)
-	v := s.edgeCertificateView(c.R.Context(), c.Tenant, "")
+	v := s.edgeCertificateView(c.R.Context(), c.Tenant, listenerOrDefault(req.Listener), "")
 	if v.Installed != nil {
 		c.Detail("installed_serial", v.Installed.Serial)
 	}
@@ -287,6 +289,7 @@ func (s *Service) handleEdgeCSR(c *route.Call) {
 		return
 	}
 	var req struct {
+		Listener     string   `json:"listener"`
 		SubjectCN    string   `json:"subject_cn"`
 		SANs         []string `json:"sans"`
 		KeyAlgorithm string   `json:"key_algorithm"`
@@ -295,10 +298,11 @@ func (s *Service) handleEdgeCSR(c *route.Call) {
 		return
 	}
 	c.Target(svctls.EdgeIdentity)
+	c.Detail("listener", listenerOrDefault(req.Listener))
 	c.Detail("subject_cn", req.SubjectCN)
 	c.Detail("sans", req.SANs)
 	c.Detail("node", nodeName())
-	p, err := s.CreateEdgeCSR(c.R.Context(), req.SubjectCN, req.SANs, strings.TrimSpace(req.KeyAlgorithm), c.Actor())
+	p, err := s.CreateEdgeCSR(c.R.Context(), req.Listener, req.SubjectCN, req.SANs, strings.TrimSpace(req.KeyAlgorithm), c.Actor())
 	if err != nil {
 		s.refuseMTLS(c, err)
 		return
@@ -312,6 +316,7 @@ func (s *Service) handleEdgeInstall(c *route.Call) {
 		return
 	}
 	var req struct {
+		Listener       string `json:"listener"`
 		CertificatePEM string `json:"certificate_pem"`
 		ChainPEM       string `json:"chain_pem"`
 		Reason         string `json:"reason"`
@@ -321,8 +326,9 @@ func (s *Service) handleEdgeInstall(c *route.Call) {
 	}
 	c.Target(svctls.EdgeIdentity)
 	c.Detail("node", nodeName())
+	c.Detail("listener", listenerOrDefault(req.Listener))
 	c.Detail("reason", req.Reason)
-	leaf, err := s.InstallEdgeCertificate(c.R.Context(), req.CertificatePEM, req.ChainPEM)
+	leaf, err := s.InstallEdgeCertificate(c.R.Context(), req.Listener, req.CertificatePEM, req.ChainPEM)
 	if err != nil {
 		s.refuseMTLS(c, err)
 		return
@@ -331,7 +337,7 @@ func (s *Service) handleEdgeInstall(c *route.Call) {
 	c.Detail("subject", leaf.Subject.String())
 	c.Detail("issuer", leaf.Issuer.String())
 	c.Detail("not_after", leaf.NotAfter.UTC())
-	c.JSON(http.StatusOK, map[string]interface{}{"certificate": s.edgeCertificateView(c.R.Context(), c.Tenant, "")})
+	c.JSON(http.StatusOK, map[string]interface{}{"certificate": s.edgeCertificateView(c.R.Context(), c.Tenant, listenerOrDefault(req.Listener), "")})
 }
 
 // edgeMeasurement is what the pqc inventory reports per external listener.
@@ -365,4 +371,12 @@ func nodeName() string {
 		return h
 	}
 	return ""
+}
+
+// listenerOrDefault names the listener a request is for, for audit details.
+func listenerOrDefault(l string) string {
+	if n, err := normListener(l); err == nil {
+		return n
+	}
+	return strings.TrimSpace(l)
 }

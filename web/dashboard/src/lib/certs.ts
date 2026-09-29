@@ -1148,6 +1148,7 @@ export type EdgeTLSListener = {
   applied: boolean;
 };
 export type EdgeCertificate = {
+  listener: "https" | "kmip";
   choice: { source: "runtime" | "ca" | "external"; ca_id?: string; key_algorithm?: string; reason?: string; updated_by?: string; updated_at?: string };
   installed?: { serial: string; subject: string; issuer: string; sans: string[] | null; not_after: string; key_algorithm: string; from_choice: boolean };
   pending_csr?: { subject_cn: string; sans: string[] | null; key_algorithm: string; csr_pem: string; created_at: string };
@@ -1156,6 +1157,7 @@ export type EdgeCertificate = {
 
 export type EdgeTLS = {
   certificate: EdgeCertificate;
+  kmip_certificate: EdgeCertificate;
   policy: { kx_profile: string; generation: number };
   policy_record?: { reason?: string; updated_by?: string; updated_at?: string };
   listeners: EdgeTLSListener[];
@@ -1180,7 +1182,7 @@ export async function setEdgeTLS(session: AuthSession, kxProfile: string, reason
 // node's CSR and the certificate signed for it (node-local).
 export async function setEdgeCertificateSource(
   session: AuthSession,
-  change: { source: string; ca_id?: string; key_algorithm?: string; reason?: string }
+  change: { listener: string; source: string; ca_id?: string; key_algorithm?: string; reason?: string }
 ): Promise<void> {
   await serviceRequest(session, "certs", `/certs/edge-tls/certificate?${tenantQuery(session)}`, {
     method: "PUT",
@@ -1190,7 +1192,7 @@ export async function setEdgeCertificateSource(
 
 export async function createEdgeCSR(
   session: AuthSession,
-  req: { subject_cn: string; sans: string[]; key_algorithm?: string }
+  req: { listener: string; subject_cn: string; sans: string[]; key_algorithm?: string }
 ): Promise<{ csr_pem: string }> {
   const out = await serviceRequest<{ csr: { csr_pem: string } }>(session, "certs", `/certs/edge-tls/csr?${tenantQuery(session)}`, {
     method: "POST",
@@ -1199,9 +1201,9 @@ export async function createEdgeCSR(
   return out.csr;
 }
 
-export async function installEdgeCertificate(session: AuthSession, certificatePEM: string, chainPEM: string, reason: string): Promise<void> {
+export async function installEdgeCertificate(session: AuthSession, listener: string, certificatePEM: string, chainPEM: string, reason: string): Promise<void> {
   await serviceRequest(session, "certs", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`, {
     method: "POST",
-    body: JSON.stringify({ certificate_pem: certificatePEM, chain_pem: chainPEM, reason })
+    body: JSON.stringify({ listener, certificate_pem: certificatePEM, chain_pem: chainPEM, reason })
   });
 }

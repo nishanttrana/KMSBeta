@@ -265,6 +265,12 @@ tls_hits=$( {
   grep -rnE "http://(${internal_hosts})[:/\"]" services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
   grep -nE "http://(${internal_hosts})[:/}\"[:space:]]" docker-compose*.yml infra/envoy/envoy.yaml web/dashboard/nginx.conf infra/scripts/*.sh deploy-local.sh install.sh 2>/dev/null
 } || true)
+# No plain-HTTP listener at the edge either, not even a redirect to HTTPS
+# (removed in 6.14.0-beta): nothing publishes port 80 or redirects.
+tls_hits="$tls_hits$( {
+  grep -nE '"80:80"|:80:80"|- "?[0-9.]*:?80:80' docker-compose*.yml 2>/dev/null
+  grep -nE 'https_redirect|port_value: 80$' infra/envoy/envoy.yaml 2>/dev/null
+} || true)"
 if [ -n "$tls_hits" ]; then
   FAIL=1
   echo "FAIL [tls-only]: plain HTTP or insecure transport to a platform component (CLAUDE.md rule 10)"

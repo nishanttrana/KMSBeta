@@ -98,6 +98,18 @@ another exemption without the same forced-change guarantee.
 
 ## History
 
+- **2026-09-29 (KMIP listener, 6.14.0-beta):** a missing or unreadable KMIP
+  certificate file made the listener fall back to a self-generated
+  development certificate with `RequireAnyClientCert`: any client
+  certificate was accepted unverified, and KMIP takes the caller's identity
+  from it. `KMIP_CLIENT_CERT_VERIFY_DISABLED=true` did the same on request,
+  and an unreadable configured CRL was skipped.
+  - **Fix:** KMIP waits for certs' files and otherwise refuses to start;
+    client certificates are always verified; the override and
+    `pkgcrypto.DevServerCertWithCA` are removed; an unreadable CRL refuses
+    start. `TestKMIPTLSFailsClosed` sets the old override and checks it has
+    no effect.
+
 - **2026-09-26 (hsm-integration SSH):** the hsm-integration README
   published `VectaCLI@2026` as the SSH password.
   - **Where it was live:** the code had stopped using it. But the SSH

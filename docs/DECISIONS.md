@@ -7,6 +7,39 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — No port 80; KMIP certificate chosen like the edge's; KMIP fails closed (6.14.0-beta)
+
+**Decision.**
+- The plain-HTTP redirect on port 80 is removed rather than kept as a
+  convenience.
+- The KMIP server certificate gets the same three sources as the HTTPS
+  edge, chosen separately.
+- KMIP refuses to start without its certificate files.
+
+**Why.**
+- CLAUDE.md rule 10: nothing speaks plain HTTP. A redirect still receives
+  the request (path, query and any credential a client puts in it) in
+  clear text before redirecting. Clients that need it can use HSTS-aware
+  bookmarks or a load balancer the customer owns.
+- The 6.13.0-beta reason for keeping KMIP on `vecta-runtime-root` ("clients
+  trust the KMS's CA") was a default, not a constraint: a customer can
+  equally want a KMIP certificate from their own CA. Server and client
+  trust stay separate: the choice changes only the server certificate;
+  client certificates still come from the KMIP client CA and are always
+  verified.
+- A listener that swaps in a weaker config on error is worse than one that
+  doesn't start: the failure is invisible.
+
+**Rejected.** One certificate choice for both listeners (KMIP clients and
+browsers often trust different CAs); keeping the redirect but restricting
+it to loopback (it still answers in clear text).
+
+**Enforced by.** `tls-only` conformance (port 80 and redirects),
+`TestKMIPTLSFailsClosed`, `TestKMIPServerCertificateReloadsAndClientsAreVerified`,
+`TestKMIPCertificateSource`.
+
+---
+
 ## 2026-09-29 — Edge certificate: three sources, external via per-node CSR; inventory reads the measurement (6.13.0-beta)
 
 **Decision.**

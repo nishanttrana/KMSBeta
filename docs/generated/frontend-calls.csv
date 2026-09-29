@@ -165,11 +165,11 @@ certs,certs,GET,/certs/internal-mtls?{param},/certs/internal-mtls,True,serviceRe
 certs,certs,PUT,/certs/internal-mtls/{param}/policy?{param},/certs/internal-mtls/{param}/policy,True,serviceRequest,web/dashboard/src/lib/certs.ts,1116,certs|PUT|/certs/internal-mtls/{param}/policy
 certs,certs,POST,/certs/internal-mtls/{param}/rotate?{param},/certs/internal-mtls/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/certs.ts,1123,certs|POST|/certs/internal-mtls/{param}/rotate
 certs,certs,POST,/certs/internal-mtls/rotate-all?{param},/certs/internal-mtls/rotate-all,True,serviceRequest,web/dashboard/src/lib/certs.ts,1135,certs|POST|/certs/internal-mtls/rotate-all
-certs,certs,GET,/certs/edge-tls?{param},/certs/edge-tls,True,serviceRequest,web/dashboard/src/lib/certs.ts,1168,certs|GET|/certs/edge-tls
-certs,certs,PUT,/certs/edge-tls?{param},/certs/edge-tls,True,serviceRequest,web/dashboard/src/lib/certs.ts,1173,certs|PUT|/certs/edge-tls
-certs,certs,PUT,/certs/edge-tls/certificate?{param},/certs/edge-tls/certificate,True,serviceRequest,web/dashboard/src/lib/certs.ts,1185,certs|PUT|/certs/edge-tls/certificate
-certs,certs,POST,/certs/edge-tls/csr?{param},/certs/edge-tls/csr,True,serviceRequest,web/dashboard/src/lib/certs.ts,1195,certs|POST|/certs/edge-tls/csr
-certs,certs,POST,/certs/edge-tls/certificate/install?{param},/certs/edge-tls/certificate/install,True,serviceRequest,web/dashboard/src/lib/certs.ts,1203,certs|POST|/certs/edge-tls/certificate/install
+certs,certs,GET,/certs/edge-tls?{param},/certs/edge-tls,True,serviceRequest,web/dashboard/src/lib/certs.ts,1170,certs|GET|/certs/edge-tls
+certs,certs,PUT,/certs/edge-tls?{param},/certs/edge-tls,True,serviceRequest,web/dashboard/src/lib/certs.ts,1175,certs|PUT|/certs/edge-tls
+certs,certs,PUT,/certs/edge-tls/certificate?{param},/certs/edge-tls/certificate,True,serviceRequest,web/dashboard/src/lib/certs.ts,1187,certs|PUT|/certs/edge-tls/certificate
+certs,certs,POST,/certs/edge-tls/csr?{param},/certs/edge-tls/csr,True,serviceRequest,web/dashboard/src/lib/certs.ts,1197,certs|POST|/certs/edge-tls/csr
+certs,certs,POST,/certs/edge-tls/certificate/install?{param},/certs/edge-tls/certificate/install,True,serviceRequest,web/dashboard/src/lib/certs.ts,1205,certs|POST|/certs/edge-tls/certificate/install
 cloud,cloud,GET,/cloud/accounts{param},/cloud/accounts{param},True,serviceRequest,web/dashboard/src/lib/cloud.ts,127,cloud|GET|/cloud/accounts{param}
 cloud,cloud,POST,/cloud/accounts,/cloud/accounts,False,serviceRequest,web/dashboard/src/lib/cloud.ts,135,cloud|POST|/cloud/accounts
 cloud,cloud,DELETE,/cloud/accounts/{param},/cloud/accounts/{param},True,serviceRequest,web/dashboard/src/lib/cloud.ts,152,cloud|DELETE|/cloud/accounts/{param}

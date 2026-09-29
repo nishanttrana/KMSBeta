@@ -1140,36 +1140,38 @@ exchange"). Same permissions as Service mTLS; another tenant is refused with
 
 ### Edge certificate: `/svc/certs/certs/edge-tls/certificate` (6.13.0, root tenant only)
 
-The certificate the HTTPS edge (Envoy) serves. The GET above returns it as
-`edge.certificate`: `choice` (`source`, `ca_id`, `key_algorithm`, who and
+The certificates the external listeners serve: `listener` `https` (Envoy,
+the default) or `kmip` (6.14.0) in every body below; each has its own
+source. The GET above returns them as `edge.certificate` (HTTPS) and
+`edge.kmip_certificate`, each with `listener`, `choice` (`source`, `ca_id`, `key_algorithm`, who and
 when), `installed` (this node's certificate: serial, subject, issuer, SANs,
 `not_after`, key algorithm, `from_choice`), `pending_csr` and `served` (the
 probe saw exactly that certificate served).
 
 - **`PUT /certs/edge-tls/certificate`**
   (`edge_tls_certificate_source_updated`):
-  - **Body:** `{"source": "runtime|ca|external", "ca_id": "...",
+  - **Body:** `{"listener": "https|kmip", "source": "runtime|ca|external", "ca_id": "...",
     "key_algorithm": "ECDSA-P256|ECDSA-P384|RSA-3072", "reason": "..."}`.
   - `runtime`: issued by `vecta-runtime-root` (default). `ca`: issued by a
     software CA from the PKI tab and renewed by certs before expiry.
     `external`: see below. Stored replicated; every node's materializer
     applies it within 5 minutes, this node at once.
-  - **Refusals:** `invalid_source`, `unknown_ca`, `ca_not_active`,
+  - **Refusals:** `invalid_listener`, `invalid_source`, `unknown_ca`, `ca_not_active`,
     `hsm_ca_not_supported` (renewal runs unattended), `internal_services_ca`,
     `invalid_key_algorithm`, `unchanged`.
 - **`POST /certs/edge-tls/csr`** (`edge_tls_csr_created`, runs on the node
   that receives it):
-  - **Body:** `{"subject_cn": "...", "sans": [...], "key_algorithm": "..."}`.
+  - **Body:** `{"listener": "https|kmip", "subject_cn": "...", "sans": [...], "key_algorithm": "..."}`.
   - Generates this node's key (kept on the node's runtime certificate
     volume) and returns `csr.csr_pem`. A new CSR replaces the pending key.
   - **Refusals:** `source_not_external`, `invalid_request`,
     `invalid_key_algorithm`.
 - **`POST /certs/edge-tls/certificate/install`**
   (`edge_tls_certificate_installed`, runs on the node that receives it):
-  - **Body:** `{"certificate_pem": "...", "chain_pem": "...", "reason": "..."}`.
+  - **Body:** `{"listener": "https|kmip", "certificate_pem": "...", "chain_pem": "...", "reason": "..."}`.
   - Installed only if it is for the pending key, valid now, allows TLS
     server authentication, and is signed by the first chain certificate.
-    Envoy reloads it (SDS). The materializer keeps it until it expires, then
+    Envoy reloads it (SDS); KMIP on its next handshake. The materializer keeps it until it expires, then
     falls back to `vecta-runtime-root`; renew it with a new CSR.
   - **Refusals:** `source_not_external`, `no_pending_key`,
     `invalid_certificate`, `key_mismatch`, `not_valid_now`,

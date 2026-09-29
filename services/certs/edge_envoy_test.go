@@ -155,10 +155,10 @@ func TestEdgeProfileAppliedByRealEnvoy(t *testing.T) {
 	// after certs installs it (SDS reload). The probe pins the installed
 	// certificate, so it measures only once Envoy serves the new one.
 	f.svc.runtimeCfg = cfg
-	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
 		t.Fatal(err)
 	}
-	csr, err := f.svc.CreateEdgeCSR(ctx, "localhost", []string{"localhost"}, "", "test")
+	csr, err := f.svc.CreateEdgeCSR(ctx, "", "localhost", []string{"localhost"}, "", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestEdgeProfileAppliedByRealEnvoy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.svc.InstallEdgeCertificate(ctx, signed.CertPEM, ext.CertPEM); err != nil {
+	if _, err := f.svc.InstallEdgeCertificate(ctx, "", signed.CertPEM, ext.CertPEM); err != nil {
 		t.Fatal(err)
 	}
 	sync()

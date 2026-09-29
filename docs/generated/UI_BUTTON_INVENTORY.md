@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T13:31:33Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T18:01:58Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -558,15 +558,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 692 | sbom | Btn | setSBOMDiffOpen(false)}>Close |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 720 | sbom | Btn | }>Close |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 750 | sbom | Btn | }>Close |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 162 | - | Btn | void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 166 | - | Btn | void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful"... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 171 | - | Btn | { setConfirmForce(""); void run(i.identity, () => rotateInternalMTLS(session,... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 176 | - | Btn | setConfirmForce(i.identity)}>Force restart |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 209 | - | Btn | void run("rotate-all", async () => { const out = await rotateAllInternalMTLS(... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 251 | - | Btn | void run("edge", async () => , "Edge key exchange saved; Envoy and KMIP apply... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 305 | - | Btn | void run("edge-cert", async () => { await setEdgeCertificateSource(session, )... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 316 | - | Btn | void run("edge-csr", async () => { const out = await createEdgeCSR(session, )... |  |
-| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 325 | - | Btn | void run("edge-install", async () => , "Certificate installed on this node; E... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 159 | - | Btn | void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 163 | - | Btn | void run(i.identity, () => rotateInternalMTLS(session, i.identity, "graceful"... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 168 | - | Btn | { setConfirmForce(""); void run(i.identity, () => rotateInternalMTLS(session,... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 173 | - | Btn | setConfirmForce(i.identity)}>Force restart |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 206 | - | Btn | void run("rotate-all", async () => { const out = await rotateAllInternalMTLS(... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 248 | - | Btn | void run("edge", async () => , "Edge key exchange saved; Envoy and KMIP apply... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 306 | - | Btn | void run(`$ -cert`, async () => { await setEdgeCertificateSource(session, );... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 317 | - | Btn | void run(`$ -csr`, async () => { const out = await createEdgeCSR(session, );... |  |
+| web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 326 | - | Btn | void run(`$ -install`, async () => { await installEdgeCertificate(session, li... |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 447 | - | button | setOp(name)} style={{ background:op===name?C.accent:"transparent", color:op==... |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 466 | - | Btn | {if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaul... |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 565 | - | Btn | void submitCurrent()} disabled= > |  |

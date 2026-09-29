@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A "dev" fallback in a production code path is the production behaviour
+- **What happened:** KMIP's TLS loader returned a self-generated
+  development config, with `RequireAnyClientCert`, whenever the configured
+  certificate files failed to load, for example if KMIP started before
+  certs wrote them. KMIP takes the caller's identity from the client
+  certificate, so for that run any certificate was accepted unverified.
+  Nothing logged it. A configured CRL that failed to load was skipped the
+  same way.
+- **How it slipped through:** each fallback looked like a convenience for
+  local runs, and compose always set the file paths, so nobody saw the
+  failure branch. It turned up only because making the KMIP certificate
+  choosable meant reading the loader.
+- **Rule:** a security listener has one config path. A missing input waits
+  or refuses to start; it never swaps in a weaker config. Grep for
+  `dev`/`fallback`/`Any` in TLS setup when touching a listener.
+
 ### A probe list built from a filtered list can't find what the filter removed
 - The edge probe measured `svctls.ServerGroups(pqc-preferred)`, which drops
   X25519 in FIPS mode. So even after the hand-built hello made X25519

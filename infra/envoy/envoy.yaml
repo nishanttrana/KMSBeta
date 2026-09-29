@@ -3,31 +3,6 @@ node:
   cluster: vecta-edge
 static_resources:
   listeners:
-  - name: http_redirect
-    address:
-      socket_address:
-        address: 0.0.0.0
-        port_value: 80
-    filter_chains:
-    - filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: edge_http_redirect
-          route_config:
-            name: redirect_all
-            virtual_hosts:
-            - name: redirect_host
-              domains: ["*"]
-              routes:
-              - match: { prefix: "/" }
-                redirect:
-                  https_redirect: true
-          http_filters:
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-
   - name: https_listener
     address:
       socket_address:

@@ -1362,7 +1362,6 @@ collect_inputs() {
   CLUSTER_NODE_ENDPOINT="$(trim "${CLUSTER_NODE_ENDPOINT}")"
   [[ -z "${CLUSTER_NODE_ENDPOINT}" ]] && CLUSTER_NODE_ENDPOINT="${BIND_IP}"
 
-  prompt_default HTTP_PORT "Public HTTP port" "80"
   prompt_default HTTPS_PORT "Public HTTPS port" "443"
   prompt_default DASHBOARD_PORT "Dashboard port" "5173"
 
@@ -1824,7 +1823,6 @@ generate_override_file() {
         [[ -n "${proto}" ]] && proto_name="${proto#/}"
         local pinned_port="false"
         case "${svc}:${container_port}" in
-          envoy:80) host_port="${HTTP_PORT}"; pinned_port="true" ;;
           envoy:443) host_port="${HTTPS_PORT}"; pinned_port="true" ;;
           dashboard:5173) host_port="${DASHBOARD_PORT}"; pinned_port="true" ;;
         esac
@@ -2217,7 +2215,6 @@ collect_fast_inputs() {
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
   MAX_KEYS="5000000"
   MAX_TENANTS="50"
-  HTTP_PORT="80"
   HTTPS_PORT="443"
   DASHBOARD_PORT="5173"
   BUILD_MODE="${BUILD_MODE:-build-missing}"

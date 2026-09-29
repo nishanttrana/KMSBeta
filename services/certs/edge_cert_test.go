@@ -59,7 +59,7 @@ func TestEdgeCertificateFromPKICA(t *testing.T) {
 		{edgeCertChoice{Source: edgeSourceCA, CAID: ca.ID, KeyAlgorithm: "ML-DSA-65"}, "invalid_key_algorithm"},
 		{edgeCertChoice{Source: edgeSourceRuntime}, "unchanged"},
 	} {
-		_, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", tc.choice)
+		_, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", tc.choice)
 		var r mtlsRefusal
 		if !errors.As(err, &r) || r.reason != tc.reason {
 			t.Fatalf("%+v: %v, want %s", tc.choice, err, tc.reason)
@@ -69,13 +69,13 @@ func TestEdgeCertificateFromPKICA(t *testing.T) {
 		t.Fatalf("a refused change must leave the edge alone: %q", got)
 	}
 
-	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", edgeCertChoice{Source: edgeSourceCA, CAID: ca.ID, KeyAlgorithm: "ECDSA-P384", UpdatedBy: "admin"}); err != nil {
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceCA, CAID: ca.ID, KeyAlgorithm: "ECDSA-P384", UpdatedBy: "admin"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := installedIssuer(t, f); got != "Corp Edge CA" {
 		t.Fatalf("the edge must be issued by the chosen CA: %q", got)
 	}
-	v := f.svc.edgeCertificateView(ctx, "root", "")
+	v := f.svc.edgeCertificateView(ctx, "root", listenerHTTPS, "")
 	if v.Installed == nil || !v.Installed.FromChoice || v.Installed.KeyAlgorithm != "ECDSA-P384" || v.Choice.UpdatedBy != "admin" {
 		t.Fatalf("view: %+v %+v", v.Choice, v.Installed)
 	}
@@ -85,11 +85,11 @@ func TestEdgeCertificateFromPKICA(t *testing.T) {
 	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
 		t.Fatal(err)
 	}
-	if v := f.svc.edgeCertificateView(ctx, "root", ""); v.Installed.Serial != serial {
+	if v := f.svc.edgeCertificateView(ctx, "root", listenerHTTPS, ""); v.Installed.Serial != serial {
 		t.Fatal("a materializer pass must not reissue a current certificate")
 	}
 
-	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", edgeCertChoice{Source: edgeSourceRuntime}); err != nil {
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceRuntime}); err != nil {
 		t.Fatal(err)
 	}
 	if got := installedIssuer(t, f); got != "vecta-runtime-root" {
@@ -103,19 +103,19 @@ func TestEdgeCertificateFromPKICA(t *testing.T) {
 func TestEdgeExternalCertificateFlow(t *testing.T) {
 	f, cfg := edgeFixture(t)
 	ctx := context.Background()
-	if _, err := f.svc.CreateEdgeCSR(ctx, "kms.example.com", nil, "", "admin"); !isRefusal(err, "source_not_external") {
+	if _, err := f.svc.CreateEdgeCSR(ctx, "", "kms.example.com", nil, "", "admin"); !isRefusal(err, "source_not_external") {
 		t.Fatalf("a CSR before choosing external: %v", err)
 	}
-	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
 		t.Fatal(err)
 	}
 	if got := installedIssuer(t, f); got != "vecta-runtime-root" {
 		t.Fatalf("until an external certificate is installed the edge keeps serving: %q", got)
 	}
-	if _, err := f.svc.InstallEdgeCertificate(ctx, "x", ""); !isRefusal(err, "no_pending_key") {
+	if _, err := f.svc.InstallEdgeCertificate(ctx, "", "x", ""); !isRefusal(err, "no_pending_key") {
 		t.Fatalf("install without a CSR: %v", err)
 	}
-	p, err := f.svc.CreateEdgeCSR(ctx, "kms.example.com", []string{"kms.example.com", "10.0.0.5"}, "", "admin")
+	p, err := f.svc.CreateEdgeCSR(ctx, "", "kms.example.com", []string{"kms.example.com", "10.0.0.5"}, "", "admin")
 	if err != nil || !strings.Contains(p.CSRPEM, "CERTIFICATE REQUEST") {
 		t.Fatalf("csr: %+v %v", p, err)
 	}
@@ -146,22 +146,22 @@ func TestEdgeExternalCertificateFlow(t *testing.T) {
 		{signed.CertPEM, "", "chain_required"},
 		{"not a certificate", "", "invalid_certificate"},
 	} {
-		if _, err := f.svc.InstallEdgeCertificate(ctx, tc.cert, tc.chain); !isRefusal(err, tc.reason) {
+		if _, err := f.svc.InstallEdgeCertificate(ctx, "", tc.cert, tc.chain); !isRefusal(err, tc.reason) {
 			t.Fatalf("%s: %v", tc.reason, err)
 		}
 	}
-	leaf, err := f.svc.InstallEdgeCertificate(ctx, signed.CertPEM, ext.CertPEM)
+	leaf, err := f.svc.InstallEdgeCertificate(ctx, "", signed.CertPEM, ext.CertPEM)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := installedIssuer(t, f); got != "Customer Issuing CA" {
 		t.Fatalf("installed issuer: %q", got)
 	}
-	v := f.svc.edgeCertificateView(ctx, "root", leaf.SerialNumber.Text(16))
+	v := f.svc.edgeCertificateView(ctx, "root", listenerHTTPS, leaf.SerialNumber.Text(16))
 	if v.Installed == nil || !v.Installed.FromChoice || !v.Served || v.Pending != nil {
 		t.Fatalf("view after install: %+v", v)
 	}
-	if _, err := f.svc.InstallEdgeCertificate(ctx, signed.CertPEM, ext.CertPEM); !isRefusal(err, "no_pending_key") {
+	if _, err := f.svc.InstallEdgeCertificate(ctx, "", signed.CertPEM, ext.CertPEM); !isRefusal(err, "no_pending_key") {
 		t.Fatalf("the pending key is consumed: %v", err)
 	}
 	// The materializer keeps the external certificate.
@@ -229,4 +229,65 @@ func TestEdgeCertificateRoutesAudited(t *testing.T) {
 func isRefusal(err error, reason string) bool {
 	var r mtlsRefusal
 	return errors.As(err, &r) && r.reason == reason
+}
+
+// KMIP's certificate has its own source, independent of the HTTPS edge's;
+// an unknown listener is refused and audited.
+func TestKMIPCertificateSource(t *testing.T) {
+	f, cfg := edgeFixture(t)
+	ctx := context.Background()
+	kmipIssuer := func() string {
+		leaf, _, err := installedLeaf(f.svc.edgeFiles(listenerKMIP).dir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return leaf.Issuer.CommonName
+	}
+	if got := kmipIssuer(); got != "vecta-runtime-root" {
+		t.Fatalf("default KMIP issuer: %q", got)
+	}
+	ca, err := f.svc.CreateCA(ctx, CreateCARequest{TenantID: "root", Name: "kmip-ca", CALevel: "root",
+		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=KMIP Server CA"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "ftp", edgeCertChoice{Source: edgeSourceRuntime}); !isRefusal(err, "invalid_listener") {
+		t.Fatalf("unknown listener: %v", err)
+	}
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", listenerKMIP, edgeCertChoice{Source: edgeSourceCA, CAID: ca.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if got := kmipIssuer(); got != "KMIP Server CA" {
+		t.Fatalf("KMIP issuer after the change: %q", got)
+	}
+	if got := installedIssuer(t, f); got != "vecta-runtime-root" {
+		t.Fatalf("the HTTPS edge must not change: %q", got)
+	}
+	leaf, _, _ := installedLeaf(f.svc.edgeFiles(listenerKMIP).dir())
+	if !strings.Contains(strings.Join(leaf.DNSNames, ","), "kmip") {
+		t.Fatalf("the KMIP certificate names kmip: %v", leaf.DNSNames)
+	}
+	// Kept on a materializer pass; the view reports it per listener.
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	inv, err := f.svc.EdgeInventory(ctx)
+	if err != nil || inv.KMIPCertificate.Choice.Source != edgeSourceCA || inv.KMIPCertificate.Installed == nil ||
+		!inv.KMIPCertificate.Installed.FromChoice || inv.Certificate.Choice.Source != edgeSourceRuntime {
+		t.Fatalf("inventory: %+v %+v %v", inv.KMIPCertificate, inv.Certificate.Choice, err)
+	}
+
+	rec := &routetest.Recorder{}
+	router := mtlsRouter(t, f.svc, rec)
+	w := mtlsCall(router, http.MethodPut, "/certs/edge-tls/certificate", "root", map[string]string{"listener": "ftp", "source": "runtime"})
+	if last := rec.Last(t); w.Code != http.StatusBadRequest || last.Event.Details["reason"] != "invalid_listener" || last.Event.Details["listener"] != "ftp" {
+		t.Fatalf("unknown listener route: %d %+v", w.Code, last.Event)
+	}
+	w = mtlsCall(router, http.MethodPut, "/certs/edge-tls/certificate", "root", map[string]string{"listener": "kmip", "source": "runtime"})
+	if last := rec.Last(t); w.Code != http.StatusOK || last.Event.Details["listener"] != "kmip" || last.Event.Details["previous_source"] != "ca" {
+		t.Fatalf("kmip route: %d %s %+v", w.Code, w.Body, last.Event)
+	}
+	if got := kmipIssuer(); got != "vecta-runtime-root" {
+		t.Fatalf("back to the runtime root: %q", got)
+	}
 }

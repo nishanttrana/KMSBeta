@@ -100,8 +100,10 @@ accepts `X25519MLKEM768` alone.
 
 ## Edge certificate
 
-The HTTPS edge's certificate comes from the source a root administrator
-chose in Service mTLS > Edge certificate (`PUT /certs/edge-tls/certificate`):
+Each external listener's certificate comes from the source a root
+administrator chose in Service mTLS (`PUT /certs/edge-tls/certificate`,
+`listener`: `https` for the Envoy edge, `kmip` for the KMIP listener; one
+choice each):
 
 | Source | Certificate | Renewal |
 |---|---|---|
@@ -109,17 +111,36 @@ chose in Service mTLS > Edge certificate (`PUT /certs/edge-tls/certificate`):
 | `ca` | issued by a software CA from the PKI tab (not the internal-services Sub CA; not an HSM CA, which signs only for a user) | certs, before expiry |
 | `external` | each node generates its key and a CSR; the customer's CA signs it; the certificate is installed on that node | the customer, with a new CSR; after expiry the node falls back to `vecta-runtime-root` |
 
-- The choice is replicated (`cert_edge_certificate`); every node's
-  materializer applies it on its next pass.
+- The choice is replicated (`cert_edge_certificate`, one row per
+  listener); every node's materializer applies it on its next pass.
 - An external certificate is node-local: the key never leaves the node's
   runtime certificate volume, and the CSR and install routes run on the
   node that receives them (`pkg/clusterroute.Local`). In a cluster, request
   and install on each node.
 - Envoy reloads the files through SDS (a rename in the watched directory).
+  KMIP re-reads them on the next handshake after they change (checked at
+  most once a second); a replacement that doesn't load keeps the one in
+  force.
 - "Served" in the dashboard is the probe's measurement: the certificate it
   pinned is the one installed.
-- The KMIP listener's certificate stays on `vecta-runtime-root`: KMIP
-  clients authenticate with certificates and trust the KMS's CA.
+- KMIP clients must trust the CA that issues the KMIP server certificate.
+  Their own certificates still come from the KMIP client CA
+  (`KMIP_TLS_CLIENT_CA_FILE`, `vecta-runtime-root`), and are always
+  verified.
+- **KMIP fails closed** (6.14.0-beta). Until then a missing or unreadable
+  certificate file silently switched KMIP to a self-generated development
+  certificate that accepted any client certificate unverified, and
+  `KMIP_CLIENT_CERT_VERIFY_DISABLED` did the same on request; a configured
+  but unreadable client CRL was ignored. Now KMIP waits up to 3 minutes for
+  certs to write its files and otherwise refuses to start; the override is
+  gone; an unreadable CRL refuses start.
+
+## No plain HTTP at the edge
+
+Nothing listens on port 80 (6.14.0-beta). Envoy's redirect listener, the
+compose `80:80` mapping and install.sh's HTTP port prompt were removed.
+`make conformance` (`tls-only`) fails if compose publishes port 80 or
+Envoy configures a redirect or a port-80 listener.
 
 ## How a change reaches a service
 
@@ -253,9 +274,6 @@ from the host:
   are the control. A rotation revokes the old certificate and restarts the
   service, which removes the old key. Until the restart completes, peers
   still accept the old certificate.
-- **Port 80** still answers with a redirect to HTTPS. (The edge
-  certificate source is chosen since 6.13.0-beta; the edge key exchange is
-  chosen and measured since 6.8.0-beta.)
 
 ## Delivery plan
 
@@ -267,9 +285,9 @@ from the host:
    and Consul (HTTPS).
 3. **Slice 3:** the service TLS page: inventory, one-click rotation,
    per-service algorithm and PQC selection, and graceful or forced restart.
-4. **Slice 4:** choose the edge certificate (done in 6.13.0-beta: runtime
-   root, a PKI CA, or an external CA via CSR), and remove the port-80
-   listener (open).
+4. **Slice 4 (done):** choose the edge certificate (6.13.0-beta: runtime
+   root, a PKI CA, or an external CA via CSR), the KMIP certificate the same
+   way, and remove the port-80 listener (6.14.0-beta).
 
 Each slice ships with tests against the real dependencies: a real TLS
 handshake with a wrong or missing client certificate refused, Postgres over

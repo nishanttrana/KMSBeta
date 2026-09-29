@@ -4,6 +4,59 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.14.0-beta] — 2026-09-29
+
+### No plain HTTP at the edge
+- **Port 80 is gone.** Envoy's redirect listener, the compose `80:80`
+  mapping and install.sh's "Public HTTP port" prompt are removed. Clients
+  use `https://` directly. This finishes INTERNAL_TLS.md slice 4.
+- `make conformance` (`tls-only`) now fails if compose publishes port 80 or
+  Envoy configures a redirect or a port-80 listener.
+
+### KMIP certificate: runtime root, a PKI CA, or an external CA
+- The KMIP listener's certificate has its own source in Certificates / PKI
+  > Service mTLS > KMIP certificate, like the HTTPS edge: `listener: "kmip"`
+  on `PUT /certs/edge-tls/certificate`, `POST /certs/edge-tls/csr` and
+  `POST /certs/edge-tls/certificate/install`. `GET /certs/edge-tls` returns
+  it as `kmip_certificate`. An unknown listener is refused
+  (`invalid_listener`).
+- KMIP reloads its certificate on the next handshake after certs replaces
+  it (checked at most once a second); a replacement that doesn't load keeps
+  the one in force. Client certificates still come from the KMIP client CA.
+
+### Security: KMIP fails closed
+- **Fixed:** a missing or unreadable KMIP certificate file made the
+  listener fall back to a self-generated development certificate that
+  accepted any client certificate unverified, and KMIP takes the caller's
+  identity from that certificate. KMIP now waits up to 3 minutes for certs'
+  files and otherwise refuses to start.
+- **Removed:** `KMIP_CLIENT_CERT_VERIFY_DISABLED` (it did the same on
+  request) and `pkgcrypto.DevServerCertWithCA`.
+- **Fixed:** a configured `KMIP_CLIENT_CRL_FILE` that couldn't be read was
+  ignored, so revoked clients were accepted. It now refuses start.
+
+### Docs
+- The deployment guide in the dashboard said the dashboard was at
+  `http://localhost:5173` and tested login with plain HTTP to port 8001; it
+  now says `https://localhost` and uses the HTTPS edge. Its port table
+  lists what compose publishes.
+
+### Tests
+- `TestKMIPTLSFailsClosed`, `TestKMIPServerCertificateReloadsAndClientsAreVerified`
+  (kmip, real handshakes: a client without a certificate or from another
+  CA is refused, a replaced certificate is served without a restart, a
+  broken one is ignored); `TestKMIPCertificateSource` (certs);
+  `TestEdgeProfileAppliedByRealEnvoy` runs the Envoy config without the
+  port-80 listener.
+
+### Breaking
+- Nothing answers on port 80; `http://` URLs and bookmarks stop working.
+  `HTTP_PORT` is no longer read by install.sh.
+- KMIP refuses to start without its certificate files, and
+  `KMIP_CLIENT_CERT_VERIFY_DISABLED` no longer exists.
+- After changing the KMIP certificate's source, KMIP clients must trust
+  the new issuing CA.
+
 ## [6.13.0-beta] — 2026-09-29
 
 ### Edge certificate: runtime root, a PKI CA, or an external CA

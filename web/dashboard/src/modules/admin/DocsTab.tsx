@@ -226,7 +226,7 @@ open -a Docker
 git clone <repository-url> vecta-kms && cd vecta-kms
 docker compose up -d
 
-# Dashboard is available at http://localhost:5173`}</Code>
+# Dashboard and API: https://localhost (HTTPS only; there is no port 80)`}</Code>
 
     <H2>Windows</H2>
     <Code>{`# Install Docker Desktop for Windows
@@ -238,14 +238,14 @@ git clone <repository-url> vecta-kms
 cd vecta-kms
 docker compose up -d
 
-# Dashboard: http://localhost:5173`}</Code>
+# Dashboard and API: https://localhost (HTTPS only; there is no port 80)`}</Code>
 
     <H2>Port Reference</H2>
     <EndpointTable rows={[
-      ["—", "5173", "Web Dashboard UI"],
-      ["—", "80 / 443", "Envoy edge proxy (HTTP / HTTPS)"],
-      ["—", "5696", "KMIP protocol endpoint"],
-      ["—", "2222", "HSM CLI SSH (profile: hsm_cli)"],
+      ["—", "443", "HTTPS edge (Envoy): dashboard and REST API. Nothing listens on 80."],
+      ["—", "5696", "KMIP (TLS with client certificates)"],
+      ["—", "9901", "Envoy admin (loopback only)"],
+      ["—", "2222", "HSM CLI SSH (loopback; profile: hsm_cli)"],
       ["—", "4222 / 8222", "NATS messaging (profile: event_streaming)"],
       ["—", "6379", "Valkey/Redis cache (profile: distributed_cache)"],
       ["—", "8500", "Consul UI (profile: service_discovery)"],
@@ -257,8 +257,9 @@ docker compose up -d
     <Code>{`# Check all containers are healthy
 docker compose ps --format "table {{.Name}}\\t{{.Status}}"
 
-# Test authentication
-curl -s -X POST http://localhost:8001/auth/login \\
+# Test authentication through the HTTPS edge (trust the edge certificate's
+# CA: vecta-runtime-root by default, downloadable from Certificates / PKI)
+curl -s --cacert vecta-runtime-root.pem -X POST https://localhost/svc/auth/auth/login \\
   -H "Content-Type: application/json" \\
   -d '{"username":"admin","password":"<your-password>","tenant_id":"root"}'
 

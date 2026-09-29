@@ -19,11 +19,46 @@ import (
 	"vecta-kms/pkg/svctls"
 )
 
-// Edge certificate (docs/SECURITY/INTERNAL_TLS.md, "Edge certificate"): the
-// certificate Envoy's HTTPS edge serves. A root administrator chooses its
-// source; every node's materializer applies the choice to its own edge
-// (Envoy reloads the files through SDS), and certs' edge probe pins the
-// served certificate to the installed one.
+// External listener certificates (docs/SECURITY/INTERNAL_TLS.md, "Edge
+// certificate"): what Envoy's HTTPS edge and the KMIP listener serve. A root
+// administrator chooses each one's source; every node's materializer
+// applies the choice to its own listeners (Envoy reloads through SDS, KMIP
+// on the next handshake), and certs' edge probe pins the served
+// certificate to the installed one.
+
+const (
+	listenerHTTPS = "https"
+	listenerKMIP  = "kmip"
+)
+
+var certListeners = []string{listenerHTTPS, listenerKMIP}
+
+// listenerRow is the listener's row id (the HTTPS edge kept "edge").
+func listenerRow(l string) string {
+	if l == listenerKMIP {
+		return "kmip"
+	}
+	return "edge"
+}
+
+// listenerDir is the listener's directory on the runtime certificate volume.
+func listenerDir(l string) string {
+	if l == listenerKMIP {
+		return "kmip"
+	}
+	return "envoy"
+}
+
+// normListener validates a listener name ("" is the HTTPS edge).
+func normListener(l string) (string, error) {
+	switch strings.TrimSpace(l) {
+	case "", listenerHTTPS:
+		return listenerHTTPS, nil
+	case listenerKMIP:
+		return listenerKMIP, nil
+	}
+	return "", mtlsRefusal{"invalid_listener", fmt.Sprintf("listener %q is not one of %s", l, strings.Join(certListeners, ", "))}
+}
 
 const (
 	edgeSourceRuntime  = "runtime"  // vecta-runtime-root (default)
@@ -42,11 +77,11 @@ type edgeCertChoice struct {
 	UpdatedAt    time.Time `json:"updated_at,omitempty"`
 }
 
-func (s *SQLStore) GetEdgeCertChoice(ctx context.Context) (edgeCertChoice, error) {
+func (s *SQLStore) GetEdgeCertChoice(ctx context.Context, listener string) (edgeCertChoice, error) {
 	var c edgeCertChoice
 	var updated interface{}
 	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT source, ca_id, key_algorithm, reason, updated_by, updated_at FROM cert_edge_certificate WHERE id = 'edge'`).
+SELECT source, ca_id, key_algorithm, reason, updated_by, updated_at FROM cert_edge_certificate WHERE id = $1`, listenerRow(listener)).
 		Scan(&c.Source, &c.CAID, &c.KeyAlgorithm, &c.Reason, &c.UpdatedBy, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return edgeCertChoice{Source: edgeSourceRuntime}, nil
@@ -55,19 +90,19 @@ SELECT source, ca_id, key_algorithm, reason, updated_by, updated_at FROM cert_ed
 	return c, err
 }
 
-func (s *SQLStore) UpsertEdgeCertChoice(ctx context.Context, c edgeCertChoice) error {
+func (s *SQLStore) UpsertEdgeCertChoice(ctx context.Context, listener string, c edgeCertChoice) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO cert_edge_certificate (id, source, ca_id, key_algorithm, reason, updated_by, updated_at)
-VALUES ('edge',$1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE SET source = EXCLUDED.source, ca_id = EXCLUDED.ca_id, key_algorithm = EXCLUDED.key_algorithm,
 	reason = EXCLUDED.reason, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
-		c.Source, c.CAID, c.KeyAlgorithm, c.Reason, c.UpdatedBy)
+		listenerRow(listener), c.Source, c.CAID, c.KeyAlgorithm, c.Reason, c.UpdatedBy)
 	return err
 }
 
 type edgeCertStore interface {
-	GetEdgeCertChoice(ctx context.Context) (edgeCertChoice, error)
-	UpsertEdgeCertChoice(ctx context.Context, c edgeCertChoice) error
+	GetEdgeCertChoice(ctx context.Context, listener string) (edgeCertChoice, error)
+	UpsertEdgeCertChoice(ctx context.Context, listener string, c edgeCertChoice) error
 }
 
 func (s *Service) edgeStore() (edgeCertStore, error) {
@@ -78,19 +113,23 @@ func (s *Service) edgeStore() (edgeCertStore, error) {
 	return st, nil
 }
 
-// edgeFiles are this node's edge files on the runtime certificate volume
-// (base is the materializer directory).
-type edgeFiles string
+// edgeFiles are a listener's files on this node's runtime certificate
+// volume (base is the materializer directory).
+type edgeFiles struct{ base, name string }
 
-func (b edgeFiles) dir() string     { return filepath.Join(string(b), "envoy") }
-func (b edgeFiles) pending() string { return filepath.Join(string(b), "envoy-pending") }
+func filesFor(base, listener string) edgeFiles { return edgeFiles{base, listenerDir(listener)} }
+
+func (b edgeFiles) dir() string     { return filepath.Join(b.base, b.name) }
+func (b edgeFiles) pending() string { return filepath.Join(b.base, b.name+"-pending") }
 
 // marker records the serial of the external certificate installed on this
 // node, so it is never confused with one certs issued.
-func (b edgeFiles) marker() string { return filepath.Join(string(b), "envoy-external.serial") }
+func (b edgeFiles) marker() string { return filepath.Join(b.base, b.name+"-external.serial") }
 
-func (s *Service) edgeFiles() edgeFiles { return edgeFiles(s.runtimeCfg.MaterializeDir) }
-func (s *Service) edgeDir() string      { return s.edgeFiles().dir() }
+func (s *Service) edgeFiles(listener string) edgeFiles {
+	return filesFor(s.runtimeCfg.MaterializeDir, listener)
+}
+func (s *Service) edgeDir() string { return s.edgeFiles(listenerHTTPS).dir() }
 
 func (b edgeFiles) installedExternal(leaf *x509.Certificate) bool {
 	raw, err := os.ReadFile(b.marker())
@@ -106,14 +145,18 @@ type edgePending struct {
 	CreatedBy    string    `json:"created_by"`
 }
 
-func edgeIdentity(cfg RuntimeCertMaterializerConfig) (string, []string) {
-	cn := strings.TrimSpace(cfg.EnvoyCN)
-	if cn == "" {
-		cn = "vecta-envoy"
+func edgeIdentity(cfg RuntimeCertMaterializerConfig, listener string) (string, []string) {
+	cn, sans, host := cfg.EnvoyCN, cfg.EnvoySANs, "envoy"
+	if listener == listenerKMIP {
+		cn, sans, host = cfg.KMIPCN, cfg.KMIPSANs, "kmip"
 	}
-	sans := dedupStrings(append([]string{}, cfg.EnvoySANs...))
+	cn = strings.TrimSpace(cn)
+	if cn == "" {
+		cn = "vecta-" + host
+	}
+	sans = dedupStrings(append([]string{}, sans...))
 	if len(sans) == 0 {
-		sans = []string{"localhost", "envoy", "127.0.0.1"}
+		sans = []string{"localhost", host, "127.0.0.1"}
 	}
 	return cn, sans
 }
@@ -169,9 +212,9 @@ func (s *Service) edgeCA(ctx context.Context, tenantID, caID string) (CA, error)
 	return ca, nil
 }
 
-// writeEdgeCert issues the edge certificate from ca and installs it.
-func (s *Service) writeEdgeCert(ctx context.Context, tenantID string, ca CA, algorithm string, cfg RuntimeCertMaterializerConfig) error {
-	cn, sans := edgeIdentity(cfg)
+// writeEdgeCert issues the listener's certificate from ca and installs it.
+func (s *Service) writeEdgeCert(ctx context.Context, tenantID string, ca CA, algorithm string, cfg RuntimeCertMaterializerConfig, listener string) error {
+	cn, sans := edgeIdentity(cfg, listener)
 	chain, err := s.caChainPEM(ctx, tenantID, ca)
 	if err != nil {
 		return err
@@ -180,22 +223,22 @@ func (s *Service) writeEdgeCert(ctx context.Context, tenantID string, ca CA, alg
 	if days <= 0 {
 		days = 90
 	}
-	_, err = s.writeRuntimeEndpointCert(ctx, tenantID, ca, edgeFiles(cfg.MaterializeDir).dir(), algorithm, "tls-server", cn, sans, days, chain)
+	_, err = s.writeRuntimeEndpointCert(ctx, tenantID, ca, filesFor(cfg.MaterializeDir, listener).dir(), algorithm, "tls-server", cn, sans, days, chain)
 	return err
 }
 
-// applyEdgeCertificate makes this node's edge serve the chosen source,
+// applyEdgeCertificate makes this node's listener serve the chosen source,
 // renewing before expiry. force reissues now (after a change).
-func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, runtimeRoot CA, cfg RuntimeCertMaterializerConfig, force bool) error {
+func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, runtimeRoot CA, cfg RuntimeCertMaterializerConfig, force bool, listener string) error {
 	st, err := s.edgeStore()
 	if err != nil {
 		return err
 	}
-	choice, err := st.GetEdgeCertChoice(ctx)
+	choice, err := st.GetEdgeCertChoice(ctx, listener)
 	if err != nil {
 		return err
 	}
-	files := edgeFiles(cfg.MaterializeDir)
+	files := filesFor(cfg.MaterializeDir, listener)
 	dir := files.dir()
 	renewBefore := cfg.RenewBefore
 	if renewBefore <= 0 {
@@ -210,7 +253,7 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 			return err
 		}
 		if due || !issuedBy(leaf, ca) || !sameKeyLabel(fileKeyAlgorithm(filepath.Join(dir, "tls.crt")), choice.KeyAlgorithm) {
-			return s.writeEdgeCert(ctx, tenantID, ca, choice.KeyAlgorithm, cfg)
+			return s.writeEdgeCert(ctx, tenantID, ca, choice.KeyAlgorithm, cfg, listener)
 		}
 		return nil
 	case edgeSourceExternal:
@@ -222,7 +265,7 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 		}
 	}
 	if due || leaf == nil || !issuedBy(leaf, runtimeRoot) {
-		return s.writeEdgeCert(ctx, tenantID, runtimeRoot, "RSA-3072", cfg)
+		return s.writeEdgeCert(ctx, tenantID, runtimeRoot, "RSA-3072", cfg, listener)
 	}
 	return nil
 }
@@ -237,12 +280,15 @@ func (s *Service) runtimeRoot(ctx context.Context, tenantID string) (CA, error) 
 
 // SetEdgeCertificateSource changes the source and applies it on this node.
 // Other nodes apply it on their next materializer pass.
-func (s *Service) SetEdgeCertificateSource(ctx context.Context, tenantID string, next edgeCertChoice) (edgeCertChoice, edgeCertChoice, error) {
+func (s *Service) SetEdgeCertificateSource(ctx context.Context, tenantID, listener string, next edgeCertChoice) (edgeCertChoice, edgeCertChoice, error) {
 	st, err := s.edgeStore()
 	if err != nil {
 		return edgeCertChoice{}, edgeCertChoice{}, err
 	}
-	prev, err := st.GetEdgeCertChoice(ctx)
+	if listener, err = normListener(listener); err != nil {
+		return edgeCertChoice{}, next, err
+	}
+	prev, err := st.GetEdgeCertChoice(ctx, listener)
 	if err != nil {
 		return edgeCertChoice{}, edgeCertChoice{}, err
 	}
@@ -265,16 +311,16 @@ func (s *Service) SetEdgeCertificateSource(ctx context.Context, tenantID string,
 		next.CAID, next.KeyAlgorithm = "", ""
 	}
 	if next.Source == prev.Source && next.CAID == prev.CAID && next.KeyAlgorithm == prev.KeyAlgorithm {
-		return prev, next, mtlsRefusal{"unchanged", "the edge certificate already comes from " + next.Source}
+		return prev, next, mtlsRefusal{"unchanged", "the " + listener + " certificate already comes from " + next.Source}
 	}
-	if err := st.UpsertEdgeCertChoice(ctx, next); err != nil {
+	if err := st.UpsertEdgeCertChoice(ctx, listener, next); err != nil {
 		return prev, next, err
 	}
 	root, err := s.runtimeRoot(ctx, tenantID)
 	if err != nil {
 		return prev, next, err
 	}
-	if err := s.applyEdgeCertificate(ctx, tenantID, root, s.runtimeCfg, next.Source != edgeSourceExternal); err != nil {
+	if err := s.applyEdgeCertificate(ctx, tenantID, root, s.runtimeCfg, next.Source != edgeSourceExternal, listener); err != nil {
 		return prev, next, fmt.Errorf("apply on this node: %w", err)
 	}
 	return prev, next, nil
@@ -283,12 +329,15 @@ func (s *Service) SetEdgeCertificateSource(ctx context.Context, tenantID string,
 // CreateEdgeCSR generates this node's edge key and returns a CSR for an
 // external CA. The key stays in this node's pending directory until the
 // signed certificate is installed; a new CSR replaces it.
-func (s *Service) CreateEdgeCSR(ctx context.Context, subjectCN string, sans []string, algorithm, actor string) (edgePending, error) {
+func (s *Service) CreateEdgeCSR(ctx context.Context, listener, subjectCN string, sans []string, algorithm, actor string) (edgePending, error) {
 	st, err := s.edgeStore()
 	if err != nil {
 		return edgePending{}, err
 	}
-	choice, err := st.GetEdgeCertChoice(ctx)
+	if listener, err = normListener(listener); err != nil {
+		return edgePending{}, err
+	}
+	choice, err := st.GetEdgeCertChoice(ctx, listener)
 	if err != nil {
 		return edgePending{}, err
 	}
@@ -327,17 +376,17 @@ func (s *Service) CreateEdgeCSR(ctx context.Context, subjectCN string, sans []st
 	p := edgePending{SubjectCN: subjectCN, SANs: sans, KeyAlgorithm: algorithm, CreatedAt: time.Now().UTC(), CreatedBy: actor,
 		CSRPEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der}))}
 	meta, _ := json.MarshalIndent(p, "", "  ")
-	if err := writeFileAtomically(filepath.Join(s.edgeFiles().pending(), "tls.key"), keyBytes, 0o600); err != nil {
+	if err := writeFileAtomically(filepath.Join(s.edgeFiles(listener).pending(), "tls.key"), keyBytes, 0o600); err != nil {
 		return edgePending{}, err
 	}
-	if err := writeFileAtomically(filepath.Join(s.edgeFiles().pending(), "pending.json"), meta, 0o600); err != nil {
+	if err := writeFileAtomically(filepath.Join(s.edgeFiles(listener).pending(), "pending.json"), meta, 0o600); err != nil {
 		return edgePending{}, err
 	}
 	return p, nil
 }
 
-func (s *Service) edgePending() *edgePending {
-	raw, err := os.ReadFile(filepath.Join(s.edgeFiles().pending(), "pending.json"))
+func (s *Service) edgePending(listener string) *edgePending {
+	raw, err := os.ReadFile(filepath.Join(s.edgeFiles(listener).pending(), "pending.json"))
 	if err != nil {
 		return nil
 	}
@@ -351,19 +400,23 @@ func (s *Service) edgePending() *edgePending {
 // InstallEdgeCertificate installs the external CA's certificate for this
 // node's pending key: it must match the key, be valid now, allow server
 // authentication, and be signed by the first certificate of the chain.
-func (s *Service) InstallEdgeCertificate(ctx context.Context, certPEM, chainPEM string) (*x509.Certificate, error) {
+func (s *Service) InstallEdgeCertificate(ctx context.Context, listener, certPEM, chainPEM string) (*x509.Certificate, error) {
 	st, err := s.edgeStore()
 	if err != nil {
 		return nil, err
 	}
-	choice, err := st.GetEdgeCertChoice(ctx)
+	if listener, err = normListener(listener); err != nil {
+		return nil, err
+	}
+	files := s.edgeFiles(listener)
+	choice, err := st.GetEdgeCertChoice(ctx, listener)
 	if err != nil {
 		return nil, err
 	}
 	if choice.Source != edgeSourceExternal {
 		return nil, mtlsRefusal{"source_not_external", "choose the external source first"}
 	}
-	keyPath := filepath.Join(s.edgeFiles().pending(), "tls.key")
+	keyPath := filepath.Join(files.pending(), "tls.key")
 	keyRaw, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, mtlsRefusal{"no_pending_key", "request a CSR on this node first"}
@@ -398,16 +451,17 @@ func (s *Service) InstallEdgeCertificate(ctx context.Context, certPEM, chainPEM 
 	for _, c := range certs {
 		out.Write(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}))
 	}
-	if err := writeFileAtomically(filepath.Join(s.edgeDir(), "tls.crt"), []byte(out.String()), 0o600); err != nil {
+	// Key first: a reader that sees the new certificate finds its key.
+	if err := writeFileAtomically(filepath.Join(files.dir(), "tls.key"), keyRaw, 0o600); err != nil {
 		return nil, err
 	}
-	if err := writeFileAtomically(filepath.Join(s.edgeDir(), "tls.key"), keyRaw, 0o600); err != nil {
+	if err := writeFileAtomically(filepath.Join(files.dir(), "tls.crt"), []byte(out.String()), 0o600); err != nil {
 		return nil, err
 	}
-	if err := writeFileAtomically(s.edgeFiles().marker(), []byte(leaf.SerialNumber.Text(16)+"\n"), 0o600); err != nil {
+	if err := writeFileAtomically(files.marker(), []byte(leaf.SerialNumber.Text(16)+"\n"), 0o600); err != nil {
 		return nil, err
 	}
-	_ = os.RemoveAll(s.edgeFiles().pending())
+	_ = os.RemoveAll(files.pending())
 	return leaf, nil
 }
 
@@ -440,8 +494,9 @@ func parsePEMCertificates(raw string) ([]*x509.Certificate, error) {
 	}
 }
 
-// edgeCertView is the edge certificate on this node.
+// edgeCertView is a listener's certificate on this node.
 type edgeCertView struct {
+	Listener  string         `json:"listener"`
 	Choice    edgeCertChoice `json:"choice"`
 	Installed *struct {
 		Serial       string    `json:"serial"`
@@ -456,12 +511,12 @@ type edgeCertView struct {
 	Served  bool         `json:"served"`
 }
 
-func (s *Service) edgeCertificateView(ctx context.Context, tenantID string, observedSerial string) edgeCertView {
-	v := edgeCertView{Pending: s.edgePending()}
+func (s *Service) edgeCertificateView(ctx context.Context, tenantID, listener string, observedSerial string) edgeCertView {
+	v := edgeCertView{Listener: listener, Pending: s.edgePending(listener)}
 	if st, err := s.edgeStore(); err == nil {
-		v.Choice, _ = st.GetEdgeCertChoice(ctx)
+		v.Choice, _ = st.GetEdgeCertChoice(ctx, listener)
 	}
-	leaf, _, err := installedLeaf(s.edgeDir())
+	leaf, _, err := installedLeaf(s.edgeFiles(listener).dir())
 	if err != nil {
 		return v
 	}
@@ -482,7 +537,7 @@ func (s *Service) edgeCertificateView(ctx context.Context, tenantID string, obse
 			v.Installed.FromChoice = issuedBy(leaf, ca)
 		}
 	case edgeSourceExternal:
-		v.Installed.FromChoice = s.edgeFiles().installedExternal(leaf)
+		v.Installed.FromChoice = s.edgeFiles(listener).installedExternal(leaf)
 	default:
 		root, err := s.runtimeRoot(ctx, tenantID)
 		v.Installed.FromChoice = err == nil && issuedBy(leaf, root)

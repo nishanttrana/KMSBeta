@@ -11,9 +11,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha1" //nolint:gosec // HMACSHA1Interop: required by legacy cloud provider signature protocols only
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
@@ -21,7 +19,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // ParseRSAPublicKeyAny parses an RSA public key from PEM (PKIX or PKCS#1) or
@@ -211,58 +208,4 @@ func LoadOrCreateRSAKeyPEM(path string, bits int) (*KeyPair, error) {
 		return nil, errors.New("crypto: persisted key is not RSA")
 	}
 	return kp, nil
-}
-
-// DevServerCertWithCA generates an ephemeral local CA plus a server
-// certificate signed by it, for development TLS listeners that require a
-// real chain (e.g. the KMIP mTLS listener). It returns the server keypair
-// and the CA certificate for the client pool.
-func DevServerCertWithCA(caCN string, serverCN string, dnsNames []string) (tls.Certificate, *x509.Certificate, error) {
-	caKey, err := rsa.GenerateKey(Reader, 2048)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-	caTpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: caCN},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(7 * 24 * time.Hour),
-		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
-	}
-	caDER, err := x509.CreateCertificate(Reader, caTpl, caTpl, &caKey.PublicKey, caKey)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-	caCert, err := x509.ParseCertificate(caDER)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-
-	srvKey, err := rsa.GenerateKey(Reader, 2048)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-	srvTpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(2),
-		Subject:               pkix.Name{CommonName: serverCN},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		DNSNames:              dnsNames,
-	}
-	srvDER, err := x509.CreateCertificate(Reader, srvTpl, caCert, &srvKey.PublicKey, caKey)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-	srvPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srvDER})
-	srvKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(srvKey)})
-	srvCert, err := tls.X509KeyPair(srvPEM, srvKeyPEM)
-	if err != nil {
-		return tls.Certificate{}, nil, err
-	}
-	return srvCert, caCert, nil
 }

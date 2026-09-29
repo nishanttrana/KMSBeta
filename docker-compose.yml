@@ -363,7 +363,6 @@ services:
       - runtime-certs:/run/vecta/runtime-certs:ro
       - internal-trust:/run/vecta/trust:ro
     ports:
-      - "80:80"
       - "443:443"
       - "5696:5696"
       - "127.0.0.1:9901:9901"

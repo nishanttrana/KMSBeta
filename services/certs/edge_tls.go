@@ -199,9 +199,9 @@ func leafKeyAlgorithm(c *x509.Certificate) string {
 // listenerCertDir holds the certificate the listener serves.
 func (s *Service) listenerCertDir(l edgeListener) string {
 	if l.envoy {
-		return s.edgeDir()
+		return s.edgeFiles(listenerHTTPS).dir()
 	}
-	return filepath.Join(s.runtimeCfg.MaterializeDir, "kmip")
+	return s.edgeFiles(listenerKMIP).dir()
 }
 
 // edgeListenerView is one listener on the Service mTLS page.
@@ -214,13 +214,14 @@ type edgeListenerView struct {
 }
 
 type edgeView struct {
-	Certificate  edgeCertView        `json:"certificate"`
-	Policy       svctls.EdgePolicy   `json:"policy"`
-	PolicyRecord *mtlsPolicyRow      `json:"policy_record,omitempty"`
-	Listeners    []edgeListenerView  `json:"listeners"`
-	Applied      bool                `json:"applied"`
-	KXProfiles   []string            `json:"kx_profiles"`
-	Groups       map[string][]string `json:"groups"`
+	Certificate     edgeCertView        `json:"certificate"`
+	KMIPCertificate edgeCertView        `json:"kmip_certificate"`
+	Policy          svctls.EdgePolicy   `json:"policy"`
+	PolicyRecord    *mtlsPolicyRow      `json:"policy_record,omitempty"`
+	Listeners       []edgeListenerView  `json:"listeners"`
+	Applied         bool                `json:"applied"`
+	KXProfiles      []string            `json:"kx_profiles"`
+	Groups          map[string][]string `json:"groups"`
 }
 
 // EdgeInventory is the edge policy with what each listener was measured to
@@ -256,13 +257,14 @@ func (s *Service) EdgeInventory(ctx context.Context) (edgeView, error) {
 		v.Applied = v.Applied && lv.Applied
 		v.Listeners = append(v.Listeners, lv)
 	}
-	served := ""
+	served := map[string]string{}
 	for _, l := range v.Listeners {
-		if strings.HasPrefix(l.Name, "envoy") && l.Observed != nil {
-			served = l.Observed.Serial
+		if l.Observed != nil {
+			served[l.certListener()] = l.Observed.Serial
 		}
 	}
-	v.Certificate = s.edgeCertificateView(ctx, s.internalTenant(), served)
+	v.Certificate = s.edgeCertificateView(ctx, s.internalTenant(), listenerHTTPS, served[listenerHTTPS])
+	v.KMIPCertificate = s.edgeCertificateView(ctx, s.internalTenant(), listenerKMIP, served[listenerKMIP])
 	return v, nil
 }
 
@@ -294,4 +296,12 @@ func (s *Service) AuditAppliedEdge(ctx context.Context, emit route.Emitter) erro
 		return err
 	}
 	return st.MarkMTLSPolicyAudited(ctx, svctls.EdgeIdentity, v.Policy.Generation)
+}
+
+// certListener is the certificate listener a probed listener serves.
+func (l edgeListenerView) certListener() string {
+	if strings.HasPrefix(l.Name, "envoy") {
+		return listenerHTTPS
+	}
+	return listenerKMIP
 }

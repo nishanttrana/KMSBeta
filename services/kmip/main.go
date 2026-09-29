@@ -25,7 +25,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -104,9 +103,12 @@ func main() {
 		}
 	}()
 
-	tlsCfg, err := loadKMIPTLSConfig()
+	// The server certificate certs writes (its source is chosen in
+	// Certificates / PKI > Service mTLS), reloaded when certs replaces it.
+	// Refuses to start without it: there is no fallback certificate.
+	tlsCfg, err := loadKMIPTLSConfig(ctx, kmipTLSFilesFromEnv(), logger.Printf)
 	if err != nil {
-		logger.Fatalf("tls config failed: %v", err)
+		logger.Fatalf("refusing to start: %v", err)
 	}
 	// The external edge key exchange chosen in Certificates / PKI > Service
 	// mTLS, applied to every new handshake (docs/SECURITY/INTERNAL_TLS.md).
@@ -210,57 +212,12 @@ func allowedKMIPMinVersion() uint16 {
 	return tls.VersionTLS13
 }
 
-// kmipClientAuthMode selects the X.509 client-cert verification policy.
-// Production deployments with a configured CA chain always use full
-// verification; the env override is provided strictly for interop testing
-// against unconventional client implementations and is logged at startup.
-func kmipClientAuthMode() tls.ClientAuthType {
-	if envBool("KMIP_CLIENT_CERT_VERIFY_DISABLED", false) {
-		logger.Printf("WARNING: KMIP client certificate verification disabled by env override")
-		return tls.RequireAnyClientCert
-	}
-	return tls.RequireAndVerifyClientCert
-}
-
-func loadKMIPTLSConfig() (*tls.Config, error) {
-	certFile := strings.TrimSpace(os.Getenv("KMIP_TLS_CERT_FILE"))
-	keyFile := strings.TrimSpace(os.Getenv("KMIP_TLS_KEY_FILE"))
-	caFile := strings.TrimSpace(os.Getenv("KMIP_TLS_CLIENT_CA_FILE"))
-	if certFile != "" && keyFile != "" && caFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return devKMIPTLSConfig()
-		}
-		caRaw, err := os.ReadFile(caFile)
-		if err != nil {
-			return devKMIPTLSConfig()
-		}
-		cp := x509.NewCertPool()
-		if !cp.AppendCertsFromPEM(caRaw) {
-			return devKMIPTLSConfig()
-		}
-		cfg := &tls.Config{
-			MinVersion:   allowedKMIPMinVersion(),
-			Certificates: []tls.Certificate{cert},
-			ClientAuth:   kmipClientAuthMode(),
-			ClientCAs:    cp,
-			CipherSuites: fipsApprovedCipherSuites,
-		}
-		if vf, err := loadKMIPClientCertVerifier(cp); err == nil && vf != nil {
-			cfg.VerifyPeerCertificate = vf
-		}
-		return cfg, nil
-	}
-	return devKMIPTLSConfig()
-}
-
 // loadKMIPClientCertVerifier attaches an additional verification step that
 // checks each client certificate against an optional CRL file. The CRL is
 // loaded once at startup from KMIP_CLIENT_CRL_FILE; revoked serials short-
 // circuit the connection. When no CRL is configured the verifier is nil
 // and the standard chain check stands alone.
-func loadKMIPClientCertVerifier(roots *x509.CertPool) (func([][]byte, [][]*x509.Certificate) error, error) {
-	crlPath := strings.TrimSpace(os.Getenv("KMIP_CLIENT_CRL_FILE"))
+func loadKMIPClientCertVerifier(crlPath string) (func([][]byte, [][]*x509.Certificate) error, error) {
 	if crlPath == "" {
 		return nil, nil
 	}
@@ -293,22 +250,6 @@ func loadKMIPClientCertVerifier(roots *x509.CertPool) (func([][]byte, [][]*x509.
 			}
 		}
 		return nil
-	}, nil
-}
-
-func devKMIPTLSConfig() (*tls.Config, error) {
-	srvCert, caCert, err := pkgcrypto.DevServerCertWithCA("kms-kmip-dev-ca", "kms-kmip-local", []string{"localhost"})
-	if err != nil {
-		return nil, err
-	}
-	cp := x509.NewCertPool()
-	cp.AddCert(caCert)
-	return &tls.Config{
-		MinVersion:   allowedKMIPMinVersion(),
-		Certificates: []tls.Certificate{srvCert},
-		ClientAuth:   tls.RequireAnyClientCert,
-		ClientCAs:    cp,
-		CipherSuites: fipsApprovedCipherSuites,
 	}, nil
 }
 

@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T13:31:33Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T18:01:58Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -176,11 +176,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
 | certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
 | certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1168 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1173 |
-| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1185 |
-| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:285) |  |  |  |  | web/dashboard/src/lib/certs.ts:1195 |
-| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:310) |  |  |  |  | web/dashboard/src/lib/certs.ts:1203 |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1170 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1175 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1187 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1197 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1205 |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:44) | RegisterAccount | CreateAccount, GetAccount |  | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope | web/dashboard/src/lib/cloud.ts:135 |
 | cloud\|DELETE\|/cloud/accounts/{param} | DELETE /cloud/accounts/{id} | handleDeleteAccount (services/cloud/handler.go:73) | DeleteAccount | DeleteAccountCascade | s.exposure.Retire |  | web/dashboard/src/lib/cloud.ts:152 |
 | cloud\|POST\|/cloud/region-mappings | POST /cloud/region-mappings | handleSetRegionMapping (services/cloud/handler.go:92) | SetRegionMapping | SetRegionMapping, GetRegionMapping |  |  | web/dashboard/src/lib/cloud.ts:171 |
@@ -799,12 +799,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
 | certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
 | certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1168 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1173 |
-| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1185 |
-| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:285) |  |  |  |  | web/dashboard/src/lib/certs.ts:1195 |
-| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:310) |  |  |  |  | web/dashboard/src/lib/certs.ts:1203 |
-| certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:345) |  |  |  |  |  |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1170 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1175 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1187 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:287) |  |  |  |  | web/dashboard/src/lib/certs.ts:1197 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:314) |  |  |  |  | web/dashboard/src/lib/certs.ts:1205 |
+| certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:351) |  |  |  |  |  |
 | certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:44) | RegisterAccount | CreateAccount, GetAccount |  | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope | web/dashboard/src/lib/cloud.ts:135 |
 | cloud\|GET\|/cloud/accounts | GET /cloud/accounts | handleListAccounts (services/cloud/handler.go:59) | ListAccounts | ListAccounts |  |  |  |
