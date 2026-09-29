@@ -2,2506 +2,483 @@
 
 **Vecta KMS Technical Reference**
 
-This document provides exhaustive technical documentation for three interconnected capability areas in Vecta KMS:
+This guide covers four capability areas and what each one actually does:
 
-1. **Workload Identity** — SPIFFE/SVID-based machine authentication with token exchange to cloud IAM systems
-2. **Confidential Computing and TEE Attestation** — Cryptographic proof of runtime environment before key release
-3. **Key Access Justifications** — Structured audit trail of why keys are used
-4. **Post-Quantum Cryptography** — NIST FIPS 203/204/205 algorithm support and migration tooling
-5. **AI gateway** — where AI traffic goes (there is no separate AI service)
-6. **Reference Use Cases** — Eight complete, end-to-end implementation scenarios
+1. **Workload identity** (`workload`): SPIFFE SVIDs issued by a per-tenant
+   CA, and the exchange of an SVID for a scoped KMS access token.
+2. **Attested key release** (`confidential`): a key is released, sealed to
+   an enclave's key, only on cryptographically verified TEE evidence.
+3. **Key access justifications** (`keyaccess`): a reason code gate on EKM,
+   cloud BYOK and HYOK key operations.
+4. **Post-quantum cryptography** (`keycore`, `pqc`): ML-KEM, ML-DSA and
+   SLH-DSA keys, hybrid TLS key exchange, and the readiness and migration
+   tooling.
+
+Section 5 points to the AI gateway, and Section 6 walks through use cases
+built only from the routes below.
+
+Every claim was checked against the code in 6.6.0-beta, following each one
+to the route that serves it. What this page used to describe that doesn't
+exist is listed under [Removed claims](#removed-claims-660-beta). What is
+real but has a known gap is under [Open items](#open-items).
+
+All examples go through the gateway (`https://localhost`) with a bearer
+token. `$TOKEN` holds it; never paste a token into a command line.
 
 ---
 
 ## Table of Contents
 
-- [Section 1: Workload Identity](#section-1-workload-identity)
-  - [The Problem with Static API Keys](#the-problem-with-static-api-keys)
-  - [SPIFFE and SVIDs](#spiffe-and-svids)
-  - [Vecta as SPIFFE CA](#vecta-as-spiffe-ca)
-  - [Setup Walkthrough](#setup-walkthrough)
-  - [Kubernetes Attestation](#kubernetes-attestation)
-  - [AWS EC2 Attestation](#aws-ec2-attestation)
-  - [GCP, Docker, Unix, and TPM Attestors](#gcp-docker-unix-and-tpm-attestors)
-  - [Attestation Policy Schema](#attestation-policy-schema)
-  - [Token Exchange — OAuth 2.0 RFC 8693](#token-exchange--oauth-20-rfc-8693)
-  - [Workload Service Endpoints](#workload-service-endpoints)
-- [Section 2: Confidential Computing and TEE Attestation](#section-2-confidential-computing-and-tee-attestation)
-  - [What is Confidential Computing](#what-is-confidential-computing)
-  - [Attested Key Release Pattern](#attested-key-release-pattern)
-  - [Intel TDX](#intel-tdx)
-  - [AMD SEV-SNP](#amd-sev-snp)
-  - [AWS Nitro Enclaves](#aws-nitro-enclaves)
-  - [Azure Confidential VMs](#azure-confidential-vms)
-  - [Attested Key Release Policy Schema](#attested-key-release-policy-schema)
-  - [Full Attested Key Release Flow](#full-attested-key-release-flow)
-  - [Confidential Service Endpoints](#confidential-service-endpoints)
-- [Section 3: Key Access Justifications](#section-3-key-access-justifications)
-- [Section 4: Post-Quantum Cryptography](#section-4-post-quantum-cryptography)
+- [Section 1: Workload identity](#section-1-workload-identity)
+- [Section 2: Attested key release](#section-2-attested-key-release)
+- [Section 3: Key access justifications](#section-3-key-access-justifications)
+- [Section 4: Post-quantum cryptography](#section-4-post-quantum-cryptography)
 - [Section 5: AI gateway](#section-5-ai-gateway)
-- [Section 6: Reference Use Cases](#section-6-reference-use-cases)
+- [Section 6: Use cases](#section-6-use-cases)
+- [Open items](#open-items)
+- [Removed claims (6.6.0-beta)](#removed-claims-660-beta)
 
 ---
 
-## Section 1: Workload Identity
+## Section 1: Workload identity
 
-### The Problem with Static API Keys
+### Background: SPIFFE
 
-Most applications authenticate to a KMS using a long-lived API key: a secret string that is generated once, stored somewhere, and presented on every request. This model has fundamental security weaknesses that become increasingly difficult to manage at scale.
+A SPIFFE ID names a workload as a URI, `spiffe://{trust-domain}/{path}`. The
+ID isn't a secret; the proof is a SPIFFE Verifiable Identity Document (SVID),
+either an X.509 certificate carrying the ID as a URI SAN or a signed JWT
+whose `sub` is the ID. SVIDs are short-lived, so a leaked one expires on its
+own.
 
-**Credential leakage is the norm, not the exception.** API keys are accidentally committed to version control, printed in CI/CD logs, embedded in container images, and stored in plaintext configuration files. GitHub's secret scanning program reports tens of millions of leaked credentials per year. Every leaked API key is a window for an attacker to impersonate your service indefinitely until the key is manually revoked.
+### What the workload service does
 
-**There is no attestation.** A static API key proves only that the holder knows the secret. It provides no evidence about what process holds the key, where it is running, what code it is executing, or whether it is the legitimate service or an attacker who copied the key from a Slack message. Two completely different processes with the same key are indistinguishable.
+The `workload` service (`/svc/workload/workload-identity/...`) is a SPIFFE
+issuer and verifier for one trust domain per tenant. It:
 
-**Manual rotation is fragile.** Rotating API keys requires coordinating the new key across every place the old key is stored: secrets managers, environment variables, Kubernetes secrets, CI/CD pipeline variables, and often hard-coded configuration files spread across dozens of repositories. Human coordination errors cause outages. Fear of outages causes teams to skip rotation, leaving keys in place for years.
+1. **Creates the tenant's signing material** the first time the tenant's
+   settings are read: an RSA-2048 root CA certificate (10-year validity) for
+   X.509 SVIDs and a separate RSA-2048 key for JWT SVIDs, with its JWKS.
+   Both come from `pkg/crypto`.
+2. **Keeps registrations**: a SPIFFE ID in the tenant's trust domain, with
+   the interfaces, key IDs and permissions that ID may be granted.
+3. **Issues SVIDs** for a registration, to a caller holding a KMS token that
+   can reach the route. **The service does not attest the workload.**
+   `selectors` on a registration are stored and shown, never checked.
+4. **Verifies SVIDs**, its own or those of a federated trust domain whose
+   bundle you added, and **exchanges** a verified SVID for a KMS access
+   token scoped to the registration's permissions and key IDs.
+5. **Reports** issuances, key usage by workload, and an authorization graph.
 
-**Revocation is reactive.** Revoking a compromised static key requires knowing it was compromised — which typically happens only after a breach. The window between compromise and revocation averages hundreds of days in industry incident data.
+There is no agent, no Workload API socket, and no Kubernetes, cloud, Docker,
+Unix or TPM attestor. A workload gets its SVID by calling the issue route
+itself, or from whatever deploys it.
 
-SPIFFE (Secure Production Identity Framework For Everyone) solves each of these problems with a fundamentally different model: workloads prove their identity using short-lived cryptographic certificates issued by a trusted authority that has verified the workload's identity through platform-level attestation. There is no secret to leak, rotation is automatic, and attestation ensures that only the legitimate workload can obtain credentials.
+### Tenant settings
 
----
+`GET` / `PUT /svc/workload/workload-identity/settings` (response key
+`settings`):
 
-### SPIFFE and SVIDs
+| Field | Default | Effect |
+|---|---|---|
+| `enabled` | `false` | Token exchange is refused (`409`) while false. Issuance doesn't check it. |
+| `trust_domain` | the tenant ID | Every registration's SPIFFE ID must be in this domain. |
+| `token_exchange_enabled` | `true` | Token exchange is refused (`409`) while false. |
+| `federation_enabled` | `false` | Stored and reported. Federated bundles are used for verification whether or not it is set. |
+| `default_x509_ttl_seconds` | 43200 (12 h) | Lifetime of an X.509 SVID when the request names none. Values under 300 fall back to the default. |
+| `default_jwt_ttl_seconds` | 1800 (30 min) | Lifetime of a JWT SVID when the request names none, and the upper bound of an exchanged KMS token. Values under 120 fall back to the default. |
+| `rotation_window_seconds` | 1800 | `rotation_due_at` = expiry minus this window. |
+| `allowed_audiences` | `kms`, `kms-workload`, `kms-rest` | Audiences put in a JWT SVID when the request names none. |
+| `disable_static_api_keys`, `rotation_alert_enabled`, `rotation_warn_hours`, `rotation_critical_hours` | | Stored and returned only. Nothing acts on them ([Open items](#open-items)). |
 
-SPIFFE defines a standard for workload identity that is platform-agnostic and interoperable across clouds, orchestration systems, and environments.
+The response also carries `local_ca_certificate_pem`, `local_bundle_jwks`
+and `jwt_signer_key_id`. The private keys are never returned.
 
-#### SPIFFE ID Format
+### Registrations
 
-Every workload in a SPIFFE deployment is identified by a URI called a SPIFFE ID:
+`GET` / `POST /svc/workload/workload-identity/registrations`,
+`PUT` / `DELETE .../registrations/{id}` (response key `registration`):
 
-```
-spiffe://{trust-domain}/{path}
-```
-
-The trust domain is a DNS name that represents an administrative boundary. The path is a hierarchical identifier that encodes meaningful information about the workload.
-
-**Common path conventions:**
-
-```
-# Kubernetes workload — namespace and service account
-spiffe://example.com/ns/prod/sa/payments-service
-
-# Kubernetes workload — namespace, deployment, and version
-spiffe://example.com/ns/prod/deployment/api-gateway/v2
-
-# Batch job
-spiffe://example.com/job/nightly-backup
-
-# Host-based identity
-spiffe://example.com/host/worker-03.internal
-
-# Cloud VM
-spiffe://example.com/aws/account/123456789012/region/us-east-1/instance/i-0abc123def456789
-
-# CI/CD pipeline
-spiffe://example.com/ci/github/org/myorg/repo/payments/branch/main
-```
-
-SPIFFE IDs are not secrets. They are identifiers. The cryptographic proof of identity is carried in the SVID (SPIFFE Verifiable Identity Document), not in the ID string itself.
-
-#### X.509 SVID
-
-An X.509 SVID is a standard X.509 certificate with these specific properties:
-
-- **Subject Alternative Name (SAN):** A URI SAN containing the SPIFFE ID (e.g., `spiffe://example.com/ns/prod/sa/payments-service`)
-- **Key Usage:** `digitalSignature` and `keyAgreement` (for key exchange)
-- **Extended Key Usage:** `serverAuth` and `clientAuth` (enabling mTLS)
-- **Short TTL:** Default 1 hour. The short lifetime bounds the window of compromise for any credential that leaks.
-- **No static secret:** The private key never leaves the workload's memory. It is generated fresh for each SVID.
-
-X.509 SVIDs are the preferred credential for service-to-service mTLS because they integrate transparently with TLS stacks. No application code change is required beyond pointing TLS configuration at the SVID files.
-
-#### JWT SVID
-
-A JWT SVID is a standard JWT with these properties:
-
-```json
-{
-  "sub": "spiffe://example.com/ns/prod/sa/payments-service",
-  "aud": ["spiffe://example.com/ns/prod/sa/order-service"],
-  "exp": 1740000000,
-  "iat": 1739996400,
-  "iss": "https://vecta.example.com"
-}
-```
-
-Key fields:
-- **`sub`:** The SPIFFE ID of the workload
-- **`aud`:** One or more audience identifiers (the intended recipient services)
-- **`exp`:** Expiration — typically 1 hour from issuance
-- **Signature:** RS256 or ES256 signed by the Vecta CA
-
-JWT SVIDs are useful for HTTP-based authentication where mTLS is not available, for token exchange flows (exchanging a Kubernetes SA token for a Vecta JWT, then exchanging that for a cloud IAM token), and for authorization decisions where a service needs to verify the caller's SPIFFE identity without terminating TLS.
-
-#### Workload API
-
-The Workload API is a local UNIX domain socket (`/run/spiffe/workload.sock` by default) provided by the vecta-agent sidecar or DaemonSet. Applications retrieve SVIDs by connecting to this socket. The Workload API is:
-
-- **Transparent to applications:** No API key, no secret, no configuration beyond the socket path
-- **Streaming:** SVIDs are pushed to the application before expiry, enabling seamless rotation
-- **Authenticated by the kernel:** Socket access is controlled by filesystem permissions — no network exposure
-
-The agent handles all communication with the Vecta CA, certificate rotation, and trust bundle distribution. The application simply reads certificates from the socket and uses them.
-
----
-
-### Vecta as SPIFFE CA
-
-Vecta KMS acts as the SPIFFE Certificate Authority for your trust domain. It:
-
-1. **Maintains the root CA** for the trust domain, stored in the KMS key store
-2. **Issues SVIDs** signed by the intermediate CA, with TTLs configured per attestation policy
-3. **Enforces attestation policies** — SVIDs are only issued after verifying the workload's platform identity
-4. **Manages trust bundles** — the set of CA certificates that should be trusted in the domain, distributed to all workloads
-5. **Federates with external SPIFFE authorities** — enabling cross-domain trust with other SPIFFE deployments
-
-Default SVID TTL is 3600 seconds (1 hour). The vecta-agent renews SVIDs automatically when they reach 50% of their lifetime.
-
----
-
-### Setup Walkthrough
-
-#### Step 1: Configure Trust Domain
-
-Create the trust domain in Vecta:
+| Field | Default | Meaning |
+|---|---|---|
+| `name` | | Display name |
+| `spiffe_id` | `spiffe://{trust_domain}/workloads/{slug of name}` | Must start with `spiffe://` and be in the tenant's trust domain |
+| `selectors` | | Free-form labels. Recorded only |
+| `allowed_interfaces` | `["rest"]` | Interfaces the exchanged token may be used on (`*` for any) |
+| `allowed_key_ids` | none | Keys the exchanged token may use. Empty means the token isn't key-scoped (flagged as over-privileged in the graph) |
+| `permissions` | `key.encrypt`, `key.decrypt` | `encrypt`, `decrypt`, `wrap`, `unwrap`, `sign`, `verify`, `mac`, `derive`, `export` (stored as `key.<op>`), or `key.*` |
+| `issue_x509_svid`, `issue_jwt_svid` | JWT only | Which SVID types may be issued |
+| `default_ttl_seconds` | tenant JWT TTL | Stored with the registration |
+| `enabled` | | A disabled registration can't be issued or exchanged |
 
 ```bash
-curl -sk -X PUT https://localhost/svc/workload/workload-identity/settings \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
   -d '{
     "tenant_id": "root",
-    "trust_domain": "example.com",
-    "default_svid_ttl_secs": 3600,
-    "jwt_svid_ttl_secs": 3600,
-    "enable_x509": true,
-    "enable_jwt": true,
-    "federation_enabled": false
-  }'
-```
-
-Expected response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "trust_domain": "example.com",
-    "default_svid_ttl_secs": 3600,
-    "jwt_svid_ttl_secs": 3600,
-    "enable_x509": true,
-    "enable_jwt": true,
-    "federation_enabled": false,
-    "ca_key_id": "ca-workload-identity-root",
-    "updated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_001"
-}
-```
-
-#### Step 2: Install vecta-agent
-
-The vecta-agent can be deployed as:
-- A **sidecar container** alongside each workload pod
-- A **DaemonSet** running once per Kubernetes node (preferred for production)
-- A **system service** on bare-metal or VM hosts
-
-See the Kubernetes attestation section below for the complete DaemonSet manifest.
-
-Basic agent configuration file (`/etc/vecta-agent/config.yaml`):
-
-```yaml
-server:
-  address: "https://vecta.example.com"
-  token_path: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-
-workload_api:
-  socket_path: "/run/spiffe/workload.sock"
-
-trust_domain: "example.com"
-
-attestor:
-  type: "kubernetes"
-  kubernetes:
-    node_name_env: "MY_NODE_NAME"
-    token_audience: "vecta-kms"
-```
-
-#### Step 3: Define Attestation Policies
-
-Create attestation policies that map platform identities to SPIFFE IDs. See the [Attestation Policy Schema](#attestation-policy-schema) section for all fields.
-
-#### Step 4: Configure Applications
-
-Applications need only the socket path. Example in Go:
-
-```go
-import "github.com/spiffe/go-spiffe/v2/workloadapi"
-
-source, err := workloadapi.NewX509Source(ctx,
-    workloadapi.WithClientOptions(workloadapi.WithAddr("unix:/run/spiffe/workload.sock")),
-)
-```
-
-For environments without a SPIFFE SDK, the agent also writes SVID files to disk:
-
-```
-/run/spiffe/svids/cert.pem      # PEM-encoded X.509 SVID certificate
-/run/spiffe/svids/key.pem       # PEM-encoded private key
-/run/spiffe/svids/bundle.pem    # Trust bundle (CA certificates)
-```
-
-#### Step 5: Test with svid-tool
-
-```bash
-# Fetch the current X.509 SVID
-svid-tool fetch x509 --socket /run/spiffe/workload.sock
-
-# Fetch a JWT SVID for a specific audience
-svid-tool fetch jwt \
-  --socket /run/spiffe/workload.sock \
-  --audience "spiffe://example.com/ns/prod/sa/order-service"
-
-# Display decoded SVID contents
-svid-tool show x509 --socket /run/spiffe/workload.sock
-```
-
----
-
-### Kubernetes Attestation
-
-Kubernetes attestation is the most common deployment pattern. The vecta-agent verifies workload identity using the Kubernetes Service Account Token Projection, which provides a cryptographically verifiable pod identity token.
-
-#### How Kubernetes Attestation Works
-
-1. A pod starts on a Kubernetes node
-2. The projected service account token is mounted at `/var/run/secrets/kubernetes.io/serviceaccount/token`
-3. The vecta-agent on the node reads this token and sends it to Vecta KMS
-4. Vecta KMS calls the Kubernetes TokenReview API to verify the token
-5. The TokenReview response includes the pod's namespace and service account
-6. Vecta matches the pod against an attestation policy
-7. If the policy matches, Vecta issues an SVID with the SPIFFE ID from the policy template
-
-#### Production DaemonSet Manifest
-
-```yaml
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: vecta-agent
-  namespace: vecta-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: vecta-agent
-rules:
-  - apiGroups: ["authentication.k8s.io"]
-    resources: ["tokenreviews"]
-    verbs: ["create"]
-  - apiGroups: [""]
-    resources: ["pods", "nodes"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: vecta-agent
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: vecta-agent
-subjects:
-  - kind: ServiceAccount
-    name: vecta-agent
-    namespace: vecta-system
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: vecta-agent
-  namespace: vecta-system
-  labels:
-    app: vecta-agent
-spec:
-  selector:
-    matchLabels:
-      app: vecta-agent
-  updateStrategy:
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        app: vecta-agent
-    spec:
-      serviceAccountName: vecta-agent
-      hostPID: false
-      hostNetwork: false
-      tolerations:
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
-      containers:
-        - name: vecta-agent
-          image: vecta/agent:latest
-          imagePullPolicy: Always
-          args:
-            - "--config=/etc/vecta-agent/config.yaml"
-          env:
-            - name: MY_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: MY_POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          ports:
-            - name: workload-api
-              containerPort: 8081
-              protocol: TCP
-            - name: health
-              containerPort: 8082
-              protocol: TCP
-          volumeMounts:
-            - name: config
-              mountPath: /etc/vecta-agent
-              readOnly: true
-            - name: workload-socket-dir
-              mountPath: /run/spiffe
-            - name: agent-token
-              mountPath: /var/run/agent-token
-              readOnly: true
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: health
-            initialDelaySeconds: 10
-            periodSeconds: 30
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: health
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            requests:
-              cpu: "50m"
-              memory: "64Mi"
-            limits:
-              cpu: "200m"
-              memory: "256Mi"
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: ["ALL"]
-      volumes:
-        - name: config
-          configMap:
-            name: vecta-agent-config
-        - name: workload-socket-dir
-          hostPath:
-            path: /run/spiffe
-            type: DirectoryOrCreate
-        - name: agent-token
-          projected:
-            sources:
-              - serviceAccountToken:
-                  path: token
-                  expirationSeconds: 7200
-                  audience: "vecta-kms"
-```
-
-#### Pod Annotation for Custom SPIFFE IDs
-
-Override the SPIFFE ID for a specific pod using annotations:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: payments-api
-  namespace: prod
-  annotations:
-    vecta.io/spiffe-id: "spiffe://example.com/ns/prod/sa/payments-service"
-    vecta.io/svid-ttl: "1800"
-```
-
-The annotation value supports template variables resolved at issuance time:
-- `{{.Namespace}}` — Kubernetes namespace
-- `{{.ServiceAccount}}` — Service account name
-- `{{.PodName}}` — Pod name
-- `{{.NodeName}}` — Node name
-
-Default template (when no annotation is set): `spiffe://{{.TrustDomain}}/ns/{{.Namespace}}/sa/{{.ServiceAccount}}`
-
----
-
-### AWS EC2 Attestation
-
-AWS EC2 attestation uses the Instance Identity Document (IID) available from the EC2 Instance Metadata Service (IMDS). The IID is a JSON document signed by AWS that proves the instance's identity, account, region, and AMI.
-
-#### Attestation Flow
-
-1. The vecta-agent on the EC2 instance calls `http://169.254.169.254/latest/dynamic/instance-identity/document` to retrieve the IID
-2. It also retrieves the IID signature from `http://169.254.169.254/latest/dynamic/instance-identity/signature`
-3. The agent sends both to Vecta KMS
-4. Vecta verifies the IID signature against the AWS certificate for the region
-5. Vecta extracts the instance ID, account ID, region, AMI ID, and IAM role
-6. The policy conditions are evaluated
-7. If matched, Vecta issues an SVID
-
-#### Attestor Configuration
-
-```json
-{
-  "name": "aws-prod-attestor",
-  "attestorType": "aws_iid",
-  "spiffeIdTemplate": "spiffe://example.com/aws/account/{{.AccountID}}/role/{{.IAMRole}}",
-  "conditions": {
-    "accountId": "123456789012",
-    "region": "^us-(east|west)-[12]$",
-    "allowedAmiIds": [
-      "ami-0abcdef1234567890",
-      "ami-0fedcba9876543210"
-    ],
-    "iamRolePattern": "^arn:aws:iam::123456789012:instance-profile/prod-.*$",
-    "instanceTags": {
-      "Environment": "production",
-      "Service": ".*"
-    }
-  },
-  "maxSvidTtl": 3600,
-  "allowedSvidTypes": ["x509", "jwt"]
-}
-```
-
-> **Security Note:** Always specify `allowedAmiIds` in production environments. Without this constraint, any instance in the account with the matching IAM role can obtain an SVID. Specifying known-good AMI IDs ensures only properly built machine images can authenticate.
-
-#### IAM Role to SPIFFE ID Mapping
-
-```json
-{
-  "conditions": {
-    "iamRolePattern": "^arn:aws:iam::123456789012:instance-profile/svc-(?P<ServiceName>[a-z-]+)$"
-  },
-  "spiffeIdTemplate": "spiffe://example.com/aws/svc/{{.NamedCapture.ServiceName}}"
-}
-```
-
-Named capture groups from the `iamRolePattern` regex are available in the SPIFFE ID template via `{{.NamedCapture.<GroupName>}}`.
-
----
-
-### GCP, Docker, Unix, and TPM Attestors
-
-#### GCP Attestor
-
-```json
-{
-  "name": "gcp-prod-attestor",
-  "attestorType": "gcp_iit",
-  "spiffeIdTemplate": "spiffe://example.com/gcp/project/{{.ProjectID}}/zone/{{.Zone}}/instance/{{.InstanceName}}",
-  "conditions": {
-    "projectId": "my-project-123456",
-    "zonePattern": "^us-central1-.*$",
-    "serviceAccountPattern": "^svc-.*@my-project-123456.iam.gserviceaccount.com$"
-  },
-  "maxSvidTtl": 3600
-}
-```
-
-#### Docker Attestor
-
-```json
-{
-  "name": "docker-dev-attestor",
-  "attestorType": "docker",
-  "spiffeIdTemplate": "spiffe://example.com/docker/image/{{.ImageName}}",
-  "conditions": {
-    "imageNamePattern": "^registry.example.com/.*:prod$",
-    "labelMatches": {
-      "com.example.env": "production"
-    },
-    "allowedUsers": ["1000", "1001"]
-  },
-  "maxSvidTtl": 1800
-}
-```
-
-#### Unix Process Attestor
-
-```json
-{
-  "name": "unix-service-attestor",
-  "attestorType": "unix",
-  "spiffeIdTemplate": "spiffe://example.com/unix/uid/{{.UID}}",
-  "conditions": {
-    "uid": "1500",
-    "gid": "1500",
-    "binarySha256": "sha256:a1b2c3d4e5f6..."
-  },
-  "maxSvidTtl": 3600
-}
-```
-
-> **Security Note:** The `binarySha256` condition pins the attestation to a specific binary. Include this in production to prevent attesting a modified or replaced binary. Update the hash as part of your deployment pipeline.
-
-#### TPM 2.0 Attestor
-
-```json
-{
-  "name": "tpm-server-attestor",
-  "attestorType": "tpm2",
-  "spiffeIdTemplate": "spiffe://example.com/tpm/ek/{{.EKCertFingerprint}}",
-  "conditions": {
-    "allowedEKCertIssuers": [
-      "CN=Infineon OPTIGA(TM) TPM 2.0 ECC CA 059"
-    ],
-    "allowedPCRValues": {
-      "0": "sha256:d4e5f6...",
-      "1": "sha256:a1b2c3..."
-    }
-  },
-  "maxSvidTtl": 86400
-}
-```
-
----
-
-### Attestation Policy Schema
-
-#### Complete Schema
-
-```json
-{
-  "name": "k8s-prod-policy",
-  "description": "Issues SVIDs for production Kubernetes workloads",
-  "attestorType": "kubernetes",
-  "spiffeIdTemplate": "spiffe://example.com/ns/{{.Namespace}}/sa/{{.ServiceAccount}}",
-  "conditions": {
-    "namespace": "^(prod|staging)$",
-    "serviceaccount": ".*",
-    "nodeLabels": {
-      "node-role": "worker"
-    },
-    "podLabels": {
-      "app.kubernetes.io/managed-by": "helm"
-    }
-  },
-  "maxSvidTtl": 3600,
-  "minSvidTtl": 300,
-  "allowedSvidTypes": ["x509", "jwt"],
-  "jwtAudiences": ["spiffe://example.com"],
-  "enabled": true,
-  "priority": 100,
-  "labels": {
-    "env": "production",
-    "team": "platform"
-  }
-}
-```
-
-#### Field Reference
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | yes | Unique name for this policy within the tenant. Must be 1–128 characters. |
-| `description` | string | no | Human-readable description of the policy's purpose. |
-| `attestorType` | string | yes | Platform attestor. One of: `kubernetes`, `aws_iid`, `gcp_iit`, `docker`, `unix`, `tpm2`, `azure_msi`. |
-| `spiffeIdTemplate` | string | yes | Go template for the SPIFFE ID. Template variables are attestor-specific. Must produce a valid `spiffe://` URI. |
-| `conditions` | object | yes | Attestor-specific conditions (logical AND). Regular expressions follow RE2 syntax. |
-| `maxSvidTtl` | integer | no | Maximum SVID lifetime in seconds. Default: 3600. Range: 60–86400. |
-| `minSvidTtl` | integer | no | Minimum SVID lifetime a workload may request. Default: 60. |
-| `allowedSvidTypes` | array[string] | no | Which SVID types this policy may issue. Values: `x509`, `jwt`. Default: both. |
-| `jwtAudiences` | array[string] | no | Allowed JWT audience values. If set, JWT SVIDs may only be issued for audiences in this list. |
-| `enabled` | boolean | no | Whether this policy is active. Default: true. |
-| `priority` | integer | no | Policy evaluation order. Higher values are evaluated first. Default: 0. |
-| `labels` | object | no | Arbitrary key-value metadata for grouping and filtering. |
-
----
-
-### Token Exchange — OAuth 2.0 RFC 8693
-
-Vecta implements OAuth 2.0 Token Exchange (RFC 8693) to bridge workload identity with cloud IAM systems.
-
-#### Pattern 1: Kubernetes SA Token → Vecta JWT SVID
-
-```bash
-K8S_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-
-curl -sk -X POST https://localhost/svc/workload/workload-identity/token/exchange \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"grant_type\": \"urn:ietf:params:oauth:grant-type:token-exchange\",
-    \"subject_token\": \"$K8S_TOKEN\",
-    \"subject_token_type\": \"urn:ietf:params:oauth:token-type:jwt\",
-    \"requested_token_type\": \"urn:ietf:params:oauth:token-type:jwt\",
-    \"audience\": \"spiffe://example.com/ns/prod/sa/order-service\",
-    \"tenant_id\": \"root\"
-  }"
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "issued_token_type": "urn:ietf:params:oauth:token-type:jwt",
-    "token_type": "Bearer",
-    "expires_in": 3600,
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service"
-  },
-  "request_id": "req_010"
-}
-```
-
-#### Pattern 2: Vecta JWT SVID → AWS STS AssumeRoleWithWebIdentity
-
-```bash
-VECTA_JWT=$(curl -sk -X POST https://localhost/svc/workload/workload-identity/issue \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"svid_type": "jwt", "audience": "sts.amazonaws.com", "tenant_id": "root"}' \
-  | jq -r '.result.jwt_svid')
-
-aws sts assume-role-with-web-identity \
-  --role-arn "arn:aws:iam::123456789012:role/payments-service-role" \
-  --role-session-name "payments-service" \
-  --web-identity-token "$VECTA_JWT" \
-  --duration-seconds 3600
-```
-
-#### Pattern 3: Vecta JWT SVID → GCP Access Token
-
-```bash
-GCP_TOKEN=$(curl -s -X POST \
-  "https://sts.googleapis.com/v1/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange\
-&audience=//iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/my-pool/providers/vecta\
-&scope=https://www.googleapis.com/auth/cloud-platform\
-&requested_token_type=urn:ietf:params:oauth:token-type:access_token\
-&subject_token_type=urn:ietf:params:oauth:token-type:jwt\
-&subject_token=$VECTA_JWT" \
-  | jq -r '.access_token')
-```
-
-#### Pattern 4: Vecta JWT SVID → Azure Managed Identity Token
-
-```bash
-curl -s -X POST \
-  "https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=$AZURE_CLIENT_ID\
-&grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer\
-&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer\
-&client_assertion=$VECTA_JWT\
-&scope=https://vault.azure.net/.default\
-&requested_token_use=on_behalf_of"
-```
-
-> **Tip:** Azure Federated Identity Credentials must be configured in the Azure portal under the app registration for your service, pointing to your Vecta OIDC issuer and with the workload's SPIFFE ID as the subject claim.
-
----
-
-### Workload Service Endpoints
-
-All workload endpoints use the service prefix `/svc/workload`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
-
-#### GET /svc/workload/workload-identity/settings
-
-```bash
-curl -sk "https://localhost/svc/workload/workload-identity/settings?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "trust_domain": "example.com",
-    "default_svid_ttl_secs": 3600,
-    "jwt_svid_ttl_secs": 3600,
-    "enable_x509": true,
-    "enable_jwt": true,
-    "federation_enabled": false,
-    "ca_key_id": "ca-workload-identity-root",
-    "oidc_issuer": "https://vecta.example.com",
-    "jwks_uri": "https://vecta.example.com/.well-known/jwks.json",
-    "updated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_100"
-}
-```
-
-#### POST /svc/workload/workload-identity/registrations
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/workload/workload-identity/registrations?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "payments-service",
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service",
-    "attestor_type": "kubernetes",
-    "attestation_policy_id": "k8s-prod-policy",
-    "svid_ttl_secs": 3600,
-    "allowed_svid_types": ["x509", "jwt"],
-    "key_ids": ["key-payments-encryption"]
-  }'
-```
-
-Response:
-
-```json
-{
-  "item": {
-    "id": "reg_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "tenant_id": "root",
-    "name": "payments-service",
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service",
-    "attestor_type": "kubernetes",
-    "status": "active",
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_101"
-}
-```
-
-#### POST /svc/workload/workload-identity/issue
-
-Issues an SVID after attestation.
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/workload/workload-identity/issue?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "svid_type": "x509",
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service",
-    "ttl_secs": 3600,
-    "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQY...\n-----END PUBLIC KEY-----"
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "svid_type": "x509",
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service",
-    "x509_svid": {
-      "certificate_pem": "-----BEGIN CERTIFICATE-----\nMIICpDCCAYwCCQD...\n-----END CERTIFICATE-----",
-      "bundle_pem": "-----BEGIN CERTIFICATE-----\nMIIDCzCCAfOgAwIB...\n-----END CERTIFICATE-----",
-      "not_before": "2026-03-23T00:00:00Z",
-      "not_after": "2026-03-23T01:00:00Z"
-    },
-    "expires_at": "2026-03-23T01:00:00Z"
-  },
-  "request_id": "req_102"
-}
-```
-
-#### POST /svc/workload/workload-identity/token/exchange
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/workload/workload-identity/token/exchange?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-    "subject_token": "<kubernetes-sa-token>",
-    "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-    "requested_token_type": "urn:ietf:params:oauth:token-type:jwt",
-    "audience": "spiffe://example.com/ns/prod/sa/order-service",
-    "tenant_id": "root"
-  }'
-```
-
-#### GET /svc/workload/workload-identity/graph
-
-```bash
-curl -sk "https://localhost/svc/workload/workload-identity/graph?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "graph": {
-    "nodes": [
-      {
-        "id": "spiffe://example.com/ns/prod/sa/payments-service",
-        "type": "workload",
-        "name": "payments-service",
-        "status": "active",
-        "last_seen": "2026-03-23T00:00:00Z"
-      },
-      {
-        "id": "key-payments-encryption",
-        "type": "key",
-        "name": "payments-encryption",
-        "algorithm": "AES-256-GCM"
-      }
-    ],
-    "edges": [
-      {
-        "from": "spiffe://example.com/ns/prod/sa/payments-service",
-        "to": "key-payments-encryption",
-        "permissions": ["encrypt", "decrypt"],
-        "granted_via": "policy:workload-key-access"
-      }
-    ]
-  },
-  "request_id": "req_105"
-}
-```
-
----
-
-## Section 2: Confidential Computing and TEE Attestation
-
-### What is Confidential Computing
-
-Confidential computing uses CPU-enforced hardware isolation to create a Trusted Execution Environment (TEE): a protected region where code runs and data is processed with encrypted memory that is inaccessible to the host operating system, hypervisor, and cloud provider administrators.
-
-Even if a cloud operator has full root access to the physical host, they cannot read or tamper with memory inside a TEE. This is enforced by the CPU hardware itself, not by software controls that can be bypassed.
-
-**The key properties of a TEE are:**
-
-- **Memory encryption:** All TEE memory is encrypted with a key that only the CPU holds. The hypervisor and host OS see only ciphertext.
-- **Isolation:** The TEE cannot be read or modified by software outside it, including the host kernel.
-- **Attestation:** The CPU generates a cryptographically signed report proving: (1) what software is running, measured as a hash of its code and configuration; (2) that the hardware is genuine (not a simulator); and (3) the security version of the firmware and software stack.
-
-**Why this matters for key management:**
-
-In a standard KMS deployment, if an attacker compromises the host OS or hypervisor (through an insider threat, supply chain attack, or misconfiguration), they can potentially extract keys from memory. With TEE attestation, the KMS can enforce that a key is only ever decrypted or used inside a verified TEE running a known, trusted application image — even if the host is compromised.
-
-### Attested Key Release Pattern
-
-The attested key release pattern ensures a cryptographic key is only released to a workload that can prove:
-
-1. It is running inside a genuine hardware TEE (not a simulator)
-2. The software image running inside the TEE matches an expected measurement (hash)
-3. The request is fresh (not a replayed old attestation report)
-
-**Why measurement matters more than identity:**
-
-Workload identity (SPIFFE/SVID) proves *who* is requesting a key. TEE attestation proves *what code* is running. These are orthogonal properties. A legitimate service account could be compromised and used by malicious code. TEE attestation ensures the key is only released to a specific, verified version of the application binary.
-
-**Nonce-based anti-replay:**
-
-Attestation reports are not bound to a specific request by default. An attacker could record a valid attestation report and replay it hours later. Vecta's attested key release requires a nonce — a random value generated fresh for each release request — to be embedded in the TEE's attestation report (in the `REPORT_DATA` field). Vecta verifies that the nonce in the report matches the nonce it issued for that specific request, preventing replay attacks.
-
----
-
-### Intel TDX
-
-Intel Trust Domain Extensions (TDX) isolates entire virtual machines as hardware-protected Trust Domains (TDs). Unlike SGX (which isolates individual processes), TDX isolates a full guest VM including its kernel and all processes.
-
-#### TDX Measurement Registers
-
-TDX maintains several measurement registers that are included in the attestation quote:
-
-| Register | Description | What It Measures |
-|----------|-------------|-----------------|
-| `MRTD` | Measurement of the Trust Domain | Initial contents of the TD (firmware + kernel) at launch time |
-| `MRCONFIGID` | Configuration identity | TD configuration supplied by the host |
-| `MROWNER` | TD owner identity | Identity of the entity that owns/controls the TD |
-| `MROWNERCONFIG` | Owner-supplied configuration | Additional owner-provided configuration |
-| `RTMR0` | Runtime Measurement Register 0 | BIOS/UEFI extensions measured during boot |
-| `RTMR1` | Runtime Measurement Register 1 | Host OS kernel and initrd |
-| `RTMR2` | Runtime Measurement Register 2 | OS configuration and drivers |
-| `RTMR3` | Runtime Measurement Register 3 | Application-layer measurements |
-
-For attested key release, `MRTD` is typically the most important: it captures the exact version of the VM image. RTMRs capture runtime state that evolves during boot.
-
-#### REPORT_DATA Field
-
-The 64-byte `REPORT_DATA` field in a TDX attestation report is controlled by the TD software. Vecta uses this field to bind the attestation report to a specific nonce:
-
-```
-REPORT_DATA = SHA256(challenge_nonce || request_id) || 0x00...  (zero-padded to 64 bytes)
-```
-
-#### TDX Quote Structure
-
-A TDX attestation quote contains:
-- **Quote Header:** Version, attestation key type, TEE type
-- **TDX Report Body:** All measurement registers, REPORT_DATA, TD attributes, XFAM
-- **Quote Signature Data:** ECDSA signature by the Attestation Key (AK)
-- **AK Certificate Chain:** AK certificate → PCK certificate → Intel CA
-
-Vecta verifies the quote by:
-1. Verifying the ECDSA signature on the quote body
-2. Verifying the PCK certificate chain up to the Intel Root CA
-3. Checking the PCK certificate against the Intel PCS (Platform Certification Service) or local DCAP cache
-4. Verifying `MRTD` matches the expected value in the attested key release policy
-5. Verifying `REPORT_DATA` contains the SHA256 of the expected nonce
-
----
-
-### AMD SEV-SNP
-
-AMD Secure Encrypted Virtualization — Secure Nested Paging (SEV-SNP) protects guest VM memory with hardware-enforced encrypted pages, and uses Nested Page Table (NPT) integrity to prevent the hypervisor from remapping encrypted guest pages.
-
-#### SNP Report Fields
-
-An SNP attestation report contains:
-
-| Field | Size | Description |
-|-------|------|-------------|
-| `VERSION` | 4 bytes | Report format version |
-| `GUEST_SVN` | 4 bytes | Guest Security Version Number (monotonically increasing) |
-| `POLICY` | 8 bytes | Guest policy flags (debug allowed, SMT allowed, etc.) |
-| `FAMILY_ID` | 16 bytes | Family identifier of the guest image |
-| `IMAGE_ID` | 16 bytes | Image identifier of the guest image |
-| `VMPL` | 4 bytes | VM Privilege Level that requested the report |
-| `SIGNATURE_ALGO` | 4 bytes | Algorithm used to sign the report (ECDSA P-384 with SHA-384) |
-| `CURRENT_TCB` | 8 bytes | Current Trusted Computing Base version |
-| `PLATFORM_INFO` | 8 bytes | Platform configuration flags |
-| `MEASUREMENT` | 48 bytes | SHA-384 hash of the initial guest memory contents |
-| `HOST_DATA` | 32 bytes | Host-provided data included in the report |
-| `ID_KEY_DIGEST` | 48 bytes | SHA-384 of the ID key used to sign the guest launch |
-| `AUTHOR_KEY_DIGEST` | 48 bytes | SHA-384 of the author key |
-| `REPORT_ID` | 32 bytes | Unique identifier for this report |
-| `REPORT_ID_MA` | 32 bytes | Report ID of the migration agent |
-| `REPORTED_TCB` | 8 bytes | TCB version used to sign the report |
-| `CHIP_ID` | 64 bytes | Unique identifier for the AMD processor chip |
-| `REPORT_DATA` | 64 bytes | Guest-supplied data (nonce goes here) |
-| `SIGNATURE` | 512 bytes | ECDSA P-384 signature |
-
-The `MEASUREMENT` field is the primary integrity measurement: a SHA-384 hash of the guest's initial memory state, essentially a fingerprint of the software image.
-
-#### VCEK Trust Chain
-
-AMD uses a Versioned Chip Endorsement Key (VCEK) hierarchy:
-
-```
-AMD Root Key (ARK)
-    └── AMD SEV Key (ASK)
-            └── Versioned Chip Endorsement Key (VCEK)
-                    └── Signs SNP attestation reports
-```
-
-The VCEK is unique per chip and per TCB version. Vecta retrieves VCEK certificates from the AMD Key Distribution Service (KDS):
-
-```
-https://kds.amd.com/vcek/<platform>/<chip_id>?blSPL=<bl>&teeSPL=<tee>&snpSPL=<snp>&ucodeSPL=<ucode>
-```
-
-#### Vecta Policy for SEV-SNP
-
-```json
-{
-  "name": "sev-snp-ml-inference",
-  "teeType": "sev_snp",
-  "measurements": {
-    "MEASUREMENT": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-    "POLICY": "0x30000",
-    "GUEST_SVN": "5"
-  },
-  "allowedKeyIds": ["key-ml-model-weights"],
-  "maxKeyAgeSecs": 3600,
-  "requireFreshNonce": true,
-  "nonceTimeWindowSecs": 300,
-  "allowedOperations": ["decrypt"]
-}
-```
-
----
-
-### AWS Nitro Enclaves
-
-AWS Nitro Enclaves are isolated compute environments created from EC2 instances. They have no persistent storage, no external network access, and no interactive access. The only communication channel is a local vsock connection to the parent EC2 instance.
-
-This isolation model makes Nitro Enclaves an excellent choice for processing sensitive data: even a fully compromised parent EC2 instance cannot read enclave memory or intercept enclave network traffic (because there is no network).
-
-#### Nitro Attestation Document
-
-The Nitro attestation document is a CBOR-encoded, COSE_Sign1-signed structure:
-
-```
-COSE_Sign1 {
-  protected: {algorithm: ES384},
-  payload: {
-    module_id: "i-0abc123def456789-enc01234567890abcdef",
-    timestamp: 1740000000000,
-    digest: "SHA384",
-    pcrs: {
-      0: <96-hex-char SHA384 hash>,   # Image measurement
-      1: <96-hex-char SHA384 hash>,   # Kernel + boot ramdisk
-      2: <96-hex-char SHA384 hash>,   # Application
-      3: <96-hex-char SHA384 hash>,   # IAM role ARN
-      4: <96-hex-char SHA384 hash>,   # Instance ID document
-      8: <96-hex-char SHA384 hash>    # User-provided data
-    },
-    certificate: <DER-encoded attestation cert>,
-    cabundle: [<DER-encoded CA certs>],
-    public_key: <DER-encoded ephemeral public key>,
-    user_data: <bytes: nonce goes here>
-  },
-  signature: <ES384 signature>
-}
-```
-
-#### PCR Register Reference
-
-| PCR | Description | Stability |
-|-----|-------------|-----------|
-| PCR0 | Hash of the enclave image (EIF file) | Changes only when the image is rebuilt |
-| PCR1 | Hash of the Linux kernel and bootstrap ramdisk | Changes on kernel update |
-| PCR2 | Hash of the user application and its dependencies | Changes on app update |
-| PCR3 | Hash of the IAM role ARN attached to the parent instance | Changes on role change |
-| PCR4 | Hash of the parent instance ID | Changes on instance replacement |
-| PCR8 | Hash of the signing certificate used to sign the EIF | Changes on certificate rotation |
-
-> **Tip:** In attested key release policies, PCR0 is the most reliable measurement for locking a key release to a specific application version. PCR3 lets you additionally constrain which IAM role (and therefore which AWS account) can release the key.
-
-#### Nonce in Nitro
-
-The `user_data` field in the attestation document carries the nonce. The enclave application sets `user_data` when calling the `NSM_GetAttestationDoc` API:
-
-```python
-import nsm
-import json
-
-# nonce received from Vecta
-challenge = b"8a3f2b1c9d7e4f6a..."  # 32 hex bytes
-
-# Generate attestation document with nonce in user_data
-doc = nsm.get_attestation_doc(
-    user_data=challenge,
-    public_key=ephemeral_public_key_der
-)
-```
-
----
-
-### Azure Confidential VMs
-
-Azure Confidential VMs run AMD SEV-SNP guests and use Microsoft Azure Attestation (MAA) as the attestation service. The attestation flow differs from AMD KDS because MAA acts as an intermediary that verifies the SNP report and issues a signed JWT.
-
-#### Azure Confidential VM Attestation Flow
-
-1. The CVM requests an SNP attestation report from the vTPM (virtual TPM)
-2. The CVM sends the SNP report to the MAA endpoint for the region: `https://<region>.attest.azure.net`
-3. MAA verifies the SNP report against AMD's certificate chain
-4. MAA issues a signed JWT (the "MAA token") containing:
-   - `x-ms-attestation-type`: "sevsnpvm"
-   - `x-ms-compliance-status`: "azure-compliant-uvm"
-   - `x-ms-runtime`: guest runtime claims
-   - `x-ms-tee`: TEE-specific claims including the SNP measurement
-   - `x-ms-sevsnpvm-guestsvn`: Guest SVN
-   - `x-ms-sevsnpvm-launchmeasurement`: The SNP `MEASUREMENT` value
-
-5. The CVM sends the MAA JWT to Vecta instead of the raw SNP report
-6. Vecta verifies the MAA JWT signature against MAA's JWKS endpoint: `https://<region>.attest.azure.net/certs`
-7. Vecta extracts claims from the MAA JWT and evaluates the attested key release policy
-
-#### Vecta Policy for Azure CVM
-
-```json
-{
-  "name": "azure-cvm-database",
-  "teeType": "azure_tdx",
-  "measurements": {
-    "launchMeasurement": "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
-    "complianceStatus": "azure-compliant-uvm",
-    "guestSvn": "1"
-  },
-  "attestationProvider": "microsoft_maa",
-  "maaEndpoint": "https://sharedeus2.eus2.attest.azure.net",
-  "allowedKeyIds": ["key-db-master"],
-  "requireFreshNonce": true,
-  "nonceTimeWindowSecs": 300,
-  "allowedOperations": ["decrypt", "unwrap"]
-}
-```
-
----
-
-### Attested Key Release Policy Schema
-
-The attested key release policy defines the exact conditions under which Vecta will release a key to a TEE.
-
-#### Complete Schema
-
-```json
-{
-  "name": "nitro-payment-processor",
-  "description": "Payment processing key released only to verified Nitro enclave",
-  "teeType": "nitro",
-  "measurements": {
-    "PCR0": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-    "PCR1": "*",
-    "PCR2": "e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
-    "PCR3": "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"
-  },
-  "allowedKeyIds": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
-  "maxKeyAgeSecs": 3600,
-  "requireFreshNonce": true,
-  "nonceTimeWindowSecs": 300,
-  "allowedOperations": ["decrypt", "sign"],
-  "keyWrappingEnabled": true,
-  "keyWrappingAlgorithm": "RSA-OAEP-256",
-  "enabled": true,
-  "labels": {
-    "team": "payments",
-    "compliance": "pci-dss"
-  }
-}
-```
-
-#### Field Reference
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | yes | Unique policy name within the tenant. 1–128 characters. |
-| `description` | string | no | Human-readable description of the policy's purpose. |
-| `teeType` | string | yes | The TEE technology. One of: `nitro`, `tdx`, `sev_snp`, `azure_tdx`, `azure_snp`. |
-| `measurements` | object | yes | Map of register name to expected value. Use `"*"` to accept any value for a register (wildcard). All specified non-wildcard values must match exactly. Values are hex-encoded. |
-| `allowedKeyIds` | array[string] | yes | List of key IDs that may be released under this policy. Use `["*"]` to allow any key (not recommended). |
-| `maxKeyAgeSecs` | integer | no | Maximum age of the key material in seconds. Keys older than this are not released. Default: 86400. |
-| `requireFreshNonce` | boolean | no | Whether a fresh nonce (issued by Vecta within `nonceTimeWindowSecs`) must be present in the attestation report. Default: true. Setting to false disables anti-replay protection — do not do this in production. |
-| `nonceTimeWindowSecs` | integer | no | Maximum age of the nonce in seconds. Requests with nonces older than this are rejected. Default: 300. |
-| `allowedOperations` | array[string] | no | Operations the released key may perform. Values: `encrypt`, `decrypt`, `sign`, `verify`, `wrap`, `unwrap`. Default: all operations permitted by the key's own policy. |
-| `keyWrappingEnabled` | boolean | no | Whether the released key material is wrapped (encrypted) under the TEE's ephemeral public key before transmission. Default: true. Should only be false for testing. |
-| `keyWrappingAlgorithm` | string | no | Algorithm for wrapping the key. One of: `RSA-OAEP-256`, `RSA-OAEP-512`, `ECDH-ES`. Default: `RSA-OAEP-256`. |
-| `enabled` | boolean | no | Whether this policy is active. Default: true. |
-| `labels` | object | no | Arbitrary key-value metadata. |
-
----
-
-### Full Attested Key Release Flow
-
-The following is the complete attested key release flow for an AWS Nitro Enclave. The same pattern applies to other TEE types with different attestation document formats.
-
-#### Step 1: Enclave Generates an Ephemeral Key Pair
-
-The enclave generates an ephemeral RSA key pair. The public key will be embedded in the attestation report so Vecta can wrap the released key material under it. Only the enclave holds the private key.
-
-```python
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-
-# Generate ephemeral RSA-2048 key pair inside the enclave
-ephemeral_private_key = rsa.generate_private_key(
-    public_exponent=65537,
-    key_size=2048
-)
-ephemeral_public_key_der = ephemeral_private_key.public_key().public_bytes(
-    encoding=serialization.Encoding.DER,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
-)
-```
-
-#### Step 2: Request a Challenge Nonce from Vecta
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "get_nonce",
-    "policy_id": "nitro-payment-processor"
-  }'
-```
-
-Response:
-
-```json
-{
-  "result": {
-    "nonce": "8a3f2b1c9d7e4f6a5b2c3d1e0f9a8b7c",
-    "nonce_id": "nonce_xyz789",
-    "expires_at": "2026-03-23T00:05:00Z"
-  },
-  "request_id": "req_200"
-}
-```
-
-#### Step 3: Enclave Generates Attestation Report with Nonce
-
-The enclave embeds the nonce (and its ephemeral public key) in the attestation document:
-
-```python
-import nsm
-import base64
-
-nonce_bytes = bytes.fromhex("8a3f2b1c9d7e4f6a5b2c3d1e0f9a8b7c")
-
-# Get Nitro attestation document
-# The NSM API embeds public_key in the document and nonce in user_data
-attestation_doc_bytes = nsm.get_attestation_doc(
-    user_data=nonce_bytes,
-    public_key=ephemeral_public_key_der,
-    nonce=None  # user_data is used as the nonce field
-)
-
-attestation_doc_b64 = base64.b64encode(attestation_doc_bytes).decode()
-```
-
-#### Step 4: Send Attestation Evidence to Vecta
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"tenant_id\": \"root\",
-    \"action\": \"key_release\",
-    \"policy_id\": \"nitro-payment-processor\",
-    \"key_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",
-    \"tee_type\": \"nitro\",
-    \"nonce_id\": \"nonce_xyz789\",
-    \"attestation_evidence\": {
-      \"type\": \"nitro_document\",
-      \"document\": \"$ATTESTATION_DOC_B64\"
-    },
-    \"requested_operations\": [\"decrypt\"]
-  }"
-```
-
-#### Step 5: Vecta Verifies and Returns Wrapped Key
-
-Vecta performs the following verification:
-1. Decodes the CBOR/COSE_Sign1 attestation document
-2. Verifies the ECDSA signature using the Nitro CA certificate chain (pinned in Vecta's trust store)
-3. Extracts PCR values and verifies each non-wildcard value against the policy
-4. Extracts `user_data` and verifies it matches the nonce issued for `nonce_xyz789`
-5. Verifies the nonce was issued within `nonceTimeWindowSecs` seconds
-6. Extracts the enclave's `public_key` from the attestation document
-7. Retrieves the key material for `3fa85f64-5717-4562-b3fc-2c963f66afa6`
-8. Wraps the key material under the enclave's ephemeral public key using RSA-OAEP-256
-9. Returns the wrapped key
-
-Response:
-
-```json
-{
-  "result": {
-    "decision": "allow",
-    "policy_id": "nitro-payment-processor",
-    "key_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "wrapped_key_material": "base64-encoded-RSA-OAEP-256-wrapped-key-bytes...",
-    "wrapping_algorithm": "RSA-OAEP-256",
-    "key_algorithm": "AES-256-GCM",
-    "allowed_operations": ["decrypt"],
-    "verified_measurements": {
-      "PCR0": "matched",
-      "PCR1": "wildcard",
-      "PCR2": "matched",
-      "PCR3": "matched"
-    },
-    "release_id": "release_abc123",
-    "expires_at": "2026-03-23T01:00:00Z"
-  },
-  "request_id": "req_201"
-}
-```
-
-#### Step 6: Enclave Decrypts the Key Material
-
-```python
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import hashes
-import base64
-
-wrapped_key = base64.b64decode(response["result"]["wrapped_key_material"])
-
-# Decrypt using the ephemeral private key (never leaves the enclave)
-aes_key_bytes = ephemeral_private_key.decrypt(
-    wrapped_key,
-    padding.OAEP(
-        mgf=padding.MGF1(algorithm=hashes.SHA256()),
-        algorithm=hashes.SHA256(),
-        label=None
-    )
-)
-
-# aes_key_bytes is now the raw AES-256-GCM key material
-# Use it for decryption operations inside the enclave
-```
-
-> **Security Note:** The ephemeral private key never leaves the enclave memory. The wrapped key material sent over the network is useless without the private key. Even if the network traffic is captured, the attacker cannot unwrap the key without compromising the enclave — which requires breaking TEE isolation.
-
----
-
-### Confidential Service Endpoints
-
-Service prefix: `/svc/confidential/confidential`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
-
-#### GET /svc/confidential/confidential/policy
-
-Returns the tenant's global confidential compute policy settings.
-
-```bash
-curl -sk "https://localhost/svc/confidential/confidential/policy?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "enabled": true,
-    "default_action": "deny",
-    "allowed_tee_types": ["nitro", "tdx", "sev_snp", "azure_tdx"],
-    "require_nonce": true,
-    "max_nonce_age_secs": 300,
-    "audit_all_releases": true,
-    "updated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_300"
-}
-```
-
-#### PUT /svc/confidential/confidential/policy
-
-```bash
-curl -s -X PUT \
-  "https://localhost/svc/confidential/confidential/policy?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "enabled": true,
-    "default_action": "deny",
-    "allowed_tee_types": ["nitro", "tdx", "sev_snp"],
-    "require_nonce": true,
-    "max_nonce_age_secs": 300,
-    "audit_all_releases": true
-  }'
-```
-
-#### POST /svc/confidential/confidential/evaluate
-
-The core attested key release endpoint. Handles both nonce issuance and key release.
-
-**Sub-action: get_nonce**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "get_nonce",
-    "policy_id": "nitro-payment-processor"
-  }'
-```
-
-**Sub-action: key_release (Nitro)**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "key_release",
-    "policy_id": "nitro-payment-processor",
-    "key_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tee_type": "nitro",
-    "nonce_id": "nonce_xyz789",
-    "attestation_evidence": {
-      "type": "nitro_document",
-      "document": "<base64-encoded CBOR/COSE_Sign1 document>"
-    },
-    "requested_operations": ["decrypt"]
-  }'
-```
-
-**Sub-action: key_release (TDX)**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "key_release",
-    "policy_id": "tdx-inference-server",
-    "key_id": "key-model-weights",
-    "tee_type": "tdx",
-    "nonce_id": "nonce_abc123",
-    "attestation_evidence": {
-      "type": "tdx_quote",
-      "quote": "<base64-encoded TDX quote>",
-      "collateral": {
-        "pck_cert_chain": "<base64-encoded PEM chain>",
-        "tcb_info": "<base64-encoded TCBInfo JSON>",
-        "qe_identity": "<base64-encoded QEIdentity JSON>"
-      }
-    },
-    "requested_operations": ["decrypt"]
-  }'
-```
-
-**Sub-action: key_release (SEV-SNP)**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "key_release",
-    "policy_id": "sev-snp-ml-inference",
-    "key_id": "key-ml-model-weights",
-    "tee_type": "sev_snp",
-    "nonce_id": "nonce_def456",
-    "attestation_evidence": {
-      "type": "snp_report",
-      "report": "<base64-encoded 1184-byte SNP report>",
-      "vcek_certificate": "<base64-encoded DER VCEK certificate>",
-      "cert_chain": {
-        "ask": "<base64-encoded DER ASK certificate>",
-        "ark": "<base64-encoded DER ARK certificate>"
-      }
-    },
-    "requested_operations": ["decrypt"]
-  }'
-```
-
-**Sub-action: key_release (Azure CVM via MAA)**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "key_release",
-    "policy_id": "azure-cvm-database",
-    "key_id": "key-db-master",
-    "tee_type": "azure_snp",
-    "nonce_id": "nonce_ghi789",
-    "attestation_evidence": {
-      "type": "maa_token",
-      "token": "<MAA JWT from https://region.attest.azure.net>",
-      "maa_endpoint": "https://sharedeus2.eus2.attest.azure.net"
-    },
-    "requested_operations": ["decrypt", "unwrap"]
-  }'
-```
-
-**Sub-action: verify (dry-run without key release)**
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/confidential/confidential/evaluate" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "action": "verify",
-    "policy_id": "nitro-payment-processor",
-    "tee_type": "nitro",
-    "nonce_id": "nonce_xyz789",
-    "attestation_evidence": {
-      "type": "nitro_document",
-      "document": "<base64-encoded document>"
-    }
-  }'
-```
-
-Response (verify):
-
-```json
-{
-  "result": {
-    "decision": "would_allow",
-    "policy_id": "nitro-payment-processor",
-    "verified_measurements": {
-      "PCR0": "matched",
-      "PCR1": "wildcard",
-      "PCR2": "matched",
-      "PCR3": "matched"
-    },
-    "nonce_valid": true,
-    "signature_valid": true,
-    "cert_chain_valid": true,
-    "failure_reasons": []
-  },
-  "request_id": "req_202"
-}
-```
-
-#### GET /svc/confidential/confidential/releases
-
-Lists all attested key release events.
-
-```bash
-curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&limit=50&offset=0" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "items": [
-    {
-      "id": "release_abc123",
-      "tenant_id": "root",
-      "policy_id": "nitro-payment-processor",
-      "key_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "tee_type": "nitro",
-      "decision": "allow",
-      "requested_operations": ["decrypt"],
-      "verified_measurements": {
-        "PCR0": "matched",
-        "PCR2": "matched",
-        "PCR3": "matched"
-      },
-      "released_at": "2026-03-23T00:00:00Z",
-      "expires_at": "2026-03-23T01:00:00Z",
-      "released_by": "svc:payments-enclave"
-    }
-  ],
-  "total": 1,
-  "request_id": "req_203"
-}
-```
-
----
-
-## Section 3: Key Access Justifications
-
-### What Key Access Justifications Are
-
-Key Access Justifications require callers to declare a structured business reason before Vecta will allow sensitive key operations. Every decrypt, sign, wrap, unwrap, or export call on a justification-governed key must carry a reason code explaining *why* the key is being used — not just proof that the caller has permission to use it.
-
-This is the difference between access control and access accountability. Access control answers "can this caller use this key?" Justifications answer "why did this caller use this key at this moment?" The second question is what auditors, compliance teams, and incident investigators actually need.
-
-**Three things justifications provide:**
-
-1. **Structured audit trail.** Every governed key operation is logged with a reason code, optional detail text, and optional ticket reference. Audit queries can answer "show me all decryptions of the customer-data key last quarter attributed to AUDIT_REVIEW" in seconds rather than requiring manual log correlation.
-
-2. **Enforcement gate.** In enforce mode, operations without a valid justification code are blocked outright, not just logged. This prevents accidental or unauthorized access even by callers who have permission on the key.
-
-3. **Approval escalation.** Sensitive codes (such as `BREAKGLASS_EMERGENCY` or `LEGAL_HOLD`) can be configured to require manager approval before the operation proceeds. The approval request flows through Vecta's Governance engine and is itself audited.
-
-**Compliance relevance:**
-- **SOX:** Requires evidence that access to financial data encryption keys was authorized and for a documented business purpose
-- **HIPAA:** Requires audit controls that record who accessed PHI encryption keys and why
-- **PCI DSS Requirement 10:** Requires logging of all access to cardholder data encryption keys
-- **FedRAMP AU-2 / AU-3:** Requires audit record content including the reason for events
-
----
-
-### Justification Code Reference
-
-Vecta ships with 17 built-in reason codes organized into categories. Organizations can also define custom codes with the `CUSTOM_` prefix.
-
-| Code | Category | Description | Typical Use |
-|------|----------|-------------|-------------|
-| `CUSTOMER_INITIATED_ACCESS` | Customer | Customer explicitly requested access to their own data | Self-service data export, customer data portability request |
-| `CUSTOMER_INITIATED_SUPPORT` | Customer | Customer opened a support ticket requiring access to their data | Support engineer accessing encrypted data to debug customer issue |
-| `VENDOR_INITIATED_MAINTENANCE` | Vendor | Vendor-side maintenance requires access | Scheduled platform maintenance by SaaS provider |
-| `SECURITY_INVESTIGATION` | Security | Active security investigation requires key use | SOC analyst decrypting logs during incident investigation |
-| `LEGAL_HOLD` | Legal | Data subject to legal hold requires access | Legal team preserving data responsive to litigation |
-| `LEGAL_RESPONSE` | Legal | Responding to a court order, subpoena, or regulatory demand | Fulfilling a law enforcement request |
-| `BREAKGLASS_EMERGENCY` | Emergency | Emergency access bypassing normal approval flows | Production outage requiring immediate access to encrypted data |
-| `SCHEDULED_MAINTENANCE` | Operations | Scheduled, pre-approved maintenance window | Key rotation ceremony, quarterly maintenance |
-| `INCIDENT_RESPONSE` | Operations | Unplanned incident response requires key access | On-call engineer responding to a production incident |
-| `DATA_MIGRATION` | Operations | Data migration between systems or regions | Moving encrypted data to a new storage backend |
-| `AUDIT_REVIEW` | Compliance | Internal or external audit requires data access | External auditor reviewing encrypted financial records |
-| `COMPLIANCE_REPORTING` | Compliance | Generating compliance reports requiring key use | Quarterly SOX report generation |
-| `TESTING_AND_VALIDATION` | Development | Testing or validation in a non-production environment | QA team testing encryption/decryption in staging |
-| `ANALYTICS_PROCESSING` | Analytics | Authorized analytics pipeline processing | Data warehouse ETL job decrypting for aggregation |
-| `BACKUP_AND_RECOVERY` | Operations | Backup creation or disaster recovery | Nightly backup job wrapping data keys |
-| `THIRD_PARTY_ACCESS` | External | Authorized third-party access to data | Business partner given temporary access to shared data |
-| `CUSTOM_*` | Custom | Organization-defined codes with the `CUSTOM_` prefix | Any business-specific reason not covered above |
-
-> **Security Note:** `BREAKGLASS_EMERGENCY` should always be configured in enforce mode with `requireManagerApproval: true`. Unrestricted breakglass access defeats the purpose of justification controls. Every breakglass event should trigger an alert and post-incident review.
-
----
-
-### Justification Rule Schema
-
-A justification rule defines which keys and operations require justification, which codes are accepted, and what enforcement mode applies.
-
-#### Complete Schema
-
-```json
-{
-  "name": "financial-data-decrypt-rule",
-  "description": "All decryption of financial keys requires a documented justification",
-  "applyToKeyIds": [
-    "key-financial-records-enc",
-    "key-payment-card-data-enc"
-  ],
-  "applyToOperations": ["decrypt", "unwrap", "export"],
-  "requiredCodes": [
-    "AUDIT_REVIEW",
-    "COMPLIANCE_REPORTING",
-    "CUSTOMER_INITIATED_ACCESS",
-    "CUSTOMER_INITIATED_SUPPORT",
-    "LEGAL_HOLD",
-    "LEGAL_RESPONSE",
-    "BREAKGLASS_EMERGENCY"
-  ],
-  "mode": "enforce",
-  "requireDetail": true,
-  "requireTicketId": false,
-  "requireManagerApproval": false,
-  "managerApprovalCodes": ["BREAKGLASS_EMERGENCY", "LEGAL_HOLD"],
-  "managerApprovalGroups": ["security-leads", "legal-approvers"],
-  "enabled": true,
-  "labels": {
-    "compliance": "sox",
-    "data-class": "financial"
-  }
-}
-```
-
-#### Field Reference
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | yes | Unique rule name within the tenant. 1–128 characters. |
-| `description` | string | no | Human-readable description. |
-| `applyToKeyIds` | array[string] | yes | Key IDs governed by this rule. Use `["*"]` to apply to all keys in the tenant. Specific key IDs take precedence over wildcards when multiple rules match. |
-| `applyToOperations` | array[string] | yes | Operations that trigger this rule. Values: `encrypt`, `decrypt`, `sign`, `verify`, `wrap`, `unwrap`, `export`, `derive`. |
-| `requiredCodes` | array[string] | no | Accepted justification codes. If empty, any code is accepted. If set, only listed codes are valid. |
-| `mode` | string | yes | Enforcement mode. `"log_only"`: operation proceeds regardless, justification is logged. `"enforce"`: operation is blocked if no valid justification is provided. |
-| `requireDetail` | boolean | no | Whether the `detail` field in the justification body is required (non-empty string). Default: false. |
-| `requireTicketId` | boolean | no | Whether a `ticketId` must be provided in the justification body. Default: false. |
-| `requireManagerApproval` | boolean | no | Whether any request triggers a manager approval flow. If true for all codes, every governed operation requires approval. |
-| `managerApprovalCodes` | array[string] | no | Specific codes that require manager approval (overrides `requireManagerApproval` per-code). Other codes in `requiredCodes` proceed without approval. |
-| `managerApprovalGroups` | array[string] | no | KMS group IDs whose members can approve requests routed to the approval queue. |
-| `enabled` | boolean | no | Whether this rule is active. Default: true. |
-| `labels` | object | no | Arbitrary key-value metadata. |
-
----
-
-### How to Pass Justifications
-
-#### Via HTTP Header
-
-For simple cases where only the code is needed:
-
-```bash
-curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -H "X-Key-Access-Justification: AUDIT_REVIEW" \
-  -d '{"ciphertext": "base64-ciphertext..."}'
-```
-
-#### Via Request Body
-
-For richer justifications including detail text and ticket references:
-
-```bash
-curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ciphertext": "base64-ciphertext...",
-    "justification": {
-      "code": "AUDIT_REVIEW",
-      "detail": "Q1 2026 external SOX audit — auditor Ernst & Young requires sample of 50 decrypted records for control testing",
-      "ticketId": "AUDIT-2026-Q1-SOX-042",
-      "requestedBy": "auditor@ernst-young.com"
-    }
-  }'
-```
-
-When both the header and body are present, the body justification takes precedence.
-
-> **Tip:** Configure your service's HTTP client to inject the `X-Key-Access-Justification` header automatically for all KMS calls, pulled from a context value that your request middleware populates from the originating user's session or ticket system. This ensures justifications flow through automatically without requiring every call site to be updated.
-
----
-
-### Key Access Justification Endpoints
-
-Service prefix: `/svc/keyaccess`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
-
-#### GET /svc/keyaccess/key-access/settings
-
-```bash
-curl -sk "https://localhost/svc/keyaccess/key-access/settings?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "enabled": true,
-    "default_mode": "log_only",
-    "require_code": true,
-    "require_detail": false,
-    "updated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_400"
-}
-```
-
-#### PUT /svc/keyaccess/key-access/settings
-
-```bash
-curl -s -X PUT \
-  "https://localhost/svc/keyaccess/key-access/settings" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "enabled": true,
-    "default_mode": "enforce",
-    "require_code": true,
-    "require_detail": false
-  }'
-```
-
-Response:
-
-```json
-{
-  "config": {
-    "tenant_id": "root",
-    "enabled": true,
-    "default_mode": "enforce",
-    "require_code": true,
-    "require_detail": false,
-    "updated_at": "2026-03-23T00:00:01Z"
-  },
-  "request_id": "req_401"
-}
-```
-
-#### GET /svc/keyaccess/key-access/codes
-
-Lists all justification rules (referred to as "codes" in the API).
-
-```bash
-curl -sk "https://localhost/svc/keyaccess/key-access/codes?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "items": [
-    {
-      "id": "rule_fin_decrypt_001",
-      "name": "financial-data-decrypt-rule",
-      "applyToKeyIds": ["key-financial-records-enc", "key-payment-card-data-enc"],
-      "applyToOperations": ["decrypt", "unwrap", "export"],
-      "requiredCodes": ["AUDIT_REVIEW", "COMPLIANCE_REPORTING", "BREAKGLASS_EMERGENCY"],
-      "mode": "enforce",
-      "requireDetail": true,
-      "enabled": true,
-      "created_at": "2026-03-23T00:00:00Z"
-    }
-  ],
-  "total": 1,
-  "request_id": "req_402"
-}
-```
-
-#### POST /svc/keyaccess/key-access/codes
-
-Create a new justification rule.
-
-```bash
-curl -s -X POST \
-  "https://localhost/svc/keyaccess/key-access/codes" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "pii-decrypt-rule",
-    "description": "PII key decryption requires customer or support justification",
-    "applyToKeyIds": ["key-user-pii-enc"],
-    "applyToOperations": ["decrypt"],
-    "requiredCodes": [
-      "CUSTOMER_INITIATED_ACCESS",
-      "CUSTOMER_INITIATED_SUPPORT",
-      "LEGAL_HOLD",
-      "LEGAL_RESPONSE",
-      "BREAKGLASS_EMERGENCY"
-    ],
-    "mode": "enforce",
-    "requireDetail": true,
-    "requireTicketId": true,
-    "managerApprovalCodes": ["BREAKGLASS_EMERGENCY"],
-    "managerApprovalGroups": ["privacy-leads"],
+    "name": "orders-service",
+    "spiffe_id": "spiffe://root/ns/prod/sa/orders-service",
+    "allowed_interfaces": ["rest"],
+    "allowed_key_ids": ["<key-id>"],
+    "permissions": ["encrypt", "decrypt"],
+    "issue_jwt_svid": true,
     "enabled": true
   }'
 ```
 
-Response:
+### Issuing an SVID
 
-```json
-{
-  "item": {
-    "id": "rule_pii_decrypt_002",
-    "name": "pii-decrypt-rule",
-    "tenant_id": "root",
-    "mode": "enforce",
-    "enabled": true,
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_403"
-}
-```
+`POST /svc/workload/workload-identity/issue` with `registration_id` (or
+`spiffe_id`), `svid_type` (`x509` or `jwt`), and optionally `audiences` and
+`ttl_seconds`. The response key is `issued`.
 
-#### PUT /svc/keyaccess/key-access/codes/{id}
+- **X.509:** the service generates the workload's RSA-2048 key pair, signs a
+  certificate with the SPIFFE ID as URI SAN, key usage `digitalSignature` and
+  `keyEncipherment`, and extended key usage `clientAuth` only, and returns
+  `certificate_pem`, **`private_key_pem`** and `bundle_pem`. The private key
+  is created by the KMS and travels in the response; protect that response
+  like any other secret.
+- **JWT:** an RS256 token with `iss` = `spiffe://{trust_domain}`, `sub` and
+  `spiffe_id` = the SPIFFE ID, `aud`, `iat`, `nbf`, `exp` and
+  `trust_domain`, plus the tenant `jwks_json`.
 
-Update a justification rule.
+Each issuance is recorded (`GET .../issuances`) with a hash of the document,
+and audited as `audit.workload.svid_issued`.
 
-```bash
-curl -s -X PUT \
-  "https://localhost/svc/keyaccess/key-access/codes/rule_pii_decrypt_002" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "mode": "enforce",
-    "requireDetail": true,
-    "requireTicketId": true
-  }'
-```
+### Federation bundles
 
-#### DELETE /svc/keyaccess/key-access/codes/{id}
+`GET` / `POST .../federation`, `PUT` / `DELETE .../federation/{id}` hold
+another trust domain's `jwks_json` and/or `ca_bundle_pem`. They are used to
+verify that domain's SVIDs during token exchange. `bundle_endpoint` is
+stored; the service doesn't fetch it.
 
-```bash
-curl -s -X DELETE \
-  "https://localhost/svc/keyaccess/key-access/codes/rule_pii_decrypt_002?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
+### Token exchange
 
-#### GET /svc/keyaccess/key-access/decisions
+`POST /svc/workload/workload-identity/token/exchange` takes a `jwt_svid` (and
+the `audience` it was issued for) or an `x509_svid_chain_pem`, plus
+`interface_name` and optionally `requested_permissions` and
+`requested_key_ids`. It is **not** an OAuth 2.0 RFC 8693 endpoint and takes
+no `grant_type` / `subject_token`.
 
-Lists evaluated justification decisions. Each decision record captures the full context of a governed operation: who called, which key, which operation, which code was provided, what decision was made, and why.
+The service verifies the SVID (JWT: RS256 signature against the tenant or a
+federated JWKS, audience, expiry; X.509: chain to the tenant CA or a
+federated bundle, `clientAuth`), finds the registration for its SPIFFE ID,
+checks the interface, and intersects the requested permissions and keys with
+the registration's. It then asks auth (`POST /auth/workload-token`) for a
+KMS access token carrying those permissions, `allowed_key_ids` and the trust
+domain. The token lives no longer than the SVID or the tenant JWT TTL,
+whichever is shorter. The response key is `exchange`, and the exchange is
+audited as `audit.workload.token_exchanged`.
 
-```bash
-curl -sk "https://localhost/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&limit=20" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
+Keycore enforces the token's `allowed_key_ids`: a key outside the list is
+refused and hidden from listings.
 
-Response:
+### Reporting routes
 
-```json
-{
-  "items": [
-    {
-      "id": "dec_a1b2c3d4",
-      "tenant_id": "root",
-      "key_id": "key-financial-records-enc",
-      "operation": "decrypt",
-      "justification_code": "AUDIT_REVIEW",
-      "justification_detail": "Q1 2026 SOX audit sample",
-      "ticket_id": "AUDIT-2026-Q1-SOX-042",
-      "decision": "allow",
-      "rule_id": "rule_fin_decrypt_001",
-      "actor": "auditor@ernst-young.com",
-      "actor_ip": "10.0.0.1",
-      "decided_at": "2026-03-23T00:00:00Z"
-    },
-    {
-      "id": "dec_b2c3d4e5",
-      "tenant_id": "root",
-      "key_id": "key-financial-records-enc",
-      "operation": "decrypt",
-      "justification_code": null,
-      "decision": "deny",
-      "deny_reason": "No justification provided. Rule 'financial-data-decrypt-rule' requires code in: [AUDIT_REVIEW, COMPLIANCE_REPORTING, BREAKGLASS_EMERGENCY]",
-      "rule_id": "rule_fin_decrypt_001",
-      "actor": "svc-account-pipeline@internal",
-      "decided_at": "2026-03-23T00:01:00Z"
-    }
-  ],
-  "total": 2,
-  "request_id": "req_404"
-}
-```
+| Route | Returns |
+|---|---|
+| `GET .../summary` | Registration, issuance, exchange and key-use counts over 24 h; expiring and expired SVIDs; over-privileged registrations |
+| `GET .../graph` | Nodes (`workload:`, `key:`) and edges: `policy` from a registration's `allowed_key_ids`, `usage` from recorded key use. Audited as `audit.workload.graph_viewed` |
+| `GET .../usage` | Key operations performed with workload tokens |
+| `GET .../issuances` | Issuance history |
 
-#### GET /svc/keyaccess/key-access/summary
-
-Returns aggregate justification statistics for dashboard and compliance use.
-
-```bash
-curl -sk "https://localhost/svc/keyaccess/key-access/summary?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "summary": {
-    "tenant_id": "root",
-    "total_requests": 1240,
-    "allowed": 1180,
-    "denied": 42,
-    "approval_held": 8,
-    "unjustified_requests": 35,
-    "bypass_signals": 2,
-    "top_codes": [
-      {"code": "AUDIT_REVIEW", "count": 480},
-      {"code": "CUSTOMER_INITIATED_SUPPORT", "count": 310},
-      {"code": "COMPLIANCE_REPORTING", "count": 190}
-    ],
-    "top_keys": [
-      {"key_id": "key-financial-records-enc", "count": 620},
-      {"key_id": "key-user-pii-enc", "count": 420}
-    ],
-    "period_start": "2026-03-01T00:00:00Z",
-    "period_end": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_405"
-}
-```
+Using a JWT SVID with AWS STS, GCP STS or Azure AD federation is **not
+supported**. Those services require an HTTPS issuer with OIDC discovery,
+and the SVID's issuer is `spiffe://...` with no discovery document.
 
 ---
 
-## Section 4: Post-Quantum Cryptography
+## Section 2: Attested key release
 
-### The Quantum Threat
+### Background
 
-Classical public-key cryptography — RSA, DSA, ECDSA, ECDH, EdDSA — relies on mathematical problems that are computationally hard for classical computers: integer factorization (RSA) and the discrete logarithm problem (ECC). These algorithms underpin virtually all secure communications today, including TLS, code signing, key wrapping, and digital certificates.
+A trusted execution environment (TEE) runs code in hardware-isolated,
+encrypted memory and can produce signed evidence of what it is running. An
+attested key release gives a key only to a TEE whose evidence verifies and
+matches policy, sealed so that only that TEE can open it.
 
-**Shor's algorithm** (1994) demonstrates that a sufficiently powerful quantum computer can solve both integer factorization and discrete logarithm in polynomial time. A quantum computer capable of running Shor's algorithm against RSA-2048 would break that key pair in hours, rendering all signatures and encrypted data protected only by RSA or ECC insecure.
+### What the confidential service verifies
 
-**Grover's algorithm** provides a quadratic speedup for searching unstructured spaces. Applied to symmetric cryptography and hash functions, it effectively halves the security level in quantum terms: AES-128 offers approximately 64 bits of quantum security, and AES-256 offers approximately 128 bits. AES-256 remains safe; AES-128 is borderline and should be avoided for new long-lived data.
+`confidential` (`/svc/confidential/confidential/...`) verifies evidence from
+three providers. Anything else is `generic`: it is recorded, and never
+allowed.
 
-**Harvest now, decrypt later (HNDL):** The most urgent near-term threat is not a quantum computer that exists today — it is adversaries who are recording TLS sessions, encrypted backups, and key material *now*, with the intention of decrypting it once a sufficiently capable quantum computer exists. Any data encrypted today that must remain confidential beyond the next 10–15 years is at risk from HNDL attacks against RSA and ECC key exchange.
+| `provider` | Evidence (`attestation_document`) | Verification |
+|---|---|---|
+| `aws_nitro_enclaves`, `aws_nitro_tpm` | Base64 CBOR COSE_Sign1 attestation document | COSE ECDSA signature by the document's certificate; the certificate chain to the AWS Nitro root pinned in the service (more roots: `CONFIDENTIAL_AWS_ROOT_PEM_PATH`). PCRs become measurements `pcr0`, `pcr1`, …; `nonce`, `public_key` and a JSON `user_data` (claims, measurements, workload identity, image) are read from the verified document. |
+| `azure_secure_key_release` | Microsoft Azure Attestation (MAA) JWT | Issuer host must be under `attest.azure.net`; OIDC discovery, then the RS256 signature against the issuer's JWKS; `nonce` / `eat_nonce`, `x-ms-sevsnpvm-launchmeasurement` and similar claims become measurements. |
+| `gcp_confidential_space` | Confidential Space JWT | Issuer must be `https://confidentialcomputing.googleapis.com`; OIDC discovery and JWKS, RS256. |
 
-**Timeline:**
-- NSA CNSA 2.0 (2022): mandates transition to PQC algorithms for all National Security Systems by 2030 for new systems, 2035 for all systems
-- NIST FIPS 203, 204, 205: published August 2024 — the first finalized PQC standards
-- NIST IR 8413: recommends organizations begin inventory and migration planning immediately
+Raw Intel TDX quotes, raw AMD SEV-SNP reports (VCEK, AMD KDS) and SGX quotes
+are **not verified**. Azure Confidential VMs are supported only through
+their MAA token.
 
----
+### The tenant policy
 
-### NIST PQC Standards
+One attestation policy per tenant: `GET` / `PUT
+/svc/confidential/confidential/policy` (response key `policy`).
 
-#### FIPS 203 — ML-KEM (Module-Lattice Key Encapsulation Mechanism)
+| Field | Default | Effect |
+|---|---|---|
+| `enabled` | `false` | Every evaluation is refused while false |
+| `provider` | `aws_nitro_enclaves` | Evidence from another provider is refused. A `generic` policy accepts any provider, but generic evidence itself is never allowed |
+| `mode` | `enforce` | `monitor` turns a failing evaluation into `review` instead of the fallback action. Neither releases a key |
+| `fallback_action` | `deny` | `deny` or `review` for a failing evaluation in `enforce` mode |
+| `key_scopes` | any | Key IDs or scopes that may be released |
+| `approved_images` | any | Image refs or digests the evidence must name |
+| `approved_subjects` | any | Workload identities the evidence must name |
+| `allowed_attesters` | any | Evidence issuers accepted |
+| `required_measurements` | `pcr0`, `pcr8` (empty values are ignored) | Each named measurement must equal the value |
+| `required_claims` | none | Each named claim must equal the value |
+| `require_secure_boot`, `require_debug_disabled` | `true` | Evidence must show secure boot / debug disabled (Nitro always does) |
+| `max_evidence_age_sec` | 300 (max 86400) | Evidence older than this, or more than 5 minutes in the future, is refused |
+| `cluster_scope`, `allowed_cluster_nodes` | `cluster_wide` | `node_allowlist` limits evaluation to named nodes |
 
-Formerly known as CRYSTALS-Kyber. ML-KEM is a Key Encapsulation Mechanism based on the hardness of the Module Learning With Errors (MLWE) problem — a lattice problem believed to be hard for both classical and quantum computers.
+### Freshness and nonces
 
-ML-KEM is **not** a signature algorithm. It generates a shared secret (used for key exchange or key wrapping), analogous to ECDH. It replaces RSA key transport and ECDH key agreement.
+The service doesn't issue nonces. Freshness is the evidence's own timestamp
+against `max_evidence_age_sec`. If the request carries a `nonce`, the nonce
+inside the verified evidence must equal it. For a release, the nonce is how
+OIDC evidence binds the recipient key (below).
 
-**Algorithm comparison — Key Exchange:**
+### Evaluate and release
 
-| Parameter Set | NIST Security Level | Public Key | Secret Key | Ciphertext | Classical Equiv. |
-|---------------|--------------------:|------------|------------|------------|-----------------|
-| ML-KEM-512 | 1 | 800 B | 1632 B | 768 B | ~128-bit |
-| ML-KEM-768 | 3 | 1184 B | 2400 B | 1088 B | ~192-bit |
-| ML-KEM-1024 | 5 | 1568 B | 3168 B | 1568 B | ~256-bit |
-| ECDH P-256 *(classical)* | — | 65 B | 32 B | 65 B | 128-bit |
-| ECDH P-384 *(classical)* | — | 97 B | 48 B | 97 B | 192-bit |
+- `POST /svc/confidential/confidential/evaluate` returns the verdict
+  (`result`: `decision` `allow` / `deny` / `review`, `reasons`, matched and
+  missing claims and measurements, `cryptographically_verified`,
+  `attestation_document_hash`) and records it unless `dry_run`. No key
+  material moves. Audited as `audit.confidential.key_release_evaluated`.
+- `POST /svc/confidential/confidential/release` (permission
+  `confidential.release`, through the `pkg/route` kernel) evaluates the
+  same way. On `allow` it has keycore release the key. It needs
+  `recipient_public_key`, the enclave's RSA key (2048 to 8192 bits) as base64
+  DER SubjectPublicKeyInfo, which the verified evidence must commit to:
+  - **Nitro:** the document's signed `public_key` must equal it.
+  - **MAA / Confidential Space:** the token's `nonce` must equal
+    base64url(SHA-256(DER)).
 
-**Recommendation:** Use ML-KEM-768 as the default. It provides NIST Level 3 security and has a reasonable size/performance profile. Use ML-KEM-1024 for data requiring the highest long-term security (root key wrapping, archival encryption).
+  Keycore (`POST /keys/{id}/attested-release`, callable only by the
+  confidential service) then requires the key to be active and
+  `export_allowed`, applies the FIPS algorithm check and the policy engine,
+  and seals the current version to the recipient key with
+  **`RSA-OAEP-256+A256GCM`**: a fresh AES-256 key wrapped with RSA-OAEP-256,
+  and the key material encrypted under it with AES-256-GCM. The AAD
+  `vecta-attested-release|{tenant}|{key}|{version}|{release_id}` binds the
+  result to that release. The response (`decision.release`) holds
+  `wrapped_key`, `nonce`, `ciphertext`, `aad`, `seal_algorithm`, `version`
+  and `kcv`. A refusal is `403 release_refused` with the reasons.
+  Outcomes are audited as `audit.confidential.key_released` or
+  `audit.confidential.key_release_refused`, and by the kernel as
+  `audit.confidential.key_release`.
 
-#### FIPS 204 — ML-DSA (Module-Lattice Digital Signature Algorithm)
+The enclave opens the release with its private key: RSA-OAEP (SHA-256,
+label `vecta-kms recipient seal v1`) to recover the AES key, then
+AES-256-GCM with the given nonce and AAD.
 
-Formerly known as CRYSTALS-Dilithium. ML-DSA is a digital signature algorithm based on the Module Learning With Errors and Module Short Integer Solution problems.
+### History
 
-**Algorithm comparison — Signatures:**
-
-| Parameter Set | NIST Security Level | Public Key | Secret Key | Signature | Classical Equiv. |
-|---------------|--------------------:|------------|------------|-----------|-----------------|
-| ML-DSA-44 | 2 | 1312 B | 2528 B | 2420 B | ~128-bit |
-| ML-DSA-65 | 3 | 1952 B | 4000 B | 3293 B | ~192-bit |
-| ML-DSA-87 | 5 | 2592 B | 4864 B | 4595 B | ~256-bit |
-| ECDSA P-256 *(classical)* | — | 64 B | 32 B | 64 B | 128-bit |
-| Ed25519 *(classical)* | — | 32 B | 64 B | 64 B | ~128-bit |
-| RSA-2048 *(classical)* | — | 256 B | 1193 B | 256 B | ~112-bit |
-
-**Recommendation:** Use ML-DSA-65 as the default for most signing workloads. Use ML-DSA-87 for root CA signatures and other high-value, long-lived signatures. Signature sizes are substantially larger than classical algorithms — account for this in TLS handshakes, JWTs, and X.509 certificate chains.
-
-#### FIPS 205 — SLH-DSA (Stateless Hash-Based Digital Signature Algorithm)
-
-Formerly known as SPHINCS+. SLH-DSA is a digital signature algorithm based *only* on hash functions. It makes no lattice assumptions — its security relies entirely on the pre-image resistance and collision resistance of SHA-256 or SHAKE-256. This makes it the most conservative PQC choice: if lattice assumptions are ever unexpectedly broken, SLH-DSA remains secure as long as hash functions are secure.
-
-**Trade-offs:** SLH-DSA produces much larger signatures and is significantly slower to sign than ML-DSA. Verification is fast.
-
-| Parameter Set | Security | Public Key | Signature | Sign Time | Verify Time |
-|---------------|----------|------------|-----------|-----------|-------------|
-| SLH-DSA-SHA2-128f | 128-bit | 32 B | 17,088 B | ~3 ms | ~1 ms |
-| SLH-DSA-SHA2-128s | 128-bit | 32 B | 7,856 B | ~300 ms | ~1 ms |
-| SLH-DSA-SHA2-192f | 192-bit | 48 B | 35,664 B | ~5 ms | ~2 ms |
-| SLH-DSA-SHA2-256f | 256-bit | 64 B | 49,856 B | ~8 ms | ~3 ms |
-| SLH-DSA-SHA2-256s | 256-bit | 64 B | 29,792 B | ~600 ms | ~3 ms |
-
-The `f` suffix means "fast" (optimized for signing speed, larger signatures). The `s` suffix means "small" (optimized for signature size, slower signing). Use SLH-DSA for root CA self-signatures, archival document signatures, and any context where signing is infrequent and the highest cryptographic conservatism is required. Do not use it for high-frequency signing (TLS, JWT issuance, code-signing pipelines).
-
----
-
-### Hybrid Modes
-
-Hybrid key exchange and hybrid signatures combine a classical algorithm with a PQC algorithm in a single operation. Both must be broken for the combined scheme to be compromised. During the transition period, hybrid modes provide a safety net: even if ML-KEM is broken, X25519 still protects the session, and vice versa.
-
-**X25519 + ML-KEM-768** — recommended for general use. Used in TLS 1.3 via the `X25519MLKEM768` key share group.
-
-**P-256 + ML-KEM-512** — for FIPS environments where X25519 is not approved.
-
-**Ed25519 + ML-DSA-65** — hybrid signatures where both algorithms sign the same message and both signatures must verify.
-
-#### Creating Hybrid Keys in Vecta
-
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "tls-hybrid-kem",
-    "algorithm": "HYBRID_X25519_MLKEM768",
-    "purpose": "key_agreement",
-    "hybridMode": true,
-    "labels": {"use": "tls", "pqc": "true"}
-  }'
-```
-
-Response:
-
-```json
-{
-  "key": {
-    "id": "key_hybrid_kem_001",
-    "name": "tls-hybrid-kem",
-    "algorithm": "HYBRID_X25519_MLKEM768",
-    "purpose": "key_agreement",
-    "hybridMode": true,
-    "componentKeyIds": {
-      "classical": "key_x25519_001",
-      "pqc": "key_mlkem768_001"
-    },
-    "status": "active",
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_500"
-}
-```
+`GET .../releases?limit=` (default 100) and `GET .../releases/{id}` return
+recorded evaluations and releases. `GET .../summary` returns 24 h counts.
 
 ---
 
-### PQC Key Creation Examples
+## Section 3: Key access justifications
 
-#### Create ML-KEM-768 Key
+### What it does
 
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "backup-encryption-kem",
-    "algorithm": "ML-KEM-768",
-    "purpose": "key_encapsulation",
-    "labels": {"pqc": "true", "use": "backup-key-wrapping"}
-  }'
-```
+The `keyaccess` service decides whether a key operation performed **by
+another service on a caller's behalf** may proceed, based on a justification
+code the caller supplies. It is consulted by exactly these operations:
 
-Response:
+| Service | Operations | Caller supplies |
+|---|---|---|
+| `ekm` (TDE) | `wrap`, `unwrap`, `rotate` | `justification_code`, `justification_text` in the EKM request |
+| `cloud` (BYOK) | `import`, `rotate`, `sync` | same fields in the cloud request |
+| `hyok` | each proxied operation (connector = protocol) | same fields in the HYOK request; skipped when a governance approval already covers the request |
 
-```json
-{
-  "key": {
-    "id": "key_mlkem768_backup_001",
-    "name": "backup-encryption-kem",
-    "algorithm": "ML-KEM-768",
-    "purpose": "key_encapsulation",
-    "nist_security_level": 3,
-    "public_key_size_bytes": 1184,
-    "status": "active",
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_501"
-}
-```
+**Keycore's own routes (`/keys/{id}/encrypt`, `decrypt`, `wrap`, `unwrap`,
+`sign`, `export`, …) don't consult it**, and no header carries a
+justification. To require a reason for direct keycore use, use key access
+grants (a grant's `justification` and `ticket_id` are recorded) and
+governance approvals ([KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md)).
 
-#### Create ML-DSA-65 Signing Key
+### Settings
 
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "code-signing-pqc",
-    "algorithm": "ML-DSA-65",
-    "purpose": "signing",
-    "labels": {"pqc": "true", "use": "artifact-signing"}
-  }'
-```
+`GET` / `PUT /svc/keyaccess/key-access/settings` (response key `settings`):
 
-Response:
+| Field | Default | Effect |
+|---|---|---|
+| `enabled` | `false` | While false every evaluation is allowed and recorded |
+| `mode` | `enforce` | `audit` allows a violating request and records `bypass_detected` |
+| `default_action` | `deny` | `allow`, `deny` or `approval`, for a request that matches no rule |
+| `require_justification_code` | `true` | A request without a code is a violation |
+| `require_justification_text` | `false` | A request without text is a violation |
+| `approval_policy_id` | | Governance approval policy for the `approval` action |
 
-```json
-{
-  "key": {
-    "id": "key_mldsa65_codesign_001",
-    "name": "code-signing-pqc",
-    "algorithm": "ML-DSA-65",
-    "purpose": "signing",
-    "nist_security_level": 3,
-    "public_key_size_bytes": 1952,
-    "status": "active",
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_502"
-}
-```
+### Rules ("codes")
 
-#### Create SLH-DSA-SHA2-128f Key
+A rule is one justification code and what it permits.
+`GET` / `POST /svc/keyaccess/key-access/codes`,
+`PUT` / `DELETE .../codes/{id}` (response key `rule`):
 
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "root-ca-pqc-signing",
-    "algorithm": "SLH-DSA-SHA2-128f",
-    "purpose": "signing",
-    "labels": {"pqc": "true", "use": "root-ca", "conservative": "true"}
-  }'
-```
+| Field | Meaning |
+|---|---|
+| `code` | The code callers send (upper-cased). There are no built-in codes: the tenant defines every one |
+| `label`, `description` | Display |
+| `action` | `allow`, `deny` or `approval` when this code is presented |
+| `services` | Services the code is valid for (`ekm`, `cloud`, `hyok`); empty = any |
+| `operations` | Operations the code is valid for; empty = any |
+| `require_text` | Justification text required with this code |
+| `approval_policy_id` | Overrides the tenant approval policy |
+| `enabled` | Disabled rules don't match |
 
-Response:
+### Evaluation
 
-```json
-{
-  "key": {
-    "id": "key_slhdsa_rootca_001",
-    "name": "root-ca-pqc-signing",
-    "algorithm": "SLH-DSA-SHA2-128f",
-    "purpose": "signing",
-    "nist_security_level": 1,
-    "public_key_size_bytes": 32,
-    "status": "active",
-    "created_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_503"
-}
-```
+For each request: a missing code (when required), an unknown code, a code
+used outside its `services` / `operations`, or missing required text is a
+violation. In `enforce` mode the result is the matched rule's `action` (or
+`default_action` when no rule matched), with the violation as the reason; in
+`audit` mode a violation is allowed with `bypass_detected`. `approval`
+creates a governance approval request (`external_key_access`); with no
+approval policy or governance unavailable, the request is denied.
+
+Every decision is stored (`GET .../decisions?service=&action=&limit=`) and
+audited as `audit.keyaccess.decision_evaluated`, plus
+`audit.keyaccess.approval_required` when an approval is opened.
+`GET .../summary` returns 24 h counts per service.
 
 ---
 
-### PQC Migration Framework
+## Section 4: Post-quantum cryptography
 
-A PQC migration is an operational program, not a one-time flag flip. Vecta structures the migration into five phases.
+### Background
 
-#### Phase 1: Inventory
+Shor's algorithm, on a large enough quantum computer, breaks RSA and
+elliptic-curve cryptography (RSA, DSA, ECDSA, ECDH, EdDSA, X25519). Grover's
+algorithm gives a square-root speedup against symmetric ciphers and hashes,
+so AES-256 keeps about 128 bits of security against it. Data encrypted today
+under a quantum-vulnerable key exchange can be recorded and decrypted later
+("harvest now, decrypt later").
 
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/inventory?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
+The product states these properties per algorithm (strength, post-quantum
+category, quantum-vulnerable, weak) from `pkg/cryptocatalog`. When and what
+to migrate is the customer's decision, set in their own Crypto Agility
+policy ([ALGORITHM_TRANSITIONS.md](SECURITY/ALGORITHM_TRANSITIONS.md)).
 
-Response:
+### Sizes
 
-```json
-{
-  "inventory": {
-    "tenant_id": "root",
-    "summary": {
-      "total_assets": 87,
-      "classical_only": 64,
-      "hybrid": 12,
-      "pqc_ready": 11,
-      "pqc_readiness_percent": 13
-    },
-    "by_algorithm": {
-      "RSA-2048": 18,
-      "RSA-4096": 8,
-      "ECDSA-P256": 22,
-      "ECDSA-P384": 16,
-      "Ed25519": 12,
-      "ML-DSA-65": 8,
-      "ML-KEM-768": 3
-    },
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_504"
-}
-```
+ML-KEM (FIPS 203), in bytes:
 
-#### Phase 2: Risk Assessment
+| Parameter set | Category | Encapsulation key | Decapsulation key | Ciphertext | Keycore generates |
+|---|---|---|---|---|---|
+| ML-KEM-512 | 1 | 800 | 1632 | 768 | no |
+| ML-KEM-768 | 3 | 1184 | 2400 | 1088 | yes |
+| ML-KEM-1024 | 5 | 1568 | 3168 | 1568 | yes |
 
-**Risk table by asset type:**
+ML-DSA (FIPS 204), in bytes:
 
-| Asset Type | Quantum Risk | Rationale |
-|-----------|-------------|-----------|
-| Root CA signing key (RSA/ECC) | CRITICAL | Signs all subordinate certificates; compromise cascades to entire PKI |
-| Long-lived data encryption keys | HIGH | HNDL: ciphertext captured now, decrypted later |
-| Code signing keys | HIGH | Signed artifacts may be trusted for years after signing |
-| TLS server certificates | MEDIUM | Short-lived; HNDL risk lower but certs themselves may be long-lived |
-| Ephemeral TLS sessions | NONE | Ephemeral ECDH keys — no stored ciphertext to harvest |
-| AES-256 symmetric keys | NONE | Grover: AES-256 → 128-bit quantum security (safe) |
-| AES-128 symmetric keys | LOW | Grover: AES-128 → 64-bit quantum security (marginal) |
+| Parameter set | Category | Public key | Private key | Signature | Keycore generates |
+|---|---|---|---|---|---|
+| ML-DSA-44 | 2 | 1312 | 2560 | 2420 | no |
+| ML-DSA-65 | 3 | 1952 | 4032 | 3309 | yes |
+| ML-DSA-87 | 5 | 2592 | 4896 | 4627 | yes |
 
-```bash
-curl -s -X POST \
-  "https://localhost/svc/pqc/pqc/scan" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "include_remediation": true}'
-```
+SLH-DSA (FIPS 205), SHA2 and SHAKE variants alike, in bytes. `s` sets have
+smaller signatures and slower signing; `f` sets are the reverse:
 
-Response:
+| Parameter set | Category | Public key | Signature |
+|---|---|---|---|
+| SLH-DSA-*-128s | 1 | 32 | 7856 |
+| SLH-DSA-*-128f | 1 | 32 | 17088 |
+| SLH-DSA-*-192s | 3 | 48 | 16224 |
+| SLH-DSA-*-192f | 3 | 48 | 35664 |
+| SLH-DSA-*-256s | 5 | 64 | 29792 |
+| SLH-DSA-*-256f | 5 | 64 | 49856 |
 
-```json
-{
-  "result": {
-    "assessment_id": "assess_2026_q1_001",
-    "findings_count": 18,
-    "critical_count": 3,
-    "high_count": 11,
-    "findings": [
-      {
-        "id": "finding_001",
-        "asset_id": "key-root-ca-rsa4096",
-        "risk": "CRITICAL",
-        "title": "Root CA uses RSA-4096 — vulnerable to Shor's algorithm",
-        "remediation": "Migrate to ML-DSA-87 or hybrid RSA-4096+ML-DSA-87"
-      }
-    ]
-  },
-  "request_id": "req_505"
-}
-```
+Keycore generates all twelve SLH-DSA parameter sets.
 
-#### Phase 3–5: Pilot, Migrate, Monitor
+### PQC keys in keycore
 
-Generate a prioritized migration plan:
+`POST /svc/keycore/keys` creates:
 
-```bash
-curl -s -X POST \
-  "https://localhost/svc/pqc/pqc/migration/plans" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "target_profile": "hybrid",
-    "priority_filter": ["CRITICAL", "HIGH"]
-  }'
-```
+- **ML-KEM-768, ML-KEM-1024** with Go's `crypto/mlkem`, inside the certified
+  FIPS 140-3 module.
+- **ML-DSA-65, ML-DSA-87** and **SLH-DSA-{SHA2,SHAKE}-{128,192,256}{s,f}**
+  with `github.com/cloudflare/circl`, **outside** the certified module. They
+  are listed in the FIPS impact catalogue, and in FIPS mode `only` keycore
+  refuses them with `fips_mode_violation`
+  ([FIPS.md](SECURITY/FIPS.md)).
 
-Response:
+Keycore refuses, with `400 algorithm_unsupported` and
+`audit.key.create_refused`:
 
-```json
-{
-  "plan": {
-    "id": "plan_mig_2026_q1",
-    "tenant_id": "root",
-    "target_profile": "hybrid",
-    "total_assets": 26,
-    "steps": [
-      {
-        "step": 1,
-        "asset_id": "key-root-ca-rsa4096",
-        "current_algorithm": "RSA-4096",
-        "recommended_algorithm": "ML-DSA-87",
-        "hybrid_pair": "RSA-4096 + ML-DSA-87",
-        "risk": "CRITICAL",
-        "estimated_effort": "high"
-      },
-      {
-        "step": 2,
-        "asset_id": "key-financial-records-enc",
-        "current_algorithm": "RSA-2048",
-        "recommended_algorithm": "ML-KEM-768",
-        "risk": "HIGH",
-        "estimated_effort": "medium"
-      }
-    ],
-    "generated_at": "2026-03-23T00:00:00Z"
-  },
-  "request_id": "req_506"
-}
-```
+- any name containing `+` (hybrid or composite keys, for example
+  `X25519+ML-KEM-768`). Create each component key instead;
+- XMSS, LMS and HSS (stateful hash-based signatures);
+- Ed448 and X448.
 
-Require post-quantum for new protection with a Crypto Agility migration
-rule, which keycore enforces on every key operation (the pqc service's own
-tenant policy enforced nothing and was removed in 6.3.0-beta):
+The operations on them:
+
+| Key | Route | Request | Response |
+|---|---|---|---|
+| ML-KEM | `POST /svc/keycore/keys/{id}/kem/encapsulate` | `algorithm` (optional, must match), `aad`, `reference_id` | `shared_secret`, `encapsulated_key` (base64) |
+| ML-KEM | `POST /svc/keycore/keys/{id}/kem/decapsulate` | `encapsulated_key`, `algorithm`, `aad` | `shared_secret` |
+| ML-DSA, SLH-DSA | `POST /svc/keycore/keys/{id}/sign` | `data` (base64) | signature |
+| ML-DSA, SLH-DSA | `POST /svc/keycore/keys/{id}/verify` | `data`, `signature` | result |
+
+`/keys/{id}/wrap` wraps with a key whose purpose includes `wrap`. It doesn't
+use an ML-KEM key; to protect a data key under ML-KEM, encapsulate, derive a
+key from the shared secret (HKDF-SHA256), and encrypt under that
+([Use case 5](#use-case-5-protecting-a-data-key-under-ml-kem)).
+
+A PQC key's check value is the `sha256-material` KCV keycore gives every
+non-symmetric key.
+
+### Hybrid: where it exists
+
+- **TLS key exchange is hybrid.** Internal mTLS offers `X25519MLKEM768`,
+  `SecP256r1MLKEM768` and `SecP384r1MLKEM1024`, with a per-service profile
+  set in the dashboard: `pqc-required`, `pqc-preferred` (default) or
+  `classical` ([INTERNAL_TLS.md](SECURITY/INTERNAL_TLS.md)). External
+  listeners follow `VECTA_TLS_PQ_PROFILE` (hybrid groups first by default).
+- **Keys aren't.** There are no composite keys, as above.
+- **Certificates aren't.** `certs` refuses ML-DSA, SLH-DSA, LMS/XMSS and
+  hybrid certificates: the certified Go module has no ML-DSA, and Go's TLS
+  can't present an ML-DSA certificate. Certificate signatures are classical.
+
+### Readiness and migration (`pqc`)
+
+All routes go through the `pkg/route` kernel (read: `pqc.read`, write:
+`pqc.write`):
+
+| Route | What it does |
+|---|---|
+| `GET /svc/pqc/pqc/inventory` | Counts the tenant's keys (from keycore) and certificates (from certs) as classical, hybrid or PQC-only by their algorithm, and lists the classical ones. `interfaces` is always `not_assessed`. No score |
+| `POST /svc/pqc/pqc/scan` | Takes a readiness scan: collects keys, certificates and discovered assets, classifies each algorithm from `pkg/cryptocatalog`, and records risk items with a migration target |
+| `GET /svc/pqc/pqc/scans`, `.../scans/{id}`, `.../readiness` | Scan history and the latest scan: `total_assets`, `pqc_ready_assets`, `hybrid_assets`, `classical_assets`, `algorithm_summary`, `risk_items` |
+| `POST /svc/pqc/pqc/migration/plans` | Builds a plan from the latest scan's risk items. Body: `name`, `target_profile`, and your own `deadline` (optional; the product sets none) |
+| `GET .../migration/plans`, `.../plans/{id}`, `.../plans/{id}/runs` | Plans and their runs |
+| `POST .../plans/{id}/execute` | For each key step, keycore creates a successor key in the target algorithm (labelled `pqc_successor_of`), or rotates the key when the target is its own algorithm. The old key isn't changed; move data to the successor, then retire the old key. Certificate, TLS and other non-key steps are manual and marked so. `dry_run` records without acting |
+| `POST .../plans/{id}/rollback` | Deactivates the successor keys the plan created and marks its steps and the plan rolled back (`partially_rolled_back` if a deactivation fails) |
+| `GET .../migration/report` | Inventory, latest scan, your plans' deadlines, and top risk items |
+| `GET .../timeline` | Your plans with a deadline, and how many steps of each are open |
+| `GET .../cbom/export` | The cryptographic bill of materials |
+
+A migration target is always something keycore can generate: ML-KEM-768
+for key establishment, ML-DSA-65 for signatures and for RSA/EC keys whose use
+isn't recorded, AES-256 for weak symmetric keys. TLS endpoints get
+`X25519MLKEM768` as a manual step.
+
+To stop new quantum-vulnerable protection from a date you choose, add a
+Crypto Agility migration rule. Keycore enforces it on every key operation
+and audits refusals as `audit.key.crypto_policy_refused`:
 
 ```bash
-curl -s -X POST "https://localhost/svc/keycore/agility/policy/rules" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
+curl -sk -X POST https://localhost/svc/keycore/agility/policy/rules \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"name": "No new quantum-vulnerable protection",
        "match_kind": "quantum_vulnerable", "action": "decrypt_only",
        "effective_date": "2027-01-01"}'
-```
-
----
-
-### PQC Service Endpoints
-
-Service prefix: `/svc/pqc/pqc`. All requests require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root`.
-
-#### GET /svc/pqc/pqc/inventory
-
-Counts the tenant's keys and certificates as classical, hybrid or PQC-only by the algorithm each has, and lists the classical ones. There is no score. `interfaces` is always `not_assessed` (see docs/API_REFERENCE.md).
-
-#### POST /svc/pqc/pqc/migration/plans
-
-Create a migration plan with `POST /svc/pqc/pqc/migration/plans`; execute or roll it back with `.../plans/{id}/execute` and `.../plans/{id}/rollback`.
-
-#### GET /svc/pqc/pqc/migration/plans
-
-Lists all previously generated migration plans for the tenant.
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/migration/plans?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-#### GET /svc/pqc/pqc/migration/plans/{id}
-
-Returns a specific migration plan by ID.
-
-#### POST /svc/pqc/pqc/scan
-
-Run a scan with `POST /svc/pqc/pqc/scan`; results are at `GET /svc/pqc/pqc/scans` and `GET /svc/pqc/pqc/scans/{id}`.
-
-#### GET /svc/pqc/pqc/readiness
-
-Returns the latest readiness scan: asset counts (`total_assets`, `pqc_ready_assets`, `hybrid_assets`, `classical_assets`), `algorithm_summary` and `risk_items`. There is no score.
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "readiness": {
-    "tenant_id": "root",
-    "score": 23,
-    "score_label": "early_migration",
-    "critical_assets_migrated": 0,
-    "critical_assets_total": 3,
-    "high_assets_migrated": 2,
-    "high_assets_total": 14,
-    "pqc_ready_percent": 13,
-    "framework_alignment": {
-      "nist_cnsa2": "non_compliant",
-      "fips_203_ready": true,
-      "fips_204_ready": true,
-      "fips_205_ready": true
-    }
-  },
-  "request_id": "req_509"
-}
-```
-
-#### GET /svc/pqc/pqc/migration/report
-
-Returns a migration status report showing completed, pending, and blocked migrations.
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-Response:
-
-```json
-{
-  "report": {
-    "tenant_id": "root",
-    "generated_at": "2026-03-23T00:00:00Z",
-    "overall_status": "in_progress",
-    "completed_migrations": 11,
-    "pending_migrations": 15,
-    "blocked_migrations": 2,
-    "blocked_reasons": [
-      {
-        "asset_id": "key-legacy-payment-terminal",
-        "reason": "Hardware constraint — awaiting PCI waiver"
-      }
-    ],
-    "recent_activity": [
-      {
-        "asset_id": "key-tls-api-gateway",
-        "from_algorithm": "ECDSA-P256",
-        "to_algorithm": "ML-DSA-65",
-        "migrated_at": "2026-03-20T00:00:00Z",
-        "migrated_by": "ops-admin"
-      }
-    ]
-  },
-  "request_id": "req_510"
-}
 ```
 
 ---
@@ -2515,608 +492,255 @@ scanning, redaction and guardrails (`POST .../v1/chat/completions`,
 guardrail, access-rule and budget administration. See the route index in
 [API_REFERENCE.md](API_REFERENCE.md#appendix-route-index-generated).
 
-## Section 6: Reference Use Cases
+---
 
-### Use Case 1: Zero-Trust Workload Authentication in Kubernetes
+## Section 6: Use cases
 
-**Context:** A payments microservice needs to decrypt cardholder data stored in an encrypted database. Currently it uses a static API key checked into a Kubernetes Secret. The key has been rotating manually every 6 months and was accidentally logged in a CI/CD run 3 weeks ago.
+Each use case uses only the routes above.
 
-**Prerequisites:**
-- Vecta KMS running with the workload identity feature enabled
-- Kubernetes cluster with vecta-agent DaemonSet deployed
-- Payments service runs in the `prod` namespace with service account `payments-service`
+### Use case 1: A workload uses a scoped token instead of a static credential
 
-**Compliance mapping:** PCI DSS 8.6 (service account credentials), 10.2 (audit individual access), NIST SP 800-207 (zero trust architecture).
+1. Enable workload identity and set the trust domain (`PUT .../settings`
+   with `"enabled": true, "trust_domain": "root"`).
+2. Register the workload with the keys and operations it needs (the
+   registration example in Section 1).
+3. Your deployment tooling, holding an operator token, issues a JWT SVID
+   for the registration and hands it to the workload:
 
-**Steps:**
+   ```bash
+   curl -sk -X POST https://localhost/svc/workload/workload-identity/issue \
+     -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
+     -H "Content-Type: application/json" \
+     -d '{"tenant_id": "root", "registration_id": "<registration-id>",
+          "svid_type": "jwt", "audiences": ["kms"]}'
+   ```
 
-1. Configure trust domain and enable JWT SVIDs:
+4. The workload exchanges the SVID for a KMS token. It holds no long-lived
+   KMS credential; the SVID and the token both expire (30 minutes by
+   default). Pass the SVID from a file, not the command line:
 
-```bash
-curl -sk -X PUT https://localhost/svc/workload/workload-identity/settings \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "trust_domain": "example.com", "enable_jwt": true, "default_svid_ttl_secs": 3600}'
-```
+   ```bash
+   jq -n --rawfile svid /run/secrets/svid.jwt \
+     '{tenant_id: "root", jwt_svid: ($svid | rtrimstr("\n")), audience: "kms",
+       interface_name: "rest", requested_permissions: ["decrypt"]}' |
+   curl -sk -X POST https://localhost/svc/workload/workload-identity/token/exchange \
+     -H "X-Tenant-ID: root" -H "Content-Type: application/json" --data-binary @-
+   ```
 
-2. Create Kubernetes attestation policy for the prod namespace:
+5. The workload calls keycore with `exchange.kms_access_token`. Keycore
+   refuses any key outside the registration's `allowed_key_ids`. The graph
+   (`GET .../graph`) shows the workload, its authorized keys and its actual
+   use.
 
-```bash
-curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "payments-service-k8s",
-    "spiffe_id": "spiffe://example.com/ns/prod/sa/payments-service",
-    "attestor_type": "kubernetes",
-    "attestation_policy_id": "k8s-prod-payments",
-    "key_ids": ["key-cardholder-data-enc"]
-  }'
-```
+Re-issuing the SVID before `rotation_due_at` is up to your tooling; there's
+no agent to do it.
 
-3. Apply a key access policy granting decrypt only to the payments SPIFFE ID:
+### Use case 2: Release a model key only to a verified Nitro enclave
 
-```bash
-curl -sk -X POST https://localhost/api/policies \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "payments-cardholder-access",
-    "keyIds": ["key-cardholder-data-enc"],
-    "rules": [
-      {
-        "principals": ["spiffe://example.com/ns/prod/sa/payments-service"],
-        "operations": ["decrypt"],
-        "effect": "allow"
-      }
-    ]
-  }'
-```
+1. Create the key with `"export_allowed": true` (release needs it).
+2. Set the tenant policy to the enclave image:
 
-4. Deploy vecta-agent DaemonSet (see Section 1 for full manifest). Remove the static Kubernetes Secret containing the old API key.
+   ```bash
+   curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
+     -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
+     -H "Content-Type: application/json" \
+     -d '{"tenant_id": "root", "enabled": true, "provider": "aws_nitro_enclaves",
+          "mode": "enforce", "key_scopes": ["<key-id>"],
+          "required_measurements": {"pcr0": "<expected PCR0 hex>"},
+          "max_evidence_age_sec": 300}'
+   ```
 
-5. Update the payments service to use the Workload API socket instead of a static key:
+3. Inside the enclave: generate an RSA-3072 key pair, request an attestation
+   document from the NSM with `public_key` = the public key's DER, and send
+   it with the same DER:
 
-```python
-# Before: static API key
-headers = {"Authorization": f"Bearer {os.environ['KMS_API_KEY']}"}
+   ```json
+   POST /svc/confidential/confidential/release
+   {"key_id": "<key-id>", "provider": "aws_nitro_enclaves",
+    "attestation_document": "<base64 COSE_Sign1>",
+    "recipient_public_key": "<base64 DER SubjectPublicKeyInfo>",
+    "release_reason": "model load"}
+   ```
 
-# After: JWT SVID from Workload API (no secrets in environment)
-import subprocess, json
-svid_json = subprocess.check_output([
-    "svid-tool", "fetch", "jwt",
-    "--socket", "/run/spiffe/workload.sock",
-    "--audience", "https://vecta.example.com"
-])
-jwt = json.loads(svid_json)["svids"][0]["svid"]
-headers = {"Authorization": f"Bearer {jwt}"}
-```
+4. Open `decision.release`: RSA-OAEP-SHA256-decrypt `wrapped_key` (label
+   `vecta-kms recipient seal v1`) to get the AES-256 key, then
+   AES-256-GCM-decrypt `ciphertext` with `nonce` and `aad`.
+5. Review `GET .../releases`. Evidence from another image fails the `pcr0`
+   check. A document whose `public_key` isn't the recipient key fails the
+   binding. Both are recorded and audited as refusals.
 
-6. Verify in the workload identity graph that payments-service is active with no expired SVIDs:
+For Azure (MAA) or GCP Confidential Space, set `provider` accordingly and
+put base64url(SHA-256(DER of the recipient key)) in the token's nonce when
+requesting it from the attestation service.
 
-```bash
-curl -sk "https://localhost/svc/workload/workload-identity/graph?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" | jq '.graph.nodes[] | select(.name == "payments-service")'
-```
+### Use case 3: Require a reason for TDE key unwrap and HYOK operations
 
-**Outcome:** The payments service authenticates with a 1-hour JWT SVID that is automatically rotated by the vecta-agent. There is no static secret. The audit log records every decrypt with the SPIFFE ID as actor. Over-permissioned or expired workloads surface immediately in the posture dashboard.
+1. Define the codes your organisation uses, for example:
+
+   ```bash
+   curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
+     -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
+     -H "Content-Type: application/json" \
+     -d '{"tenant_id": "root", "code": "DB_STARTUP", "label": "Database start",
+          "action": "allow", "services": ["ekm"], "operations": ["unwrap"],
+          "enabled": true}'
+   ```
+
+   Add an `approval` code (with an `approval_policy_id`) for emergency access.
+2. Enable enforcement: `PUT .../settings` with `"enabled": true,
+   "mode": "enforce", "default_action": "deny",
+   "require_justification_code": true`.
+3. EKM, cloud and HYOK callers send `justification_code` (and
+   `justification_text` where required) in their requests. Requests without
+   an accepted code are refused.
+4. Review `GET .../decisions?service=ekm` and the
+   `audit.keyaccess.decision_evaluated` events. An evidence pack
+   (`POST /svc/reporting/reports/generate` with
+   `"template_id": "evidence_pack"`) collects approvals, alerts and actions
+   for a period.
+
+This gate doesn't cover direct keycore calls (Section 3).
+
+### Use case 4: A post-quantum signing key
+
+1. Create it:
+
+   ```bash
+   curl -sk -X POST https://localhost/svc/keycore/keys \
+     -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" \
+     -H "Content-Type: application/json" \
+     -d '{"name": "release-signing-mldsa87", "algorithm": "ML-DSA-87",
+          "key_type": "asymmetric-private", "purpose": "sign-verify"}'
+   ```
+
+2. Sign with `POST /svc/keycore/keys/{id}/sign` (`{"data": "<base64>"}`),
+   verify with `.../verify`.
+3. In FIPS mode `only` keycore refuses to create or use ML-DSA and SLH-DSA
+   keys. They run outside the certified module.
+
+An ML-DSA or hybrid **CA certificate** can't be issued: `certs` refuses
+them. To keep a classical CA and add PQC signatures, sign artifacts with
+both a classical key and an ML-DSA key and have verifiers check both. That
+is two keys and two signatures, not a composite key.
+
+### Use case 5: Protecting a data key under ML-KEM
+
+1. Create an ML-KEM-1024 key (`"algorithm": "ML-KEM-1024",
+   "key_type": "asymmetric-private", "purpose": "key-encapsulation"`).
+2. Encapsulate: `POST /svc/keycore/keys/{id}/kem/encapsulate` returns
+   `shared_secret` and `encapsulated_key`.
+3. Derive a key-encryption key from `shared_secret` with HKDF-SHA256, wrap
+   your data key with AES-256-GCM, and store `encapsulated_key` with the
+   ciphertext. Discard the shared secret.
+4. To recover it, `POST .../kem/decapsulate` with `encapsulated_key` returns
+   the same `shared_secret`.
+
+For a hybrid construction, also run an X25519 or ECDH exchange with a
+separate keycore key and feed both shared secrets into the HKDF. Your
+application does the combining; keycore has no hybrid key type.
+
+**Platform backups** (System Administration → Backups) are AES-256-GCM. The
+backup key is either wrapped inside the tenant's HSM under its tenant key or
+handed to the operator as a key file. Backups are not wrapped under ML-KEM.
+
+### Use case 6: Measure readiness and plan migration
+
+1. `POST /svc/pqc/pqc/scan`, then `GET /svc/pqc/pqc/readiness` for counts
+   and risk items.
+2. `POST /svc/pqc/pqc/migration/plans` with your own `deadline`.
+3. `POST .../plans/{id}/execute` with `"dry_run": true`, review, then run it:
+   key steps create PQC successor keys; do the manual steps yourself.
+4. Add a Crypto Agility migration rule for the date you choose (Section 4).
+5. `GET .../migration/report` and `GET .../timeline` show progress against
+   your deadlines. `GET .../cbom/export` exports the inventory.
 
 ---
 
-### Use Case 2: Confidential ML Inference — Model Key Released Only to Verified Nitro Enclave
+## Open items
 
-**Context:** An ML inference service loads a proprietary model whose weights are encrypted. The model weights represent significant IP. The key must never be accessible outside a verified Nitro enclave running the exact approved inference binary.
-
-**Prerequisites:**
-- AWS account with Nitro Enclave support enabled on the EC2 instance type
-- Model weights encrypted with `key-ml-model-weights` in Vecta
-- Known-good PCR0 value for the inference enclave image
-
-**Compliance mapping:** SOC 2 CC6.1 (logical access), NIST CSF PR.DS-1 (data at rest protection).
-
-**Steps:**
-
-1. Register the attested key release policy pinned to the enclave image PCR:
-
-```bash
-curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "nitro-inference-policy",
-    "teeType": "nitro",
-    "measurements": {
-      "PCR0": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-      "PCR1": "*",
-      "PCR2": "*",
-      "PCR3": "f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5"
-    },
-    "allowedKeyIds": ["key-ml-model-weights"],
-    "requireFreshNonce": true,
-    "nonceTimeWindowSecs": 300,
-    "allowedOperations": ["decrypt"]
-  }'
-```
-
-2. Inside the enclave startup script, implement the attested key release flow:
-
-```python
-# Get nonce from Vecta
-nonce_resp = requests.post(
-    "http://vecta.internal:5173/svc/confidential/confidential/evaluate",
-    headers={"Authorization": f"Bearer {svc_token}", "X-Tenant-ID": "root"},
-    json={"tenant_id": "root", "action": "get_nonce", "policy_id": "nitro-inference-policy"}
-)
-nonce_id = nonce_resp.json()["result"]["nonce_id"]
-nonce_bytes = bytes.fromhex(nonce_resp.json()["result"]["nonce"])
-
-# Generate ephemeral key pair and get attestation document
-ephemeral_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-epk_der = ephemeral_key.public_key().public_bytes(DER, SubjectPublicKeyInfo)
-att_doc = nsm.get_attestation_doc(user_data=nonce_bytes, public_key=epk_der)
-
-# Request key release
-release_resp = requests.post(
-    "http://vecta.internal:5173/svc/confidential/confidential/evaluate",
-    headers={"Authorization": f"Bearer {svc_token}", "X-Tenant-ID": "root"},
-    json={
-        "tenant_id": "root",
-        "action": "key_release",
-        "policy_id": "nitro-inference-policy",
-        "key_id": "key-ml-model-weights",
-        "tee_type": "nitro",
-        "nonce_id": nonce_id,
-        "attestation_evidence": {
-            "type": "nitro_document",
-            "document": base64.b64encode(att_doc).decode()
-        },
-        "requested_operations": ["decrypt"]
-    }
-)
-
-# Unwrap model key using ephemeral private key
-wrapped = base64.b64decode(release_resp.json()["result"]["wrapped_key_material"])
-model_key = ephemeral_key.decrypt(wrapped, OAEP(MGF1(SHA256()), SHA256(), None))
-```
-
-3. Verify the release appears in the release audit log:
-
-```bash
-curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&policy_id=nitro-inference-policy" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Outcome:** The model key is only ever decrypted inside a verified Nitro enclave running the exact approved inference binary (PCR0 pinned). Any attempt to release the key to a different binary or outside an enclave fails the measurement check and is logged as a denial.
+- **No caller authentication on the legacy routes.** Every
+  `/svc/workload/...` and `/svc/keyaccess/...` route, and confidential's
+  policy, summary, evaluate and release-history routes, is on a legacy
+  `http.ServeMux` (`scripts/route-kernel-burndown.txt`). None of them
+  verifies a bearer token or checks a permission; the gateway has no JWT
+  filter; the tenant comes from `tenant_id` / `X-Tenant-ID`. Anyone who can
+  reach the gateway can change these settings for any tenant and issue
+  SVIDs, private keys included. Only `POST /svc/confidential/confidential/release`
+  is on the `pkg/route` kernel. Moving the rest onto it is open. Until then,
+  the `Authorization` headers in the examples above aren't checked by these
+  services.
+- **The workload CA and JWT signing keys** are stored in the workload
+  database as PEM, not sealed under a `pkg/mek` service master key.
+- **X.509 SVID private keys are generated by the KMS** and returned in the
+  issue response. Issuance from a workload-supplied public key (CSR) isn't
+  implemented.
+- **Record-only workload settings:** `disable_static_api_keys` and the
+  `rotation_alert_*` settings are stored and returned, and nothing enforces
+  or acts on them.
+- **Key access justifications fail open** in `ekm` and `cloud` when the
+  keyaccess service can't be reached, and in `hyok` unless its policy is
+  fail-closed. Rules carry `allowed_time_windows` /
+  `outside_window_action` fields in the API type that are neither stored nor
+  enforced.
 
 ---
 
-### Use Case 3: SOX Compliance — Justification Required for All Financial Data Decryption
+## Removed claims (6.6.0-beta)
 
-**Context:** The company is subject to SOX. External auditors require evidence that every access to the financial records encryption key was for a documented, approved business purpose. There have been two incidents in the past year of undocumented decryption by pipeline service accounts.
+Until 6.6.0-beta this page described the following. None of it existed, so
+it was removed:
 
-**Prerequisites:**
-- `key-financial-records-enc` already in Vecta
-- Audit log retention configured for 7 years
+- **Workload identity:** a `vecta-agent` (DaemonSet, sidecar or service), a
+  SPIFFE Workload API socket, `svid-tool`, SVID files on disk, automatic
+  renewal at 50% of lifetime, pod annotations for SPIFFE IDs, Kubernetes
+  TokenReview attestation, AWS IID, GCP IIT, Docker, Unix-process, TPM 2.0
+  and Azure MSI attestors, an attestation-policy schema (`attestorType`,
+  `spiffeIdTemplate`, `conditions`, `maxSvidTtl`, `priority`), a CA "stored
+  in the KMS key store" with an intermediate, RFC 8693 token exchange
+  (`grant_type`, `subject_token`), exchange of a Kubernetes SA token, and
+  federation into AWS STS, GCP STS and Azure AD. The settings and
+  registration fields shown (`default_svid_ttl_secs`, `enable_x509`,
+  `ca_key_id`, `oidc_issuer`, `jwks_uri`, `attestor_type`,
+  `attestation_policy_id`, `public_key_pem`) weren't the API's.
+- **Attested key release:** Intel TDX quote, AMD SEV-SNP report / VCEK /
+  AMD KDS verification, a `get_nonce` action and server-issued nonces with
+  `REPORT_DATA` binding, `action` / `key_release` / `verify` sub-actions on
+  `/evaluate`, named per-workload policies (`teeType`, `measurements`,
+  `allowedKeyIds`, `allowedOperations`, `keyWrappingAlgorithm` with
+  RSA-OAEP-512 / ECDH-ES, `maaEndpoint`), `wrapped_key_material` wrapped
+  directly with RSA-OAEP, and a release that restricts the operations of the
+  released key.
+- **Key access justifications:** 17 built-in reason codes, an
+  `X-Key-Access-Justification` header and a `justification` body on keycore
+  decrypt, per-key rules (`applyToKeyIds`, `applyToOperations`,
+  `requiredCodes`, `requireTicketId`, `managerApprovalCodes`,
+  `managerApprovalGroups`), `log_only` mode, and a summary with top codes and
+  keys.
+- **PQC:** hybrid and composite keys (`HYBRID_X25519_MLKEM768`,
+  `HYBRID_RSA4096_MLDSA87`, `hybridMode`, `componentKeyIds`), a hybrid KEM
+  `wrap` (`HYBRID_X25519_MLKEM768_HKDF`), backups wrapped under a hybrid
+  X25519 + ML-KEM-768 KEK, a self-signed hybrid root CA certificate,
+  `nist_security_level` / `public_key_size_bytes` in the create response,
+  scan findings with CRITICAL/HIGH ratings and remediation text, a readiness
+  score with "framework alignment", a migration report with blocked reasons,
+  and a "CNSA 2.0 gap analysis". Also removed: agency deadlines and
+  "Recommendation" lines (the customer decides what and when to migrate),
+  SLH-DSA sign and verify timings nobody measured, and ML-DSA sizes from the
+  pre-standard Dilithium submission (now the FIPS 204 values).
+- **Use cases** built on the above: Kubernetes zero-trust via the agent,
+  multi-cloud attestor federation, Azure CVM policies, a SOX gate on keycore
+  decrypt, the hybrid root CA, hybrid backup KEKs, and an AI-generated board
+  report.
 
-**Compliance mapping:** SOX Section 404 (internal controls over financial reporting), COSO Principle 12 (control activities via information technology).
-
-**Steps:**
-
-1. Enable Key Access Justifications in enforce mode:
-
-```bash
-curl -sk -X PUT https://localhost/svc/keyaccess/key-access/settings \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "enabled": true, "default_mode": "enforce", "require_code": true}'
-```
-
-2. Create the justification rule for financial key decryption:
-
-```bash
-curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "sox-financial-decrypt",
-    "applyToKeyIds": ["key-financial-records-enc"],
-    "applyToOperations": ["decrypt", "unwrap", "export"],
-    "requiredCodes": [
-      "AUDIT_REVIEW", "COMPLIANCE_REPORTING",
-      "CUSTOMER_INITIATED_ACCESS", "CUSTOMER_INITIATED_SUPPORT",
-      "LEGAL_HOLD", "LEGAL_RESPONSE", "BREAKGLASS_EMERGENCY"
-    ],
-    "mode": "enforce",
-    "requireDetail": true,
-    "managerApprovalCodes": ["BREAKGLASS_EMERGENCY", "LEGAL_HOLD"],
-    "managerApprovalGroups": ["finance-leads", "legal-approvers"]
-  }'
-```
-
-3. All callers now pass a justification header:
-
-```bash
-curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -H "X-Key-Access-Justification: AUDIT_REVIEW" \
-  -d '{
-    "ciphertext": "base64-ciphertext...",
-    "justification": {
-      "code": "AUDIT_REVIEW",
-      "detail": "Q1 2026 SOX audit — Ernst & Young control testing sample",
-      "ticketId": "AUDIT-2026-Q1-042"
-    }
-  }'
-```
-
-4. Pull the justification audit trail for the auditor:
-
-```bash
-curl -sk "https://localhost/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&start=2026-01-01T00:00:00Z&end=2026-03-31T23:59:59Z" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-5. Generate an evidence pack report for the auditor:
-
-```bash
-curl -sk -X POST https://localhost/svc/reporting/reports/generate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "template_id": "evidence_pack", "scope": {"key_ids": ["key-financial-records-enc"], "period_start": "2026-01-01", "period_end": "2026-03-31"}}'
-```
-
-**Outcome:** Every decrypt of the financial key has a structured reason code, detail text, and optional ticket reference in the audit log. Undocumented decrypts are blocked at the API layer. The evidence pack gives auditors a single artifact containing all access events, justification codes, and approval records for the period.
+How this happened is recorded in [learning.md](../learning.md) (2026-09-29).
 
 ---
 
-### Use Case 4: PQC Migration for Root CA (RSA-4096 → ML-DSA-87 Hybrid)
-
-**Context:** The company's internal Root CA uses RSA-4096. The CISO has received a directive to begin PQC migration. The Root CA is the CRITICAL priority item identified in the PQC assessment.
-
-**Prerequisites:**
-- `key-root-ca-rsa4096` is the current Root CA signing key
-- CA infrastructure (ACME, PKCS#11, or internal CA) can be updated
-
-**Compliance mapping:** NSA CNSA 2.0, NIST SP 800-208 (recommendation for stateful hash-based signature schemes).
-
-**Steps:**
-
-1. Run PQC assessment to confirm the Root CA is the top priority:
-
-```bash
-curl -sk -X POST https://localhost/svc/pqc/pqc/scan \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "include_remediation": true}'
-```
-
-2. Create the ML-DSA-87 key for the new hybrid Root CA:
-
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "root-ca-mldsa87",
-    "algorithm": "ML-DSA-87",
-    "purpose": "signing",
-    "labels": {"pqc": "true", "use": "root-ca", "nist-level": "5"}
-  }'
-```
-
-3. Create the hybrid key handle linking RSA-4096 + ML-DSA-87:
-
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "root-ca-hybrid",
-    "algorithm": "HYBRID_RSA4096_MLDSA87",
-    "purpose": "signing",
-    "hybridMode": true,
-    "componentKeyIds": {
-      "classical": "key-root-ca-rsa4096",
-      "pqc": "key-root-ca-mldsa87"
-    }
-  }'
-```
-
-4. Generate the new Root CA self-signed certificate using the hybrid key (quorum ceremony if MPC is configured):
-
-```bash
-curl -sk -X POST https://localhost/api/certificates/self-signed \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "key_id": "key-root-ca-hybrid",
-    "subject": "CN=Example Root CA G2,O=Example Corp,C=US",
-    "validity_days": 7300,
-    "is_ca": true,
-    "path_length": 1
-  }'
-```
-
-5. Re-sign all intermediate CA certificates under the new Root CA. Update trust anchors in all systems.
-
-6. Update the PQC migration record:
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Outcome:** The Root CA now signs with both RSA-4096 and ML-DSA-87. Relying parties that support hybrid signatures get quantum-resistant assurance. Classical-only relying parties continue to verify the RSA-4096 signature. The PQC inventory updates the Root CA from `CRITICAL/classical` to `hybrid`.
-
----
-
-### Use Case 5: Hybrid KEM for Long-Lived Encrypted Backups
-
-**Context:** Nightly database backups are encrypted with a data encryption key (DEK) that is wrapped under an RSA-2048 key encryption key (KEK). Backups are retained for 7 years. The HNDL risk means that an adversary recording today's backups could decrypt them in ~10 years using a quantum computer.
-
-**Steps:**
-
-1. Create an ML-KEM-768 + X25519 hybrid KEK:
-
-```bash
-curl -sk -X POST https://localhost/api/keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "backup-kek-hybrid-kem",
-    "algorithm": "HYBRID_X25519_MLKEM768",
-    "purpose": "key_encapsulation",
-    "hybridMode": true,
-    "labels": {"use": "backup-kek", "pqc": "true", "retention": "7yr"}
-  }'
-```
-
-2. Create a justification rule requiring a backup justification code for all wrap/unwrap operations:
-
-```bash
-curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "backup-kek-wrap-rule",
-    "applyToKeyIds": ["key-backup-kek-hybrid-kem"],
-    "applyToOperations": ["wrap", "unwrap"],
-    "requiredCodes": ["BACKUP_AND_RECOVERY", "INCIDENT_RESPONSE", "BREAKGLASS_EMERGENCY"],
-    "mode": "enforce",
-    "requireDetail": false
-  }'
-```
-
-3. Update the backup pipeline to use the hybrid KEK with a justification header:
-
-```bash
-curl -sk -X POST https://localhost/api/keys/key-backup-kek-hybrid-kem/wrap \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -H "X-Key-Access-Justification: BACKUP_AND_RECOVERY" \
-  -d '{"keyToWrap": "base64-dek-bytes...", "wrappingAlgorithm": "HYBRID_X25519_MLKEM768_HKDF"}'
-```
-
-**Outcome:** Backups created today are protected against HNDL attacks by the ML-KEM-768 component. Even if X25519 is broken by a future quantum computer, ML-KEM-768 remains secure. Backups created before the migration (wrapped under RSA-2048) remain at risk — prioritize re-wrapping the most recent retained backups under the new hybrid KEK.
-
----
-
-### Use Case 6: Multi-Cloud Workload Identity Federation
-
-**Context:** A data processing service runs in both AWS (EC2) and GCP (GCE). It needs to access Vecta KMS using its platform identity in each cloud, without any static secrets. The service processes data for which the cloud providers should not be trusted.
-
-**Steps:**
-
-1. Create AWS IID attestation policy:
-
-```bash
-curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "data-processor-aws",
-    "spiffe_id": "spiffe://example.com/cloud/aws/data-processor",
-    "attestor_type": "aws_iid",
-    "attestation_policy_id": "aws-data-processor-policy"
-  }'
-```
-
-2. Create GCP IIT attestation policy:
-
-```bash
-curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "name": "data-processor-gcp",
-    "spiffe_id": "spiffe://example.com/cloud/gcp/data-processor",
-    "attestor_type": "gcp_iit",
-    "attestation_policy_id": "gcp-data-processor-policy"
-  }'
-```
-
-3. Create a single key access policy granting decrypt to both SPIFFE IDs:
-
-```bash
-curl -sk -X POST https://localhost/api/policies \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "data-processor-multicloud-access",
-    "keyIds": ["key-processed-data-enc"],
-    "rules": [
-      {
-        "principals": [
-          "spiffe://example.com/cloud/aws/data-processor",
-          "spiffe://example.com/cloud/gcp/data-processor"
-        ],
-        "operations": ["decrypt"],
-        "effect": "allow"
-      }
-    ]
-  }'
-```
-
-4. Each cloud instance uses the vecta-agent with the appropriate attestor and gets an SVID automatically. The same key access policy applies regardless of which cloud the workload is running in.
-
-**Outcome:** The data processing service uses platform identity in both clouds with no static secrets. The key access policy is written once and applied uniformly. The workload identity graph shows both SPIFFE IDs connected to the same key.
-
----
-
-### Use Case 7: TEE-Attested Database Key — Azure Confidential VM Only
-
-**Context:** A database server stores encrypted PII. The database decryption key must only ever be available inside an Azure Confidential VM running the approved database image. No other process — not even Azure support or administrators — should be able to access the key.
-
-**Steps:**
-
-1. Obtain the expected launch measurement from the Azure CVM image. This is the `x-ms-sevsnpvm-launchmeasurement` claim from a known-good MAA attestation token for the approved image.
-
-2. Create the attested key release policy:
-
-```bash
-curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "enabled": true,
-    "allowed_tee_types": ["azure_snp"],
-    "require_nonce": true
-  }'
-```
-
-```bash
-curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "azure-cvm-db-policy",
-    "teeType": "azure_snp",
-    "measurements": {
-      "launchMeasurement": "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
-      "complianceStatus": "azure-compliant-uvm"
-    },
-    "attestationProvider": "microsoft_maa",
-    "maaEndpoint": "https://sharedeus2.eus2.attest.azure.net",
-    "allowedKeyIds": ["key-db-pii-master"],
-    "requireFreshNonce": true,
-    "nonceTimeWindowSecs": 300,
-    "allowedOperations": ["decrypt", "unwrap"]
-  }'
-```
-
-3. Inside the CVM, the database startup script fetches the MAA token and requests key release following the pattern in Section 2.
-
-4. Verify releases are being logged:
-
-```bash
-curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&policy_id=azure-cvm-db-policy" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root"
-```
-
-**Outcome:** The PII database decryption key is only released to the verified, measured CVM image. Even an Azure administrator with full access to the host cannot read the key from memory or extract it. The release audit log provides continuous evidence for compliance purposes.
-
----
-
-### Use Case 8: Automated PQC Compliance Report for NIST Readiness
-
-**Context:** The CISO needs a quarterly PQC readiness report for the board, showing progress against the NIST CNSA 2.0 timeline and identifying any new classical-only assets created since the last report.
-
-**Steps:**
-
-1. Run the PQC inventory and assessment:
-
-```bash
-# Get inventory snapshot
-curl -sk "https://localhost/svc/pqc/pqc/inventory?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" > pqc_inventory_q1_2026.json
-
-# Run fresh assessment
-curl -sk -X POST https://localhost/svc/pqc/pqc/scan \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id": "root", "include_remediation": true}' > pqc_assessment_q1_2026.json
-```
-
-2. Get the migration report:
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" > pqc_migration_q1_2026.json
-```
-
-3. Get the latest readiness scan (asset counts):
-
-```bash
-curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" > pqc_readiness_q1_2026.json
-```
-
-4. Use AI to generate the executive summary:
-
-5. Generate the evidence pack for auditors:
-
-```bash
-curl -sk -X POST https://localhost/svc/reporting/reports/generate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "root",
-    "template_id": "evidence_pack",
-    "scope": {
-      "domains": ["pqc"],
-      "period_start": "2026-01-01",
-      "period_end": "2026-03-31"
-    }
-  }'
-```
-
-**Outcome:** A complete, auditable PQC status package is produced in minutes rather than days: inventory snapshot, risk findings, migration progress, readiness scan counts, CNSA 2.0 gap analysis, and an AI-generated board summary. The evidence pack is signed and timestamped, suitable for regulatory submission.
-
----
-
-## Related References
-
-- [ARCHITECTURE.md](ARCHITECTURE.md) — System architecture and service topology
-- [ADMIN_GUIDE.md](ADMIN_GUIDE.md) — Deployment, configuration, and operational procedures
-- [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) — Feature overview and adoption guidance
-- [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) — Complete REST API surface reference
-- [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) — Additional workflow examples
-- [openapi/README.md](openapi/README.md) — Machine-readable OpenAPI specifications
+## Related references
+
+- [API_REFERENCE.md](API_REFERENCE.md): routes and request fields
+- [AUTOMATION_ALKM_PQC.md](AUTOMATION_ALKM_PQC.md): lifecycle automation and PQC keys
+- [SECURITY/KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md): key access grants and approvals
+- [SECURITY/INTERNAL_TLS.md](SECURITY/INTERNAL_TLS.md): hybrid TLS key exchange profiles
+- [SECURITY/ALGORITHM_TRANSITIONS.md](SECURITY/ALGORITHM_TRANSITIONS.md): migration policy rules
+- [SECURITY/FIPS.md](SECURITY/FIPS.md): FIPS modes and the impact catalogue

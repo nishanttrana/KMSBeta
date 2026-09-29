@@ -5,6 +5,42 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A reference guide drifts into a spec when nobody follows its examples to a route
+- **What happened:** `docs/IDENTITY_AND_PQC.md` (3,100 lines) presented as
+  product capability a SPIFFE agent with seven attestors, RFC 8693 exchange
+  into AWS/GCP/Azure, TDX and SEV-SNP quote verification with server-issued
+  nonces, 17 built-in justification codes enforced on keycore decrypt through
+  an `X-Key-Access-Justification` header, and hybrid keys
+  (`HYBRID_X25519_MLKEM768`, `hybridMode`, `componentKeyIds`) wrapping
+  7-year backups and signing a hybrid root CA. None of it existed. Keycore
+  refuses every algorithm containing `+`, certs refuses PQC certificates, and
+  backups are AES-256-GCM. The same inventions were in `API_REFERENCE.md`.
+  The page's real content (routes that exist) sat under field names and
+  response shapes that didn't match the handlers.
+- **Why it slipped through:** the guide was written as a vendor-style
+  reference (complete schemas, sample responses with request IDs,
+  compliance mappings), so it read as authoritative. Every later fix was
+  scoped to one claim that surfaced elsewhere: 5.2.0 to 6.3.0-beta
+  corrected the PQC endpoint stubs, so the page looked maintained. Nothing
+  checks a doc's example bodies against handler structs:
+  `check-doc-routes.py` only proves a named route is registered, and every
+  route here was, while its request fields, headers and response keys were
+  fiction. The PQC sizes table held pre-standard Dilithium numbers that
+  looked plausible.
+- **What following the data found:** tracing each claim to a handler turned
+  up real gaps the old prose had covered over. The workload, keyaccess and
+  most confidential routes verify no caller at all (legacy mux, tenant from
+  a header, no gateway JWT filter). The workload CA key is stored as
+  plaintext PEM. EKM and cloud allow the operation when the justification
+  service is down.
+- **Rule:** when auditing a doc, open the handler for every example, not
+  just the route table. Check the decoded struct's JSON tags against the
+  request body, the `writeJSON` keys against the response, and the
+  middleware chain against "requires a bearer token". Background theory
+  (what a TEE is, what Shor's algorithm does) stays; any sentence whose
+  subject is "Vecta" or "the KMS" needs a caller. List removed claims at
+  the bottom of the page so a reader who remembers them learns why they are
+  gone.
 ### A "verified" label on a check that looked somewhere else
 - **What happened:** `POST /keys/{id}/zeroize-verify` (263893d12, "stringent
   FIPS 140-3 posture") returned `zeroization_verified` from

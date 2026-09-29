@@ -16,7 +16,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | [CERTIFICATES.md](CERTIFICATES.md) | PKI, platform | PKI hierarchy, certificate lifecycle, ACME/EST/SCEP/CMPv2, STAR, ARI |
 | [DATA_PROTECTION.md](DATA_PROTECTION.md) | App, data teams | Tokenization, FPE, masking, payment crypto, PKCS#11/JCA, Autokey |
 | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) | Cloud, integration | BYOK, HYOK, EKM/TDE, KMIP, artifact signing |
-| [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) | Security, platform | Workload identity, confidential compute, key access justifications, PQC migration |
+| [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) | Security, platform | Workload identity (SPIFFE SVIDs, token exchange), attested key release, key access justifications, PQC keys and migration |
 | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) | Compliance, ops | Audit log, governance/approvals, compliance frameworks, alerts, posture, SBOM |
 | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) | Platform, ops | HSM integration, cluster management, QKD, QRNG, MPC/FROST |
 | [ADMINISTRATION.md](ADMINISTRATION.md) | Administrators | Users, tenants, IdP, SCIM, API clients, FIPS, network config |
@@ -55,7 +55,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 
 ### Security Architect
 1. [GETTING_STARTED.md](GETTING_STARTED.md) — security model
-2. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity, confidential compute, PQC
+2. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity, attested key release, PQC
 3. [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) — compliance, posture, audit
 4. [KEYS.md](KEYS.md) — access policy, interface hardening
 5. [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) — HYOK, signing
@@ -65,7 +65,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 2. [KEYS.md](KEYS.md) — creating and using keys
 3. [API_REFERENCE.md](API_REFERENCE.md) — endpoint reference
 4. [DATA_PROTECTION.md](DATA_PROTECTION.md) — tokenization, field encryption
-5. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity (no static API keys)
+5. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity (SVID exchanged for a scoped KMS token)
 
 ### PKI / Integration Team
 1. [CERTIFICATES.md](CERTIFICATES.md) — PKI hierarchy, enrollment protocols
@@ -96,10 +96,10 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | Protect MSSQL / Oracle with TDE | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
 | Connect a KMIP appliance | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
 | Sign container images / Git commits | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
-| Set up workload identity (SPIFFE) | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
-| Configure TEE attested key release | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Issue SPIFFE SVIDs and exchange them for KMS tokens | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Release a key to a verified Nitro, Azure MAA or GCP Confidential Space TEE | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
 | Plan PQC migration | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
-| Require access justification codes | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Require justification codes for EKM, BYOK and HYOK operations | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
 | Run a compliance assessment | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
 | Set up multi-quorum governance | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
 | Search the audit log | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
