@@ -24,31 +24,10 @@ type GovernancePostureControls struct {
 	RequireStepUpAuth         bool
 	PauseConnectorSync        bool
 	GuardrailPolicyRequired   bool
-
-	// Automation & PQC posture toggles. Defaults to false so existing
-	// tenants are unaffected by the new controls; operators opt-in via
-	// the governance service.
-	//
-	// HNDLDetectionEnabled: when true, the audit service evaluates each
-	// classical-only encrypt event against the HNDL sliding-window
-	// detector and emits audit.security.hndl_pattern_detected on breach.
-	HNDLDetectionEnabled bool
-	// AutoQuarantineEnabled: when true, sustained high-risk events
-	// trigger audit.security.auto_quarantined which freezes the target
-	// (key or tenant) until an operator releases it.
-	AutoQuarantineEnabled bool
-	// AutoMigrationEnabled: when true, the reconciler will execute
-	// PQC-migration steps that don't require approval. False keeps the
-	// planner output as plan-only.
-	AutoMigrationEnabled bool
-	// MinAlgorithmTier: the tenant-wide crypto-agility floor (one of
-	// classical-128, classical-192, classical-256, pqc-hybrid, pqc-only).
-	// Empty leaves enforcement to per-policy minAlgorithmTier fields.
+	// MinAlgorithmTier is the floor agility_enforce.go applies to new
+	// protection. Governance does not store posture_min_algorithm_tier yet,
+	// so from governance it is always empty (docs/SECURITY/ALGORITHM_TRANSITIONS.md).
 	MinAlgorithmTier string
-	// ZeroizationVerificationIntervalMins: cadence of the periodic
-	// zeroisation re-verification scheduler. Zero leaves the keycore
-	// default (60 minutes).
-	ZeroizationVerificationIntervalMins int
 }
 
 type GovernancePostureControlsProvider interface {
@@ -140,15 +119,11 @@ func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, _ str
 
 	var payload struct {
 		State struct {
-			ForceQuorumDestructiveOps           bool   `json:"posture_force_quorum_destructive_ops"`
-			RequireStepUpAuth                   bool   `json:"posture_require_step_up_auth"`
-			PauseConnectorSync                  bool   `json:"posture_pause_connector_sync"`
-			GuardrailPolicyRequired             bool   `json:"posture_guardrail_policy_required"`
-			HNDLDetectionEnabled                bool   `json:"posture_hndl_detection_enabled"`
-			AutoQuarantineEnabled               bool   `json:"posture_auto_quarantine_enabled"`
-			AutoMigrationEnabled                bool   `json:"posture_auto_migration_enabled"`
-			MinAlgorithmTier                    string `json:"posture_min_algorithm_tier"`
-			ZeroizationVerificationIntervalMins int    `json:"posture_zeroization_interval_mins"`
+			ForceQuorumDestructiveOps bool   `json:"posture_force_quorum_destructive_ops"`
+			RequireStepUpAuth         bool   `json:"posture_require_step_up_auth"`
+			PauseConnectorSync        bool   `json:"posture_pause_connector_sync"`
+			GuardrailPolicyRequired   bool   `json:"posture_guardrail_policy_required"`
+			MinAlgorithmTier          string `json:"posture_min_algorithm_tier"`
 		} `json:"state"`
 		Error struct {
 			Message string `json:"message"`
@@ -165,15 +140,11 @@ func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, _ str
 		return GovernancePostureControls{}, errors.New(msg)
 	}
 	return GovernancePostureControls{
-		ForceQuorumDestructiveOps:           payload.State.ForceQuorumDestructiveOps,
-		RequireStepUpAuth:                   payload.State.RequireStepUpAuth,
-		PauseConnectorSync:                  payload.State.PauseConnectorSync,
-		GuardrailPolicyRequired:             payload.State.GuardrailPolicyRequired,
-		HNDLDetectionEnabled:                payload.State.HNDLDetectionEnabled,
-		AutoQuarantineEnabled:               payload.State.AutoQuarantineEnabled,
-		AutoMigrationEnabled:                payload.State.AutoMigrationEnabled,
-		MinAlgorithmTier:                    payload.State.MinAlgorithmTier,
-		ZeroizationVerificationIntervalMins: payload.State.ZeroizationVerificationIntervalMins,
+		ForceQuorumDestructiveOps: payload.State.ForceQuorumDestructiveOps,
+		RequireStepUpAuth:         payload.State.RequireStepUpAuth,
+		PauseConnectorSync:        payload.State.PauseConnectorSync,
+		GuardrailPolicyRequired:   payload.State.GuardrailPolicyRequired,
+		MinAlgorithmTier:          payload.State.MinAlgorithmTier,
 	}, nil
 }
 

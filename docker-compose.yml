@@ -629,9 +629,7 @@ services:
     environment:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
-      KMIP_URL: https://kmip:8160
       POLICY_URL: https://policy:8040
-      AUDIT_URL: https://audit:8060
       HTTP_PORT: "8470"
       RECONCILER_MANIFEST_DIR: ${RECONCILER_MANIFEST_DIR:-/etc/vecta/manifests}
     ports:

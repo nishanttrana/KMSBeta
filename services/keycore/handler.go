@@ -51,15 +51,13 @@ func NewHandler(svc *Service) *Handler {
 }
 
 // tokenlessRoutes are the only keycore routes served without a verified JWT:
-// the reconciler routes, which authenticate with the internal token
-// themselves. Every other request without a token is refused in ServeHTTP. Until 4.0.0-beta tokenless requests
+// the reconciler route, which authenticates with the internal token
+// itself. Every other request without a token is refused in ServeHTTP. Until 4.0.0-beta tokenless requests
 // reached every handler, and management routes (export policy, grants,
 // access settings, approval) applied them.
 func (h *Handler) tokenlessRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /keys/due-for-lifecycle", internalauth.RequireToken(h.handleDueForLifecycle))
-	mux.HandleFunc("POST /tenants/onboard", internalauth.RequireToken(h.handleTenantOnboard))
-	mux.HandleFunc("POST /keys/{id}/archive", internalauth.RequireToken(h.handleArchiveKey))
 	return mux
 }
 
@@ -117,7 +115,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				"result":                   "refused",
 				"reason":                   "unauthenticated",
 				"severity":                 "warning",
-				"description":              "keycore requires a verified token on every route except the internal-token routes",
+				"description":              "keycore requires a verified token on every route except the internal-token route",
 				"unverified_actor_headers": actor.Unverified,
 			})
 			writeErr(w, http.StatusUnauthorized, "unauthorized", "authentication required", requestID(r), "")
@@ -208,13 +206,11 @@ func (h *Handler) routes() *http.ServeMux {
 	// FIPS RNG health (token required)
 	mux.HandleFunc("GET /fips/rng-health", h.handleRNGHealth)
 
-	// Reconciler-driven endpoints. These are service-to-service only —
-	// internalauth.RequireToken gates each one against the shared
+	// Reconciler-driven endpoint. Service-to-service only —
+	// internalauth.RequireToken gates it against the shared
 	// INTERNAL_API_TOKEN secret and fails closed when the secret is
-	// unset, so the routes can never be silently exposed.
+	// unset, so the route can never be silently exposed.
 	mux.HandleFunc("GET /keys/due-for-lifecycle", internalauth.RequireToken(h.handleDueForLifecycle))
-	mux.HandleFunc("POST /tenants/onboard", internalauth.RequireToken(h.handleTenantOnboard))
-	mux.HandleFunc("POST /keys/{id}/archive", internalauth.RequireToken(h.handleArchiveKey))
 
 	return mux
 }

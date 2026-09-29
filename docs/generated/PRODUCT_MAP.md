@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-29T00:18:24Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T00:24:44Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `905` across `30` services
+- Backend HTTP routes discovered: `899` across `30` services
 - Backend routes on the `pkg/route` kernel: `301` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `565`
 - Frontend call sites with exact backend route match: `520`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
 - Clickable controls with static `onClick` handlers: `758`
-- Backend request flows with handler/service/package summaries: `905`
+- Backend request flows with handler/service/package summaries: `899`
 
 ## How To Use This For Launch
 
@@ -144,7 +144,7 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (168 routes)"]
+  svc_keycore["keycore (164 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (12 routes)"]
   svc_pqc["pqc (16 routes)"]
@@ -219,8 +219,8 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 168 | 115 |
-| kmip | 14 | 11 |
+| keycore | 164 | 115 |
+| kmip | 12 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
 | posture | 12 | 8 |
@@ -414,7 +414,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
 | compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
 
-Showing `120` of `378`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `372`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

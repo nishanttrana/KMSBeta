@@ -16783,34 +16783,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-post-keys-id-archive",
-    "group": "Key Management (keycore)",
-    "title": "POST /keys/{id}/archive",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/keys/{id}/archive?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/keys/{id}/archive?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-post-keys-id-attest",
     "group": "Key Management (keycore)",
     "title": "POST /keys/{id}/attest",
@@ -17847,34 +17819,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-post-tenants-onboard",
-    "group": "Key Management (keycore)",
-    "title": "POST /tenants/onboard",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/tenants/onboard?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/tenants/onboard?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-put-access-groups-id-members",
     "group": "Key Management (keycore)",
     "title": "PUT /access/groups/{id}/members",
@@ -18351,34 +18295,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "kmip-get-kmip-clients-decommission-candidates",
-    "group": "KMIP (kmip)",
-    "title": "GET /kmip/clients/decommission-candidates",
-    "service": "kmip",
-    "method": "GET",
-    "pathTemplate": "/kmip/clients/decommission-candidates?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KMIP service.",
-    "requestExample": "GET /svc/kmip/kmip/clients/decommission-candidates?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "kmip-get-kmip-interop-targets",
     "group": "KMIP (kmip)",
     "title": "GET /kmip/interop/targets",
@@ -18444,34 +18360,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KMIP service.",
     "requestExample": "POST /svc/kmip/kmip/clients?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "kmip-post-kmip-clients-id-decommission",
-    "group": "KMIP (kmip)",
-    "title": "POST /kmip/clients/{id}/decommission",
-    "service": "kmip",
-    "method": "POST",
-    "pathTemplate": "/kmip/clients/{id}/decommission?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KMIP service.",
-    "requestExample": "POST /svc/kmip/kmip/clients/{id}/decommission?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

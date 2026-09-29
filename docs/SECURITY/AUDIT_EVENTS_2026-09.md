@@ -365,3 +365,27 @@ Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecr
 |---|---|---|
 | `audit.key.crypto_policy_refused` | A key operation refused by the tenant's migration policy (`reason` `crypto_policy_decrypt_only` or `crypto_policy_disallowed`, with `rule_id`, `rule_name`, `rule_action`) or minimum algorithm tier (`below_min_algorithm_tier`, `invalid_min_algorithm_tier`); `result: refused`, `operation`, `algorithm`, `key_id`. The operation's own `audit.key.<op>` carries the same `reason`. Playbooks trigger `crypto_policy_refused` | `TestCryptoPolicyEnforcedOnKeyOperations`, `TestTenantMinAlgorithmTierEnforced` |
 | `audit.key.agility_policy_rules_listed`, `agility_policy_rule_created`, `agility_policy_rule_updated`, `agility_policy_rule_deleted` | Kernel events for migration rules (details `name`, `match_kind`, `match_value`, `action`, `effective_date`, `target_algorithm`; refusals `result: refused`). Changes are Playbooks trigger `crypto_policy_changed` | `TestAgilityPolicyRulesValidatedAndAudited`, `TestAgilityRoutesRefusalsAudited` |
+
+The `below_min_algorithm_tier` / `invalid_min_algorithm_tier` reasons need a
+tier from governance posture, which governance does not store yet, so a
+deployment never emits them (docs/SECURITY/ALGORITHM_TRANSITIONS.md, Open).
+
+## Automation signals (5.3.0-beta, docs/AUTOMATION_ALKM_PQC.md)
+
+| Event | When | Test |
+|---|---|---|
+| `audit.security.sustained_risk_detected` | Audit saw 3 events scoring ≥80 on one target (key, other target, or tenant) within 5 minutes; once per window, `result: warning`, `target_type` / `target_id` set so the `sustained_risk_detected` playbook trigger can act on `{{event.target_id}}`. It changes nothing itself | `TestSustainedRiskPublishedOnceWithTarget` |
+
+No longer emitted, because the work they named never happened:
+`audit.security.auto_quarantined` (renamed to the row above; nothing was
+quarantined), `audit.security.hndl_pattern_detected` (raw encrypt volume, not
+a harvest-now-decrypt-later measurement), `audit.tenant.onboarded` (keycore's
+`/tenants/onboard` provisioned nothing, yet was audited every 30 s),
+`audit.key.archive_requested` (nothing was queued), and
+`audit.kmip.client_dormant` / `audit.kmip.client_revoked` from the KMIP
+auto-decommission, which measured time since a client was created, not its
+traffic. The catalogue entries for events no code ever emitted
+(`audit.key.wake_kat_failed`, `hbs_exhausted`, `dependency_blocked_destroy`,
+`predictive_rotation_scheduled`, `lifecycle_auto_transition`,
+`zeroization_verified`, `archive_completed`, `audit.pqc.attestation_recorded`)
+are gone too.

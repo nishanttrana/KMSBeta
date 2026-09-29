@@ -7,6 +7,42 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Automation/ALKM/PQC: remove what isn't real rather than document it (5.3.0-beta)
+
+**Decision.** Where `docs/AUTOMATION_ALKM_PQC.md` described a capability
+the code didn't deliver, the dead or fake code was removed and the guide
+rewritten, rather than the rows being re-worded as "not wired". The
+exceptions are real capabilities with a wrong label or gate: the sustained-risk
+detector keeps running under an honest name
+(`audit.security.sustained_risk_detected`) and becomes a playbook trigger,
+because the playbook layer is where a response (disable the key) belongs.
+
+**Why.** CLAUDE.md rule 8 prefers removal to a pretend feature. Dead code
+with its own tests keeps getting cited as evidence (see learning.md). Three
+pieces were harmful rather than inert: the KMIP auto-decommission refused
+active clients after 90 days, `/tenants/onboard` audited provisioning that
+never happened, and "auto-quarantine" named an enforcement that didn't occur.
+
+**Rejected.**
+- *Building the missing pieces now* (composite keys, HBS state tracking,
+  dependency registry, KMIP last-seen tracking). Each is real work with its
+  own design: composite keys need a key-format and KMIP story, and last-seen
+  tracking would write a replicated table from every cluster node on every
+  connect (docs/CLUSTERING.md). They can come back as features with tests.
+- *Keeping automatic destroy in the lifecycle reconciler* and making it send
+  the pre-destroy acknowledgements. That would let a timer irreversibly
+  destroy keys under a service identity, which the playbook rule reserves for
+  a governance approval.
+- *Keeping Y2Q* next to the crypto-agility CARAF risk ratings: two
+  prioritisation scores would disagree. The unused Y2Q code goes, and the
+  CARAF slices add the one that is used.
+
+**Enforced by.** The tests listed in the 5.3.0-beta CHANGELOG entry, the
+route index (`scripts/check-doc-routes.py`), and
+`TestTriggerSubjectsAreEmitted` for the new trigger.
+
+---
+
 ## 2026-09-29 — Key visibility: see only the keys you can use (5.0.0-beta)
 
 **Decision.** The owner chose option A: a key is listed and readable only by

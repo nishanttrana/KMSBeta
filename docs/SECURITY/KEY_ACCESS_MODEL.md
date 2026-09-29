@@ -197,10 +197,10 @@ KMIP needs `AddAttribute`, `ModifyAttribute` and `DeleteAttribute` (only
 
 ## 9. Route permissions (4.0.0-beta)
 
-Keycore requires a verified token on every route except the three
-reconciler routes that authenticate with the internal token
-(`GET /keys/due-for-lifecycle`, `POST /tenants/onboard`,
-`POST /keys/{id}/archive`). A tokenless request is refused `401` and audited
+Keycore requires a verified token on every route except the reconciler
+route that authenticates with the internal token
+(`GET /keys/due-for-lifecycle`; the no-op `POST /tenants/onboard` and the
+`POST /keys/{id}/archive` stub were removed in 5.3.0-beta). A tokenless request is refused `401` and audited
 as `audit.key.request_refused` (`reason: unauthenticated`).
 
 | Routes | Permission | Extra check |

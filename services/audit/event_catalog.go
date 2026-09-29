@@ -156,18 +156,9 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		// not paging), automatic remediations are HIGH (operator should
 		// see the action took place), exhaustion / breach signals are
 		// CRITICAL.
-		"audit.security.hndl_pattern_detected":    {Severity: "HIGH"},
-		"audit.security.auto_quarantined":         {Severity: "HIGH"},
+		"audit.security.sustained_risk_detected":  {Severity: "HIGH"},
 		"audit.policy.quota_exceeded":             {Severity: "MEDIUM"},
 		"audit.policy.crypto_floor_violation":     {Severity: "HIGH"},
-		"audit.key.zeroization_verified":          {Severity: "LOW"},
-		"audit.key.archive_requested":             {Severity: "LOW"},
-		"audit.key.archive_completed":             {Severity: "LOW"},
-		"audit.key.lifecycle_auto_transition":     {Severity: "MEDIUM"},
-		"audit.key.predictive_rotation_scheduled": {Severity: "MEDIUM"},
-		"audit.key.wake_kat_failed":               {Severity: "CRITICAL"},
-		"audit.key.dependency_blocked_destroy":    {Severity: "MEDIUM"},
-		"audit.key.hbs_exhausted":                 {Severity: "CRITICAL"},
 		"audit.key.anomaly_scan_completed":        {Severity: "MEDIUM"},
 		"audit.key.dspm_finding_upserted":         {Severity: "HIGH"},
 		"audit.key.kdf_derived":                   {Severity: "MEDIUM"},
@@ -176,16 +167,12 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.key.searchable_token_generated":    {Severity: "MEDIUM"},
 		"audit.key.compliance_dashboard_viewed":   {Severity: "LOW"},
 		"audit.key.cost_optimization_viewed":      {Severity: "LOW"},
-		"audit.tenant.onboarded":                  {Severity: "LOW"},
 		"audit.tenant.quota_set":                  {Severity: "LOW"},
-		"audit.kmip.client_dormant":               {Severity: "LOW"},
-		"audit.kmip.client_revoked":               {Severity: "HIGH"},
 		"audit.kmip.attribute_mutation_denied":    {Severity: "MEDIUM"},
 		"audit.kmip.authorization_denied":         {Severity: "HIGH"},
 		"audit.health.incident":                   {Severity: "HIGH"},
 		"audit.pqc.migration_plan_built":          {Severity: "LOW"},
 		"audit.pqc.migration_step_executed":       {Severity: "MEDIUM"},
-		"audit.pqc.attestation_recorded":          {Severity: "LOW"},
 		"audit.cbom.inventory_viewed":             {Severity: "LOW"},
 	}
 	for action, meta := range overrides {

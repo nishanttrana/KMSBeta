@@ -15,7 +15,6 @@ import (
 
 	"github.com/ovh/kmip-go/ttlv"
 
-	"vecta-kms/pkg/internalauth"
 	"vecta-kms/pkg/tenantcheck"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -35,12 +34,6 @@ func (h *Handler) HTTPHandler() http.Handler {
 	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
 	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
 	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
-	// Reconciler-internal endpoints. Service-to-service only — the
-	// internalauth.RequireToken middleware fails closed when the
-	// INTERNAL_API_TOKEN env var is unset, so a fresh deployment can't
-	// accidentally leave them open.
-	mux.HandleFunc("GET /kmip/clients/decommission-candidates", internalauth.RequireToken(h.handleDecommissionCandidates))
-	mux.HandleFunc("POST /kmip/clients/{id}/decommission", internalauth.RequireToken(h.handleDecommission))
 	return mux
 }
 

@@ -169,11 +169,10 @@ func main() {
 		2*time.Second,
 	))
 
-	// Lifecycle policy: cryptoperiods, version retention, wake-time KAT.
-	// All three are passive holders consumed by the handler/reconciler.
+	// Lifecycle policy: cryptoperiods (GET /keys/due-for-lifecycle) and
+	// version retention.
 	svc.SetCryptoperiodPolicy(NewCryptoperiodPolicy())
 	svc.SetVersionPolicy(DefaultVersionPolicy())
-	svc.SetWakeSelfTestRegistry(NewWakeSelfTestRegistry())
 	go func() {
 		// Records that name a key they don't hold (key_label_correction.go)
 		// are corrected and audited; primary only, idempotent.
@@ -189,20 +188,6 @@ func main() {
 	// Unused until a tenant turns on its tenant key or HSM keys.
 	svc.SetHSMBackend(hsm.FromEnv())
 
-	// Cold-tier archiver. Disabled by default; operators turn it on by
-	// setting KEYCORE_ARCHIVE_DIR and KEYCORE_ARCHIVE_KEK_B64. When the
-	// archive KEK is missing or malformed we fail open (no archival)
-	// rather than refuse to start — the archive is an optimisation, not
-	// a safety property.
-	if archiveDir := stringsTrimSpace(os.Getenv("KEYCORE_ARCHIVE_DIR")); archiveDir != "" {
-		if kek, err := base64.StdEncoding.DecodeString(stringsTrimSpace(os.Getenv("KEYCORE_ARCHIVE_KEK_B64"))); err == nil && len(kek) == 32 {
-			fs := &FilesystemArchiveStore{Root: archiveDir}
-			if arch, err := NewArchiver(fs, kek); err == nil {
-				svc.SetArchiver(arch)
-				logger.Printf("cold-tier key archive enabled at %s", archiveDir)
-			}
-		}
-	}
 	governanceURL := stringsTrimSpace(os.Getenv("GOVERNANCE_URL"))
 	if governanceURL != "" {
 		svc.SetFIPSModeProvider(NewHTTPFIPSModeProvider(governanceURL, 3*time.Second, 5*time.Second))
@@ -212,20 +197,6 @@ func main() {
 	}
 	handler := NewHandler(svc)
 	handler.SetAuditClient(auditClient)
-
-	// Zeroization verification scheduler. Runs on the keycore process
-	// because it needs the live key cache; emits per-key audit events
-	// so the immutable chain carries continuous evidence of FIPS 140-3
-	// §4.9.2 zeroisation.
-	if envBool("KEYCORE_ZEROIZATION_SCHEDULER_ENABLED", true) {
-		sched := NewZeroizationScheduler(
-			svc, // implements ZeroizationLister via store_lifecycle.go
-			func(tenantID, keyID string) bool { return svc.ConfirmKeyMaterialZeroized(tenantID, keyID) },
-			auditClient,
-		)
-		go sched.Run(ctx)
-		logger.Printf("zeroization verification scheduler started")
-	}
 
 	// Rotation policies: due auto-rotate policies run on the primary.
 	go NewRotationScheduler(svc, auditClient, logger).Run(ctx)

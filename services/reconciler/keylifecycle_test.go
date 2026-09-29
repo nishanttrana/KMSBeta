@@ -65,3 +65,38 @@ func TestLifecycleCallsCarryServiceIdentityAndTenant(t *testing.T) {
 		t.Fatalf("tenant_id = %q", rotate.URL.Query().Get("tenant_id"))
 	}
 }
+
+// A scan keycore refuses is the controller's last_error, not "nothing due",
+// and an action keycore no longer offers (archive) is never called.
+func TestLifecycleScanFailureIsReportedAndArchiveIsNotCalled(t *testing.T) {
+	refusing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer refusing.Close()
+	if err := newKeyLifecycleReconciler(refusing.Client(), refusing.URL, log.Default()).Reconcile(context.Background()); err == nil {
+		t.Fatal("a refused due-for-lifecycle scan reported success")
+	}
+
+	var mu sync.Mutex
+	var calls []string
+	keycore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/keys/due-for-lifecycle" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"items": []map[string]string{
+				{"tenant_id": "tenant-a", "key_id": "k1", "action": "archive"},
+			}})
+			return
+		}
+		mu.Lock()
+		calls = append(calls, r.URL.Path)
+		mu.Unlock()
+	}))
+	defer keycore.Close()
+	if err := newKeyLifecycleReconciler(keycore.Client(), keycore.URL, log.Default()).Reconcile(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(calls) != 0 {
+		t.Fatalf("reconciler called %v for an archive item", calls)
+	}
+}

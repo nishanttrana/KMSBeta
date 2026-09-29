@@ -894,9 +894,9 @@ Every keycore request needs a verified token (a user token through the
 gateway, or a service JWT). Since 4.0.0-beta a request without one gets
 `401 unauthorized` before any handler runs, audited as
 `audit.key.request_refused` (`reason: unauthenticated`). The only exceptions
-are the reconciler routes `GET /keys/due-for-lifecycle`, `POST
-/tenants/onboard` and `POST /keys/{id}/archive`, which require the
-`X-Internal-Token` instead. Keycore refuses to start without the
+is the reconciler route `GET /keys/due-for-lifecycle`, which requires the
+`X-Internal-Token` instead (`POST /tenants/onboard` and `POST
+/keys/{id}/archive` were removed in 5.3.0-beta: neither did anything). Keycore refuses to start without the
 key that verifies tokens. Keycore decides key access from the verified token only. `X-Actor-*`,
 `X-KMS-Subject` and `X-KMS-Interface` headers are ignored for authorization
 and recorded in `audit.key.actor_headers_ignored`. A key operation the caller
@@ -1637,7 +1637,9 @@ this.
 
 - Triggers: `alert_raised` (`audit.reporting.alert_created`),
   `incident_opened` (`audit.reporting.incident_opened`), `canary_tripped`,
-  `threat_signal_raised`, `threat_finding_raised`, `key_compromised`,
+  `threat_signal_raised`, `threat_finding_raised`,
+  `sustained_risk_detected` (`audit.security.sustained_risk_detected`),
+  `key_compromised`,
   `audit_chain_broken` (`audit.audit.chain_broken`),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
@@ -3229,6 +3231,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.signing.* | Artifact signing |
 | audit.workload.* | Workload identity |
 | audit.confidential.* | Attestation verdicts and attested key release |
+| audit.security.* | Audit-side detection signals (sustained risk) |
 | audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |
 | audit.sbom.* | SBOM/CBOM generation |
@@ -3267,6 +3270,7 @@ Selected events with dedicated audit classification:
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
+- `audit.security.sustained_risk_detected` (audit's sustained-risk signal: 3 events scoring ≥80 on one target within 5 minutes, once per window; `target_type` / `target_id` name the key, target or tenant, details `reason`, `score_threshold`, `window_seconds`, `result: warning`). It changes nothing itself; the `sustained_risk_detected` playbook trigger responds. Replaced `audit.security.auto_quarantined` in 5.3.0-beta, which quarantined nothing
 - `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
 - `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy or minimum algorithm tier; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
 - `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
@@ -4014,7 +4018,6 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/activate`
 - `GET /svc/keycore/keys/{id}/approval`
 - `PUT /svc/keycore/keys/{id}/approval`
-- `POST /svc/keycore/keys/{id}/archive`
 - `POST /svc/keycore/keys/{id}/attest`
 - `POST /svc/keycore/keys/{id}/attested-release`
 - `GET /svc/keycore/keys/{id}/consumers`
@@ -4073,17 +4076,14 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/tags`
 - `POST /svc/keycore/tags`
 - `DELETE /svc/keycore/tags/{name}`
-- `POST /svc/keycore/tenants/onboard`
 
 ### kmip (`/svc/kmip/`)
 
 - `GET /svc/kmip/kmip/capabilities`
 - `GET /svc/kmip/kmip/clients`
 - `POST /svc/kmip/kmip/clients`
-- `GET /svc/kmip/kmip/clients/decommission-candidates`
 - `DELETE /svc/kmip/kmip/clients/{id}`
 - `GET /svc/kmip/kmip/clients/{id}`
-- `POST /svc/kmip/kmip/clients/{id}/decommission`
 - `GET /svc/kmip/kmip/interop/targets`
 - `POST /svc/kmip/kmip/interop/targets`
 - `DELETE /svc/kmip/kmip/interop/targets/{id}`

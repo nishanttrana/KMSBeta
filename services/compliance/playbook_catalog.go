@@ -44,6 +44,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "canary_tripped", Label: "Canary key referenced", Group: "Incident response", Subjects: []string{"audit.keycore.canary_tripped"}},
 	{Type: "threat_signal_raised", Label: "Key threat signal raised", Group: "Incident response", Subjects: []string{"audit.keycore.threat_signal_raised"}},
 	{Type: "threat_finding_raised", Label: "Posture threat finding raised", Group: "Incident response", Subjects: []string{"audit.posture.threat_finding_raised"}},
+	{Type: "sustained_risk_detected", Label: "Sustained high-risk activity on a target", Group: "Incident response", Subjects: []string{"audit.security.sustained_risk_detected"}},
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
 	{Type: "key_created", Label: "Key created", Group: "Key lifecycle", Subjects: []string{"audit.key.create"}, SuccessOnly: true},

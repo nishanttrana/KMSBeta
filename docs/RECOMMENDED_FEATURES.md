@@ -48,10 +48,9 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 ### ✅ Core Key Management (Complete)
 - Key lifecycle and versioning
 - Key rotation with cryptoperiod enforcement
-- Composite keys (classical + PQC hybrid)
+- PQC keys (ML-KEM, ML-DSA, SLH-DSA); hybrid (composite) keys are not implemented
 - Key access justification and delegation
-- Automated lifecycle reconciliation
-- Dependency-aware key destruction
+- Automated lifecycle reconciliation (rotation; see AUTOMATION_ALKM_PQC.md)
 - NIST SP 800-57 compliance
 
 ### ✅ Advanced Cryptography (State-of-the-Art)
@@ -79,9 +78,9 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 ### ✅ Observability & Automation (Mature)
 - Service health monitoring
 - CBOM inventory tracking
-- Sustained risk auto-quarantine
+- Sustained-risk signal (a playbook trigger; it quarantines nothing itself)
 - Incident playbooks
-- Webhook circuit breaker
+- Event-stream circuit breaker
 - Crypto asset discovery
 
 ---

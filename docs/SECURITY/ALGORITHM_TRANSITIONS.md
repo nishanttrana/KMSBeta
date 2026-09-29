@@ -42,10 +42,13 @@ in `checkPolicy`, which every key operation passes through
 - **Lifecycle:** export, destroy, approval and export-policy changes.
   - Never refused by the migration policy, so a key can always be retired.
 
-The tenant's **minimum algorithm tier** (governance posture) is enforced on
-the same new-protection operations. A value that is not a tier refuses new
-protection until it is fixed (fail closed). Before 5.1.0-beta it was stored
-and never enforced.
+Keycore enforces a **minimum algorithm tier** from governance posture
+(`posture_min_algorithm_tier`) on the same new-protection operations, and a
+value that is not a tier refuses new protection until it is fixed (fail
+closed). **Governance does not store or return that field**, so in a
+deployment the floor is never set and this check never fires (see Open);
+`TestTenantMinAlgorithmTierEnforced` injects it directly. Until 5.1.0-beta
+this page said the tier was "stored and never enforced"; it was never stored.
 
 Every refusal answers `403 policy_denied`. It emits
 `audit.key.crypto_policy_refused` with its reason and rule, and the
@@ -88,3 +91,8 @@ deadline has none.
   cannot refuse their use.
 - CARAF assessment (threats, asset profiles, timeline and cost ratings,
   decisions) is the next crypto-agility slice.
+- The minimum algorithm tier has no setting: governance has no
+  `posture_min_algorithm_tier` (column, API or UI), so keycore always reads
+  it empty. Either governance gains the setting, with its UI and audit, or
+  keycore's check is removed. Until then a floor is a policy's
+  `spec.minAlgorithmTier` or a migration policy rule.

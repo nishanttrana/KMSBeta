@@ -5,6 +5,47 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A feature table written with the code, never re-read against it
+- **What happened:** `docs/AUTOMATION_ALKM_PQC.md` was written in one
+  "hardening wave" alongside the code it described. Of its 27 "At a glance"
+  rows, about half were false by 5.0.0-beta: composite keys (creation
+  refuses `+`), Y2Q scoring and a keycore migration planner (never
+  constructed), PQC KCV, dependency-aware destroy, self-test on wake,
+  workflow templates and auto-tagging (never called), a stateful HBS
+  tracker, composite signatures and PQC HSM attestation (no code at all), a
+  zeroization scheduler that listed destroyed keys through a store method
+  that didn't exist, and five posture toggles governance never stored. Its
+  caveats were stale the other way: "PQC primitives are interface only" when
+  keycore already generated ML-KEM/ML-DSA/SLH-DSA keys, and "the lifecycle
+  scan is a stub" when it had been real for months.
+- **Why it slipped through:** each row named a symbol (`RotationForecaster`,
+  `DependencyChecker`, `WakeSelfTestRegistry`), and a named symbol reads as
+  evidence. Nobody checked for a caller. Most of the code compiled and some
+  had its own unit test (`pqc_primitives_test.go` tested wrappers nothing
+  used), so `go test` and `make conformance` were green. The event
+  catalogue had the same shape: severities for `wake_kat_failed` and
+  `hbs_exhausted` looked like emitted events and were quoted as "the most
+  important to alert on".
+- **What was worse than dead:** three pieces ran. The KMIP auto-decommission
+  took `updated_at` as "last seen", and KMIP traffic never writes it, so every
+  client was set dormant (and refused at connect) 90 days after creation.
+  `POST /tenants/onboard` did nothing but emit `audit.tenant.onboarded` every
+  30 s. The audit "auto-quarantine" quarantined nothing, and the "HNDL
+  detector" counted all encrypt volume.
+- **Rule:** before a doc row, catalogue entry or CHANGELOG line names a
+  capability, follow it to a caller in a running path: `main.go` wiring,
+  a registered route, or a scheduler. A symbol with no caller outside its
+  own file (and its own test) is dead, and gets removed rather than
+  documented. When a value stands in for a measurement ("last seen",
+  "verified", "quarantined"), check what actually writes that value.
+- **Same trap, one commit earlier:** 5.1.0-beta (below) made keycore enforce
+  governance posture's minimum algorithm tier, on the premise that the tier
+  "was saved". Governance has no such field: keycore's parser named
+  `posture_min_algorithm_tier`, and nothing in governance stores or returns
+  it. The enforcement is correct and tested with an injected value, but in a
+  deployment it never fires. A control's test must start from where the
+  value is really set, not from the struct that receives it.
+
 ### A service nobody's UI called still served its API unauthenticated
 - **What happened:** the pqc service's tab was orphaned, so its routes looked
   dormant, but they were live behind Envoy with no JWT check: tenant from the
@@ -31,6 +72,7 @@ Newest entries on top.
   product is not our place.
 - **Rule:** the product states technical facts and enforces the customer's
   policy; it doesn't decide dates for them (CLAUDE.md, 2026-09-29).
+
 ### Closing a hole in two route families left the rest of the mux open
 - **What happened:** 4.0.0-beta put keycore's access and key-management
   routes behind permissions, but the same raw mux still let any verified

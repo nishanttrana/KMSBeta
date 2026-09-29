@@ -68,8 +68,6 @@ type Service struct {
 	posture      GovernancePostureControlsProvider
 	cryptoperiod *CryptoperiodPolicy
 	versions     VersionPolicy
-	wakeRegistry *WakeSelfTestRegistry
-	archiver     *Archiver
 	attestKP     *crypto.KeyPair
 	attestMu     sync.Mutex
 	hsm          HSMBackend // nil when the platform runs no hsm-connector
@@ -87,13 +85,6 @@ func (s *Service) SetVersionPolicy(p VersionPolicy) {
 		s.versions = p
 	}
 }
-
-// SetWakeSelfTestRegistry installs the per-key restoration KAT tracker.
-func (s *Service) SetWakeSelfTestRegistry(r *WakeSelfTestRegistry) { s.wakeRegistry = r }
-
-// SetArchiver installs the cold-tier archive writer. Optional — when
-// nil the lifecycle reconciler simply skips the archival step.
-func (s *Service) SetArchiver(a *Archiver) { s.archiver = a }
 
 var errTagInUse = errors.New("tag in use")
 

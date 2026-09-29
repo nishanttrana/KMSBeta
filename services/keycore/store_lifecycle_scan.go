@@ -26,11 +26,10 @@ type LifecycleCandidate struct {
 }
 
 // ScanLifecycleCandidates walks the cross-tenant `keys` table and
-// returns rows that are plausibly due for a lifecycle transition.
-// "Plausibly" is intentional: the SQL filter is permissive (status in
-// (active, deactivated) and updated_at older than 1 day, or ops_total
-// near ops_limit), and the Go-side evaluator applies the strict policy
-// rules. Splitting the work this way keeps the query simple — it can
+// returns active rows that are plausibly due for rotation. "Plausibly" is
+// intentional: the SQL filter is permissive (updated_at older than 1 day,
+// ops_total near ops_limit, or expiry reached), and the Go-side evaluator
+// applies the strict rules. Splitting the work this way keeps the query simple — it can
 // run from a read replica without a custom expiry index — while
 // preserving the full cryptoperiod / grace-period decision logic.
 //
@@ -49,7 +48,7 @@ SELECT id, tenant_id, algorithm, key_type, purpose, status,
        created_at, updated_at,
        COALESCE(ops_total, 0), COALESCE(ops_limit, 0), expiry_date
 FROM keys
-WHERE status IN ('active', 'deactivated', 'compromised')
+WHERE status = 'active'
   AND (
         updated_at < $1
         OR (ops_limit > 0 AND ops_total >= ops_limit * 8 / 10)
@@ -76,49 +75,31 @@ LIMIT $3
 	return out, rows.Err()
 }
 
-// EvaluateLifecycle applies the keycore's lifecycle rules to one
-// candidate and returns the action the reconciler should take, plus a
-// short human-readable reason. Returns ("", "") when no action is due.
+// EvaluateLifecycle applies keycore's rotation rules to one candidate and
+// returns the action the reconciler should take ("rotate"), plus a short
+// reason. Returns ("", "") when nothing is due.
 //
-// The rule order matters: explicit operator dates (expiry_date) win
-// over policy-derived cryptoperiods, which win over predictive
-// rotation triggers. Without that ordering we'd race the operator and
-// pre-empt a deliberate destroy date.
+// The rule order matters: an explicit operator date (expiry_date) wins over
+// the policy cryptoperiod, which wins over the ops_limit threshold.
+//
+// Destroy is never automatic. Until 5.3.0-beta this also returned "destroy"
+// for compromised keys and for deactivated keys past a 30-day grace, but
+// keycore's destroy route requires pre-destroy acknowledgements the
+// reconciler never sent, so every such call was refused; and an unattended,
+// irreversible destroy belongs behind a governance approval (a playbook), not
+// a timer.
 func EvaluateLifecycle(c LifecycleCandidate, cp *CryptoperiodPolicy, now time.Time) (action, reason string) {
-	status := strings.ToLower(strings.TrimSpace(c.Status))
-
-	switch status {
-	case StateActive:
-		// Operator-set destroy date is the most explicit signal.
-		if c.ExpiryDate != nil && !c.ExpiryDate.IsZero() && !now.Before(*c.ExpiryDate) {
-			return "rotate", "operator-set expiry reached"
-		}
-		// Cryptoperiod expiry.
-		if cp != nil && cp.IsExpired(c.CreatedAt, c.Purpose, c.Algorithm, c.KeyType) {
-			return "rotate", "cryptoperiod exceeded for category"
-		}
-		// Predictive: 80% of ops_limit triggers a rotate with a 24h
-		// successor pre-create window. The keycore handler decides
-		// whether to honour the predictive rotate or queue the
-		// successor key only.
-		if c.OpsLimit > 0 && c.OpsTotal*10 >= c.OpsLimit*8 {
-			return "rotate", "ops_total reached 80% of ops_limit"
-		}
-		return "", ""
-
-	case StateDeactivated:
-		// Promote to destroy once the grace window has elapsed.
-		if PastGrace(c.UpdatedAt) {
-			return "destroy", "deactivation grace window elapsed"
-		}
-		return "", ""
-
-	case StateCompromised:
-		// Compromised keys always advance to destroyed; the reconciler
-		// performs the move so the audit chain records who triggered it.
-		return "destroy", "compromised key auto-destroy"
-
-	default:
+	if strings.ToLower(strings.TrimSpace(c.Status)) != StateActive {
 		return "", ""
 	}
+	if c.ExpiryDate != nil && !c.ExpiryDate.IsZero() && !now.Before(*c.ExpiryDate) {
+		return "rotate", "operator-set expiry reached"
+	}
+	if cp != nil && cp.IsExpired(c.CreatedAt, c.Purpose, c.Algorithm, c.KeyType) {
+		return "rotate", "cryptoperiod exceeded for category"
+	}
+	if c.OpsLimit > 0 && c.OpsTotal*10 >= c.OpsLimit*8 {
+		return "rotate", "ops_total reached 80% of ops_limit"
+	}
+	return "", ""
 }

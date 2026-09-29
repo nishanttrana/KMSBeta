@@ -4,6 +4,84 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [5.3.0-beta] — 2026-09-29
+
+### Automation/ALKM/PQC: the guide now matches the code, and dead or fake code is gone
+`docs/AUTOMATION_ALKM_PQC.md` was audited row by row against the code.
+Most of its "At a glance" table described code that was never wired, did
+nothing, or was named for something it didn't do. The guide is rewritten,
+with a "Removed claims" table naming each former claim and what the code
+really did. The code behind those claims is removed in this release's
+commit (recoverable from git history before it):
+
+- **Removed, never called or never wired:** keycore's migration planner and
+  Y2Q score (and `pkg/migration`), `ComputePQCKCV`, the unused ML-KEM/ML-DSA
+  wrappers in `pqc_primitives.go`, the dependency checker, the wake self-test
+  registry, keycore's workflow-template table, keycore's and KMIP's
+  auto-taggers, and the cold-tier archiver (`KEYCORE_ARCHIVE_DIR`,
+  `KEYCORE_ARCHIVE_KEK_B64`).
+- **Removed, ran but did nothing:** the zeroization scheduler (it called a
+  store method that didn't exist; `KEYCORE_ZEROIZATION_SCHEDULER_ENABLED` is
+  gone). The on-demand `POST /keys/{id}/zeroize-verify` stays.
+- **Removed, audited work that never happened:** keycore's `POST
+  /tenants/onboard` provisioned nothing but emitted `audit.tenant.onboarded`
+  every 30 s per manifest; `POST /keys/{id}/archive` answered
+  `archive_queued` and queued nothing. The reconciler no longer calls them.
+- **Removed, harmful:** the KMIP auto-decommission (`GET
+  /kmip/clients/decommission-candidates`, `POST
+  /kmip/clients/{id}/decommission`). It judged "no traffic in 90 days" from
+  the client row's `updated_at`, which KMIP traffic never changes, so every
+  KMIP client was set dormant, and then refused at connect, 90 days after it
+  was created, however busy it was.
+- **Removed, mislabelled:** the audit "HNDL detector" counted raw encrypt
+  volume per tenant for any algorithm (its byte count was never reported);
+  it did not measure harvest-now-decrypt-later exposure.
+- **Renamed:** `audit.security.auto_quarantined` is now
+  **`audit.security.sustained_risk_detected`** (nothing was ever quarantined).
+  It carries the key or target as `target_type` / `target_id` and is a new
+  playbook trigger, **`sustained_risk_detected`**, so a playbook can disable
+  or deactivate the key. SIEM rules on the old subject need the new one.
+- **Key lifecycle reconciler: rotation only.** Keycore's
+  `GET /keys/due-for-lifecycle` returns only active keys due for rotation
+  (operator expiry, cryptoperiod, 80% of `ops_limit`). It used to return
+  "destroy" for compromised keys and for deactivated keys past 30 days, but
+  keycore refused every such call (the reconciler sent no pre-destroy
+  acknowledgements), and an unattended, irreversible destroy belongs behind
+  a governance approval.
+- **Reconciler errors are visible.** A refused lifecycle scan, or a failed
+  tenant quota apply, is now the controller's `last_error` in System
+  Administration → Health instead of being swallowed. The reconciler's
+  unused `KMIP_URL` / `AUDIT_URL` are dropped from compose.
+- **Posture:** keycore no longer parses four posture fields governance never
+  stored and nothing read (`posture_hndl_detection_enabled`,
+  `posture_auto_quarantine_enabled`, `posture_auto_migration_enabled`,
+  `posture_zeroization_interval_mins`).
+- **Correction to 5.1.0-beta:** the tenant minimum algorithm tier it says
+  keycore now enforces comes from governance posture
+  (`posture_min_algorithm_tier`), which **governance does not store or
+  return**. In a deployment the value is always empty, so that check never
+  fires; its test injects the value directly. Governance needs the setting
+  (with UI and audit), or the check should go. A floor that takes effect
+  today is a policy's `spec.minAlgorithmTier` or a migration policy rule.
+- The audit event catalogue drops entries for events nothing emits
+  (`wake_kat_failed`, `hbs_exhausted`, `dependency_blocked_destroy`,
+  `predictive_rotation_scheduled`, `lifecycle_auto_transition`,
+  `zeroization_verified`, `archive_*`, `tenant.onboarded`,
+  `kmip.client_dormant|revoked`, `pqc.attestation_recorded`).
+- README, `docs/RECOMMENDED_FEATURES.md` (composite keys, dependency-aware
+  destruction and auto-quarantine were listed as existing),
+  `docs/SECURITY/ALGORITHM_TRANSITIONS.md`, `docs/SECURITY/KEY_ACCESS_MODEL.md`
+  and `docs/API_REFERENCE.md` are corrected to match.
+- Tests: `TestSustainedRiskPublishedOnceWithTarget`,
+  `TestEvaluateLifecycleRotatesAndNeverDestroys`,
+  `TestDueForLifecyclePostgres`, `TestDecommissionRoutesRemoved`,
+  `TestLifecycleScanFailureIsReportedAndArchiveIsNotCalled`, and the
+  removed routes in `TestTokenlessRoutesAreOnlyTheDeclaredOnes`.
+
+Still open (in the guide): `SetKeyStatus` doesn't enforce the lifecycle
+state table, so a compromised key can be set active again; manifest
+policies are created once and later edits aren't applied.
+
 ## [5.2.0-beta] — 2026-09-29
 
 ### Security: the pqc service verified no token and checked no permission
@@ -60,6 +138,7 @@ decide when and what he wants to migrate as per his policy".
   `weak`, `uncovered_keys`, `min_algorithm_tier`) instead of `nist_status`,
   `schedule` and `sources`. X25519 is no longer tiered `deprecated` (it is a
   128-bit quantum-vulnerable scheme).
+
 ## [5.0.0-beta] — 2026-09-29
 
 ### Key visibility: you see the keys you can use (owner decision, option A)

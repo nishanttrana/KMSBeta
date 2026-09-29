@@ -68,13 +68,19 @@ func TestTokenlessManagementRequestsAreRefused(t *testing.T) {
 	}
 }
 
-// Only the internal-token routes are reachable without a JWT, and they still
-// demand their own token.
+// Only the internal-token route is reachable without a JWT, and it still
+// demands its own token. The no-op /tenants/onboard and the archive stub are
+// gone (5.3.0-beta), so without a JWT they meet the gate like any route.
 func TestTokenlessRoutesAreOnlyTheDeclaredOnes(t *testing.T) {
 	h, _, _ := newActorTestHandler(t)
 	t.Setenv("INTERNAL_API_TOKEN", "")
 	if w := callKeycore(h, http.MethodGet, "/keys/due-for-lifecycle", "", nil); w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("internal route reached the JWT gate instead of internalauth: %d %s", w.Code, w.Body)
+	}
+	for _, path := range []string{"/tenants/onboard", "/keys/k1/archive"} {
+		if w := callKeycore(h, http.MethodPost, path, "{}", nil); w.Code != http.StatusUnauthorized {
+			t.Fatalf("POST %s without a token: %d, want 401", path, w.Code)
+		}
 	}
 	if w := callKeycore(h, http.MethodGet, "/keys", "", nil); w.Code != http.StatusUnauthorized {
 		t.Fatalf("GET /keys without a token: %d, want 401", w.Code)

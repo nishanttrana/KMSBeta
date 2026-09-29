@@ -1,7 +1,6 @@
-// reconciler is the controller-loop service. It consumes the declarative
-// tenant manifest, periodically diffs it against live state in each
-// downstream service (keycore, KMIP, policy, audit), and emits the
-// actions required to converge.
+// reconciler is the controller-loop service. Every tick it applies the
+// declarative tenant manifests to the policy service (ops budget, policies)
+// and triggers the key lifecycle actions keycore reports as due.
 //
 // The service holds no domain state of its own — every operation is an
 // HTTP call to an existing service plus an audit event. That keeps the
@@ -46,19 +45,16 @@ func main() {
 	}
 
 	keycoreURL := envOr("KEYCORE_URL", "http://kms-keycore:8010")
-	kmipURL := envOr("KMIP_URL", "http://kms-kmip:8160")
 	policyURL := envOr("POLICY_URL", "http://kms-policy:8050")
-	auditURL := envOr("AUDIT_URL", "http://kms-audit:8060")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 
-	tenant := newTenantReconciler(client, keycoreURL, kmipURL, policyURL, auditURL, logger)
+	tenant := newTenantReconciler(client, policyURL, logger)
 	keylife := newKeyLifecycleReconciler(client, keycoreURL, logger)
-	kmipClients := newKMIPClientReconciler(client, kmipURL, logger)
 	quota := newQuotaReconciler(client, policyURL, logger)
 
 	runner := pkgreconciler.NewRunner(pkgreconciler.DefaultConfig(), logger,
-		tenant, keylife, kmipClients, quota,
+		tenant, keylife, quota,
 	)
 
 	// The status API is audited as audit.reconciler.<action> on the unified

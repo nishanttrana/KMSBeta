@@ -105,13 +105,10 @@ func main() {
 	}
 	svc := NewService(store, ac, wal, pub)
 
-	// Closed-loop detectors. Each runs as a side-effect of normal event
-	// processing; they consume the same publisher that ingestion uses so
-	// their findings join the immutable audit chain rather than being
-	// recorded in a separate, easy-to-bypass store.
-	hndl := NewHNDLDetector(pub)
-	quarantine := NewQuarantineEvaluator(pub)
-	svc.SetDetectors(hndl, quarantine)
+	// Sustained-risk signal. It runs as a side-effect of normal event
+	// processing and publishes on the same stream ingestion uses, so its
+	// findings join the immutable audit chain and reach playbooks.
+	svc.SetRiskDetector(NewSustainedRiskDetector(pub))
 
 	// Event streams send through compliance connections, opened over
 	// internal mTLS as kms-audit (stream_connections.go).

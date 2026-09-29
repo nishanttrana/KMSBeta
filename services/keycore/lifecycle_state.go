@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"strings"
-	"time"
 )
 
 // Key lifecycle states. The set matches NIST SP 800-57 with one explicit
@@ -17,14 +16,14 @@ const (
 	StateDestroyed   = "destroyed"
 )
 
-// LifecycleTransition captures one allowed move between states. The
-// reconciler iterates this table to decide whether an automatic
-// transition is permitted; manual overrides go through the same gate so
-// audit can record the request reason on every move.
+// LifecycleTransition captures one allowed move between states. Only
+// compromise detection's automatic suspend (enterprise_audit_service.go)
+// consults this table today; SetKeyStatus does not, so an operator's
+// status change is not checked against it (docs/AUTOMATION_ALKM_PQC.md).
 type LifecycleTransition struct {
 	From       string
 	To         string
-	AllowAuto  bool // reconciler may apply this transition unattended
+	AllowAuto  bool // an automated path may apply this transition unattended
 	AllowAdmin bool // operator may apply this transition with audit
 }
 
@@ -32,8 +31,7 @@ type LifecycleTransition struct {
 // from this list are rejected. Notes:
 //   - Destroyed is terminal; no transitions out.
 //   - Compromised only flows forward to destroyed.
-//   - Deactivated may be re-activated by an operator within the grace
-//     window but the reconciler will not do so automatically.
+//   - Deactivated may be re-activated by an operator, never automatically.
 var allowedLifecycleTransitions = []LifecycleTransition{
 	{From: StatePreActive, To: StateActive, AllowAuto: true, AllowAdmin: true},
 	{From: StatePreActive, To: StateDestroyed, AllowAdmin: true},
@@ -70,25 +68,4 @@ func CanTransition(from, to string, automated bool) error {
 		return nil
 	}
 	return errors.New("transition not in lifecycle state machine")
-}
-
-// GracePeriod returns the duration a deactivated key remains decrypt-able
-// before the reconciler auto-promotes it to compromised. 30 days matches
-// the most common compliance window (PCI DSS, HIPAA); operators can
-// shorten via key metadata.
-func GracePeriod(deactivatedAt time.Time) time.Duration {
-	const defaultGrace = 30 * 24 * time.Hour
-	if deactivatedAt.IsZero() {
-		return defaultGrace
-	}
-	return defaultGrace
-}
-
-// PastGrace reports whether a deactivated key has exceeded its grace
-// window and is ready for auto-promotion to compromised/destroyed.
-func PastGrace(deactivatedAt time.Time) bool {
-	if deactivatedAt.IsZero() {
-		return false
-	}
-	return time.Since(deactivatedAt) > GracePeriod(deactivatedAt)
 }

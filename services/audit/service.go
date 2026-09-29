@@ -18,8 +18,7 @@ type Service struct {
 	wal         *WALBuffer
 	publisher   EventPublisher
 	broker      *StreamBroker
-	hndl        *HNDLDetector
-	quarantine  *QuarantineEvaluator
+	risk        *SustainedRiskDetector
 	cluster     clusterKeyState
 	webhooks    *webhookFanout
 	creds       *credVault      // webhook credentials under the audit master key
@@ -29,14 +28,9 @@ type Service struct {
 // SetWebhookFanout wires delivery of persisted events to webhooks.
 func (s *Service) SetWebhookFanout(f *webhookFanout) { s.webhooks = f }
 
-// SetDetectors wires the closed-loop detectors. Both are optional; if
-// nil the corresponding signal is simply not produced. The setter is on
-// the service rather than the constructor so dependency wiring stays
-// linear in main.go.
-func (s *Service) SetDetectors(hndl *HNDLDetector, q *QuarantineEvaluator) {
-	s.hndl = hndl
-	s.quarantine = q
-}
+// SetRiskDetector wires the sustained-risk signal (sustained_risk.go). With
+// nil the signal is simply not produced.
+func (s *Service) SetRiskDetector(d *SustainedRiskDetector) { s.risk = d }
 
 type EventPublisher interface {
 	Publish(ctx context.Context, subject string, payload []byte) error
@@ -126,19 +120,11 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 	return evt, nil
 }
 
-// runDetectors fans an event out to the optional closed-loop detectors.
-// Each detector decides for itself whether the event is relevant; the
-// service does not pre-filter so adding a new detector is one line.
+// runDetectors hands an event to the sustained-risk detector, which decides
+// for itself whether the event is relevant.
 func (s *Service) runDetectors(ctx context.Context, event AuditEvent) {
-	if s.hndl != nil {
-		bytes := int64(0)
-		if v, ok := event.Details["bytes_in"].(float64); ok {
-			bytes = int64(v)
-		}
-		s.hndl.Observe(ctx, event.TenantID, event.Action, bytes)
-	}
-	if s.quarantine != nil {
-		_ = s.quarantine.Evaluate(ctx, event)
+	if s.risk != nil {
+		_ = s.risk.Evaluate(ctx, event)
 	}
 }
 
