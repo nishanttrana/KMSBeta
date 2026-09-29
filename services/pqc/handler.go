@@ -1,374 +1,249 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
+	"log"
 	"net/http"
-	"strings"
 
-	"vecta-kms/pkg/tenantcheck"
+	"vecta-kms/pkg/route"
 )
 
+// Handler serves the PQC readiness and migration API. Every route is
+// registered through the pkg/route kernel, which authenticates the caller,
+// binds the tenant to the verified token, checks the route's permission and
+// emits one audit.pqc.<action> event per request, refusals included. Before
+// 5.2.0-beta this was a raw mux: the tenant came from the query or body, no
+// permission was checked, and the actor recorded for a plan execution came
+// from the request body.
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
-	h.mux = h.routes()
+// Permissions for the pqc domain.
+const (
+	permRead  = "pqc.read"
+	permWrite = "pqc.write" // policy, scans, plans, execution, rollback
+)
+
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, router: route.New("pqc", audit, logger)}
+	h.routes()
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /pqc/policy", h.handleGetPolicy)
-	mux.HandleFunc("PUT /pqc/policy", h.handleUpdatePolicy)
-	mux.HandleFunc("GET /pqc/inventory", h.handleGetInventory)
-	mux.HandleFunc("POST /pqc/scan", h.handleStartScan)
-	mux.HandleFunc("GET /pqc/scans", h.handleListScans)
-	mux.HandleFunc("GET /pqc/scans/{id}", h.handleGetScan)
-	mux.HandleFunc("GET /pqc/readiness", h.handleGetReadiness)
+func (h *Handler) routes() {
+	r := h.router
+	spec := func(action, perm, resource, target string) route.Spec {
+		return route.Spec{Action: action, Permission: perm, Resource: resource, TargetParam: target}
+	}
+	r.Handle("GET /pqc/policy", spec("policy_read", permRead, "pqc_policy", ""), h.getPolicy)
+	r.Handle("PUT /pqc/policy", spec("policy_update_requested", permWrite, "pqc_policy", ""), h.updatePolicy)
+	r.Handle("GET /pqc/inventory", spec("inventory_read", permRead, "pqc_inventory", ""), h.getInventory)
+	r.Handle("POST /pqc/scan", spec("scan_requested", permWrite, "pqc_scan", ""), h.startScan)
+	r.Handle("GET /pqc/scans", spec("scans_listed", permRead, "pqc_scan", ""), h.listScans)
+	r.Handle("GET /pqc/scans/{id}", spec("scan_read", permRead, "pqc_scan", "id"), h.getScan)
+	r.Handle("GET /pqc/readiness", spec("readiness_read", permRead, "pqc_scan", ""), h.getReadiness)
 
-	mux.HandleFunc("GET /pqc/migration/report", h.handleGetMigrationReport)
-	mux.HandleFunc("POST /pqc/migration/plans", h.handleCreatePlan)
-	mux.HandleFunc("GET /pqc/migration/plans", h.handleListPlans)
-	mux.HandleFunc("GET /pqc/migration/plans/{id}", h.handleGetPlan)
-	mux.HandleFunc("POST /pqc/migration/plans/{id}/execute", h.handleExecutePlan)
-	mux.HandleFunc("POST /pqc/migration/plans/{id}/rollback", h.handleRollbackPlan)
-	mux.HandleFunc("GET /pqc/migration/plans/{id}/runs", h.handleListRuns)
+	r.Handle("GET /pqc/migration/report", spec("migration_report_read", permRead, "pqc_plan", ""), h.getMigrationReport)
+	r.Handle("POST /pqc/migration/plans", spec("plan_create_requested", permWrite, "pqc_plan", ""), h.createPlan)
+	r.Handle("GET /pqc/migration/plans", spec("plans_listed", permRead, "pqc_plan", ""), h.listPlans)
+	r.Handle("GET /pqc/migration/plans/{id}", spec("plan_read", permRead, "pqc_plan", "id"), h.getPlan)
+	r.Handle("POST /pqc/migration/plans/{id}/execute", route.Spec{Action: "plan_execute_requested", Permission: permWrite, Resource: "pqc_plan", TargetParam: "id", Severity: "warning"}, h.executePlan)
+	r.Handle("POST /pqc/migration/plans/{id}/rollback", route.Spec{Action: "plan_rollback_requested", Permission: permWrite, Resource: "pqc_plan", TargetParam: "id", Severity: "warning"}, h.rollbackPlan)
+	r.Handle("GET /pqc/migration/plans/{id}/runs", spec("plan_runs_listed", permRead, "pqc_plan", "id"), h.listRuns)
 
-	mux.HandleFunc("GET /pqc/timeline", h.handleTimeline)
-	mux.HandleFunc("GET /pqc/cbom/export", h.handleExportCBOM)
-	return mux
+	r.Handle("GET /pqc/timeline", spec("timeline_read", permRead, "pqc_plan", ""), h.timeline)
+	r.Handle("GET /pqc/cbom/export", spec("cbom_exported", permRead, "cbom", ""), h.exportCBOM)
 }
 
-func (h *Handler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getPolicy(c *route.Call) {
+	item, err := h.svc.GetPolicy(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetPolicy(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
 }
 
-func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) updatePolicy(c *route.Call) {
 	var req PQCPolicy
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.UpdatePolicy(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+	req.TenantID, req.UpdatedBy = c.Tenant, c.Actor()
+	item, err := h.svc.UpdatePolicy(c.R.Context(), req)
+	if !h.ok(c, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+	c.Detail("profile_id", item.ProfileID)
+	c.JSON(http.StatusOK, map[string]interface{}{"policy": item})
 }
 
-func (h *Handler) handleGetInventory(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getInventory(c *route.Call) {
+	item, err := h.svc.GetInventory(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetInventory(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"inventory": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"inventory": item})
 }
 
-func (h *Handler) handleStartScan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) startScan(c *route.Call) {
 	var req ScanRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.StartReadinessScan(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+	req.TenantID = c.Tenant
+	item, err := h.svc.StartReadinessScan(c.R.Context(), req)
+	if !h.ok(c, err) {
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{"scan": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.Detail("total_assets", item.TotalAssets)
+	c.JSON(http.StatusAccepted, map[string]interface{}{"scan": item})
 }
 
-func (h *Handler) handleListScans(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listScans(c *route.Call) {
+	q := c.R.URL.Query()
+	items, err := h.svc.ListReadinessScans(c.R.Context(), c.Tenant, atoi(q.Get("limit")), atoi(q.Get("offset")))
+	if !h.ok(c, err) {
 		return
 	}
-	items, err := h.svc.ListReadinessScans(r.Context(), tenantID, atoi(r.URL.Query().Get("limit")), atoi(r.URL.Query().Get("offset")))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetScan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getScan(c *route.Call) {
+	item, err := h.svc.GetReadinessScan(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetReadinessScan(r.Context(), tenantID, r.PathValue("id"))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"scan": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"scan": item})
 }
 
-func (h *Handler) handleGetReadiness(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getReadiness(c *route.Call) {
+	item, err := h.svc.GetLatestReadiness(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetLatestReadiness(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"readiness": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"readiness": item})
 }
 
-func (h *Handler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) createPlan(c *route.Call) {
 	var req PlanRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.CreateMigrationPlan(r.Context(), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+	req.TenantID, req.CreatedBy = c.Tenant, c.Actor()
+	item, err := h.svc.CreateMigrationPlan(c.R.Context(), req)
+	if !h.ok(c, err) {
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"plan": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.Detail("steps", len(item.Steps))
+	c.JSON(http.StatusCreated, map[string]interface{}{"plan": item})
 }
 
-func (h *Handler) handleGetMigrationReport(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getMigrationReport(c *route.Call) {
+	item, err := h.svc.GetMigrationReport(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetMigrationReport(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"report": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"report": item})
 }
 
-func (h *Handler) handleListPlans(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listPlans(c *route.Call) {
+	q := c.R.URL.Query()
+	items, err := h.svc.ListMigrationPlans(c.R.Context(), c.Tenant, atoi(q.Get("limit")), atoi(q.Get("offset")))
+	if !h.ok(c, err) {
 		return
 	}
-	items, err := h.svc.ListMigrationPlans(r.Context(), tenantID, atoi(r.URL.Query().Get("limit")), atoi(r.URL.Query().Get("offset")))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetPlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getPlan(c *route.Call) {
+	item, err := h.svc.GetMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.GetMigrationPlan(r.Context(), tenantID, r.PathValue("id"))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"plan": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"plan": item})
 }
 
-func (h *Handler) handleExecutePlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+// executePlan records the verified caller as the actor; a body "actor" is
+// ignored.
+func (h *Handler) executePlan(c *route.Call) {
 	var req ExecuteRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	run, err := h.svc.ExecuteMigrationPlan(r.Context(), req.TenantID, r.PathValue("id"), req)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+	req.TenantID, req.Actor = c.Tenant, c.Actor()
+	run, err := h.svc.ExecuteMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"), req)
+	if !h.ok(c, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"run": run, "request_id": reqID})
+	c.Detail("dry_run", req.DryRun)
+	c.Detail("run_status", run.Status)
+	c.JSON(http.StatusOK, map[string]interface{}{"run": run})
 }
 
-func (h *Handler) handleRollbackPlan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) rollbackPlan(c *route.Call) {
 	var req RollbackRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.RollbackMigrationPlan(r.Context(), req.TenantID, r.PathValue("id"), req.Actor)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+	item, err := h.svc.RollbackMigrationPlan(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor())
+	if !h.ok(c, err) {
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"plan": item, "request_id": reqID})
+	c.Detail("plan_status", item.Status)
+	c.JSON(http.StatusOK, map[string]interface{}{"plan": item})
 }
 
-func (h *Handler) handleListRuns(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) listRuns(c *route.Call) {
+	items, err := h.svc.ListMigrationRuns(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if !h.ok(c, err) {
 		return
 	}
-	items, err := h.svc.ListMigrationRuns(r.Context(), tenantID, r.PathValue("id"))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleTimeline(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) timeline(c *route.Call) {
+	milestones, readiness, err := h.svc.Timeline(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	milestones, readiness, err := h.svc.Timeline(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tenant_id": tenantID,
-		"readiness": map[string]interface{}{
-			"score":        readiness.ReadinessScore,
-			"total_assets": readiness.TotalAssets,
-		},
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"tenant_id":  c.Tenant,
+		"readiness":  map[string]interface{}{"total_assets": readiness.TotalAssets},
 		"milestones": milestones,
-		"request_id": reqID,
 	})
 }
 
-func (h *Handler) handleExportCBOM(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) exportCBOM(c *route.Call) {
+	item, err := h.svc.ExportCBOM(c.R.Context(), c.Tenant)
+	if !h.ok(c, err) {
 		return
 	}
-	item, err := h.svc.ExportCBOM(r.Context(), tenantID)
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"document": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"document": item})
 }
 
-func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
+// ok writes a service error and reports whether the call may continue.
+func (h *Handler) ok(c *route.Call, err error) bool {
+	if err == nil {
+		return true
+	}
 	var svcErr serviceError
 	if errors.As(err, &svcErr) {
-		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
-		return
+		c.Error(svcErr.HTTPStatus, svcErr.Code, svcErr.Message)
+		return false
 	}
-	// A05: avoid leaking internal error details for 5xx responses
 	status := httpStatusForErr(err)
 	msg := err.Error()
 	if status >= 500 {
-		msg = "internal server error"
+		msg = "internal server error" // A05: no internal detail on 5xx
 	}
-	writeErr(w, status, "internal_error", msg, reqID, tenantID)
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(out); err != nil {
-		if errors.Is(err, io.EOF) {
-			return errors.New("request body is required")
-		}
-		return err
-	}
-	return nil
-}
-
-func requestID(r *http.Request) string {
-	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-	if id != "" {
-		return id
-	}
-	return newID("req")
-}
-
-func tenantFromRequest(r *http.Request) string {
-	if v := strings.TrimSpace(r.URL.Query().Get("tenant_id")); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-}
-
-func firstTenant(values ...string) string {
-	for _, v := range values {
-		if strings.TrimSpace(v) != "" {
-			return strings.TrimSpace(v)
-		}
-	}
-	return ""
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return ""
-	}
-	return tenantID
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeErr(w http.ResponseWriter, status int, code string, message string, requestID string, tenantID string) {
-	writeJSON(w, status, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": requestID,
-			"tenant_id":  tenantID,
-		},
-	})
+	c.Error(status, "internal_error", msg)
+	return false
 }

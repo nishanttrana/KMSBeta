@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T00:03:40Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T00:18:24Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -465,12 +465,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
-| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
+| pqc\|GET\|/pqc/policy | GET /pqc/policy | getPolicy (services/pqc/handler.go:64) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
+| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | updatePolicy (services/pqc/handler.go:72) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:86) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:94) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:126) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:149) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
 | reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
 | reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
@@ -1315,22 +1315,22 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/policy | GET /pqc/policy | handleGetPolicy (services/pqc/handler.go:51) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
-| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | handleUpdatePolicy (services/pqc/handler.go:65) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | handleGetInventory (services/pqc/handler.go:81) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | handleStartScan (services/pqc/handler.go:95) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
-| pqc\|GET\|/pqc/scans | GET /pqc/scans | handleListScans (services/pqc/handler.go:111) | ListReadinessScans | ListReadinessScans |  |  |  |
-| pqc\|GET\|/pqc/scans/{param} | GET /pqc/scans/{id} | handleGetScan (services/pqc/handler.go:125) | GetReadinessScan | GetReadinessScan |  |  |  |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | handleGetReadiness (services/pqc/handler.go:139) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | handleGetMigrationReport (services/pqc/handler.go:169) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
-| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | handleCreatePlan (services/pqc/handler.go:153) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  |  |
-| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | handleListPlans (services/pqc/handler.go:183) | ListMigrationPlans | ListMigrationPlans |  |  |  |
-| pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | handleGetPlan (services/pqc/handler.go:197) | GetMigrationPlan | GetMigrationPlan |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | handleExecutePlan (services/pqc/handler.go:211) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | handleRollbackPlan (services/pqc/handler.go:227) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  |  |
-| pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | handleListRuns (services/pqc/handler.go:243) | ListMigrationRuns | ListMigrationRuns |  |  |  |
-| pqc\|GET\|/pqc/timeline | GET /pqc/timeline | handleTimeline (services/pqc/handler.go:257) | Timeline |  |  |  |  |
-| pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | handleExportCBOM (services/pqc/handler.go:279) | ExportCBOM |  |  |  |  |
+| pqc\|GET\|/pqc/policy | GET /pqc/policy | getPolicy (services/pqc/handler.go:64) | GetPolicy | GetPolicy |  |  | web/dashboard/src/lib/pqc.ts:135 |
+| pqc\|PUT\|/pqc/policy | PUT /pqc/policy | updatePolicy (services/pqc/handler.go:72) | UpdatePolicy | UpsertPolicy |  |  | web/dashboard/src/lib/pqc.ts:140 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:86) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.keycore.ListInterfacePorts |  | web/dashboard/src/lib/pqc.ts:148 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:94) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:163 |
+| pqc\|GET\|/pqc/scans | GET /pqc/scans | listScans (services/pqc/handler.go:109) | ListReadinessScans | ListReadinessScans |  |  |  |
+| pqc\|GET\|/pqc/scans/{param} | GET /pqc/scans/{id} | getScan (services/pqc/handler.go:118) | GetReadinessScan | GetReadinessScan |  |  |  |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:126) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:158 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:149) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:153 |
+| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:134) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  |  |
+| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:157) | ListMigrationPlans | ListMigrationPlans |  |  |  |
+| pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | getPlan (services/pqc/handler.go:166) | GetMigrationPlan | GetMigrationPlan |  |  |  |
+| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:176) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  |  |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:191) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  |  |
+| pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | listRuns (services/pqc/handler.go:204) | ListMigrationRuns | ListMigrationRuns |  |  |  |
+| pqc\|GET\|/pqc/timeline | GET /pqc/timeline | timeline (services/pqc/handler.go:212) | Timeline |  |  |  |  |
+| pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | exportCBOM (services/pqc/handler.go:224) | ExportCBOM |  |  |  |  |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
 | reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
 | reporting\|GET\|/alerts/feed | GET /alerts/feed | alertsFeed (services/reporting/handler.go:163) |  |  |  |  |  |

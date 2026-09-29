@@ -2099,6 +2099,19 @@ Single release record with full evaluation detail.
 
 Post-quantum crypto policy, inventory classification, migration planning, and readiness scoring.
 
+Every route is served by the `pkg/route` kernel behind a verified JWT (since
+5.2.0-beta): the tenant comes from the token (a conflicting `tenant_id` is
+refused as `tenant_mismatch`), each call emits its own `audit.pqc.<action>`
+event, refusals included, and the actor recorded for plan creation,
+execution, rollback and policy changes is the verified caller (body `actor`,
+`created_by` and `updated_by` are ignored). Permissions: `pqc.read`,
+`pqc.write` (policy, scans, plans, execute, rollback). Kernel actions:
+`policy_read`, `policy_update_requested`, `inventory_read`, `scan_requested`,
+`scans_listed`, `scan_read`, `readiness_read`, `migration_report_read`,
+`plan_create_requested`, `plans_listed`, `plan_read`,
+`plan_execute_requested`, `plan_rollback_requested`, `plan_runs_listed`,
+`timeline_read`, `cbom_exported`.
+
 ---
 
 ### GET /svc/pqc/pqc/policy

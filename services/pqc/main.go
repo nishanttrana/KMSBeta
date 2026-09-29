@@ -26,6 +26,8 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -68,9 +70,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.pqc.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "pqc"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, pqc event publishing disabled: %v", err)
 	}
@@ -82,7 +88,9 @@ func main() {
 		NewHTTPDiscoveryClient(envOr("DISCOVERY_URL", "https://discovery:8100"), 5*time.Second),
 		publisher,
 	)
-	handler := NewHandler(svc)
+	// Every route needs a verified JWT: the kernel binds the tenant and the
+	// actor to it (CLAUDE.md rule 4).
+	handler := pkgjwtauth.MustWrap("PQC", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 
 	httpPort := envOr("HTTP_PORT", "8060")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "pqc"))

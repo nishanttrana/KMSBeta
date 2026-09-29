@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"context"
+	"fmt"
+	"net/http"
 	"sync"
 	"testing"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -118,10 +120,25 @@ func newPQCService(t *testing.T) (*Service, *SQLStore, *nopPQCPublisher, *fakePQ
 	return svc, store, pub, keycore
 }
 
-func newPQCHandler(t *testing.T) (*Handler, *Service, *nopPQCPublisher) {
+// newPQCHandler serves the handler as if pkg/jwtauth had verified an admin
+// token for tenant-h1.
+func newPQCHandler(t *testing.T) (http.Handler, *Service, *nopPQCPublisher) {
 	t.Helper()
 	svc, _, pub, _ := newPQCService(t)
-	return NewHandler(svc), svc, pub
+	return asCaller(NewHandler(svc, nil, nil), adminOf("tenant-h1")), svc, pub
+}
+
+// asCaller serves h as if pkg/jwtauth had verified a token carrying claims.
+func asCaller(h http.Handler, claims *pkgauth.Claims) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
+	})
+}
+
+func adminOf(tenant string) *pkgauth.Claims {
+	c := &pkgauth.Claims{UserID: "u-" + tenant, TenantID: tenant, Role: "admin", Permissions: []string{"*"}}
+	c.Subject = c.UserID
+	return c
 }
 
 func createPQCSchemaForTest(conn *pkgdb.DB) error {

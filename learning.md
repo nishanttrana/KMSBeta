@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A service nobody's UI called still served its API unauthenticated
+- **What happened:** the pqc service's tab was orphaned, so its routes looked
+  dormant, but they were live behind Envoy with no JWT check: tenant from the
+  query, no permission, and a body-supplied actor on plan execution, which
+  creates keys in keycore with pqc's service identity.
+- **Why it slipped through:** reviews followed the UI; a service with no
+  screen got none. The 4.0.0-beta keycore fix didn't sweep other raw muxes.
+- **Rule:** when an auth hole is fixed in one raw-mux service, check every
+  service still on `scripts/route-kernel-burndown.txt` for the same shape.
+
 ### A posture control that is stored but never read is a promise, not a control
 - **What happened:** governance posture's `MinAlgorithmTier` ("the
   tenant-wide crypto-agility floor") was saved, synced to keycore and shown

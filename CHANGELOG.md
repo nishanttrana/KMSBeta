@@ -4,6 +4,22 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [5.2.0-beta] — 2026-09-29
+
+### Security: the pqc service verified no token and checked no permission
+- **What was exposed.** The pqc service (readiness scans, migration plans,
+  plan execution and rollback) was a raw mux with no JWT verification: the
+  tenant came from the query string or body, no permission was checked, and
+  the actor recorded for a plan execution (which creates successor keys in
+  keycore under the pqc service identity) was whatever the body's `actor`
+  said.
+- **Fixed.** Every route now goes through the `pkg/route` kernel behind
+  `pkg/jwtauth`: the tenant is bound to the verified token, `pqc.read` /
+  `pqc.write` are enforced, each request emits `audit.pqc.<action>` with
+  refusals, and the actor is the verified caller. `services/pqc/handler.go`
+  leaves the route-kernel burn-down list.
+- Needed before the Crypto Agility tab offers plan execution (next release).
+
 ## [5.1.0-beta] — 2026-09-29
 
 ### Crypto agility: the customer's migration policy, enforced
