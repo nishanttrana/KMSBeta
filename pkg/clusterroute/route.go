@@ -88,6 +88,11 @@ var Local = map[string][]string{
 		// tests only read.
 		"POST /audit/publish", "POST /audit/search", "POST /webhooks/{id}/test",
 	},
+	"kms-certs": {
+		// An external edge certificate is this node's own key and the
+		// certificate for it: both are files on this node, nothing replicated.
+		"POST /certs/edge-tls/csr", "POST /certs/edge-tls/certificate/install",
+	},
 }
 
 func isWrite(method string) bool {

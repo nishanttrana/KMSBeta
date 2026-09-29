@@ -1666,7 +1666,7 @@ certificates its external listeners serve and the key exchange they accept.
 
 | Listener | Served by | Port | Certificate |
 |---|---|---|---|
-| HTTPS (dashboard and REST API) | Envoy | 443 (`HTTPS_PORT`) | `vecta-runtime-root`, written by certs |
+| HTTPS (dashboard and REST API) | Envoy | 443 (`HTTPS_PORT`) | chosen in Service mTLS > Edge certificate: `vecta-runtime-root` (default), a PKI CA, or an external CA |
 | HTTP | Envoy | 80 (`HTTP_PORT`) | none: redirects to HTTPS |
 | KMIP | kmip service (Envoy passes TCP through) | 5696 | `vecta-runtime-root`, written by certs; clients need a certificate |
 
@@ -1688,11 +1688,26 @@ TLS 1.3 groups HTTPS and KMIP accept, for the whole node:
   applies it on the next handshake.
 - Certs measures each listener with one handshake per group and shows what
   it accepts. "In force" means the measured groups are exactly the
-  profile's. With FIPS mode on, X25519 alone is not measured.
+  profile's. Every group is measured, in every FIPS mode.
 - API: `GET` / `PUT /svc/certs/certs/edge-tls` (root tenant,
   [API_REFERENCE.md](API_REFERENCE.md)).
 
-### 11.3 Dashboard: Interfaces
+### 11.3 Edge certificate
+
+Certificates / PKI > Service mTLS > **Edge certificate** chooses what the
+HTTPS edge serves:
+
+1. **vecta-runtime-root** (default) or **a CA from the PKI tab** (software
+   CAs only): certs issues it, installs it on every node and renews it.
+2. **An external CA:** choose it, then on each node click **Create CSR**
+   (subject and SANs), have your CA sign the CSR, paste the certificate and
+   the issuing chain, and click **Install on this node**. The key never
+   leaves the node. Renew before `not_after` with a new CSR; an expired
+   external certificate is replaced by a `vecta-runtime-root` one.
+
+"Served" means certs' probe saw exactly that certificate on the edge.
+
+### 11.4 Dashboard: Interfaces
 
 System Administration > Interfaces lists the ports the container runtime
 reports as published, with their status. It changes nothing. Until
@@ -1706,7 +1721,7 @@ DNS, NTP and proxy fields it read) changed nothing on the host and was removed
 in 1.27.0-beta ([REAL_CAPABILITY.md](SECURITY/REAL_CAPABILITY.md)). Host
 networking belongs to the host or orchestrator.
 
-### 11.4 Network security recommendations
+### 11.5 Network security recommendations
 
 | Concern | Recommendation |
 |---|---|

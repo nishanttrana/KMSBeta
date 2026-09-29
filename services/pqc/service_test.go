@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
@@ -27,14 +31,14 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 		t.Fatalf("inventory: %v", err)
 	}
 	// Counts come from each asset's algorithm (fakes: RSA / hybrid / ML-DSA
-	// keys; RSA / hybrid / ML-DSA certificates). Interface TLS is never
-	// measured, so it is reported as not assessed rather than as a mode.
+	// keys; RSA / hybrid / ML-DSA certificates). No listener has been
+	// measured by certs yet, so none is reported.
 	if k := inventory.Keys; k.Total != 3 || k.Classical != 1 || k.Hybrid != 1 || k.PQCOnly != 1 ||
 		inventory.Certificates.Total != 3 || inventory.Certificates.Classical != 1 || inventory.Certificates.Hybrid != 1 || inventory.Certificates.PQCOnly != 1 {
 		t.Fatalf("unexpected inventory counts: keys=%+v certs=%+v", inventory.Keys, inventory.Certificates)
 	}
-	if inventory.Interfaces != "not_assessed" {
-		t.Fatalf("interfaces = %q, want not_assessed", inventory.Interfaces)
+	if inventory.Interfaces != "not_measured" || len(inventory.Listeners) != 0 {
+		t.Fatalf("interfaces = %q %+v, want not_measured", inventory.Interfaces, inventory.Listeners)
 	}
 	if len(inventory.ClassicalUsage) != 2 || len(inventory.NonMigratedCertificates) != 1 {
 		t.Fatalf("expected every classical asset listed: %+v", inventory)
@@ -152,5 +156,56 @@ func TestPQCTimelineAndCBOM(t *testing.T) {
 	}
 	if doc["bomFormat"] != "CycloneDX" {
 		t.Fatalf("unexpected cbom format: %+v", doc)
+	}
+}
+
+// The inventory reports the external listeners as certs measured them, and
+// classifies them from pkg/cryptocatalog: a listener that still accepts a
+// quantum-vulnerable group is classical; if certs can't answer, the
+// listeners are "unavailable", never a guess.
+func TestInventoryReportsMeasuredListeners(t *testing.T) {
+	svc, _, pub, _ := newPQCService(t)
+	certs := &fakePQCCerts{listeners: []ListenerMeasurement{
+		{Name: "envoy", AcceptedGroups: []string{"X25519MLKEM768"}, NegotiatedGroup: "X25519MLKEM768", MeasuredAt: time.Now()},
+		{Name: "kmip", AcceptedGroups: []string{"X25519MLKEM768", "SecP256r1MLKEM768", "CurveP256", "CurveP384"}, NegotiatedGroup: "X25519MLKEM768", MeasuredAt: time.Now()},
+		{Name: "odd", AcceptedGroups: []string{"brainpoolP256r1"}},
+	}}
+	svc.certs = certs
+	inv, err := svc.GetInventory(context.Background(), "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]ListenerPQCItem{}
+	for _, l := range inv.Listeners {
+		got[l.Name] = l
+	}
+	if inv.Interfaces != "measured" || got["envoy"].Classification != "hybrid" || got["kmip"].Classification != "classical" ||
+		strings.Join(got["kmip"].QuantumVulnerableGroups, ",") != "CurveP256,CurveP384" || got["odd"].Classification != "not_assessed" {
+		t.Fatalf("listeners: %s %+v", inv.Interfaces, inv.Listeners)
+	}
+	if pub.Count("audit.pqc.inventory_viewed") == 0 {
+		t.Fatal("the inventory view is audited")
+	}
+
+	certs.listeners, certs.edgeErr = nil, errors.New("certs unreachable")
+	inv, err = svc.GetInventory(context.Background(), "t1")
+	if err != nil || inv.Interfaces != "unavailable" || len(inv.Listeners) != 0 {
+		t.Fatalf("unavailable measurement: %s %+v %v", inv.Interfaces, inv.Listeners, err)
+	}
+}
+
+// The HTTP client reads certs' measurement route.
+func TestCertsClientEdgeMeasurement(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/certs/edge-tls/measurement" || r.URL.Query().Get("tenant_id") != "t1" {
+			http.Error(w, `{"error":{"message":"wrong route"}}`, http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write([]byte(`{"listeners":[{"name":"envoy","accepted_groups":["X25519MLKEM768"],"negotiated_group":"X25519MLKEM768","measured_at":"2026-09-29T10:00:00Z"}],"configured":2}`))
+	}))
+	defer srv.Close()
+	got, err := NewHTTPCertsClient(srv.URL, time.Second).EdgeMeasurement(context.Background(), "t1")
+	if err != nil || len(got) != 1 || got[0].Name != "envoy" || got[0].AcceptedGroups[0] != "X25519MLKEM768" || got[0].MeasuredAt.IsZero() {
+		t.Fatalf("measurement: %+v %v", got, err)
 	}
 }

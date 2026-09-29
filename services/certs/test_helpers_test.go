@@ -202,9 +202,13 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 	}
 	// Service mTLS tables straight from the migration, so the tests run the
 	// schema production runs.
-	raw, err := os.ReadFile("migrations/013_internal_mtls_policy.sql")
-	if err != nil {
-		return err
+	var raw []byte
+	for _, f := range []string{"migrations/013_internal_mtls_policy.sql", "migrations/015_edge_certificate.sql"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return err
+		}
+		raw = append(append(raw, b...), '\n')
 	}
 	var sqlOnly []string
 	for _, line := range strings.Split(string(raw), "\n") {

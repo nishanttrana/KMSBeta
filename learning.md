@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A probe list built from a filtered list can't find what the filter removed
+- The edge probe measured `svctls.ServerGroups(pqc-preferred)`, which drops
+  X25519 in FIPS mode. So even after the hand-built hello made X25519
+  measurable, it was never probed with FIPS on. Only the real Envoy test in
+  FIPS mode showed it. **Rule:** a measurement's input list is the fixed
+  universe (`svctls.ProbeGroupsAll`), never a policy's output.
+
+### Envoy's SDS watch needs a rename it can see
+- `watched_directory` reloads on a move into the directory. certs renames
+  atomically, and on a Linux named volume Envoy sees `MOVED_TO`. A macOS
+  bind mount delivers the same host rename as `CREATE`/`MODIFY`, so the
+  real Envoy test waited forever for a reload. Checked with `inotifywait`
+  in a container: bind mount no, named volume yes. The test now uses a
+  named volume and copies with a rename, as compose does.
+
+### An upload that verifies a key and then drops it
+- `POST /certs/upload-3p` checks that the private key matches the
+  certificate, then stores only the certificate. So no uploaded certificate
+  could ever be served. The edge takes the other route: the node makes its
+  key and a CSR, and only the certificate travels.
 ### A fallback for missing key material becomes the only path when the source never had it
 - **What happened:** ekm's TDE public key getter and key creation fell back
   to `buildPublicKeyFallback`, `"EKM-PUBLIC-"` plus a hash of tenant and key

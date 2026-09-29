@@ -2019,6 +2019,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-certs-edge-tls-measurement",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/edge-tls/measurement",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/edge-tls/measurement?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/edge-tls/measurement?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-certs-internal-mtls",
     "group": "Certificates / PKI (certs)",
     "title": "GET /certs/internal-mtls",
@@ -2719,6 +2747,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-post-certs-edge-tls-certificate-install",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/edge-tls/certificate/install",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/edge-tls/certificate/install?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/edge-tls/certificate/install?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-certs-edge-tls-csr",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/edge-tls/csr",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/edge-tls/csr?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/edge-tls/csr?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-post-certs-internal-mtls-identity-rotate",
     "group": "Certificates / PKI (certs)",
     "title": "POST /certs/internal-mtls/{identity}/rotate",
@@ -3204,6 +3288,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "PUT /svc/certs/certs/edge-tls?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-put-certs-edge-tls-certificate",
+    "group": "Certificates / PKI (certs)",
+    "title": "PUT /certs/edge-tls/certificate",
+    "service": "certs",
+    "method": "PUT",
+    "pathTemplate": "/certs/edge-tls/certificate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "PUT /svc/certs/certs/edge-tls/certificate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -23356,6 +23468,34 @@ export const DISCOVERED_REST_API_CATALOG = [
         "enabled": true,
         "created_at": "2026-03-19T09:05:00Z"
       }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-post-workload-identity-settings-rotate-signing-keys",
+    "group": "Workload Identity (workload)",
+    "title": "POST /workload-identity/settings/rotate-signing-keys",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/settings/rotate-signing-keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "POST /svc/workload/workload-identity/settings/rotate-signing-keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
     },
     "errorCodes": [
       {

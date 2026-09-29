@@ -2649,8 +2649,12 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 	if err := writeFileAtomically(filepath.Join(materializeDir, "ca", "ca.crt"), []byte(strings.TrimSpace(ca.CertPEM)+"\n"), 0o600); err != nil {
 		return err
 	}
-	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "envoy"), "RSA-3072", "tls-server", envoyCN, envoySANs, cfg.ValidityDays, cfg.RenewBefore, ""); err != nil {
-		return err
+	// The HTTPS edge's certificate comes from the source a root
+	// administrator chose (edge_cert.go); vecta-runtime-root by default.
+	edgeCfg := cfg
+	edgeCfg.MaterializeDir, edgeCfg.EnvoyCN, edgeCfg.EnvoySANs = materializeDir, envoyCN, envoySANs
+	if err := s.applyEdgeCertificate(ctx, tenantID, ca, edgeCfg, false); err != nil {
+		return fmt.Errorf("edge certificate: %w", err)
 	}
 	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "kmip"), "RSA-3072", "tls-server", kmipCN, kmipSANs, cfg.ValidityDays, cfg.RenewBefore, ""); err != nil {
 		return err

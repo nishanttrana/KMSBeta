@@ -4,8 +4,72 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
-## [6.12.0-beta] — 2026-09-29
+## [6.13.0-beta] — 2026-09-29
 
+### Edge certificate: runtime root, a PKI CA, or an external CA
+- **Choose what the HTTPS edge serves** in Certificates / PKI > Service
+  mTLS > Edge certificate (`PUT /certs/edge-tls/certificate`, root tenant):
+  `vecta-runtime-root` (the default), a software CA from the PKI tab
+  (issued, installed on every node and renewed by certs), or an external
+  CA. This was INTERNAL_TLS.md slice 4.
+- **External CA without moving the key.** Each node generates its key and
+  a CSR (`POST /certs/edge-tls/csr`); the customer's CA signs it; the
+  certificate is installed on that node (`POST
+  /certs/edge-tls/certificate/install`) only if it is for that key, valid
+  now, allows server authentication and is signed by the given chain. Both
+  routes run on the node that receives them (`pkg/clusterroute.Local`).
+  Envoy reloads the files through SDS. An expired external certificate is
+  replaced by a runtime-root one rather than served expired.
+- **Served, measured.** The edge probe now pins the certificate certs
+  installed, so "served" in the dashboard means a handshake saw exactly
+  that certificate.
+- **Refused:** an unknown or inactive CA, the internal-services Sub CA, and
+  HSM CAs (they sign only for a user; renewal is unattended).
+- The source is stored in the new replicated table `cert_edge_certificate`
+  (migration 015).
+
+### The PQC inventory reports the external listeners
+- `GET /pqc/inventory` returns `listeners`: each external listener as certs
+  measured it (`accepted_groups`, `negotiated_group`, `measured_at`),
+  classified from `pkg/cryptocatalog`: `classical` if it accepts any
+  quantum-vulnerable group, `hybrid` if only hybrid ML-KEM groups.
+  `interfaces` is `measured`, `not_measured` or `unavailable` (was always
+  `not_assessed`). The pqc service reads `GET /certs/edge-tls/measurement`
+  (any verified caller) with its service token. Compliance > PQC Migration
+  Gaps shows "N of M accept classical".
+- `pkg/cryptocatalog` knows Go's TLS group names (`CurveP256`, `CurveP384`,
+  `CurveP521`, `secp256r1`...).
+- **Fixed:** pqc's certs client sent no credential, so the certificate
+  list in the inventory depended on certs accepting an anonymous call. It
+  now sends the service token.
+
+### X25519 is measured in every FIPS mode
+- With FIPS mode on, Go won't offer X25519 alone, so the edge probe could
+  not measure it. The probe now sends its own TLS 1.3 ClientHello offering
+  only X25519 and reads the group the ServerHello selects. It performs no
+  key exchange (the share is random bytes), so no non-approved
+  cryptography runs. The probe also measures every group whatever the
+  process's FIPS mode; before, its list came from the FIPS-filtered
+  profile.
+
+### Tests
+- `TestEdgeCertificateFromPKICA`, `TestEdgeExternalCertificateFlow`,
+  `TestEdgeCertificateRoutesAudited` (certs);
+  `TestHelloProbeReadsSelectedGroup`, `TestProbeMeasuresX25519InFIPSMode`,
+  `TestProbeRefusesAnotherCertificate` (svctls, real handshakes);
+  `TestInventoryReportsMeasuredListeners`, `TestCertsClientEdgeMeasurement`
+  (pqc); `TestTLSGroupNames` (cryptocatalog).
+- `TestEdgeProfileAppliedByRealEnvoy` now also installs an external CA's
+  certificate through the CSR flow and checks Envoy serves it, and checks
+  X25519 is measured; it passes with certs in FIPS off, on and only. Its
+  certificates live in a named Docker volume, because a macOS bind mount
+  doesn't deliver the rename Envoy's SDS watch reacts to.
+
+### Open
+- Port 80 still redirects to HTTPS (the rest of slice 4).
+- The KMIP listener's certificate stays on `vecta-runtime-root`.
+
+## [6.12.0-beta] — 2026-09-29
 ### EKM no longer invents TDE public keys (breaking)
 `GET /ekm/tde/keys/{id}/public` returned `"EKM-PUBLIC-"` plus a truncated
 SHA-256 of tenant and key ID whenever keycore gave no public key, stored it

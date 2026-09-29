@@ -58,6 +58,7 @@ var Replicated = map[string][]string{
 		"cert_certificates",
 		"cert_clm_policies",
 		"cert_deleted_refs",
+		"cert_edge_certificate",
 		"cert_expiry_alert_policies",
 		"cert_expiry_alert_state",
 		"cert_internal_mtls_policy",

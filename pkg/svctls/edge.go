@@ -160,26 +160,51 @@ func (w *EdgeWatcher) ServerConfig(base *tls.Config) *tls.Config {
 // PolicyFile is where this identity reads the published policy.
 func (id *Identity) PolicyFile() string { return id.policyFile }
 
-// ProbeResult is what a listener was measured to accept.
-type ProbeResult struct {
-	Probed     []tls.CurveID     // groups offered alone (in FIPS mode Go won't offer X25519 alone)
-	Accepted   []tls.CurveID     // of Probed, those the server completed a handshake with
-	Negotiated tls.CurveID       // chosen when every probed group is offered
-	Leaf       *x509.Certificate // the certificate the listener served
+// ProbeGroupsAll is every group a listener is measured for, whatever this
+// process's FIPS mode (X25519 is measured through probeGroupHello when Go
+// won't offer it).
+func ProbeGroupsAll() []tls.CurveID {
+	return append(append([]tls.CurveID{}, hybridGroups...), tls.X25519, tls.CurveP256, tls.CurveP384)
 }
 
+// ProbeResult is what a listener was measured to accept.
+type ProbeResult struct {
+	Probed     []tls.CurveID     // groups offered alone
+	Accepted   []tls.CurveID     // of Probed, those the server selected
+	Negotiated tls.CurveID       // chosen when every group Go can offer is offered
+	Leaf       *x509.Certificate // the certificate the listener served (== pin)
+}
+
+// errNotPinned refuses a listener that serves another certificate.
+var errNotPinned = errors.New("the listener does not serve the installed certificate")
+
 // ProbeGroups measures which groups the TLS 1.3 server at addr accepts: one
-// handshake offering all of them (it must succeed, or the listener is
-// unreachable or untrusted), then one handshake per group offering only it.
-// No application data is sent; a server that wants a client certificate
-// refuses only after the key exchange, which a TLS 1.3 client has finished.
-func ProbeGroups(ctx context.Context, addr, serverName string, roots *x509.CertPool, groups []tls.CurveID) (ProbeResult, error) {
+// full handshake offering every group Go can offer (it must succeed and the
+// server must present exactly pin, so the probe proves the listener runs
+// the installed certificate), then one ClientHello per group offering only
+// it. Go completes those handshakes itself, except X25519 in FIPS mode,
+// which Go won't offer alone: for it the probe sends its own ClientHello
+// and reads which group the ServerHello selects (probeGroupHello). No
+// application data is sent.
+func ProbeGroups(ctx context.Context, addr, serverName string, pin *x509.Certificate, groups []tls.CurveID) (ProbeResult, error) {
+	if pin == nil {
+		return ProbeResult{}, errors.New("edge probe: no installed certificate to pin")
+	}
 	dial := func(offer []tls.CurveID) (tls.ConnectionState, error) {
 		d := tls.Dialer{
 			NetDialer: &net.Dialer{Timeout: 5 * time.Second},
 			Config: &tls.Config{
-				MinVersion: tls.VersionTLS13, RootCAs: roots, ServerName: serverName,
-				CurvePreferences: offer,
+				MinVersion: tls.VersionTLS13, ServerName: serverName, CurvePreferences: offer,
+				// Pinned, not chain-verified: the only certificate accepted is
+				// the one certs installed (an external CA's root may not be in
+				// any pool this process has).
+				InsecureSkipVerify: true, //nolint:gosec // replaced by the pin in VerifyConnection
+				VerifyConnection: func(cs tls.ConnectionState) error {
+					if len(cs.PeerCertificates) == 0 || !cs.PeerCertificates[0].Equal(pin) {
+						return errNotPinned
+					}
+					return nil
+				},
 			},
 		}
 		hctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -192,22 +217,31 @@ func ProbeGroups(ctx context.Context, addr, serverName string, roots *x509.CertP
 		return conn.(*tls.Conn).ConnectionState(), nil
 	}
 	var res ProbeResult
+	var goOffers []tls.CurveID
 	for _, g := range groups {
+		res.Probed = append(res.Probed, g)
 		if g == tls.X25519 && fips140.Enabled() {
 			continue
 		}
-		res.Probed = append(res.Probed, g)
+		goOffers = append(goOffers, g)
 	}
-	cs, err := dial(res.Probed)
+	cs, err := dial(goOffers)
 	if err != nil {
 		return ProbeResult{}, fmt.Errorf("edge probe %s: %w", addr, err)
 	}
-	res.Negotiated = cs.CurveID
-	if len(cs.PeerCertificates) > 0 {
-		res.Leaf = cs.PeerCertificates[0]
-	}
+	res.Negotiated, res.Leaf = cs.CurveID, cs.PeerCertificates[0]
 	for _, g := range res.Probed {
-		if got, err := dial([]tls.CurveID{g}); err == nil && got.CurveID == g {
+		var ok bool
+		if g == tls.X25519 && fips140.Enabled() {
+			ok, err = probeGroupHello(ctx, addr, serverName, g)
+			if err != nil {
+				return ProbeResult{}, fmt.Errorf("edge probe %s (%s): %w", addr, g, err)
+			}
+		} else {
+			got, derr := dial([]tls.CurveID{g})
+			ok = derr == nil && got.CurveID == g
+		}
+		if ok {
 			res.Accepted = append(res.Accepted, g)
 		}
 	}

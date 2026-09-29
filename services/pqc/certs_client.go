@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPCertsClient struct {
@@ -55,11 +57,33 @@ func (c *HTTPCertsClient) ListCertificates(ctx context.Context, tenantID string,
 	return items, nil
 }
 
+// EdgeMeasurement reads the external listeners' measured key exchange.
+func (c *HTTPCertsClient) EdgeMeasurement(ctx context.Context, tenantID string) ([]ListenerMeasurement, error) {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return nil, errors.New("certs base url is empty")
+	}
+	q := url.Values{"tenant_id": {strings.TrimSpace(tenantID)}}
+	out, err := c.doJSON(ctx, http.MethodGet, "/certs/edge-tls/measurement?"+q.Encode())
+	if err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(out["listeners"])
+	if err != nil {
+		return nil, err
+	}
+	items := []ListenerMeasurement{}
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (c *HTTPCertsClient) doJSON(ctx context.Context, method string, path string) (map[string]interface{}, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

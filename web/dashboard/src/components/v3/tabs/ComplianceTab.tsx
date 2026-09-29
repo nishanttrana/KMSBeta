@@ -867,7 +867,10 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             <Stat l="RSA / ECC Active" v={String(Number(pqcInventory?.classical_usage?.length || 0))} c={Number(pqcInventory?.classical_usage?.length || 0) > 0 ? "amber" : "green"} />
             <Stat l="Certificates Pending" v={String(Number(pqcInventory?.non_migrated_certificates?.length || 0))} c={Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"} />
             <Stat l="Keys PQC / Hybrid" v={`${Number(pqcInventory?.keys?.pqc_only || 0)} / ${Number(pqcInventory?.keys?.hybrid || 0)}`} c="accent" />
-            <Stat l="Interface TLS" v="not assessed" c="muted" />
+            <Stat l="External listeners" v={pqcInventory?.interfaces === "measured"
+              ? `${(pqcInventory?.listeners || []).filter((l: any) => l.classification === "classical").length} of ${(pqcInventory?.listeners || []).length} accept classical`
+              : pqcInventory?.interfaces === "unavailable" ? "unavailable" : "not measured"}
+              c={pqcInventory?.interfaces !== "measured" ? "muted" : (pqcInventory?.listeners || []).some((l: any) => l.classification !== "hybrid") ? "amber" : "green"} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>

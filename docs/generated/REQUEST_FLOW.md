@@ -1,13 +1,13 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T13:26:17Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T13:31:33Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `910`
-- Routes with exact frontend call sites: `535`
+- Backend routes analyzed: `914`
+- Routes with exact frontend call sites: `538`
 - Routes whose handlers call `h.svc.*`: `538`
 - Routes with detected store calls: `649`
 - Routes with detected internal `pkg/*` calls: `162`
@@ -172,12 +172,15 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/scep/pkiclient.exe | POST /scep/pkiclient.exe | handleSCEPPKIOperation (services/certs/handler.go:951) | loadCASigner, SCEPPKIOperation | GetCA |  |  | web/dashboard/src/lib/certs.ts:924 |
 | certs\|POST\|/cmpv2 | POST /cmpv2 | handleCMPv2 (services/certs/handler.go:1083) | CMPv2Request | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:945 |
 | certs\|POST\|/cmpv2/confirm | POST /cmpv2/confirm | handleCMPv2Confirm (services/certs/handler.go:1144) | CMPv2Confirm, CMPv2Error | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:1039 |
-| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:56) |  |  |  |  | web/dashboard/src/lib/certs.ts:1108 |
-| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:85) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
-| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:113) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
-| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:142) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:186) |  |  |  |  | web/dashboard/src/lib/certs.ts:1160 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:200) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1165 |
+| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1108 |
+| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
+| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
+| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1168 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1173 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1185 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:285) |  |  |  |  | web/dashboard/src/lib/certs.ts:1195 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:310) |  |  |  |  | web/dashboard/src/lib/certs.ts:1203 |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:44) | RegisterAccount | CreateAccount, GetAccount |  | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope | web/dashboard/src/lib/cloud.ts:135 |
 | cloud\|DELETE\|/cloud/accounts/{param} | DELETE /cloud/accounts/{id} | handleDeleteAccount (services/cloud/handler.go:73) | DeleteAccount | DeleteAccountCascade | s.exposure.Retire |  | web/dashboard/src/lib/cloud.ts:152 |
 | cloud\|POST\|/cloud/region-mappings | POST /cloud/region-mappings | handleSetRegionMapping (services/cloud/handler.go:92) | SetRegionMapping | SetRegionMapping, GetRegionMapping |  |  | web/dashboard/src/lib/cloud.ts:171 |
@@ -468,14 +471,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates |  | web/dashboard/src/lib/pqc.ts:101 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:116 |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:102) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:111 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:125) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:106 |
-| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:110) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:170 |
-| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:133) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:165 |
-| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:152) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:178 |
-| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:167) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:186 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.certs.EdgeMeasurement |  | web/dashboard/src/lib/pqc.ts:109 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:124 |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:102) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:119 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:125) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:114 |
+| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:110) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:178 |
+| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:133) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:173 |
+| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:152) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:186 |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:167) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:194 |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
 | reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
 | reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
@@ -792,12 +795,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | certs\|POST\|/scep/pkiclient.exe | POST /scep/pkiclient.exe | handleSCEPPKIOperation (services/certs/handler.go:951) | loadCASigner, SCEPPKIOperation | GetCA |  |  | web/dashboard/src/lib/certs.ts:924 |
 | certs\|POST\|/cmpv2 | POST /cmpv2 | handleCMPv2 (services/certs/handler.go:1083) | CMPv2Request | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:945 |
 | certs\|POST\|/cmpv2/confirm | POST /cmpv2/confirm | handleCMPv2Confirm (services/certs/handler.go:1144) | CMPv2Confirm, CMPv2Error | GetCertificate |  |  | web/dashboard/src/lib/certs.ts:1039 |
-| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:56) |  |  |  |  | web/dashboard/src/lib/certs.ts:1108 |
-| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:85) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
-| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:113) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
-| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:142) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
-| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:186) |  |  |  |  | web/dashboard/src/lib/certs.ts:1160 |
-| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:200) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1165 |
+| certs\|GET\|/certs/internal-mtls | GET /certs/internal-mtls | handleMTLSInventory (services/certs/internal_mtls_routes.go:78) |  |  |  |  | web/dashboard/src/lib/certs.ts:1108 |
+| certs\|PUT\|/certs/internal-mtls/{param}/policy | PUT /certs/internal-mtls/{identity}/policy | handleMTLSPolicy (services/certs/internal_mtls_routes.go:107) |  |  |  |  | web/dashboard/src/lib/certs.ts:1116 |
+| certs\|POST\|/certs/internal-mtls/{param}/rotate | POST /certs/internal-mtls/{identity}/rotate | handleMTLSRotate (services/certs/internal_mtls_routes.go:135) |  |  |  |  | web/dashboard/src/lib/certs.ts:1123 |
+| certs\|POST\|/certs/internal-mtls/rotate-all | POST /certs/internal-mtls/rotate-all | handleMTLSRotateAll (services/certs/internal_mtls_routes.go:164) |  |  |  |  | web/dashboard/src/lib/certs.ts:1135 |
+| certs\|GET\|/certs/edge-tls | GET /certs/edge-tls | handleEdgeRead (services/certs/internal_mtls_routes.go:208) |  |  |  |  | web/dashboard/src/lib/certs.ts:1168 |
+| certs\|PUT\|/certs/edge-tls | PUT /certs/edge-tls | handleEdgePolicy (services/certs/internal_mtls_routes.go:222) |  |  |  | pkg/svctls.EnvoyCurves | web/dashboard/src/lib/certs.ts:1173 |
+| certs\|PUT\|/certs/edge-tls/certificate | PUT /certs/edge-tls/certificate | handleEdgeCertSource (services/certs/internal_mtls_routes.go:248) |  |  |  |  | web/dashboard/src/lib/certs.ts:1185 |
+| certs\|POST\|/certs/edge-tls/csr | POST /certs/edge-tls/csr | handleEdgeCSR (services/certs/internal_mtls_routes.go:285) |  |  |  |  | web/dashboard/src/lib/certs.ts:1195 |
+| certs\|POST\|/certs/edge-tls/certificate/install | POST /certs/edge-tls/certificate/install | handleEdgeInstall (services/certs/internal_mtls_routes.go:310) |  |  |  |  | web/dashboard/src/lib/certs.ts:1203 |
+| certs\|GET\|/certs/edge-tls/measurement | GET /certs/edge-tls/measurement | handleEdgeMeasurement (services/certs/internal_mtls_routes.go:345) |  |  |  |  |  |
 | certs\|POST\|/v1/enroll | POST /v1/enroll | <inline func> (:) |  |  |  |  |  |
 | cloud\|POST\|/cloud/accounts | POST /cloud/accounts | handleRegisterAccount (services/cloud/handler.go:44) | RegisterAccount | CreateAccount, GetAccount |  | pkg/crypto.Zeroize, pkg/crypto.EncryptEnvelope | web/dashboard/src/lib/cloud.ts:135 |
 | cloud\|GET\|/cloud/accounts | GET /cloud/accounts | handleListAccounts (services/cloud/handler.go:59) | ListAccounts | ListAccounts |  |  |  |
@@ -1326,17 +1333,17 @@ This file connects frontend requests to backend Go processing. It is static anal
 | posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:233) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:221 |
 | posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:253) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:232 |
 | posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:279) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
-| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates |  | web/dashboard/src/lib/pqc.ts:101 |
-| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:116 |
+| pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.certs.EdgeMeasurement |  | web/dashboard/src/lib/pqc.ts:109 |
+| pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:124 |
 | pqc\|GET\|/pqc/scans | GET /pqc/scans | listScans (services/pqc/handler.go:85) | ListReadinessScans | ListReadinessScans |  |  |  |
 | pqc\|GET\|/pqc/scans/{param} | GET /pqc/scans/{id} | getScan (services/pqc/handler.go:94) | GetReadinessScan | GetReadinessScan |  |  |  |
-| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:102) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:111 |
-| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:125) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:106 |
-| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:110) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:170 |
-| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:133) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:165 |
+| pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:102) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:119 |
+| pqc\|GET\|/pqc/migration/report | GET /pqc/migration/report | getMigrationReport (services/pqc/handler.go:125) | GetMigrationReport |  |  |  | web/dashboard/src/lib/pqc.ts:114 |
+| pqc\|POST\|/pqc/migration/plans | POST /pqc/migration/plans | createPlan (services/pqc/handler.go:110) | CreateMigrationPlan | CreateMigrationPlan, GetMigrationPlan |  |  | web/dashboard/src/lib/pqc.ts:178 |
+| pqc\|GET\|/pqc/migration/plans | GET /pqc/migration/plans | listPlans (services/pqc/handler.go:133) | ListMigrationPlans | ListMigrationPlans |  |  | web/dashboard/src/lib/pqc.ts:173 |
 | pqc\|GET\|/pqc/migration/plans/{param} | GET /pqc/migration/plans/{id} | getPlan (services/pqc/handler.go:142) | GetMigrationPlan | GetMigrationPlan |  |  |  |
-| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:152) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:178 |
-| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:167) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:186 |
+| pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:152) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:186 |
+| pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:167) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey |  | web/dashboard/src/lib/pqc.ts:194 |
 | pqc\|GET\|/pqc/migration/plans/{param}/runs | GET /pqc/migration/plans/{id}/runs | listRuns (services/pqc/handler.go:180) | ListMigrationRuns | ListMigrationRuns |  |  |  |
 | pqc\|GET\|/pqc/timeline | GET /pqc/timeline | timeline (services/pqc/handler.go:188) | Timeline |  |  |  |  |
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | exportCBOM (services/pqc/handler.go:200) | ExportCBOM |  |  |  |  |

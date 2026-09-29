@@ -2463,7 +2463,7 @@ const SectionUIPqc = () => (
     <div style={S.h1}>UI Guide: Post-Quantum Crypto</div>
     <P>The Post-Quantum Crypto tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It covers ML-KEM, ML-DSA and SLH-DSA migration of keys and certificates.</P>
     <H2>Overview</H2>
-    <P>Review how many keys and certificates are classical, hybrid or PQC-only (counted from each one's actual algorithm), the RSA / ECC keys and certificates still active, and the certificates that remain non-migrated. There is no readiness score. Interface TLS key exchange is not measured and is shown as not assessed.</P>
+    <P>Review how many keys and certificates are classical, hybrid or PQC-only (counted from each one's actual algorithm), the RSA / ECC keys and certificates still active, and the certificates that remain non-migrated. There is no readiness score. The external listeners (HTTPS edge and KMIP) are listed as the certs service measured them, one TLS 1.3 handshake per key-exchange group: classical if they still accept a quantum-vulnerable group, hybrid if they accept only hybrid ML-KEM groups. Unavailable means the measurement could not be read.</P>
     <H2>Requiring PQC</H2>
     <P>To stop new protection with quantum-vulnerable keys, add a Crypto Agility migration rule (for example <IC>quantum_vulnerable → decrypt_only</IC>); keycore enforces it on every key operation. The former tenant PQC policy enforced nothing and was removed in 6.3.0-beta.</P>
     <H2>Migration Report</H2>
@@ -2869,8 +2869,8 @@ const SectionConfigNetwork = () => (
       ["HSM (eth2)", "(unconfigured)", "Optional dedicated HSM communication"],
     ]} />
     <H2>TLS Configuration</H2>
-    <P>Runtime Crypto controls the TLS runtime mode and the authoritative certificate binding for request interfaces. Interfaces controls which request endpoints are exposed, the bind address, the port, and whether a listener uses HTTP, HTTPS, TLS 1.3, or mTLS.</P>
-    <P>The certs service writes the edge (Envoy) and KMIP server certificates from <IC>vecta-runtime-root</IC> and renews them before they expire. Choosing another CA for the edge certificate is not built yet.</P>
+    <P>Runtime Crypto shows the FIPS mode, TLS minimum and random-number source the platform runs with. Interfaces lists the ports the container runtime reports as published; listeners and ports are set by the deployment. The edge certificate and key exchange are set under Certificates / PKI &gt; Service mTLS.</P>
+    <P>The HTTPS edge (Envoy) serves a certificate from the source chosen in Certificates / PKI &gt; Service mTLS &gt; Edge certificate: <IC>vecta-runtime-root</IC> (the default), a software CA from the PKI tab (certs issues and renews it), or an external CA (each node generates its own key and a CSR; the signed certificate is installed on that node and the key never leaves it). The KMIP server certificate comes from <IC>vecta-runtime-root</IC>. Both are renewed before they expire, except an external certificate, which the external CA renews.</P>
     <Code>{`# TLS paths
 CERTS_RUNTIME_MATERIALIZER_ENABLED=true
 CERTS_RUNTIME_MATERIALIZER_DIR=/run/vecta/certs

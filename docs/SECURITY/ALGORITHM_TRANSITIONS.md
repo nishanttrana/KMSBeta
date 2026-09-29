@@ -141,7 +141,10 @@ pqc reports measured counts only:
   hand-weighted `readiness_score` (scan 55/30/15, inventory 85/15 with
   hybrid counted as 0.7), `quantum_readiness_percent` and a plan's
   `estimated_risk_reduced` were removed.
-- Interfaces are `not_assessed`. The inventory used to report an
+- Interfaces were `not_assessed` until 6.13.0-beta, when the inventory
+  started reporting the external listeners as certs measures them by
+  handshake (`listeners`, classified from `pkg/cryptocatalog`). Before
+  6.3.0-beta the inventory reported an
   interface with `pqc_mode: inherit` as having the policy's default mode,
   so a TLS mode that was never measured appeared as measured. Keycore's
   interface `pqc_mode` was removed in 6.4.0-beta: no listener read it.
@@ -169,6 +172,9 @@ pqc reports measured counts only:
   counts against each asset's algorithm and that interfaces are
   `not_assessed`. `TestPolicyAndScoreDroppedPostgres` runs the migrations on
   Postgres.
+- `TestInventoryReportsMeasuredListeners`, `TestTLSGroupNames` (pqc,
+  cryptocatalog): external listeners are reported as measured and
+  classified from the catalogue; an unreachable certs is "unavailable".
 - `web/dashboard/tests/crypto-agility.spec.ts` asserts that the tab shows no
   standards document, draft or reference.
 
@@ -177,9 +183,8 @@ pqc reports measured counts only:
 - A rule applies to keycore keys. Certificates, TLS endpoints and
   discovered assets are measured and planned (pqc, discovery), but the KMS
   cannot refuse their use.
-- The pqc inventory still reports listeners as `not_assessed`. Their key
-  exchange is set and measured elsewhere: internal listeners by their svctls
-  `kx_profile`, the external edge (Envoy HTTPS and KMIP) by the edge profile
-  in Service mTLS, which certs measures by handshake (6.8.0-beta).
+- The pqc inventory reports the external listeners (measured by certs).
+  Internal listeners are not in it: their groups are each service's svctls
+  `kx_profile`, reported by the services on the Service mTLS page.
 - CARAF decisions are recorded, not gated: accepting a risk needs a review
   date, not a governance approval.

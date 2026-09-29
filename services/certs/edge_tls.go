@@ -127,14 +127,16 @@ func (s *Service) ProbeEdge(ctx context.Context) error {
 		return err
 	}
 	policy, _ := edgePolicy(rows)
-	roots, err := s.edgeRoots()
-	if err != nil {
-		return err
-	}
-	all := svctls.ServerGroups(svctls.KXPQCPreferred)
+	all := svctls.ProbeGroupsAll()
 	var errs []error
 	for _, l := range edgeListeners() {
-		res, err := svctls.ProbeGroups(ctx, l.Address, l.ServerName, roots, all)
+		// Pinned to the certificate certs installed for the listener.
+		pin, _, err := installedLeaf(s.listenerCertDir(l))
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: installed certificate: %w", l.Name, err))
+			continue
+		}
+		res, err := svctls.ProbeGroups(ctx, l.Address, l.ServerName, pin, all)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -194,21 +196,12 @@ func leafKeyAlgorithm(c *x509.Certificate) string {
 	return c.PublicKeyAlgorithm.String()
 }
 
-// edgeRoots trusts the runtime root that issues the edge certificates.
-func (s *Service) edgeRoots() (*x509.CertPool, error) {
-	dir := strings.TrimSpace(s.runtimeCfg.MaterializeDir)
-	if dir == "" {
-		return nil, errors.New("the runtime certificate directory is not configured")
+// listenerCertDir holds the certificate the listener serves.
+func (s *Service) listenerCertDir(l edgeListener) string {
+	if l.envoy {
+		return s.edgeDir()
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "ca", "ca.crt"))
-	if err != nil {
-		return nil, err
-	}
-	pool := x509.NewCertPool()
-	if !pool.AppendCertsFromPEM(raw) {
-		return nil, errors.New("the runtime root CA file holds no certificate")
-	}
-	return pool, nil
+	return filepath.Join(s.runtimeCfg.MaterializeDir, "kmip")
 }
 
 // edgeListenerView is one listener on the Service mTLS page.
@@ -221,6 +214,7 @@ type edgeListenerView struct {
 }
 
 type edgeView struct {
+	Certificate  edgeCertView        `json:"certificate"`
 	Policy       svctls.EdgePolicy   `json:"policy"`
 	PolicyRecord *mtlsPolicyRow      `json:"policy_record,omitempty"`
 	Listeners    []edgeListenerView  `json:"listeners"`
@@ -262,6 +256,13 @@ func (s *Service) EdgeInventory(ctx context.Context) (edgeView, error) {
 		v.Applied = v.Applied && lv.Applied
 		v.Listeners = append(v.Listeners, lv)
 	}
+	served := ""
+	for _, l := range v.Listeners {
+		if strings.HasPrefix(l.Name, "envoy") && l.Observed != nil {
+			served = l.Observed.Serial
+		}
+	}
+	v.Certificate = s.edgeCertificateView(ctx, s.internalTenant(), served)
 	return v, nil
 }
 

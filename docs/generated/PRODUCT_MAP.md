@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-29T13:26:17Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T13:31:33Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `910` across `30` services
-- Backend routes on the `pkg/route` kernel: `343` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `571`
-- Frontend call sites with exact backend route match: `526`
+- Backend HTTP routes discovered: `914` across `30` services
+- Backend routes on the `pkg/route` kernel: `347` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `574`
+- Frontend call sites with exact backend route match: `529`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `762`
-- Backend request flows with handler/service/package summaries: `910`
+- Clickable controls with static `onClick` handlers: `765`
+- Backend request flows with handler/service/package summaries: `914`
 
 ## How To Use This For Launch
 
@@ -136,7 +136,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (65 routes)"]
+  svc_certs["certs (69 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (54 routes)"]
@@ -164,13 +164,13 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 193 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 196 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 93 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 15 |
-| PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 97 |
+| PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 100 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
@@ -195,7 +195,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | payment | payment | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | payment | 27 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
-| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 108 |
+| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 111 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
 ## Backend Route Counts
@@ -207,7 +207,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 86 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 65 | 49 |
+| certs | 69 | 52 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 54 | 19 |
@@ -373,6 +373,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /acme/cert/{id} | h.handleACMECertDownload |  | services/certs/handler.go | 85 |
 | certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts |  | services/certs/handler.go | 87 |
 | certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll |  | services/certs/handler.go | 90 |
+| certs | GET | /certs/edge-tls/measurement | s.handleEdgeMeasurement | authenticated | services/certs/internal_mtls_routes.go | 65 |
 | certs | POST | /v1/enroll | <inline func> | public | services/certs/internal_tls.go | 184 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts |  | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings |  | services/cloud/handler.go | 34 |
@@ -412,9 +413,8 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
 | compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
 | compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
-| compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
 
-Showing `120` of `375`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `376`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

@@ -219,12 +219,24 @@ func (s *Service) GetInventory(ctx context.Context, tenantID string) (PQCInvento
 		GeneratedAt:             s.now(),
 		Keys:                    keyBreakdown,
 		Certificates:            certBreakdown,
-		Interfaces:              interfacesNotAssessed,
+		Interfaces:              interfacesUnavailable,
+		Listeners:               []ListenerPQCItem{},
 		ClassicalUsage:          classicalUsage,
 		NonMigratedCertificates: nonMigratedCerts,
 		Recommendations:         buildPQCRecommendations(classicalUsage, nonMigratedCerts),
 	}
+	if s.certs != nil {
+		if measured, err := s.certs.EdgeMeasurement(ctx, tenantID); err == nil {
+			inventory.Interfaces = interfacesNotMeasured
+			for _, m := range measured {
+				inventory.Listeners = append(inventory.Listeners, classifyListener(m))
+				inventory.Interfaces = interfacesMeasured
+			}
+		}
+	}
 	_ = s.publishAudit(ctx, "audit.pqc.inventory_viewed", tenantID, map[string]interface{}{
+		"interfaces":              inventory.Interfaces,
+		"listener_count":          len(inventory.Listeners),
 		"key_count":               keyBreakdown.Total,
 		"certificate_count":       certBreakdown.Total,
 		"classical_usage_count":   len(inventory.ClassicalUsage),
@@ -1088,4 +1100,28 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		return err
 	}
 	return s.events.Publish(ctx, subject, raw)
+}
+
+// classifyListener states what a measured listener's groups are, from
+// pkg/cryptocatalog.
+func classifyListener(m ListenerMeasurement) ListenerPQCItem {
+	item := ListenerPQCItem{ListenerMeasurement: m, Classification: "hybrid", QuantumVulnerableGroups: []string{}}
+	if len(m.AcceptedGroups) == 0 {
+		item.Classification = "not_assessed"
+	}
+	for _, g := range m.AcceptedGroups {
+		e, ok := cryptocatalog.Lookup(g)
+		switch {
+		case !ok:
+			item.Classification = "not_assessed"
+		case e.QuantumVulnerable:
+			item.QuantumVulnerableGroups = append(item.QuantumVulnerableGroups, g)
+		case !e.Hybrid && !e.PostQuantum:
+			item.Classification = "not_assessed"
+		}
+	}
+	if len(item.QuantumVulnerableGroups) > 0 && item.Classification != "not_assessed" {
+		item.Classification = "classical"
+	}
+	return item
 }

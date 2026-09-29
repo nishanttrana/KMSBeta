@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { B, Btn, Card, Inp, Section, Sel } from "../legacyPrimitives";
+import { B, Btn, Card, Inp, Section, Sel, Txt } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
+  createEdgeCSR,
   getEdgeTLS,
+  installEdgeCertificate,
+  listCAs,
+  setEdgeCertificateSource,
+  type CertCA,
   getInternalMTLS,
   rotateAllInternalMTLS,
   rotateInternalMTLS,
@@ -53,6 +58,13 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
   const [edge, setEdge] = useState<EdgeTLS | null>(null);
   const [edgeError, setEdgeError] = useState("");
   const [edgeDraft, setEdgeDraft] = useState("");
+  const [cas, setCAs] = useState<CertCA[]>([]);
+  const [certDraft, setCertDraft] = useState<{ source: string; ca_id: string; key_algorithm: string } | null>(null);
+  const [csrCN, setCsrCN] = useState("");
+  const [csrSANs, setCsrSANs] = useState("");
+  const [csrPem, setCsrPem] = useState("");
+  const [signedPem, setSignedPem] = useState("");
+  const [chainPem, setChainPem] = useState("");
 
   const load = useCallback(async () => {
     if (!session?.token) return;
@@ -67,6 +79,11 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
       setEdgeError("");
     } catch (e) {
       setEdgeError(errMsg(e));
+    }
+    try {
+      setCAs((await listCAs(session)).filter((c) => String(c.status || "").toLowerCase() === "active" && String((c as any).key_backend || "") !== "hsm"));
+    } catch {
+      setCAs([]);
     }
   }, [session]);
 
@@ -244,6 +261,77 @@ export const ServiceMTLSPanel = ({ session, onToast }: Props) => {
           </>
         )}
       </Card>
+      {edge && (() => {
+        const cert = edge.certificate;
+        const d = certDraft || { source: cert.choice.source, ca_id: cert.choice.ca_id || "", key_algorithm: cert.choice.key_algorithm || "ECDSA-P256" };
+        const changed = d.source !== cert.choice.source || (d.source === "ca" && (d.ca_id !== (cert.choice.ca_id || "") || d.key_algorithm !== (cert.choice.key_algorithm || "")));
+        const inst = cert.installed;
+        return (
+          <Card style={{ padding: 12, marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Edge certificate (HTTPS)</div>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+              The certificate the HTTPS edge serves on this node. vecta-runtime-root is the default; a CA from the PKI tab is
+              issued and renewed by certs; an external CA signs a CSR this node generates, and the key never leaves the node
+              (in a cluster, request and install on each node).
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginTop: 8, fontSize: 11 }}>
+              <div>
+                {inst ? <>
+                  <div style={{ color: C.text }}>{inst.subject} · issued by {inst.issuer}</div>
+                  <div style={{ color: C.dim, fontSize: 10 }}>serial {inst.serial.slice(0, 16)} · {inst.key_algorithm} · until {day(inst.not_after)} · SANs {(inst.sans || []).join(", ") || "none"}</div>
+                </> : <div style={{ color: C.dim }}>no certificate installed</div>}
+              </div>
+              <div>
+                {inst && inst.from_choice && cert.served ? <B c="green">served, from the chosen source</B>
+                  : inst && inst.from_choice ? <B c="amber" pulse>installed; not measured as served yet</B>
+                  : <B c="amber">{cert.choice.source === "external" ? "external certificate not installed on this node" : "being issued"}</B>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+              <Sel value={d.source} onChange={(e: any) => setCertDraft({ ...d, source: String(e.target.value) })} w={220}>
+                <option value="runtime">vecta-runtime-root (default)</option>
+                <option value="ca">A CA from the PKI tab</option>
+                <option value="external">An external CA (CSR)</option>
+              </Sel>
+              {d.source === "ca" && <>
+                <Sel value={d.ca_id} onChange={(e: any) => setCertDraft({ ...d, ca_id: String(e.target.value) })} w={220}>
+                  <option value="">Choose a CA</option>
+                  {cas.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Sel>
+                <Sel value={d.key_algorithm} onChange={(e: any) => setCertDraft({ ...d, key_algorithm: String(e.target.value) })} w={140}>
+                  {(inv.meta.key_algorithms || []).map((a) => <option key={a} value={a}>{a}</option>)}
+                </Sel>
+              </>}
+              <Btn small primary disabled={busy !== "" || !changed || (d.source === "ca" && !d.ca_id)}
+                onClick={() => void run("edge-cert", async () => { await setEdgeCertificateSource(session, { ...d, reason }); setCertDraft(null); },
+                  d.source === "external" ? "External source chosen; request a CSR on each node" : "Edge certificate issued; Envoy reloads it")}>
+                Apply
+              </Btn>
+            </div>
+            {cert.choice.source === "external" && (
+              <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 6 }}>
+                  <Inp placeholder="Subject CN (e.g. kms.example.com)" value={csrCN} onChange={(e: any) => setCsrCN(String(e.target.value || ""))} />
+                  <Inp placeholder="SANs, comma separated" value={csrSANs} onChange={(e: any) => setCsrSANs(String(e.target.value || ""))} />
+                  <Btn small disabled={busy !== "" || (!csrCN && !csrSANs)} onClick={() => void run("edge-csr", async () => {
+                    const out = await createEdgeCSR(session, { subject_cn: csrCN, sans: csrSANs.split(",").map((v) => v.trim()).filter(Boolean) });
+                    setCsrPem(out.csr_pem);
+                  }, "CSR created on this node; have your CA sign it")}>Create CSR</Btn>
+                </div>
+                {(csrPem || cert.pending_csr?.csr_pem) && <Txt rows={5} readOnly value={csrPem || cert.pending_csr?.csr_pem || ""} />}
+                {cert.pending_csr && <>
+                  <Txt rows={4} placeholder="Signed certificate (PEM)" value={signedPem} onChange={(e: any) => setSignedPem(String(e.target.value || ""))} />
+                  <Txt rows={4} placeholder="Issuing CA chain (PEM)" value={chainPem} onChange={(e: any) => setChainPem(String(e.target.value || ""))} />
+                  <div><Btn small primary disabled={busy !== "" || !signedPem} onClick={() => void run("edge-install", async () => {
+                    await installEdgeCertificate(session, signedPem, chainPem, reason);
+                    setSignedPem(""); setChainPem(""); setCsrPem("");
+                  }, "Certificate installed on this node; Envoy reloads it")}>Install on this node</Btn></div>
+                </>}
+              </div>
+            )}
+          </Card>
+        );
+      })()}
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1.5fr 1.6fr 1.2fr 1.6fr", gap: 8, padding: "8px 10px", fontSize: 10, fontWeight: 700, color: C.dim }}>
           <div>Identity</div><div>Certificate key</div><div>Key exchange (server)</div><div>State</div><div>Actions</div>

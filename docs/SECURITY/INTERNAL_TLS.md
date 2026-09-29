@@ -91,8 +91,35 @@ accepts `X25519MLKEM768` alone.
 - **Measured** by certs (`svctls.ProbeGroups`): a handshake offering every
   group, then one per group. The listener is "in force" when the groups it
   accepted are exactly the profile's; only then is
-  `audit.certs.edge_tls_applied` emitted, once per generation. With FIPS
-  mode on, Go won't offer X25519 alone, so it is not measured.
+  `audit.certs.edge_tls_applied` emitted, once per generation. The probe
+  pins the certificate certs installed, so it also proves the listener
+  serves it. Every group is measured in every FIPS mode: when Go won't
+  offer X25519 alone, the probe sends its own ClientHello offering only
+  X25519 and reads the group the ServerHello selects (`probeGroupHello`; no
+  key exchange is performed).
+
+## Edge certificate
+
+The HTTPS edge's certificate comes from the source a root administrator
+chose in Service mTLS > Edge certificate (`PUT /certs/edge-tls/certificate`):
+
+| Source | Certificate | Renewal |
+|---|---|---|
+| `runtime` (default) | issued by `vecta-runtime-root` | certs, before expiry |
+| `ca` | issued by a software CA from the PKI tab (not the internal-services Sub CA; not an HSM CA, which signs only for a user) | certs, before expiry |
+| `external` | each node generates its key and a CSR; the customer's CA signs it; the certificate is installed on that node | the customer, with a new CSR; after expiry the node falls back to `vecta-runtime-root` |
+
+- The choice is replicated (`cert_edge_certificate`); every node's
+  materializer applies it on its next pass.
+- An external certificate is node-local: the key never leaves the node's
+  runtime certificate volume, and the CSR and install routes run on the
+  node that receives them (`pkg/clusterroute.Local`). In a cluster, request
+  and install on each node.
+- Envoy reloads the files through SDS (a rename in the watched directory).
+- "Served" in the dashboard is the probe's measurement: the certificate it
+  pinned is the one installed.
+- The KMIP listener's certificate stays on `vecta-runtime-root`: KMIP
+  clients authenticate with certificates and trust the KMS's CA.
 
 ## How a change reaches a service
 
@@ -226,9 +253,9 @@ from the host:
   are the control. A rotation revokes the old certificate and restarts the
   service, which removes the old key. Until the restart completes, peers
   still accept the old certificate.
-- **The edge certificate** still comes from `vecta-runtime-root`, chosen in
-  code, and port 80 still answers with a redirect. That's slice 4. (The
-  edge key exchange is chosen and measured since 6.8.0-beta.)
+- **Port 80** still answers with a redirect to HTTPS. (The edge
+  certificate source is chosen since 6.13.0-beta; the edge key exchange is
+  chosen and measured since 6.8.0-beta.)
 
 ## Delivery plan
 
@@ -240,8 +267,9 @@ from the host:
    and Consul (HTTPS).
 3. **Slice 3:** the service TLS page: inventory, one-click rotation,
    per-service algorithm and PQC selection, and graceful or forced restart.
-4. **Slice 4:** choose the edge certificate in the PKI tab (internal or
-   external CA), and remove the port-80 listener.
+4. **Slice 4:** choose the edge certificate (done in 6.13.0-beta: runtime
+   root, a PKI CA, or an external CA via CSR), and remove the port-80
+   listener (open).
 
 Each slice ships with tests against the real dependencies: a real TLS
 handshake with a wrong or missing client certificate refused, Postgres over

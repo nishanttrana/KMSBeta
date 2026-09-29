@@ -7,6 +7,43 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-29 — Edge certificate: three sources, external via per-node CSR; inventory reads the measurement (6.13.0-beta)
+
+**Decision.**
+- The HTTPS edge certificate comes from `vecta-runtime-root`, a software
+  CA from the PKI tab, or an external CA. The choice is replicated; every
+  node applies it.
+- An external certificate is issued for a key the node generates. The CSR
+  and install routes are node-local, and the key never leaves the node.
+- The pqc inventory reads certs' measurement of the external listeners and
+  classifies them from `pkg/cryptocatalog`.
+- X25519 is measured in FIPS mode by a hand-built ClientHello.
+
+**Why.**
+- Uploading an external private key would mean storing and replicating it
+  under the certs wrapping key, rewrapping it on CRWK rotation, and
+  trusting an operator's copy. A CSR keeps the key where it is used.
+- HSM CAs are refused: they sign only for a user they act for, and edge
+  renewal runs unattended. An HSM CA can still sign the CSR as an external
+  CA.
+- The internal-services Sub CA is refused so an external-facing
+  certificate never chains to the internal trust anchor.
+- The probe pins the installed certificate instead of verifying a chain:
+  an external root may be in no pool certs has, and pinning proves more
+  (that exact certificate is served).
+- The hand-built hello performs no cryptography: it sends a random share
+  and reads the ServerHello's selected group, which is all the measurement
+  needs. Go's TLS stack is still used for every group it can offer.
+
+**Rejected.** A per-listener certificate for KMIP (KMIP clients pin the
+KMS's CA); a key upload; marking X25519 "not measured" in FIPS mode.
+
+**Enforced by.** `TestEdgeExternalCertificateFlow`,
+`TestEdgeCertificateFromPKICA`, `TestEdgeProfileAppliedByRealEnvoy`,
+`TestProbeMeasuresX25519InFIPSMode`, `TestInventoryReportsMeasuredListeners`.
+
+---
+
 ## 2026-09-29 — Workload signing keys: seal in the store, refuse backups that would copy plaintext (6.11.0-beta)
 
 **Decision.** The tenant's root CA and JWT-SVID signer private keys are

@@ -1127,6 +1127,53 @@ exchange"). Same permissions as Service mTLS; another tenant is refused with
   once per group, every 15 s while a change is pending and every 5 min
   after. `audit.certs.edge_tls_applied` is emitted once per generation when
   every listener accepts exactly the new groups.
+  - The probe pins the certificate certs installed for each listener: a
+    listener serving any other certificate is not measured.
+  - Every group is measured in every FIPS mode. When Go won't offer X25519
+    alone (FIPS mode on), the probe sends its own TLS 1.3 ClientHello
+    offering only X25519 and reads the group the ServerHello selects; it
+    performs no key exchange.
+- **`GET /certs/edge-tls/measurement`** (`edge_tls_measurement_read`, any
+  verified caller, 6.13.0): `listeners` (`name`, `accepted_groups`,
+  `negotiated_group`, `measured_at`) and `configured`. Read by the pqc
+  inventory with its service token.
+
+### Edge certificate: `/svc/certs/certs/edge-tls/certificate` (6.13.0, root tenant only)
+
+The certificate the HTTPS edge (Envoy) serves. The GET above returns it as
+`edge.certificate`: `choice` (`source`, `ca_id`, `key_algorithm`, who and
+when), `installed` (this node's certificate: serial, subject, issuer, SANs,
+`not_after`, key algorithm, `from_choice`), `pending_csr` and `served` (the
+probe saw exactly that certificate served).
+
+- **`PUT /certs/edge-tls/certificate`**
+  (`edge_tls_certificate_source_updated`):
+  - **Body:** `{"source": "runtime|ca|external", "ca_id": "...",
+    "key_algorithm": "ECDSA-P256|ECDSA-P384|RSA-3072", "reason": "..."}`.
+  - `runtime`: issued by `vecta-runtime-root` (default). `ca`: issued by a
+    software CA from the PKI tab and renewed by certs before expiry.
+    `external`: see below. Stored replicated; every node's materializer
+    applies it within 5 minutes, this node at once.
+  - **Refusals:** `invalid_source`, `unknown_ca`, `ca_not_active`,
+    `hsm_ca_not_supported` (renewal runs unattended), `internal_services_ca`,
+    `invalid_key_algorithm`, `unchanged`.
+- **`POST /certs/edge-tls/csr`** (`edge_tls_csr_created`, runs on the node
+  that receives it):
+  - **Body:** `{"subject_cn": "...", "sans": [...], "key_algorithm": "..."}`.
+  - Generates this node's key (kept on the node's runtime certificate
+    volume) and returns `csr.csr_pem`. A new CSR replaces the pending key.
+  - **Refusals:** `source_not_external`, `invalid_request`,
+    `invalid_key_algorithm`.
+- **`POST /certs/edge-tls/certificate/install`**
+  (`edge_tls_certificate_installed`, runs on the node that receives it):
+  - **Body:** `{"certificate_pem": "...", "chain_pem": "...", "reason": "..."}`.
+  - Installed only if it is for the pending key, valid now, allows TLS
+    server authentication, and is signed by the first chain certificate.
+    Envoy reloads it (SDS). The materializer keeps it until it expires, then
+    falls back to `vecta-runtime-root`; renew it with a new CSR.
+  - **Refusals:** `source_not_external`, `no_pending_key`,
+    `invalid_certificate`, `key_mismatch`, `not_valid_now`,
+    `not_server_certificate`, `bad_chain`, `chain_required`.
 
 **How a service learns its policy:**
 - Certs publishes it as `/run/vecta/trust/mtls-policy.json`, which is
@@ -2185,7 +2232,8 @@ Returns `{"inventory": {...}}`, the tenant's keys (keycore) and certificates
 | Field | Description |
 |---|---|
 | `keys`, `certificates` | `{total, classical, hybrid, pqc_only, algorithms}` |
-| `interfaces` | always `"not_assessed"`: the key exchange a listener negotiates is never measured |
+| `interfaces` | `measured`, `not_measured` (certs has measured no listener yet) or `unavailable` (certs didn't answer) (6.13.0) |
+| `listeners` | the external listeners as certs measured them: `name`, `accepted_groups`, `negotiated_group`, `measured_at`, `classification` (`classical` if any accepted group is quantum-vulnerable, `hybrid` if all are hybrid ML-KEM, `not_assessed` if a group is unknown; from `pkg/cryptocatalog`), `quantum_vulnerable_groups` |
 | `classical_usage` | every RSA / ECC key and certificate still active |
 | `non_migrated_certificates` | every classical certificate |
 | `recommendations` | only for what the counts found; empty when nothing is classical |
@@ -3311,7 +3359,7 @@ Selected events with dedicated audit classification:
 - `audit.cert.internal_subca_created`, `audit.certs.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
-- `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.edge_tls_read`, `audit.certs.edge_tls_policy_updated` (refusals: `not_root_tenant`, `invalid_policy`, `unchanged`), `audit.certs.edge_tls_applied` (every external listener was measured accepting exactly the new groups), `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
+- `audit.certs.internal_mtls_inventory_read`, `audit.certs.internal_mtls_policy_updated`, `audit.certs.internal_mtls_rotated`, `audit.certs.internal_mtls_rotated_all` (refusals: `not_root_tenant`, `unchanged`, `invalid_policy`, `unknown_identity`, `kx_profile_not_applicable`, `force_not_available`, `confirmation_required`), `audit.certs.internal_mtls_applied` (a change is running on every instance), `audit.certs.edge_tls_read`, `audit.certs.edge_tls_policy_updated` (refusals: `not_root_tenant`, `invalid_policy`, `unchanged`), `audit.certs.edge_tls_applied` (every external listener was measured accepting exactly the new groups), `audit.certs.edge_tls_certificate_source_updated`, `audit.certs.edge_tls_csr_created`, `audit.certs.edge_tls_certificate_installed` (refusals listed under Edge certificate), `audit.certs.edge_tls_measurement_read`, `audit.certs.certificate_key_label_corrected`: Service mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.cert.pqc_issuance_refused` (`reason: pqc_certificates_removed`), `audit.certs.pqc_profile_removed`: post-quantum and hybrid certificates are removed (1.19.0); `POST /certs/validate-pqc`, `POST /certs/pqc/migrate/{id}`, `GET /certs/pqc-readiness` and `GET /certs/ots-status/{ca_id}` no longer exist, and `audit.cert.pqc_cert_issued`, `pqc_cert_validated` and `pqc_migration_executed` are no longer emitted
 - `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
@@ -3597,6 +3645,10 @@ from the code; do not edit by hand.
 - `GET /svc/certs/certs/download/{id}`
 - `GET /svc/certs/certs/edge-tls`
 - `PUT /svc/certs/certs/edge-tls`
+- `PUT /svc/certs/certs/edge-tls/certificate`
+- `POST /svc/certs/certs/edge-tls/certificate/install`
+- `POST /svc/certs/certs/edge-tls/csr`
+- `GET /svc/certs/certs/edge-tls/measurement`
 - `GET /svc/certs/certs/internal-mtls`
 - `POST /svc/certs/certs/internal-mtls/rotate-all`
 - `PUT /svc/certs/certs/internal-mtls/{identity}/policy`

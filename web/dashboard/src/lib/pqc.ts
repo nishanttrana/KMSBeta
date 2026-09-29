@@ -30,14 +30,22 @@ export type CertificatePQCItem = {
 };
 
 // Keys and certificates counted by the algorithm each actually has; there is
-// no score. Interface TLS key exchange is never measured, so interfaces is
-// always "not_assessed".
+// no score. Listeners are the external listeners as certs measured them by
+// handshake; interfaces says whether that measurement was available.
 export type PQCInventory = {
   tenant_id: string;
   generated_at: string;
   keys: InventoryBreakdown;
   certificates: InventoryBreakdown;
-  interfaces: "not_assessed";
+  interfaces: "measured" | "not_measured" | "unavailable";
+  listeners: {
+    name: string;
+    accepted_groups: string[] | null;
+    negotiated_group: string;
+    measured_at: string;
+    classification: "classical" | "hybrid" | "not_assessed";
+    quantum_vulnerable_groups: string[] | null;
+  }[];
   classical_usage: ClassicalUsageItem[];
   non_migrated_certificates: CertificatePQCItem[];
   recommendations: string[];

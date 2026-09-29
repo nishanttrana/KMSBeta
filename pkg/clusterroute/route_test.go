@@ -29,6 +29,8 @@ func TestDecide(t *testing.T) {
 		{"kms-governance", "PUT", "/governance/system/state", RunLocal},
 		{"kms-governance", "PUT", "/governance/system/fips-mode", Forward},
 		{"kms-cluster-manager", "POST", "/cluster/join/connect", RunLocal},
+		{"kms-certs", "POST", "/certs/edge-tls/csr", RunLocal},
+		{"kms-certs", "PUT", "/certs/edge-tls/certificate", Forward},
 		{"kms-unknown", "POST", "/anything", Refuse},
 		{"kms-unknown", "GET", "/anything", RunLocal},
 	}
@@ -44,7 +46,7 @@ func TestDecide(t *testing.T) {
 func TestLocalRoutesExist(t *testing.T) {
 	dirs := map[string]string{
 		"kms-keycore": "keycore", "kms-dataprotect": "dataprotect", "kms-auth": "auth",
-		"kms-governance": "governance", "kms-audit": "audit",
+		"kms-governance": "governance", "kms-audit": "audit", "kms-certs": "certs",
 	}
 	re := regexp.MustCompile(`\bHandle(?:Func)?\("([A-Z]+ [^"]+)"`) // legacy mux and route kernel
 	for svc, pats := range Local {

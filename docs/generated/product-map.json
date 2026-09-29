@@ -3425,7 +3425,7 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleMTLSInventory",
-      "line": 23,
+      "line": 25,
       "match_key": "certs|GET|/certs/internal-mtls",
       "method": "GET",
       "normalized_path": "/certs/internal-mtls",
@@ -3440,7 +3440,7 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleMTLSPolicy",
-      "line": 26,
+      "line": 28,
       "match_key": "certs|PUT|/certs/internal-mtls/{param}/policy",
       "method": "PUT",
       "normalized_path": "/certs/internal-mtls/{param}/policy",
@@ -3455,7 +3455,7 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleMTLSRotate",
-      "line": 30,
+      "line": 32,
       "match_key": "certs|POST|/certs/internal-mtls/{param}/rotate",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/{param}/rotate",
@@ -3470,7 +3470,7 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleMTLSRotateAll",
-      "line": 34,
+      "line": 36,
       "match_key": "certs|POST|/certs/internal-mtls/rotate-all",
       "method": "POST",
       "normalized_path": "/certs/internal-mtls/rotate-all",
@@ -3485,7 +3485,7 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleEdgeRead",
-      "line": 39,
+      "line": 41,
       "match_key": "certs|GET|/certs/edge-tls",
       "method": "GET",
       "normalized_path": "/certs/edge-tls",
@@ -3500,12 +3500,72 @@
       "code_scope": "certs",
       "file": "services/certs/internal_mtls_routes.go",
       "handler": "s.handleEdgePolicy",
-      "line": 42,
+      "line": 44,
       "match_key": "certs|PUT|/certs/edge-tls",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls",
       "path": "/certs/edge-tls",
       "permission": "cert.internal_mtls.write",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
+      "action": "edge_tls_certificate_source_updated",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeCertSource",
+      "line": 51,
+      "match_key": "certs|PUT|/certs/edge-tls/certificate",
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls/certificate",
+      "path": "/certs/edge-tls/certificate",
+      "permission": "cert.internal_mtls.write",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
+      "action": "edge_tls_csr_created",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeCSR",
+      "line": 55,
+      "match_key": "certs|POST|/certs/edge-tls/csr",
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/csr",
+      "path": "/certs/edge-tls/csr",
+      "permission": "cert.internal_mtls.write",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
+      "action": "edge_tls_certificate_installed",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeInstall",
+      "line": 59,
+      "match_key": "certs|POST|/certs/edge-tls/certificate/install",
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/certificate/install",
+      "path": "/certs/edge-tls/certificate/install",
+      "permission": "cert.internal_mtls.write",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
+      "action": "edge_tls_measurement_read",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeMeasurement",
+      "line": 65,
+      "match_key": "certs|GET|/certs/edge-tls/measurement",
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls/measurement",
+      "path": "/certs/edge-tls/measurement",
+      "permission": "authenticated",
       "registration": "kernel",
       "resource": "edge_tls",
       "service": "certs"
@@ -14853,6 +14913,21 @@
       "service": "certs"
     },
     {
+      "action": "edge_tls_measurement_read",
+      "code_scope": "certs",
+      "file": "services/certs/internal_mtls_routes.go",
+      "handler": "s.handleEdgeMeasurement",
+      "line": 65,
+      "match_key": "certs|GET|/certs/edge-tls/measurement",
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls/measurement",
+      "path": "/certs/edge-tls/measurement",
+      "permission": "authenticated",
+      "registration": "kernel",
+      "resource": "edge_tls",
+      "service": "certs"
+    },
+    {
       "action": "internal_enroll",
       "code_scope": "certs",
       "file": "services/certs/internal_tls.go",
@@ -21712,7 +21787,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ComplianceTab.tsx",
       "handler": "",
       "label": "{ setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa...",
-      "line": 1142,
+      "line": 1145,
       "tabs": [
         "compliance"
       ],
@@ -24558,7 +24633,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => setInternalMTLSPolicy(session, i.identity, i.kind...",
-      "line": 145,
+      "line": 162,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24566,7 +24641,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(i.identity, () => rotateInternalMTLS(session, i.identity, \"graceful\"...",
-      "line": 149,
+      "line": 166,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24574,7 +24649,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "{ setConfirmForce(\"\"); void run(i.identity, () => rotateInternalMTLS(session,...",
-      "line": 154,
+      "line": 171,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24582,7 +24657,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "setConfirmForce(i.identity)}>Force restart",
-      "line": 159,
+      "line": 176,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24590,7 +24665,7 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(\"rotate-all\", async () => { const out = await rotateAllInternalMTLS(...",
-      "line": 192,
+      "line": 209,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24598,7 +24673,31 @@
       "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
       "handler": "",
       "label": "void run(\"edge\", async () => , \"Edge key exchange saved; Envoy and KMIP apply...",
-      "line": 234,
+      "line": 251,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "void run(\"edge-cert\", async () => { await setEdgeCertificateSource(session, )...",
+      "line": 305,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "void run(\"edge-csr\", async () => { const out = await createEdgeCSR(session, )...",
+      "line": 316,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx",
+      "handler": "",
+      "label": "void run(\"edge-install\", async () => , \"Certificate installed on this node; E...",
+      "line": 325,
       "tabs": [],
       "tag": "Btn"
     },
@@ -28448,7 +28547,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1160,
+      "line": 1168,
       "match_key": "certs|GET|/certs/edge-tls",
       "method": "GET",
       "normalized_path": "/certs/edge-tls",
@@ -28461,11 +28560,50 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1165,
+      "line": 1173,
       "match_key": "certs|PUT|/certs/edge-tls",
       "method": "PUT",
       "normalized_path": "/certs/edge-tls",
       "path": "/certs/edge-tls?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/certs.ts",
+      "line": 1185,
+      "match_key": "certs|PUT|/certs/edge-tls/certificate",
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls/certificate",
+      "path": "/certs/edge-tls/certificate?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/certs.ts",
+      "line": 1195,
+      "match_key": "certs|POST|/certs/edge-tls/csr",
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/csr",
+      "path": "/certs/edge-tls/csr?{param}",
+      "service": "certs",
+      "service_key": "certs",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/certs.ts",
+      "line": 1203,
+      "match_key": "certs|POST|/certs/edge-tls/certificate/install",
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/certificate/install",
+      "path": "/certs/edge-tls/certificate/install?{param}",
       "service": "certs",
       "service_key": "certs",
       "source": "serviceRequest"
@@ -32465,7 +32603,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 101,
+      "line": 109,
       "match_key": "pqc|GET|/pqc/inventory",
       "method": "GET",
       "normalized_path": "/pqc/inventory",
@@ -32478,7 +32616,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 106,
+      "line": 114,
       "match_key": "pqc|GET|/pqc/migration/report",
       "method": "GET",
       "normalized_path": "/pqc/migration/report",
@@ -32491,7 +32629,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 111,
+      "line": 119,
       "match_key": "pqc|GET|/pqc/readiness",
       "method": "GET",
       "normalized_path": "/pqc/readiness",
@@ -32504,7 +32642,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 116,
+      "line": 124,
       "match_key": "pqc|POST|/pqc/scan",
       "method": "POST",
       "normalized_path": "/pqc/scan",
@@ -32517,7 +32655,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 165,
+      "line": 173,
       "match_key": "pqc|GET|/pqc/migration/plans",
       "method": "GET",
       "normalized_path": "/pqc/migration/plans",
@@ -32530,7 +32668,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 170,
+      "line": 178,
       "match_key": "pqc|POST|/pqc/migration/plans",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans",
@@ -32543,7 +32681,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 178,
+      "line": 186,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/execute",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/execute",
@@ -32556,7 +32694,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
       "file": "web/dashboard/src/lib/pqc.ts",
-      "line": 186,
+      "line": 194,
       "match_key": "pqc|POST|/pqc/migration/plans/{param}/rollback",
       "method": "POST",
       "normalized_path": "/pqc/migration/plans/{param}/rollback",
@@ -33710,7 +33848,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T13:26:17Z",
+  "generated_at": "2026-09-29T13:31:33Z",
   "navigation": [
     {
       "group": "Overview",
@@ -43071,21 +43209,21 @@
       "service": "certs",
       "service_external_package_calls": [
         "bytes.TrimSpace",
+        "bytes.Equal",
         "context.Background",
+        "crypto/ecdsa.GenerateKey",
+        "crypto/ed25519.GenerateKey",
+        "crypto/elliptic.P384",
+        "crypto/elliptic.P256",
+        "crypto/elliptic.P521",
         "crypto/fips140.Enforced",
         "crypto/rand.Int",
         "crypto/rand.Read",
+        "crypto/rsa.GenerateKey",
         "crypto/sha256.Sum256",
         "crypto/x509.CreateRevocationList",
-        "encoding/json.Unmarshal",
-        "encoding/json.Marshal",
-        "encoding/pem.EncodeToMemory",
-        "errors.New",
-        "errors.Is",
-        "fmt.Errorf",
-        "fmt.Sprintf",
-        "math/big.NewInt",
-        "net.ParseIP"
+        "crypto/x509.ParseCertificateRequest",
+        "crypto/x509.ParseCertificate"
       ],
       "service_helper_calls": [
         "GetCA",
@@ -43131,21 +43269,21 @@
         {
           "external_package_calls": [
             "bytes.TrimSpace",
+            "bytes.Equal",
             "context.Background",
+            "crypto/ecdsa.GenerateKey",
+            "crypto/ed25519.GenerateKey",
+            "crypto/elliptic.P384",
+            "crypto/elliptic.P256",
+            "crypto/elliptic.P521",
             "crypto/fips140.Enforced",
             "crypto/rand.Int",
             "crypto/rand.Read",
+            "crypto/rsa.GenerateKey",
             "crypto/sha256.Sum256",
             "crypto/x509.CreateRevocationList",
-            "encoding/json.Unmarshal",
-            "encoding/json.Marshal",
-            "encoding/pem.EncodeToMemory",
-            "errors.New",
-            "errors.Is",
-            "fmt.Errorf",
-            "fmt.Sprintf",
-            "math/big.NewInt",
-            "net.ParseIP"
+            "crypto/x509.ParseCertificateRequest",
+            "crypto/x509.ParseCertificate"
           ],
           "file": "services/certs/service.go",
           "helper_calls": [
@@ -43260,6 +43398,7 @@
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
+            "applyEdgeCertificate",
             "ensureRuntimeEndpointCert",
             "EnsureInternalPKI",
             "internalCertValidityDays",
@@ -43280,7 +43419,26 @@
             "Close",
             "signWithKeyCoreIfConfigured",
             "normalizeKeyBackend",
-            "Sign"
+            "Sign",
+            "enforceFIPS",
+            "addCertMetaExtensions",
+            "normalizeAlgorithm",
+            "parseCSRPEM",
+            "normalizePrivateKeyToPKCS8PEM",
+            "generateSigningKey",
+            "generateKeyFor",
+            "generateLeafKey",
+            "selectExtKeyUsage",
+            "parseSubject",
+            "csrSANs",
+            "splitSANs",
+            "buildCASigningIntent",
+            "buildLeafSigningIntent",
+            "normalizeCALevel",
+            "normalizeCAType",
+            "isPQCAlgorithm",
+            "isHybridAlgorithm",
+            "zeroizeString"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
@@ -43598,6 +43756,7 @@
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
+            "applyEdgeCertificate",
             "ensureRuntimeEndpointCert",
             "EnsureInternalPKI",
             "internalCertValidityDays",
@@ -43610,9 +43769,7 @@
             "runtimeCertNeedsRenew",
             "sameKeyLabel",
             "fileKeyAlgorithm",
-            "reissueFileIdentity",
-            "CreateCA",
-            "writeRuntimeEndpointCert"
+            "reissueFileIdentity"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
@@ -43943,6 +44100,7 @@
             "MaterializeRuntimeCerts",
             "ensureRuntimeRootCA",
             "writeFileAtomically",
+            "applyEdgeCertificate",
             "ensureRuntimeEndpointCert",
             "EnsureInternalPKI",
             "internalCertValidityDays",
@@ -43955,9 +44113,7 @@
             "runtimeCertNeedsRenew",
             "sameKeyLabel",
             "fileKeyAlgorithm",
-            "reissueFileIdentity",
-            "CreateCA",
-            "writeRuntimeEndpointCert"
+            "reissueFileIdentity"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
@@ -47143,7 +47299,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 56,
+      "handler_line": 78,
       "handler_name": "handleMTLSInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47152,7 +47308,7 @@
       "normalized_path": "/certs/internal-mtls",
       "path": "/certs/internal-mtls",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 23,
+      "route_line": 25,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -47182,7 +47338,7 @@
         "mtlsDetails"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 85,
+      "handler_line": 107,
       "handler_name": "handleMTLSPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47191,7 +47347,7 @@
       "normalized_path": "/certs/internal-mtls/{param}/policy",
       "path": "/certs/internal-mtls/{identity}/policy",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 26,
+      "route_line": 28,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -47221,7 +47377,7 @@
         "mtlsDetails"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 135,
       "handler_name": "handleMTLSRotate",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47230,7 +47386,7 @@
       "normalized_path": "/certs/internal-mtls/{param}/rotate",
       "path": "/certs/internal-mtls/{identity}/rotate",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 30,
+      "route_line": 32,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -47259,7 +47415,7 @@
         "refuseMTLS"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 142,
+      "handler_line": 164,
       "handler_name": "handleMTLSRotateAll",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47268,7 +47424,7 @@
       "normalized_path": "/certs/internal-mtls/rotate-all",
       "path": "/certs/internal-mtls/rotate-all",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 34,
+      "route_line": 36,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -47282,7 +47438,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1160,
+          "line": 1168,
           "source": "serviceRequest"
         }
       ],
@@ -47295,7 +47451,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 186,
+      "handler_line": 208,
       "handler_name": "handleEdgeRead",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47304,7 +47460,7 @@
       "normalized_path": "/certs/edge-tls",
       "path": "/certs/edge-tls",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 39,
+      "route_line": 41,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -47318,7 +47474,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1165,
+          "line": 1173,
           "source": "serviceRequest"
         }
       ],
@@ -47335,7 +47491,7 @@
       "handler_internal_package_calls": [
         "pkg/svctls.EnvoyCurves"
       ],
-      "handler_line": 200,
+      "handler_line": 222,
       "handler_name": "handleEdgePolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -47344,7 +47500,151 @@
       "normalized_path": "/certs/edge-tls",
       "path": "/certs/edge-tls",
       "route_file": "services/certs/internal_mtls_routes.go",
-      "route_line": 42,
+      "route_line": 44,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/certs.ts",
+          "line": 1185,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "s.handleEdgeCertSource",
+      "handler_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "rootOnly",
+        "SetEdgeCertificateSource",
+        "refuseMTLS",
+        "edgeCertificateView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 248,
+      "handler_name": "handleEdgeCertSource",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "PUT",
+      "normalized_path": "/certs/edge-tls/certificate",
+      "path": "/certs/edge-tls/certificate",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 51,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/certs.ts",
+          "line": 1195,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "s.handleEdgeCSR",
+      "handler_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "rootOnly",
+        "nodeName",
+        "CreateEdgeCSR",
+        "refuseMTLS"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 285,
+      "handler_name": "handleEdgeCSR",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/csr",
+      "path": "/certs/edge-tls/csr",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 55,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/certs.ts",
+          "line": 1203,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "s.handleEdgeInstall",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "rootOnly",
+        "nodeName",
+        "InstallEdgeCertificate",
+        "refuseMTLS",
+        "edgeCertificateView"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 310,
+      "handler_name": "handleEdgeInstall",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/certs/edge-tls/certificate/install",
+      "path": "/certs/edge-tls/certificate/install",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 59,
+      "service": "certs",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "s.handleEdgeMeasurement",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/internal_mtls_routes.go",
+      "handler_helper_calls": [
+        "EdgeInventory",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 345,
+      "handler_name": "handleEdgeMeasurement",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/certs/edge-tls/measurement",
+      "path": "/certs/edge-tls/measurement",
+      "route_file": "services/certs/internal_mtls_routes.go",
+      "route_line": 65,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -82923,7 +83223,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 101,
+          "line": 109,
           "source": "serviceRequest"
         }
       ],
@@ -82960,6 +83260,8 @@
         "sortClassicalUsage",
         "sortCertificatePQCItems",
         "buildPQCRecommendations",
+        "EdgeMeasurement",
+        "classifyListener",
         "publishAudit"
       ],
       "service_internal_package_calls": [],
@@ -82978,6 +83280,8 @@
             "sortClassicalUsage",
             "sortCertificatePQCItems",
             "buildPQCRecommendations",
+            "EdgeMeasurement",
+            "classifyListener",
             "publishAudit"
           ],
           "internal_package_calls": [],
@@ -82985,14 +83289,16 @@
           "name": "GetInventory",
           "receiver_calls": [
             "s.keycore.ListKeys",
-            "s.certs.ListCertificates"
+            "s.certs.ListCertificates",
+            "s.certs.EdgeMeasurement"
           ],
           "store_calls": []
         }
       ],
       "service_receiver_calls": [
         "s.keycore.ListKeys",
-        "s.certs.ListCertificates"
+        "s.certs.ListCertificates",
+        "s.certs.EdgeMeasurement"
       ],
       "service_store_calls": []
     },
@@ -83001,7 +83307,7 @@
         {
           "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 116,
+          "line": 124,
           "source": "serviceRequest"
         }
       ],
@@ -83210,7 +83516,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 111,
+          "line": 119,
           "source": "serviceRequest"
         }
       ],
@@ -83276,7 +83582,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 106,
+          "line": 114,
           "source": "serviceRequest"
         }
       ],
@@ -83326,7 +83632,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 236,
+          "line": 248,
           "name": "GetMigrationReport",
           "receiver_calls": [],
           "store_calls": []
@@ -83340,7 +83646,7 @@
         {
           "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 170,
+          "line": 178,
           "source": "serviceRequest"
         }
       ],
@@ -83396,7 +83702,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 270,
+          "line": 282,
           "name": "CreateMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -83416,7 +83722,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 165,
+          "line": 173,
           "source": "serviceRequest"
         }
       ],
@@ -83459,7 +83765,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 347,
+          "line": 359,
           "name": "ListMigrationPlans",
           "receiver_calls": [],
           "store_calls": [
@@ -83512,7 +83818,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 355,
+          "line": 367,
           "name": "GetMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -83530,7 +83836,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 178,
+          "line": 186,
           "source": "serviceRequest"
         }
       ],
@@ -83594,7 +83900,7 @@
             "UpdateMigrationRun"
           ],
           "internal_package_calls": [],
-          "line": 364,
+          "line": 376,
           "name": "ExecuteMigrationPlan",
           "receiver_calls": [],
           "store_calls": [
@@ -83618,7 +83924,7 @@
         {
           "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
           "file": "web/dashboard/src/lib/pqc.ts",
-          "line": 186,
+          "line": 194,
           "source": "serviceRequest"
         }
       ],
@@ -83678,7 +83984,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 507,
+          "line": 519,
           "name": "RollbackMigrationPlan",
           "receiver_calls": [
             "s.keycore.DeactivateKey"
@@ -83739,7 +84045,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 572,
+          "line": 584,
           "name": "ListMigrationRuns",
           "receiver_calls": [],
           "store_calls": [
@@ -83790,7 +84096,7 @@
             "buildTimelineMilestones"
           ],
           "internal_package_calls": [],
-          "line": 580,
+          "line": 592,
           "name": "Timeline",
           "receiver_calls": [],
           "store_calls": []
@@ -83831,7 +84137,7 @@
           "file": "services/pqc/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 589,
+          "line": 601,
           "name": "ExportCBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -91002,7 +91308,7 @@
       "auth": 86,
       "autokey": 15,
       "backup": 11,
-      "certs": 65,
+      "certs": 69,
       "cloud": 14,
       "cluster-manager": 21,
       "compliance": 54,
@@ -91037,7 +91343,7 @@
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 49,
+      "certs": 52,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 19,
@@ -91249,14 +91555,14 @@
     ]
   },
   "summary": {
-    "backend_routes": 910,
+    "backend_routes": 914,
     "backend_services": 30,
-    "button_inventory": 762,
-    "frontend_call_sites": 571,
-    "matched_frontend_call_sites": 526,
+    "button_inventory": 765,
+    "frontend_call_sites": 574,
+    "matched_frontend_call_sites": 529,
     "nav_items": 27,
-    "request_flows": 910,
-    "request_flows_with_frontend": 535,
+    "request_flows": 914,
+    "request_flows_with_frontend": 538,
     "request_flows_with_internal_package_calls": 162,
     "request_flows_with_service_calls": 538,
     "request_flows_with_store_calls": 649,
@@ -91296,7 +91602,7 @@
       ]
     },
     {
-      "call_count": 193,
+      "call_count": 196,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -91385,7 +91691,7 @@
       ]
     },
     {
-      "call_count": 97,
+      "call_count": 100,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "PKI & certificates",
       "id": "certs",
@@ -91719,7 +92025,7 @@
       ]
     },
     {
-      "call_count": 108,
+      "call_count": 111,
       "component": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "group": "UNLISTED",
       "id": "restapi",
@@ -98663,21 +98969,21 @@
         "externalPackages": [
           "strings.TrimSpace",
           "bytes.TrimSpace",
+          "bytes.Equal",
           "context.Background",
+          "crypto/ecdsa.GenerateKey",
+          "crypto/ed25519.GenerateKey",
+          "crypto/elliptic.P384",
+          "crypto/elliptic.P256",
+          "crypto/elliptic.P521",
           "crypto/fips140.Enforced",
           "crypto/rand.Int",
           "crypto/rand.Read",
+          "crypto/rsa.GenerateKey",
           "crypto/sha256.Sum256",
           "crypto/x509.CreateRevocationList",
-          "encoding/json.Unmarshal",
-          "encoding/json.Marshal",
-          "encoding/pem.EncodeToMemory",
-          "errors.New",
-          "errors.Is",
-          "fmt.Errorf",
-          "fmt.Sprintf",
-          "math/big.NewInt",
-          "net.ParseIP"
+          "crypto/x509.ParseCertificateRequest",
+          "crypto/x509.ParseCertificate"
         ],
         "frontendSites": [
           {
@@ -100434,7 +100740,7 @@
         ],
         "handler": "handleMTLSInventory",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 56,
+        "handlerLine": 78,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100468,7 +100774,7 @@
         ],
         "handler": "handleMTLSPolicy",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 85,
+        "handlerLine": 107,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -100502,7 +100808,7 @@
         ],
         "handler": "handleMTLSRotate",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 113,
+        "handlerLine": 135,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100536,7 +100842,7 @@
         ],
         "handler": "handleMTLSRotateAll",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 142,
+        "handlerLine": 164,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100562,13 +100868,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1160,
+            "line": 1168,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEdgeRead",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 186,
+        "handlerLine": 208,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100596,13 +100902,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/edge-tls?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1165,
+            "line": 1173,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEdgePolicy",
         "handlerFile": "services/certs/internal_mtls_routes.go",
-        "handlerLine": 200,
+        "handlerLine": 222,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/svctls.EnvoyCurves"
@@ -100621,6 +100927,129 @@
           "Operations",
           "Certificates / PKI",
           "restapi"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/certs.ts",
+            "line": 1185,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleEdgeCertSource",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 248,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/certs/edge-tls/certificate",
+        "path": "/certs/edge-tls/certificate",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|PUT|/certs/edge-tls/certificate",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Certificates / PKI",
+          "restapi"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/edge-tls/csr?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/certs.ts",
+            "line": 1195,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleEdgeCSR",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 285,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/certs/edge-tls/csr",
+        "path": "/certs/edge-tls/csr",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|POST|/certs/edge-tls/csr",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Certificates / PKI",
+          "restapi"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"certs\", `/certs/edge-tls/certificate/install?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/certs.ts",
+            "line": 1203,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleEdgeInstall",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 310,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/certs/edge-tls/certificate/install",
+        "path": "/certs/edge-tls/certificate/install",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "certs|POST|/certs/edge-tls/certificate/install",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Certificates / PKI",
+          "restapi"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [],
+        "handler": "handleEdgeMeasurement",
+        "handlerFile": "services/certs/internal_mtls_routes.go",
+        "handlerLine": 345,
+        "hasFrontend": false,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/certs/edge-tls/measurement",
+        "path": "/certs/edge-tls/measurement",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "certs|GET|/certs/edge-tls/measurement",
+        "sensitive": true,
+        "service": "certs",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "API only"
         ]
       },
       {
@@ -118739,7 +119168,7 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 3,
         "externalPackages": [
           "strings.TrimSpace"
         ],
@@ -118747,7 +119176,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/inventory?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 101,
+            "line": 109,
             "source": "serviceRequest"
           }
         ],
@@ -118761,7 +119190,8 @@
         "path": "/pqc/inventory",
         "receiverCalls": [
           "s.keycore.ListKeys",
-          "s.certs.ListCertificates"
+          "s.certs.ListCertificates",
+          "s.certs.EdgeMeasurement"
         ],
         "risk": "low",
         "routeKey": "pqc|GET|/pqc/inventory",
@@ -118786,7 +119216,7 @@
           {
             "expression": "serviceRequest(\"pqc\", \"/pqc/scan\")",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 116,
+            "line": 124,
             "source": "serviceRequest"
           }
         ],
@@ -118883,7 +119313,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/readiness?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 111,
+            "line": 119,
             "source": "serviceRequest"
           }
         ],
@@ -118919,7 +119349,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/report?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 106,
+            "line": 114,
             "source": "serviceRequest"
           }
         ],
@@ -118953,7 +119383,7 @@
           {
             "expression": "serviceRequest(\"pqc\", \"/pqc/migration/plans\")",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 170,
+            "line": 178,
             "source": "serviceRequest"
           }
         ],
@@ -118990,7 +119420,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans?tenant_id=${encodeURIComponent(session.tenantId)}&limit=50`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 165,
+            "line": 173,
             "source": "serviceRequest"
           }
         ],
@@ -119056,7 +119486,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/execute`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 178,
+            "line": 186,
             "source": "serviceRequest"
           }
         ],
@@ -119095,7 +119525,7 @@
           {
             "expression": "serviceRequest(\"pqc\", `/pqc/migration/plans/${encodeURIComponent(id)}/rollback`)",
             "file": "web/dashboard/src/lib/pqc.ts",
-            "line": 186,
+            "line": 194,
             "source": "serviceRequest"
           }
         ],
@@ -123541,7 +123971,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T13:26:17Z",
+    "generatedAt": "2026-09-29T13:31:33Z",
     "methods": [
       "DELETE",
       "GET",
@@ -123583,8 +124013,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 910,
-      "frontendBacked": 535,
+      "flows": 914,
+      "frontendBacked": 538,
       "highRisk": 374,
       "services": 30
     }

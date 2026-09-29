@@ -106,3 +106,16 @@ func TestAssessmentDoesNotRepeatTheOldMislabels(t *testing.T) {
 		t.Fatal("readiness flags wrong")
 	}
 }
+
+// TLS group names, as the edge probe reports them, are key establishment.
+func TestTLSGroupNames(t *testing.T) {
+	for name, want := range map[string]struct{ hybrid, vulnerable bool }{
+		"X25519MLKEM768": {true, false}, "SecP256r1MLKEM768": {true, false}, "SecP384r1MLKEM1024": {true, false},
+		"X25519": {false, true}, "CurveP256": {false, true}, "CurveP384": {false, true}, "secp384r1": {false, true},
+	} {
+		e, ok := Lookup(name)
+		if !ok || e.Function != "key_establishment" || e.Hybrid != want.hybrid || e.QuantumVulnerable != want.vulnerable {
+			t.Fatalf("%s: %+v %v", name, e, ok)
+		}
+	}
+}

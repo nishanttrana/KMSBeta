@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/svctls"
@@ -43,6 +45,26 @@ func (s *Service) RegisterInternalMTLSRoutes(k *route.Router) {
 		Action: "edge_tls_policy_updated", Permission: permInternalMTLSWrite, Resource: "edge_tls",
 		Severity: "warning",
 	}, s.handleEdgePolicy)
+	// The edge certificate (edge_cert.go). The source is replicated; a CSR
+	// and an external certificate belong to the node that serves them
+	// (pkg/clusterroute.Local).
+	k.Handle("PUT /certs/edge-tls/certificate", route.Spec{
+		Action: "edge_tls_certificate_source_updated", Permission: permInternalMTLSWrite, Resource: "edge_tls",
+		Severity: "warning",
+	}, s.handleEdgeCertSource)
+	k.Handle("POST /certs/edge-tls/csr", route.Spec{
+		Action: "edge_tls_csr_created", Permission: permInternalMTLSWrite, Resource: "edge_tls",
+		Severity: "warning",
+	}, s.handleEdgeCSR)
+	k.Handle("POST /certs/edge-tls/certificate/install", route.Spec{
+		Action: "edge_tls_certificate_installed", Permission: permInternalMTLSWrite, Resource: "edge_tls",
+		Severity: "warning",
+	}, s.handleEdgeInstall)
+	// What the external listeners were measured to accept: public facts any
+	// client can observe, read by the pqc inventory with its service token.
+	k.Handle("GET /certs/edge-tls/measurement", route.Spec{
+		Action: "edge_tls_measurement_read", Permission: route.Authenticated, Resource: "edge_tls",
+	}, s.handleEdgeMeasurement)
 }
 
 func rootOnly(c *route.Call) bool {
@@ -221,4 +243,126 @@ func (s *Service) handleEdgePolicy(c *route.Call) {
 	c.Detail("generation", res.Policy.Generation)
 	c.Detail("envoy_groups", svctls.EnvoyCurves(res.Policy.KXProfile))
 	c.JSON(http.StatusOK, map[string]interface{}{"result": res})
+}
+
+func (s *Service) handleEdgeCertSource(c *route.Call) {
+	if !rootOnly(c) {
+		return
+	}
+	var req struct {
+		Source       string `json:"source"`
+		CAID         string `json:"ca_id"`
+		KeyAlgorithm string `json:"key_algorithm"`
+		Reason       string `json:"reason"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Target(svctls.EdgeIdentity)
+	c.Detail("requested_source", req.Source)
+	c.Detail("requested_ca_id", req.CAID)
+	c.Detail("reason", req.Reason)
+	prev, next, err := s.SetEdgeCertificateSource(c.R.Context(), c.Tenant, edgeCertChoice{
+		Source: strings.TrimSpace(req.Source), CAID: strings.TrimSpace(req.CAID), KeyAlgorithm: strings.TrimSpace(req.KeyAlgorithm),
+		Reason: req.Reason, UpdatedBy: c.Actor(),
+	})
+	if err != nil {
+		s.refuseMTLS(c, err)
+		return
+	}
+	c.Detail("source", next.Source)
+	c.Detail("ca_id", next.CAID)
+	c.Detail("key_algorithm", next.KeyAlgorithm)
+	c.Detail("previous_source", prev.Source)
+	c.Detail("previous_ca_id", prev.CAID)
+	v := s.edgeCertificateView(c.R.Context(), c.Tenant, "")
+	if v.Installed != nil {
+		c.Detail("installed_serial", v.Installed.Serial)
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"certificate": v})
+}
+
+func (s *Service) handleEdgeCSR(c *route.Call) {
+	if !rootOnly(c) {
+		return
+	}
+	var req struct {
+		SubjectCN    string   `json:"subject_cn"`
+		SANs         []string `json:"sans"`
+		KeyAlgorithm string   `json:"key_algorithm"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Target(svctls.EdgeIdentity)
+	c.Detail("subject_cn", req.SubjectCN)
+	c.Detail("sans", req.SANs)
+	c.Detail("node", nodeName())
+	p, err := s.CreateEdgeCSR(c.R.Context(), req.SubjectCN, req.SANs, strings.TrimSpace(req.KeyAlgorithm), c.Actor())
+	if err != nil {
+		s.refuseMTLS(c, err)
+		return
+	}
+	c.Detail("key_algorithm", p.KeyAlgorithm)
+	c.JSON(http.StatusOK, map[string]interface{}{"csr": p})
+}
+
+func (s *Service) handleEdgeInstall(c *route.Call) {
+	if !rootOnly(c) {
+		return
+	}
+	var req struct {
+		CertificatePEM string `json:"certificate_pem"`
+		ChainPEM       string `json:"chain_pem"`
+		Reason         string `json:"reason"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Target(svctls.EdgeIdentity)
+	c.Detail("node", nodeName())
+	c.Detail("reason", req.Reason)
+	leaf, err := s.InstallEdgeCertificate(c.R.Context(), req.CertificatePEM, req.ChainPEM)
+	if err != nil {
+		s.refuseMTLS(c, err)
+		return
+	}
+	c.Detail("serial", leaf.SerialNumber.Text(16))
+	c.Detail("subject", leaf.Subject.String())
+	c.Detail("issuer", leaf.Issuer.String())
+	c.Detail("not_after", leaf.NotAfter.UTC())
+	c.JSON(http.StatusOK, map[string]interface{}{"certificate": s.edgeCertificateView(c.R.Context(), c.Tenant, "")})
+}
+
+// edgeMeasurement is what the pqc inventory reports per external listener.
+type edgeMeasurement struct {
+	Name           string    `json:"name"`
+	AcceptedGroups []string  `json:"accepted_groups"`
+	Negotiated     string    `json:"negotiated_group"`
+	MeasuredAt     time.Time `json:"measured_at"`
+}
+
+func (s *Service) handleEdgeMeasurement(c *route.Call) {
+	v, err := s.EdgeInventory(c.R.Context())
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "edge_tls_unavailable", err.Error())
+		return
+	}
+	out := []edgeMeasurement{}
+	for _, l := range v.Listeners {
+		if l.Observed == nil {
+			continue
+		}
+		out = append(out, edgeMeasurement{Name: l.Name, AcceptedGroups: l.Observed.ServerGroups,
+			Negotiated: l.Observed.LastHandshakeGroup, MeasuredAt: l.Observed.LastHandshakeAt})
+	}
+	c.Detail("listeners", len(out))
+	c.JSON(http.StatusOK, map[string]interface{}{"listeners": out, "configured": len(v.Listeners)})
+}
+
+func nodeName() string {
+	if h, err := os.Hostname(); err == nil {
+		return h
+	}
+	return ""
 }

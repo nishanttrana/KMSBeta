@@ -85,7 +85,14 @@ func (f *fakePQCDiscovery) ListCryptoAssets(_ context.Context, _ string, _ int) 
 	}, nil
 }
 
-type fakePQCCerts struct{}
+type fakePQCCerts struct {
+	listeners []ListenerMeasurement
+	edgeErr   error
+}
+
+func (f *fakePQCCerts) EdgeMeasurement(_ context.Context, _ string) ([]ListenerMeasurement, error) {
+	return f.listeners, f.edgeErr
+}
 
 func (f *fakePQCCerts) ListCertificates(_ context.Context, _ string, _ int) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{

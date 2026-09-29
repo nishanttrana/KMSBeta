@@ -41,6 +41,13 @@ type Entry struct {
 	Note string `json:"note,omitempty"`
 }
 
+// tlsGroupAliases maps TLS named groups (crypto/tls CurveID names and the
+// RFC 8422 names) to the key establishment they are.
+var tlsGroupAliases = map[string]string{
+	"CURVEP256": "ECDH-P256", "CURVEP384": "ECDH-P384", "CURVEP521": "ECDH-P521",
+	"SECP256R1": "ECDH-P256", "SECP384R1": "ECDH-P384", "SECP521R1": "ECDH-P521",
+}
+
 // ifcStrength is the strength of an RSA modulus or finite-field group: the
 // largest standard size the key reaches.
 func ifcStrength(n int) int {
@@ -88,6 +95,10 @@ func Lookup(algorithm string) (Entry, bool) {
 	a = strings.NewReplacer("_", "-", " ", "-").Replace(a)
 	if a == "" {
 		return Entry{}, false
+	}
+	// TLS key-exchange group names as Go's crypto/tls prints them.
+	if g, ok := tlsGroupAliases[a]; ok {
+		a = g
 	}
 	if m := reHybrid.FindStringSubmatch(a); m != nil {
 		return Entry{

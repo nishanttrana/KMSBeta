@@ -22,6 +22,18 @@ type DiscoveryClient interface {
 
 type CertsClient interface {
 	ListCertificates(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	// EdgeMeasurement is what certs measured each external listener to
+	// accept (GET /certs/edge-tls/measurement).
+	EdgeMeasurement(ctx context.Context, tenantID string) ([]ListenerMeasurement, error)
+}
+
+// ListenerMeasurement is one external listener, measured by certs with one
+// TLS 1.3 handshake per key-exchange group.
+type ListenerMeasurement struct {
+	Name            string    `json:"name"`
+	AcceptedGroups  []string  `json:"accepted_groups"`
+	NegotiatedGroup string    `json:"negotiated_group"`
+	MeasuredAt      time.Time `json:"measured_at"`
 }
 
 type Store interface {
@@ -88,21 +100,38 @@ type CertificatePQCItem struct {
 
 // PQCInventory counts keys and certificates by the algorithm each one
 // actually has. There is no score: the counts are the measurement.
-// Interfaces is "not_assessed": the key exchange an interface negotiates is
-// never measured, so the inventory does not report one (6.3.0-beta).
+// Listeners are the KMS's external listeners as certs measured them
+// (6.13.0-beta); Interfaces says whether that measurement was available:
+// "measured", "not_measured" (none yet) or "unavailable" (certs didn't
+// answer). Nothing is inferred from configuration.
 type PQCInventory struct {
 	TenantID                string               `json:"tenant_id"`
 	GeneratedAt             time.Time            `json:"generated_at"`
 	Keys                    InventoryBreakdown   `json:"keys"`
 	Certificates            InventoryBreakdown   `json:"certificates"`
 	Interfaces              string               `json:"interfaces"`
+	Listeners               []ListenerPQCItem    `json:"listeners"`
 	ClassicalUsage          []ClassicalUsageItem `json:"classical_usage"`
 	NonMigratedCertificates []CertificatePQCItem `json:"non_migrated_certificates"`
 	Recommendations         []string             `json:"recommendations"`
 }
 
-// interfacesNotAssessed is PQCInventory.Interfaces.
-const interfacesNotAssessed = "not_assessed"
+// PQCInventory.Interfaces values.
+const (
+	interfacesMeasured    = "measured"
+	interfacesNotMeasured = "not_measured"
+	interfacesUnavailable = "unavailable"
+)
+
+// ListenerPQCItem is a measured listener. Classification comes from
+// pkg/cryptocatalog: "classical" when it accepts any quantum-vulnerable
+// group (a client can still negotiate one), "hybrid" when it accepts only
+// hybrid ML-KEM groups, "not_assessed" when a group is unknown.
+type ListenerPQCItem struct {
+	ListenerMeasurement
+	Classification          string   `json:"classification"`
+	QuantumVulnerableGroups []string `json:"quantum_vulnerable_groups"`
+}
 
 type PQCMigrationReport struct {
 	TenantID        string              `json:"tenant_id"`

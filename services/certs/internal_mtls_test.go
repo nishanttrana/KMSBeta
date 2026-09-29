@@ -377,4 +377,17 @@ func TestMTLSStorePostgres(t *testing.T) {
 	if edge == nil || edge.LastHandshakeGroup != "X25519MLKEM768" || !edge.LastHandshakeAt.Equal(started) || edge.Generation != 3 {
 		t.Fatalf("edge measurement: %+v", edge)
 	}
+
+	// The edge certificate source (migration 015): default, then upserts.
+	if c, err := st.GetEdgeCertChoice(ctx); err != nil || c.Source != edgeSourceRuntime {
+		t.Fatalf("default edge certificate source: %+v %v", c, err)
+	}
+	for _, c := range []edgeCertChoice{{Source: edgeSourceCA, CAID: "ca_1", KeyAlgorithm: pkgcrypto.AlgECDSAP384, UpdatedBy: "admin"}, {Source: edgeSourceExternal, UpdatedBy: "admin2"}} {
+		if err := st.UpsertEdgeCertChoice(ctx, c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if c, err := st.GetEdgeCertChoice(ctx); err != nil || c.Source != edgeSourceExternal || c.CAID != "" || c.UpdatedBy != "admin2" || c.UpdatedAt.IsZero() {
+		t.Fatalf("edge certificate source round trip: %+v %v", c, err)
+	}
 }
