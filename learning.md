@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Fix the pattern, not the instance (sbom bootstrap-on-read)
+- **What happened:** 1.37.0-beta removed the first-read snapshot generation
+  from `ListCBOMHistory` but left the same `"bootstrap"` generation in
+  `GetLatestCBOM`, `GetLatestSBOM` and `ListSBOMHistory`.
+- **Why it slipped through:** the fix targeted the one function named in the
+  open item instead of grepping for the pattern (`"bootstrap"`).
+- **Rule:** when fixing a bug class, grep for every instance and test each
+  read path's empty case.
+
 ### A fail-open switch survives the fix for its sibling
 - **What happened:** 6.10.0-beta made HYOK key-access checks fail closed and
   said `HYOK_POLICY_FAIL_CLOSED` "governs only the policy engine". The

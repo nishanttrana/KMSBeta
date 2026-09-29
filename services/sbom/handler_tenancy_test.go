@@ -147,3 +147,20 @@ func TestSBOMVulnerabilityRoutesRemoved(t *testing.T) {
 		}
 	}
 }
+
+// No read generates a snapshot: latest is 404 and history is empty until a
+// POST or the scheduler creates one.
+func TestBOMReadsWriteNothing(t *testing.T) {
+	h, svc, _ := newAuditedSBOMHandler(t)
+	for path, want := range map[string]int{"/sbom/latest": http.StatusNotFound, "/sbom/history": http.StatusOK, "/cbom/latest": http.StatusNotFound} {
+		if rr := serve(h, adminOf("root"), http.MethodGet, path, ""); rr.Code != want {
+			t.Fatalf("%s: status %d, want %d: %s", path, rr.Code, want, rr.Body.String())
+		}
+	}
+	if items, _ := svc.store.ListSBOMSnapshots(context.Background(), 10); len(items) != 0 {
+		t.Fatalf("a read generated %d SBOM snapshot(s)", len(items))
+	}
+	if items, _ := svc.store.ListCBOMSnapshots(context.Background(), "root", 10); len(items) != 0 {
+		t.Fatalf("a read generated %d CBOM snapshot(s)", len(items))
+	}
+}

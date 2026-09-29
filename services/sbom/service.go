@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -134,9 +133,7 @@ func (s *Service) GetLatestSBOM(ctx context.Context) (SBOMSnapshot, error) {
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, errNotFound) {
-		return s.GenerateSBOM(ctx, "bootstrap")
-	}
+	// A read never writes: no snapshot yet is a 404, not a generation.
 	return SBOMSnapshot{}, err
 }
 
@@ -145,12 +142,8 @@ func (s *Service) ListSBOMHistory(ctx context.Context, limit int) ([]SBOMSnapsho
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 {
-		item, err := s.GenerateSBOM(ctx, "bootstrap")
-		if err != nil {
-			return nil, err
-		}
-		return []SBOMSnapshot{item}, nil
+	if items == nil {
+		items = []SBOMSnapshot{} // a read never writes
 	}
 	return items, nil
 }
@@ -234,9 +227,7 @@ func (s *Service) GetLatestCBOM(ctx context.Context, tenantID string) (CBOMSnaps
 	if err == nil {
 		return item, nil
 	}
-	if errors.Is(err, errNotFound) {
-		return s.GenerateCBOM(ctx, tenantID, "bootstrap")
-	}
+	// A read never writes: no snapshot yet is a 404, not a generation.
 	return CBOMSnapshot{}, err
 }
 

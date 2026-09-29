@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.21.0-beta] — 2026-09-30
+
+### sbom reads never write
+- `GET /sbom/latest`, `GET /sbom/history` and `GET /cbom/latest` (and the
+  CBOM summary/readiness views built on it) generated and stored a snapshot
+  when none existed, a write on a read path that also ran on cluster
+  members. 1.37.0-beta fixed only `/cbom/history`. Now `latest` returns 404
+  and `history` returns `[]` until `POST /sbom/generate`,
+  `POST /cbom/generate` or the scheduler creates one
+  (`TestBOMReadsWriteNothing`).
+
 ## [6.20.0-beta] — 2026-09-30
 
 ### HYOK: an unreachable policy service refuses (fail closed)

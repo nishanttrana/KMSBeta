@@ -33886,7 +33886,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T18:42:07Z",
+  "generated_at": "2026-09-29T18:45:13Z",
   "navigation": [
     {
       "group": "Overview",
@@ -86247,7 +86247,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 105,
+          "line": 104,
           "name": "GenerateSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86292,26 +86292,20 @@
       "route_file": "services/sbom/handler.go",
       "route_line": 53,
       "service": "sbom",
-      "service_external_package_calls": [
-        "errors.Is"
-      ],
+      "service_external_package_calls": [],
       "service_helper_calls": [
-        "GetLatestSBOMSnapshot",
-        "GenerateSBOM"
+        "GetLatestSBOMSnapshot"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [
-            "errors.Is"
-          ],
+          "external_package_calls": [],
           "file": "services/sbom/service.go",
           "helper_calls": [
-            "GetLatestSBOMSnapshot",
-            "GenerateSBOM"
+            "GetLatestSBOMSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 132,
+          "line": 131,
           "name": "GetLatestSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86357,8 +86351,7 @@
       "service": "sbom",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ListSBOMSnapshots",
-        "GenerateSBOM"
+        "ListSBOMSnapshots"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -86366,11 +86359,10 @@
           "external_package_calls": [],
           "file": "services/sbom/service.go",
           "helper_calls": [
-            "ListSBOMSnapshots",
-            "GenerateSBOM"
+            "ListSBOMSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 143,
+          "line": 140,
           "name": "ListSBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -86436,7 +86428,7 @@
             "diffComponents"
           ],
           "internal_package_calls": [],
-          "line": 166,
+          "line": 159,
           "name": "DiffSBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86495,7 +86487,7 @@
             "exportSBOM"
           ],
           "internal_package_calls": [],
-          "line": 184,
+          "line": 177,
           "name": "ExportSBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -86546,7 +86538,7 @@
             "GetSBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 158,
+          "line": 151,
           "name": "GetSBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -86631,7 +86623,7 @@
             "defaultString"
           ],
           "internal_package_calls": [],
-          "line": 192,
+          "line": 185,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86677,29 +86669,25 @@
       "route_line": 63,
       "service": "sbom",
       "service_external_package_calls": [
-        "errors.Is",
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "newServiceError",
-        "GetLatestCBOMSnapshot",
-        "GenerateCBOM"
+        "GetLatestCBOMSnapshot"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
-            "errors.Is",
             "strings.TrimSpace"
           ],
           "file": "services/sbom/service.go",
           "helper_calls": [
             "newServiceError",
-            "GetLatestCBOMSnapshot",
-            "GenerateCBOM"
+            "GetLatestCBOMSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 228,
+          "line": 221,
           "name": "GetLatestCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86762,7 +86750,7 @@
             "ListCBOMSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 243,
+          "line": 234,
           "name": "ListCBOMHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -86814,7 +86802,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 277,
+          "line": 268,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -86862,7 +86850,7 @@
           "file": "services/sbom/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 285,
+          "line": 276,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -86924,7 +86912,7 @@
             "diffAssets"
           ],
           "internal_package_calls": [],
-          "line": 299,
+          "line": 290,
           "name": "DiffCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -86983,7 +86971,7 @@
             "exportCBOM"
           ],
           "internal_package_calls": [],
-          "line": 269,
+          "line": 260,
           "name": "ExportCBOM",
           "receiver_calls": [],
           "store_calls": []
@@ -87034,7 +87022,7 @@
             "GetCBOMSnapshotByID"
           ],
           "internal_package_calls": [],
-          "line": 260,
+          "line": 251,
           "name": "GetCBOMByID",
           "receiver_calls": [],
           "store_calls": [
@@ -121012,9 +121000,7 @@
       },
       {
         "complexity": 1,
-        "externalPackages": [
-          "errors.Is"
-        ],
+        "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"sbom\", \"/sbom/latest\")",
@@ -121217,7 +121203,6 @@
       {
         "complexity": 1,
         "externalPackages": [
-          "errors.Is",
           "strings.TrimSpace"
         ],
         "frontendSites": [
@@ -124144,7 +124129,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T18:42:07Z",
+    "generatedAt": "2026-09-29T18:45:13Z",
     "methods": [
       "DELETE",
       "GET",
