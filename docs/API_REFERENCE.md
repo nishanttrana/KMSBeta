@@ -1549,6 +1549,7 @@ Audit:
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
 - `audit.ekm.request_refused` (EKM `401`/`403`: no verified tenant token, cross-tenant, BitLocker agent token missing or wrong role)
+- `audit.ekm.tde_key_accessed` with `operation: public`, `result: refused`, `reason: public_key_unavailable` (EKM `424`: keycore holds no public key for the TDE key; 6.12.0-beta)
 - `audit.ekm.key_access_denied` (TDE `wrap`, `unwrap`, `rotate` refused by key access: `reason` is the deny reason, or `key_access_unavailable` when the service is deployed but gives no decision; `result: refused`), `audit.cloud.key_access_denied` (BYOK `import`, `rotate`, `sync`, same reasons, `result: refused`)
 - then `audit.governance.fips_mode_applied` for each service start
 - and `audit.governance.fips_mode_rollout_completed` when all match
@@ -3185,6 +3186,13 @@ key_access_unavailable`), whatever `HYOK_POLICY_FAIL_CLOSED` says; when it
 isn't deployed the request runs with `key_access_reason:
 key_access_not_deployed`. The same holds for EKM TDE and cloud BYOK
 operations. `approver_emails` is no longer accepted.
+
+**EKM TDE public key.** `GET /ekm/tde/keys/{id}/public` returns only the
+public key keycore holds for the key (`format: pem` or `opaque`). Without one
+it refuses with `424 public_key_unavailable` (`audit.ekm.tde_key_accessed`,
+`result: refused`); it no longer returns an `EKM-PUBLIC-` value derived from
+the tenant and key ID (6.12.0-beta). `GET /ekm/agents/{id}/status` carries
+`assigned_key_algorithm`, the algorithm of the agent's assigned TDE key.
 Endpoint administration (`/hyok/v1/endpoints*`, `/hyok/v1/requests`,
 `/hyok/v1/health`) needs a verified token; changes need a tenant
 administrator (`audit.hyok.admin_refused`).

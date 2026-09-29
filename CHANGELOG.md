@@ -4,6 +4,41 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.12.0-beta] — 2026-09-29
+
+### EKM no longer invents TDE public keys (breaking)
+`GET /ekm/tde/keys/{id}/public` returned `"EKM-PUBLIC-"` plus a truncated
+SHA-256 of tenant and key ID whenever keycore gave no public key, stored it
+as the key's public key (`format: opaque`), and audited
+`audit.ekm.tde_key_accessed` as a success. TDE key creation stored the same
+value. Keycore's `GET /keys/{id}` never returns a public key, so **every EKM
+TDE key** carried this invented value. It was derived from identifiers, not
+key material (CLAUDE.md rules 6 and 8).
+
+- `buildPublicKeyFallback` is removed. Key creation stores only a public key
+  keycore returned, and otherwise leaves it empty.
+- **Without a public key from keycore the endpoint refuses** with
+  `424 public_key_unavailable`, records a `failed` key access log entry, and
+  emits `audit.ekm.tde_key_accessed` with `result: refused`,
+  `reason: public_key_unavailable` (severity warning). The success event now
+  carries `result: success`. Because keycore exposes no public key over HTTP
+  today, the endpoint refuses for every key until it does.
+- **Stored values revoked:** migration `services/ekm/migrations/007_clear_invented_public_keys.sql`
+  clears every `ekm_tde_keys.public_key_cache` starting `EKM-PUBLIC-`, with its
+  format. Key listings and the gRPC key map show an empty public key for
+  those keys.
+- **Dashboard:** the EKM tab called this endpoint every 15 seconds for each
+  assigned key only to show the key's algorithm. It now reads the new
+  `assigned_key_algorithm` field of `GET /ekm/agents/{id}/status`, taken from
+  the ekm key record, and `getEKMTDEPublicKey` is removed.
+- No agent, SDK or JCA provider consumed the invented format.
+- Tests: `TestTDEPublicKeyUnavailableRefuses`,
+  `TestTDEPublicKeyUnavailableHTTP424`, `TestTDEPublicKeyFromKeycore`,
+  `TestMigrationClearsInventedPublicKeys` (the migration also checked on
+  Postgres 16), `TestAgentStatusCarriesAssignedKeyAlgorithm`.
+- **Upgrade note:** a database that read its TDE public key from this
+  endpoint now gets `424`; the value it had before was not a public key.
+
 ## [6.11.0-beta] — 2026-09-29
 
 ### Workload signing keys are sealed under the workload master key (security)
@@ -54,6 +89,7 @@ any tenant. CLAUDE.md rule 6.
   `TestBackupRefusesPlaintextSigningKeys` / `…Postgres`,
   `TestCatalogIsValidAndMigrated`, and the dashboard's exposure-register
   catalogue test.
+
 ## [6.10.0-beta] — 2026-09-29
 
 ### Key access justifications fail closed in EKM, cloud BYOK and HYOK (breaking)

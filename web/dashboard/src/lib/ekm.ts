@@ -28,6 +28,7 @@ export type EKMAgentStatus = {
   managed_databases: number;
   tde_enabled_databases: number;
   last_heartbeat_age_sec: number;
+  assigned_key_algorithm?: string;
 };
 
 export type EKMAgentHealth = {
@@ -274,15 +275,6 @@ type BitLockerDeployResponse = { package: EKMDeployPackage };
 type BitLockerDeletePreviewResponse = { preview: EKMBitLockerDeletePreview };
 type BitLockerDeleteResponse = { deleted: EKMDeleteBitLockerClientResult };
 type BitLockerNetworkScanResponse = { scan: EKMBitLockerNetworkScanResult };
-type PublicKeyResponse = {
-  public_key: {
-    key_id: string;
-    algorithm: string;
-    public_key: string;
-    format: string;
-    key_version: string;
-  };
-};
 
 function tenantQuery(session: AuthSession, tenantOverride?: string): string {
   const tenant = String(tenantOverride || session.tenantId || "").trim();
@@ -564,21 +556,6 @@ export async function getBitLockerDeployPackage(
     `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/deploy?${tenantQuery(session, tenantOverride)}&os=${encodeURIComponent(targetOS)}`
   );
   return out.package;
-}
-
-export async function getEKMTDEPublicKey(
-  session: AuthSession,
-  keyID: string
-): Promise<{ algorithm: string; key_version: string }> {
-  const out = await serviceRequest<PublicKeyResponse>(
-    session,
-    "ekm",
-    `/ekm/tde/keys/${encodeURIComponent(keyID)}/public?${tenantQuery(session)}`
-  );
-  return {
-    algorithm: String(out?.public_key?.algorithm || ""),
-    key_version: String(out?.public_key?.key_version || "")
-  };
 }
 
 export type EKMDatabaseInstance = {

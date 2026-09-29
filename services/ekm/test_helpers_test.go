@@ -51,6 +51,9 @@ type fakeEKMKeyCore struct {
 	mu      sync.Mutex
 	counter int
 	keys    map[string]*fakeEKMKey
+	// noPublicKey makes GetKey answer as keycore does today: key metadata
+	// with no public key field.
+	noPublicKey bool
 }
 
 type fakeEKMKey struct {
@@ -92,13 +95,16 @@ func (f *fakeEKMKeyCore) GetKey(_ context.Context, tenantID string, keyID string
 	if !ok {
 		return nil, errors.New("key not found")
 	}
-	return map[string]interface{}{
+	out := map[string]interface{}{
 		"id":              k.KeyID,
 		"tenant_id":       k.TenantID,
 		"algorithm":       k.Algorithm,
 		"current_version": k.Version,
-		"public_key_pem":  k.PublicKey,
-	}, nil
+	}
+	if !f.noPublicKey {
+		out["public_key_pem"] = k.PublicKey
+	}
+	return out, nil
 }
 
 func (f *fakeEKMKeyCore) RotateKey(_ context.Context, tenantID string, keyID string, _ string) (map[string]interface{}, error) {

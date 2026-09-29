@@ -212,11 +212,18 @@ func (s *Service) GetAgentStatus(ctx context.Context, tenantID string, agentID s
 			age = 0
 		}
 	}
+	algorithm := ""
+	if keyID := strings.TrimSpace(agent.AssignedKeyID); keyID != "" {
+		if key, err := s.store.GetTDEKey(ctx, tenantID, keyID); err == nil {
+			algorithm = key.Algorithm
+		}
+	}
 	return AgentStatus{
-		Agent:               agent,
-		ManagedDatabases:    len(dbs),
-		TDEEnabledDatabases: tdeEnabled,
-		LastHeartbeatAgeSec: age,
+		Agent:                agent,
+		ManagedDatabases:     len(dbs),
+		TDEEnabledDatabases:  tdeEnabled,
+		LastHeartbeatAgeSec:  age,
+		AssignedKeyAlgorithm: algorithm,
 	}, nil
 }
 
@@ -429,13 +436,15 @@ func (s *Service) createTDEKey(ctx context.Context, req CreateTDEKeyRequest) (TD
 	if v := extractInt(meta["current_version"]); v > 0 {
 		version = "v" + strconvItoa(v)
 	}
+	// Only a public key keycore returned is stored; without one the cache
+	// stays empty and GetTDEPublicKey refuses (never an invented value).
 	publicKey := strings.TrimSpace(firstString(meta["public_key_pem"], meta["public_key"]))
-	format := "opaque"
-	if strings.Contains(publicKey, "BEGIN") {
-		format = "pem"
-	}
-	if publicKey == "" {
-		publicKey = buildPublicKeyFallback(req.TenantID, keyID)
+	format := ""
+	if publicKey != "" {
+		format = "opaque"
+		if strings.Contains(publicKey, "BEGIN") {
+			format = "pem"
+		}
 	}
 
 	key := TDEKeyRecord{
@@ -802,6 +811,9 @@ func (s *Service) RotateTDEKey(ctx context.Context, keyID string, req RotateTDEK
 	}, nil
 }
 
+// GetTDEPublicKey returns the public key keycore holds for a TDE key. When
+// keycore gives none, it refuses with 424 public_key_unavailable and audits
+// the refusal; it never returns a value derived from identifiers.
 func (s *Service) GetTDEPublicKey(ctx context.Context, tenantID string, keyID string) (PublicKeyResponse, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
@@ -818,24 +830,25 @@ func (s *Service) GetTDEPublicKey(ctx context.Context, tenantID string, keyID st
 	algorithm := strings.TrimSpace(key.Algorithm)
 	version := strings.TrimSpace(key.CurrentVersion)
 	if publicKey == "" {
-		if s.keycore != nil {
-			meta, err := s.keycore.GetKey(ctx, tenantID, key.KeyCoreKeyID)
-			if err == nil {
-				publicKey = strings.TrimSpace(firstString(meta["public_key_pem"], meta["public_key"]))
-				algorithm = defaultString(firstString(meta["algorithm"]), algorithm)
-				if v := extractInt(meta["current_version"]); v > 0 {
-					version = "v" + strconvItoa(v)
-				}
+		detail := "keycore returned no public key"
+		if s.keycore == nil {
+			detail = "keycore client is not configured"
+		} else if meta, err := s.keycore.GetKey(ctx, tenantID, key.KeyCoreKeyID); err != nil {
+			detail = "keycore key lookup failed"
+		} else {
+			publicKey = strings.TrimSpace(firstString(meta["public_key_pem"], meta["public_key"]))
+			algorithm = defaultString(firstString(meta["algorithm"]), algorithm)
+			if v := extractInt(meta["current_version"]); v > 0 {
+				version = "v" + strconvItoa(v)
 			}
 		}
 		if publicKey == "" {
-			publicKey = buildPublicKeyFallback(tenantID, keyID)
+			s.refusePublicKey(ctx, tenantID, keyID, detail)
+			return PublicKeyResponse{}, newServiceError(http.StatusFailedDependency, "public_key_unavailable", "keycore holds no public key for this key: "+detail)
 		}
+		format = "opaque"
 		if strings.Contains(publicKey, "BEGIN") {
 			format = "pem"
-		}
-		if format == "" {
-			format = "opaque"
 		}
 		_ = s.store.UpdateTDEKeyMetadata(ctx, tenantID, keyID, publicKey, format, "")
 	}
@@ -857,6 +870,7 @@ func (s *Service) GetTDEPublicKey(ctx context.Context, tenantID string, keyID st
 	_ = s.publishAudit(ctx, "audit.ekm.tde_key_accessed", tenantID, map[string]interface{}{
 		"key_id":    keyID,
 		"operation": "public",
+		"result":    "success",
 	})
 	return PublicKeyResponse{
 		KeyID:      keyID,
@@ -865,6 +879,28 @@ func (s *Service) GetTDEPublicKey(ctx context.Context, tenantID string, keyID st
 		Format:     format,
 		KeyVersion: version,
 	}, nil
+}
+
+// refusePublicKey records a public key request refused because keycore gave
+// no public key: a failed key access log entry and a refused audit event.
+func (s *Service) refusePublicKey(ctx context.Context, tenantID string, keyID string, detail string) {
+	_ = s.store.RecordKeyAccess(ctx, KeyAccessLog{
+		ID:           newID("kacc"),
+		TenantID:     tenantID,
+		KeyID:        keyID,
+		Operation:    "public",
+		Status:       "failed",
+		ErrorMessage: detail,
+		CreatedAt:    time.Now().UTC(),
+	})
+	_ = s.publishAudit(ctx, "audit.ekm.tde_key_accessed", tenantID, map[string]interface{}{
+		"key_id":    keyID,
+		"operation": "public",
+		"result":    "refused",
+		"reason":    "public_key_unavailable",
+		"error":     detail,
+		"severity":  "warning",
+	})
 }
 
 func (s *Service) GetAgentHealth(ctx context.Context, tenantID string, agentID string) (AgentHealthStatus, error) {

@@ -154,6 +154,9 @@ type AgentStatus struct {
 	ManagedDatabases    int   `json:"managed_databases"`
 	TDEEnabledDatabases int   `json:"tde_enabled_databases"`
 	LastHeartbeatAgeSec int64 `json:"last_heartbeat_age_sec"`
+	// AssignedKeyAlgorithm is the algorithm of the agent's assigned TDE key,
+	// from the ekm key record; empty when no key is assigned.
+	AssignedKeyAlgorithm string `json:"assigned_key_algorithm,omitempty"`
 }
 
 type AgentOSMetrics struct {

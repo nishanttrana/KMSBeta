@@ -278,11 +278,6 @@ func parseVersionID(v string) int {
 	return n
 }
 
-func buildPublicKeyFallback(tenantID string, keyID string) string {
-	sum := sha256.Sum256([]byte(strings.TrimSpace(tenantID) + ":" + strings.TrimSpace(keyID)))
-	return "EKM-PUBLIC-" + hex.EncodeToString(sum[:16])
-}
-
 func heartbeatTimeout(agent Agent) time.Duration {
 	base := defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec)
 	timeout := time.Duration(base*3) * time.Second

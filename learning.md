@@ -5,6 +5,28 @@ Newest entries on top.
 
 ## 2026-09-29
 
+### A fallback for missing key material becomes the only path when the source never had it
+- **What happened:** ekm's TDE public key getter and key creation fell back
+  to `buildPublicKeyFallback`, `"EKM-PUBLIC-"` plus a hash of tenant and key
+  ID, when keycore's key metadata had no public key. Keycore's
+  `GET /keys/{id}` never returns one, so every EKM TDE key got the invented
+  value, which was stored as `format: opaque` and audited as a successful
+  access. Removed in 6.12.0-beta: the endpoint refuses with
+  `424 public_key_unavailable`, audits the refusal, and migration 007 clears
+  the stored values.
+- **Why it slipped through:** the test keycore fake always returned a PEM
+  public key, so no test ever reached the fallback, and nothing checked the
+  fake's response shape against keycore's `renderKey`. The name "fallback"
+  and the `opaque` format label made an identifier hash read like a key
+  encoding. The dashboard only read the algorithm from the response, so no
+  one looked at the key. Conformance's crypto-import rule does not list
+  `crypto/sha256` (hashing is allowed in services), so nothing flagged a
+  hash standing in for key material.
+- **Rule:** a test fake of another service answers with that service's real
+  response shape, including the fields it doesn't return. A value presented
+  as key material comes only from the key's owner; when it isn't there, the
+  answer is a refusal, never a stand-in.
+
 ### An "open item" in the docs is not a fix, and a store is the only safe place to seal
 - **What happened:** the workload service kept every tenant's SPIFFE root
   CA and JWT-SVID signer private keys as plaintext PEM. It was listed under
@@ -22,6 +44,7 @@ Newest entries on top.
   refuse to capture it. Also: `ADD COLUMN IF NOT EXISTS` doesn't parse on
   SQLite; plain `ADD COLUMN` is safe because `schema_migrations` applies a
   file once, and it lets the same migration run the SQLite test.
+
 ### An optional dependency needs a deployment signal, or its callers fail open
 - **What happened:** ekm, cloud and hyok allowed key operations whenever
   keyaccess returned an error, because keyaccess is optional (compose

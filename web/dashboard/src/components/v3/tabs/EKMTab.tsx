@@ -16,7 +16,6 @@ import {
   getEKMAgentHealth,
   getEKMAgentStatus,
   getEKMDeployPackage,
-  getEKMTDEPublicKey,
   listEKMAgentLogs,
   listEKMAgents,
   listEKMDatabases,
@@ -106,7 +105,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const [agents,setAgents]=useState([]);
   const [statusByID,setStatusByID]=useState({});
   const [healthByID,setHealthByID]=useState({});
-  const [keyMetaByID,setKeyMetaByID]=useState({});
   const [databases,setDatabases]=useState([]);
   const [modal,setModal]=useState(null);
   const [selectedAgent,setSelectedAgent]=useState(null);
@@ -377,12 +375,6 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       try{ const azMaps=await listAzureKeyMappings(session); setAzureMappings(Array.isArray(azMaps)?azMaps:[]); }catch{ setAzureMappings([]); }
       try{ const gcseC=await listGoogleCSEConfigs(session); setGoogleCSEConfigs(Array.isArray(gcseC)?gcseC:[]); }catch{ setGoogleCSEConfigs([]); }
       try{ const gcseK=await listGoogleCSEKeys(session); setGoogleCSEKeys(Array.isArray(gcseK)?gcseK:[]); }catch{ setGoogleCSEKeys([]); }
-      const keyIDs=[...new Set(items.map((a)=>String(a.assigned_key_id||"").trim()).filter(Boolean))];
-      const keyMeta={};
-      await Promise.all(keyIDs.map(async(keyID)=>{
-        try{ keyMeta[keyID]=await getEKMTDEPublicKey(session,keyID); }catch{ keyMeta[keyID]={algorithm:"",key_version:""}; }
-      }));
-      setKeyMetaByID(keyMeta);
     }catch(error){
       onToast?.(`EKM load failed: ${errMsg(error)}`);
     }finally{
@@ -718,7 +710,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                 const badge=statusBadge(agent);
                 const st=statusByID[agent.id]||{};
                 const h=healthByID[agent.id]||{};
-                const km=keyMetaByID[String(agent.assigned_key_id||"").trim()];
+                const keyAlg=String(st.assigned_key_algorithm||"");
                 const rc=rotationCompliance(agent);
                 const meta=parseAgentMeta(agent);
                 const agentDBs=databases.filter(d=>d.agent_id===agent.id);
@@ -745,7 +737,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                   {agent.assigned_key_id&&(<div style={{fontSize:12,marginBottom:4}}>
                     <span style={{color:C.textDim}}>TDE Key: </span>
                     <span style={{fontFamily:"monospace",fontSize:11}}>{String(agent.assigned_key_id).slice(0,20)}</span>
-                    {km&&(<span style={{color:C.textDim}}> ({km.algorithm} {km.key_version})</span>)}
+                    {keyAlg&&(<span style={{color:C.textDim}}> ({keyAlg} {agent.assigned_key_version||""})</span>)}
                   </div>)}
 
                   {/* Rotation compliance */}
@@ -816,7 +808,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                         {agent.assigned_key_id?(<>
                           <div style={{color:C.textDim}}>Key ID: <span style={{fontFamily:"monospace",fontSize:11}}>{agent.assigned_key_id}</span></div>
                           <div style={{color:C.textDim}}>Version: {agent.assigned_key_version||"v1"}</div>
-                          {keyMetaByID[agent.assigned_key_id]&&(<div style={{color:C.textDim}}>Algorithm: {keyMetaByID[agent.assigned_key_id].algorithm}</div>)}
+                          {st.assigned_key_algorithm&&(<div style={{color:C.textDim}}>Algorithm: {st.assigned_key_algorithm}</div>)}
                         </>):(<div style={{color:C.textDim}}>No key assigned</div>)}
                       </div>
                       <div>
