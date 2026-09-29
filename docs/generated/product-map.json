@@ -25241,38 +25241,6 @@
       "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
       "handler": "",
       "label": "setThreatModal( )}> Add threat",
-      "line": 307,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
-      "handler": "",
-      "label": "setThreatModal( )}>",
-      "line": 321,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
-      "handler": "",
-      "label": "void remove(\"threat\", t.id, t.name)}>",
-      "line": 322,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
-      "handler": "",
-      "label": "setAssetModal( )}> Add asset",
-      "line": 332,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
-      "handler": "",
-      "label": "setDecisionFor(x)}> Decide",
       "line": 362,
       "tabs": [],
       "tag": "button"
@@ -25280,8 +25248,40 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
       "handler": "",
+      "label": "setThreatModal( )}>",
+      "line": 376,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "void remove(\"threat\", t.id, t.name)}>",
+      "line": 377,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setAssetModal( )}> Add asset",
+      "line": 387,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
+      "label": "setDecisionFor(x)}> Decide",
+      "line": 417,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
+      "handler": "",
       "label": "setAssetModal( )}>",
-      "line": 363,
+      "line": 418,
       "tabs": [],
       "tag": "button"
     },
@@ -25289,7 +25289,7 @@
       "file": "web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx",
       "handler": "",
       "label": "void remove(\"asset\", x.asset.id, x.asset.name)}>",
-      "line": 364,
+      "line": 419,
       "tabs": [],
       "tag": "button"
     },
@@ -29186,7 +29186,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 243,
+      "line": 247,
       "match_key": "keycore|GET|/agility/caraf/assessment",
       "method": "GET",
       "normalized_path": "/agility/caraf/assessment",
@@ -29199,7 +29199,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 248,
+      "line": 252,
       "match_key": "keycore|GET|/agility/caraf/threats",
       "method": "GET",
       "normalized_path": "/agility/caraf/threats",
@@ -29212,7 +29212,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 259,
+      "line": 263,
       "match_key": "keycore|DELETE|/agility/caraf/threats/{param}",
       "method": "DELETE",
       "normalized_path": "/agility/caraf/threats/{param}",
@@ -29225,7 +29225,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 269,
+      "line": 273,
       "match_key": "keycore|DELETE|/agility/caraf/assets/{param}",
       "method": "DELETE",
       "normalized_path": "/agility/caraf/assets/{param}",
@@ -29238,7 +29238,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 273,
+      "line": 277,
       "match_key": "keycore|PUT|/agility/caraf/assets/{param}/decision",
       "method": "PUT",
       "normalized_path": "/agility/caraf/assets/{param}/decision",
@@ -29251,7 +29251,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 306,
+      "line": 310,
       "match_key": "keycore|GET|/agility/drills",
       "method": "GET",
       "normalized_path": "/agility/drills",
@@ -29264,7 +29264,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
       "file": "web/dashboard/src/lib/cryptoAgility.ts",
-      "line": 311,
+      "line": 315,
       "match_key": "keycore|POST|/agility/drills",
       "method": "POST",
       "normalized_path": "/agility/drills",
@@ -33824,7 +33824,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T08:09:55Z",
+  "generated_at": "2026-09-29T08:48:19Z",
   "navigation": [
     {
       "group": "Overview",
@@ -71332,7 +71332,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 306,
+          "line": 310,
           "source": "serviceRequest"
         }
       ],
@@ -71369,7 +71369,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 311,
+          "line": 315,
           "source": "serviceRequest"
         }
       ],
@@ -71631,7 +71631,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 243,
+          "line": 247,
           "source": "serviceRequest"
         }
       ],
@@ -71675,7 +71675,7 @@
         {
           "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 248,
+          "line": 252,
           "source": "serviceRequest"
         }
       ],
@@ -71778,7 +71778,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 259,
+          "line": 263,
           "source": "serviceRequest"
         }
       ],
@@ -71911,7 +71911,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 269,
+          "line": 273,
           "source": "serviceRequest"
         }
       ],
@@ -71948,7 +71948,7 @@
         {
           "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
           "file": "web/dashboard/src/lib/cryptoAgility.ts",
-          "line": 273,
+          "line": 277,
           "source": "serviceRequest"
         }
       ],
@@ -113001,7 +113001,7 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 306,
+            "line": 310,
             "source": "serviceRequest"
           }
         ],
@@ -113042,7 +113042,7 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/drills\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 311,
+            "line": 315,
             "source": "serviceRequest"
           }
         ],
@@ -113226,7 +113226,7 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/caraf/assessment\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 243,
+            "line": 247,
             "source": "serviceRequest"
           }
         ],
@@ -113260,7 +113260,7 @@
           {
             "expression": "serviceRequest(\"keycore\", \"/agility/caraf/threats\")",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 248,
+            "line": 252,
             "source": "serviceRequest"
           }
         ],
@@ -113342,7 +113342,7 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/caraf/threats/${encodeURIComponent(id)}`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 259,
+            "line": 263,
             "source": "serviceRequest"
           }
         ],
@@ -113449,7 +113449,7 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 269,
+            "line": 273,
             "source": "serviceRequest"
           }
         ],
@@ -113483,7 +113483,7 @@
           {
             "expression": "serviceRequest(\"keycore\", `/agility/caraf/assets/${encodeURIComponent(id)}/decision`)",
             "file": "web/dashboard/src/lib/cryptoAgility.ts",
-            "line": 273,
+            "line": 277,
             "source": "serviceRequest"
           }
         ],
@@ -124187,7 +124187,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T08:09:55Z",
+    "generatedAt": "2026-09-29T08:48:19Z",
     "methods": [
       "DELETE",
       "GET",

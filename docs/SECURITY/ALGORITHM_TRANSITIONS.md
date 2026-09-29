@@ -90,6 +90,10 @@ kernel event (`audit.key.caraf_*`). A recorded decision is the Playbooks
 trigger `crypto_risk_decision_recorded`. The product supplies no threat
 dates, bands or defaults.
 
+The assessment also counts assets by sensitivity and timeline (`heatmap`)
+and how many carry each value it rests on (`profile`: owner, X, Y, cost,
+sensitivity, a live key). Unknown values count as gaps, never as a score.
+
 ## Swap drill (6.1.0-beta)
 
 `POST /agility/drills` rehearses a swap on a keycore node. Throwaway keys

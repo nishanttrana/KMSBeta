@@ -234,6 +234,10 @@ export interface CarafAssessment {
     assets: number; threats: number; exposed: number; at_limit: number; time_to_spare: number;
     not_assessed: number; no_threat: number; undecided_at_risk: number; overdue: number; acceptance_expired: number;
   };
+  // Assets carrying each part of their profile ("unknown" is not counted).
+  profile: { owner: number; shelf_life: number; migration_time: number; cost: number; sensitivity: number; live_keys: number; complete: number };
+  // Assets by sensitivity, then timeline.
+  heatmap: Record<string, Record<string, number>>;
   assets: CarafAssetAssessment[];
   roadmap: { asset_id: string; asset: string; decision: CarafDecisionKind; owner: string; date: string; state: string }[];
   findings: string[];

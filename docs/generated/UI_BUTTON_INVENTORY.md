@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T08:09:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T08:48:19Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -639,13 +639,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 416 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 449 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 479 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 307 | - | button | setThreatModal( )}> Add threat |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 321 | - | button | setThreatModal( )}> |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 322 | - | button | void remove("threat", t.id, t.name)}> |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 332 | - | button | setAssetModal( )}> Add asset |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setDecisionFor(x)}> Decide |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 363 | - | button | setAssetModal( )}> |  |
-| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 364 | - | button | void remove("asset", x.asset.id, x.asset.name)}> |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setThreatModal( )}> Add threat |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 376 | - | button | setThreatModal( )}> |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 377 | - | button | void remove("threat", t.id, t.name)}> |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 387 | - | button | setAssetModal( )}> Add asset |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 417 | - | button | setDecisionFor(x)}> Decide |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 418 | - | button | setAssetModal( )}> |  |
+| web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 419 | - | button | void remove("asset", x.asset.id, x.asset.name)}> |  |
 | web/dashboard/src/components/v3/tabs/agility/DrillPanel.tsx | 56 | - | button | void run()}> |  |
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 98 | - | button | void act("scan", async () => { const s = await runPQCScan(session); return `S... |  |
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 101 | - | button | setShowPlan(true)}> Build execution plan |  |

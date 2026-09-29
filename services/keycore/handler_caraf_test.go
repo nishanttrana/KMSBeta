@@ -62,6 +62,18 @@ func TestCarafAssessmentComputation(t *testing.T) {
 		s.UndecidedAtRisk != 1 || s.Overdue != 1 || s.AcceptanceExpired != 1 {
 		t.Fatalf("summary %+v", s)
 	}
+	// Profile completeness counts recorded values only; "unknown" is not a
+	// value. a3 links one live key (k3des) and one that is gone.
+	a1 := assets[0]
+	a1.Owner, a1.Sensitivity = "fleet-ops", "high"
+	a1.KeyIDs = []string{"k3des"}
+	p := computeCarafAssessment([]CarafAsset{a1, assets[1], assets[2], assets[3]}, threats, map[string]string{"k3des": "3DES"}, now)
+	if got := p.Profile; got != (CarafProfile{Owner: 1, ShelfLife: 3, MigrationTime: 3, Cost: 4, Sensitivity: 1, LiveKeys: 2, Complete: 1}) {
+		t.Fatalf("profile %+v", got)
+	}
+	if h := p.Heatmap; h["high"][TimelineExposed] != 1 || h["unknown"][TimelineExposed] != 1 || h["unknown"][TimelineTimeToSpare] != 1 || h["unknown"][TimelineNotAssessed] != 1 {
+		t.Fatalf("heatmap %+v", h)
+	}
 	if len(a.Roadmap) != 3 || a.Roadmap[2].AssetID != "a5" || a.Roadmap[2].Date != "2027-06-30" {
 		t.Fatalf("roadmap %+v", a.Roadmap)
 	}

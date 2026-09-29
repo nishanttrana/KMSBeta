@@ -141,13 +141,30 @@ type CarafSummary struct {
 	AcceptanceExpired int `json:"acceptance_expired"`
 }
 
+// CarafProfile counts how many assets carry each part of their profile:
+// how much of the assessment rests on recorded values. A value left
+// unknown is not counted.
+type CarafProfile struct {
+	Owner         int `json:"owner"`
+	ShelfLife     int `json:"shelf_life"`     // X
+	MigrationTime int `json:"migration_time"` // Y
+	Cost          int `json:"cost"`
+	Sensitivity   int `json:"sensitivity"`
+	LiveKeys      int `json:"live_keys"` // linked to at least one live key
+	Complete      int `json:"complete"`  // all of the above
+}
+
 // CarafAssessment is the tenant's assessment on one day.
 type CarafAssessment struct {
-	AsOf     string                 `json:"as_of"`
-	Summary  CarafSummary           `json:"summary"`
-	Assets   []CarafAssetAssessment `json:"assets"`
-	Roadmap  []CarafRoadmapItem     `json:"roadmap"`
-	Findings []string               `json:"findings"`
+	AsOf    string       `json:"as_of"`
+	Summary CarafSummary `json:"summary"`
+	Profile CarafProfile `json:"profile"`
+	// Heatmap counts assets by sensitivity (low, medium, high, critical,
+	// unknown) and timeline.
+	Heatmap  map[string]map[string]int `json:"heatmap"`
+	Assets   []CarafAssetAssessment    `json:"assets"`
+	Roadmap  []CarafRoadmapItem        `json:"roadmap"`
+	Findings []string                  `json:"findings"`
 }
 
 // carafSuggestion is the CARAF mitigation matrix: with time to spare, a
@@ -192,7 +209,7 @@ func decisionState(d CarafDecision, today string) string {
 // maps each live key ID to its algorithm.
 func computeCarafAssessment(assets []CarafAsset, threats []CarafThreat, liveKeyAlgorithms map[string]string, now time.Time) CarafAssessment {
 	today := now.UTC().Format("2006-01-02")
-	out := CarafAssessment{AsOf: today, Assets: []CarafAssetAssessment{}, Roadmap: []CarafRoadmapItem{}, Findings: []string{}}
+	out := CarafAssessment{AsOf: today, Assets: []CarafAssetAssessment{}, Roadmap: []CarafRoadmapItem{}, Findings: []string{}, Heatmap: map[string]map[string]int{}}
 	out.Summary.Assets, out.Summary.Threats = len(assets), len(threats)
 	for _, a := range assets {
 		as := CarafAssetAssessment{Asset: a, MissingKeys: []string{}, Threats: []CarafThreatRef{}, Missing: []string{}, X: a.ShelfLifeYears, Y: a.MigrationYears}
@@ -250,6 +267,15 @@ func computeCarafAssessment(assets []CarafAsset, threats []CarafThreat, liveKeyA
 				as.Timeline = TimelineAtLimit
 			}
 		}
+		out.Profile.add(a, len(a.KeyIDs) > len(as.MissingKeys))
+		sens := a.Sensitivity
+		if sens == "" {
+			sens = "unknown"
+		}
+		if out.Heatmap[sens] == nil {
+			out.Heatmap[sens] = map[string]int{}
+		}
+		out.Heatmap[sens][as.Timeline]++
 		as.Suggestion = carafSuggestion(as.Timeline, a.Cost)
 		as.DecisionState = decisionState(a.Decision, today)
 		switch as.Timeline {
@@ -287,6 +313,22 @@ func computeCarafAssessment(assets []CarafAsset, threats []CarafThreat, liveKeyA
 	sort.SliceStable(out.Roadmap, func(i, j int) bool { return out.Roadmap[i].Date < out.Roadmap[j].Date })
 	out.Findings = carafFindings(out)
 	return out
+}
+
+func (p *CarafProfile) add(a CarafAsset, liveKey bool) {
+	known := func(v string) bool { v = strings.TrimSpace(v); return v != "" && v != "unknown" }
+	parts := []bool{known(a.Owner), a.ShelfLifeYears != nil, a.MigrationYears != nil, known(a.Cost), known(a.Sensitivity), liveKey}
+	counts := []*int{&p.Owner, &p.ShelfLife, &p.MigrationTime, &p.Cost, &p.Sensitivity, &p.LiveKeys}
+	complete := true
+	for i, ok := range parts {
+		if ok {
+			*counts[i]++
+		}
+		complete = complete && ok
+	}
+	if complete {
+		p.Complete++
+	}
 }
 
 func carafFindings(a CarafAssessment) []string {

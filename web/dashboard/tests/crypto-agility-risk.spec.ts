@@ -2,7 +2,8 @@ import { expect, test, type Page, type Request } from "@playwright/test";
 
 // Crypto Agility → Risk assessment (CARAF) and Readiness & execution (the
 // former Post-Quantum tab). The APIs are stubbed with payloads computed by
-// keycore's computeCarafAssessment and the pqc service's scan and plan code;
+// keycore's computeCarafAssessment (profile and heatmap included) and the
+// pqc service's scan and plan code;
 // the figures are tested there.
 
 const SHOTS = process.env.AGILITY_SHOTS_DIR || "";
@@ -20,6 +21,8 @@ const assessment = {
     "overdue": 1,
     "acceptance_expired": 0
   },
+  "profile": {"owner": 3, "shelf_life": 3, "migration_time": 3, "cost": 4, "sensitivity": 3, "live_keys": 0, "complete": 0},
+  "heatmap": {"critical": {"time_to_spare": 1}, "high": {"exposed": 1}, "medium": {"exposed": 1}, "unknown": {"not_assessed": 1}},
   "assets": [
     {
       "asset": {
@@ -544,6 +547,12 @@ test("risk assessment shows exposure from the customer's own numbers and records
   await expect(page.locator("tr", { hasText: "Customer portal" }).first().getByText(/missing shelf life years, migration years/)).toBeVisible();
   await expect(page.getByText(/Exposed with no decision \(1\): Smart meter fleet/)).toBeVisible();
   await expect(page.locator("tr", { hasText: "Legacy batch job" }).last().getByText("Overdue")).toBeVisible();
+  const heat = page.getByTestId("caraf-heatmap");
+  await expect(heat.locator("tr", { hasText: "high" }).locator("td").nth(1)).toHaveText("1"); // high × exposed
+  await expect(heat.locator("tr", { hasText: "critical" }).locator("td").nth(3)).toHaveText("1"); // critical × time to spare
+  const profile = page.getByTestId("caraf-profile");
+  await expect(profile.getByText("3 of 4").first()).toBeVisible();
+  await expect(profile.locator("div", { hasText: /^All of the above0 of 4$/ }).last()).toBeVisible();
   await expect(page.getByText(/NIST|SP 800|IR 8547|draft/)).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/caraf.png`, fullPage: true });
 

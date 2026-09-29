@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.2.0-beta] — 2026-09-29
+
+### Crypto Agility: risk overview
+- **Sensitivity × exposure.** The risk assessment's `heatmap` counts assets
+  by the sensitivity the customer recorded (critical, high, medium, low,
+  unknown) and their timeline (exposed, at the limit, time to spare, not
+  assessed, no threat). The Risk assessment view shows it under the
+  summary cards.
+- **Profile completeness.** `profile` counts the assets that carry each
+  value the assessment rests on: owner, shelf life (X), migration time (Y),
+  cost, sensitivity, a link to at least one live key, and all of them
+  together. A value left `unknown` is not counted, so gaps show as gaps
+  rather than as a score.
+- Both are computed by keycore's `computeCarafAssessment` from the
+  customer's own records (`TestCarafAssessmentComputation`); the
+  dashboard test's fixture is recomputed from that function.
+
 ## [6.1.0-beta] — 2026-09-29
 
 ### Crypto Agility: algorithm-swap drill

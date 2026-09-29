@@ -53,6 +53,60 @@ const STATE: Record<string, [string, string, string]> = {
 };
 const pick = (map: Record<string, [string, string, string]>, k: string) => map[k] ?? [k, C.dim, C.dimTint];
 
+const SENSITIVITY = ["critical", "high", "medium", "low", "unknown"];
+const TIMELINE_ORDER = ["exposed", "at_limit", "time_to_spare", "not_assessed", "no_threat"];
+const PROFILE: [keyof CarafAssessment["profile"], string][] = [
+  ["owner", "Owner"], ["shelf_life", "Shelf life (X)"], ["migration_time", "Migration time (Y)"],
+  ["cost", "Cost"], ["sensitivity", "Sensitivity"], ["live_keys", "Linked to a live key"], ["complete", "All of the above"],
+];
+
+// Where the risk sits (sensitivity × timeline) and how much of the
+// assessment rests on recorded values rather than gaps.
+function RiskOverview({ data }: { data: CarafAssessment }) {
+  const total = data.summary.assets;
+  const rows = SENSITIVITY.filter(s => Object.values(data.heatmap?.[s] ?? {}).some(n => n > 0));
+  return (
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
+      <div style={{ ...S.panel, flex: 2, minWidth: 320 }} data-testid="caraf-heatmap">
+        <div style={{ ...S.sectionTitle, padding: "12px 14px 0" }}>Sensitivity × exposure</div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr><th style={S.th}>Sensitivity</th>{TIMELINE_ORDER.map(t => <th key={t} style={{ ...S.th, textAlign: "center" }}>{pick(TIMELINE, t)[0]}</th>)}</tr></thead>
+            <tbody>{rows.map(s => (
+              <tr key={s} style={{ borderTop: `1px solid ${C.border}` }}>
+                <td style={{ ...S.td, textTransform: "capitalize" }}>{s}</td>
+                {TIMELINE_ORDER.map(t => {
+                  const n = data.heatmap[s]?.[t] ?? 0;
+                  const [, fg, bg] = pick(TIMELINE, t);
+                  return <td key={t} style={{ ...S.td, textAlign: "center", fontWeight: n ? 700 : 400, color: n ? fg : C.muted, background: n ? bg : "transparent" }}>{n || "·"}</td>;
+                })}
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+      <div style={{ ...S.panel, flex: 1, minWidth: 260, padding: "12px 14px" }} data-testid="caraf-profile">
+        <div style={S.sectionTitle}>Profile completeness</div>
+        <div style={S.sectionHint}>Assets with each value recorded. Gaps make the assessment weaker.</div>
+        {PROFILE.map(([k, label]) => {
+          const n = data.profile?.[k] ?? 0;
+          const pct = total ? Math.round((n / total) * 100) : 0;
+          return (
+            <div key={k} style={{ marginTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: k === "complete" ? C.text : C.dim, fontWeight: k === "complete" ? 600 : 400 }}>
+                <span>{label}</span><span>{n} of {total}</span>
+              </div>
+              <div style={{ height: 5, background: C.border, borderRadius: 3, marginTop: 3 }}>
+                <div style={{ width: `${pct}%`, height: 5, borderRadius: 3, background: pct === 100 ? C.green : C.accent }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function matchText(t: { match_kind: MatchKind; match_value?: string | undefined }) {
   switch (t.match_kind) {
     case "algorithm": return t.match_value || "";
@@ -298,6 +352,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
         <StatCard icon={<Clock size={16} />} label="Overdue or lapsed" value={s.overdue + s.acceptance_expired} sub="decisions past due, acceptances past review" color={C.purple} bg={C.purpleTint} />
         <StatCard icon={<HelpCircle size={16} />} label="Not assessed" value={s.not_assessed + s.no_threat} sub="missing X or Y, or no threat applies" color={C.dim} bg={C.dimTint} />
       </div>
+      {s.assets > 0 && <RiskOverview data={data} />}
       <Findings items={data.findings} />
       {actionError && <div style={{ fontSize: 12, color: C.red, marginTop: 12 }}>Not changed: {actionError}</div>}
 

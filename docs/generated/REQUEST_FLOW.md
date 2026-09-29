@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T08:09:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-29T08:48:19Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -370,17 +370,17 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:315) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:127 |
 | keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:336) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:132 |
 | keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:361) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:137 |
-| keycore\|GET\|/agility/drills | GET /agility/drills | listAgilityDrills (services/keycore/handler_agility_drill.go:22) |  | ListAgilityDrills |  |  | web/dashboard/src/lib/cryptoAgility.ts:306 |
-| keycore\|POST\|/agility/drills | POST /agility/drills | runAgilityDrill (services/keycore/handler_agility_drill.go:38) | enforceFIPSKeyAlgorithm, agilityRules | CreateAgilityDrill, ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:311 |
+| keycore\|GET\|/agility/drills | GET /agility/drills | listAgilityDrills (services/keycore/handler_agility_drill.go:22) |  | ListAgilityDrills |  |  | web/dashboard/src/lib/cryptoAgility.ts:310 |
+| keycore\|POST\|/agility/drills | POST /agility/drills | runAgilityDrill (services/keycore/handler_agility_drill.go:38) | enforceFIPSKeyAlgorithm, agilityRules | CreateAgilityDrill, ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:315 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
 | keycore\|DELETE\|/canary/keys/{param} | DELETE /canary/keys/{id} | deactivateCanaryKey (services/keycore/handler_canary.go:106) |  | DeactivateCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1467 |
-| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:243 |
-| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:248 |
-| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:259 |
-| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:269 |
-| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
+| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:247 |
+| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:252 |
+| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:263 |
+| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
+| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:277 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:273) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:314) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:348) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:711 |
@@ -1140,22 +1140,22 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:315) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:127 |
 | keycore\|PUT\|/agility/policy/rules/{param} | PUT /agility/policy/rules/{id} | updateAgilityRule (services/keycore/handler_agility.go:336) | invalidateAgilityRules | UpdateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:132 |
 | keycore\|DELETE\|/agility/policy/rules/{param} | DELETE /agility/policy/rules/{id} | deleteAgilityRule (services/keycore/handler_agility.go:361) | invalidateAgilityRules | DeleteAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:137 |
-| keycore\|GET\|/agility/drills | GET /agility/drills | listAgilityDrills (services/keycore/handler_agility_drill.go:22) |  | ListAgilityDrills |  |  | web/dashboard/src/lib/cryptoAgility.ts:306 |
-| keycore\|POST\|/agility/drills | POST /agility/drills | runAgilityDrill (services/keycore/handler_agility_drill.go:38) | enforceFIPSKeyAlgorithm, agilityRules | CreateAgilityDrill, ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:311 |
+| keycore\|GET\|/agility/drills | GET /agility/drills | listAgilityDrills (services/keycore/handler_agility_drill.go:22) |  | ListAgilityDrills |  |  | web/dashboard/src/lib/cryptoAgility.ts:310 |
+| keycore\|POST\|/agility/drills | POST /agility/drills | runAgilityDrill (services/keycore/handler_agility_drill.go:38) | enforceFIPSKeyAlgorithm, agilityRules | CreateAgilityDrill, ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:315 |
 | keycore\|GET\|/canary/keys | GET /canary/keys | listCanaryKeys (services/keycore/handler_canary.go:54) |  | ListCanaryKeys |  |  | web/dashboard/src/lib/keycore.ts:1454 |
 | keycore\|POST\|/canary/keys | POST /canary/keys | createCanaryKey (services/keycore/handler_canary.go:63) |  | CreateCanaryKey, GetCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1459 |
 | keycore\|GET\|/canary/keys/{param}/trips | GET /canary/keys/{id}/trips | listCanaryTrips (services/keycore/handler_canary.go:91) |  | GetCanaryKey, ListCanaryTrips |  |  | web/dashboard/src/lib/keycore.ts:1471 |
 | keycore\|DELETE\|/canary/keys/{param} | DELETE /canary/keys/{id} | deactivateCanaryKey (services/keycore/handler_canary.go:106) |  | DeactivateCanaryKey |  |  | web/dashboard/src/lib/keycore.ts:1467 |
-| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:243 |
-| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:248 |
+| keycore\|GET\|/agility/caraf/assessment | GET /agility/caraf/assessment | getCarafAssessment (services/keycore/handler_caraf.go:32) |  | ListCarafAssets, ListCarafThreats, GetKey |  |  | web/dashboard/src/lib/cryptoAgility.ts:247 |
+| keycore\|GET\|/agility/caraf/threats | GET /agility/caraf/threats | listCarafThreats (services/keycore/handler_caraf.go:98) |  | ListCarafThreats |  |  | web/dashboard/src/lib/cryptoAgility.ts:252 |
 | keycore\|POST\|/agility/caraf/threats | POST /agility/caraf/threats | createCarafThreat (services/keycore/handler_caraf.go:107) |  | CreateCarafThreat |  |  |  |
 | keycore\|PUT\|/agility/caraf/threats/{param} | PUT /agility/caraf/threats/{id} | updateCarafThreat (services/keycore/handler_caraf.go:127) |  | UpdateCarafThreat |  |  |  |
-| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:259 |
+| keycore\|DELETE\|/agility/caraf/threats/{param} | DELETE /agility/caraf/threats/{id} | deleteCarafThreat (services/keycore/handler_caraf.go:146) |  | DeleteCarafThreat |  |  | web/dashboard/src/lib/cryptoAgility.ts:263 |
 | keycore\|GET\|/agility/caraf/assets | GET /agility/caraf/assets | listCarafAssets (services/keycore/handler_caraf.go:236) |  | ListCarafAssets |  |  |  |
 | keycore\|POST\|/agility/caraf/assets | POST /agility/caraf/assets | createCarafAsset (services/keycore/handler_caraf.go:245) |  | CreateCarafAsset |  |  |  |
 | keycore\|PUT\|/agility/caraf/assets/{param} | PUT /agility/caraf/assets/{id} | updateCarafAsset (services/keycore/handler_caraf.go:265) |  | UpdateCarafAsset |  |  |  |
-| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:269 |
-| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
+| keycore\|DELETE\|/agility/caraf/assets/{param} | DELETE /agility/caraf/assets/{id} | deleteCarafAsset (services/keycore/handler_caraf.go:284) |  | DeleteCarafAsset |  |  | web/dashboard/src/lib/cryptoAgility.ts:273 |
+| keycore\|PUT\|/agility/caraf/assets/{param}/decision | PUT /agility/caraf/assets/{id}/decision | setCarafDecision (services/keycore/handler_caraf.go:354) |  | SetCarafDecision |  |  | web/dashboard/src/lib/cryptoAgility.ts:277 |
 | keycore\|POST\|/keys | POST /keys | handleCreateKey (services/keycore/handler.go:273) | CreateKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:587 |
 | keycore\|POST\|/keys/import | POST /keys/import | handleImportKey (services/keycore/handler.go:314) | ImportKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:742 |
 | keycore\|POST\|/keys/form | POST /keys/form | handleFormKey (services/keycore/handler.go:348) | FormKey |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:711 |
