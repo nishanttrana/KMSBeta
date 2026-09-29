@@ -134,13 +134,12 @@ func lastEventData(subjects []string, payloads [][]byte, subject string) map[str
 }
 
 // When key access is deployed but unreachable the proxy refuses with 424
-// key_access_unavailable, even with HYOK_POLICY_FAIL_CLOSED off. Until
-// 6.10.0-beta that setting turned the error into an allow.
+// key_access_unavailable. Until 6.10.0-beta HYOK_POLICY_FAIL_CLOSED=false
+// turned the error into an allow; 6.20.0-beta removed that setting.
 func TestHYOKKeyAccessFailsClosed(t *testing.T) {
 	svc, _, keycore, _, _, pub := newHYOKService(t)
 	ctx := context.Background()
 	keycore.Seed("tenant-k", "key-k", "AES-256")
-	svc.policyFailClosed = false
 	srv := httptest.NewServer(http.NotFoundHandler())
 	url := srv.URL
 	srv.Close()
@@ -182,5 +181,28 @@ func TestHYOKKeyAccessNotDeployedAllows(t *testing.T) {
 	}
 	if pub.Count("audit.hyok.request_denied") != 0 {
 		t.Fatal("not-deployed allow audited as a refusal")
+	}
+}
+
+// An unreachable policy service refuses the request with 424; there is no
+// fail-open setting (6.20.0-beta removed HYOK_POLICY_FAIL_CLOSED).
+func TestHYOKPolicyUnavailableFailsClosed(t *testing.T) {
+	svc, _, keycore, policy, _, pub := newHYOKService(t)
+	ctx := context.Background()
+	keycore.Seed("tenant-p", "key-p", "AES-256")
+	policy.err = errors.New("policy service down")
+	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{TenantID: "tenant-p", Protocol: ProtocolGeneric, Enabled: true, AuthMode: AuthModeJWT}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := svc.ProcessCrypto(ctx, "tenant-p", ProtocolGeneric, "wrap", "key-p", "/p", AuthIdentity{Mode: "jwt"}, ProxyCryptoRequest{PlaintextB64: "aGVsbG8="})
+	var se serviceError
+	if !errors.As(err, &se) || se.HTTPStatus != http.StatusFailedDependency || se.Code != "policy_unavailable" {
+		t.Fatalf("got %v, want 424 policy_unavailable", err)
+	}
+	if ev := pub.Last("audit.hyok.request_denied"); ev["result"] != "refused" || ev["reason"] != "policy_unavailable" {
+		t.Fatalf("refusal event %+v", ev)
+	}
+	if pub.Count(protocolEventSubject(ProtocolGeneric, "wrap")) != 0 {
+		t.Fatal("operation event emitted for a refused request")
 	}
 }

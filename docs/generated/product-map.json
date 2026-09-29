@@ -33886,7 +33886,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T18:37:37Z",
+  "generated_at": "2026-09-29T18:42:07Z",
   "navigation": [
     {
       "group": "Overview",
@@ -65748,7 +65748,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 613,
+          "line": 619,
           "name": "GetMicrosoftDKEKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65839,7 +65839,7 @@
             "dkeRequesterEmail"
           ],
           "internal_package_calls": [],
-          "line": 723,
+          "line": 729,
           "name": "ProcessMicrosoftDKEDecrypt",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -65959,7 +65959,7 @@
             "mustJSON"
           ],
           "internal_package_calls": [],
-          "line": 523,
+          "line": 525,
           "name": "GetDKEPublicKey",
           "receiver_calls": [
             "s.keycore.GetKey"
@@ -66357,7 +66357,7 @@
             "defaultEndpointConfig"
           ],
           "internal_package_calls": [],
-          "line": 83,
+          "line": 81,
           "name": "ListEndpoints",
           "receiver_calls": [],
           "store_calls": [
@@ -66547,7 +66547,7 @@
             "pkg/crypto.ParseRSAPublicKeyAny",
             "pkg/crypto.RSAPublicKeyJWK"
           ],
-          "line": 50,
+          "line": 48,
           "name": "ConfigureEndpoint",
           "receiver_calls": [
             "s.keyAccess.Evaluate",
@@ -66653,7 +66653,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 108,
+          "line": 106,
           "name": "DeleteEndpoint",
           "receiver_calls": [],
           "store_calls": [
@@ -66724,7 +66724,7 @@
             "ListRequestLogs"
           ],
           "internal_package_calls": [],
-          "line": 123,
+          "line": 121,
           "name": "ListRequests",
           "receiver_calls": [],
           "store_calls": [
@@ -66782,7 +66782,7 @@
           "file": "services/hyok/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 137,
+          "line": 135,
           "name": "Health",
           "receiver_calls": [],
           "store_calls": []
@@ -124144,7 +124144,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T18:37:37Z",
+    "generatedAt": "2026-09-29T18:42:07Z",
     "methods": [
       "DELETE",
       "GET",

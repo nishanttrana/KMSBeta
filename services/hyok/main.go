@@ -83,7 +83,6 @@ func main() {
 	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
 	policyURL := envOr("POLICY_URL", "https://policy:8040")
 	governanceURL := envOr("GOVERNANCE_URL", "https://governance:8050")
-	policyFailClosed := envBool("HYOK_POLICY_FAIL_CLOSED", true)
 
 	jwtParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
 	if err != nil {
@@ -96,7 +95,6 @@ func main() {
 		NewHTTPPolicyClient(policyURL, 3*time.Second),
 		NewHTTPGovernanceClient(governanceURL, 3*time.Second),
 		publisher,
-		policyFailClosed,
 	)
 	keyAccess := pkgkeyaccess.GateFromEnv(3 * time.Second)
 	svc.SetKeyAccess(keyAccess)
@@ -238,14 +236,6 @@ func envOr(k string, d string) string {
 		return d
 	}
 	return v
-}
-
-func envBool(k string, d bool) bool {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv(k)))
-	if v == "" {
-		return d
-	}
-	return v == "1" || v == "true" || v == "yes"
 }
 
 func mustAtoi(s string) int {

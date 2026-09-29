@@ -239,7 +239,7 @@ func newHYOKService(t *testing.T) (*Service, *SQLStore, *fakeHYOKKeyCore, *fakeH
 	policy := &fakeHYOKPolicy{decision: "ALLOW"}
 	governance := &fakeHYOKGovernance{id: "apr_test_1"}
 	pub := &nopHYOKPublisher{}
-	svc := NewService(store, keycore, policy, governance, pub, true)
+	svc := NewService(store, keycore, policy, governance, pub)
 	svc.SetKeyAccess(pkgkeyaccess.NotDeployed())
 	return svc, store, keycore, policy, governance, pub
 }

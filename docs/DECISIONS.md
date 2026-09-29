@@ -178,7 +178,9 @@ compose can't make an environment entry conditional on a profile, so each
 installer would compute it, in bash and PowerShell. A dedicated
 `KEY_ACCESS_DEPLOYED` flag: the same duplication. Keeping
 `HYOK_POLICY_FAIL_CLOSED` as the key access switch: a configuration that
-makes an outage an allow is not a customer choice we offer.
+makes an outage an allow is not a customer choice we offer. 6.20.0-beta
+removed `HYOK_POLICY_FAIL_CLOSED` altogether: the policy engine check fails
+closed with no setting.
 
 **Enforced by** `TestGateFromEnvDeployment`, `TestGateNeverAllowsOnFailure`,
 and per service `Test{EKM,Cloud}KeyAccessUnavailableRefuses`,

@@ -456,8 +456,9 @@ deployment's profiles from `VECTA_DEPLOYED_PROFILES`, which
 | `key_access_justifications` profile off | The operation runs; its success event carries `key_access_reason: key_access_not_deployed` |
 | Profile on, or the profile list unset or empty (unknown) | keyaccess decides. If it can't be reached, answers an error, or returns no action, the operation is refused with `424 key_access_unavailable` and audited with `result: refused` and `reason: key_access_unavailable` (`audit.ekm.key_access_denied`, `audit.cloud.key_access_denied`, `audit.hyok.request_denied`) |
 
-A failure is never turned into an allow, and hyok's `HYOK_POLICY_FAIL_CLOSED`
-no longer affects key access (it governs only the policy engine). Each
+A failure is never turned into an allow. HYOK's policy-engine check fails
+closed too (`424 policy_unavailable`); `HYOK_POLICY_FAIL_CLOSED` was removed in
+6.20.0-beta. Each
 service logs `key access justifications deployed=<bool>` at start. Adding the
 profile only with `docker compose --profile` on the command line, not in
 `COMPOSE_PROFILES`, leaves the callers treating it as not deployed: enable

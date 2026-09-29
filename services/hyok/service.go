@@ -21,23 +21,21 @@ type EventPublisher interface {
 }
 
 type Service struct {
-	store            Store
-	keycore          KeyCoreClient
-	policy           PolicyClient
-	governance       GovernanceClient
-	events           EventPublisher
-	keyAccess        pkgkeyaccess.Gate
-	policyFailClosed bool
+	store      Store
+	keycore    KeyCoreClient
+	policy     PolicyClient
+	governance GovernanceClient
+	events     EventPublisher
+	keyAccess  pkgkeyaccess.Gate
 }
 
-func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governance GovernanceClient, events EventPublisher, policyFailClosed bool) *Service {
+func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governance GovernanceClient, events EventPublisher) *Service {
 	return &Service{
-		store:            store,
-		keycore:          keycore,
-		policy:           policy,
-		governance:       governance,
-		events:           events,
-		policyFailClosed: policyFailClosed,
+		store:      store,
+		keycore:    keycore,
+		policy:     policy,
+		governance: governance,
+		events:     events,
 	}
 }
 
@@ -212,7 +210,7 @@ func (s *Service) Health(ctx context.Context, tenantID string) (map[string]inter
 		"connected_endpoints":      connected,
 		"degraded_endpoints":       degraded,
 		"not_configured_endpoints": notConfigured,
-		"policy_fail_closed":       s.policyFailClosed,
+		"policy_fail_closed":       true,
 		"protocol_statuses":        protocolStatuses,
 		"checked_at":               time.Now().UTC().Format(time.RFC3339Nano),
 	}
@@ -325,6 +323,10 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	policyDecision, policyReason, err := s.evaluatePolicy(ctx, tenantID, protocol, operation, keyID, cfg.PolicyID)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
+		_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
+			"request_id": logEntry.ID, "operation": operation, "key_id": keyID,
+			"reason": "policy_unavailable", "result": "refused", "severity": "warning",
+		})
 		return ProxyCryptoResponse{}, err
 	}
 	if policyDecision == "DENY" {
@@ -342,7 +344,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	keyAccessResult := pkgkeyaccess.EvaluateResponse{Action: "allow"}
 	// A redeemed approval was already released by governance. Otherwise the
 	// gate decides; a deployed key access service that gives no decision
-	// refuses the request, whatever HYOK_POLICY_FAIL_CLOSED says.
+	// refuses the request, whatever the policy service says.
 	if approvedBy == "" {
 		keyAccessResult, err = s.keyAccess.Evaluate(ctx, pkgkeyaccess.EvaluateRequest{
 			TenantID:          tenantID,
@@ -557,6 +559,10 @@ func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID st
 	policyDecision, policyReason, err := s.evaluatePolicy(ctx, tenantID, ProtocolDKE, "publickey", keyID, cfg.PolicyID)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
+		_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
+			"request_id": logEntry.ID, "operation": "publickey", "key_id": keyID,
+			"reason": "policy_unavailable", "result": "refused", "severity": "warning",
+		})
 		return DKEPublicKeyResponse{}, err
 	}
 	if policyDecision == "DENY" {
@@ -819,10 +825,8 @@ func (s *Service) evaluatePolicy(ctx context.Context, tenantID string, protocol 
 		PolicyID:  strings.TrimSpace(policyID),
 	})
 	if err != nil {
-		if s.policyFailClosed {
-			return "ERROR", "", newServiceError(http.StatusFailedDependency, "policy_unavailable", err.Error())
-		}
-		return "ALLOW", "policy_unavailable_fail_open", nil
+		// Never fail open: an unreachable policy service refuses (6.20.0-beta).
+		return "ERROR", "", newServiceError(http.StatusFailedDependency, "policy_unavailable", err.Error())
 	}
 	decision := strings.ToUpper(strings.TrimSpace(resp.Decision))
 	if decision == "" {

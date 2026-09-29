@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A fail-open switch survives the fix for its sibling
+- **What happened:** 6.10.0-beta made HYOK key-access checks fail closed and
+  said `HYOK_POLICY_FAIL_CLOSED` "governs only the policy engine". The
+  switch still let an outage of the policy service become an allow, and
+  that refusal path emitted no audit event.
+- **Why it slipped through:** the fix was scoped to key access. The setting
+  defaulted to `true`, so it looked safe, and the fail-open branch was never
+  tested.
+- **Rule:** when one dependency check is made fail closed, grep the same
+  service for every `fail_open` / `FAIL_CLOSED` branch and remove them
+  together. A customer-settable outage-becomes-allow switch isn't a choice
+  we offer.
+
 ### A state table only protects the paths that consult it
 
 `lifecycle_state.go` said a compromised key could only be destroyed, and the

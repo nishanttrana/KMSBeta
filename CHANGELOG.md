@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.20.0-beta] — 2026-09-30
+
+### HYOK: an unreachable policy service refuses (fail closed)
+With `HYOK_POLICY_FAIL_CLOSED=false`, a HYOK proxy or DKE public-key request
+ran when the policy service couldn't be reached (`policy_unavailable_fail_open`).
+The setting is removed: the request is refused with `424 policy_unavailable`
+and audited as `audit.hyok.request_denied` (`reason: policy_unavailable`,
+`result: refused`). Until now that refusal wasn't audited at all. **Breaking:**
+`HYOK_POLICY_FAIL_CLOSED` is ignored. The status field `policy_fail_closed`
+is always `true`. Test: `TestHYOKPolicyUnavailableFailsClosed`.
+
 ## [6.19.0-beta] — 2026-09-30
 
 ### Keycore enforces the key lifecycle state table (breaking)

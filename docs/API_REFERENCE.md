@@ -3252,10 +3252,13 @@ approved for that key, operation and payload (`403 approval_invalid`
 otherwise; `audit.hyok.approval_refused`). When the
 `key_access_justifications` profile is deployed (or the deployment's profiles
 are unknown) an unreachable key-access service refuses (`424
-key_access_unavailable`), whatever `HYOK_POLICY_FAIL_CLOSED` says; when it
+key_access_unavailable`); when it
 isn't deployed the request runs with `key_access_reason:
 key_access_not_deployed`. The same holds for EKM TDE and cloud BYOK
-operations. `approver_emails` is no longer accepted.
+operations. An unreachable policy service likewise refuses (`424
+policy_unavailable`, `audit.hyok.request_denied` with `reason:
+policy_unavailable`); `HYOK_POLICY_FAIL_CLOSED` was removed in 6.20.0-beta.
+`approver_emails` is no longer accepted.
 
 **EKM TDE keys have no read or export route.** `GET /ekm/tde/keys/{id}` and
 `POST /ekm/tde/keys/{id}/export` do not exist; the EKM agent that called them
