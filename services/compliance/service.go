@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -51,8 +52,16 @@ func (s *Service) RecomputePosture(ctx context.Context, tenantID string) (Postur
 	certs, _ := s.fetchCerts(ctx, tenantID)
 	renewal, _ := s.fetchCertRenewalSummary(ctx, tenantID)
 	policies, _ := s.fetchPolicies(ctx, tenantID)
-	events, _ := s.fetchEvents(ctx, tenantID, 500)
-	alertStats, _ := s.fetchAlertStats(ctx, tenantID)
+	// Access and policy scores are computed from audit events and alert
+	// stats; without them the score would be invented, so recompute fails.
+	events, err := s.fetchEvents(ctx, tenantID, 500)
+	if err != nil {
+		return PostureSnapshot{}, err
+	}
+	alertStats, err := s.fetchAlertStats(ctx, tenantID)
+	if err != nil {
+		return PostureSnapshot{}, err
+	}
 
 	hygieneReport, keyHygieneScore := computeKeyHygiene(keys, policies)
 	certReport, certScore, certMetrics := computeCertHygiene(certs)
@@ -291,7 +300,11 @@ func (s *Service) GetAssessmentDelta(ctx context.Context, tenantID string, templ
 	out.ScoreDelta = latest.OverallScore - previous.OverallScore
 	out.AddedFindings, out.ResolvedFindings = diffAssessmentFindings(latest.Findings, previous.Findings)
 	out.RecoveredDomains, out.RegressedDomains = diffAssessmentDomains(latest.Posture, previous.Posture)
-	out.NewFailingConnectors = s.diffConnectorFailures(ctx, tenantID, previous.CreatedAt, latest.CreatedAt)
+	failing, err := s.diffConnectorFailures(ctx, tenantID, previous.CreatedAt, latest.CreatedAt)
+	if err != nil {
+		return out, err
+	}
+	out.NewFailingConnectors = failing
 	switch {
 	case out.ScoreDelta > 0:
 		out.Summary = "Posture improved since the previous scan."
@@ -473,9 +486,9 @@ func diffAssessmentDomains(current PostureSnapshot, previous PostureSnapshot) ([
 	return recovered, regressed
 }
 
-func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, previousAt time.Time, latestAt time.Time) []AssessmentConnectorDelta {
+func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, previousAt time.Time, latestAt time.Time) ([]AssessmentConnectorDelta, error) {
 	if s.audit == nil || latestAt.IsZero() {
-		return []AssessmentConnectorDelta{}
+		return []AssessmentConnectorDelta{}, nil
 	}
 	windowEnd := latestAt
 	windowStart := previousAt
@@ -487,7 +500,7 @@ func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, pr
 	prevWindowStart := prevWindowEnd.Add(-windowSize)
 	events, err := s.audit.ListEvents(ctx, tenantID, 2000)
 	if err != nil {
-		return []AssessmentConnectorDelta{}
+		return nil, fmt.Errorf("audit events unavailable: %w", err)
 	}
 	type bucket struct {
 		currentFails  int
@@ -535,7 +548,7 @@ func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, pr
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Delta > out[j].Delta })
-	return out
+	return out, nil
 }
 
 func complianceConnectorFromEvent(ev map[string]interface{}) string {
@@ -799,7 +812,10 @@ func (s *Service) GetExpiredKeys(ctx context.Context, tenantID string) ([]map[st
 }
 
 func (s *Service) GetAuditCorrelations(ctx context.Context, tenantID string, limit int) ([]CorrelationItem, error) {
-	events, _ := s.fetchEvents(ctx, tenantID, 1000)
+	events, err := s.fetchEvents(ctx, tenantID, 1000)
+	if err != nil {
+		return nil, err
+	}
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
@@ -842,8 +858,14 @@ func (s *Service) GetAuditCorrelations(ctx context.Context, tenantID string, lim
 }
 
 func (s *Service) GetAuditAnomalies(ctx context.Context, tenantID string) ([]AnomalyItem, error) {
-	events, _ := s.fetchEvents(ctx, tenantID, 1000)
-	stats, _ := s.fetchAlertStats(ctx, tenantID)
+	events, err := s.fetchEvents(ctx, tenantID, 1000)
+	if err != nil {
+		return nil, err
+	}
+	stats, err := s.fetchAlertStats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	failedAuth := 0
 	policyViolations := 0
@@ -1286,7 +1308,7 @@ func (s *Service) fetchEvents(ctx context.Context, tenantID string, limit int) (
 	}
 	items, err := s.audit.ListEvents(ctx, tenantID, limit)
 	if err != nil {
-		return []map[string]interface{}{}, nil
+		return nil, fmt.Errorf("audit events unavailable: %w", err)
 	}
 	return items, nil
 }
@@ -1297,7 +1319,7 @@ func (s *Service) fetchAlertStats(ctx context.Context, tenantID string) (map[str
 	}
 	stats, err := s.audit.AlertStats(ctx, tenantID)
 	if err != nil {
-		return map[string]interface{}{}, nil
+		return nil, fmt.Errorf("alert stats unavailable: %w", err)
 	}
 	return stats, nil
 }

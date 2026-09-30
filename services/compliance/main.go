@@ -92,7 +92,7 @@ func main() {
 		store,
 		NewHTTPKeyCoreClient(keycoreURL, 5*time.Second),
 		NewHTTPPolicyClient(policyURL, 5*time.Second),
-		NewHTTPAuditClient(auditURL, 5*time.Second),
+		NewHTTPAuditClient(auditURL, envOr("REPORTING_URL", "https://reporting:8140"), 5*time.Second),
 		NewHTTPCertsClient(certsURL, 5*time.Second),
 		publisher,
 	)

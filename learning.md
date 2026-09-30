@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### `return empty, nil` on an upstream error is a fake result
+- **What happened:** compliance scored posture and listed anomalies over zero
+  events whenever audit refused it, and asked audit for a reporting route, so
+  alert stats were always empty.
+- **How it slipped through:** each fetch helper swallowed its error "to keep
+  the page up", so every failure looked like a quiet tenant and nothing
+  failed.
+- **Rule:** a fetch helper returns its error; the caller decides, and a
+  computed score fails rather than using missing data.
+
 ### Fixing one client of a service leaves its siblings broken
 - **What happened:** the Alert Center was empty for every tenant. Reporting's
   audit client never sent a service token. When audit started requiring a

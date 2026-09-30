@@ -31319,7 +31319,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T07:00:31Z",
+  "generated_at": "2026-09-30T07:21:15Z",
   "navigation": [
     {
       "group": "Overview",
@@ -46743,7 +46743,7 @@
             "GetLatestPosture"
           ],
           "internal_package_calls": [],
-          "line": 34,
+          "line": 35,
           "name": "GetPosture",
           "receiver_calls": [],
           "store_calls": [
@@ -46804,7 +46804,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 157,
+          "line": 166,
           "name": "GetPostureHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -46859,7 +46859,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 176,
+          "line": 185,
           "name": "GetPostureBreakdown",
           "receiver_calls": [],
           "store_calls": []
@@ -46926,7 +46926,7 @@
             "ListAssessmentRuns"
           ],
           "internal_package_calls": [],
-          "line": 214,
+          "line": 223,
           "name": "GetLatestAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -47005,7 +47005,7 @@
             "diffConnectorFailures"
           ],
           "internal_package_calls": [],
-          "line": 242,
+          "line": 251,
           "name": "GetAssessmentDelta",
           "receiver_calls": [],
           "store_calls": [
@@ -47104,7 +47104,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 317,
+          "line": 330,
           "name": "RunAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -47174,7 +47174,7 @@
             "normalizeTemplateID"
           ],
           "internal_package_calls": [],
-          "line": 233,
+          "line": 242,
           "name": "ListAssessmentRuns",
           "receiver_calls": [],
           "store_calls": [
@@ -47239,7 +47239,7 @@
             "normalizeAssessmentFrequency"
           ],
           "internal_package_calls": [],
-          "line": 587,
+          "line": 600,
           "name": "GetAssessmentSchedule",
           "receiver_calls": [],
           "store_calls": [
@@ -47317,7 +47317,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 600,
+          "line": 613,
           "name": "UpsertAssessmentSchedule",
           "receiver_calls": [],
           "store_calls": [
@@ -47382,7 +47382,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 651,
+          "line": 664,
           "name": "ListComplianceTemplates",
           "receiver_calls": [],
           "store_calls": [
@@ -47460,7 +47460,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 675,
+          "line": 688,
           "name": "UpsertComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -47524,7 +47524,7 @@
             "normalizeComplianceTemplate"
           ],
           "internal_package_calls": [],
-          "line": 659,
+          "line": 672,
           "name": "GetComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -47591,7 +47591,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 715,
+          "line": 728,
           "name": "DeleteComplianceTemplate",
           "receiver_calls": [],
           "store_calls": [
@@ -47648,7 +47648,7 @@
             "frameworkCatalog"
           ],
           "internal_package_calls": [],
-          "line": 733,
+          "line": 746,
           "name": "ListFrameworks",
           "receiver_calls": [],
           "store_calls": []
@@ -47709,7 +47709,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 737,
+          "line": 750,
           "name": "GetFrameworkControls",
           "receiver_calls": [],
           "store_calls": [
@@ -47778,7 +47778,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 758,
+          "line": 771,
           "name": "GetFrameworkGaps",
           "receiver_calls": [],
           "store_calls": [
@@ -47841,7 +47841,7 @@
             "computeKeyHygiene"
           ],
           "internal_package_calls": [],
-          "line": 777,
+          "line": 790,
           "name": "GetKeyHygieneReport",
           "receiver_calls": [],
           "store_calls": []
@@ -47885,7 +47885,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 785,
+          "line": 798,
           "name": "GetOrphanedKeys",
           "receiver_calls": [],
           "store_calls": []
@@ -47929,7 +47929,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 793,
+          "line": 806,
           "name": "GetExpiredKeys",
           "receiver_calls": [],
           "store_calls": []
@@ -47988,7 +47988,7 @@
             "topActions"
           ],
           "internal_package_calls": [],
-          "line": 801,
+          "line": 814,
           "name": "GetAuditCorrelations",
           "receiver_calls": [],
           "store_calls": []
@@ -48059,7 +48059,7 @@
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 844,
+          "line": 860,
           "name": "GetAuditAnomalies",
           "receiver_calls": [],
           "store_calls": []
@@ -48123,7 +48123,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 901,
+          "line": 923,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -48171,7 +48171,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 929,
+          "line": 951,
           "name": "CBOMSummary",
           "receiver_calls": [],
           "store_calls": []
@@ -48238,7 +48238,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 901,
+          "line": 923,
           "name": "GenerateCBOM",
           "receiver_calls": [],
           "store_calls": [
@@ -48286,7 +48286,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 944,
+          "line": 966,
           "name": "CBOMPQCReadiness",
           "receiver_calls": [],
           "store_calls": []
@@ -48333,7 +48333,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 958,
+          "line": 980,
           "name": "CBOMDiff",
           "receiver_calls": [],
           "store_calls": []
@@ -48439,7 +48439,7 @@
             "GetLatestPosture"
           ],
           "internal_package_calls": [],
-          "line": 34,
+          "line": 35,
           "name": "GetPosture",
           "receiver_calls": [],
           "store_calls": [
@@ -48458,7 +48458,7 @@
             "ListAssessmentRuns"
           ],
           "internal_package_calls": [],
-          "line": 214,
+          "line": 223,
           "name": "GetLatestAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -48489,7 +48489,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 317,
+          "line": 330,
           "name": "RunAssessment",
           "receiver_calls": [],
           "store_calls": [
@@ -48510,7 +48510,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 737,
+          "line": 750,
           "name": "GetFrameworkControls",
           "receiver_calls": [],
           "store_calls": [
@@ -48529,7 +48529,7 @@
             "RecomputePosture"
           ],
           "internal_package_calls": [],
-          "line": 758,
+          "line": 771,
           "name": "GetFrameworkGaps",
           "receiver_calls": [],
           "store_calls": [
@@ -48545,7 +48545,7 @@
             "computeKeyHygiene"
           ],
           "internal_package_calls": [],
-          "line": 777,
+          "line": 790,
           "name": "GetKeyHygieneReport",
           "receiver_calls": [],
           "store_calls": []
@@ -48605,7 +48605,7 @@
           "file": "services/compliance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1305,
+          "line": 1327,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -114516,7 +114516,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T07:00:31Z",
+    "generatedAt": "2026-09-30T07:21:15Z",
     "methods": [
       "DELETE",
       "GET",

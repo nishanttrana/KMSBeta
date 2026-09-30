@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.7.0-beta] — 2026-09-30
+
+### Compliance no longer scores over missing audit data
+- **Fixed:** when audit events or alert stats couldn't be read, compliance
+  treated them as empty. Posture recompute, audit correlations, anomalies and
+  the assessment delta's "new failing connectors" now return an error, and
+  the dashboard shows it, instead of a score or list built from nothing.
+- **Fixed:** compliance read alert stats from `/alerts/stats` on the audit
+  URL, a route audit doesn't have, so it always got nothing. It now reads
+  them from reporting (`REPORTING_URL`, default `https://reporting:8140`).
+- **Tests:** `TestAuditFailureIsNotEmptyData`, `TestAlertStatsReadFromReporting`.
+- Closes both items left open in 7.6.0-beta.
+
 ## [7.6.0-beta] — 2026-09-30
 
 ### Alert Center shows alerts again

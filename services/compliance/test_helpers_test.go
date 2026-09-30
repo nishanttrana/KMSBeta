@@ -100,9 +100,13 @@ func (f *fakeComplianceCerts) GetRenewalSummary(_ context.Context, _ string) (Ce
 type fakeComplianceAudit struct {
 	events map[string][]map[string]interface{}
 	stats  map[string]map[string]interface{}
+	err    error
 }
 
 func (f *fakeComplianceAudit) ListEvents(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
 	if f.events == nil {
 		return []map[string]interface{}{}, nil
 	}
@@ -114,6 +118,9 @@ func (f *fakeComplianceAudit) ListEvents(_ context.Context, tenantID string, _ i
 }
 
 func (f *fakeComplianceAudit) AlertStats(_ context.Context, tenantID string) (map[string]interface{}, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
 	if f.stats == nil {
 		return map[string]interface{}{}, nil
 	}

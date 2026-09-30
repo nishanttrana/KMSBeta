@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,17 +19,19 @@ type AuditClient interface {
 }
 
 type HTTPAuditClient struct {
-	baseURL string
-	client  *http.Client
+	baseURL      string
+	reportingURL string // alert stats live in reporting, not audit
+	client       *http.Client
 }
 
-func NewHTTPAuditClient(baseURL string, timeout time.Duration) *HTTPAuditClient {
+func NewHTTPAuditClient(baseURL, reportingURL string, timeout time.Duration) *HTTPAuditClient {
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
 	return &HTTPAuditClient{
-		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		client:  &http.Client{Timeout: timeout},
+		baseURL:      strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		reportingURL: strings.TrimRight(strings.TrimSpace(reportingURL), "/"),
+		client:       &http.Client{Timeout: timeout},
 	}
 }
 
@@ -39,7 +42,7 @@ func (c *HTTPAuditClient) ListEvents(ctx context.Context, tenantID string, limit
 	q := url.Values{}
 	q.Set("tenant_id", strings.TrimSpace(tenantID))
 	q.Set("limit", strconvItoa(limit))
-	out, err := c.doJSON(ctx, http.MethodGet, "/audit/events?"+q.Encode())
+	out, err := c.doJSON(ctx, http.MethodGet, c.baseURL, "/audit/events?"+q.Encode())
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +64,7 @@ func (c *HTTPAuditClient) ListEvents(ctx context.Context, tenantID string, limit
 func (c *HTTPAuditClient) AlertStats(ctx context.Context, tenantID string) (map[string]interface{}, error) {
 	q := url.Values{}
 	q.Set("tenant_id", strings.TrimSpace(tenantID))
-	out, err := c.doJSON(ctx, http.MethodGet, "/alerts/stats?"+q.Encode())
+	out, err := c.doJSON(ctx, http.MethodGet, c.reportingURL, "/alerts/stats?"+q.Encode())
 	if err != nil {
 		return map[string]interface{}{}, err
 	}
@@ -76,11 +79,11 @@ func (c *HTTPAuditClient) AlertStats(ctx context.Context, tenantID string) (map[
 	return map[string]interface{}{}, nil
 }
 
-func (c *HTTPAuditClient) doJSON(ctx context.Context, method string, path string) (map[string]interface{}, error) {
-	if strings.TrimSpace(c.baseURL) == "" {
-		return nil, errors.New("audit base url is empty")
+func (c *HTTPAuditClient) doJSON(ctx context.Context, method, base, path string) (map[string]interface{}, error) {
+	if base == "" {
+		return nil, errors.New("base url is empty")
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, method, base+path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +95,16 @@ func (c *HTTPAuditClient) doJSON(ctx context.Context, method string, path string
 	}
 	defer resp.Body.Close() //nolint:errcheck
 	out := map[string]interface{}{}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
-	}
+	decErr := json.NewDecoder(resp.Body).Decode(&out)
 	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, errors.New(extractErrorMessage(out))
+		msg := "request failed"
+		if decErr == nil {
+			msg = extractErrorMessage(out)
+		}
+		return nil, fmt.Errorf("%s: %s", resp.Status, msg)
+	}
+	if decErr != nil {
+		return nil, decErr
 	}
 	return out, nil
 }
