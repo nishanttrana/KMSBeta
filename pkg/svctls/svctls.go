@@ -65,7 +65,6 @@ var Services = map[string]string{
 	"kms-key-access":        "keyaccess",
 	"kms-keycore":           "keycore",
 	"kms-kmip":              "kmip",
-	"kms-payment":           "payment",
 	"kms-policy":            "policy",
 	"kms-posture":           "posture",
 	"kms-pqc":               "pqc",

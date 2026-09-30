@@ -46,7 +46,7 @@ func TestFIPSModeChangeImpactAndRollout(t *testing.T) {
 		t.Fatal(err)
 	}
 	observe(t, store, "kms-keycore", "on")
-	observe(t, store, "kms-payment", "on")
+	observe(t, store, "kms-secrets", "on")
 
 	impact, err := svc.FIPSModeImpact(ctx, "only")
 	if err != nil {
@@ -55,8 +55,8 @@ func TestFIPSModeChangeImpactAndRollout(t *testing.T) {
 	if impact.From != "on" || impact.Downgrade || len(impact.Stops) == 0 || len(impact.Restarts) != 2 || impact.EstimatedSecs <= 0 {
 		t.Fatalf("on->only impact: %+v", impact)
 	}
-	if !strings.Contains(strings.ToLower(impact.Stops[0].Feature+impact.Stops[0].Detail), "des") {
-		t.Fatalf("payment TDES must be listed as stopping: %+v", impact.Stops[0])
+	if impact.Stops[0].Service != "secrets" || !strings.Contains(strings.ToLower(impact.Stops[0].Feature), "x25519") {
+		t.Fatalf("secrets X25519 keys must be listed as stopping: %+v", impact.Stops[0])
 	}
 
 	if _, err := svc.SetFIPSMode(ctx, "off", "on", "", "admin1"); !errors.Is(err, errFIPSModeConfirm) {

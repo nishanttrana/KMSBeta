@@ -15,11 +15,6 @@
    - [Masking Policy Configuration](#32-masking-policy-configuration)
    - [Field Encryption](#33-field-encryption)
    - [API Endpoints — Masking and Field Encryption](#34-api-endpoints--masking-and-field-encryption)
-4. [Payment Cryptography](#4-payment-cryptography)
-   - [TR-31 Key Blocks](#41-tr-31-key-blocks)
-   - [PIN Block Formats](#42-pin-block-formats)
-   - [ISO 20022 Signing](#43-iso-20022-signing)
-   - [API Endpoints — Payment](#44-api-endpoints--payment)
 5. [PKCS#11 Provider](#5-pkcs11-provider)
 6. [JCA/JCE Provider](#6-jcajce-provider)
 7. [Autokey — Automatic Key Provisioning](#7-autokey--automatic-key-provisioning)
@@ -34,12 +29,9 @@
 9. [Use Cases](#9-use-cases)
    - [PCI DSS: End-to-End PAN Tokenization at Checkout](#91-pci-dss-end-to-end-pan-tokenization-at-checkout)
    - [HIPAA: PHI Field Encryption Per Patient](#92-hipaa-phi-field-encryption-per-patient)
-   - [TR-31 Key Injection into POS Terminals](#93-tr-31-key-injection-into-pos-terminals)
-   - [ATM PIN Change Flow](#94-atm-pin-change-flow)
-   - [Data Warehouse Dynamic Masking](#95-data-warehouse-dynamic-masking)
-   - [Java Microservice Using JCA — Zero Code Change](#96-java-microservice-using-jca--zero-code-change)
-   - [PostgreSQL Column Encryption via PKCS#11](#97-postgresql-column-encryption-via-pkcs11)
-   - [Autokey for Microservice Fleet — Self-Service](#98-autokey-for-microservice-fleet--self-service)
+   - [Data Warehouse Dynamic Masking](#93-data-warehouse-dynamic-masking)
+   - [Java Microservice Using JCA — Zero Code Change](#94-java-microservice-using-jca--zero-code-change)
+   - [Autokey for Microservice Fleet — Self-Service](#95-autokey-for-microservice-fleet--self-service)
 
 ---
 
@@ -48,9 +40,9 @@
 Vecta KMS separates two concerns that are often conflated:
 
 - **Key management** governs the lifecycle of cryptographic keys — generation, rotation, distribution, destruction, and access policy. The core KMS services handle this.
-- **Data protection** uses those keys to transform sensitive data at the application layer — tokenizing PANs, masking PII fields, encrypting database columns, or participating in payment-industry protocols such as TR-31 and PIN block translation.
+- **Data protection** uses those keys to transform sensitive data at the application layer — tokenizing PANs, masking PII fields, encrypting database columns.
 
-All data-protection endpoints are hosted under the `/svc/dataprotect/` base path and run inside the `dataprotect` service behind the Envoy edge. Payment-specific endpoints use `/svc/payment/`. Both services authenticate via the standard `Authorization: Bearer <jwt>` header and require `X-Tenant-ID` for multi-tenant deployments.
+All data-protection endpoints are hosted under the `/svc/dataprotect/` base path and run inside the `dataprotect` service behind the Envoy edge. It authenticates via the standard `Authorization: Bearer <jwt>` header and require `X-Tenant-ID` for multi-tenant deployments.
 
 ### 1.1 Decision Matrix: Tokenization vs Encryption vs Masking
 
@@ -85,7 +77,6 @@ Choose the right protection technique based on format requirements, reversibilit
 | Service | Base path (dashboard proxy) | Edge path |
 |---|---|---|
 | Data Protection | `/svc/dataprotect/` | `/api/dataprotect/` |
-| Payment Crypto | `/svc/payment/` | `/api/payment/` |
 | Secrets Vault | `/svc/secrets/` | `/api/secrets/` |
 | Autokey | `/svc/autokey/` | `/api/autokey/` |
 
@@ -593,315 +584,6 @@ The re-encrypt endpoint accepts old ciphertext, decrypts with the current key ve
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/svc/dataprotect/mask` | Apply masking to a single record |
-
----
-
-## 4. Payment Cryptography
-
-Payment cryptography covers the regulated protocols used in card-present payment networks: TR-31 key blocks, PIN block generation and translation, PIN verification (PVV and IBM offset), and ISO 20022 message signing.
-
-> **Security Note:** All payment cryptography operations require the caller to hold the `payment:operate` permission in addition to standard authentication. Operations are logged with payment-specific audit subjects.
-
-### 4.1 TR-31 Key Blocks
-
-**Background — PCI PIN Security Requirement 18-3:**
-The PCI PIN Security standard (Requirement 18-3) mandates that symmetric key material exchanged between payment participants must be transported inside authenticated, integrity-protected key blocks. The TR-31 (ANSI X9.143) standard defines the key block format used industry-wide.
-
-**TR-31 Block Header Format:**
-
-The first 16 characters are the header, encoding key metadata authenticated by the appended MAC:
-
-```
-Position  Length  Field              Example  Description
-0         1       VersionId          D        Block format version (D=current AES-based)
-1         4       BlockLength        0096     Total block length in ASCII decimal characters
-5         2       KeyUsage           P0       Key usage code (see table below)
-7         1       Algorithm          A        Key algorithm (A=AES, D=DEA, T=2TDEA, Y=AES-256)
-8         1       ModeOfUse         N        Permitted mode of use (see table below)
-9         2       KeyVersionNumber   00       Vendor-defined version counter
-11        1       Exportability      S        S=Sensitive, E=Exportable, N=Non-Exportable
-12        2       NumOptionalBlocks  00       Count of optional header blocks
-14        2       Reserved           00       Must be "00"
-Total: 16 characters
-```
-
-**Key Usage Codes (TR-31):**
-
-| Code | Usage | Description |
-|---|---|---|
-| `B0` | BDK | Base Derivation Key for DUKPT |
-| `B1` | Initial DUKPT Key | Initial Key loaded into device |
-| `B2` | BDK (DUKPT AES) | AES-based BDK |
-| `C0` | CVK | Card Verification Key (Visa CVV, Mastercard CVC) |
-| `D0` | Data Encryption | Generic symmetric data encryption key |
-| `D1` | Data Encryption (asymmetric public) | DEK public component |
-| `E0` | EMV Issuer MK — Application Cryptogram | ICC master key |
-| `E1` | EMV Issuer MK — Secure Messaging Confidentiality | |
-| `E2` | EMV Issuer MK — Secure Messaging Integrity | |
-| `E3` | EMV Issuer MK — Data Authentication | DAC |
-| `E4` | EMV Issuer MK — Dynamic Numbers | UN generation |
-| `E5` | EMV Issuer MK — Card Personalization | |
-| `E6` | EMV Issuer MK — Other | Vendor-specific |
-| `I0` | Initialization Vector | IV for use with another key |
-| `K0` | Key Encryption / Key Wrapping | KEK |
-| `K1` | TR-31 Key Block Protection Key | KBPK |
-| `K2` | TR-34 Asymmetric Transport Key | RSA key transport |
-| `M0` | ISO 16609 MAC Algorithm 1 | Retail MAC |
-| `M1` | ISO 9797-1 MAC Algorithm 1 | CBC-MAC |
-| `M3` | ISO 9797-1 MAC Algorithm 3 | ANSI Retail MAC |
-| `M5` | ISO 9797-1 MAC Algorithm 5 | CMAC |
-| `M7` | HMAC | HMAC-SHA family |
-| `P0` | PIN Encryption Key | ZPK / PEK |
-| `S0` | Asymmetric Key Pair for Digital Signature | |
-| `S1` | Asymmetric Key Pair — CA Signing | |
-| `S2` | Asymmetric Key Pair — Non-X9.24 | |
-| `V0` | PIN Verification — KPV | |
-| `V2` | PIN Verification — Visa PVV | |
-| `V3` | PIN Verification — IBM 3624 | Offset method |
-| `V4` | PIN Verification — Other | |
-
-**Algorithm Codes:**
-
-| Code | Algorithm |
-|---|---|
-| `A` | AES-128 |
-| `D` | Single DES (DEA) — legacy, avoid in new designs |
-| `R` | RSA |
-| `T` | 2-key Triple DES (2TDEA) |
-| `U` | AES-192 |
-| `Y` | AES-256 |
-
-**Mode of Use Codes:**
-
-| Code | Mode | Description |
-|---|---|---|
-| `B` | Both Encrypt/Decrypt | Key may encrypt and decrypt |
-| `C` | MAC Generation/Verification | MAC both directions |
-| `D` | Decrypt Only | Key may not encrypt |
-| `E` | Encrypt Only | Key may not decrypt |
-| `G` | MAC Generation Only | Cannot verify |
-| `N` | No Restriction | Any use permitted by key usage |
-| `S` | Sign Only | Signature generation only |
-| `T` | Both Sign and Decrypt | Asymmetric dual use |
-| `V` | Verify Only | Signature verification only |
-| `W` | Wrap Only | Key wrapping only |
-| `X` | Key Derivation | Key derivation function input |
-
-**Exportability Codes:**
-
-| Code | Description |
-|---|---|
-| `E` | Exportable — may be exported under any KEK |
-| `N` | Non-Exportable — cannot be exported |
-| `S` | Sensitive — may be exported only under certain conditions |
-
----
-
-#### Wrap a Key in a TR-31 Block
-
-`POST /svc/payment/payment/tr31/create` builds a TR-31 key block.
-
-#### Unwrap a TR-31 Key Block
-
-`POST /svc/payment/payment/tr31/parse` opens a TR-31 key block.
-
-#### Translate a TR-31 Key Block
-
-`POST /svc/payment/payment/tr31/translate`
-
-Re-wraps a key block from one KBPK to another without exposing the working key in plaintext.
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/tr31/translate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyBlock": "D0096P0AN01S0000...",
-    "incomingKbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "outgoingKbpkId": "7de29b53-8164-4e19-c712-5f48a22bf093"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "keyBlock": "D0096P0AN01S0000A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4",
-  "outgoingKbpkId": "7de29b53-8164-4e19-c712-5f48a22bf093",
-  "request_id": "req_pay_003"
-}
-```
-
-### 4.2 PIN Block Formats
-
-A PIN block encodes a cardholder's PIN in a standardized binary structure. Vecta KMS supports all four primary ISO 9564-1 formats.
-
-**ISO 9564-1 Format 0 (most common):**
-
-Format 0 XORs a PIN-encoded block with a PAN-derived block:
-
-```
-PIN Block construction:
-  Nibble 0    : Format = 0
-  Nibble 1    : PIN length (4–12)
-  Nibbles 2–13: PIN digits, padded with 0xF
-
-PAN Block construction:
-  Nibbles 0–3 : 0000
-  Nibbles 4–15: Rightmost 12 PAN digits, excluding check digit
-
-Final = PIN Block XOR PAN Block
-
-Example: PIN=1234, PAN=4532015112830366
-  Check digit of PAN = 6 (last digit), exclude it
-  Rightmost 12 excl. check: 5 3 2 0 1 5 1 1 2 8 3 0
-
-  PIN Block (hex): 04 12 34 FF FF FF FF FF
-  PAN Block (hex): 00 00 53 20 15 11 28 30
-  XOR result:      04 12 67 DF EA EE D7 CF
-
-Encrypted PIN block transmitted = DES/AES-encrypt(04 12 67 DF EA EE D7 CF, ZPK)
-```
-
-**ISO 9564-1 Format 1:**
-- Random padding (11 nibbles) instead of PAN XOR
-- Each PIN entry produces a unique block — good for systems where PAN is unavailable at the PIN device
-
-**ISO 9564-1 Format 3:**
-- Like Format 0, but fill nibbles are random decimal digits (0–9) instead of 0xF
-- Slightly better entropy than Format 0
-
-**ISO 9564-1 Format 4 (AES-native, 128-bit):**
-- 16-byte block — does not XOR with PAN
-- `Format=4`, PIN length, PIN digits, then random padding to 128 bits
-- Recommended for all new AES-based designs; avoids the XOR-with-PAN vulnerability
-
----
-
-#### Translate a PIN Block
-
-`POST /svc/payment/payment/pin/translate`
-
-Translates a PIN block from one ZPK to another without exposing the PIN in plaintext.
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/pin/translate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "encryptedPinBlock": "A3F7E29D4B1C8F62",
-    "pan": "4532015112830366",
-    "incomingFormat": 0,
-    "incomingZpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "outgoingFormat": 0,
-    "outgoingZpkId": "6cd07i97-8a4a-7895-e6if-5f296i99didi"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "encryptedPinBlock": "C8B2F14A7E3D9521",
-  "incomingZpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-  "outgoingZpkId": "6cd07i97-8a4a-7895-e6if-5f296i99didi",
-  "outgoingFormat": 0,
-  "request_id": "req_pay_011"
-}
-```
-
----
-
-#### Verify PIN — Visa PVV Method
-
-`POST /svc/payment/payment/pin/pvv/verify`; generate a PVV with `POST /svc/payment/payment/pin/pvv/generate`.
-
-#### Verify PIN — IBM 3624 Offset Method
-
-`POST /svc/payment/payment/pin/offset/verify`; generate an offset with `POST /svc/payment/payment/pin/offset/generate`.
-
-### 4.3 ISO 20022 Signing
-
-ISO 20022 is the international standard for electronic data interchange between financial institutions, used by SWIFT, SEPA, FedNow, and other modern payment rails. Vecta KMS supports signing and verification of ISO 20022 messages via XMLDSig (for XML messages) and JWS (for JSON messages).
-
----
-
-#### Sign an ISO 20022 Message
-
-`POST /svc/payment/payment/iso20022/sign`
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/iso20022/sign \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "9ef30c64-6828-5784-d5ef-4e296f99bgc9",
-    "messageFormat": "xml",
-    "signatureFormat": "xmldsig",
-    "messageBase64": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PERvY3VtZW50Pjwvc2VuZGVyPjwvRG9jdW1lbnQ+",
-    "canonicalizationAlgorithm": "http://www.w3.org/2001/10/xml-exc-c14n#",
-    "signatureAlgorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
-    "includeKeyInfo": true
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "signedMessageBase64": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PERvY3VtZW50PjxTaWduYXR1cmU+...",
-  "signatureBase64": "MEUCIQCkL7v9K+2j8mP3qR7wL2Xk9mP3qR7wL2Xk9mP3qR7w==",
-  "keyId": "9ef30c64-6828-5784-d5ef-4e296f99bgc9",
-  "algorithm": "rsa-sha256",
-  "canonicalization": "exc-c14n",
-  "request_id": "req_pay_040"
-}
-```
-
----
-
-#### Verify an ISO 20022 Signature
-
-`POST /svc/payment/payment/iso20022/verify`
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/iso20022/verify \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyId": "9ef30c64-6828-5784-d5ef-4e296f99bgc9",
-    "signedMessageBase64": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PERvY3VtZW50PjxTaWduYXR1cmU+...",
-    "signatureFormat": "xmldsig"
-  }'
-```
-
-**Response `200 OK`:**
-
-```json
-{
-  "verified": true,
-  "keyId": "9ef30c64-6828-5784-d5ef-4e296f99bgc9",
-  "signerKeyInfo": {
-    "algorithm": "RSA",
-    "keySize": 2048,
-    "subjectDN": "CN=FI-Sending-Bank,O=Example Bank,C=US"
-  },
-  "request_id": "req_pay_041"
-}
-```
-
-### 4.4 API Endpoints — Payment
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/svc/payment/payment/tr31/translate` | Translate TR-31 block from one KBPK to another |
-| `POST` | `/svc/payment/payment/pin/translate` | Translate PIN block between ZPKs/formats |
-| `POST` | `/svc/payment/payment/iso20022/sign` | Sign ISO 20022 message (XMLDSig or JWS) |
-| `POST` | `/svc/payment/payment/iso20022/verify` | Verify ISO 20022 message signature |
 
 ---
 
@@ -1553,75 +1235,7 @@ If the application needs `SELECT * FROM patients WHERE ssn = ?`:
 
 ---
 
-### 9.3 TR-31 Key Injection into POS Terminals
-
-**Context:** A payment processor injects Zone PIN Keys (ZPKs) into POS terminals during personalization. Keys must be transported in TR-31 key blocks per PCI PIN Security Requirement 18-3.
-
-**Prerequisites:**
-- KBPK (K1) stored in Vecta KMS, tagged `role=kbpk, zone=zone-a`
-- ZPK (P0) stored in Vecta KMS, tagged `role=zpk, zone=zone-a, terminal=POS-00142`
-- Caller holds `payment:operate` permission
-
-**Step 1 — Wrap ZPK for transport to the POS terminal's key injection device:**
-
-**Step 2 — Transmit key block to the key injection facility (KIF).**
-
-The KIF's own KBPK may differ from the KMS KBPK. Use `translate` to re-wrap for the KIF's KBPK without exposing the ZPK:
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/tr31/translate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keyBlock": "D0096P0AN01S0000...",
-    "incomingKbpkId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "outgoingKbpkId": "7de29b53-8164-4e19-c712-5f48a22bf093"
-  }'
-```
-
-**Step 3 — KIF injects translated key block into terminal.** Terminal unwraps using its local KBPK.
-
-**Compliance outcome:** ZPK never appears in plaintext outside a TR-31 block. Full PCI PIN Security Requirement 18-3 compliance. Audit trail covers every wrap and translate operation.
-
----
-
-### 9.4 ATM PIN Change Flow
-
-**Context:** A bank allows customers to change their PIN at an ATM. The ATM captures the old PIN and new PIN as encrypted PIN blocks under the ATM's ZPK. The host must verify the old PIN and store a new PIN verification value.
-
-**Prerequisites:**
-- ATM ZPK stored in Vecta KMS
-- PVK stored in Vecta KMS (for Visa PVV verification)
-
-**Step 1 — Verify old PIN (PVV method):**
-
-**Step 2 — Translate new PIN block from ATM ZPK to host ZPK:**
-
-```bash
-curl -X POST https://localhost/svc/payment/payment/pin/translate \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: root" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "encryptedPinBlock": "F1E2D3C4B5A69788",
-    "pan": "4532015112830366",
-    "incomingFormat": 0,
-    "incomingZpkId": "5bc96h86-7939-6784-d5he-4e185h88chc8",
-    "outgoingFormat": 0,
-    "outgoingZpkId": "6cd07i97-8a4a-7895-e6if-5f296i99didi"
-  }'
-```
-
-**Step 3 — Compute new PVV and store on the card (for re-issuance) or in the host database:**
-
-The new PVV is derived during the `translate` or a separate `generate` call, then stored on Track 2.
-
-**Compliance outcome:** Old and new PINs never appear in plaintext on the host. Every PIN operation is logged to the audit trail with ATM terminal ID, PAN (masked), and operation type.
-
----
-
-### 9.5 Data Warehouse Dynamic Masking
+### 9.3 Data Warehouse Dynamic Masking
 
 **Context:** A data analytics platform exposes a read-only API over the data warehouse. Data scientists, support engineers, and external auditors all query the same API with different data access needs.
 
@@ -1664,7 +1278,7 @@ Pass `"callerRoles": ["dba"]` — the `roleExemptions` list includes `dba`, so t
 
 ---
 
-### 9.6 Java Microservice Using JCA — Zero Code Change
+### 9.4 Java Microservice Using JCA — Zero Code Change
 
 **Context:** A Java service encrypts records with AES-GCM data keys and
 wants those data keys protected by a Vecta KMS key (envelope encryption).
@@ -1693,7 +1307,7 @@ To read, unwrap the data key with `UNWRAP_MODE` and
 a KMS call, checked against the key's access policy and audited
 (`audit.ekm.tde_key_accessed`).
 
-### 9.8 Autokey for Microservice Fleet — Self-Service
+### 9.5 Autokey for Microservice Fleet — Self-Service
 
 **Context:** A platform engineering team manages 40+ microservices. Each service needs its own AES-256 DEK for encrypting data at rest. Previously, developers opened tickets and waited 3–5 days for a KMS admin to provision keys manually.
 

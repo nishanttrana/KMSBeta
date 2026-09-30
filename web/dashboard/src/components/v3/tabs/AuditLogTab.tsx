@@ -24,7 +24,7 @@ import {
 const SERVICES = [
   "auth", "key", "keycore", "secrets", "certs", "policy", "governance",
   "audit", "compliance", "posture", "reporting", "cluster",
-  "payment", "confidential", "hyok", "byok", "ekm",
+  "confidential", "hyok", "byok", "ekm",
   "pqc",
   "autokey", "keyaccess", "signing",
   "workload", "dataprotect", "kmip", "sbom",

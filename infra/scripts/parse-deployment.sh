@@ -15,7 +15,6 @@ FEATURE_ORDER=(
   hyok_proxy
   kmip_server
   ekm_database
-  payment_crypto
   autokey_provisioning
   artifact_signing
   key_access_justifications

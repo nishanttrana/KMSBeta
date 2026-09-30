@@ -1398,8 +1398,6 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("attested_key_release_and_confidential_compute")
 		case strings.HasPrefix(table, "workload_identity_"):
 			addCapability("workload_identity_and_spiffe_federation")
-		case strings.HasPrefix(table, "payment_"):
-			addCapability("payment_cryptography_and_ap2_policy")
 		case strings.HasPrefix(table, "autokey_"):
 			addCapability("policy_driven_autokey_and_key_handle_provisioning")
 		case strings.HasPrefix(table, "signing_"):

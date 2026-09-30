@@ -11,7 +11,7 @@ For broader context, pair this guide with:
 
 ## Conventions
 
-- UI paths use the dashboard labels, for example `Data Protection -> Payment Policy`
+- UI paths use the dashboard labels, for example `Data Protection -> Tokenize / Mask / Redact`
 - API paths use the dashboard proxy style, for example `/svc/keycore/keys`
 - `tenant_id=root` is used in examples
 - For route-level detail and larger REST coverage, see [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md)
@@ -32,7 +32,6 @@ For broader context, pair this guide with:
 | `cloud` | cloud/platform teams | you manage BYOK or HYOK across clouds | Cloud UI, `/svc/cloud/...` |
 | `ekm` | database/platform teams | you protect databases or BitLocker endpoints | EKM UI, `/svc/ekm/...` |
 | `kmip` | integration teams | you integrate KMIP clients and appliances | KMIP UI, `:5696`, `/svc/kmip/...` |
-| `payment` | payments/HSM teams | you manage payment keys and payment crypto policy | Payment Crypto UI, `/svc/payment/...` |
 | `compliance` | compliance, audit | you need framework scoring and evidence views | Compliance UI, `/svc/compliance/...` |
 | `posture` | security ops | you need risk, findings, or remediation | Posture UI, `/svc/posture/...` |
 | `reporting` | ops, management | you need alerts, incidents, and reports | Reporting UI, `/svc/reporting/...` |
@@ -59,7 +58,7 @@ Use cases:
 - create application KEKs and DEKs
 - rotate signing keys on a fixed schedule
 - wrap cloud or agent keys under centrally managed root keys
-- expose controlled request interfaces for REST, KMIP, HYOK, EKM, and payment integrations
+- expose controlled request interfaces for REST, KMIP, HYOK and EKM integrations
 
 How teams use it:
 
@@ -264,7 +263,6 @@ Common APIs:
 What it does:
 
 - handles tokenization, masking, and related protection controls for sensitive datasets
-- hosts the `Payment Policy` tab because payment guardrails are KMS-wide data protection policy, not just a workbench action
 
 Use cases:
 
@@ -351,28 +349,6 @@ Common APIs:
 - `POST /svc/kmip/kmip/interop/targets`
 - `POST /svc/kmip/kmip/interop/targets/{id}/validate`
 
-### Payment
-
-What it does:
-
-- manages payment keys, payment crypto operations, and policy
-- splits policy into `Traditional Payment` and `Modern Payment`
-- supports TR-31, PIN, CVV, MAC, ISO 20022, remote injection, and AP2 policy/evaluation
-
-Use cases:
-
-- define payment key usage and rotation
-- run test crypto flows in `Workbench -> Payment Crypto`
-- enforce production payment guardrails in `Data Protection -> Payment Policy`
-
-Common APIs:
-
-- `GET /svc/payment/payment/policy?tenant_id=root`
-- `PUT /svc/payment/payment/policy?tenant_id=root`
-- `POST /svc/payment/payment/tr31/create?tenant_id=root`
-- `POST /svc/payment/payment/iso20022/sign?tenant_id=root`
-- `POST /svc/payment/payment/ap2/evaluate?tenant_id=root`
-
 ### HSM Integration
 
 What it does:
@@ -413,7 +389,7 @@ References:
 What it does:
 
 - computes framework posture, assessment history, control gaps, CBOM/SBOM views, and deltas between assessments
-- now incorporates certificate renewal intelligence, payment policy posture, PQC readiness, and other platform-level controls
+- now incorporates certificate renewal intelligence, PQC readiness, and other platform-level controls
 
 Use cases:
 

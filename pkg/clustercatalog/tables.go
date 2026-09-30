@@ -192,14 +192,6 @@ var Replicated = map[string][]string{
 		"kmip_interop_targets",
 		"kmip_objects",
 	},
-	"payment": {
-		"payment_ap2_profile",
-		"payment_injection_jobs",
-		"payment_injection_terminals",
-		"payment_keys",
-		"payment_policy",
-		"tr31_translations",
-	},
 	"policy": {
 		"policies",
 		"policy_versions",
@@ -296,7 +288,6 @@ var NodeLocal = map[string]string{
 	"kmip_operations":                     "per-node KMIP operation log",
 	"kmip_sessions":                       "KMIP connections held by this node",
 	"ops_metrics_hourly":                  "operation metrics by node; the primary also counts members' relayed operations",
-	"pin_operations_log":                  "per-node PIN operation log",
 	"platform_fips_observed":              "the FIPS mode this node runs",
 	"platform_mtls_observed":              "the internal mTLS certificate and key exchange this node's services run",
 	"policy_evaluations":                  "per-node policy decision log",

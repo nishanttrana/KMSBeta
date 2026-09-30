@@ -158,7 +158,7 @@ export function OpsMetricsPanel({ session }: { session: any }) {
           {loading ? <div style={{ color: C.muted, padding: 20, textAlign: "center" }}>Loading...</div> : latency.length === 0 ? (
             <div style={{ textAlign: "center", padding: 40, color: C.muted }}>
               <Activity size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
-              <div style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, payment PIN/CVV/MAC/TR-31, and certificate and OCSP signing appear here as they run.</div>
+              <div style={{ fontSize: 13 }}>No operations in this window. Key operations, tokenization and FPE, and certificate and OCSP signing appear here as they run.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

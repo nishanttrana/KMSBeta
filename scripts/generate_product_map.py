@@ -1303,7 +1303,6 @@ def visual_graph_payload(
         "governance",
         "keyaccess",
         "keycore",
-        "payment",
         "policy",
         "secrets",
         "signing",
@@ -1320,7 +1319,7 @@ def visual_graph_payload(
         internal_pkg_calls = list(flow.get("handler_internal_package_calls") or []) + list(flow.get("service_internal_package_calls") or [])
         external_pkg_calls = list(flow.get("handler_external_package_calls") or []) + list(flow.get("service_external_package_calls") or [])
         complexity = len(unique(store_calls)) + len(unique(receiver_calls)) + len(unique(internal_pkg_calls))
-        risk = "high" if method in {"DELETE"} or service in {"keycore", "auth", "governance", "payment"} else "medium" if method in destructive_methods or complexity >= 4 else "low"
+        risk = "high" if method in {"DELETE"} or service in {"keycore", "auth", "governance"} else "medium" if method in destructive_methods or complexity >= 4 else "low"
         flows.append(
             {
                 "routeKey": f"{service}|{method}|{flow.get('normalized_path')}",

@@ -890,34 +890,6 @@ services:
       timeout: 5s
       retries: 10
 
-  payment:
-    <<: *kms-service
-    profiles: ["payment_crypto"]
-    build:
-      context: .
-      dockerfile: services/payment/Dockerfile
-    image: vecta/payment:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      KEYCORE_URL: https://keycore:8010
-      HTTP_PORT: "8170"
-      GRPC_PORT: "18170"
-      PAYMENT_TCP_ENABLED: "${PAYMENT_TCP_ENABLED:-true}"
-      PAYMENT_TCP_BIND: "0.0.0.0"
-      PAYMENT_TCP_PORT: "${PAYMENT_TCP_PORT:-9170}"
-    ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8170:8170"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18170:18170"
-      - "${PAYMENT_TCP_PORT:-9170}:${PAYMENT_TCP_PORT:-9170}"
-    volumes:
-      - internal-trust:/run/vecta/trust:ro
-      - platform-state:/run/vecta/platform:ro
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   confidential:
     <<: *kms-service
     profiles: ["confidential_compute"]

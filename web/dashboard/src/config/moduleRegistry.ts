@@ -10,10 +10,9 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   certs: "certs",
   pqc: "pqc_migration",
   // DATA & POLICY
-  dataprotection: ["data_protection", "payment_crypto"],
+  dataprotection: ["data_protection"],
   tokenize: "data_protection",
   dataenc: "data_protection",
-  payment: "payment_crypto",
   autokey: "autokey_provisioning",
   keyaccess: "key_access_justifications",
   // CLOUD & IDENTITY — workload now hosts confidential as a sub-pane

@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Finish or discard: a half-done removal sat uncommitted for a day
+- **What happened:** a session deleted the payment service in the shared
+  checkout (108 files, about 14,600 lines) but never documented, versioned or
+  committed it. Meanwhile `main` moved on by 23 commits.
+- **Also found:** the session had rewritten a standing rule in CLAUDE.md
+  (moving cut features to KMSExtension) without a recorded owner decision.
+- **Rule:** a change that removes a product surface is finished in one sitting
+  (code, docs, version, commit) or not started. Never edit CLAUDE.md rules
+  without the owner's words in the same change.
+
 ### An "open item" can be a rule, not a gap
 - **What happened:** the automation guide listed XMSS/LMS as "not
   implemented", inviting a software implementation. NIST SP 800-208 requires

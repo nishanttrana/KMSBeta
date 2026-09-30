@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-30T04:51:56Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T06:13:39Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
 - Dashboard navigation items: `27`
-- Tab/component mappings: `35`
+- Tab/component mappings: `34`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `919` across `30` services
+- Backend HTTP routes discovered: `877` across `29` services
 - Backend routes on the `pkg/route` kernel: `352` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `578`
-- Frontend call sites with exact backend route match: `533`
+- Frontend API call sites discovered: `551`
+- Frontend call sites with exact backend route match: `506`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `768`
-- Backend request flows with handler/service/package summaries: `919`
+- Clickable controls with static `onClick` handlers: `758`
+- Backend request flows with handler/service/package summaries: `877`
 
 ## How To Use This For Launch
 
@@ -116,9 +116,6 @@ flowchart LR
   tab_hyok["hyok"]
   UI --> tab_hyok
   tab_hyok --> svc_hyok
-  tab_payment["payment"]
-  UI --> tab_payment
-  tab_payment --> svc_payment
   tab_pkcs11["pkcs11"]
   UI --> tab_pkcs11
   tab_pkcs11 --> svc_ekm
@@ -145,7 +142,6 @@ flowchart LR
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (175 routes)"]
-  svc_payment["payment (42 routes)"]
   svc_posture["posture (12 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
@@ -193,7 +189,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 49 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
-| UNLISTED | payment | payment | web/dashboard/src/components/v3/tabs/PaymentTab.tsx | payment | 27 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
 | UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 111 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -221,7 +216,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | keyaccess | 9 | 6 |
 | keycore | 175 | 121 |
 | kmip | 12 | 11 |
-| payment | 42 | 27 |
 | policy | 12 | 0 |
 | posture | 12 | 8 |
 | pqc | 14 | 8 |
@@ -414,7 +408,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
 | compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
 
-Showing `120` of `377`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `362`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

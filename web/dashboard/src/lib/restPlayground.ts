@@ -6,7 +6,7 @@ import { serviceRequestRaw } from "./serviceApi";
 const ALLOWED_SERVICES = new Set([
   "keycore", "secrets", "certs", "policy", "governance", "pqc",
   "audit", "cloud", "compliance", "hyok", "ekm", "kmip", "reporting",
-  "posture", "ai", "qkd", "qrng", "payment", "confidential", "workload",
+  "posture", "ai", "qkd", "qrng", "confidential", "workload",
   "autokey", "signing", "keyaccess", "sbom", "dataprotect", "mpc",
   "cluster", "auth"
 ]);

@@ -41,7 +41,6 @@ Unlike bolt-on secrets managers, Vecta KMS is purpose-built for **cryptographic 
 | Workload identity (SPIFFE) | Yes (native) | Yes | Limited | Limited | No |
 | Confidential compute (TEE) | Yes | No | No | Limited | No |
 | Tokenization / FPE | Yes (built-in) | Plugin | No | No | Yes |
-| Payment crypto (TR-31) | Yes | No | No | No | Yes |
 | EKM (database TDE) | Yes | No | Yes | Yes | Yes |
 | Open-source core | Yes | Yes (CE) | No | No | No |
 
@@ -63,7 +62,6 @@ Vecta KMS is composed of the following services, each independently deployable a
 | Confidential Compute | `confidential` | TEE attestation, enclave key sealing |
 | Post-Quantum Crypto | `pqc` | ML-KEM, ML-DSA, SLH-DSA operations |
 | Data Protection | `dataprotect` | Tokenization, FPE (format-preserving encryption), masking |
-| Payment Crypto | `payment` | TR-31 key blocks, PCI-DSS key management |
 | Autokey | `autokey` | Self-service key provisioning with governance templates |
 | Cloud KMS Proxy | `cloud` | BYOK/HYOK for AWS, Azure, GCP |
 | External Key Manager | `ekm` | Database TDE proxy (PostgreSQL, MySQL, Oracle, SQL Server) |
@@ -725,7 +723,6 @@ The left sidebar is organized into these sections:
 
 **DATA & POLICY**
 - **Data Protection** — Tokenization, format-preserving encryption, vaults (PAN, SSN, etc.).
-- **Payment Crypto** — TR-31 key blocks, payment key management.
 - **Autokey** — Self-service key request portal with governance templates.
 - **Access Policies** — Per-key and key-ring access policy management.
 
@@ -1047,9 +1044,6 @@ What are you trying to accomplish?
 ├── KMIP-compatible storage or devices?
 │   └── KMIP appliances, storage arrays → KMIP server
 │
-├── Payment keys (PCI-DSS)?
-│   └── TR-31 key blocks, LMK, ZMK, PIK → Payment Crypto service
-│
 ├── Post-quantum migration?
 │   ├── Key exchange → PQC service (ML-KEM-768)
 │   └── Signatures → PQC service (ML-DSA-65 or SLH-DSA-SHA2-128s)
@@ -1074,7 +1068,6 @@ What are you trying to accomplish?
 | Certificate issuance | `certs` | `/svc/certs/certificates` |
 | PAN/SSN tokenization | `dataprotect` | `/svc/dataprotect/tokenize` |
 | Format-preserving encryption | `dataprotect` | `/svc/dataprotect/fpe/encrypt` |
-| Payment keys (TR-31) | `payment` | `/svc/payment/key-blocks` |
 | Post-quantum KEM | `pqc` | `/svc/pqc/kem/encapsulate` |
 | Post-quantum signatures | `pqc` | `/svc/pqc/sign` |
 | Code/artifact signing | `signing` | `/svc/signing/sign` |

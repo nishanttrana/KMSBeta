@@ -99,7 +99,7 @@ that stops for a mode change stays stopped. Restart it by hand.
 | AES (GCM with module-generated IV, CBC, CTR), SHA-2/SHA-3, HMAC, HKDF, PBKDF2, RSA, ECDSA, Ed25519, ECDH P-curves, ML-KEM, DRBG | **ML-DSA, SLH-DSA** (`cloudflare/circl`): refused in `only` mode |
 | | **X25519** via `filippo.io/age`: refused in `only` mode by an explicit guard, because the runtime can't see it |
 | | **OpenPGP** (`ProtonMail/go-crypto`, SHA-1 fingerprints): refused in `only` mode |
-| | **DES/TDES** payment crypto (`pkg/payment`, `moov-io/tr31`), **ChaCha20** (`x/crypto`): refused by the runtime in `only` mode |
+| | **DES/TDES** in TR-31 key-block import (`pkg/payment`, used by keycore), **ChaCha20** (`x/crypto`): refused by the runtime in `only` mode |
 | | **scrypt, Argon2id** (`x/crypto`, keycore KDF endpoint): refused in `only` mode by `pkgcrypto.ErrKDFStrict` guards |
 | | **FF1 format-preserving encryption** (`pkg/crypto/fpe.go`): an SP 800-38G approved mode built on the module's AES, like AES-SIV. The FF1 construction itself is outside the module's validation scope; it runs in every mode and is not claimed as validated |
 

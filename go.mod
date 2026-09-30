@@ -24,7 +24,6 @@ require (
 	github.com/kardianos/service v1.3.0
 	github.com/microsoft/go-mssqldb v1.11.2
 	github.com/miekg/pkcs11 v1.1.2
-	github.com/moov-io/tr31 v0.0.0-20260924224748-4b67da66a25e
 	github.com/nats-io/nats.go v1.54.0
 	github.com/oracle/oci-go-sdk/v65 v65.126.0
 	github.com/ovh/kmip-go v0.9.2
@@ -76,7 +75,6 @@ require (
 	github.com/aws/smithy-go v1.28.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.25.0 // indirect
-	github.com/ccoveille/go-safecast/v2 v2.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect

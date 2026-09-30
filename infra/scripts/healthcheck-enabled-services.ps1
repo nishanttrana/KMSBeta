@@ -27,7 +27,6 @@ $profileToService = @{
     "qkd_interface" = @("qkd")
     "qrng_generator" = @("qrng")
     "ekm_database" = @("ekm")
-    "payment_crypto" = @("payment")
     "autokey_provisioning" = @("autokey")
     "artifact_signing" = @("signing")
     "key_access_justifications" = @("keyaccess")

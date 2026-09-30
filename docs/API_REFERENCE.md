@@ -19,7 +19,6 @@ Complete endpoint reference for all 27 Vecta KMS services.
 | pqc | /svc/pqc/ | PQC inventory, readiness scans, migration |
 | keyaccess | /svc/keyaccess/ | Access justification rules |
 | dataprotect | /svc/dataprotect/ | Tokenization, masking, field encryption |
-| payment | /svc/payment/ | TR-31, PIN blocks, ISO 20022 |
 | autokey | /svc/autokey/ | Key provisioning templates, handles |
 | cloud | /svc/cloud/ | BYOK, cloud key sync |
 | hyok | /svc/hyok/ | HYOK proxy, DKE, Google CSE |
@@ -2509,52 +2508,6 @@ Applies a masking policy to a data object.
 
 ---
 
-## Service 14: Payment (`/svc/payment/`)
-
-Payment crypto: TR-31 key blocks, PIN operations, ISO 20022 message signing.
-
----
-
-### POST /svc/payment/payment/tr31/translate
-
-Translates a TR-31 key block from one KBPK to another (for inter-system key exchange).
-
-**Request Body**: `keyBlock`, `sourcekbpkId`, `targetKbpkId`, `targetKeyUsage`, `targetModeOfUse`
-
-**Response 200**: `keyBlock` (new TR-31 block under target KBPK)
-
----
-
-### POST /svc/payment/payment/pin/translate
-
-Translates a PIN block from one format or key to another.
-
-**Request Body**: `pinBlock` (hex), `sourceFormat`, `sourceKeyId`, `targetFormat`, `targetKeyId`, `pan`
-
-**Response 200**: `pinBlock` (hex), `targetFormat`, `targetKeyId`
-
----
-
-### POST /svc/payment/payment/iso20022/sign
-
-Signs an ISO 20022 XML or JSON message.
-
-**Request Body**: `message` (base64-encoded message), `messageType` (string, e.g. pacs.008), `signingKeyId`, `algorithm`, `includeCertificate` (boolean)
-
-**Response 200**: `signedMessage` (base64), `signature` (base64), `signatureAlgorithm`, `keyId`, `certificateId`
-
----
-
-### POST /svc/payment/payment/iso20022/verify
-
-Verifies a signed ISO 20022 message.
-
-**Request Body**: `signedMessage` (base64), `messageType`, `signingKeyId`, `signature`
-
-**Response 200**: `valid` (boolean), `signerIdentity`, `keyId`, `verifiedAt`
-
----
-
 ## Service 15: Autokey (`/svc/autokey/`)
 
 Policy-driven key provisioning: templates, handles, per-service defaults, governed self-service.
@@ -3356,7 +3309,6 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.cloud.* | Cloud BYOK accounts, bindings and sync; `audit.cloud.key_access_denied` for a refusal by key access |
 | audit.hyok.* | HYOK proxy requests; `audit.hyok.request_denied` for policy and key access refusals |
 | audit.security.* | Audit-side detection signals (sustained risk) |
-| audit.payment.* | Payment crypto operations |
 | audit.secrets.* | Secret vault access |
 | audit.sbom.* | SBOM/CBOM generation |
 | audit.watchdog.* | Watchdog heartbeat and incident reads |
@@ -3387,7 +3339,6 @@ Selected events with dedicated audit classification:
 - `audit.key.encrypt`, `audit.key.decrypt`, `audit.key.wrap`, `audit.key.unwrap`, `audit.key.sign`, `audit.key.verify`, `audit.key.mac`, `audit.key.derive`, `audit.key.kem_encapsulate`, `audit.key.kem_decapsulate`: every key operation, named after the operation that ran, with `duration_ms` and `result` `success` / `refused` (`reason`) / `failure` / `pending_approval` (2.1.0-beta; these feed the Operations metrics)
 - `audit.key.rotate`, `audit.key.destroy`, `audit.key.export`
 - `audit.dataprotect.<op>_refused`, `audit.dataprotect.<op>_failed` (`op`: `tokenize`, `detokenize`, `fpe_encrypt`, `fpe_decrypt`, `field_encrypt`, `field_decrypt`, `envelope_encrypt`, `envelope_decrypt`, `searchable_encrypt`, `searchable_decrypt`)
-- `audit.payment.tr31_validated`, `audit.payment.mac_computed`, `audit.payment.mac_verified`, `audit.payment.lau_generated`, `audit.payment.lau_verified`, `audit.payment.iso20022_verified`, `audit.payment.iso20022_decrypted`, and `audit.payment.<op>_refused` / `<op>_failed` for every payment operation (2.2.0-beta)
 - `audit.cert.cert_issue_failed`, `audit.cert.ocsp_sign_failed`
 - Metered operations (`metered_op` in details) feed the Operations metrics; see "Operations metrics"
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
@@ -3434,7 +3385,6 @@ Selected events with dedicated audit classification:
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
 - `audit.signing.artifact_signed`, `audit.signing.artifact_verified` (`verification_status`: verified / signature_invalid / artifact_mismatch), `audit.signing.records_viewed`
 - `audit.confidential.key_released`, `audit.confidential.attestation_denied`
-- `audit.payment.pin_verified`, `audit.payment.tr31_wrapped`
 
 ---
 
@@ -4240,51 +4190,6 @@ from the code; do not edit by hand.
 - `GET /svc/kmip/kmip/profiles`
 - `POST /svc/kmip/kmip/profiles`
 - `DELETE /svc/kmip/kmip/profiles/{id}`
-
-### payment (`/svc/payment/`)
-
-- `POST /svc/payment/payment/ap2/evaluate`
-- `GET /svc/payment/payment/ap2/profile`
-- `PUT /svc/payment/payment/ap2/profile`
-- `POST /svc/payment/payment/crypto`
-- `GET /svc/payment/payment/crypto/operations`
-- `GET /svc/payment/payment/injection/jobs`
-- `POST /svc/payment/payment/injection/jobs`
-- `POST /svc/payment/payment/injection/jobs/{id}/ack`
-- `GET /svc/payment/payment/injection/terminals`
-- `POST /svc/payment/payment/injection/terminals`
-- `POST /svc/payment/payment/injection/terminals/{id}/challenge`
-- `GET /svc/payment/payment/injection/terminals/{id}/jobs/next`
-- `POST /svc/payment/payment/injection/terminals/{id}/verify`
-- `POST /svc/payment/payment/iso20022/decrypt`
-- `POST /svc/payment/payment/iso20022/encrypt`
-- `POST /svc/payment/payment/iso20022/lau/generate`
-- `POST /svc/payment/payment/iso20022/lau/verify`
-- `POST /svc/payment/payment/iso20022/sign`
-- `POST /svc/payment/payment/iso20022/verify`
-- `GET /svc/payment/payment/keys`
-- `POST /svc/payment/payment/keys`
-- `GET /svc/payment/payment/keys/{id}`
-- `PUT /svc/payment/payment/keys/{id}`
-- `POST /svc/payment/payment/keys/{id}/rotate`
-- `POST /svc/payment/payment/mac/cmac`
-- `POST /svc/payment/payment/mac/iso9797`
-- `POST /svc/payment/payment/mac/retail`
-- `POST /svc/payment/payment/mac/verify`
-- `POST /svc/payment/payment/pin/cvv/compute`
-- `POST /svc/payment/payment/pin/cvv/verify`
-- `POST /svc/payment/payment/pin/offset/generate`
-- `POST /svc/payment/payment/pin/offset/verify`
-- `POST /svc/payment/payment/pin/pvv/generate`
-- `POST /svc/payment/payment/pin/pvv/verify`
-- `POST /svc/payment/payment/pin/translate`
-- `GET /svc/payment/payment/policy`
-- `PUT /svc/payment/payment/policy`
-- `POST /svc/payment/payment/tr31/create`
-- `GET /svc/payment/payment/tr31/key-usages`
-- `POST /svc/payment/payment/tr31/parse`
-- `POST /svc/payment/payment/tr31/translate`
-- `POST /svc/payment/payment/tr31/validate`
 
 ### policy (`/svc/policy/`)
 

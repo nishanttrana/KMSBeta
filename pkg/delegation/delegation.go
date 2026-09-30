@@ -5,8 +5,8 @@
 // about to perform (for example fpe-encrypt). Keycore verifies the token
 // itself, requires the caller to be a service identity in the same tenant,
 // and decides key access for the user and that usage: the user's grants
-// apply, not the service's tenant-wide trust. Without it, dataprotect,
-// payment and certs used keys as themselves, so any user who could reach
+// apply, not the service's tenant-wide trust. Without it, dataprotect and
+// certs used keys as themselves, so any user who could reach
 // them could use any key in the tenant.
 //
 // A request with no user behind it (a scheduled job, an ACME or EST client)
@@ -40,8 +40,6 @@ var Usages = map[string]bool{
 	"sign": true, "verify": true, "mac": true,
 	"fpe-encrypt": true, "fpe-decrypt": true,
 	"tokenize": true, "detokenize": true,
-	"translate-wrap": true, "translate-unwrap": true,
-	"translate-encrypt": true, "translate-decrypt": true,
 	"certificate-sign": true, "crl-sign": true,
 }
 

@@ -45,7 +45,6 @@ export const CLUSTER_COMPONENT_CHOICES: Array<{ id: string; label: string; core?
   { id: "workload", label: "Workload Identity", category: "security" },
   { id: "confidential", label: "Confidential Compute", category: "security" },
   // Specialized
-  { id: "payment", label: "Payment", category: "specialized" },
   { id: "hyok", label: "HYOK", category: "specialized" },
   { id: "byok", label: "BYOK", category: "specialized" },
   { id: "kmip", label: "KMIP", category: "specialized" },

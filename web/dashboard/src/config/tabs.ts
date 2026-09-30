@@ -35,7 +35,6 @@ export type FeatureKey =
   | "kmip_server"
   | "qkd_interface"
   | "ekm_database"
-  | "payment_crypto"
   | "autokey_provisioning"
   | "artifact_signing"
   | "key_access_justifications"
@@ -76,7 +75,6 @@ export type TabId =
   | "vault"
   | "certificates"
   | "tokenize_mask"
-  | "payment"
   | "autokey"
   | "key_access_justifications"
   | "artifact_signing"
@@ -139,7 +137,6 @@ export const tabConfig: TabConfig[] = [
 
   // ── DATA & POLICY ───────────────────────────────────────────────────
   { id: "tokenize_mask", label: "Tokenize / Mask", shortLabel: "Tokenize",  group: "data_policy",           description: "Tokenization, masking, and field-level encryption",                                                      icon: Shield,            emoji: "T"  },
-  { id: "payment",       label: "Payment",         shortLabel: "Payment",   group: "data_policy",           description: "TR-31, PIN blocks, and ISO 20022 signing",                                                               icon: Wallet,            emoji: "P"  },
   { id: "autokey",       label: "Auto-Provisioning", shortLabel: "Autokey", group: "data_policy",           description: "Policy-driven key handle provisioning — request keys via templates, track handles and approval workflows", icon: Layers3,           emoji: "A"  },
   { id: "key_access_justifications", label: "Access Justifications", shortLabel: "Key Access", group: "data_policy", description: "Justification codes, time-window rules, and access audit decisions for key operations",           icon: ShieldCheck,       emoji: "J"  },
   { id: "pkcs11_jca",    label: "PKCS#11 / JCA",   shortLabel: "PKCS#11",  group: "data_policy",           description: "Client SDK providers and mechanism telemetry",                                                            icon: Fingerprint,       emoji: "P"  },

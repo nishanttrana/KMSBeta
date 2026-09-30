@@ -331,10 +331,10 @@ curl -k -X POST https://127.0.0.1/svc/keyaccess/key-access/codes \
   -H "Content-Type: application/json" \
   -d '{
     "tenant_id": "root",
-    "code": "iso20022_payment",
-    "label": "ISO 20022 payment signing",
+    "code": "hyok_unwrap",
+    "label": "HYOK unwrap for the cloud provider",
     "action": "allow",
-    "services": ["payment", "hyok"],
+    "services": ["hyok"],
     "operations": ["sign", "decrypt"],
     "enabled": true
   }'
@@ -477,48 +477,6 @@ Best for:
 - middleware
 - appliances
 - enterprise key consumers that already standardize on KMIP
-
-## 8. Enforce Payment Policy And Run Payment Crypto
-
-Goal:
-
-- separate production payment guardrails from workbench operations
-
-Components used:
-
-- `payment`
-- `dataprotect`
-- `governance`
-- `audit`
-
-Steps:
-
-1. Open `Data Protection -> Payment Policy`.
-2. Configure `Traditional Payment` for TR-31, KBPK, PIN, CVV, MAC, and TCP controls.
-3. Configure `Modern Payment` for ISO 20022 and AP2.
-4. Open `Workbench -> Payment Crypto` for test operations.
-5. Audit policy updates and runtime operations separately.
-
-AP2 profile sample:
-
-```bash
-curl -k -X PUT https://127.0.0.1/svc/payment/payment/ap2/profile?tenant_id=root \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "enabled": true,
-    "allowed_protocol_bindings": ["a2a", "mcp"],
-    "allowed_payment_rails": ["card", "ach"],
-    "allowed_currencies": ["USD"],
-    "require_payment_mandate": true
-  }'
-```
-
-Best for:
-
-- PCI and card-processing environments
-- ISO 20022 adoption
-- agentic payment evaluation under policy
 
 ## 9. Gate Key Release On Attestation
 

@@ -53,7 +53,6 @@ import {
 } from "../../../lib/dataprotect";
 import { generateDataKey } from "../../../lib/keycore";
 import { ClientSDKTab } from "./ClientSDKTab";
-import { PaymentPolicyTab } from "./PaymentPolicyTab";
 
 function normalizeKeyState(state: string): string {
   const normalized = String(state || "").trim().toLowerCase();
@@ -2544,7 +2543,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
     {l:"Active Leases",v:stats?.active_leases,icon:FileKey,color:C.yellow},
   ];
   const activeStatItems=statItems;
-  const showStats=currentSubtab==="payment-policy"?false:Boolean(stats);
+  const showStats=Boolean(stats);
 
   return <div style={{display:"grid",gap:12}}>
     {showStats&&<div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>
@@ -2563,15 +2562,12 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
       <Btn small primary={currentSubtab==="fieldenc"} onClick={()=>selectSubtab("fieldenc")}>Field Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
-      <Btn small primary={currentSubtab==="payment-policy"} onClick={()=>selectSubtab("payment-policy")}>Payment Policy</Btn>
       <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>Java SDK</Btn>
     </div>}
     {currentSubtab==="pkcs11"
       ? <ClientSDKTab session={session} onToast={onToast}/>
       : currentSubtab==="token-policy"
         ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
-        : currentSubtab==="payment-policy"
-          ? <PaymentPolicyTab session={session} onToast={onToast}/>
         : currentSubtab==="dataenc-policy"
           ? <DataEncryptionPolicy session={session} onToast={onToast}/>
           : <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>}

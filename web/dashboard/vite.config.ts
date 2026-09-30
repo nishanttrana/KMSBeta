@@ -136,11 +136,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/qrng/, "")
       },
-      "/svc/payment": {
-        target: serviceURL("payment", 8170),
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/svc\/payment/, "")
-      },
       "/svc/sbom": {
         target: serviceURL("sbom", 8180),
         changeOrigin: true,

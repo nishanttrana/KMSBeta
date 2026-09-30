@@ -3,7 +3,7 @@ import { serviceRequest } from "./serviceApi";
 
 // Operations metrics are built by the audit service from every audit event
 // marked as a metered cryptographic operation (pkg/audit.MeteredOp):
-// keycore key operations, dataprotect, payment, certificate signing, and
+// keycore key operations, dataprotect, certificate signing, and
 // kernel routes declared Metered.
 
 export type OpsWindow = "1h" | "24h" | "7d" | "30d";

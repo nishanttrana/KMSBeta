@@ -24,6 +24,5 @@ services/hyok/handler.go
 services/keycore/handler.go
 services/kmip/handler.go
 services/kmip/http_api.go
-services/payment/handler.go
 services/policy/handler.go
 services/signing/handler.go

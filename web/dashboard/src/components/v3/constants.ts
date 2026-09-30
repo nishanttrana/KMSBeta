@@ -39,5 +39,13 @@ export const KEY_ACCESS_OPERATION_OPTIONS = [
   { id: "derive", label: "Derive" },
   { id: "kem-encapsulate", label: "KEM Encap" },
   { id: "kem-decapsulate", label: "KEM Decap" },
-  { id: "export", label: "Export" }
+  { id: "export", label: "Export" },
+  // Usages a platform service performs for the user (pkg/delegation): the
+  // user's grant must name the usage itself; "Encrypt" doesn't cover FPE.
+  { id: "fpe-encrypt", label: "FPE Encrypt" },
+  { id: "fpe-decrypt", label: "FPE Decrypt" },
+  { id: "tokenize", label: "Tokenize" },
+  { id: "detokenize", label: "Detokenize" },
+  { id: "certificate-sign", label: "Certificate Sign" },
+  { id: "crl-sign", label: "CRL Sign" }
 ];

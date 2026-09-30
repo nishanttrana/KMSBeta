@@ -195,10 +195,9 @@ func normalizeAccessOperation(raw string) (string, error) {
 	case "export":
 		return "export", nil
 	case "fpe-encrypt", "fpe-decrypt", "tokenize", "detokenize",
-		"translate-wrap", "translate-unwrap", "translate-encrypt", "translate-decrypt",
 		"certificate-sign", "crl-sign":
-		// Delegated usages: performed by dataprotect, payment or certs for
-		// a user (pkg/delegation, KEY_ACCESS_MODEL.md section 4).
+		// Delegated usages: performed by dataprotect or certs for a user
+		// (pkg/delegation, KEY_ACCESS_MODEL.md section 4).
 		return strings.ToLower(strings.TrimSpace(raw)), nil
 	default:
 		return "", fmt.Errorf("unsupported operation %q", raw)
@@ -232,8 +231,6 @@ func normalizeAccessOperations(raw []string) ([]string, error) {
 var delegatedBaseOperation = map[string]string{
 	"fpe-encrypt": "encrypt", "fpe-decrypt": "decrypt",
 	"tokenize": "encrypt", "detokenize": "decrypt",
-	"translate-wrap": "wrap", "translate-unwrap": "unwrap",
-	"translate-encrypt": "encrypt", "translate-decrypt": "decrypt",
 	"certificate-sign": "sign", "crl-sign": "sign",
 }
 
@@ -356,7 +353,7 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation string) error {
 	actor := accessActorFromContext(ctx)
 	// A service acting for a user performs the user's usage (fpe-encrypt,
-	// translate-wrap, ...): the user's grants must allow that usage, whatever
+	// tokenize, ...): the user's grants must allow that usage, whatever
 	// keycore operation the service needs to carry it out.
 	if actor.Usage != "" {
 		// "read" is a per-key read (visibility, not this decision): it never

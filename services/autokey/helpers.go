@@ -340,8 +340,6 @@ func normalizeServiceName(raw string) string {
 	switch raw {
 	case "restapi":
 		return "rest-api"
-	case "paymentcrypto":
-		return "payment"
 	case "cloudkeycontrol":
 		return "cloud"
 	case "workloadidentity":

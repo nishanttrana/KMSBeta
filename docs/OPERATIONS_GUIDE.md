@@ -226,7 +226,6 @@ Use `Governance` to confirm:
 - review SCIM provisioning summary, disabled identities, and role-mapped group counts
 - review workload identity registrations and expiries
 - review certificate renewal windows
-- review AP2 or payment policy changes if payment features are enabled
 
 ## Monthly Operational Tasks
 

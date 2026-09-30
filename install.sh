@@ -41,7 +41,6 @@ FEATURE_KEYS=(
   qkd_interface
   qrng_generator
   ekm_database
-  payment_crypto
   autokey_provisioning
   artifact_signing
   key_access_justifications
@@ -69,7 +68,6 @@ CLUSTER_COMPONENT_KEYS=(
   certs
   byok
   hyok
-  payment
   autokey
   signing
   keyaccess
@@ -1067,7 +1065,7 @@ suggest_cluster_profile_id() {
     fi
   done
 
-  for key in payment_crypto autokey_provisioning artifact_signing key_access_justifications workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm ai_gateway; do
+  for key in autokey_provisioning artifact_signing key_access_justifications workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm ai_gateway; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_specialized="true"

@@ -10,7 +10,7 @@ import (
 
 // ---------------------------------------------------------------------------
 // Legacy Meter — backward-compatible simple ops counter with windowed limits.
-// Used by existing services (keycore, auth, payment).
+// Used by existing services (keycore, auth).
 // ---------------------------------------------------------------------------
 
 // Meter is a simple operations counter with a windowed rate limit.

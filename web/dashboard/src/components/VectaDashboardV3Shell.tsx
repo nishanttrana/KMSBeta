@@ -34,7 +34,6 @@ import {
   ShieldCheck,
   VenetianMask,
   Zap,
-  CreditCard,
   Users,
   Server,
   RefreshCw,
@@ -81,7 +80,6 @@ const HYOKTab = lazy(() => import("./v3/tabs/HYOKTab").then(m => ({ default: m.H
 const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").then(m => ({ default: m.CloudKeyControlTab })));
 const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ default: m.WorkbenchTab })));
 const CryptoTab = lazy(() => import("./v3/tabs/CryptoTab").then(m => ({ default: m.CryptoTab })));
-const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
 const HSMTab = lazy(() => import("./v3/tabs/HSMTab").then(m => ({ default: m.HSMTab })));
 const CertsTab = lazy(() => import("./v3/tabs/CertsTab").then(m => ({ default: m.CertsTab })));
 const KeysTab = lazy(() => import("./v3/tabs/KeysTab").then(m => ({ default: m.KeysTab })));
@@ -173,7 +171,6 @@ const TABS: Record<string, any> = {
   dataprotection: DataProtectionTabs,
   tokenize: TokenizeTab,
   dataenc: DataEncryptionTab,
-  payment: PaymentTab,
   cloudctl: CloudKeyControlTab,
   byok: BYOKTab,
   hyok: HYOKTab,
@@ -212,7 +209,6 @@ const TITLES: Record<string, string> = {
   dataprotection: "Data Protection",
   tokenize: "Tokenize / Mask / Redact",
   dataenc: "Data Encryption",
-  payment: "Payment Crypto",
   cloudctl: "Cloud Key Control",
   byok: "BYOK",
   hyok: "HYOK",
@@ -286,14 +282,12 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
     { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN, CVV, MAC and ISO20022 operations", icon: CreditCard, feature: "payment_crypto" },
     { id: "hyok-test", label: "HYOK Live Test", hint: "Interactive HYOK crypto test console for all protocols", icon: Zap }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
     { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },
     { id: "token-policy", label: "Token / Mask / Redact Policy", hint: "Policy controls only for tokenization, masking and redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "payment-policy", label: "Payment Policy", hint: "Policy controls only for payment cryptography operations", icon: CreditCard, feature: "payment_crypto" },
     { id: "pkcs11", label: "Java SDK", hint: "Java JCA provider download", icon: Plug }
   ],
   cloudctl: [

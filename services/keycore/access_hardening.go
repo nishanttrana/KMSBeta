@@ -121,8 +121,6 @@ func normalizeInterfaceName(raw string) string {
 		return "ekm"
 	case "ekm-data":
 		return "ekm"
-	case "payment", "paymenttcp", "payment-tcp", "paytcp":
-		return "payment-tcp"
 	case "kmip", "kmip-tls":
 		return "kmip"
 	case "hyok", "hyok-api":

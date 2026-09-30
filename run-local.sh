@@ -137,7 +137,6 @@ start_service ekm              8130 18130
 start_service reporting        8140 18140
 start_service qkd              8150 18150
 start_service kmip             8160 18160
-start_service payment          8170 18170
 start_service sbom             8180 18180
 start_service mpc              8190 18190
 start_service dataprotect      8200 18200

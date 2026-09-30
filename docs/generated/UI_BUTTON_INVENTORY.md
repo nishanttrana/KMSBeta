@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T04:51:56Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T06:13:39Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 706 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 866 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 917 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 940 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 990 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1027 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1062 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 700 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 860 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 911 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 934 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 984 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1021 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1056 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -487,15 +487,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 144 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
-| web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 453 | - | Btn | void loadAll(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PaymentPolicyTab.tsx | 454 | - | Btn | (icon or dynamic label) | saveAll} disabled={loading \|\| saving |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 824 | payment | Btn | void refreshAP2Profile()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 825 | payment | Btn | void saveAP2Profile()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 917 | payment | Btn | void refreshInjectionData()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 931 | payment | Btn | void registerTerminal()} disabled= >Register Terminal |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 944 | payment | Btn | void issueChallenge()} disabled= >Issue Challenge |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 945 | payment | Btn | void verifyChallenge()} disabled= >Verify Challenge |  |
-| web/dashboard/src/components/v3/tabs/PaymentTab.tsx | 967 | payment | Btn | { if(op==="Payment Key Injection") if(op==="AP2 Agent Payments") void runPaym... |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 83 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 194 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 198 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
@@ -570,34 +561,33 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 306 | - | Btn | void run(`$ -cert`, async () => { await setEdgeCertificateSource(session, );... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 317 | - | Btn | void run(`$ -csr`, async () => { const out = await createEdgeCSR(session, );... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 326 | - | Btn | void run(`$ -install`, async () => { await installEdgeCertificate(session, li... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 447 | - | button | setOp(name)} style={{ background:op===name?C.accent:"transparent", color:op==... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 466 | - | Btn | {if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaul... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 565 | - | Btn | void submitCurrent()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 581 | - | Btn | setOp("Mask")}>Open Mask Operation |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 589 | - | Btn | setOp("Redact")}>Open Redact Operation |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 768 | - | button | } style={{ background:mode===name?C.accentDim:"transparent", color:mode===nam... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 815 | - | Btn | void submit()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1187 | - | Btn | void downloadSDK()} disabled= >Download SDK |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1188 | - | Btn | void refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1218 | - | Btn | void submitInit()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1241 | - | Btn | void submitComplete()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1264 | - | Btn | void submitLease()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1280 | - | Btn | void submitReceipt()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1320 | - | Btn | void revokeLease(item)} disabled= >Revoke |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1610 | - | Btn | void loadPolicy(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1611 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2188 | - | Btn | void loadPolicy(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2189 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2384 | - | Btn | void refreshVaultRows(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2385 | - | Btn | void downloadVaultSetup()} disabled= >Download Setup Query |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2386 | - | Btn | void createVaultFromPolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2443 | - | Btn | void deleteVaultFromPolicy(row)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2490 | - | Btn | void refresh()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2563 | - | Btn | selectSubtab("fieldenc")}>Field Encryption |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2564 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2565 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2566 | - | Btn | selectSubtab("payment-policy")}>Payment Policy |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2567 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 446 | - | button | setOp(name)} style={{ background:op===name?C.accent:"transparent", color:op==... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 465 | - | Btn | {if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaul... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 564 | - | Btn | void submitCurrent()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 580 | - | Btn | setOp("Mask")}>Open Mask Operation |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 588 | - | Btn | setOp("Redact")}>Open Redact Operation |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 767 | - | button | } style={{ background:mode===name?C.accentDim:"transparent", color:mode===nam... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 814 | - | Btn | void submit()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1186 | - | Btn | void downloadSDK()} disabled= >Download SDK |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1187 | - | Btn | void refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1217 | - | Btn | void submitInit()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1240 | - | Btn | void submitComplete()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1263 | - | Btn | void submitLease()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1279 | - | Btn | void submitReceipt()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1319 | - | Btn | void revokeLease(item)} disabled= >Revoke |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1609 | - | Btn | void loadPolicy(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1610 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2187 | - | Btn | void loadPolicy(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2188 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2383 | - | Btn | void refreshVaultRows(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2384 | - | Btn | void downloadVaultSetup()} disabled= >Download Setup Query |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2385 | - | Btn | void createVaultFromPolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2442 | - | Btn | void deleteVaultFromPolicy(row)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2489 | - | Btn | void refresh()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2562 | - | Btn | selectSubtab("fieldenc")}>Field Encryption |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2563 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2564 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2565 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 435 | vault | Btn | (icon or dynamic label) | handleRefresh} disabled={refreshing \|\| busy |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 441 | vault | button | setCategory(cat.id)} style={{ height: 32, padding: "0 12px", borderRadius: 8,... |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 449 | vault | Btn | setModal("create")} style={ }> Store Secret |  |
@@ -646,7 +636,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 452 | - | Btn | setFederationDraft( )}>Edit |  |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 453 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
 | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 486 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 527 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 526 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setThreatModal( )}> Add threat |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 376 | - | button | setThreatModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 377 | - | button | void remove("threat", t.id, t.name)}> |  |

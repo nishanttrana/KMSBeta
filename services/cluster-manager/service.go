@@ -60,8 +60,8 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 	{
 		ID:          "cluster-profile-full",
 		Name:        "full-platform",
-		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
-		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
+		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, PQC, QKD, QRNG, MPC, and HYOK services.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
 	},
 }
 
@@ -1509,7 +1509,7 @@ func splitComponentTokens(raw string) []string {
 func componentFromHint(raw string) string {
 	v := strings.ToLower(strings.TrimSpace(raw))
 	switch v {
-	case "auth", "keycore", "policy", "governance", "audit", "payment", "workload", "confidential", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai", "keyaccess", "signing":
+	case "auth", "keycore", "policy", "governance", "audit", "workload", "confidential", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai", "keyaccess", "signing":
 		return v
 	case "key_access", "key_access_justifications", "key-access", "kaj":
 		return "keyaccess"
@@ -1519,8 +1519,6 @@ func componentFromHint(raw string) string {
 		return "workload"
 	case "cloud", "cloud_control", "cloud-key-control":
 		return "byok"
-	case "payments":
-		return "payment"
 	case "data_protection", "data-protection", "field_encryption", "field-encryption":
 		return "dataprotect"
 	case "certificates", "pki":
@@ -1551,8 +1549,6 @@ func componentFromServiceName(serviceName string) string {
 		return "governance"
 	case "kms-audit":
 		return "audit"
-	case "kms-payment":
-		return "payment"
 	case "kms-workload-identity":
 		return "workload"
 	case "kms-key-access":

@@ -226,6 +226,7 @@ func envOrBool(k string, d bool) bool {
 func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger, audit AuditPublisher) {
 	tenantID := envOr("INTERNAL_SERVICE_TENANT", "root")
 	revokeInsecureServiceKeys(ctx, store, tenantID, logger, audit)
+	retireRemovedServiceClients(ctx, store, tenantID, logger, audit)
 
 	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
 	if err := servicetoken.ValidateBootstrapSecret(secret); errors.Is(err, servicetoken.ErrBootstrapSecretUnset) {
@@ -284,11 +285,50 @@ func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *l
 
 var internalServiceClients = []string{
 	"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
-	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
+	"kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
 	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
 	"kms-cluster-manager", "kms-secrets", "kms-reconciler", "kms-confidential",
 	"kms-workload-identity",
+}
+
+// retiredServiceClients are service identities of services removed from the
+// platform. Their credentials must not outlive the service (CLAUDE.md rule
+// 3: revoke what a removed default produced), so every start deletes their
+// API keys and revokes their registration.
+var retiredServiceClients = []string{
+	"kms-payment", // payment service removed, 7.0.0-beta
+}
+
+// retireRemovedServiceClients revokes the identities in retiredServiceClients
+// and audits each change as audit.auth.service_identity_retired. Idempotent:
+// a restart with nothing left to revoke emits nothing.
+func retireRemovedServiceClients(ctx context.Context, store Store, tenantID string, logger *log.Logger, audit AuditPublisher) {
+	for _, name := range retiredServiceClients {
+		// An empty (not nil) keep-hash matches no key, so every key goes.
+		keys, err := store.DeleteClientAPIKeysExcept(ctx, tenantID, name, []byte{})
+		if err != nil {
+			logger.Fatalf("bootstrap: retire %s service keys failed: %v", name, err)
+		}
+		revoked := false
+		if reg, err := store.GetClientRegistration(ctx, tenantID, name); err == nil && reg.Status != "revoked" {
+			if err := store.RevokeClientRegistration(ctx, tenantID, name); err != nil {
+				logger.Fatalf("bootstrap: revoke %s registration failed: %v", name, err)
+			}
+			revoked = true
+		} else if err != nil && !errors.Is(err, errNotFound) {
+			logger.Fatalf("bootstrap: read %s registration failed: %v", name, err)
+		}
+		if keys == 0 && !revoked {
+			continue
+		}
+		logger.Printf("bootstrap: SECURITY retired removed service identity %s (%d key(s) deleted)", name, keys)
+		bootstrapAudit(ctx, audit, "audit.auth.service_identity_retired", tenantID, map[string]any{
+			"service": name, "keys_deleted": keys, "registration_revoked": revoked,
+			"reason": "service removed from the platform", "severity": "warning", "result": "success",
+			"description": "the credentials of a removed internal service were revoked at startup",
+		})
+	}
 }
 
 // revokeInsecureServiceKeys deletes service API keys that earlier deployments

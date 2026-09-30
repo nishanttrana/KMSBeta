@@ -13,7 +13,6 @@ type Impact struct {
 // strictOnlyUnavailable lists what stops working under "only" and resumes when
 // leaving it.
 var strictOnlyUnavailable = []Impact{
-	{"payment", "DES / TDES operations", "PIN block translation, PVV, retail MAC (ISO 9797-1 alg 3) and TR-31 key blocks under TDES keys"},
 	{"secrets", "X25519 key types", "age-x25519 and WireGuard key-pair generation"},
 	{"secrets", "OpenPGP keys", "pgp-rsa-4096 generation (OpenPGP v4 fingerprints require SHA-1)"},
 	{"keycore", "ML-DSA / SLH-DSA keys", "post-quantum signing keys, composite ML-DSA+ECDSA keys, and algorithm-swap drills that name them; implemented outside the certified module until a certified snapshot includes them"},

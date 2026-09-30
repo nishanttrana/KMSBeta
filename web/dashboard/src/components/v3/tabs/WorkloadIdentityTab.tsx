@@ -499,7 +499,6 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
                 <Sel value={String(exchangeDraft?.interface_name || "rest")} onChange={(e) => setExchangeDraft((prev: any) => ({ ...prev, interface_name: e.target.value }))}>
                   <option value="rest">REST</option>
                   <option value="kmip">KMIP</option>
-                  <option value="payment-tcp">Payment TCP</option>
                   <option value="ekm">EKM</option>
                   <option value="hyok">HYOK</option>
                 </Sel>

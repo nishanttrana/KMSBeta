@@ -704,8 +704,6 @@ func normalizeInterfaces(values []string) []string {
 			value = "ekm"
 		case "hyok-api":
 			value = "hyok"
-		case "payment", "paymenttcp":
-			value = "payment-tcp"
 		}
 		if value != "" {
 			out = append(out, value)

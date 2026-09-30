@@ -250,7 +250,6 @@ Use this when certificate lifecycle is not just operational, but also a risk and
 
 ### Payment + Data Protection
 
-Use `Workbench -> Payment Crypto` for controlled operational testing and `Data Protection -> Payment Policy` for tenant-wide guardrails that affect request-handling behavior.
 
 ### PQC + Interfaces + Certificates
 

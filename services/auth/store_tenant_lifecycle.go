@@ -130,13 +130,6 @@ func (s *SQLStore) GetTenantDeleteReadiness(ctx context.Context, tenantID string
 			Remediation: "Revoke active wrapper leases before tenant disable.",
 		},
 		{
-			Code:        "payment_injection_jobs",
-			Label:       "Pending Payment Injection Jobs",
-			CountQuery:  `SELECT COUNT(1) FROM payment_injection_jobs WHERE tenant_id=$1 AND LOWER(COALESCE(status,'')) IN ('pending','queued','running','in_progress','dispatched')`,
-			DetailQuery: `SELECT id FROM payment_injection_jobs WHERE tenant_id=$1 AND LOWER(COALESCE(status,'')) IN ('pending','queued','running','in_progress','dispatched') ORDER BY created_at DESC LIMIT 10`,
-			Remediation: "Wait for jobs to finish or cancel queued payment injection jobs.",
-		},
-		{
 			Code:        "cloud_sync_jobs",
 			Label:       "Running Cloud Sync Jobs",
 			CountQuery:  `SELECT COUNT(1) FROM cloud_sync_jobs WHERE tenant_id=$1 AND LOWER(COALESCE(status,'')) IN ('pending','queued','running','in_progress')`,

@@ -28,7 +28,6 @@ const defaultDeployment: DeploymentConfig = {
       kmip_server: true,
       qkd_interface: true,
       ekm_database: true,
-      payment_crypto: true,
       autokey_provisioning: true,
       artifact_signing: true,
       key_access_justifications: true,

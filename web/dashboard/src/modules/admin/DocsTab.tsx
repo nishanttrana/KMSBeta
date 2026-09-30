@@ -97,7 +97,6 @@ const NAV = [
   { id: "api-signing", label: "API: Artifact Signing" },
   { id: "api-confidential", label: "API: Confidential Compute" },
   { id: "api-workload", label: "API: Workload Identity" },
-  { id: "api-payment", label: "API: Payment" },
   { id: "api-cloud", label: "API: Cloud / BYOK" },
   { id: "api-hyok", label: "API: HYOK" },
   { id: "api-ekm", label: "API: EKM" },
@@ -154,7 +153,7 @@ const NAV = [
 const SectionOverview = () => (
   <div>
     <div style={S.h1}>Vecta KMS Platform Documentation</div>
-    <P>Vecta KMS is an enterprise-grade Key Management System providing comprehensive cryptographic key lifecycle management, secrets management, certificate PKI, data protection, payment cryptography, cloud key control, and workload identity. The platform consists of 27+ microservices, a web dashboard, and an Envoy edge proxy.</P>
+    <P>Vecta KMS is an enterprise-grade Key Management System providing comprehensive cryptographic key lifecycle management, secrets management, certificate PKI, data protection, cloud key control, and workload identity. The platform consists of 27+ microservices, a web dashboard, and an Envoy edge proxy.</P>
     <H2>Key Capabilities</H2>
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
       {[
@@ -167,7 +166,6 @@ const SectionOverview = () => (
         ["Confidential Compute", "Attested key release with approved images, claims, measurements, and cluster-node gating"],
         ["SCIM Provisioning", "Tenant-scoped RFC 7643/7644 user and group provisioning with directory-driven RBAC mapping"],
         ["Workload Identity", "SPIFFE trust domains, X.509-SVID/JWT-SVID issuance, federation, and workload-to-key authorization"],
-        ["Payment Crypto", "TR-31 key blocks, PIN translation, CVV, MAC, ISO 20022, AP2 agent payments, key injection"],
         ["Cloud Key Control", "BYOK (AWS, Azure, GCP, Oracle, Salesforce) and HYOK (DKE, Cache-Only, EKM)"],
         ["Post-Quantum", "PQC algorithms (ML-KEM, ML-DSA, SLH-DSA), migration planning, CBOM"],
         ["MPC", "Distributed key generation, threshold signing, multi-party decryption"],
@@ -340,7 +338,6 @@ const SectionArchitecture = () => (
       ["kms-dataprotect", "8200 / 18200", "Tokenization, masking (profile: data_protection)"],
       ["kms-autokey", "8260 / 18260", "Policy-driven key handle provisioning (profile: autokey_provisioning)"],
       ["kms-confidential", "8240 / 18240", "Attested key release / confidential compute (profile: confidential_compute)"],
-      ["kms-payment", "8170 / 18170", "Payment cryptography (profile: payment_crypto)"],
     ]} />
 
     <H3>Cloud & Integration</H3>
@@ -814,7 +811,7 @@ const SectionApiAudit = () => (
   <div>
     <div style={S.h1}>API: Audit & Alerting</div>
     <P>Service: kms-audit | Port: 8070 (HTTP) / 18070 (gRPC)</P>
-    <P>The audit stream now records posture/compliance/reporting interactions for the newer operational views too. Operators will see subjects such as <IC>audit.posture.dashboard_viewed</IC>, <IC>audit.compliance.assessment_delta_viewed</IC>, <IC>audit.reporting.evidence_pack_requested</IC>, <IC>audit.reporting.mttd_stats_viewed</IC>, <IC>audit.payment.ap2_profile_updated</IC>, and <IC>audit.payment.ap2_evaluated</IC> in the same tamper-evident audit timeline.</P>
+    <P>The audit stream now records posture/compliance/reporting interactions for the newer operational views too. Operators will see subjects such as <IC>audit.posture.dashboard_viewed</IC>, <IC>audit.compliance.assessment_delta_viewed</IC>, <IC>audit.reporting.evidence_pack_requested</IC>, <IC>audit.reporting.mttd_stats_viewed</IC> in the same tamper-evident audit timeline.</P>
     <Collapse title="Audit Events" defaultOpen>
       <EndpointTable rows={[
         ["POST", "/audit/publish", "Publish audit event (internal)"],
@@ -851,9 +848,6 @@ const SectionApiAudit = () => (
         ["AUDIT", "audit.compliance.assessment_delta_viewed", "Recorded when the operator opens the 'What Changed Since Last Scan' delta view"],
         ["AUDIT", "audit.reporting.evidence_pack_requested", "Recorded when an Evidence Pack export is requested"],
         ["AUDIT", "audit.reporting.mttd_stats_viewed", "Recorded when MTTD timing analytics are fetched"],
-        ["AUDIT", "audit.payment.policy_updated", "Recorded when the unified payment policy is saved across traditional or modern controls"],
-        ["AUDIT", "audit.payment.ap2_profile_updated", "Recorded when a tenant AP2 policy profile is created or changed"],
-        ["AUDIT", "audit.payment.ap2_evaluated", "Recorded when an AP2 agent-payment request is evaluated for allow, review, or deny"],
       ]} />
     </Collapse>
   </div>
@@ -1295,7 +1289,7 @@ curl -X POST http://localhost:8250/workload-identity/registrations \\
     "tenant_id": "root",
     "name": "payments-api",
     "spiffe_id": "spiffe://root/workloads/payments-api",
-    "allowed_interfaces": ["rest", "payment-tcp"],
+    "allowed_interfaces": ["rest"],
     "allowed_key_ids": ["key_payments_prod"],
     "permissions": ["key.encrypt", "key.decrypt", "key.sign"],
     "issue_jwt_svid": true,
@@ -1313,79 +1307,6 @@ curl -X POST http://localhost:8250/workload-identity/token/exchange \\
     "audience": "kms",
     "jwt_svid": "eyJhbGciOiJFZERTQSIsImtpZCI6IndpZC1yb290In0..."
   }'`}</Code>
-  </div>
-);
-
-const SectionApiPayment = () => (
-  <div>
-    <div style={S.h1}>API: Payment Cryptography</div>
-    <P>Service: kms-payment | Port: 8170 (HTTP) / 18170 (gRPC) | Profile: payment_crypto</P>
-    <P>The payment API now supports a dedicated operator split between <IC>Traditional Payment</IC> and <IC>Modern Payment</IC>. The underlying REST model stays stable: <IC>/payment/policy</IC> stores unified tenant payment guardrails, while AP2 continues to use its own dedicated profile and evaluation endpoints.</P>
-    <Collapse title="Traditional Payment Policy" defaultOpen>
-      <EndpointTable rows={[
-        ["GET", "/payment/policy", "Fetch unified tenant payment policy for the Traditional Payment UI"],
-        ["PUT", "/payment/policy", "Update TR-31, KBPK, PIN, CVV, MAC, TCP, and runtime guardrails"],
-      ]} />
-      <P>Traditional payment policy covers TR-31 versions, exportability, KBPK class controls, PIN formats and translation pairs, CVV service codes, issuer profiles, MAC controls, decimalization rules, Payment TCP exposure, and approval / HSM gates for classic payment operations.</P>
-    </Collapse>
-    <Collapse title="Traditional Payment Operations">
-      <EndpointTable rows={[
-        ["POST", "/payment/tr31/create", "Create TR-31 key block"],
-        ["POST", "/payment/tr31/parse", "Parse TR-31 block"],
-        ["POST", "/payment/tr31/translate", "Translate TR-31 between KEKs"],
-        ["POST", "/payment/tr31/validate", "Validate TR-31 block integrity"],
-        ["GET", "/payment/tr31/key-usages", "Get supported TR-31 key usages"],
-      ]} />
-    </Collapse>
-    <Collapse title="PIN Operations">
-      <EndpointTable rows={[
-        ["POST", "/payment/pin/translate", "Translate PIN block between keys"],
-        ["POST", "/payment/pin/offset/generate", "Generate PIN offset"],
-        ["POST", "/payment/pin/offset/verify", "Verify PIN offset"],
-        ["POST", "/payment/pin/pvv/generate", "Generate PIN Verification Value"],
-        ["POST", "/payment/pin/pvv/verify", "Verify PVV"],
-        ["POST", "/payment/pin/cvv/compute", "Compute CVV/CVC"],
-        ["POST", "/payment/pin/cvv/verify", "Verify CVV/CVC"],
-      ]} />
-    </Collapse>
-    <Collapse title="MAC Operations">
-      <EndpointTable rows={[
-        ["POST", "/payment/mac/iso9797", "ISO 9797 MAC computation"],
-        ["POST", "/payment/mac/cmac", "AES-CMAC computation"],
-        ["POST", "/payment/mac/retail", "Retail MAC (ISO 9797-1 Algo 3)"],
-        ["POST", "/payment/mac/verify", "Verify MAC value"],
-      ]} />
-    </Collapse>
-    <Collapse title="Modern Payment Policy">
-      <EndpointTable rows={[
-        ["GET", "/payment/policy", "Fetch unified tenant payment policy for the Modern Payment UI"],
-        ["PUT", "/payment/policy", "Update ISO 20022 payload, LAU, canonicalization, and signature-suite guardrails"],
-        ["GET", "/payment/ap2/profile", "Fetch tenant AP2 policy profile"],
-        ["PUT", "/payment/ap2/profile", "Update tenant AP2 policy profile"],
-      ]} />
-      <P>Modern payment policy covers ISO 20022 limits and cryptographic profile choices plus AP2 bindings, rails, currencies, mandates, wallet trust, credential issuers, tokenization requirements, and agent-payment thresholds.</P>
-    </Collapse>
-    <Collapse title="Modern Payment Operations">
-      <EndpointTable rows={[
-        ["POST", "/payment/iso20022/encrypt", "Encrypt ISO 20022 message"],
-        ["POST", "/payment/iso20022/decrypt", "Decrypt ISO 20022 message"],
-        ["POST", "/payment/iso20022/sign", "Sign ISO 20022 message"],
-        ["POST", "/payment/iso20022/verify", "Verify ISO 20022 signature"],
-        ["POST", "/payment/iso20022/lau/generate", "Generate LAU"],
-        ["POST", "/payment/iso20022/lau/verify", "Verify LAU"],
-        ["POST", "/payment/ap2/evaluate", "Evaluate an agent payment request against AP2 policy"],
-      ]} />
-      <P>AP2 evaluation checks the protocol binding (`a2a`, `mcp`, optional `x402`), transaction mode, payment rail, currency, required mandates, verifiable credential, wallet attestation, tokenization state, and tenant thresholds. The result is an explicit `allow`, `review`, or `deny` decision with missing artifacts and applied controls.</P>
-      <P>Typical flow: save unified payment guardrails from <IC>Payment Policy</IC>, then use the Payments workbench to run modern ISO 20022 and AP2 operations before handing the request to the downstream authorization path. Use the audit timeline to prove when policy changed and when a request was evaluated.</P>
-    </Collapse>
-    <Collapse title="Key Injection">
-      <EndpointTable rows={[
-        ["GET", "/payment/injection/terminals", "List registered terminals"],
-        ["POST", "/payment/injection/terminals", "Register key injection terminal"],
-        ["POST", "/payment/injection/terminals/{id}/challenge", "Challenge terminal"],
-        ["POST", "/payment/injection/jobs", "Create injection job"],
-      ]} />
-    </Collapse>
   </div>
 );
 
@@ -2257,8 +2178,6 @@ const SectionUIWorkbench = () => (
     <P>Interactive tokenization, masking, and redaction tool. Enter sensitive data, select the operation type, configure options (vault-based vs vaultless, format-preserving, masking pattern), and execute. Preview mode available for masking.</P>
     <H3>Data Encryption</H3>
     <P>Field-level and envelope encryption interface. Select encryption mode (field, envelope, searchable), choose a key, enter data, and encrypt/decrypt.</P>
-    <H3>Payment Crypto</H3>
-    <P>Payment cryptography operations are grouped into <IC>Traditional Payment</IC> and <IC>Modern Payment</IC> for testing and execution. Traditional handles TR-31, PIN, CVV, MAC, and key injection. Modern handles ISO 20022, LAU, and AP2 evaluation.</P>
   </div>
 );
 
@@ -2337,8 +2256,6 @@ const SectionUIDataprotect = () => (
     <P>Configure policies for field-level encryption. Define which fields get encrypted, with which keys, and under what conditions.</P>
     <H3>Token / Mask / Redact Policy</H3>
     <P>Configure tokenization policies (vault-based, vaultless, format-preserving), masking policies (patterns, partial masking), and redaction policies (auto-detection, rule-based).</P>
-    <H3>Payment Policy</H3>
-    <P>Configure the KMS-wide payment guardrails for REST and payment interfaces. This policy is split into <IC>Traditional Payment</IC> for TR-31, KBPK, PIN, CVV, MAC, Payment TCP, rotation, and runtime handling, and <IC>Modern Payment</IC> for ISO 20022 and AP2 trust configuration.</P>
     <H3>PKCS#11 / JCA</H3>
     <P>Download the Java JCA provider source (Cipher VectaKeyWrap: key wrapping under a Vecta KMS key). Vecta ships no PKCS#11 module and reports no SDK usage telemetry.</P>
   </div>
@@ -2370,7 +2287,7 @@ const SectionUIKeyAccess = () => (
     <H2>Settings</H2>
     <P>Choose whether the tenant runs in audit or enforce mode, what the default action should be, whether a reason code or free-text explanation is mandatory, and which approval policy should be used when a rule requires human review.</P>
     <H2>Justifications</H2>
-    <P>Create reason-code rules and bind them to services and operations. This is where you define policies such as allowing payment signing for ISO 20022, requiring approval for tenant-mail decrypt, or denying unknown codes by default.</P>
+    <P>Create reason-code rules and bind them to services and operations. This is where you define policies such as requiring approval for tenant-mail decrypt, or denying unknown codes by default.</P>
     <H2>Decisions</H2>
     <P>Review evaluated requests, the matched code, approval request ID, requester context, and whether a bypass was detected. Operators should treat this as the operational ledger for external key-governance behavior.</P>
   </div>
@@ -2411,7 +2328,7 @@ const SectionUIWorkload = () => (
     <H2>Overview</H2>
     <P>Review the tenant trust domain, enabled registrations, federated domains, SVID rotation health, key usage, and over-privileged registrations. The summary cards are backed by the dedicated <IC>kms-workload-identity</IC> microservice, not static UI counters.</P>
     <H2>Registrations</H2>
-    <P>Register workloads by SPIFFE ID, selectors, allowed interfaces, allowed key IDs, and workload permissions. This is where you decide which workloads may call REST, KMIP, HYOK, EKM, or payment interfaces and which keys they may use.</P>
+    <P>Register workloads by SPIFFE ID, selectors, allowed interfaces, allowed key IDs, and workload permissions. This is where you decide which workloads may call REST, KMIP, HYOK, or EKM interfaces and which keys they may use.</P>
     <H2>Federation</H2>
     <P>Configure federated trust domains by adding JWT JWKS bundles or X.509 CA bundles. This allows the tenant to validate SVIDs issued outside the local trust domain and support multi-cluster or partner trust relationships.</P>
     <H2>Issuance & Exchange</H2>
@@ -2657,8 +2574,6 @@ const SectionUICluster = () => (
     <P>Real-time sync events, checkpoints, and replication lag metrics. View pending sync items and acknowledged events.</P>
     <H3>Cluster Logs</H3>
     <P>Filterable cluster operation audit log showing joins, departures, role changes, sync events, and failures.</P>
-    <H3>Payment / AP2 State</H3>
-    <P>Traditional payment policy, modern ISO 20022 policy, and AP2 state are not configured per node. They are stored as tenant payment configuration in the shared control plane, so clustered operators manage one policy surface and every payment-service instance sees the same guardrails once the control plane is consistent.</P>
   </div>
 );
 
@@ -2740,7 +2655,7 @@ const SectionConfigEnv = () => (
       ["JWT_AUDIENCE", "vecta-services", "JWT token audience"],
       ["JWT_PUBLIC_KEY_PATH", "certs/jwt_public.pem", "Path to JWT public key"],
     ]} />
-    <P>Service JWT validation now requires RS256, `exp`, and `iat`, and request parsers enforce `JWT_ISSUER` and `JWT_AUDIENCE` with a small leeway for clock skew. Keep these values aligned across auth, keycore, governance, HYOK, payment, and other request-handling services.</P>
+    <P>Service JWT validation now requires RS256, `exp`, and `iat`, and request parsers enforce `JWT_ISSUER` and `JWT_AUDIENCE` with a small leeway for clock skew. Keep these values aligned across auth, keycore, governance, HYOK, and other request-handling services.</P>
     <H2>Auth Bootstrap</H2>
     <EnvTable rows={[
       ["AUTH_BOOTSTRAP_TENANT_ID", "root", "Default tenant ID"],
@@ -2780,7 +2695,7 @@ const SectionConfigFips = () => (
     <div style={S.h1}>Configuration: FIPS Mode</div>
     <P>Every Vecta KMS binary links the CMVP-certified Go Cryptographic Module (v1.0.0). Whether it runs in FIPS mode is the customer's choice, set once per deployment with VECTA_FIPS_MODE. Services refuse to start if the running mode does not match that choice.</P>
     <EnvTable rows={[
-      ["on (default)", "VECTA_FIPS_MODE=on", "Certified module in FIPS mode: power-on self-tests, approved DRBG, FIPS TLS. Integrations that need non-approved algorithms (payment TDES, X25519/age secrets, ChaCha20 field encryption) stay available; the per-tenant FIPS Policy can block them for keys."],
+      ["on (default)", "VECTA_FIPS_MODE=on", "Certified module in FIPS mode: power-on self-tests, approved DRBG, FIPS TLS. Integrations that need non-approved algorithms (X25519/age secrets, ChaCha20 field encryption) stay available; the per-tenant FIPS Policy can block them for keys."],
       ["only (strict)", "VECTA_FIPS_MODE=only", "The Go runtime refuses every non-approved algorithm: X25519, ChaCha20, SHA-1, DES/TDES, caller-supplied GCM IVs, OpenPGP v4, and ML-DSA/SLH-DSA (implemented outside the validated module). These features return a clear error."],
       ["off", "VECTA_FIPS_MODE=off", "FIPS mode disabled. All algorithms available."],
     ]} />
@@ -2874,7 +2789,6 @@ const SectionConfigCluster = () => (
     ]} />
     <H2>Node Roles</H2>
     <P>Leader: accepts writes, coordinates replication. Follower: receives replicated data, can serve reads. Replica: read-only copy for horizontal read scaling. Roles can be changed dynamically via the Cluster tab or API.</P>
-    <P>Tenant payment policy is part of the payment service control-plane state. There is no separate node-local traditional-payment, ISO 20022, or AP2 configuration file to manage. In clustered deployments, keep the payment service attached to the shared tenant data plane so the same payment-policy and evaluation behavior is observed across nodes.</P>
     <Code>{`docker compose --profile clustering up -d
 
 # Verify cluster
@@ -2887,7 +2801,7 @@ const SectionConfigBackup = () => (
     <div style={S.h1}>Configuration: Backup & Restore</div>
     <H2>Backup Features</H2>
     <P>Scope: system-wide or tenant-specific. Format: JSON GZip compressed with AES-256-GCM encryption. Artifacts use .vbk extension with separate .key.json key package.</P>
-    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data, and tenant payment policy state across traditional payment, ISO 20022, and AP2 are included in the encrypted snapshot.</P>
+    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data are included in the encrypted snapshot.</P>
     <H2>Creating a Backup</H2>
     <Code>{`# Via API. The response's key_file is the only copy of a software-mode
 # backup key: save it now (base64-decode content_base64 to <file_name>).
@@ -2943,7 +2857,6 @@ docker compose ps`}</Code>
       ["kmip_server", "kms-kmip", "KMIP 2.1 server"],
       ["qkd_interface", "kms-qkd", "Quantum key distribution"],
       ["ekm_database", "kms-ekm", "Enterprise key manager"],
-      ["payment_crypto", "kms-payment", "Payment cryptography"],
       ["autokey_provisioning", "kms-autokey", "Policy-driven Autokey provisioning"],
       ["confidential_compute", "kms-confidential", "Attested key release / confidential compute"],
       ["compliance_dashboard", "kms-compliance", "Compliance reporting"],
@@ -3315,7 +3228,6 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-signing": SectionApiSigning,
   "api-confidential": SectionApiConfidential,
   "api-workload": SectionApiWorkload,
-  "api-payment": SectionApiPayment,
   "api-cloud": SectionApiCloud,
   "api-hyok": SectionApiHyok,
   "api-ekm": SectionApiEkm,

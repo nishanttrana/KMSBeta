@@ -1,16 +1,16 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T04:51:56Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T06:13:39Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `919`
-- Routes with exact frontend call sites: `542`
-- Routes whose handlers call `h.svc.*`: `539`
-- Routes with detected store calls: `656`
-- Routes with detected internal `pkg/*` calls: `164`
+- Backend routes analyzed: `877`
+- Routes with exact frontend call sites: `515`
+- Routes whose handlers call `h.svc.*`: `500`
+- Routes with detected store calls: `632`
+- Routes with detected internal `pkg/*` calls: `147`
 
 ## How To Trace One Frontend Click
 
@@ -440,33 +440,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 | kmip\|POST\|/kmip/interop/targets | POST /kmip/interop/targets | handleCreateInteropTarget (services/kmip/http_api.go:385) |  |  |  |  | web/dashboard/src/lib/kmip.ts:244 |
 | kmip\|DELETE\|/kmip/interop/targets/{param} | DELETE /kmip/interop/targets/{id} | handleDeleteInteropTarget (services/kmip/http_api.go:403) |  | GetInteropTarget, DeleteInteropTarget |  |  | web/dashboard/src/lib/kmip.ts:256 |
 | kmip\|POST\|/kmip/interop/targets/{param}/validate | POST /kmip/interop/targets/{id}/validate | handleValidateInteropTarget (services/kmip/http_api.go:440) |  | GetInteropTarget, UpdateInteropTargetValidation |  |  | web/dashboard/src/lib/kmip.ts:263 |
-| payment\|GET\|/payment/keys | GET /payment/keys | handleListPaymentKeys (services/payment/handler.go:96) | ListPaymentKeys | ListPaymentKeys |  |  | web/dashboard/src/lib/payment.ts:136 |
-| payment\|GET\|/payment/policy | GET /payment/policy | handleGetPaymentPolicy (services/payment/handler.go:160) | GetPaymentPolicy | GetPaymentPolicy |  |  | web/dashboard/src/lib/payment.ts:145 |
-| payment\|PUT\|/payment/policy | PUT /payment/policy | handleSetPaymentPolicy (services/payment/handler.go:175) | UpdatePaymentPolicy | UpsertPaymentPolicy |  |  | web/dashboard/src/lib/payment.ts:153 |
-| payment\|GET\|/payment/ap2/profile | GET /payment/ap2/profile | handleGetPaymentAP2Profile (services/payment/handler_ap2.go:5) | GetPaymentAP2Profile | GetPaymentAP2Profile |  |  | web/dashboard/src/lib/payment.ts:164 |
-| payment\|PUT\|/payment/ap2/profile | PUT /payment/ap2/profile | handleSetPaymentAP2Profile (services/payment/handler_ap2.go:20) | UpdatePaymentAP2Profile | UpsertPaymentAP2Profile |  |  | web/dashboard/src/lib/payment.ts:172 |
-| payment\|POST\|/payment/ap2/evaluate | POST /payment/ap2/evaluate | handleEvaluatePaymentAP2 (services/payment/handler_ap2.go:45) | EvaluatePaymentAP2 |  |  |  | web/dashboard/src/lib/payment.ts:204 |
-| payment\|POST\|/payment/tr31/create | POST /payment/tr31/create | handleTR31Create (services/payment/handler.go:239) | CreateTR31 |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:231 |
-| payment\|POST\|/payment/tr31/translate | POST /payment/tr31/translate | handleTR31Translate (services/payment/handler.go:271) | TranslateTR31 | CreateTR31Translation |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:261 |
-| payment\|POST\|/payment/tr31/validate | POST /payment/tr31/validate | handleTR31Validate (services/payment/handler.go:287) | ValidateTR31 |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:281 |
-| payment\|POST\|/payment/pin/translate | POST /payment/pin/translate | handlePINTranslate (services/payment/handler.go:313) | TranslatePIN | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:305 |
-| payment\|POST\|/payment/pin/pvv/generate | POST /payment/pin/pvv/generate | handlePVVGenerate (services/payment/handler.go:329) | GeneratePVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:325 |
-| payment\|POST\|/payment/pin/pvv/verify | POST /payment/pin/pvv/verify | handlePVVVerify (services/payment/handler.go:345) | VerifyPVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:346 |
-| payment\|POST\|/payment/pin/cvv/compute | POST /payment/pin/cvv/compute | handleCVVCompute (services/payment/handler.go:393) | ComputeCVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:366 |
-| payment\|POST\|/payment/pin/cvv/verify | POST /payment/pin/cvv/verify | handleCVVVerify (services/payment/handler.go:409) | VerifyCVV |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:387 |
-| payment\|POST\|/payment/mac/verify | POST /payment/mac/verify | handleMACVerify (services/payment/handler.go:459) | VerifyMAC |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:434 |
-| payment\|POST\|/payment/iso20022/sign | POST /payment/iso20022/sign | handleISO20022Sign (services/payment/handler.go:475) | ISO20022Sign |  | s.keycore.Sign |  | web/dashboard/src/lib/payment.ts:451 |
-| payment\|POST\|/payment/iso20022/verify | POST /payment/iso20022/verify | handleISO20022Verify (services/payment/handler.go:491) | ISO20022Verify |  | s.keycore.Verify |  | web/dashboard/src/lib/payment.ts:469 |
-| payment\|POST\|/payment/iso20022/encrypt | POST /payment/iso20022/encrypt | handleISO20022Encrypt (services/payment/handler.go:507) | ISO20022Encrypt |  | s.keycore.Encrypt |  | web/dashboard/src/lib/payment.ts:488 |
-| payment\|POST\|/payment/iso20022/decrypt | POST /payment/iso20022/decrypt | handleISO20022Decrypt (services/payment/handler.go:523) | ISO20022Decrypt |  | s.keycore.Decrypt | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:506 |
-| payment\|POST\|/payment/iso20022/lau/generate | POST /payment/iso20022/lau/generate | handleLAUGenerate (services/payment/handler.go:539) | GenerateLAU |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:525 |
-| payment\|POST\|/payment/iso20022/lau/verify | POST /payment/iso20022/lau/verify | handleLAUVerify (services/payment/handler.go:555) | VerifyLAU |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:545 |
-| payment\|POST\|/payment/injection/terminals | POST /payment/injection/terminals | handleRegisterInjectionTerminal (services/payment/handler_injection.go:8) | RegisterInjectionTerminal | GetInjectionTerminalByTerminalID, CreateInjectionTerminal, GetInjectionTerminal |  | pkg/crypto.DescribePublicKey | web/dashboard/src/lib/payment.ts:575 |
-| payment\|GET\|/payment/injection/terminals | GET /payment/injection/terminals | handleListInjectionTerminals (services/payment/handler_injection.go:27) | ListInjectionTerminals | ListInjectionTerminals |  |  | web/dashboard/src/lib/payment.ts:556 |
-| payment\|POST\|/payment/injection/terminals/{param}/challenge | POST /payment/injection/terminals/{id}/challenge | handleIssueInjectionChallenge (services/payment/handler_injection.go:45) | IssueInjectionChallenge | GetInjectionTerminal, UpdateInjectionTerminalChallenge |  | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:594 |
-| payment\|POST\|/payment/injection/terminals/{param}/verify | POST /payment/injection/terminals/{id}/verify | handleVerifyInjectionChallenge (services/payment/handler_injection.go:67) | VerifyInjectionChallenge | GetInjectionTerminal, MarkInjectionTerminalVerified |  | pkg/crypto.Zeroize, pkg/crypto.RandomBytes | web/dashboard/src/lib/payment.ts:611 |
-| payment\|POST\|/payment/injection/jobs | POST /payment/injection/jobs | handleCreateInjectionJob (services/payment/handler_injection.go:92) | CreateInjectionJob | GetInjectionTerminal, GetPaymentKey, CreateInjectionJob, GetInjectionJob | s.keycore.GetKey | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.SealDetached, pkg/crypto.WrapKeyRSAOAEP | web/dashboard/src/lib/payment.ts:655 |
-| payment\|GET\|/payment/injection/jobs | GET /payment/injection/jobs | handleListInjectionJobs (services/payment/handler_injection.go:116) | ListInjectionJobs | ListInjectionJobsByTerminal, ListInjectionJobs |  |  | web/dashboard/src/lib/payment.ts:635 |
 | posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:159) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
 | posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:171) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:196 |
 | posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:191) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:205 |
@@ -1276,48 +1249,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 | kmip\|POST\|/kmip/interop/targets | POST /kmip/interop/targets | handleCreateInteropTarget (services/kmip/http_api.go:385) |  |  |  |  | web/dashboard/src/lib/kmip.ts:244 |
 | kmip\|DELETE\|/kmip/interop/targets/{param} | DELETE /kmip/interop/targets/{id} | handleDeleteInteropTarget (services/kmip/http_api.go:403) |  | GetInteropTarget, DeleteInteropTarget |  |  | web/dashboard/src/lib/kmip.ts:256 |
 | kmip\|POST\|/kmip/interop/targets/{param}/validate | POST /kmip/interop/targets/{id}/validate | handleValidateInteropTarget (services/kmip/http_api.go:440) |  | GetInteropTarget, UpdateInteropTargetValidation |  |  | web/dashboard/src/lib/kmip.ts:263 |
-| payment\|POST\|/payment/keys | POST /payment/keys | handleRegisterPaymentKey (services/payment/handler.go:80) | RegisterPaymentKey | CreatePaymentKey, GetPaymentKey | s.keycore.GetKey |  |  |
-| payment\|GET\|/payment/keys | GET /payment/keys | handleListPaymentKeys (services/payment/handler.go:96) | ListPaymentKeys | ListPaymentKeys |  |  | web/dashboard/src/lib/payment.ts:136 |
-| payment\|GET\|/payment/keys/{param} | GET /payment/keys/{id} | handleGetPaymentKey (services/payment/handler.go:111) | GetPaymentKey | GetPaymentKey |  |  |  |
-| payment\|PUT\|/payment/keys/{param} | PUT /payment/keys/{id} | handleUpdatePaymentKey (services/payment/handler.go:126) | UpdatePaymentKey | GetPaymentKey, UpdatePaymentKey |  |  |  |
-| payment\|POST\|/payment/keys/{param}/rotate | POST /payment/keys/{id}/rotate | handleRotatePaymentKey (services/payment/handler.go:142) | RotatePaymentKey | GetPaymentKey, UpdatePaymentKeyVersion | s.keycore.RotateKey |  |  |
-| payment\|GET\|/payment/policy | GET /payment/policy | handleGetPaymentPolicy (services/payment/handler.go:160) | GetPaymentPolicy | GetPaymentPolicy |  |  | web/dashboard/src/lib/payment.ts:145 |
-| payment\|PUT\|/payment/policy | PUT /payment/policy | handleSetPaymentPolicy (services/payment/handler.go:175) | UpdatePaymentPolicy | UpsertPaymentPolicy |  |  | web/dashboard/src/lib/payment.ts:153 |
-| payment\|GET\|/payment/ap2/profile | GET /payment/ap2/profile | handleGetPaymentAP2Profile (services/payment/handler_ap2.go:5) | GetPaymentAP2Profile | GetPaymentAP2Profile |  |  | web/dashboard/src/lib/payment.ts:164 |
-| payment\|PUT\|/payment/ap2/profile | PUT /payment/ap2/profile | handleSetPaymentAP2Profile (services/payment/handler_ap2.go:20) | UpdatePaymentAP2Profile | UpsertPaymentAP2Profile |  |  | web/dashboard/src/lib/payment.ts:172 |
-| payment\|POST\|/payment/ap2/evaluate | POST /payment/ap2/evaluate | handleEvaluatePaymentAP2 (services/payment/handler_ap2.go:45) | EvaluatePaymentAP2 |  |  |  | web/dashboard/src/lib/payment.ts:204 |
-| payment\|GET\|/payment/crypto/operations | GET /payment/crypto/operations | handleListPaymentCryptoOperations (services/payment/handler.go:200) | SupportedPaymentCryptoOperations |  |  |  |  |
-| payment\|POST\|/payment/crypto | POST /payment/crypto | handlePaymentCryptoDispatch (services/payment/handler.go:210) | DispatchPaymentCrypto |  |  |  |  |
-| payment\|POST\|/payment/tr31/create | POST /payment/tr31/create | handleTR31Create (services/payment/handler.go:239) | CreateTR31 |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:231 |
-| payment\|POST\|/payment/tr31/parse | POST /payment/tr31/parse | handleTR31Parse (services/payment/handler.go:255) | ParseTR31 |  | s.keycore.ImportKey | pkg/crypto.Zeroize |  |
-| payment\|POST\|/payment/tr31/translate | POST /payment/tr31/translate | handleTR31Translate (services/payment/handler.go:271) | TranslateTR31 | CreateTR31Translation |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:261 |
-| payment\|POST\|/payment/tr31/validate | POST /payment/tr31/validate | handleTR31Validate (services/payment/handler.go:287) | ValidateTR31 |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:281 |
-| payment\|GET\|/payment/tr31/key-usages | GET /payment/tr31/key-usages | handleTR31KeyUsages (services/payment/handler.go:303) | SupportedTR31KeyUsages |  |  |  |  |
-| payment\|POST\|/payment/pin/translate | POST /payment/pin/translate | handlePINTranslate (services/payment/handler.go:313) | TranslatePIN | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:305 |
-| payment\|POST\|/payment/pin/pvv/generate | POST /payment/pin/pvv/generate | handlePVVGenerate (services/payment/handler.go:329) | GeneratePVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:325 |
-| payment\|POST\|/payment/pin/pvv/verify | POST /payment/pin/pvv/verify | handlePVVVerify (services/payment/handler.go:345) | VerifyPVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:346 |
-| payment\|POST\|/payment/pin/offset/generate | POST /payment/pin/offset/generate | handleOffsetGenerate (services/payment/handler.go:361) | GenerateOffset | CreatePINOperationLog |  |  |  |
-| payment\|POST\|/payment/pin/offset/verify | POST /payment/pin/offset/verify | handleOffsetVerify (services/payment/handler.go:377) | VerifyOffset | CreatePINOperationLog |  |  |  |
-| payment\|POST\|/payment/pin/cvv/compute | POST /payment/pin/cvv/compute | handleCVVCompute (services/payment/handler.go:393) | ComputeCVV | CreatePINOperationLog |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:366 |
-| payment\|POST\|/payment/pin/cvv/verify | POST /payment/pin/cvv/verify | handleCVVVerify (services/payment/handler.go:409) | VerifyCVV |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:387 |
-| payment\|POST\|/payment/mac/retail | POST /payment/mac/retail | handleMACRetail (services/payment/handler.go:425) |  |  |  |  |  |
-| payment\|POST\|/payment/mac/iso9797 | POST /payment/mac/iso9797 | handleMACISO9797 (services/payment/handler.go:429) |  |  |  |  |  |
-| payment\|POST\|/payment/mac/cmac | POST /payment/mac/cmac | handleMACCMAC (services/payment/handler.go:433) |  |  |  |  |  |
-| payment\|POST\|/payment/mac/verify | POST /payment/mac/verify | handleMACVerify (services/payment/handler.go:459) | VerifyMAC |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:434 |
-| payment\|POST\|/payment/iso20022/sign | POST /payment/iso20022/sign | handleISO20022Sign (services/payment/handler.go:475) | ISO20022Sign |  | s.keycore.Sign |  | web/dashboard/src/lib/payment.ts:451 |
-| payment\|POST\|/payment/iso20022/verify | POST /payment/iso20022/verify | handleISO20022Verify (services/payment/handler.go:491) | ISO20022Verify |  | s.keycore.Verify |  | web/dashboard/src/lib/payment.ts:469 |
-| payment\|POST\|/payment/iso20022/encrypt | POST /payment/iso20022/encrypt | handleISO20022Encrypt (services/payment/handler.go:507) | ISO20022Encrypt |  | s.keycore.Encrypt |  | web/dashboard/src/lib/payment.ts:488 |
-| payment\|POST\|/payment/iso20022/decrypt | POST /payment/iso20022/decrypt | handleISO20022Decrypt (services/payment/handler.go:523) | ISO20022Decrypt |  | s.keycore.Decrypt | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:506 |
-| payment\|POST\|/payment/iso20022/lau/generate | POST /payment/iso20022/lau/generate | handleLAUGenerate (services/payment/handler.go:539) | GenerateLAU |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:525 |
-| payment\|POST\|/payment/iso20022/lau/verify | POST /payment/iso20022/lau/verify | handleLAUVerify (services/payment/handler.go:555) | VerifyLAU |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:545 |
-| payment\|POST\|/payment/injection/terminals | POST /payment/injection/terminals | handleRegisterInjectionTerminal (services/payment/handler_injection.go:8) | RegisterInjectionTerminal | GetInjectionTerminalByTerminalID, CreateInjectionTerminal, GetInjectionTerminal |  | pkg/crypto.DescribePublicKey | web/dashboard/src/lib/payment.ts:575 |
-| payment\|GET\|/payment/injection/terminals | GET /payment/injection/terminals | handleListInjectionTerminals (services/payment/handler_injection.go:27) | ListInjectionTerminals | ListInjectionTerminals |  |  | web/dashboard/src/lib/payment.ts:556 |
-| payment\|POST\|/payment/injection/terminals/{param}/challenge | POST /payment/injection/terminals/{id}/challenge | handleIssueInjectionChallenge (services/payment/handler_injection.go:45) | IssueInjectionChallenge | GetInjectionTerminal, UpdateInjectionTerminalChallenge |  | pkg/crypto.RandomBytes, pkg/crypto.Zeroize | web/dashboard/src/lib/payment.ts:594 |
-| payment\|POST\|/payment/injection/terminals/{param}/verify | POST /payment/injection/terminals/{id}/verify | handleVerifyInjectionChallenge (services/payment/handler_injection.go:67) | VerifyInjectionChallenge | GetInjectionTerminal, MarkInjectionTerminalVerified |  | pkg/crypto.Zeroize, pkg/crypto.RandomBytes | web/dashboard/src/lib/payment.ts:611 |
-| payment\|POST\|/payment/injection/jobs | POST /payment/injection/jobs | handleCreateInjectionJob (services/payment/handler_injection.go:92) | CreateInjectionJob | GetInjectionTerminal, GetPaymentKey, CreateInjectionJob, GetInjectionJob | s.keycore.GetKey | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/crypto.SealDetached, pkg/crypto.WrapKeyRSAOAEP | web/dashboard/src/lib/payment.ts:655 |
-| payment\|GET\|/payment/injection/jobs | GET /payment/injection/jobs | handleListInjectionJobs (services/payment/handler_injection.go:116) | ListInjectionJobs | ListInjectionJobsByTerminal, ListInjectionJobs |  |  | web/dashboard/src/lib/payment.ts:635 |
-| payment\|GET\|/payment/injection/terminals/{param}/jobs/next | GET /payment/injection/terminals/{id}/jobs/next | handlePullNextInjectionJob (services/payment/handler_injection.go:135) | PullNextInjectionJob | GetNextQueuedInjectionJob, MarkInjectionJobDelivered, UpdateInjectionTerminalLastSeen, GetInjectionJob |  |  |  |
-| payment\|POST\|/payment/injection/jobs/{param}/ack | POST /payment/injection/jobs/{id}/ack | handleAckInjectionJob (services/payment/handler_injection.go:155) | AckInjectionJob | GetInjectionJob, MarkInjectionJobAck, UpdateInjectionTerminalLastSeen |  |  |  |
 | policy\|POST\|/policies | POST /policies | handleCreatePolicy (services/policy/handler.go:45) | CreatePolicy | CreatePolicy, GetPolicy |  | pkg/tenantcheck.Enforce |  |
 | policy\|GET\|/policies | GET /policies | handleListPolicies (services/policy/handler.go:73) | ListPolicies | ListPolicies |  |  |  |
 | policy\|GET\|/policies/{param} | GET /policies/{id} | handleGetPolicy (services/policy/handler.go:90) | GetPolicy | GetPolicy |  |  |  |

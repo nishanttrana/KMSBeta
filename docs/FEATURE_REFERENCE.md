@@ -517,51 +517,6 @@ Operators can:
 - Posture: certificate mass-rollout and lifecycle drift
 - Compliance: short-lived cert coverage and rollout-risk penalties
 
-## Payment Policy And Payment Crypto
-
-### What It Is
-
-Payment is split intentionally into:
-
-- `Data Protection -> Payment Policy`
-- `Workbench -> Payment Crypto`
-
-This separates KMS-wide payment guardrails from test and operational crypto actions.
-
-### Why Teams Use It
-
-Use `Payment Policy` when:
-
-- a tenant needs governed settings for traditional and modern payment workflows
-
-Use `Payment Crypto` when:
-
-- operators or engineers need to test or execute approved payment crypto operations
-
-### Traditional Payment
-
-This covers:
-
-- TR-31
-- KBPK
-- PIN
-- CVV
-- MAC
-- payment TCP controls
-
-### Modern Payment
-
-This covers:
-
-- ISO 20022
-- AP2 and agent-payment policy
-
-### Evidence Surfaces
-
-- Audit: policy updates, runtime operations, AP2 evaluations
-- Compliance: payment control status
-- Posture: payment policy drift or unsafe interface exposure
-
 ## Compliance
 
 ### What It Is
@@ -640,7 +595,6 @@ These features help the KMS act as a central crypto authority while fitting into
 - KMIP
 - EKM
 - cloud BYOK and HYOK
-- payment protocol surfaces
 
 ### Why Teams Use Them
 

@@ -21,7 +21,6 @@ spec:
     qkd_interface: true
     qrng_generator: true
     ekm_database: true
-    payment_crypto: true
     compliance_dashboard: true
     sbom_cbom: true
     reporting_alerting: true

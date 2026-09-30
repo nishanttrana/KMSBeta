@@ -5,7 +5,6 @@ const CryptoTab         = lazy(() => import("./CryptoTab").then(m => ({ default:
 const RestAPITab        = lazy(() => import("./RestAPITab").then(m => ({ default: m.RestAPITab })));
 const TokenizeTab       = lazy(() => import("./TokenizeTab").then(m => ({ default: m.TokenizeTab })));
 const DataEncryptionTab = lazy(() => import("./TokenizeTab").then(m => ({ default: m.DataEncryptionTab })));
-const PaymentTab        = lazy(() => import("./PaymentTab").then(m => ({ default: m.PaymentTab })));
 const HYOKLiveTestPane  = lazy(() => import("./HYOKLiveTestPane").then(m => ({ default: m.HYOKLiveTestPane })));
 
 const SubFallback = <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, fontSize: 12, color: "#888" }}>Loading...</div>;
@@ -17,9 +16,8 @@ export const WorkbenchTab = ({ session, keyCatalog, onToast, subView, fipsMode }
       {active === "restapi"   && <RestAPITab session={session} keyCatalog={keyCatalog} onToast={onToast} />}
       {active === "tokenize"  && <TokenizeTab session={session} keyCatalog={keyCatalog} onToast={onToast} />}
       {active === "dataenc"   && <DataEncryptionTab session={session} keyCatalog={keyCatalog} onToast={onToast} />}
-      {active === "payment"   && <PaymentTab session={session} keyCatalog={keyCatalog} onToast={onToast} />}
       {active === "hyok-test" && <HYOKLiveTestPane session={session} keyCatalog={keyCatalog} onToast={onToast} />}
-      {active !== "restapi" && active !== "tokenize" && active !== "dataenc" && active !== "payment" && active !== "hyok-test" && (
+      {active !== "restapi" && active !== "tokenize" && active !== "dataenc" && active !== "hyok-test" && (
         <CryptoTab session={session} keyCatalog={keyCatalog} onToast={onToast} fipsMode={fipsMode} />
       )}
     </Suspense>

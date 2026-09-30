@@ -1,6 +1,6 @@
 # Vecta KMS
 
-Vecta KMS is a multi-service key management platform for centralized cryptographic operations, internal PKI, SCIM-based identity provisioning, workload identity, attested key release, payment crypto, compliance, and security posture management.
+Vecta KMS is a multi-service key management platform for centralized cryptographic operations, internal PKI, SCIM-based identity provisioning, workload identity, attested key release, compliance, and security posture management.
 
 This README is the landing page. Detailed operator documentation now lives under [`docs/`](docs/README.md).
 
@@ -21,7 +21,7 @@ This README is the landing page. Detailed operator documentation now lives under
 - [Operations Guide](docs/OPERATIONS_GUIDE.md)
   - Covers installation, startup, health checks, backups, cluster operations, and troubleshooting.
 - [Workflow Examples](docs/WORKFLOW_EXAMPLES.md)
-  - End-to-end examples for onboarding apps, PKI automation, payment policy, workload identity, PQC migration, and more.
+  - End-to-end examples for onboarding apps, PKI automation, workload identity, PQC migration, and more.
 - [Generated Product Map](docs/generated/PRODUCT_MAP.md)
   - Source-generated UI/service/route map for launch triage and feature ownership.
 - [Generated Request Flow Map](docs/generated/REQUEST_FLOW.md)
@@ -76,7 +76,6 @@ Vecta KMS is organized into five working areas:
 | `cloud` | BYOK/HYOK orchestration | cloud key import, sync, rotation tracking |
 | `ekm` | External key manager and database protection | TDE keys, BitLocker, agent-managed database encryption |
 | `kmip` | KMIP protocol server | HSM clients, appliances, middleware, enterprise tools |
-| `payment` | Payment key management and crypto | TR-31, PIN, CVV, MAC, ISO 20022, AP2 |
 | `compliance` | Framework scoring and assessments | PCI DSS, FIPS, NIST, evidence review |
 | `posture` | Risk detection and remediation | drift detection, findings, blast radius, actions |
 | `reporting` | Alerts and reports | MTTR/MTTD, incident reporting, scheduled exports |

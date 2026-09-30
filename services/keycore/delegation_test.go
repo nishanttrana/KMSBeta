@@ -96,22 +96,25 @@ func TestDelegatedUseDecidesWithUserGrant(t *testing.T) {
 	}
 }
 
-// The export decision for payment is the user's translate grant, and the user
-// can't export the key themselves. (Keycore exports only under a wrapping
-// key, which payment doesn't send yet: KEY_ACCESS_MODEL.md, "Payment key
-// references".)
-func TestDelegatedExportIsDecidedByTheTranslateGrant(t *testing.T) {
+// A CA signature made by certs for a user is decided by that user's
+// certificate-sign or crl-sign grant, and a signing grant for one doesn't
+// give the other or plain sign.
+func TestDelegatedCASigningIsDecidedByTheUsageGrant(t *testing.T) {
 	h, svc, rec := delegationHandler(t)
-	key := bobKeyGrantedTo(t, svc, "translate-decrypt")
-	kek, err := svc.CreateKey(context.Background(), CreateKeyRequest{TenantID: "t1", Name: "kek", Algorithm: "AES-256",
-		KeyType: "symmetric", Purpose: "wrap-unwrap", Owner: "ops", CreatedBy: "bob"})
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{TenantID: "t1", Name: "ca", Algorithm: "ECDSA-P256",
+		KeyType: "asymmetric", Purpose: "sign", Owner: "pki", CreatedBy: "bob"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	payment := &pkgauth.Claims{ClientID: "kms-payment", TenantID: "root", Role: "client-service", Permissions: []string{"service.internal"}}
-	payment.Subject = "kms-payment"
-	export := func(caller *pkgauth.Claims, token, usage string) *httptest.ResponseRecorder {
-		req := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/export?tenant_id=t1", bytes.NewBufferString(`{"wrapping_key_id":"`+kek.ID+`"}`))
+	if err := svc.store.ReplaceKeyAccessGrants(context.Background(), "t1", key.ID, []KeyAccessGrant{
+		{SubjectType: AccessSubjectUser, SubjectID: "alice", Operations: []string{"certificate-sign"}},
+	}, "bob"); err != nil {
+		t.Fatal(err)
+	}
+	certs := &pkgauth.Claims{ClientID: "kms-certs", TenantID: "root", Role: "client-service", Permissions: []string{"service.internal"}}
+	certs.Subject = "kms-certs"
+	sign := func(caller *pkgauth.Claims, token, usage string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/sign?tenant_id=t1", bytes.NewBufferString(`{"tenant_id":"t1","data":"dGJz"}`))
 		req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), caller))
 		if token != "" {
 			req.Header.Set(delegation.HeaderToken, token)
@@ -121,17 +124,17 @@ func TestDelegatedExportIsDecidedByTheTranslateGrant(t *testing.T) {
 		h.ServeHTTP(w, req)
 		return w
 	}
-	if w := export(payment, "alice-token", "translate-encrypt"); w.Code != http.StatusForbidden {
-		t.Fatalf("usage alice has no grant for: %d %s", w.Code, w.Body)
+	if w := sign(certs, "alice-token", "crl-sign"); w.Code != http.StatusForbidden {
+		t.Fatalf("crl-sign without the grant: %d %s", w.Code, w.Body)
 	}
-	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["usage"] != "translate-encrypt" || d["via"] != "kms-payment" {
+	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["usage"] != "crl-sign" || d["via"] != "kms-certs" {
 		t.Fatalf("details %+v", d)
 	}
-	if w := export(payment, "alice-token", "translate-decrypt"); w.Code != http.StatusOK {
+	if w := sign(certs, "alice-token", "certificate-sign"); w.Code != http.StatusOK {
 		t.Fatalf("granted usage refused: %d %s", w.Code, w.Body)
 	}
-	if w := export(delegAlice, "", ""); w.Code != http.StatusForbidden {
-		t.Fatalf("alice exported the key directly: %d %s", w.Code, w.Body)
+	if w := sign(delegAlice, "", ""); w.Code != http.StatusForbidden {
+		t.Fatalf("a certificate-sign grant allowed plain sign: %d %s", w.Code, w.Body)
 	}
 }
 

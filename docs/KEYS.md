@@ -1317,7 +1317,6 @@ Interface policies restrict which **network interface or protocol** a principal 
 | `rest` | Standard REST API via `/svc/keycore/` |
 | `kmip` | KMIP protocol on port 5696 |
 | `hyok` | Hold-Your-Own-Key cloud interface |
-| `payment` | Payment crypto TR-31 interface |
 | `ekm` | External Key Manager database TDE interface |
 
 ---

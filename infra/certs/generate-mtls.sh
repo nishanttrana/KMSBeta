@@ -33,7 +33,6 @@ SERVICES=(
   kmip
   qkd
   ekm
-  payment
   compliance
   sbom
   reporting

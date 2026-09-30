@@ -32,7 +32,6 @@ var Services = map[string]string{
 	"kms-key-access":        "https://keyaccess:8270",
 	"kms-keycore":           "https://keycore:8010",
 	"kms-kmip":              "https://kmip:8160",
-	"kms-payment":           "https://payment:8170",
 	"kms-policy":            "https://policy:8040",
 	"kms-posture":           "https://posture:8220",
 	"kms-pqc":               "https://pqc:8060",

@@ -1415,7 +1415,6 @@ The system health surface gives administrators real-time visibility into the ope
 | `reporting` | Operational reports and evidence export |
 | `posture` | Security posture analysis and risk findings |
 | `workload` | Workload identity (SPIFFE/SVID) |
-| `payment` | Payment crypto and protocol surfaces |
 | `autokey` | Self-service key provisioning templates |
 | `keyaccess` | Key access justifications |
 | `signing` | Artifact signing and transparency |
@@ -1749,7 +1748,7 @@ The sidebar is divided into the following tab groups:
 |---|---|
 | **CORE** | Health, keys, and primary operational surfaces |
 | **CRYPTO & PKI** | Certificate lifecycle, PKI, and protocol interfaces |
-| **DATA & POLICY** | Data protection, tokenization, and payment policy |
+| **DATA & POLICY** | Data protection and tokenization |
 | **CLOUD & IDENTITY** | Cloud integrations, workload identity, and BYOK/HYOK |
 | **INFRASTRUCTURE** | Interfaces, network, cluster, and HSM integration |
 | **GOVERNANCE** | Approvals, backups, audit, and compliance |
@@ -1777,8 +1776,8 @@ The sidebar is divided into the following tab groups:
 
 | Tab | Sub-panes | Purpose |
 |---|---|---|
-| **Data Protection** | Tokenization, Masking, Payment Policy | Field-level and payment data protection configuration |
-| **Workbench** | Payment Crypto, Protocol Testing | Controlled testing environment — not production state |
+| **Data Protection** | Tokenization, Masking | Field-level data protection configuration |
+| **Workbench** | Protocol Testing | Controlled testing environment — not production state |
 
 ### 12.5 CLOUD & IDENTITY Group
 

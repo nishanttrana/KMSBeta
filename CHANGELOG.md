@@ -4,6 +4,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.0.0-beta] — 2026-09-30
+
+### Removed: the payment service (breaking)
+- **Owner decision (2026-09-30):** payment HSM functions leave the core product.
+- **Removed:**
+  - `services/payment`: TR-31, PIN, MAC, ISO 20022, AP2 and key injection;
+  - its compose service, Envoy route and Makefile target;
+  - the Payment and Payment Policy tabs;
+  - the `translate-*` delegation usages, which only payment enforced;
+  - its API reference sections.
+- **Kept:** `pkg/payment`, because keycore's TR-31 key import uses its
+  parser.
+- **Service identity:** auth now revokes the `kms-payment` service identity at
+  every start: it deletes the API keys and revokes the registration. This is
+  audited once as `audit.auth.service_identity_retired`
+  (`TestBootstrapRetiresRemovedServiceIdentities`).
+- **Recovery:** the sources remain in KMSBeta's git history; see the commit
+  that removes them.
+
 ## [6.26.0-beta] — 2026-09-30
 
 ### Composite signature keys

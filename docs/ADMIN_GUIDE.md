@@ -59,13 +59,7 @@ Use this area for policies that affect protected data rather than just raw keys.
 Typical use:
 
 - tokenization and masking
-- payment policy
 - field-level data protection controls
-
-Important distinction:
-
-- `Data Protection -> Payment Policy` defines long-lived guardrails
-- `Workbench -> Payment Crypto` is for controlled operational testing
 
 ### Certificates
 
@@ -229,7 +223,6 @@ Use Workbench for guided, controlled testing of capabilities without treating th
 
 Typical use:
 
-- payment crypto
 - protocol and capability evaluation
 - controlled crypto testing
 
@@ -446,14 +439,6 @@ Use both surfaces together:
 3. Add workload registrations.
 4. Issue SVIDs and test token exchange.
 5. Confirm workload-to-key graph and audit events.
-
-### Playbook: Enable Payment Guardrails
-
-1. Open `Data Protection -> Payment Policy`.
-2. Configure `Traditional Payment`.
-3. Configure `Modern Payment`.
-4. Use `Workbench -> Payment Crypto` to verify expected operations.
-5. Review payment audit events separately from workbench tests.
 
 ### Playbook: Investigate Renewal Risk
 

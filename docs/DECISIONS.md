@@ -7,6 +7,13 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Remove the payment service
+
+- **Decision:** the owner chose to remove payment from the core product.
+- **What stays:** `pkg/payment`, because keycore's TR-31 key import uses its
+  parser. Service identities of removed services are revoked at every auth
+  start, so their credentials can't outlive them (secure-defaults rule 3).
+
 ## 2026-09-30 — Composite signatures by dual signing; no HSM HBS until a testable library exists (6.26.0-beta)
 
 **Decision.** Composite keys `ML-DSA-65+ECDSA-P256` and `ML-DSA-87+ECDSA-P384`

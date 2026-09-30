@@ -14,7 +14,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | [KEYS.md](KEYS.md) | All users | Key lifecycle, algorithms, access policy, crypto operations, rotation |
 | [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md) | Security, ops, audit | Rotation analytics, compromise response, key health, inventory, DSPM findings, enterprise controls |
 | [CERTIFICATES.md](CERTIFICATES.md) | PKI, platform | PKI hierarchy, certificate lifecycle, ACME/EST/SCEP/CMPv2, STAR, ARI |
-| [DATA_PROTECTION.md](DATA_PROTECTION.md) | App, data teams | Tokenization, FPE, masking, payment crypto, PKCS#11/JCA, Autokey |
+| [DATA_PROTECTION.md](DATA_PROTECTION.md) | App, data teams | Tokenization, FPE, masking, PKCS#11/JCA, Autokey |
 | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) | Cloud, integration | BYOK, HYOK, EKM/TDE, KMIP, artifact signing |
 | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) | Security, platform | Workload identity (SPIFFE SVIDs, token exchange), attested key release, key access justifications, PQC keys and migration |
 | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) | Compliance, ops | Audit log, governance/approvals, compliance frameworks, alerts, posture, SBOM |
@@ -70,7 +70,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 ### PKI / Integration Team
 1. [CERTIFICATES.md](CERTIFICATES.md) — PKI hierarchy, enrollment protocols
 2. [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) — BYOK, HYOK, KMIP, EKM
-3. [DATA_PROTECTION.md](DATA_PROTECTION.md) — payment crypto, PKCS#11
+3. [DATA_PROTECTION.md](DATA_PROTECTION.md) — PKCS#11
 4. [API_REFERENCE.md](API_REFERENCE.md) — full endpoint reference
 
 ### Compliance / Audit Team
@@ -140,7 +140,6 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 | `pqc` | `/svc/pqc/` | PQC inventory, readiness scans, migration planning |
 | `keyaccess` | `/svc/keyaccess/` | Access justification rules and audit |
 | `dataprotect` | `/svc/dataprotect/` | Tokenization, masking, field encryption |
-| `payment` | `/svc/payment/` | TR-31, PIN blocks, ISO 20022 signing |
 | `autokey` | `/svc/autokey/` | Key provisioning templates and handle requests |
 | `cloud` | `/svc/cloud/` | BYOK, cloud key sync |
 | `hyok` | `/svc/hyok/` | HYOK proxy, hold-your-own-key policies |

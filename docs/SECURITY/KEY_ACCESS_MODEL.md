@@ -104,11 +104,9 @@ Adding a checkbox without its enforcement point is a fake capability
 | Encrypt, Decrypt, Wrap, Unwrap, Sign, Verify, Generate MAC, Verify MAC, Derive, Key agreement | keycore | the decision, directly |
 | Export | keycore `/keys/{id}/export` | the decision, directly |
 | FPE encrypt / decrypt, tokenize / detokenize | dataprotect (FF1, vaults) | delegated (section 5), 6.0.0-beta |
-| Translate wrap / unwrap (TR-31) | payment `TranslateTR31` | delegated, 6.0.0-beta (material delivery open, 5a) |
-| Translate encrypt / decrypt (PIN) | payment `TranslatePIN` | delegated, 6.0.0-beta (material delivery open, 5a) |
 | Certificate sign, CRL sign | certs (CA keys held in keycore) | delegated, 6.0.0-beta |
 | Content commitment | not an operation: the X.509 non-repudiation bit | certs sets the bit on an issued certificate only if the CA key's mask has it |
-| Generate / validate cryptogram (EMV ARQC) | **nothing implements it** | not offered until payment implements EMV cryptograms |
+| Translate (TR-31, PIN), generate / validate cryptogram (EMV) | **nothing in the core**: payment moved to KMS Extension in 7.0.0-beta (5a) | not offered |
 
 Mask rules:
 - Set at creation from presets (Data encryption, Key wrapping, Signing CA,
@@ -149,7 +147,6 @@ operation (`fpe-encrypt` → encrypt); its key binding still applies.
 | Service | Keycore call (decision point) | Usages |
 |---|---|---|
 | dataprotect | `POST /keys/{id}/usage/meter`, made before every key operation and before `service-derive` | `fpe-encrypt`, `fpe-decrypt`, `tokenize`, `detokenize`, `encrypt`/`decrypt` (field, searchable, mask), `wrap`/`unwrap` (envelope) |
-| payment | `POST /keys/{id}/export` for key material; `encrypt`, `decrypt`, `sign`, `verify` (ISO 20022) | `translate-decrypt`/`translate-encrypt` (PIN), `translate-unwrap`/`translate-wrap` (TR-31 translate), `export` (TR-31 create payload), `wrap`/`unwrap` (KBPK), `mac` (PVV, offset, CVV, MAC, LAU) |
 | certs | `POST /keys/{id}/sign` (HSM CA keys and the `keycore` backend) | `certificate-sign` (issuance, sub-CA), `crl-sign` |
 | ekm | `GET /keys/{id}/public-key` (TDE public key, on every request and at key creation and rotation) | `read` (6.18.0-beta) |
 
@@ -181,26 +178,19 @@ Open:
 - **Field-encryption leases** hand wrapped key material to a registered
   wrapper without a keycore decision for the user who asked
   (`IssueFieldEncryptionLease`).
-- **Payment key references** (section 5a).
 
-### 5a. Payment key references (open, owner decision)
+### 5a. Payment (moved out, 7.0.0-beta)
 
-Payment's operations accept a key by ID and fetch its material with `POST
-/keys/{id}/export`, reading a plaintext `material` field. Keycore's export
-has only ever returned material wrapped under a `wrapping_key_id`, so every
-payment operation that names a key by ID fails against the real keycore
-(`keycore_export_failed: wrapping_key_id is required`); only inline
-`material_b64` works. Payment's tests passed because their fake keycore
-returned a `material` field the real one never sends. The delegated
-decision in front of that export is built and tested in keycore
-(`TestDelegatedExportIsDecidedByTheTranslateGrant`), but the path behind it
-doesn't deliver material. Options, for the owner:
-1. A keycore endpoint that releases a key's material only to `kms-payment`,
-   for a delegated user and a payment usage, audited, over internal mTLS
-   (payment zeroizes it after use).
-2. Payment's cryptography moves into keycore, so material never leaves it.
-3. Payment accepts inline material only, and the key-by-ID option is
-   removed from the API and UI.
+The payment service (TR-31, PIN translation, PVV/CVV, MAC, ISO 20022, AP2)
+moved to the KMS Extension repository as a seed (owner decision,
+2026-09-29; `seeds/services/payment`, last in KMSBeta at `4146dc70c`). Its
+delegated usages (`translate-*`, `mac`, `export`, `sign`, `verify`) went with
+it. Its key-by-ID path never worked against the real keycore (keycore exports
+only under a `wrapping_key_id`; payment read a plaintext field its test fake
+supplied). Promoting it back needs a design where keycore performs the
+payment cryptography or releases material only to a verified payment
+identity for a delegated user. Keycore still imports TR-31 key blocks with
+`pkg/payment`.
 
 ## 6. Key properties and KMIP metadata
 
@@ -343,8 +333,8 @@ Every slice of this work meets all of these, or it isn't done:
 |---|---|---|
 | 0 | Tokenless refusal; access and key-management routes on the kernel with permissions; owner-or-admin for grant changes; actor from token | **done, 4.0.0-beta** |
 | 0 | Key visibility (option A, `key.inventory.read`, `read` grants); every remaining keycore write on the kernel | **done, 5.0.0-beta** |
-| 0 | Delegated usage with the user's token for dataprotect, payment, certs (section 5) | **done, 6.0.0-beta** |
-| 0 | Enforce the declared usage; bare service identities limited to their usages; field-encryption lease decision; payment key references (5a); step-up from a verified MFA claim | open |
+| 0 | Delegated usage with the user's token for dataprotect, payment, certs (section 5) | **done, 6.0.0-beta** (payment moved out in 7.0.0-beta) |
+| 0 | Enforce the declared usage; bare service identities limited to their usages; field-encryption lease decision; step-up from a verified MFA claim | open |
 | 1 | Usage-mask column (full vocabulary, per-key migration, KMIP mask kept); owner and change-owner; subjects from auth; explicit deny | open |
 | 2 | Label policies, cache with NATS invalidation, explainers, dry run; tags into labels | open |
 | 3 | Enforced dates; aliases; links; section 6 properties; KMIP Add/Modify/DeleteAttribute | open |
@@ -356,4 +346,4 @@ Every slice of this work meets all of these, or it isn't done:
 1. ~~Default key visibility~~: decided 2026-09-29, option A (section 8).
 2. Retire keycore's own groups into auth groups.
 3. Label policies in keycore (recommended) or in `services/policy`.
-4. How payment gets key material for a key named by ID (section 5a).
+4. ~~How payment gets key material~~: payment moved to KMS Extension, 7.0.0-beta (section 5a).

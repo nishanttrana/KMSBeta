@@ -38,7 +38,6 @@ web/dashboard/dist/
 /cloud
 /dataprotect
 /keycore
-/payment
 /posture
 services/keycore/keycore
 services/ekm/ekm
@@ -93,7 +92,6 @@ services/hyok/hyok
 services/jca-provider/jca-provider
 services/keyaccess/keyaccess
 services/kmip/kmip
-services/payment/payment
 services/policy/policy
 services/posture/posture
 services/pqc/pqc
