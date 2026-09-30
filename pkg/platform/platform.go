@@ -181,7 +181,13 @@ func (rt *Runtime) Serve(handler http.Handler) error {
 	if rt.opts.SkipJWT {
 		rt.Logger.Printf("WARNING: platform JWT middleware disabled (SkipJWT) — endpoints must enforce their own authentication")
 	} else {
-		authed = pkgjwtauth.MustWrap(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, handler, rt.Logger)
+		// A kernel router refuses (and audits) missing or bad tokens under
+		// the route's own action; anything else is audited by MustWrap.
+		if pr, ok := handler.(pkgjwtauth.PublicRouter); ok {
+			authed = pkgjwtauth.MustWrapRouter(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, pr, rt.Logger)
+		} else {
+			authed = pkgjwtauth.MustWrap(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, handler, rt.Audit, rt.Logger)
+		}
 	}
 	id := pkgsvctls.Current()
 	if id == nil {

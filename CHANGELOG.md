@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.12.0-beta] — 2026-09-30
+
+### Every JWT refusal is audited, on raw-mux services too
+- **Fixed:** services still on a raw `http.ServeMux` (audit, backup,
+  compliance, policy, signing, and `platform.Boot` services whose handler
+  isn't a kernel router) answered a missing or bad token with a 401 from
+  `pkg/jwtauth.MustWrap`, and only the generic request log saw it.
+  `MustWrap` now takes the service's audit client and emits
+  `audit.<service>.request_refused` with `result: refused`, `reason`
+  `unauthenticated` or `invalid_token`, the source IP, method, path and any
+  `requested_tenant`. This completes 7.10.0-beta, which covered kernel
+  services only.
+- **Changed:** `platform.Boot` serves a handler that is a kernel router
+  (`jwtauth.PublicRouter`) through `MustWrapRouter`, so its refusals are
+  audited under the route's own action.
+- **Test:** `TestLegacyWrapperAuditsTokenRefusals`.
+
 ## [7.11.0-beta] — 2026-09-30
 
 ### Crypto Discovery: ECDSA-P256 is no longer "vulnerable"; add TLS targets from the page

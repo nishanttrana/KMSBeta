@@ -52,3 +52,49 @@ func TestKernelWrapperAuditsTokenRefusals(t *testing.T) {
 		}
 	}
 }
+
+// On a raw mux there is no kernel: MustWrap refuses and audits each missing
+// or bad token as request_refused (7.12.0-beta).
+func TestLegacyWrapperAuditsTokenRefusals(t *testing.T) {
+	rec := &routetest.Recorder{}
+	parser := func(raw string) (*pkgauth.Claims, error) {
+		if raw == "good" {
+			return &pkgauth.Claims{UserID: "u", TenantID: "t1"}, nil
+		}
+		return nil, errors.New("bad signature")
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /things", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+	h := wrapLegacy(parser, mux, rec, nil)
+	for _, c := range []struct {
+		auth   string
+		status int
+		reason string
+	}{
+		{"", http.StatusUnauthorized, route.ReasonUnauthenticated},
+		{"Bearer forged", http.StatusUnauthorized, route.ReasonInvalidToken},
+		{"Bearer good", http.StatusOK, ""},
+	} {
+		rec.Reset()
+		req := httptest.NewRequest(http.MethodGet, "/things?tenant_id=t9", nil)
+		if c.auth != "" {
+			req.Header.Set("Authorization", c.auth)
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != c.status {
+			t.Fatalf("%q: status %d, want %d", c.auth, rr.Code, c.status)
+		}
+		ev := rec.Events()
+		if c.reason == "" {
+			if len(ev) != 0 {
+				t.Fatalf("%q: unexpected refusal event %+v", c.auth, ev)
+			}
+			continue
+		}
+		if len(ev) != 1 || ev[0].Action != "request_refused" || ev[0].Event.Result != route.ResultRefused ||
+			ev[0].Event.Details["reason"] != c.reason || ev[0].Event.Details["requested_tenant"] != "t9" {
+			t.Fatalf("%q: audited %+v", c.auth, ev)
+		}
+	}
+}

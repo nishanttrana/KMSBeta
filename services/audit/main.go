@@ -78,6 +78,7 @@ func main() {
 		logger.Fatalf("nats init failed: %v", err)
 	}
 	defer nc.Close()
+	authAudit, _ := pkgaudit.NewClient(js, "audit") // audits the JWT layer's refusals
 
 	// The audit service owns the single unified AUDIT stream (audit.>).
 	// All services publish into it; downstream visibility services attach
@@ -241,7 +242,7 @@ func main() {
 	}()
 
 	httpPort := envOr("HTTP_PORT", "8070")
-	authedHandler := pkgjwtauth.MustWrap("AUDIT", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	authedHandler := pkgjwtauth.MustWrap("AUDIT", cfg.JWTIssuer, cfg.JWTAudience, handler, authAudit, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, pub, "logger"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)

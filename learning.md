@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### The last unaudited refusal was in the middleware every service shares
+- **What happened:** after 7.10.0-beta, kernel services audited token
+  refusals, but `MustWrap` still answered 401 silently for the rest. The
+  gap sat in shared middleware, so every service's own refusal tests missed
+  it.
+- **Rule:** middleware that refuses a request takes an audit emitter and
+  emits the refusal (`request_refused` with its reason); a refusal that
+  happens before any handler is still a refusal.
+
+
 ### One label for two facts hides the one that matters
 - **What happened:** the catalogue reported "weak" and "quantum-vulnerable"
   as one class, `vulnerable`. Discovery showed an ECDSA-P256 certificate in

@@ -67,7 +67,9 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var authAudit *pkgaudit.Client // audits the JWT layer's refusals
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
+		authAudit, _ = pkgaudit.NewClient(js, "signing")
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.signing.dead_letter")
 	} else {
@@ -85,7 +87,7 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8280")
-	authedHandler := pkgjwtauth.MustWrap("SIGNING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	authedHandler := pkgjwtauth.MustWrap("SIGNING", cfg.JWTIssuer, cfg.JWTAudience, handler, authAudit, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "signing"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)

@@ -72,7 +72,9 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var authAudit *pkgaudit.Client // audits the JWT layer's refusals
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
+		authAudit, _ = pkgaudit.NewClient(js, "backup")
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.backup.dead_letter")
 	} else {
@@ -84,7 +86,7 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8250")
-	authedHandler := pkgjwtauth.MustWrap("BACKUP", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	authedHandler := pkgjwtauth.MustWrap("BACKUP", cfg.JWTIssuer, cfg.JWTAudience, handler, authAudit, logger)
 	var httpHandlerChain http.Handler = authedHandler
 	if publisher != nil {
 		httpHandlerChain = pkgauditmw.Wrap(authedHandler, publisher, "backup")

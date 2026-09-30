@@ -72,7 +72,9 @@ func main() {
 
 	var publisher EventPublisher
 	var natsConn *nats.Conn
+	var authAudit *pkgaudit.Client // audits the JWT layer's refusals
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
+		authAudit, _ = pkgaudit.NewClient(js, "policy")
 		natsConn = nc
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.policy.dead_letter")
@@ -109,7 +111,7 @@ func main() {
 	httpPort := envOr("HTTP_PORT", "8040")
 	// Require a valid Bearer JWT on every request. Fail-closed at startup
 	// if no public key is configured (security review follow-up, May 2026).
-	authedHandler := pkgjwtauth.MustWrap("POLICY", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	authedHandler := pkgjwtauth.MustWrap("POLICY", cfg.JWTIssuer, cfg.JWTAudience, handler, authAudit, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "policy"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)
