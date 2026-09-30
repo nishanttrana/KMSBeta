@@ -256,6 +256,23 @@ else
   echo "PASS [no-pagerduty]"
 fi
 
+# Every internal service client sends the caller's service token. Services
+# refuse tokenless callers, and a client without one fails silently: the
+# Alert Center was empty for this reason (7.6.0-beta). A client that
+# authenticates some other way says so with a `servicetoken-exempt:` comment.
+tokenless=""
+for f in services/*/*client*.go; do
+  case "$f" in *_test.go) continue ;; esac
+  grep -q 'http.NewRequest' "$f" || continue
+  grep -qE 'servicetoken\.|servicetoken-exempt:' "$f" || tokenless="$tokenless $f"
+done
+if [ -n "$tokenless" ]; then
+  FAIL=1
+  echo "FAIL [service-token]: internal clients without servicetoken.Authorize:$tokenless"
+else
+  echo "PASS [service-token]"
+fi
+
 # Rule 6c: every connection is TLS, every internal one mTLS (CLAUDE.md rule
 # 10, docs/SECURITY/INTERNAL_TLS.md). No plain listener, no insecure gRPC
 # credentials, and no http:// to a platform host in code or deployment files.

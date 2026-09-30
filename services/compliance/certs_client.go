@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type CertsClient interface {
@@ -22,18 +23,18 @@ type HTTPCertsClient struct {
 }
 
 type CertRenewalSummary struct {
-	ARIEnabled              bool `json:"ari_enabled"`
-	RecommendedPollHours    int  `json:"recommended_poll_hours"`
-	MissedWindowCount       int  `json:"missed_window_count"`
-	EmergencyRotationCount  int  `json:"emergency_rotation_count"`
-	DueSoonCount            int  `json:"due_soon_count"`
-	NonCompliantCount       int  `json:"non_compliant_count"`
-	MassRenewalRiskCount    int  `json:"mass_renewal_risk_count"`
-	CADirectedScheduleCount int  `json:"ca_directed_schedule_count"`
-	STARSubscriptionCount   int  `json:"star_subscription_count"`
-	STARDelegatedCount      int  `json:"star_delegated_count"`
-	STARDueSoonCount        int  `json:"star_due_soon_count"`
-	STARMassRolloutRiskCount int `json:"star_mass_rollout_risk_count"`
+	ARIEnabled               bool `json:"ari_enabled"`
+	RecommendedPollHours     int  `json:"recommended_poll_hours"`
+	MissedWindowCount        int  `json:"missed_window_count"`
+	EmergencyRotationCount   int  `json:"emergency_rotation_count"`
+	DueSoonCount             int  `json:"due_soon_count"`
+	NonCompliantCount        int  `json:"non_compliant_count"`
+	MassRenewalRiskCount     int  `json:"mass_renewal_risk_count"`
+	CADirectedScheduleCount  int  `json:"ca_directed_schedule_count"`
+	STARSubscriptionCount    int  `json:"star_subscription_count"`
+	STARDelegatedCount       int  `json:"star_delegated_count"`
+	STARDueSoonCount         int  `json:"star_due_soon_count"`
+	STARMassRolloutRiskCount int  `json:"star_mass_rollout_risk_count"`
 }
 
 func NewHTTPCertsClient(baseURL string, timeout time.Duration) *HTTPCertsClient {
@@ -90,15 +91,15 @@ func (c *HTTPCertsClient) GetRenewalSummary(ctx context.Context, tenantID string
 		return CertRenewalSummary{}, nil
 	}
 	summary := CertRenewalSummary{
-		ARIEnabled:             boolValue(raw["ari_enabled"]),
-		RecommendedPollHours:   intValue(raw["recommended_poll_hours"]),
-		MissedWindowCount:      intValue(raw["missed_window_count"]),
-		EmergencyRotationCount: intValue(raw["emergency_rotation_count"]),
-		DueSoonCount:           intValue(raw["due_soon_count"]),
-		NonCompliantCount:      intValue(raw["non_compliant_count"]),
-		STARSubscriptionCount:  intValue(raw["star_subscription_count"]),
-		STARDelegatedCount:     intValue(raw["star_delegated_count"]),
-		STARDueSoonCount:       intValue(raw["star_due_soon_count"]),
+		ARIEnabled:               boolValue(raw["ari_enabled"]),
+		RecommendedPollHours:     intValue(raw["recommended_poll_hours"]),
+		MissedWindowCount:        intValue(raw["missed_window_count"]),
+		EmergencyRotationCount:   intValue(raw["emergency_rotation_count"]),
+		DueSoonCount:             intValue(raw["due_soon_count"]),
+		NonCompliantCount:        intValue(raw["non_compliant_count"]),
+		STARSubscriptionCount:    intValue(raw["star_subscription_count"]),
+		STARDelegatedCount:       intValue(raw["star_delegated_count"]),
+		STARDueSoonCount:         intValue(raw["star_due_soon_count"]),
 		STARMassRolloutRiskCount: intValue(raw["star_mass_rollout_risk_count"]),
 	}
 	if items, ok := raw["mass_renewal_risks"].([]interface{}); ok {
@@ -115,6 +116,7 @@ func (c *HTTPCertsClient) doJSON(ctx context.Context, method string, path string
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

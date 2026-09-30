@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPCertsClient struct {
@@ -36,6 +37,7 @@ func (c *HTTPCertsClient) ListCAs(ctx context.Context, tenantID string) ([]map[s
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -79,6 +81,7 @@ func (c *HTTPCertsClient) SignCSR(ctx context.Context, reqIn FieldEncryptionSign
 		return FieldEncryptionIssuedCertificate{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	servicetoken.Authorize(ctx, httpReq)
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return FieldEncryptionIssuedCertificate{}, err

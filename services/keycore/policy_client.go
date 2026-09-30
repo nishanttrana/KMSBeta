@@ -78,6 +78,7 @@ func (c *HTTPPolicyClient) Evaluate(ctx context.Context, req PolicyEvaluateReque
 		return PolicyEvaluateResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	// servicetoken-exempt: forwards the verified caller's own token.
 	// The policy service requires a valid Bearer JWT on every request. Propagate
 	// the caller's token (all services share the cluster JWT public key) so policy
 	// evaluates under the caller's identity; also forward the tenant header the

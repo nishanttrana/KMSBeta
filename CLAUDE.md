@@ -204,6 +204,12 @@ an approach, record it here or in the matching doc below.
   reconciler, lazy first-use insert) that writes replicated state checks
   `clusterstate.RunsPrimaryJobs(ctx)` / `IsMember()`, with a member-mode test
   (docs/CLUSTERING.md).
+- **Every internal call carries a credential** (owner directive,
+  2026-09-30: "never let it break", after a tokenless client emptied the
+  Alert Center). A service calling another sends
+  `servicetoken.Authorize`, or the caller's own verified token with a
+  `servicetoken-exempt:` comment. Conformance `service-token` enforces it.
+  After a fix, rebuild the service and check the live result.
 - An internal endpoint that moves secrets or grants cluster access must
   restrict its caller: a specific service identity or a root administrator,
   never "any authenticated caller". Node-to-node endpoints authenticate

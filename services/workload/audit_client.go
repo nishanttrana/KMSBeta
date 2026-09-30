@@ -43,6 +43,7 @@ func (c *HTTPAuditClient) ListEvents(ctx context.Context, tenantID string, limit
 	if err != nil {
 		return nil, err
 	}
+	// servicetoken-exempt: forwards the verified caller's own token.
 	// The audit service decides with the caller's own verified token, so a
 	// usage view shows only what the caller may read in the audit log.
 	token, ok := pkgauth.VerifiedTokenFromContext(ctx)

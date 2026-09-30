@@ -4,6 +4,18 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.8.0-beta] — 2026-09-30
+
+### Every internal client sends its service token (enforced)
+- **Fixed:** nine internal clients called other services without a token,
+  were refused, and treated the refusal as "no data": compliance → certs and
+  policy; dataprotect, discovery, kmip and sbom → certs; hyok → policy; pqc
+  and sbom → discovery. Each now sends its own service token.
+- **Enforced:** new `make conformance` check `service-token`. An internal
+  client that builds an HTTP request must call `servicetoken.Authorize`, or
+  carry a `servicetoken-exempt:` comment naming the credential it uses
+  instead.
+
 ## [7.7.0-beta] — 2026-09-30
 
 ### Compliance no longer scores over missing audit data

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type PolicyClient interface {
@@ -42,6 +43,7 @@ func (c *HTTPPolicyClient) Evaluate(ctx context.Context, req PolicyEvaluateReque
 		return PolicyEvaluateResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	servicetoken.Authorize(ctx, httpReq)
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return PolicyEvaluateResponse{}, err

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type CertsClient interface {
@@ -130,6 +131,7 @@ func (c *HTTPCertsClient) doJSON(ctx context.Context, method string, path string
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err

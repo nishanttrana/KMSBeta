@@ -63,6 +63,7 @@ func (c *HTTPAuthClient) IssueWorkloadToken(ctx context.Context, req AuthWorkloa
 		return AuthWorkloadTokenResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	// servicetoken-exempt: auth verifies this call by the workload shared secret.
 	httpReq.Header.Set("X-Workload-Identity-Secret", c.sharedSecret)
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {

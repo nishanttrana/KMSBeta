@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Never again: an internal call without a service token (enforced)
+- **What happened:** the Alert Center was empty because reporting read
+  audit with no token (7.6.0-beta). Once `service-token` checked every
+  client, it found nine more doing the same: compliance → certs and policy,
+  dataprotect/discovery/kmip/sbom → certs, hyok → policy, pqc/sbom →
+  discovery. Each of those reads was refused and treated as "no data".
+- **Why a learning wasn't enough:** 7.6.0-beta's entry said "grep every
+  client". Nobody did, and the next check found nine. A rule only holds if a
+  check fails the build.
+- **Enforced by:** `make conformance` `service-token`. Every
+  `services/*/*client*.go` that builds an HTTP request calls
+  `servicetoken.Authorize`, or carries a `servicetoken-exempt:` comment
+  naming the credential it uses instead (the caller's own verified token,
+  or workload's shared secret).
+- **Also:** after fixing a service, rebuild it and check the live result
+  (logs and audit trail), not only the tests. The 7.7.0-beta fix sat
+  undeployed until the owner asked.
+
 ### `return empty, nil` on an upstream error is a fake result
 - **What happened:** compliance scored posture and listed anomalies over zero
   events whenever audit refused it, and asked audit for a reporting route, so
