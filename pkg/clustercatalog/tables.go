@@ -145,6 +145,7 @@ var Replicated = map[string][]string{
 		"agility_migration_plans",
 		"agility_policy_rules",
 		"agility_drills",
+		"cryptoperiod_overrides",
 		"caraf_assets",
 		"caraf_threats",
 		"canary_keys",

@@ -9991,11 +9991,56 @@
       "service": "keycore"
     },
     {
+      "action": "cryptoperiods_listed",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_rotation.go",
+      "handler": "h.listCryptoperiods",
+      "line": 23,
+      "match_key": "keycore|GET|/rotation/cryptoperiods",
+      "method": "GET",
+      "normalized_path": "/rotation/cryptoperiods",
+      "path": "/rotation/cryptoperiods",
+      "permission": "key.rotation.read",
+      "registration": "kernel",
+      "resource": "cryptoperiod",
+      "service": "keycore"
+    },
+    {
+      "action": "cryptoperiod_set",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_rotation.go",
+      "handler": "h.setCryptoperiod",
+      "line": 24,
+      "match_key": "keycore|PUT|/rotation/cryptoperiods/{param}",
+      "method": "PUT",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{category}",
+      "permission": "key.rotation.write",
+      "registration": "kernel",
+      "resource": "cryptoperiod",
+      "service": "keycore"
+    },
+    {
+      "action": "cryptoperiod_reset",
+      "code_scope": "keycore",
+      "file": "services/keycore/handler_rotation.go",
+      "handler": "h.resetCryptoperiod",
+      "line": 25,
+      "match_key": "keycore|DELETE|/rotation/cryptoperiods/{param}",
+      "method": "DELETE",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{category}",
+      "permission": "key.rotation.write",
+      "registration": "kernel",
+      "resource": "cryptoperiod",
+      "service": "keycore"
+    },
+    {
       "action": "rotation_upcoming_listed",
       "code_scope": "keycore",
       "file": "services/keycore/handler_rotation.go",
       "handler": "h.listUpcomingRotations",
-      "line": 23,
+      "line": 26,
       "match_key": "keycore|GET|/rotation/upcoming",
       "method": "GET",
       "normalized_path": "/rotation/upcoming",
@@ -22009,6 +22054,22 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx",
+      "handler": "",
+      "label": "void run(r.category, () => setCryptoperiod(session, r.category, Number(draft[...",
+      "line": 51,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx",
+      "handler": "",
+      "label": "void run(r.category, () => resetCryptoperiod(session, r.category))}>Reset",
+      "line": 52,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(\"certs\")}>View Certificates \u2192",
@@ -24476,7 +24537,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "void refresh()}> Retry",
-      "line": 203,
+      "line": 204,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24484,7 +24545,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "openCreateModal",
       "label": "Create Policy",
-      "line": 242,
+      "line": 243,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24492,7 +24553,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= >",
-      "line": 244,
+      "line": 245,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24500,7 +24561,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "void doTrigger(p.id, p.name)}>",
-      "line": 297,
+      "line": 298,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24508,7 +24569,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "openEditModal(p)}>",
-      "line": 300,
+      "line": 301,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24516,7 +24577,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "void doDelete(p)}>",
-      "line": 303,
+      "line": 304,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24524,7 +24585,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "void doTrigger(u.policy_id, u.policy_name)}>",
-      "line": 359,
+      "line": 360,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24532,7 +24593,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "",
       "label": "setPolicyModal(false)}>Cancel",
-      "line": 450,
+      "line": 453,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24540,7 +24601,7 @@
       "file": "web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx",
       "handler": "savePolicy} disabled={pSaving || !pName.trim() || !pFilter.trim()",
       "label": "(icon or dynamic label)",
-      "line": 451,
+      "line": 454,
       "tabs": [],
       "tag": "Btn"
     },
@@ -33254,6 +33315,45 @@
     },
     {
       "dynamic": false,
+      "expression": "serviceRequest(\"keycore\", \"/rotation/cryptoperiods\")",
+      "file": "web/dashboard/src/lib/rotationScheduler.ts",
+      "line": 107,
+      "match_key": "keycore|GET|/rotation/cryptoperiods",
+      "method": "GET",
+      "normalized_path": "/rotation/cryptoperiods",
+      "path": "/rotation/cryptoperiods",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+      "file": "web/dashboard/src/lib/rotationScheduler.ts",
+      "line": 112,
+      "match_key": "keycore|PUT|/rotation/cryptoperiods/{param}",
+      "method": "PUT",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+      "file": "web/dashboard/src/lib/rotationScheduler.ts",
+      "line": 116,
+      "match_key": "keycore|DELETE|/rotation/cryptoperiods/{param}",
+      "method": "DELETE",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{param}",
+      "service": "keycore",
+      "service_key": "keycore",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": false,
       "expression": "serviceRequest(\"sbom\", \"/sbom/generate\")",
       "file": "web/dashboard/src/lib/sbom.ts",
       "line": 91,
@@ -33916,7 +34016,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-29T18:47:49Z",
+  "generated_at": "2026-09-30T04:44:45Z",
   "navigation": [
     {
       "group": "Overview",
@@ -67585,7 +67685,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Encrypt"
           ],
-          "line": 2792,
+          "line": 2799,
           "name": "Encrypt",
           "receiver_calls": [
             "s.hsm.Encrypt",
@@ -67634,7 +67734,8 @@
       ],
       "service_helper_calls": [
         "ScanLifecycleCandidates",
-        "EvaluateLifecycle"
+        "ListCryptoperiodOverrides",
+        "EvaluateLifecycleFor"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -67645,17 +67746,22 @@
           "file": "services/keycore/handler_lifecycle.go",
           "helper_calls": [
             "ScanLifecycleCandidates",
-            "EvaluateLifecycle"
+            "ListCryptoperiodOverrides",
+            "EvaluateLifecycleFor"
           ],
           "internal_package_calls": [],
           "line": 46,
           "name": "dueForLifecycle",
           "receiver_calls": [],
-          "store_calls": []
+          "store_calls": [
+            "ListCryptoperiodOverrides"
+          ]
         }
       ],
       "service_receiver_calls": [],
-      "service_store_calls": []
+      "service_store_calls": [
+        "ListCryptoperiodOverrides"
+      ]
     },
     {
       "frontend_call_sites": [
@@ -67775,7 +67881,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1958,
+          "line": 1965,
           "name": "ListKeysCursor",
           "receiver_calls": [
             "s.cache.Delete",
@@ -67799,7 +67905,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1928,
+          "line": 1935,
           "name": "ListKeys",
           "receiver_calls": [
             "s.cache.Delete",
@@ -67883,7 +67989,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1988,
+          "line": 1995,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -68176,6 +68282,8 @@
             "mlkemEncapsulate",
             "KEMDecapsulate",
             "mlkemDecapsulate",
+            "hybridKEMEncapsulate",
+            "hybridKEMDecapsulate",
             "openTenantHSMMaterial",
             "unpackWrappedDEK",
             "selectIV",
@@ -68213,7 +68321,10 @@
             "rsaBits",
             "ecCurve",
             "generateMaterial",
-            "planKeyGeneration"
+            "planKeyGeneration",
+            "hybridKEMGenerate",
+            "hybridKEMPublic",
+            "hybridKEMPrivate"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
@@ -68229,7 +68340,7 @@
             "pkg/hsm.Verify",
             "pkg/hsm.Random"
           ],
-          "line": 1647,
+          "line": 1654,
           "name": "ExportPublicComponentPlaintext",
           "receiver_calls": [
             "s.cache.Delete",
@@ -68299,7 +68410,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1719,
+          "line": 1726,
           "name": "ExportCurrentVersionWrapped",
           "receiver_calls": [],
           "store_calls": []
@@ -68395,7 +68506,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2690,
+          "line": 2697,
           "name": "ListVersions",
           "receiver_calls": [],
           "store_calls": [
@@ -68452,7 +68563,7 @@
             "GetKey"
           ],
           "internal_package_calls": [],
-          "line": 2694,
+          "line": 2701,
           "name": "GetVersion",
           "receiver_calls": [],
           "store_calls": [
@@ -68524,7 +68635,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1988,
+          "line": 1995,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -68585,7 +68696,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2574,
+          "line": 2581,
           "name": "GetUsage",
           "receiver_calls": [],
           "store_calls": [
@@ -68634,7 +68745,7 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2686,
+          "line": 2693,
           "name": "GetApproval",
           "receiver_calls": [],
           "store_calls": [
@@ -68775,7 +68886,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2427,
+          "line": 2434,
           "name": "ListTagCatalog",
           "receiver_calls": [],
           "store_calls": [
@@ -68985,7 +69096,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Verify"
           ],
-          "line": 3081,
+          "line": 3088,
           "name": "Verify",
           "receiver_calls": [
             "s.hsm.Verify",
@@ -69183,7 +69294,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3531,
+          "line": 3540,
           "name": "Derive",
           "receiver_calls": [],
           "store_calls": []
@@ -69550,7 +69661,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3644,
+          "line": 3653,
           "name": "KEMEncapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69648,7 +69759,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 3727,
+          "line": 3736,
           "name": "KEMDecapsulate",
           "receiver_calls": [],
           "store_calls": []
@@ -69717,7 +69828,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 3435,
+          "line": 3444,
           "name": "Hash",
           "receiver_calls": [],
           "store_calls": []
@@ -69802,7 +69913,7 @@
             "pkg/crypto.Zeroize",
             "pkg/hsm.Random"
           ],
-          "line": 3470,
+          "line": 3479,
           "name": "Random",
           "receiver_calls": [
             "s.hsm.Random"
@@ -70103,7 +70214,8 @@
       ],
       "service_helper_calls": [
         "ScanLifecycleCandidates",
-        "EvaluateLifecycle"
+        "ListCryptoperiodOverrides",
+        "EvaluateLifecycleFor"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -70114,17 +70226,22 @@
           "file": "services/keycore/handler_lifecycle.go",
           "helper_calls": [
             "ScanLifecycleCandidates",
-            "EvaluateLifecycle"
+            "ListCryptoperiodOverrides",
+            "EvaluateLifecycleFor"
           ],
           "internal_package_calls": [],
           "line": 46,
           "name": "dueForLifecycle",
           "receiver_calls": [],
-          "store_calls": []
+          "store_calls": [
+            "ListCryptoperiodOverrides"
+          ]
         }
       ],
       "service_receiver_calls": [],
-      "service_store_calls": []
+      "service_store_calls": [
+        "ListCryptoperiodOverrides"
+      ]
     },
     {
       "frontend_call_sites": [
@@ -71372,7 +71489,7 @@
             "implementedOutsideValidatedModule"
           ],
           "internal_package_calls": [],
-          "line": 245,
+          "line": 247,
           "name": "enforceFIPSKeyAlgorithm",
           "receiver_calls": [],
           "store_calls": []
@@ -71964,6 +72081,8 @@
       ],
       "service_helper_calls": [
         "createHSMKey",
+        "planKeyGeneration",
+        "enforceFIPSKeyAlgorithm",
         "isPublicKeyType",
         "resolvePublicMaterialFromPair",
         "generateMaterialForCreate",
@@ -71983,6 +72102,8 @@
           "file": "services/keycore/keycore.go",
           "helper_calls": [
             "createHSMKey",
+            "planKeyGeneration",
+            "enforceFIPSKeyAlgorithm",
             "isPublicKeyType",
             "resolvePublicMaterialFromPair",
             "generateMaterialForCreate",
@@ -72072,7 +72193,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 844,
+          "line": 851,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72171,7 +72292,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 1555,
+          "line": 1562,
           "name": "FormKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72239,7 +72360,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 844,
+          "line": 851,
           "name": "ImportKey",
           "receiver_calls": [],
           "store_calls": []
@@ -72333,7 +72454,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1783,
+          "line": 1790,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72427,7 +72548,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2164,
+          "line": 2171,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72493,7 +72614,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2021,
+          "line": 2028,
           "name": "UpdateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72608,7 +72729,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1783,
+          "line": 1790,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72710,7 +72831,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2032,
+          "line": 2039,
           "name": "ConfigureKeyActivation",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72892,7 +73013,7 @@
             "Set"
           ],
           "internal_package_calls": [],
-          "line": 1988,
+          "line": 1995,
           "name": "GetKey",
           "receiver_calls": [
             "s.exists.TestString",
@@ -72929,7 +73050,7 @@
             "cloneKeyLabels"
           ],
           "internal_package_calls": [],
-          "line": 2164,
+          "line": 2171,
           "name": "ScheduleKeyDestroy",
           "receiver_calls": [
             "s.cache.Delete"
@@ -72962,7 +73083,7 @@
             "buildDeletedItemsAudit"
           ],
           "internal_package_calls": [],
-          "line": 2240,
+          "line": 2247,
           "name": "DestroyKeyImmediately",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73057,7 +73178,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2341,
+          "line": 2348,
           "name": "SetExportAllowed",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73186,7 +73307,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2705,
+          "line": 2712,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -73249,7 +73370,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2329,
+          "line": 2336,
           "name": "SetUsageLimit",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73308,7 +73429,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2532,
+          "line": 2539,
           "name": "ResetUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73381,7 +73502,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2541,
+          "line": 2548,
           "name": "SetApproval",
           "receiver_calls": [
             "s.cache.Delete"
@@ -73455,7 +73576,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2705,
+          "line": 2712,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -73532,7 +73653,7 @@
             "ListTagCatalog"
           ],
           "internal_package_calls": [],
-          "line": 2449,
+          "line": 2456,
           "name": "UpsertTag",
           "receiver_calls": [],
           "store_calls": [
@@ -73608,7 +73729,7 @@
             "tagUsageCounts"
           ],
           "internal_package_calls": [],
-          "line": 2479,
+          "line": 2486,
           "name": "DeleteTag",
           "receiver_calls": [],
           "store_calls": [
@@ -74095,7 +74216,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2632,
+          "line": 2639,
           "name": "MeterUsage",
           "receiver_calls": [
             "s.cache.Delete"
@@ -75181,7 +75302,7 @@
             "Publish"
           ],
           "internal_package_calls": [],
-          "line": 2705,
+          "line": 2712,
           "name": "publishAudit",
           "receiver_calls": [
             "s.cluster.Publish"
@@ -75618,7 +75739,7 @@
             "pkg/crypto.Zeroize",
             "pkg/crypto.ConstantTimeEqual"
           ],
-          "line": 1783,
+          "line": 1790,
           "name": "RotateKey",
           "receiver_calls": [
             "s.cache.Delete"
@@ -76125,7 +76246,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 27,
+      "handler_line": 30,
       "handler_name": "listRotationPolicies",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76167,7 +76288,7 @@
         "newID"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 36,
+      "handler_line": 39,
       "handler_name": "createRotationPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76209,7 +76330,7 @@
         "UpdateRotationPolicy"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 88,
+      "handler_line": 91,
       "handler_name": "updateRotationPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76248,7 +76369,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 148,
+      "handler_line": 151,
       "handler_name": "deleteRotationPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76288,7 +76409,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 163,
+      "handler_line": 166,
       "handler_name": "triggerRotationPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76363,7 +76484,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 183,
+      "handler_line": 186,
       "handler_name": "listRotationRuns",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76375,6 +76496,129 @@
       "path": "/rotation/runs",
       "route_file": "services/keycore/handler_rotation.go",
       "route_line": 22,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", \"/rotation/cryptoperiods\")",
+          "file": "web/dashboard/src/lib/rotationScheduler.ts",
+          "line": 107,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listCryptoperiods",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_cryptoperiod.go",
+      "handler_helper_calls": [
+        "ListCryptoperiodOverrides",
+        "Error",
+        "cryptoperiodTable",
+        "Categories",
+        "Default",
+        "days"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 31,
+      "handler_name": "listCryptoperiods",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListCryptoperiodOverrides"
+      ],
+      "method": "GET",
+      "normalized_path": "/rotation/cryptoperiods",
+      "path": "/rotation/cryptoperiods",
+      "route_file": "services/keycore/handler_rotation.go",
+      "route_line": 23,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+          "file": "web/dashboard/src/lib/rotationScheduler.ts",
+          "line": 112,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.setCryptoperiod",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_cryptoperiod.go",
+      "handler_helper_calls": [
+        "cryptoperiodCategory",
+        "SetCryptoperiodOverride",
+        "Error",
+        "cryptoperiodTable",
+        "Default",
+        "days"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 61,
+      "handler_name": "setCryptoperiod",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "SetCryptoperiodOverride"
+      ],
+      "method": "PUT",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{category}",
+      "route_file": "services/keycore/handler_rotation.go",
+      "route_line": 24,
+      "service": "keycore",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+          "file": "web/dashboard/src/lib/rotationScheduler.ts",
+          "line": 116,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.resetCryptoperiod",
+      "handler_external_package_calls": [],
+      "handler_file": "services/keycore/handler_cryptoperiod.go",
+      "handler_helper_calls": [
+        "cryptoperiodCategory",
+        "DeleteCryptoperiodOverride",
+        "Error",
+        "cryptoperiodTable",
+        "Default",
+        "days"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 87,
+      "handler_name": "resetCryptoperiod",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "DeleteCryptoperiodOverride"
+      ],
+      "method": "DELETE",
+      "normalized_path": "/rotation/cryptoperiods/{param}",
+      "path": "/rotation/cryptoperiods/{category}",
+      "route_file": "services/keycore/handler_rotation.go",
+      "route_line": 25,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -76400,7 +76644,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 192,
+      "handler_line": 195,
       "handler_name": "listUpcomingRotations",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -76411,7 +76655,7 @@
       "normalized_path": "/rotation/upcoming",
       "path": "/rotation/upcoming",
       "route_file": "services/keycore/handler_rotation.go",
-      "route_line": 23,
+      "route_line": 26,
       "service": "keycore",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -91495,7 +91739,7 @@
       "hsm-connector": 12,
       "hyok": 21,
       "keyaccess": 9,
-      "keycore": 172,
+      "keycore": 175,
       "kmip": 12,
       "payment": 42,
       "policy": 12,
@@ -91529,7 +91773,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 118,
+      "keycore": 121,
       "kmip": 11,
       "payment": 27,
       "posture": 8,
@@ -91730,17 +91974,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 916,
+    "backend_routes": 919,
     "backend_services": 30,
-    "button_inventory": 766,
-    "frontend_call_sites": 575,
-    "matched_frontend_call_sites": 530,
+    "button_inventory": 768,
+    "frontend_call_sites": 578,
+    "matched_frontend_call_sites": 533,
     "nav_items": 27,
-    "request_flows": 916,
-    "request_flows_with_frontend": 539,
+    "request_flows": 919,
+    "request_flows_with_frontend": 542,
     "request_flows_with_internal_package_calls": 164,
     "request_flows_with_service_calls": 539,
-    "request_flows_with_store_calls": 651,
+    "request_flows_with_store_calls": 656,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 45
@@ -110955,7 +111199,7 @@
         ]
       },
       {
-        "complexity": 0,
+        "complexity": 1,
         "externalPackages": [
           "strconv.Atoi",
           "strings.TrimSpace",
@@ -110978,7 +111222,9 @@
         "serviceCalls": [
           "dueForLifecycle"
         ],
-        "storeCalls": [],
+        "storeCalls": [
+          "ListCryptoperiodOverrides"
+        ],
         "uiLabels": [
           "API only"
         ]
@@ -112148,7 +112394,7 @@
         ]
       },
       {
-        "complexity": 0,
+        "complexity": 1,
         "externalPackages": [
           "strconv.Atoi",
           "strings.TrimSpace",
@@ -112171,7 +112417,9 @@
         "serviceCalls": [
           "dueForLifecycle"
         ],
-        "storeCalls": [],
+        "storeCalls": [
+          "ListCryptoperiodOverrides"
+        ],
         "uiLabels": [
           "API only"
         ]
@@ -115734,7 +115982,7 @@
         ],
         "handler": "listRotationPolicies",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 27,
+        "handlerLine": 30,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115769,7 +116017,7 @@
         ],
         "handler": "createRotationPolicy",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 36,
+        "handlerLine": 39,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -115804,7 +116052,7 @@
         ],
         "handler": "updateRotationPolicy",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 88,
+        "handlerLine": 91,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PATCH",
@@ -115838,7 +116086,7 @@
         ],
         "handler": "deleteRotationPolicy",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 148,
+        "handlerLine": 151,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -115873,7 +116121,7 @@
         ],
         "handler": "triggerRotationPolicy",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 163,
+        "handlerLine": 166,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -115910,7 +116158,7 @@
         ],
         "handler": "listRotationRuns",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 183,
+        "handlerLine": 186,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115934,6 +116182,102 @@
         "externalPackages": [],
         "frontendSites": [
           {
+            "expression": "serviceRequest(\"keycore\", \"/rotation/cryptoperiods\")",
+            "file": "web/dashboard/src/lib/rotationScheduler.ts",
+            "line": 107,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listCryptoperiods",
+        "handlerFile": "services/keycore/handler_cryptoperiod.go",
+        "handlerLine": 31,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/rotation/cryptoperiods",
+        "path": "/rotation/cryptoperiods",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|GET|/rotation/cryptoperiods",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListCryptoperiodOverrides"
+        ],
+        "uiLabels": [
+          "rotationScheduler"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+            "file": "web/dashboard/src/lib/rotationScheduler.ts",
+            "line": 112,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "setCryptoperiod",
+        "handlerFile": "services/keycore/handler_cryptoperiod.go",
+        "handlerLine": 61,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "PUT",
+        "normalizedPath": "/rotation/cryptoperiods/{param}",
+        "path": "/rotation/cryptoperiods/{category}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|PUT|/rotation/cryptoperiods/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "SetCryptoperiodOverride"
+        ],
+        "uiLabels": [
+          "rotationScheduler"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"keycore\", `/rotation/cryptoperiods/${encodeURIComponent(category)}`)",
+            "file": "web/dashboard/src/lib/rotationScheduler.ts",
+            "line": 116,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "resetCryptoperiod",
+        "handlerFile": "services/keycore/handler_cryptoperiod.go",
+        "handlerLine": 87,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/rotation/cryptoperiods/{param}",
+        "path": "/rotation/cryptoperiods/{category}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "keycore|DELETE|/rotation/cryptoperiods/{param}",
+        "sensitive": true,
+        "service": "keycore",
+        "serviceCalls": [],
+        "storeCalls": [
+          "DeleteCryptoperiodOverride"
+        ],
+        "uiLabels": [
+          "rotationScheduler"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
             "expression": "serviceRequest(\"keycore\", \"/rotation/upcoming\")",
             "file": "web/dashboard/src/lib/rotationScheduler.ts",
             "line": 93,
@@ -115942,7 +116286,7 @@
         ],
         "handler": "listUpcomingRotations",
         "handlerFile": "services/keycore/handler_rotation.go",
-        "handlerLine": 192,
+        "handlerLine": 195,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -124221,7 +124565,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-29T18:47:49Z",
+    "generatedAt": "2026-09-30T04:44:45Z",
     "methods": [
       "DELETE",
       "GET",
@@ -124263,9 +124607,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 916,
-      "frontendBacked": 539,
-      "highRisk": 376,
+      "flows": 919,
+      "frontendBacked": 542,
+      "highRisk": 379,
       "services": 30
     }
   }

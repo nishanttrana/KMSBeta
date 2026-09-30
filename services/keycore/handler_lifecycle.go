@@ -59,8 +59,16 @@ func (s *Service) dueForLifecycle(ctx context.Context, maxN int) ([]dueLifecycle
 	}
 	out := make([]dueLifecycleItem, 0, len(candidates))
 	now := time.Now().UTC()
+	periods := map[string]map[string]time.Duration{}
 	for _, c := range candidates {
-		action, reason := EvaluateLifecycle(c, s.cryptoperiod, now)
+		ov, seen := periods[c.TenantID]
+		if !seen {
+			if ov, err = s.store.ListCryptoperiodOverrides(ctx, c.TenantID); err != nil {
+				return nil, err
+			}
+			periods[c.TenantID] = ov
+		}
+		action, reason := EvaluateLifecycleFor(c, s.cryptoperiod, ov, now)
 		if action == "" {
 			continue
 		}

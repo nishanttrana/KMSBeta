@@ -41,6 +41,29 @@ func NewCryptoperiodPolicy() *CryptoperiodPolicy {
 	}
 }
 
+// Categories lists the categories in the table, in a stable order.
+func (p *CryptoperiodPolicy) Categories() []string {
+	return []string{"symmetric_encrypt", "symmetric_mac", "key_wrap", "signing", "ephemeral", "master"}
+}
+
+// Default returns the built-in period for a category (false if unknown).
+func (p *CryptoperiodPolicy) Default(category string) (time.Duration, bool) {
+	d, ok := p.defaults[category]
+	return d, ok
+}
+
+// IsExpiredFor applies a tenant's own periods (by category) over the
+// built-in table.
+func (p *CryptoperiodPolicy) IsExpiredFor(overrides map[string]time.Duration, createdAt time.Time, purpose, algorithm, keyType string) bool {
+	if createdAt.IsZero() {
+		return false
+	}
+	if d, ok := overrides[classifyCategory(purpose, algorithm, keyType)]; ok && d > 0 {
+		return time.Since(createdAt) > d
+	}
+	return p.IsExpired(createdAt, purpose, algorithm, keyType)
+}
+
 // SetCryptoperiod overrides one entry. Zero values are ignored.
 func (p *CryptoperiodPolicy) SetCryptoperiod(category string, d time.Duration) {
 	if d > 0 {

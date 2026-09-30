@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-29T18:47:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T04:44:45Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -280,6 +280,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 898 | crypto | Btn | Hex | renderResultAsHex |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 899 | crypto | Btn | Base64 | renderResultAsBase64 |
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 900 | crypto | Btn | Download | downloadResult |
+| web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 51 | - | Btn | void run(r.category, () => setCryptoperiod(session, r.category, Number(draft[... |  |
+| web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 52 | - | Btn | void run(r.category, () => resetCryptoperiod(session, r.category))}>Reset |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 229 | - | Btn | onNavigate?.("certs")}>View Certificates → |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 256 | - | button | onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } > |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 266 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
@@ -536,15 +538,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 612 | restapi | Btn | (icon or dynamic label) | saveClientSecurity} disabled={clientSaving |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 733 | restapi | Btn | Refresh cURL | buildPreview |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 734 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 203 | - | Btn | void refresh()}> Retry |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 242 | - | Btn | Create Policy | openCreateModal |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 244 | - | Btn | void refresh()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 297 | - | Btn | void doTrigger(p.id, p.name)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 300 | - | Btn | openEditModal(p)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 303 | - | Btn | void doDelete(p)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 359 | - | Btn | void doTrigger(u.policy_id, u.policy_name)}> |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 450 | - | Btn | setPolicyModal(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 451 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 204 | - | Btn | void refresh()}> Retry |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 243 | - | Btn | Create Policy | openCreateModal |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 245 | - | Btn | void refresh()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 298 | - | Btn | void doTrigger(p.id, p.name)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 301 | - | Btn | openEditModal(p)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 304 | - | Btn | void doDelete(p)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 360 | - | Btn | void doTrigger(u.policy_id, u.policy_name)}> |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 453 | - | Btn | setPolicyModal(false)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 454 | - | Btn | (icon or dynamic label) | savePolicy} disabled={pSaving \|\| !pName.trim() \|\| !pFilter.trim() |
 | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | 22 | rotation | button | setView(id)} style={{ display: "inline-flex", alignItems: "center", gap: 6, p... |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 400 | sbom | Btn | void loadData( )} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | 487 | sbom | Btn | void exportSBOMFile("cyclonedx")} disabled= style={ }> |  |

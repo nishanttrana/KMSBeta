@@ -15,7 +15,7 @@ remembers them can see why they're gone.
 |---|---|---|
 | Tenant manifests | `reconciler` | YAML in `RECONCILER_MANIFEST_DIR`; applies `ops_budget_per_day` and creates `policies` ([below](#reconciler-manifests)) |
 | Key lifecycle rotation | `reconciler` + `keycore` | every 30 s: `GET /keys/due-for-lifecycle` (internal token), then `POST /keys/{id}/rotate` as `kms-reconciler` |
-| Cryptoperiods | `keycore` | built-in SP 800-57 table, input to the lifecycle scan |
+| Cryptoperiods | `keycore` | built-in SP 800-57 table; each tenant sets its own per category (`/rotation/cryptoperiods`, Rotation → Cryptoperiods) |
 | Lifecycle state table | `keycore` | every status change: operator (`/keys/{id}/{activate,disable,deactivate,...}`, playbooks) and compromise detection's automatic suspend; refusals `409 status_transition_refused`, `audit.key.status_transition_refused` |
 | Quota auto-throttle | `policy` | `PUT /policy/quota/{tenant_id}` (or manifest `ops_budget_per_day`) |
 | Policy lint / dry-run | `policy` | `POST /policies/lint`, `POST /policies/dry-run` |
@@ -24,7 +24,7 @@ remembers them can see why they're gone.
 | Sustained-risk signal | `audit` | always on; `audit.security.sustained_risk_detected`, playbook trigger `sustained_risk_detected` |
 | Event-stream circuit breaker | `audit` | per-target breaker on event-stream deliveries (Playbooks → Event streaming) |
 | CBOM inventory & diff | `audit` | `GET /audit/cbom/inventory`, `GET /audit/cbom/diff` |
-| PQC key generation | `keycore` | `POST /keys` with an ML-KEM, ML-DSA or SLH-DSA algorithm |
+| PQC key generation | `keycore` | `POST /keys` with an ML-KEM, ML-DSA, SLH-DSA or `X25519MLKEM768` (hybrid) algorithm |
 | PQC migration plans | `pqc` | `POST /svc/pqc/pqc/migration/plans`, then `.../{id}/execute` |
 | Service heartbeats | keycore, kmip, policy, audit, and services started with `platform.Boot` | `pkg/heartbeat` on `health.<service>.heartbeat` |
 | Watchdog | `watchdog` | subscribes to `health.*.heartbeat`; raises `audit.health.incident`; compliance playbooks with the `service_health_degraded` trigger respond (the watchdog acts on nothing itself) |
@@ -55,8 +55,11 @@ pre-destroy acknowledgements.)
 `NewCryptoperiodPolicy` holds the upper bounds of SP 800-57 Part 1 Rev. 5
 §5.3.5 Table 1: 2 years for symmetric encrypt, MAC and key-wrap keys, 1 year
 for signing keys, 30 days for DEK and ephemeral keys, 5 years for master keys
-and KEKs. There is no operator setting for them yet. They feed only the
-lifecycle scan above.
+and KEKs. A tenant replaces any of them with its own period (1–3650 days)
+with `PUT /rotation/cryptoperiods/{category}` (`key.rotation.write`), or in
+the dashboard under Rotation → Cryptoperiods; `DELETE` returns the category to
+the default. The lifecycle scan uses the tenant's period. Changes and
+refusals are audited (`audit.key.cryptoperiod_set`, `cryptoperiod_reset`).
 
 ### Lifecycle state table
 
@@ -86,10 +89,20 @@ waits for a governance approval).
 ### PQC keys
 
 Keycore generates ML-KEM-768 and ML-KEM-1024 (`crypto/mlkem`), ML-DSA-65 and
-ML-DSA-87, and the SLH-DSA parameter sets. It refuses, with
-`audit.key.create_refused`, hybrid (composite) names such as
-`AES-256-GCM+ML-KEM-768` (create each component key instead), stateful
-hash-based signatures (XMSS, LMS, HSS), and Ed448/X448. A PQC key's
+ML-DSA-87, the SLH-DSA parameter sets, and the hybrid **`X25519MLKEM768`**
+key-establishment key: an ML-KEM-768 key and an X25519 key held as one.
+`POST /keys/{id}/kem/encapsulate` returns a 64-byte secret (the ML-KEM-768
+secret, then the X25519 secret) and a ciphertext (the ML-KEM-768 ciphertext,
+then an ephemeral X25519 public key); decapsulate recovers the secret. Derive
+working keys from it with HKDF. Strict FIPS mode refuses it (the module
+refuses X25519); ML-KEM-768 keys still work.
+
+It refuses, with `audit.key.create_refused`, other composite names such as
+`ML-DSA-65+ECDSA-P256`, and Ed448/X448. It also refuses stateful hash-based
+signatures (XMSS, LMS, HSS), by design: NIST SP 800-208 requires their keys
+to be generated and used for signing inside a hardware cryptographic module,
+so a software key engine must not offer them. They would come only through
+an HSM integration whose PKCS#11 library supports them. A PQC key's
 check value is the `sha256-material` KCV keycore gives every non-symmetric
 key (`computeKCVStrict`). There is no separate PQC KCV.
 
@@ -194,9 +207,10 @@ use the same `pkg/cryptocatalog` facts.
 
 ## Open items
 
-- Cryptoperiods have no operator setting.
-- Hybrid (composite) keys and stateful hash-based signatures are not
-  implemented; creation refuses them.
+- Composite signature keys (for example ML-DSA + ECDSA) are not offered;
+  `X25519MLKEM768` is the only hybrid key.
+- Stateful hash-based signatures need an HSM whose PKCS#11 library supports
+  them; hsm-connector has none today.
 
 ## Removed claims (5.3.0-beta)
 

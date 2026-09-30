@@ -5,6 +5,7 @@ import {
 import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
+import { CryptoperiodPanel } from "./CryptoperiodPanel";
 import {
   listPolicies,
   createPolicy,
@@ -233,9 +234,9 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
       {/* ── Tab switcher + header actions ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <Tabs
-          tabs={["Policies", "Schedule", "History"]}
-          active={section === "policies" ? "Policies" : section === "schedule" ? "Schedule" : "History"}
-          onChange={(t) => setSection(t === "Policies" ? "policies" : t === "Schedule" ? "schedule" : "history")}
+          tabs={["Policies", "Schedule", "History", "Cryptoperiods"]}
+          active={section === "policies" ? "Policies" : section === "schedule" ? "Schedule" : section === "cryptoperiods" ? "Cryptoperiods" : "History"}
+          onChange={(t) => setSection(t === "Policies" ? "policies" : t === "Schedule" ? "schedule" : t === "Cryptoperiods" ? "cryptoperiods" : "history")}
         />
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {section === "policies" && (
@@ -366,6 +367,8 @@ export const RotationSchedulerTab = ({ session }: { session: any; enabledFeature
           </Card>
         </Section>
       )}
+
+      {section === "cryptoperiods" && <CryptoperiodPanel session={session} />}
 
       {/* ════════════ HISTORY SECTION ════════════ */}
       {section === "history" && (

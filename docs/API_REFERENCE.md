@@ -642,6 +642,9 @@ real outcome. Served by the `pkg/route` kernel.
 |---|---|---|
 | `GET /rotation/policies` | `key.rotation.read` | `audit.key.rotation_policies_listed` |
 | `POST /rotation/policies` | `key.rotation.write` | `audit.key.rotation_policy_created` |
+| `GET /rotation/cryptoperiods` | `key.rotation.read` | `audit.key.cryptoperiods_listed` (each category's `default_days`, `days`, `custom`) |
+| `PUT /rotation/cryptoperiods/{category}` | `key.rotation.write` | `audit.key.cryptoperiod_set` (body `{"days": 1..3650}`; refused `invalid_days`, `unknown_category`) |
+| `DELETE /rotation/cryptoperiods/{category}` | `key.rotation.write` | `audit.key.cryptoperiod_reset` (refused `not_custom`) |
 | `PATCH /rotation/policies/{id}` | `key.rotation.write` | `audit.key.rotation_policy_updated` |
 | `DELETE /rotation/policies/{id}` | `key.rotation.write` | `audit.key.rotation_policy_deleted` |
 | `POST /rotation/policies/{id}/trigger` | `key.rotation.write` | `audit.key.rotation_policy_triggered` (details `matched`, `rotated`, `failed`) |
@@ -3397,6 +3400,7 @@ Selected events with dedicated audit classification:
 - `audit.posture.health_read`, `audit.posture.dashboard_viewed`, `audit.posture.risk_read`, `audit.posture.risk_history_read`, `audit.posture.scan_run`, `audit.posture.events_ingested`, `audit.posture.audit_synced`, `audit.posture.findings_listed`, `audit.posture.finding_status_updated`, `audit.posture.actions_listed`, `audit.posture.action_executed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, `tenant_wildcard`), `audit.posture.events_ingested` (also from the scheduled audit sync, `source: scheduled_audit_sync`, under the synced tenant), `audit.posture.risk_snapshot`, `audit.posture.preventive_controls_applied`, `audit.posture.actions_corrected` (engine events; `audit.posture.runbook.execute` is no longer emitted as of 1.34.0-beta): posture engine
 - `audit.key.canary_keys_listed`, `audit.key.canary_key_created`, `audit.key.canary_trips_listed`, `audit.key.canary_key_deactivated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.keycore.canary_tripped` (a canary key ID was referenced through the key API: `canary_id`, `actor_id`, `actor_ip`): canary keys
 - `audit.keycore.threat_signal_raised` (scheduled sweep or canary trip: `signal_id`, `signal_type`, `key_id`, `actor_id`, `severity`, `description`), `audit.posture.threat_finding_raised` (posture raised a finding for a signal: `finding_id`, `signal_id`, `signal_type`, `severity`): threat detection
+- `audit.key.cryptoperiods_listed`, `audit.key.cryptoperiod_set`, `audit.key.cryptoperiod_reset` (kernel events for `/rotation/cryptoperiods`; details `days`, `default_days`; refusals `invalid_days`, `unknown_category`, `not_custom`)
 - `audit.security.sustained_risk_detected` (audit's sustained-risk signal: 3 events scoring ≥80 on one target within 5 minutes, once per window; `target_type` / `target_id` name the key, target or tenant, details `reason`, `score_threshold`, `window_seconds`, `result: warning`). It changes nothing itself; the `sustained_risk_detected` playbook trigger responds. Replaced `audit.security.auto_quarantined` in 5.3.0-beta, which quarantined nothing
 - `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
 - `audit.key.agility_drill_run`, `audit.key.agility_drills_listed` (swap drill kernel events, above), `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
@@ -4203,6 +4207,9 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/wrap`
 - `GET /svc/keycore/rotation/analytics`
 - `GET /svc/keycore/rotation/analytics/overdue`
+- `GET /svc/keycore/rotation/cryptoperiods`
+- `DELETE /svc/keycore/rotation/cryptoperiods/{category}`
+- `PUT /svc/keycore/rotation/cryptoperiods/{category}`
 - `GET /svc/keycore/rotation/policies`
 - `POST /svc/keycore/rotation/policies`
 - `DELETE /svc/keycore/rotation/policies/{id}`

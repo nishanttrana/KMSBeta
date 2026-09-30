@@ -93,3 +93,25 @@ export async function listUpcoming(session: AuthSession): Promise<UpcomingRotati
   const res = await serviceRequest<{ items: UpcomingRotation[] }>(session, "keycore", "/rotation/upcoming");
   return res.items ?? [];
 }
+
+// Cryptoperiods: the tenant's own period per key category, which the key
+// lifecycle scan uses for rotation instead of the built-in default.
+export interface Cryptoperiod {
+  category: string;
+  default_days: number;
+  days: number;
+  custom: boolean;
+}
+
+export async function listCryptoperiods(session: AuthSession): Promise<Cryptoperiod[]> {
+  const res = await serviceRequest<{ data: Cryptoperiod[] }>(session, "keycore", "/rotation/cryptoperiods");
+  return res.data ?? [];
+}
+
+export async function setCryptoperiod(session: AuthSession, category: string, days: number): Promise<void> {
+  await serviceRequest(session, "keycore", `/rotation/cryptoperiods/${encodeURIComponent(category)}`, { method: "PUT", body: JSON.stringify({ days }) });
+}
+
+export async function resetCryptoperiod(session: AuthSession, category: string): Promise<void> {
+  await serviceRequest(session, "keycore", `/rotation/cryptoperiods/${encodeURIComponent(category)}`, { method: "DELETE" });
+}

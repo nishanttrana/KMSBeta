@@ -5,6 +5,17 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### An "open item" can be a rule, not a gap
+- **What happened:** the automation guide listed XMSS/LMS as "not
+  implemented", inviting a software implementation. NIST SP 800-208 requires
+  those keys to be generated and to sign inside a hardware module, so
+  building them in keycore would have made the product non-compliant.
+- **Rule:** before building an open item, check whether the standard
+  forbids the obvious place to build it; record the decision
+  (docs/DECISIONS.md) instead of leaving it as "open".
+
+## 2026-09-30
+
 ### Removing a check leaves its input behind
 - **What happened:** 5.4.0-beta removed the minimum-tier check, but the
   posture field it read stayed parsed in `posture_controls.go`, still

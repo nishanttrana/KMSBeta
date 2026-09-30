@@ -817,6 +817,13 @@ func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, err
 	if req.HSM {
 		return s.createHSMKey(ctx, req)
 	}
+	// Refuse before generating: in strict mode the module itself refuses some
+	// halves (X25519 in X25519MLKEM768) with a plain error.
+	if _, perr := planKeyGeneration(req.Algorithm); perr == nil {
+		if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, req.Algorithm, "key.create"); err != nil {
+			return Key{}, err
+		}
+	}
 	var (
 		raw []byte
 		err error
@@ -3295,6 +3302,8 @@ func normalizeKEMAlgorithm(algorithm string) string {
 		return "ml-kem-768"
 	case "ml-kem-1024", "mlkem-1024", "ml_kem_1024":
 		return "ml-kem-1024"
+	case "x25519mlkem768", "x25519-mlkem-768", "x25519-ml-kem-768":
+		return hybridKEM768
 	default:
 		return ""
 	}
@@ -3666,7 +3675,7 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	keyAlg := normalizeKEMAlgorithm(key.Algorithm)
 	reqAlg := normalizeKEMAlgorithm(req.Algorithm)
 	if keyAlg == "" {
-		return KEMResponse{}, errors.New("key algorithm must be ml-kem-768 or ml-kem-1024")
+		return KEMResponse{}, errors.New("key algorithm must be ml-kem-768, ml-kem-1024 or X25519MLKEM768")
 	}
 	if reqAlg != "" && reqAlg != keyAlg {
 		return KEMResponse{}, errors.New("requested KEM algorithm does not match key algorithm")
@@ -3749,7 +3758,7 @@ func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecap
 	keyAlg := normalizeKEMAlgorithm(key.Algorithm)
 	reqAlg := normalizeKEMAlgorithm(req.Algorithm)
 	if keyAlg == "" {
-		return KEMResponse{}, errors.New("key algorithm must be ml-kem-768 or ml-kem-1024")
+		return KEMResponse{}, errors.New("key algorithm must be ml-kem-768, ml-kem-1024 or X25519MLKEM768")
 	}
 	if reqAlg != "" && reqAlg != keyAlg {
 		return KEMResponse{}, errors.New("requested KEM algorithm does not match key algorithm")
@@ -3813,6 +3822,9 @@ func mlkemEncapsulate(algorithm string, keyType string, raw []byte) ([]byte, []b
 	if alg == "" {
 		return nil, nil, errors.New("unsupported KEM algorithm")
 	}
+	if alg == hybridKEM768 {
+		return hybridKEMEncapsulate(keyType, raw)
+	}
 	switch alg {
 	case "ml-kem-768":
 		if isPublicKeyType(keyType) {
@@ -3862,6 +3874,9 @@ func mlkemDecapsulate(algorithm string, keyType string, raw []byte, ciphertext [
 	alg := normalizeKEMAlgorithm(algorithm)
 	if alg == "" {
 		return nil, errors.New("unsupported KEM algorithm")
+	}
+	if alg == hybridKEM768 {
+		return hybridKEMDecapsulate(raw, ciphertext)
 	}
 	switch alg {
 	case "ml-kem-768":
@@ -4961,8 +4976,10 @@ func planKeyGeneration(algorithm string) (keyGenPlan, error) {
 	switch {
 	case up == "":
 		return keyGenPlan{}, errors.New("algorithm is required")
+	case normalizeKEMAlgorithm(up) == hybridKEM768:
+		return keyGenPlan{kind: hybridKEM768}, nil
 	case strings.Contains(up, "+"):
-		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "hybrid (composite) keys are not implemented; create each component key")
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "the only hybrid key is X25519MLKEM768 (key establishment); other composites are not implemented")
 	case strings.Contains(up, "XMSS"), strings.Contains(up, "LMS"), strings.Contains(up, "HSS"):
 		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "stateful hash-based signatures are not implemented")
 	case strings.Contains(up, "ED448"), strings.Contains(up, "X448"):
@@ -5064,6 +5081,8 @@ func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error)
 			return pub.MarshalBinary()
 		}
 		return priv.MarshalBinary()
+	case hybridKEM768:
+		return hybridKEMGenerate(public)
 	case "ml-kem-768":
 		dk, err := mlkem.GenerateKey768()
 		if err != nil {
@@ -5084,4 +5103,109 @@ func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error)
 		return dk.Bytes(), nil
 	}
 	return generateMaterial(algorithm)
+}
+
+// hybridKEM768 is X25519MLKEM768, the hybrid key establishment TLS uses:
+// an ML-KEM-768 key and an X25519 key held as one key. The shared secret is
+// the ML-KEM-768 secret followed by the X25519 secret (64 bytes), and the
+// ciphertext is the ML-KEM-768 ciphertext followed by an ephemeral X25519
+// public key; callers derive working keys from the secret with HKDF. Private
+// material is the ML-KEM seed followed by the X25519 private key; public
+// material is the encapsulation key followed by the X25519 public key.
+const hybridKEM768 = "x25519mlkem768"
+
+const x25519Len = 32
+
+func hybridKEMGenerate(public bool) ([]byte, error) {
+	dk, err := mlkem.GenerateKey768()
+	if err != nil {
+		return nil, err
+	}
+	x, err := ecdh.X25519().GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	if public {
+		return append(dk.EncapsulationKey().Bytes(), x.PublicKey().Bytes()...), nil
+	}
+	return append(dk.Bytes(), x.Bytes()...), nil
+}
+
+// hybridKEMPublic returns the encapsulation key and X25519 public key from
+// public or private material.
+func hybridKEMPublic(keyType string, raw []byte) (*mlkem.EncapsulationKey768, *ecdh.PublicKey, error) {
+	if isPublicKeyType(keyType) {
+		if len(raw) != mlkem.EncapsulationKeySize768+x25519Len {
+			return nil, nil, errors.New("invalid X25519MLKEM768 public key material")
+		}
+		ek, err := mlkem.NewEncapsulationKey768(raw[:mlkem.EncapsulationKeySize768])
+		if err != nil {
+			return nil, nil, errors.New("invalid X25519MLKEM768 public key material")
+		}
+		xp, err := ecdh.X25519().NewPublicKey(raw[mlkem.EncapsulationKeySize768:])
+		if err != nil {
+			return nil, nil, errors.New("invalid X25519MLKEM768 public key material")
+		}
+		return ek, xp, nil
+	}
+	dk, xk, err := hybridKEMPrivate(raw)
+	if err != nil {
+		return nil, nil, err
+	}
+	return dk.EncapsulationKey(), xk.PublicKey(), nil
+}
+
+func hybridKEMPrivate(raw []byte) (*mlkem.DecapsulationKey768, *ecdh.PrivateKey, error) {
+	if len(raw) != mlkem.SeedSize+x25519Len {
+		return nil, nil, errors.New("invalid X25519MLKEM768 private key material")
+	}
+	dk, err := mlkem.NewDecapsulationKey768(raw[:mlkem.SeedSize])
+	if err != nil {
+		return nil, nil, errors.New("invalid X25519MLKEM768 private key material")
+	}
+	xk, err := ecdh.X25519().NewPrivateKey(raw[mlkem.SeedSize:])
+	if err != nil {
+		return nil, nil, errors.New("invalid X25519MLKEM768 private key material")
+	}
+	return dk, xk, nil
+}
+
+func hybridKEMEncapsulate(keyType string, raw []byte) ([]byte, []byte, error) {
+	ek, xp, err := hybridKEMPublic(keyType, raw)
+	if err != nil {
+		return nil, nil, err
+	}
+	eph, err := ecdh.X25519().GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	ssX, err := eph.ECDH(xp)
+	if err != nil {
+		return nil, nil, err
+	}
+	ssK, ctK := ek.Encapsulate()
+	return append(ssK, ssX...), append(ctK, eph.PublicKey().Bytes()...), nil
+}
+
+func hybridKEMDecapsulate(raw, ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) != mlkem.CiphertextSize768+x25519Len {
+		return nil, fmt.Errorf("X25519MLKEM768 ciphertext must be %d bytes", mlkem.CiphertextSize768+x25519Len)
+	}
+	dk, xk, err := hybridKEMPrivate(raw)
+	if err != nil {
+		return nil, err
+	}
+	ssK, err := dk.Decapsulate(ciphertext[:mlkem.CiphertextSize768])
+	if err != nil {
+		return nil, err
+	}
+	eph, err := ecdh.X25519().NewPublicKey(ciphertext[mlkem.CiphertextSize768:])
+	if err != nil {
+		return nil, errors.New("invalid X25519MLKEM768 ciphertext")
+	}
+	ssX, err := xk.ECDH(eph)
+	if err != nil {
+		return nil, err
+	}
+	return append(ssK, ssX...), nil
 }

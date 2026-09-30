@@ -665,7 +665,10 @@ keycore,PATCH,/rotation/policies/{id},/rotation/policies/{param},h.updateRotatio
 keycore,DELETE,/rotation/policies/{id},/rotation/policies/{param},h.deleteRotationPolicy,kernel,key.rotation.write,rotation_policy_deleted,rotation_policy,services/keycore/handler_rotation.go,20,keycore|DELETE|/rotation/policies/{param}
 keycore,POST,/rotation/policies/{id}/trigger,/rotation/policies/{param}/trigger,h.triggerRotationPolicy,kernel,key.rotation.write,rotation_policy_triggered,rotation_policy,services/keycore/handler_rotation.go,21,keycore|POST|/rotation/policies/{param}/trigger
 keycore,GET,/rotation/runs,/rotation/runs,h.listRotationRuns,kernel,key.rotation.read,rotation_runs_listed,rotation_policy,services/keycore/handler_rotation.go,22,keycore|GET|/rotation/runs
-keycore,GET,/rotation/upcoming,/rotation/upcoming,h.listUpcomingRotations,kernel,key.rotation.read,rotation_upcoming_listed,rotation_policy,services/keycore/handler_rotation.go,23,keycore|GET|/rotation/upcoming
+keycore,GET,/rotation/cryptoperiods,/rotation/cryptoperiods,h.listCryptoperiods,kernel,key.rotation.read,cryptoperiods_listed,cryptoperiod,services/keycore/handler_rotation.go,23,keycore|GET|/rotation/cryptoperiods
+keycore,PUT,/rotation/cryptoperiods/{category},/rotation/cryptoperiods/{param},h.setCryptoperiod,kernel,key.rotation.write,cryptoperiod_set,cryptoperiod,services/keycore/handler_rotation.go,24,keycore|PUT|/rotation/cryptoperiods/{param}
+keycore,DELETE,/rotation/cryptoperiods/{category},/rotation/cryptoperiods/{param},h.resetCryptoperiod,kernel,key.rotation.write,cryptoperiod_reset,cryptoperiod,services/keycore/handler_rotation.go,25,keycore|DELETE|/rotation/cryptoperiods/{param}
+keycore,GET,/rotation/upcoming,/rotation/upcoming,h.listUpcomingRotations,kernel,key.rotation.read,rotation_upcoming_listed,rotation_policy,services/keycore/handler_rotation.go,26,keycore|GET|/rotation/upcoming
 keycore,GET,/hsm/settings,/hsm/settings,h.getHSM,kernel,key.hsm.read,hsm_status_read,hsm,services/keycore/hsm.go,558,keycore|GET|/hsm/settings
 keycore,PUT,/hsm/settings,/hsm/settings,h.putHSM,kernel,key.hsm.write,hsm_settings_update,hsm,services/keycore/hsm.go,559,keycore|PUT|/hsm/settings
 keycore,GET,/hsm/objects,/hsm/objects,h.listHSMObjects,kernel,key.hsm.read,hsm_objects_listed,hsm,services/keycore/hsm.go,560,keycore|GET|/hsm/objects

@@ -17,6 +17,7 @@ var strictOnlyUnavailable = []Impact{
 	{"secrets", "X25519 key types", "age-x25519 and WireGuard key-pair generation"},
 	{"secrets", "OpenPGP keys", "pgp-rsa-4096 generation (OpenPGP v4 fingerprints require SHA-1)"},
 	{"keycore", "ML-DSA / SLH-DSA keys", "post-quantum signing keys, and algorithm-swap drills that name them; implemented outside the certified module until a certified snapshot includes them"},
+	{"keycore", "X25519MLKEM768 hybrid keys", "creating and using hybrid key-establishment keys (the X25519 half is refused in strict mode; ML-KEM-768 keys still work)"},
 	{"keycore", "scrypt / Argon2id KDF derivation", "POST /enterprise/kdf/derive with algorithm scrypt or argon2id (HKDF-SHA256 and PBKDF2-SHA256 still work)"},
 	{"keycore", "Caller-supplied AES-GCM IVs", "keys with iv_mode external or deterministic cannot encrypt (decryption still works)"},
 	{"dataprotect", "ChaCha20-Poly1305 field encryption", "fields configured for CHACHA20-POLY1305"},

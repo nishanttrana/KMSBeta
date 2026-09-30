@@ -101,6 +101,9 @@ type Store interface {
 	SetCarafDecision(ctx context.Context, tenantID, id string, d CarafDecision) (CarafAsset, error)
 	DeleteCarafAsset(ctx context.Context, tenantID, id string) error
 	ListAgilityDrills(ctx context.Context, tenantID string, limit int) ([]AgilityDrill, error)
+	ListCryptoperiodOverrides(ctx context.Context, tenantID string) (map[string]time.Duration, error)
+	SetCryptoperiodOverride(ctx context.Context, tenantID, category string, days int, actor string) error
+	DeleteCryptoperiodOverride(ctx context.Context, tenantID, category string) (bool, error)
 	CreateAgilityDrill(ctx context.Context, d AgilityDrill) (AgilityDrill, error)
 
 	// Ceremony

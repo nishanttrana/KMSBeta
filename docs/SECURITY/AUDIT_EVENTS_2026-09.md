@@ -413,3 +413,9 @@ traffic. The catalogue entries for events no code ever emitted
 `predictive_rotation_scheduled`, `lifecycle_auto_transition`,
 `zeroization_verified`, `archive_completed`, `audit.pqc.attestation_recorded`)
 are gone too.
+
+## Tenant cryptoperiods (2026-09-30, docs/AUTOMATION_ALKM_PQC.md)
+
+| Event | When | Test |
+|---|---|---|
+| `audit.key.cryptoperiods_listed`, `audit.key.cryptoperiod_set`, `audit.key.cryptoperiod_reset` | Kernel events for the tenant's cryptoperiods (`days`, `default_days`); refusals `invalid_days`, `unknown_category`, `not_custom` with `result: refused` | `TestTenantCryptoperiodDrivesRotation`, `TestRotationRoutesRefusalsAudited` |

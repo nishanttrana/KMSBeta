@@ -239,7 +239,9 @@ func (s *Service) isFIPSEnabled(ctx context.Context, tenantID string) (bool, err
 // cannot see those calls, so strict mode refuses them here.
 func implementedOutsideValidatedModule(algorithm string) bool {
 	v := strings.ToUpper(strings.TrimSpace(algorithm))
-	return strings.Contains(v, "ML-DSA") || strings.Contains(v, "MLDSA") || strings.Contains(v, "SLH-DSA") || strings.Contains(v, "SLHDSA")
+	return strings.Contains(v, "ML-DSA") || strings.Contains(v, "MLDSA") || strings.Contains(v, "SLH-DSA") || strings.Contains(v, "SLHDSA") ||
+		// X25519MLKEM768: the Go module refuses X25519 in "only" mode.
+		normalizeKEMAlgorithm(algorithm) == hybridKEM768
 }
 
 func (s *Service) enforceFIPSKeyAlgorithm(ctx context.Context, tenantID string, algorithm string, operation string) error {

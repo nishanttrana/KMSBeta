@@ -20,6 +20,9 @@ func (h *Handler) rotationRouter(audit route.Emitter) *route.Router {
 	r.Handle("DELETE /rotation/policies/{id}", route.Spec{Action: "rotation_policy_deleted", Permission: "key.rotation.write", Resource: "rotation_policy", TargetParam: "id", Severity: "warning"}, h.deleteRotationPolicy)
 	r.Handle("POST /rotation/policies/{id}/trigger", route.Spec{Action: "rotation_policy_triggered", Permission: "key.rotation.write", Resource: "rotation_policy", TargetParam: "id", Severity: "warning"}, h.triggerRotationPolicy)
 	r.Handle("GET /rotation/runs", route.Spec{Action: "rotation_runs_listed", Permission: "key.rotation.read", Resource: "rotation_policy"}, h.listRotationRuns)
+	r.Handle("GET /rotation/cryptoperiods", route.Spec{Action: "cryptoperiods_listed", Permission: "key.rotation.read", Resource: "cryptoperiod"}, h.listCryptoperiods)
+	r.Handle("PUT /rotation/cryptoperiods/{category}", route.Spec{Action: "cryptoperiod_set", Permission: "key.rotation.write", Resource: "cryptoperiod", TargetParam: "category", Severity: "warning"}, h.setCryptoperiod)
+	r.Handle("DELETE /rotation/cryptoperiods/{category}", route.Spec{Action: "cryptoperiod_reset", Permission: "key.rotation.write", Resource: "cryptoperiod", TargetParam: "category", Severity: "warning"}, h.resetCryptoperiod)
 	r.Handle("GET /rotation/upcoming", route.Spec{Action: "rotation_upcoming_listed", Permission: "key.rotation.read", Resource: "rotation_policy"}, h.listUpcomingRotations)
 	return r
 }

@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.25.0-beta] — 2026-09-30
+
+### Operator cryptoperiods
+- Each tenant sets its own cryptoperiod per key category (symmetric
+  encryption, MAC, key wrapping, signing, DEK/ephemeral, master/KEK), 1–3650
+  days: `GET /rotation/cryptoperiods`, `PUT|DELETE
+  /rotation/cryptoperiods/{category}` (`key.rotation.read|write`), and
+  Rotation → Cryptoperiods in the dashboard. The key lifecycle scan rotates on
+  the tenant's period instead of the built-in SP 800-57 default. New table
+  `cryptoperiod_overrides` (migration 033, replicated with keycore). Audited:
+  `audit.key.cryptoperiods_listed`, `cryptoperiod_set`, `cryptoperiod_reset`,
+  refusals `invalid_days`, `unknown_category`, `not_custom`.
+
+### Hybrid key establishment: X25519MLKEM768
+- Keycore creates `X25519MLKEM768` keys (ML-KEM-768 and X25519 as one key)
+  and encapsulates/decapsulates with them: a 64-byte secret, ML-KEM-768 then
+  X25519. Refused in strict FIPS mode (added to the impact catalogue); strict
+  mode now applies keycore's FIPS algorithm check before generating any key.
+  Other composites are still refused.
+- Stateful hash-based signatures (XMSS, LMS, HSS) stay refused by design:
+  SP 800-208 requires hardware generation and signing (docs/DECISIONS.md).
+
 ## [6.24.0-beta] — 2026-09-30
 
 ### Docs

@@ -89,13 +89,19 @@ LIMIT $3
 // irreversible destroy belongs behind a governance approval (a playbook), not
 // a timer.
 func EvaluateLifecycle(c LifecycleCandidate, cp *CryptoperiodPolicy, now time.Time) (action, reason string) {
+	return EvaluateLifecycleFor(c, cp, nil, now)
+}
+
+// EvaluateLifecycleFor is EvaluateLifecycle with the tenant's own
+// cryptoperiods (by category) applied over the built-in table.
+func EvaluateLifecycleFor(c LifecycleCandidate, cp *CryptoperiodPolicy, overrides map[string]time.Duration, now time.Time) (action, reason string) {
 	if strings.ToLower(strings.TrimSpace(c.Status)) != StateActive {
 		return "", ""
 	}
 	if c.ExpiryDate != nil && !c.ExpiryDate.IsZero() && !now.Before(*c.ExpiryDate) {
 		return "rotate", "operator-set expiry reached"
 	}
-	if cp != nil && cp.IsExpired(c.CreatedAt, c.Purpose, c.Algorithm, c.KeyType) {
+	if cp != nil && cp.IsExpiredFor(overrides, c.CreatedAt, c.Purpose, c.Algorithm, c.KeyType) {
 		return "rotate", "cryptoperiod exceeded for category"
 	}
 	if c.OpsLimit > 0 && c.OpsTotal*10 >= c.OpsLimit*8 {

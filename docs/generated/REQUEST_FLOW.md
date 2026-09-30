@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-29T18:47:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T04:44:45Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `916`
-- Routes with exact frontend call sites: `539`
+- Backend routes analyzed: `919`
+- Routes with exact frontend call sites: `542`
 - Routes whose handlers call `h.svc.*`: `539`
-- Routes with detected store calls: `651`
+- Routes with detected store calls: `656`
 - Routes with detected internal `pkg/*` calls: `164`
 
 ## How To Trace One Frontend Click
@@ -407,13 +407,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|DELETE\|/scheduling/jobs/{param} | DELETE /scheduling/jobs/{id} | handleDeleteSchedulingJob (services/keycore/handler_advanced.go:142) |  | DeleteSchedulingJob |  |  | web/dashboard/src/lib/keyScheduling.ts:36 |
 | keycore\|POST\|/keys/{param}/attest | POST /keys/{id}/attest | handleAttestKey (services/keycore/handler_attestation.go:5) | AttestKey |  |  | pkg/crypto.Sign | web/dashboard/src/lib/keycore.ts:755 |
 | keycore\|POST\|/keys/{param}/verify-material | POST /keys/{id}/verify-material | handleVerifyKeyMaterial (services/keycore/handler_advanced.go:158) | VerifyKeyIntegrity | GetVersion |  | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keyVerification.ts:6, web/dashboard/src/lib/keycore.ts:745 |
-| keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:27) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
-| keycore\|POST\|/rotation/policies | POST /rotation/policies | createRotationPolicy (services/keycore/handler_rotation.go:36) |  | CreateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:68 |
-| keycore\|PATCH\|/rotation/policies/{param} | PATCH /rotation/policies/{id} | updateRotationPolicy (services/keycore/handler_rotation.go:88) |  | UpdateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:73 |
-| keycore\|DELETE\|/rotation/policies/{param} | DELETE /rotation/policies/{id} | deleteRotationPolicy (services/keycore/handler_rotation.go:148) |  | DeleteRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:78 |
-| keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
-| keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
-| keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
+| keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:30) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
+| keycore\|POST\|/rotation/policies | POST /rotation/policies | createRotationPolicy (services/keycore/handler_rotation.go:39) |  | CreateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:68 |
+| keycore\|PATCH\|/rotation/policies/{param} | PATCH /rotation/policies/{id} | updateRotationPolicy (services/keycore/handler_rotation.go:91) |  | UpdateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:73 |
+| keycore\|DELETE\|/rotation/policies/{param} | DELETE /rotation/policies/{id} | deleteRotationPolicy (services/keycore/handler_rotation.go:151) |  | DeleteRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:78 |
+| keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:166) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
+| keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:186) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
+| keycore\|GET\|/rotation/cryptoperiods | GET /rotation/cryptoperiods | listCryptoperiods (services/keycore/handler_cryptoperiod.go:31) |  | ListCryptoperiodOverrides |  |  | web/dashboard/src/lib/rotationScheduler.ts:107 |
+| keycore\|PUT\|/rotation/cryptoperiods/{param} | PUT /rotation/cryptoperiods/{category} | setCryptoperiod (services/keycore/handler_cryptoperiod.go:61) |  | SetCryptoperiodOverride |  |  | web/dashboard/src/lib/rotationScheduler.ts:112 |
+| keycore\|DELETE\|/rotation/cryptoperiods/{param} | DELETE /rotation/cryptoperiods/{category} | resetCryptoperiod (services/keycore/handler_cryptoperiod.go:87) |  | DeleteCryptoperiodOverride |  |  | web/dashboard/src/lib/rotationScheduler.ts:116 |
+| keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:195) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
 | keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:565) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:655 |
 | keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:574) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:662 |
 | keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:600) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:636 |
@@ -1088,7 +1091,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keyaccess\|POST\|/key-access/evaluate | POST /key-access/evaluate | evaluate (services/keyaccess/handler.go:163) | Evaluate | ListRules, CreateDecision | s.governance.CreateApprovalRequest | pkg/tenantcheck.IsServicePrincipal |  |
 | keycore\|POST\|/keys/{param}/attested-release | POST /keys/{id}/attested-release | attestedRelease (services/keycore/attested_release.go:142) | AttestedRelease |  |  | pkg/crypto.RecipientKeyBinding, pkg/tenantcheck.IsServicePrincipal, pkg/crypto.ParseRecipientPublicKey, pkg/crypto.Zeroize, pkg/crypto.SealToRecipient |  |
 | keycore\|POST\|/keys/{param}/generate-data-key | POST /keys/{id}/generate-data-key | generateDataKey (services/keycore/data_key.go:29) | Encrypt |  | s.hsm.Encrypt, s.meter.IncrementOps | pkg/crypto.RandomBytes, pkg/crypto.Zeroize, pkg/hsm.Encrypt | web/dashboard/src/lib/keycore.ts:831 |
-| keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle |  |  |  |  |
+| keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle | ListCryptoperiodOverrides |  |  |  |
 | keycore\|GET\|/keys | GET /keys | handleListKeys (services/keycore/handler.go:507) | keyViewFor, ListKeysCursor, ListKeys | ListAccessGroupIDsForUser, ListGrantedKeyIDs, ListKeysCursor, ListKeysScoped, ListKeys | s.cache.Delete, s.exists.AddString, s.cache.Set | pkg/tenantcheck.Enforce, pkg/auth.ClaimsFromContext, pkg/route.Allowed | web/dashboard/src/lib/keyVerification.ts:15, web/dashboard/src/lib/keycore.ts:506 |
 | keycore\|GET\|/keys/{param} | GET /keys/{id} | handleGetKey (services/keycore/handler.go:564) | GetKey | GetKey | s.exists.TestString, s.cache.Get, s.cache.Delete, s.exists.AddString, s.cache.Set |  |  |
 | keycore\|POST\|/keys/{param}/export | POST /keys/{id}/export | handleExportKey (services/keycore/handler.go:843) | ExportPublicComponentPlaintext, ExportCurrentVersionWrapped | RecordRotationMetric, RotateVersion, PurgeDueDestroyed, ActivateDueKeys, ListKeys, ListKeysScoped, ListKeysCursor, GetKey, +16 more | s.cache.Delete, s.exists.AddString, s.cache.Set, s.exists.TestString, s.cache.Get, s.cluster.Publish, s.approval.ensureApproval, s.hsm.Encrypt, +7 more | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual, pkg/crypto.DecryptEnvelope, pkg/crypto.GenerateIV, pkg/crypto.SealDetached, pkg/crypto.SealGCMWithNonce, pkg/crypto.OpenDetached, pkg/hsm.Encrypt, +4 more | web/dashboard/src/lib/keycore.ts:1058 |
@@ -1121,7 +1124,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/analytics/algorithms | GET /analytics/algorithms | handleGetAlgorithmBenchmarks (services/keycore/handler_enterprise_audit.go:439) |  | GetAlgorithmBenchmarks |  |  |  |
 | keycore\|GET\|/attestation/public-key | GET /attestation/public-key | handleAttestationPublicKey (services/keycore/handler_attestation.go:19) | attestationPublicKeyPEM |  |  | pkg/crypto.MarshalPublicKeyPEM |  |
 | keycore\|GET\|/fips/rng-health | GET /fips/rng-health | handleRNGHealth (services/keycore/handler_fips_selftest.go:45) |  |  |  |  |  |
-| keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle |  |  |  |  |
+| keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle | ListCryptoperiodOverrides |  |  |  |
 | keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:63) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1186 |
 | keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:75) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1199 |
 | keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:100) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1268 |
@@ -1228,13 +1231,16 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/keys/{param}/verify-material | POST /keys/{id}/verify-material | handleVerifyKeyMaterial (services/keycore/handler_advanced.go:158) | VerifyKeyIntegrity | GetVersion |  | pkg/crypto.Zeroize, pkg/crypto.ConstantTimeEqual | web/dashboard/src/lib/keyVerification.ts:6, web/dashboard/src/lib/keycore.ts:745 |
 | keycore\|POST\|/keys/{param}/destruction-check | POST /keys/{id}/destruction-check | handleDestructionCheck (services/keycore/destruction_check.go:88) | CheckKeyDestruction | GetKey, ListVersions | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix |  |
 | keycore\|POST\|/fips/self-test | POST /fips/self-test | handleFIPSSelfTest (services/keycore/handler_fips_selftest.go:19) |  |  |  |  |  |
-| keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:27) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
-| keycore\|POST\|/rotation/policies | POST /rotation/policies | createRotationPolicy (services/keycore/handler_rotation.go:36) |  | CreateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:68 |
-| keycore\|PATCH\|/rotation/policies/{param} | PATCH /rotation/policies/{id} | updateRotationPolicy (services/keycore/handler_rotation.go:88) |  | UpdateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:73 |
-| keycore\|DELETE\|/rotation/policies/{param} | DELETE /rotation/policies/{id} | deleteRotationPolicy (services/keycore/handler_rotation.go:148) |  | DeleteRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:78 |
-| keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:163) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
-| keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:183) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
-| keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:192) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
+| keycore\|GET\|/rotation/policies | GET /rotation/policies | listRotationPolicies (services/keycore/handler_rotation.go:30) |  | ListRotationPolicies |  |  | web/dashboard/src/lib/rotationScheduler.ts:63 |
+| keycore\|POST\|/rotation/policies | POST /rotation/policies | createRotationPolicy (services/keycore/handler_rotation.go:39) |  | CreateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:68 |
+| keycore\|PATCH\|/rotation/policies/{param} | PATCH /rotation/policies/{id} | updateRotationPolicy (services/keycore/handler_rotation.go:91) |  | UpdateRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:73 |
+| keycore\|DELETE\|/rotation/policies/{param} | DELETE /rotation/policies/{id} | deleteRotationPolicy (services/keycore/handler_rotation.go:151) |  | DeleteRotationPolicy |  |  | web/dashboard/src/lib/rotationScheduler.ts:78 |
+| keycore\|POST\|/rotation/policies/{param}/trigger | POST /rotation/policies/{id}/trigger | triggerRotationPolicy (services/keycore/handler_rotation.go:166) | RunRotationPolicy | RecordRotationPolicyOutcome, CreateRotationRun |  |  | web/dashboard/src/lib/rotationScheduler.ts:82 |
+| keycore\|GET\|/rotation/runs | GET /rotation/runs | listRotationRuns (services/keycore/handler_rotation.go:186) |  | ListRotationRuns |  |  | web/dashboard/src/lib/rotationAnalytics.ts:15 |
+| keycore\|GET\|/rotation/cryptoperiods | GET /rotation/cryptoperiods | listCryptoperiods (services/keycore/handler_cryptoperiod.go:31) |  | ListCryptoperiodOverrides |  |  | web/dashboard/src/lib/rotationScheduler.ts:107 |
+| keycore\|PUT\|/rotation/cryptoperiods/{param} | PUT /rotation/cryptoperiods/{category} | setCryptoperiod (services/keycore/handler_cryptoperiod.go:61) |  | SetCryptoperiodOverride |  |  | web/dashboard/src/lib/rotationScheduler.ts:112 |
+| keycore\|DELETE\|/rotation/cryptoperiods/{param} | DELETE /rotation/cryptoperiods/{category} | resetCryptoperiod (services/keycore/handler_cryptoperiod.go:87) |  | DeleteCryptoperiodOverride |  |  | web/dashboard/src/lib/rotationScheduler.ts:116 |
+| keycore\|GET\|/rotation/upcoming | GET /rotation/upcoming | listUpcomingRotations (services/keycore/handler_rotation.go:195) |  | ListUpcomingRotations |  |  | web/dashboard/src/lib/rotationScheduler.ts:93 |
 | keycore\|GET\|/hsm/settings | GET /hsm/settings | getHSM (services/keycore/hsm.go:565) | HSMStatus | GetHSMSettings | s.hsm.Status | pkg/hsm.Status | web/dashboard/src/lib/keycore.ts:655 |
 | keycore\|PUT\|/hsm/settings | PUT /hsm/settings | putHSM (services/keycore/hsm.go:574) | UpdateHSMSettings | GetHSMSettings, UpsertHSMSettings | s.hsm.Status, s.hsm.EnsureTenantKey | pkg/hsm.Status, pkg/hsm.EnsureTenantKey | web/dashboard/src/lib/keycore.ts:662 |
 | keycore\|GET\|/hsm/objects | GET /hsm/objects | listHSMObjects (services/keycore/hsm.go:600) | ListHSMObjects |  | s.hsm.Objects | pkg/hsm.Objects, pkg/hsm.TenantPrefix, pkg/hsm.TenantKeyLabel | web/dashboard/src/lib/keycore.ts:636 |

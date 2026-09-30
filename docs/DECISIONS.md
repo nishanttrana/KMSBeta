@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Cryptoperiods per tenant; X25519MLKEM768 only hybrid; no software HBS (6.25.0-beta)
+
+**Decision.** Tenants set their own cryptoperiod per key category (1–3650
+days), used by the lifecycle scan. Keycore offers one hybrid key,
+`X25519MLKEM768` (the TLS hybrid construction: secrets and ciphertexts
+concatenated, ML-KEM first). Stateful hash-based signatures are not offered
+by keycore.
+
+**Why.** The customer decides policy (CLAUDE.md), and the built-in periods
+were fixed. X25519MLKEM768 is the established hybrid with no invented
+combiner. SP 800-208 requires XMSS/LMS generation and signing in hardware.
+
+**Rejected.** A custom hybrid KDF combiner (a new construction to justify);
+composite signatures (no settled construction); software LMS/XMSS; capping
+tenant periods at the SP 800-57 value (the customer's choice).
+
+**Enforced by.** `TestTenantCryptoperiodDrivesRotation`,
+`TestHybridKEMKeyRoundTrip`, `TestStrictModeRefusesHybridKEMKey`,
+`TestCreateKeyRefusesAlgorithmsItCannotGenerate`.
+
+---
+
 ## 2026-09-29 — Public key read: the per-key read decision, delegated as usage `read` (6.18.0-beta)
 
 **Decision.** Keycore serves an asymmetric key's current public key at

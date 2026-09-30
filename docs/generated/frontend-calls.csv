@@ -523,6 +523,9 @@ keycore,keycore,DELETE,/rotation/policies/{param},/rotation/policies/{param},Tru
 keycore,keycore,POST,/rotation/policies/{param}/trigger,/rotation/policies/{param}/trigger,True,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,82,keycore|POST|/rotation/policies/{param}/trigger
 keycore,keycore,GET,/rotation/runs{param},/rotation/runs{param},True,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,88,keycore|GET|/rotation/runs{param}
 keycore,keycore,GET,/rotation/upcoming,/rotation/upcoming,False,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,93,keycore|GET|/rotation/upcoming
+keycore,keycore,GET,/rotation/cryptoperiods,/rotation/cryptoperiods,False,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,107,keycore|GET|/rotation/cryptoperiods
+keycore,keycore,PUT,/rotation/cryptoperiods/{param},/rotation/cryptoperiods/{param},True,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,112,keycore|PUT|/rotation/cryptoperiods/{param}
+keycore,keycore,DELETE,/rotation/cryptoperiods/{param},/rotation/cryptoperiods/{param},True,serviceRequest,web/dashboard/src/lib/rotationScheduler.ts,116,keycore|DELETE|/rotation/cryptoperiods/{param}
 sbom,sbom,POST,/sbom/generate,/sbom/generate,False,serviceRequest,web/dashboard/src/lib/sbom.ts,91,sbom|POST|/sbom/generate
 sbom,sbom,GET,/sbom/latest,/sbom/latest,False,serviceRequest,web/dashboard/src/lib/sbom.ts,99,sbom|GET|/sbom/latest
 sbom,sbom,GET,/sbom/history?limit={param},/sbom/history,True,serviceRequest,web/dashboard/src/lib/sbom.ts,104,sbom|GET|/sbom/history

@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-29T18:47:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T04:44:45Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `916` across `30` services
-- Backend routes on the `pkg/route` kernel: `349` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `575`
-- Frontend call sites with exact backend route match: `530`
+- Backend HTTP routes discovered: `919` across `30` services
+- Backend routes on the `pkg/route` kernel: `352` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `578`
+- Frontend call sites with exact backend route match: `533`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `766`
-- Backend request flows with handler/service/package summaries: `916`
+- Clickable controls with static `onClick` handlers: `768`
+- Backend request flows with handler/service/package summaries: `919`
 
 ## How To Use This For Launch
 
@@ -144,7 +144,7 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (172 routes)"]
+  svc_keycore["keycore (175 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (12 routes)"]
   svc_pqc["pqc (14 routes)"]
@@ -219,7 +219,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 172 | 118 |
+| keycore | 175 | 121 |
 | kmip | 12 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |

@@ -68,4 +68,28 @@ func TestDueForLifecyclePostgres(t *testing.T) {
 	if got[expired.ID] != "rotate" || len(got) != 1 {
 		t.Fatalf("due items for the tenant: %v (want only %s: rotate)", got, expired.ID)
 	}
+
+	// The tenant's own cryptoperiod (30 days for encryption keys) makes a
+	// 60-day-old key due; the built-in 2 years would not.
+	aged := create("aged")
+	if _, err := conn.SQL().ExecContext(ctx, `UPDATE keys SET created_at = $1, updated_at = $1 WHERE tenant_id = $2 AND id = $3`, time.Now().UTC().Add(-60*24*time.Hour), tenant, aged.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.store.SetCryptoperiodOverride(ctx, tenant, "symmetric_encrypt", 30, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.store.SetCryptoperiodOverride(ctx, tenant, "symmetric_encrypt", 31, "alice"); err != nil { // upsert
+		t.Fatal(err)
+	}
+	items, err = svc.dueForLifecycle(ctx, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := false
+	for _, it := range items {
+		due = due || (it.TenantID == tenant && it.KeyID == aged.ID && it.Action == "rotate")
+	}
+	if !due {
+		t.Fatal("a 60-day-old key was not due under the tenant's 31-day cryptoperiod")
+	}
 }
