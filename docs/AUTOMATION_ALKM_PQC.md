@@ -24,7 +24,7 @@ remembers them can see why they're gone.
 | Sustained-risk signal | `audit` | always on; `audit.security.sustained_risk_detected`, playbook trigger `sustained_risk_detected` |
 | Event-stream circuit breaker | `audit` | per-target breaker on event-stream deliveries (Playbooks → Event streaming) |
 | CBOM inventory & diff | `audit` | `GET /audit/cbom/inventory`, `GET /audit/cbom/diff` |
-| PQC key generation | `keycore` | `POST /keys` with an ML-KEM, ML-DSA, SLH-DSA or `X25519MLKEM768` (hybrid) algorithm |
+| PQC key generation | `keycore` | `POST /keys` with an ML-KEM, ML-DSA, SLH-DSA, `X25519MLKEM768` or composite `ML-DSA-65+ECDSA-P256` / `ML-DSA-87+ECDSA-P384` algorithm |
 | PQC migration plans | `pqc` | `POST /svc/pqc/pqc/migration/plans`, then `.../{id}/execute` |
 | Service heartbeats | keycore, kmip, policy, audit, and services started with `platform.Boot` | `pkg/heartbeat` on `health.<service>.heartbeat` |
 | Watchdog | `watchdog` | subscribes to `health.*.heartbeat`; raises `audit.health.incident`; compliance playbooks with the `service_health_degraded` trigger respond (the watchdog acts on nothing itself) |
@@ -97,8 +97,14 @@ then an ephemeral X25519 public key); decapsulate recovers the secret. Derive
 working keys from it with HKDF. Strict FIPS mode refuses it (the module
 refuses X25519); ML-KEM-768 keys still work.
 
-It refuses, with `audit.key.create_refused`, other composite names such as
-`ML-DSA-65+ECDSA-P256`, and Ed448/X448. It also refuses stateful hash-based
+Composite signature keys **`ML-DSA-65+ECDSA-P256`** and
+**`ML-DSA-87+ECDSA-P384`** hold an ML-DSA key and an ECDSA key as one. A
+signature is both component signatures (the ML-DSA signature, prefixed with
+its 4-byte length, then the ECDSA signature), and it verifies only if both
+do. Strict FIPS mode refuses them, as it refuses ML-DSA.
+
+It refuses, with `audit.key.create_refused`, any other composite name, and
+Ed448/X448. It also refuses stateful hash-based
 signatures (XMSS, LMS, HSS), by design: NIST SP 800-208 requires their keys
 to be generated and used for signing inside a hardware cryptographic module,
 so a software key engine must not offer them. They would come only through
@@ -207,10 +213,10 @@ use the same `pkg/cryptocatalog` facts.
 
 ## Open items
 
-- Composite signature keys (for example ML-DSA + ECDSA) are not offered;
-  `X25519MLKEM768` is the only hybrid key.
-- Stateful hash-based signatures need an HSM whose PKCS#11 library supports
-  them; hsm-connector has none today.
+None. Stateful hash-based signatures are a closed decision, not an open
+item: keycore won't offer them in software (SP 800-208), and hsm-connector
+exposes no HSS/XMSS mechanism, because no PKCS#11 library we can test
+against (SoftHSM2) implements one (docs/DECISIONS.md).
 
 ## Removed claims (5.3.0-beta)
 

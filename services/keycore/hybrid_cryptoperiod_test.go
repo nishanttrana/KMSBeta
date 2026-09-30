@@ -51,7 +51,7 @@ func TestHybridKEMKeyRoundTrip(t *testing.T) {
 			t.Fatal("tampered ciphertext produced the same secret")
 		}
 	}
-	if _, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "cmp", Algorithm: "ML-DSA-65+ECDSA-P256",
+	if _, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "cmp", Algorithm: "AES-256+ML-KEM-768",
 		KeyType: "asymmetric", Purpose: "sign", Owner: "ops", CreatedBy: "tester"}); err == nil {
 		t.Fatal("a composite other than X25519MLKEM768 was created")
 	}

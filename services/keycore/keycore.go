@@ -19,6 +19,7 @@ import (
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -4187,6 +4188,21 @@ func digestForSigning(data []byte, hashAlg stdcrypto.Hash) ([]byte, error) {
 
 func signWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byte, data []byte, algorithmHint string) ([]byte, error) {
 	alg := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
+	if parts := compositeSigParts(alg); parts != nil {
+		pqKey, clKey, err := splitComposite(keyMaterial)
+		if err != nil {
+			return nil, err
+		}
+		pqSig, err := signWithKeyAlgorithm(parts[0], keyType, pqKey, data, "")
+		if err != nil {
+			return nil, err
+		}
+		clSig, err := signWithKeyAlgorithm(parts[1], keyType, clKey, data, "")
+		if err != nil {
+			return nil, err
+		}
+		return joinComposite(pqSig, clSig), nil
+	}
 	switch {
 	case isHMACKeyAlgorithm(alg):
 		hmacAlg := normalizeHMACAlgorithm(algorithmHint)
@@ -4276,6 +4292,21 @@ func signWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byt
 
 func verifyWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byte, data []byte, signature []byte, algorithmHint string) (bool, error) {
 	alg := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
+	if parts := compositeSigParts(alg); parts != nil {
+		pqKey, clKey, err := splitComposite(keyMaterial)
+		if err != nil {
+			return false, err
+		}
+		pqSig, clSig, err := splitComposite(signature)
+		if err != nil {
+			return false, nil
+		}
+		ok, err := verifyWithKeyAlgorithm(parts[0], keyType, pqKey, data, pqSig, "")
+		if err != nil || !ok {
+			return false, err
+		}
+		return verifyWithKeyAlgorithm(parts[1], keyType, clKey, data, clSig, "")
+	}
 	switch {
 	case isHMACKeyAlgorithm(alg):
 		hmacAlg := normalizeHMACAlgorithm(algorithmHint)
@@ -4976,10 +5007,12 @@ func planKeyGeneration(algorithm string) (keyGenPlan, error) {
 	switch {
 	case up == "":
 		return keyGenPlan{}, errors.New("algorithm is required")
+	case compositeSigParts(up) != nil:
+		return keyGenPlan{kind: "composite-sig"}, nil
 	case normalizeKEMAlgorithm(up) == hybridKEM768:
 		return keyGenPlan{kind: hybridKEM768}, nil
 	case strings.Contains(up, "+"):
-		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "the only hybrid key is X25519MLKEM768 (key establishment); other composites are not implemented")
+		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "supported hybrids are X25519MLKEM768, ML-DSA-65+ECDSA-P256 and ML-DSA-87+ECDSA-P384")
 	case strings.Contains(up, "XMSS"), strings.Contains(up, "LMS"), strings.Contains(up, "HSS"):
 		return keyGenPlan{}, errUnsupportedKeyAlgorithm(algorithm, "stateful hash-based signatures are not implemented")
 	case strings.Contains(up, "ED448"), strings.Contains(up, "X448"):
@@ -5083,6 +5116,17 @@ func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error)
 		return priv.MarshalBinary()
 	case hybridKEM768:
 		return hybridKEMGenerate(public)
+	case "composite-sig":
+		parts := compositeSigParts(algorithm)
+		pq, err := generateMaterialForCreate(parts[0], keyType)
+		if err != nil {
+			return nil, err
+		}
+		cl, err := generateMaterialForCreate(parts[1], keyType)
+		if err != nil {
+			return nil, err
+		}
+		return joinComposite(pq, cl), nil
 	case "ml-kem-768":
 		dk, err := mlkem.GenerateKey768()
 		if err != nil {
@@ -5208,4 +5252,38 @@ func hybridKEMDecapsulate(raw, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 	return append(ssK, ssX...), nil
+}
+
+// Composite signature keys: an ML-DSA key and an ECDSA key held as one. A
+// signature is both component signatures, and it verifies only if both do,
+// so it stays sound if either algorithm is broken. Material and signatures
+// are the post-quantum part then the classical part, the first prefixed
+// with its 4-byte big-endian length.
+var compositeSigAlgorithms = map[string][2]string{
+	"ML-DSA-65+ECDSA-P256": {"ML-DSA-65", "ECDSA-P256"},
+	"ML-DSA-87+ECDSA-P384": {"ML-DSA-87", "ECDSA-P384"},
+}
+
+func compositeSigParts(algorithm string) []string {
+	if p, ok := compositeSigAlgorithms[strings.ToUpper(strings.TrimSpace(algorithm))]; ok {
+		return p[:]
+	}
+	return nil
+}
+
+func joinComposite(first, second []byte) []byte {
+	out := make([]byte, 4, 4+len(first)+len(second))
+	binary.BigEndian.PutUint32(out, uint32(len(first)))
+	return append(append(out, first...), second...)
+}
+
+func splitComposite(b []byte) ([]byte, []byte, error) {
+	if len(b) < 4 {
+		return nil, nil, errors.New("invalid composite encoding")
+	}
+	n := binary.BigEndian.Uint32(b[:4])
+	if uint64(n) > uint64(len(b)-4) || n == 0 || int(n) == len(b)-4 {
+		return nil, nil, errors.New("invalid composite encoding")
+	}
+	return b[4 : 4+n], b[4+n:], nil
 }

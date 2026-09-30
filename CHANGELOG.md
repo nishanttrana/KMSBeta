@@ -4,6 +4,18 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.26.0-beta] — 2026-09-30
+
+### Composite signature keys
+- Keycore creates `ML-DSA-65+ECDSA-P256` and `ML-DSA-87+ECDSA-P384` keys and
+  signs with both halves; a signature verifies only when both component
+  signatures do (stripping or corrupting either fails). Refused in strict
+  FIPS mode with ML-DSA (impact catalogue updated).
+- Closed, by decision: stateful hash-based signatures through an HSM. No
+  testable PKCS#11 library implements HSS/XMSS, and HSM integrations are
+  tested only against a real library (docs/DECISIONS.md). The automation
+  guide has no open items left.
+
 ## [6.25.0-beta] — 2026-09-30
 
 ### Operator cryptoperiods

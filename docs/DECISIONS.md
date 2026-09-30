@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Composite signatures by dual signing; no HSM HBS until a testable library exists (6.26.0-beta)
+
+**Decision.** Composite keys `ML-DSA-65+ECDSA-P256` and `ML-DSA-87+ECDSA-P384`
+sign with both algorithms; verification requires both. Stateful hash-based
+signatures stay unoffered, including through the HSM path.
+
+**Why.** Requiring both signatures keeps a signature sound if either
+algorithm falls, with no new cryptography. For HBS, SP 800-208 rules out
+software keys, and our HSM rule requires tests against a real PKCS#11
+library; SoftHSM2 implements no HSS/XMSS mechanism, so an HSM path would be
+untested code presented as a feature.
+
+**Rejected.** Adopting a draft composite encoding (not settled; the owner
+asked not to cite drafts); "either signature verifies" (only as strong as the
+weaker algorithm); an untested CKM_HSS passthrough in hsm-connector.
+
+**Enforced by.** `TestCompositeSignatureKey`,
+`TestStrictModeRefusesCompositeSignatureKey`,
+`TestCreateKeyRefusesAlgorithmsItCannotGenerate` (XMSS/LMS/HSS refused).
+
+---
+
 ## 2026-09-30 — Cryptoperiods per tenant; X25519MLKEM768 only hybrid; no software HBS (6.25.0-beta)
 
 **Decision.** Tenants set their own cryptoperiod per key category (1–3650
