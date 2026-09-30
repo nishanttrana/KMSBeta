@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Never again: resetting a shared doc in a checkout another session is using
+- **What happened:** after pushing 8f0dd192c from a worktree, I ran
+  `git checkout HEAD -- <my files>` in the shared checkout. The list
+  included CHANGELOG.md, learning.md, API_REFERENCE.md and
+  AUDIT_EVENTS_2026-09.md, which another session had just edited. Its
+  uncommitted entries were destroyed and it had to re-add them (4c08e84da).
+- **How it slipped through:** a pre-check printed "DIFFERS" for those four
+  files, but the loop kept going. CLAUDE.md already forbids scratch resets
+  in a dirty tree; a checkout of named files is the same thing.
+- **Rule:** never run `git checkout --`, `git restore` or `git reset` on a
+  file in the shared checkout. Commit and push from a worktree, then only
+  `git merge --ff-only` in the shared checkout once it holds none of your
+  edits. If it does, wait or ask; don't reset.
+
 ### A name check for "internal" would have blocked auth.example.com
 - **What happened:** the first draft of the platform-host check matched a
   target's first DNS label against the service names. `auth`, `certs`,
