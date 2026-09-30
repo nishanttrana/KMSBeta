@@ -197,9 +197,6 @@ use the same `pkg/cryptocatalog` facts.
 - Cryptoperiods have no operator setting.
 - Hybrid (composite) keys and stateful hash-based signatures are not
   implemented; creation refuses them.
-- Risk ratings for migration priority are being built by the crypto-agility
-  CARAF work (threats, asset profiles, X/Y/Z timelines); the unused Y2Q
-  score was removed rather than kept alongside.
 
 ## Removed claims (5.3.0-beta)
 

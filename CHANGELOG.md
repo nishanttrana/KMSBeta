@@ -4,6 +4,14 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [6.24.0-beta] — 2026-09-30
+
+### Docs
+- `docs/AUTOMATION_ALKM_PQC.md` no longer lists migration risk ratings as
+  open: the CARAF assessment (keycore `caraf.go`) has shipped. Still open:
+  cryptoperiods have no operator setting; hybrid keys and stateful
+  hash-based signatures are not implemented.
+
 ## [6.23.0-beta] — 2026-09-30
 
 ### Keycore no longer parses the posture minimum algorithm tier
