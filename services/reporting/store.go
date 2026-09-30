@@ -182,9 +182,10 @@ LIMIT 1
 }
 
 func (s *SQLStore) ListAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error) {
-	if q.Limit <= 0 || q.Limit > 1000 {
+	if q.Limit <= 0 {
 		q.Limit = 100
 	}
+	q.Limit = min(q.Limit, alertScanLimit)
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, audit_event_id, audit_action, severity, category, title, description,
 	   service, actor_id, actor_type, target_type, target_id, source_ip, status,

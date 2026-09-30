@@ -145,7 +145,7 @@ func (h *Handler) alerts(c *route.Call) {
 		Action:     strings.TrimSpace(qs.Get("action")),
 		TargetType: strings.TrimSpace(qs.Get("target_type")),
 		TargetID:   strings.TrimSpace(qs.Get("target_id")),
-		Limit:      atoi(qs.Get("limit")),
+		Limit:      min(atoi(qs.Get("limit")), alertPageLimit),
 		Offset:     atoi(qs.Get("offset")),
 		From:       parseTimeString(qs.Get("from")),
 		To:         parseTimeString(qs.Get("to")),

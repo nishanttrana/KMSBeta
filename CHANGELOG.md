@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.15.0-beta] — 2026-09-30
+
+### Charts sit beside their entries, and every chart drills into them
+- **Moved:** audit charts are now Audit Log → **Activity** (beside Events,
+  Forensics and Checkpoints), and alert charts are Alert Center →
+  **Analytics** (beside the **Alerts** triage list). Overview → Analytics
+  keeps Key inventory and Operations.
+- **Added:** every slice, bar, point and top-N row is clickable and lists
+  exactly the entries it counts:
+  - Audit activity (result, service, risk bucket, hour or day, actor): the
+    events; a row opens the event detail with timeline, session and
+    correlation links.
+  - Alert analytics (severity, day, status, time to detect or resolve per
+    severity, actor, IP, service): the alerts, as triage cards you can
+    acknowledge or escalate in place. The charts reload after triage.
+  - Posture (severity, risk distribution, resolution status, engine scores,
+    domain bars): the findings, each opening its detail. The risk gauge and
+    each point on the risk trend open that snapshot's scores and signals.
+- **Fixed:** alert statistics counted only the newest 100 alerts.
+  `GET /svc/reporting/alerts/stats`, `/stats/mttr`, `/stats/mttd`,
+  `/stats/top-sources` and the alert-summary reports asked for 5000, but the
+  store cut any limit over 1000 back to 100. They now read the newest 5000.
+  The per-page cap of `GET /svc/reporting/alerts` (500) moved to the HTTP
+  handler.
+- **Docs:** `docs/API_REFERENCE.md` now gives the real query parameters and
+  response shapes of the alert list and statistics endpoints.
+
 ## [7.14.0-beta] — 2026-09-30
 
 ### DevSecOps / IaC tab removed; real CI/CD guide in Documentation

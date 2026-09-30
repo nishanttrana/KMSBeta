@@ -285,11 +285,23 @@ an approach, record it here or in the matching doc below.
   The removed gateway is a KMS Extension seed (docs/DECISIONS.md).
 - **One home per view** (owner, 2026-09-28: Analytics under both Audit Log
   and Overview, Alerts under both Audit Log and Alert Center, and a
-  Compliance page that "is not accurate"). Charts and trends go in Overview →
-  Analytics, alert triage in the Alert Center, the audit record in the Audit
-  Log, and only assessed compliance in Compliance. Don't copy a view into
-  another tab; link to its home. A failed or missing source shows
+  Compliance page that "is not accurate"; amended 2026-09-30: charts live
+  with their data). Charts sit in a tab beside the entries they count:
+  audit charts in Audit Log → Activity, alert charts and triage in Alert
+  Center → Analytics / Alerts, posture charts in Posture, and key and
+  operations trends in Overview → Analytics. The audit record stays in the
+  Audit Log, and Compliance shows only assessed compliance. Don't copy a view
+  into another tab; link to its home. A failed or missing source shows
   "unavailable" or "not assessed", never 0 or 100 (docs/DECISIONS.md).
+- **Every chart drills into its entries** (owner directive, 2026-09-30:
+  "clicking on graphs / bar should show related entries"). Every bar, slice,
+  point and legend row with a count is clickable and lists exactly the
+  entries it counts, and each entry opens its detail view. Use
+  `components/v3/chartDrill.tsx`: a `Drill` predicate over the same rows the
+  chart was computed from, shared bucket functions for the chart and the
+  drill, and `DrillPanel`. When a chart comes from a server aggregate, the
+  drill-down pages over the same set the aggregate reads, so the list length
+  equals the number on the bar. A new chart without a drill-down is not done.
 
 ## Documentation is part of done
 

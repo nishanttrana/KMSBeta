@@ -18067,6 +18067,14 @@
       "tag": "button"
     },
     {
+      "file": "web/dashboard/src/components/v3/chartDrill.tsx",
+      "handler": "onClear",
+      "label": "Clear",
+      "line": 29,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
       "file": "web/dashboard/src/components/v3/legacyPrimitives.tsx",
       "handler": "onClose} aria-label=\"Close\" style={{ background: \"transparent\", border: \"none\", color: C.muted, cursor: \"pointer\", pa...",
       "label": "Close",
@@ -18126,7 +18134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()}>Retry",
-      "line": 60,
+      "line": 97,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18134,45 +18142,15 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 67,
+      "line": 104,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
-      "label": "void refresh(false)}>",
-      "line": 411,
-      "tabs": [
-        "alerts"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
-      "handler": "",
-      "label": "void ackAllAlerts()} disabled= >",
-      "line": 412,
-      "tabs": [
-        "alerts"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
-      "handler": "",
-      "label": "setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`...",
-      "line": 422,
-      "tabs": [
-        "alerts"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
-      "handler": "",
       "label": "void ackAlert(item)} disabled= style={ }>",
-      "line": 459,
+      "line": 426,
       "tabs": [
         "alerts"
       ],
@@ -18182,7 +18160,37 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void escalateOne(item)} disabled= style={ }>",
-      "line": 460,
+      "line": 427,
+      "tabs": [
+        "alerts"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
+      "handler": "",
+      "label": "void refresh(false)}>",
+      "line": 453,
+      "tabs": [
+        "alerts"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
+      "handler": "",
+      "label": "void ackAllAlerts()} disabled= >",
+      "line": 454,
+      "tabs": [
+        "alerts"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
+      "handler": "",
+      "label": "setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`...",
+      "line": 464,
       "tabs": [
         "alerts"
       ],
@@ -18192,7 +18200,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 481,
+      "line": 493,
       "tabs": [
         "alerts"
       ],
@@ -18202,7 +18210,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next",
-      "line": 483,
+      "line": 495,
       "tabs": [
         "alerts"
       ],
@@ -18268,7 +18276,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 90,
+      "line": 107,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18276,7 +18284,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si...",
-      "line": 443,
+      "line": 444,
       "tabs": [
         "audit"
       ],
@@ -18286,7 +18294,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "verifyChain} disabled={chainVerifying",
       "label": "(icon or dynamic label)",
-      "line": 444,
+      "line": 445,
       "tabs": [
         "audit"
       ],
@@ -18296,7 +18304,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "load()} disabled= >Refresh",
-      "line": 447,
+      "line": 448,
       "tabs": [
         "audit"
       ],
@@ -18306,7 +18314,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous",
-      "line": 538,
+      "line": 539,
       "tabs": [
         "audit"
       ],
@@ -18316,7 +18324,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "setOffset(offset + PAGE_SIZE)}>Next",
-      "line": 539,
+      "line": 540,
       "tabs": [
         "audit"
       ],
@@ -18326,7 +18334,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "loadForensic} disabled={forensicLoading",
       "label": "(icon or dynamic label)",
-      "line": 565,
+      "line": 566,
       "tabs": [
         "audit"
       ],
@@ -18336,7 +18344,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Timeline ( )",
-      "line": 673,
+      "line": 674,
       "tabs": [
         "audit"
       ],
@@ -18346,7 +18354,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Session ( )",
-      "line": 678,
+      "line": 679,
       "tabs": [
         "audit"
       ],
@@ -18356,7 +18364,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "handler": "",
       "label": "}> View Correlation ( )",
-      "line": 683,
+      "line": 684,
       "tabs": [
         "audit"
       ],
@@ -21419,7 +21427,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "onClick} style={{ display: \"inline-flex\", alignItems: \"center\", gap: 5, padding: small ? \"4px 10px\" : \"6px 14px\", bor...",
       "label": "(icon or dynamic label)",
-      "line": 18,
+      "line": 16,
       "tabs": [
         "key_analytics"
       ],
@@ -21429,7 +21437,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "handleExport",
       "label": "Export JSON",
-      "line": 66,
+      "line": 64,
       "tabs": [
         "key_analytics"
       ],
@@ -21439,7 +21447,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "load",
       "label": "(icon or dynamic label)",
-      "line": 67,
+      "line": 65,
       "tabs": [
         "key_analytics"
       ],
@@ -21449,7 +21457,7 @@
       "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
       "handler": "",
       "label": "setView(id)} style={{ padding: \"8px 16px\", border: \"none\", background: \"trans...",
-      "line": 73,
+      "line": 71,
       "tabs": [
         "key_analytics"
       ],
@@ -22361,7 +22369,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
-      "line": 518,
+      "line": 516,
       "tabs": [
         "posture"
       ],
@@ -22371,7 +22379,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "runScan} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 519,
+      "line": 517,
       "tabs": [
         "posture"
       ],
@@ -22381,7 +22389,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 905,
+      "line": 922,
       "tabs": [
         "posture"
       ],
@@ -22391,7 +22399,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1141,
+      "line": 1175,
       "tabs": [
         "posture"
       ],
@@ -22401,7 +22409,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1142,
+      "line": 1176,
       "tabs": [
         "posture"
       ],
@@ -22411,7 +22419,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1143,
+      "line": 1177,
       "tabs": [
         "posture"
       ],
@@ -22421,7 +22429,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1144,
+      "line": 1178,
       "tabs": [
         "posture"
       ],
@@ -22431,7 +22439,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1235,
+      "line": 1269,
       "tabs": [
         "posture"
       ],
@@ -22441,7 +22449,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1237,
+      "line": 1271,
       "tabs": [
         "posture"
       ],
@@ -30184,7 +30192,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 161,
+      "line": 163,
       "match_key": "reporting|GET|/alerts",
       "method": "GET",
       "normalized_path": "/alerts",
@@ -30197,7 +30205,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 169,
+      "line": 185,
       "match_key": "reporting|GET|/alerts/unread",
       "method": "GET",
       "normalized_path": "/alerts/unread",
@@ -30210,7 +30218,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 178,
+      "line": 194,
       "match_key": "reporting|GET|/alerts/stats",
       "method": "GET",
       "normalized_path": "/alerts/stats",
@@ -30223,7 +30231,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 189,
+      "line": 205,
       "match_key": "reporting|GET|/alerts/stats/mttr",
       "method": "GET",
       "normalized_path": "/alerts/stats/mttr",
@@ -30236,7 +30244,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 194,
+      "line": 210,
       "match_key": "reporting|GET|/alerts/stats/mttd",
       "method": "GET",
       "normalized_path": "/alerts/stats/mttd",
@@ -30249,7 +30257,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 201,
+      "line": 217,
       "match_key": "reporting|GET|/alerts/channels",
       "method": "GET",
       "normalized_path": "/alerts/channels",
@@ -30262,7 +30270,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 206,
+      "line": 222,
       "match_key": "reporting|GET|/alerts/rules",
       "method": "GET",
       "normalized_path": "/alerts/rules",
@@ -30275,7 +30283,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 230,
+      "line": 246,
       "match_key": "reporting|POST|/alerts/rules/test",
       "method": "POST",
       "normalized_path": "/alerts/rules/test",
@@ -30288,7 +30296,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 238,
+      "line": 254,
       "match_key": "reporting|POST|/alerts/rules",
       "method": "POST",
       "normalized_path": "/alerts/rules",
@@ -30301,7 +30309,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 249,
+      "line": 265,
       "match_key": "reporting|PUT|/alerts/rules/{param}",
       "method": "PUT",
       "normalized_path": "/alerts/rules/{param}",
@@ -30314,7 +30322,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 256,
+      "line": 272,
       "match_key": "reporting|DELETE|/alerts/rules/{param}",
       "method": "DELETE",
       "normalized_path": "/alerts/rules/{param}",
@@ -30327,7 +30335,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 263,
+      "line": 279,
       "match_key": "reporting|PUT|/alerts/{param}/acknowledge",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/acknowledge",
@@ -30340,7 +30348,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 289,
+      "line": 305,
       "match_key": "reporting|POST|/alerts/bulk/acknowledge",
       "method": "POST",
       "normalized_path": "/alerts/bulk/acknowledge",
@@ -30353,7 +30361,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/escalate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 302,
+      "line": 318,
       "match_key": "reporting|PUT|/alerts/{param}/escalate",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/escalate",
@@ -30366,7 +30374,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 317,
+      "line": 333,
       "match_key": "reporting|GET|/alerts/stats/top-sources",
       "method": "GET",
       "normalized_path": "/alerts/stats/top-sources",
@@ -30379,7 +30387,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 330,
+      "line": 346,
       "match_key": "reporting|GET|/reports/templates",
       "method": "GET",
       "normalized_path": "/reports/templates",
@@ -30392,7 +30400,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 343,
+      "line": 359,
       "match_key": "reporting|POST|/reports/generate",
       "method": "POST",
       "normalized_path": "/reports/generate",
@@ -30405,7 +30413,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 358,
+      "line": 374,
       "match_key": "reporting|GET|/reports/jobs/{param}",
       "method": "GET",
       "normalized_path": "/reports/jobs/{param}",
@@ -30418,7 +30426,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 370,
+      "line": 386,
       "match_key": "reporting|GET|/reports/jobs",
       "method": "GET",
       "normalized_path": "/reports/jobs",
@@ -30431,7 +30439,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 388,
+      "line": 404,
       "match_key": "reporting|GET|/reports/jobs/{param}/download",
       "method": "GET",
       "normalized_path": "/reports/jobs/{param}/download",
@@ -30444,7 +30452,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 404,
+      "line": 420,
       "match_key": "reporting|DELETE|/reports/jobs/{param}",
       "method": "DELETE",
       "normalized_path": "/reports/jobs/{param}",
@@ -30457,7 +30465,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 410,
+      "line": 426,
       "match_key": "reporting|GET|/reports/scheduled",
       "method": "GET",
       "normalized_path": "/reports/scheduled",
@@ -30470,7 +30478,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 424,
+      "line": 440,
       "match_key": "reporting|POST|/reports/scheduled",
       "method": "POST",
       "normalized_path": "/reports/scheduled",
@@ -31325,7 +31333,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T15:52:55Z",
+  "generated_at": "2026-09-30T16:08:17Z",
   "navigation": [
     {
       "group": "Overview",
@@ -77154,7 +77162,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 161,
+          "line": 163,
           "source": "serviceRequest"
         }
       ],
@@ -77251,7 +77259,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 169,
+          "line": 185,
           "source": "serviceRequest"
         }
       ],
@@ -77449,7 +77457,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 289,
+          "line": 305,
           "source": "serviceRequest"
         }
       ],
@@ -77757,7 +77765,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 206,
+          "line": 222,
           "source": "serviceRequest"
         }
       ],
@@ -77809,7 +77817,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 238,
+          "line": 254,
           "source": "serviceRequest"
         }
       ],
@@ -77881,7 +77889,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 249,
+          "line": 265,
           "source": "serviceRequest"
         }
       ],
@@ -77951,7 +77959,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 230,
+          "line": 246,
           "source": "serviceRequest"
         }
       ],
@@ -78012,7 +78020,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 256,
+          "line": 272,
           "source": "serviceRequest"
         }
       ],
@@ -78180,7 +78188,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 201,
+          "line": 217,
           "source": "serviceRequest"
         }
       ],
@@ -78283,7 +78291,7 @@
         {
           "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 330,
+          "line": 346,
           "source": "serviceRequest"
         }
       ],
@@ -78330,7 +78338,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 343,
+          "line": 359,
           "source": "serviceRequest"
         }
       ],
@@ -78378,7 +78386,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 370,
+          "line": 386,
           "source": "serviceRequest"
         }
       ],
@@ -78431,7 +78439,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 358,
+          "line": 374,
           "source": "serviceRequest"
         }
       ],
@@ -78483,7 +78491,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 388,
+          "line": 404,
           "source": "serviceRequest"
         }
       ],
@@ -78536,7 +78544,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 404,
+          "line": 420,
           "source": "serviceRequest"
         }
       ],
@@ -78600,7 +78608,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 410,
+          "line": 426,
           "source": "serviceRequest"
         }
       ],
@@ -78652,7 +78660,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 424,
+          "line": 440,
           "source": "serviceRequest"
         }
       ],
@@ -78834,7 +78842,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 178,
+          "line": 194,
           "source": "serviceRequest"
         }
       ],
@@ -78868,7 +78876,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1199,
+          "line": 1208,
           "name": "AlertStats",
           "receiver_calls": [],
           "store_calls": []
@@ -78882,7 +78890,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 194,
+          "line": 210,
           "source": "serviceRequest"
         }
       ],
@@ -78920,7 +78928,7 @@
             "computeMTTDStats"
           ],
           "internal_package_calls": [],
-          "line": 1293,
+          "line": 1302,
           "name": "MTTDStats",
           "receiver_calls": [],
           "store_calls": []
@@ -78934,7 +78942,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 189,
+          "line": 205,
           "source": "serviceRequest"
         }
       ],
@@ -78974,7 +78982,7 @@
             "normalizeSeverity"
           ],
           "internal_package_calls": [],
-          "line": 1225,
+          "line": 1234,
           "name": "MTTRStats",
           "receiver_calls": [],
           "store_calls": [
@@ -78992,7 +79000,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 317,
+          "line": 333,
           "source": "serviceRequest"
         }
       ],
@@ -79026,7 +79034,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1297,
+          "line": 1306,
           "name": "TopSources",
           "receiver_calls": [],
           "store_calls": []
@@ -84502,7 +84510,7 @@
   "summary": {
     "backend_routes": 843,
     "backend_services": 28,
-    "button_inventory": 717,
+    "button_inventory": 718,
     "frontend_call_sites": 525,
     "matched_frontend_call_sites": 483,
     "nav_items": 28,
@@ -85514,7 +85522,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 263,
+      "line": 279,
       "match_key": "reporting|PUT|/alerts/{param}/acknowledge",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/acknowledge",
@@ -85527,7 +85535,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/escalate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 302,
+      "line": 318,
       "match_key": "reporting|PUT|/alerts/{param}/escalate",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/escalate",
@@ -110259,7 +110267,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 161,
+            "line": 163,
             "source": "serviceRequest"
           }
         ],
@@ -110324,7 +110332,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 169,
+            "line": 185,
             "source": "serviceRequest"
           }
         ],
@@ -110420,7 +110428,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 289,
+            "line": 305,
             "source": "serviceRequest"
           }
         ],
@@ -110597,7 +110605,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 206,
+            "line": 222,
             "source": "serviceRequest"
           }
         ],
@@ -110636,7 +110644,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 238,
+            "line": 254,
             "source": "serviceRequest"
           }
         ],
@@ -110675,7 +110683,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 249,
+            "line": 265,
             "source": "serviceRequest"
           }
         ],
@@ -110711,7 +110719,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 230,
+            "line": 246,
             "source": "serviceRequest"
           }
         ],
@@ -110745,7 +110753,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 256,
+            "line": 272,
             "source": "serviceRequest"
           }
         ],
@@ -110841,7 +110849,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 201,
+            "line": 217,
             "source": "serviceRequest"
           }
         ],
@@ -110902,7 +110910,7 @@
           {
             "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 330,
+            "line": 346,
             "source": "serviceRequest"
           }
         ],
@@ -110936,7 +110944,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 343,
+            "line": 359,
             "source": "serviceRequest"
           }
         ],
@@ -110970,7 +110978,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 370,
+            "line": 386,
             "source": "serviceRequest"
           }
         ],
@@ -111006,7 +111014,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 358,
+            "line": 374,
             "source": "serviceRequest"
           }
         ],
@@ -111042,7 +111050,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 388,
+            "line": 404,
             "source": "serviceRequest"
           }
         ],
@@ -111080,7 +111088,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 404,
+            "line": 420,
             "source": "serviceRequest"
           }
         ],
@@ -111117,7 +111125,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 410,
+            "line": 426,
             "source": "serviceRequest"
           }
         ],
@@ -111153,7 +111161,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 424,
+            "line": 440,
             "source": "serviceRequest"
           }
         ],
@@ -111255,7 +111263,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 178,
+            "line": 194,
             "source": "serviceRequest"
           }
         ],
@@ -111289,7 +111297,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 194,
+            "line": 210,
             "source": "serviceRequest"
           }
         ],
@@ -111323,7 +111331,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 189,
+            "line": 205,
             "source": "serviceRequest"
           }
         ],
@@ -111359,7 +111367,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 317,
+            "line": 333,
             "source": "serviceRequest"
           }
         ],
@@ -114565,7 +114573,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T15:52:55Z",
+    "generatedAt": "2026-09-30T16:08:17Z",
     "methods": [
       "DELETE",
       "GET",

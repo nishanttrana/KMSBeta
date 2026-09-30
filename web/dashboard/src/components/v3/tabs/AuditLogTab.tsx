@@ -18,6 +18,7 @@ import {
   type AuditCheckpoint,
   type ChainVerifyResult
 } from "../../../lib/audit";
+import { AuditAnalyticsPanel } from "./AuditAnalyticsPanel";
 
 /* ── constants ── */
 
@@ -718,9 +719,10 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   return (
     <div>
       <IntegrityBar />
-      <Tabs tabs={["Events", "Forensics", "Checkpoints"]} active={subTab} onChange={setSubTab} />
+      <Tabs tabs={["Events", "Activity", "Forensics", "Checkpoints"]} active={subTab} onChange={setSubTab} />
 
       {subTab === "Events" && renderEvents()}
+      {subTab === "Activity" && <AuditAnalyticsPanel session={session} onOpenEvent={setSelectedEvent} />}
       {subTab === "Forensics" && renderForensics()}
       {subTab === "Checkpoints" && <CheckpointsSection session={session} />}
 
@@ -729,8 +731,8 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       {/* audit integration note */}
       <div style={{ marginTop: 16, padding: "8px 12px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 9, color: C.muted }}>
         Every service publishes to the single audit stream. Events are hash-chained (SHA-256), HMAC-signed, covered
-        by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Overview → Analytics →
-        Audit activity; alerts raised from these events are triaged in the Alert Center.
+        by signed checkpoints (ECDSA-P384) and stored append-only; a fail-closed WAL covers outages. Charts are under Activity, where
+        clicking a chart lists the events it counts; alerts raised from these events are triaged in the Alert Center.
       </div>
     </div>
   );

@@ -33,32 +33,62 @@ Complete endpoint reference for all 27 Vecta KMS services.
 
 ## Conventions
 
-**Base URL**: `http://{host}` — use `https://localhost` for local dev
+Checked against the code in 7.15.0-beta.
 
-**All API paths**: `http://{host}/svc/{service}/{path}`
+**Base URL**: `https://{host}`. Everything is TLS; there is no plain-HTTP
+listener. For a local install, pass the internal root CA
+(PKI tab) with `--cacert` instead of `-k`.
 
-**Authentication**: Include on all requests except noted:
-```
-Authorization: Bearer {token}
-X-Tenant-ID: {tenantId}
-Content-Type: application/json
-```
+**All API paths**: `https://{host}/svc/{service}/{path}`. Envoy strips
+`/svc/{service}`, so the service sees `/{path}` (for example
+`/svc/keycore/keys/{id}/rotate` reaches keycore as `/keys/{id}/rotate`).
 
-**Token**: JWT from `POST /svc/auth/auth/login`. Contains claims: `sub` (user ID), `tid` (tenant ID), `roles` (array), `exp`, `iat`.
+**Authentication**: `Authorization: Bearer {token}` on every call except
+the public ones noted (login, client registration, client-token, SSO).
+The token is a JWT from `POST /svc/auth/auth/login` (users) or
+`POST /svc/auth/auth/client-token` (REST clients,
+[CI_CD_AUTOMATION.md](CI_CD_AUTOMATION.md)). Its claims include
+`tenant_id`, `role`, `permissions[]`, `user_id` (users) or `client_id`
+(clients), `exp`, `iat`.
 
-**Pagination**: Cursor-based on all list endpoints. Request: `pageSize` (max 100, default 20), `pageToken`. Response: `{"items": [...], "nextPageToken": "...", "totalCount": 1234}`
+**Tenant**: the token's `tenant_id` is the tenant. A request may also name
+it (`X-Tenant-ID` header, `tenant_id` query or body field). Some older
+routes require it (for example `GET /svc/keycore/keys?tenant_id=...`). A
+named tenant that differs from the token's is refused
+(`403`, `tenant_mismatch`, audited).
 
-**Idempotency**: POST requests accept `X-Idempotency-Key: {uuid}` header to safely retry.
+**Field names** are `snake_case` in requests and responses.
 
-**Error Response**:
+**Lists** return `{"items": [...], "request_id": "..."}`. Where a list
+pages, it says so in its section (for example keycore keys: `limit` and
+`offset`, or the `after_created_at` + `after_id` cursor, returning
+`next_cursor` and `has_more`). There is no platform-wide `pageToken`.
+
+**Idempotency**: no `X-Idempotency-Key` support. Don't blindly retry a
+non-idempotent POST (key create, rotate) on a timeout: check state first.
+
+**Error response**:
 ```json
-{
-  "code": "KEY_NOT_FOUND",
-  "message": "Key abc123 not found in tenant root",
-  "details": {"keyId": "abc123"},
-  "requestId": "req-01ARZ3NDEKTSV4RRFFQ69G5FAV"
-}
+{"error": {"code": "not_found", "message": "key not found", "request_id": "req_...", "tenant_id": "acme"}}
 ```
+
+`code` is lowercase snake_case and route-specific. The common ones:
+
+| HTTP | Typical `code` | Meaning |
+|------|---------|---------|
+| 400 | `bad_request` | Validation failed |
+| 401 | `unauthorized` | Missing, invalid or expired token |
+| 403 | `forbidden`, `permission_denied`, `tenant_mismatch` | Not allowed (every refusal is audited) |
+| 404 | `not_found` | Resource does not exist |
+| 409 | route-specific (e.g. `feature_preview`, `algorithm_change_refused`) | State conflict |
+| 429 | `RATE_LIMITED` | Tenant rate limit exceeded (keycore) |
+| 500 | `store_error`, `internal_error` | Server error |
+| 503 | `event_publish_failed` | The audit event could not be recorded, so the operation did not complete |
+
+**Rate limiting**: keycore limits requests per tenant. A limited request gets
+`429` with `Retry-After`. There are no `X-RateLimit-*` headers.
+
+**Timestamps**: RFC 3339 UTC, for example `2026-09-30T14:22:00Z`.
 
 **Preview features** ([PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): responses
 from features that store configuration without enforcing it carry
@@ -66,30 +96,6 @@ from features that store configuration without enforcing it carry
 (keycore control records also include `feature_status` / `feature_id`).
 Operations such a feature cannot perform return `409 feature_preview`.
 
-**Common Error Codes**:
-| HTTP | Code | Meaning |
-|------|------|---------|
-| 400 | INVALID_REQUEST | Validation failed |
-| 401 | UNAUTHENTICATED | Missing/invalid token |
-| 403 | UNAUTHORIZED | Insufficient permissions |
-| 404 | NOT_FOUND | Resource does not exist |
-| 409 | CONFLICT | State conflict or duplicate |
-| 422 | UNPROCESSABLE | Semantic validation failed |
-| 429 | RATE_LIMITED | Rate limit exceeded |
-| 500 | INTERNAL_ERROR | Server error |
-| 503 | SERVICE_UNAVAILABLE | Dependency unavailable |
-
-**Rate Limiting**: Response headers when rate limited:
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 0
-X-RateLimit-Reset: 1735689600
-Retry-After: 60
-```
-
-**Binary data**: All keys, signatures, ciphertext are base64url-encoded (no padding)
-
-**Timestamps**: ISO-8601 UTC: `2025-03-15T14:22:00.000Z`
 
 ---
 
@@ -2087,9 +2093,14 @@ query parameter and `X-Actor-ID` header are ignored).
 
 ### GET /svc/reporting/alerts
 
-Query: `ruleId`, `severity`, `acknowledged`, `startTime`, `endTime`. Response: paginated Alert[].
+Query: `severity`, `status`, `action`, `target_type`, `target_id`, `from`,
+`to` (RFC 3339), `limit` (default 100, at most 500 per page), `offset`.
+Response: `{"items": Alert[]}`, newest first.
 
-Alert: id, ruleId, severity, triggeredAt, summary, acknowledged, acknowledgedBy, acknowledgedAt
+Alert: `id`, `audit_event_id`, `audit_action`, `severity`, `category`,
+`title`, `description`, `service`, `actor_id`, `target_type`, `target_id`,
+`source_ip`, `status`, `acknowledged_by`, `acknowledged_at`, `resolved_by`,
+`resolved_at` (year 1 when unset), `dedup_count`, `created_at`, `updated_at`.
 
 ---
 
@@ -2102,21 +2113,31 @@ Alert: id, ruleId, severity, triggeredAt, summary, acknowledged, acknowledgedBy,
 
 ---
 
+### GET /svc/reporting/alerts/stats
+
+Counts over the newest 5000 alerts (7.15.0-beta; before that the store
+silently cut every statistic to the newest 100). Response:
+`{"stats": {"total", "by_severity", "by_status", "top_actions", "daily_trend" (UTC date → count), "generated_at"}}`.
+
+---
+
 ### GET /svc/reporting/alerts/stats/mttd
 
-Mean time to detect by severity. Response: `{"critical": 4.2, "high": 12.7, "medium": 48.3, "unit": "minutes"}`
+Mean minutes from the linked audit event to the alert, by severity, over the
+same 5000 alerts. Response: `{"mttd_minutes": {"critical": 4.2, ...}}`
 
 ---
 
 ### GET /svc/reporting/alerts/stats/mttr
 
-Mean time to resolve by severity.
+Mean minutes from creation to resolution, by severity, over resolved alerts
+among the same 5000. Response: `{"mttr_minutes": {...}}`
 
 ---
 
 ### GET /svc/reporting/alerts/stats/top-sources
 
-Top actors, IPs, and services driving alerts. Response: `{"topActors": [...], "topIps": [...], "topServices": [...]}`
+Top ten actors, source IPs and services among the same 5000 alerts. Response: `{"top_actors": [{"key", "count"}], "top_ips": [...], "top_services": [...]}`
 
 ---
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -230,5 +231,35 @@ func TestStoreErrorTelemetryOps(t *testing.T) {
 	}
 	if affected != 1 {
 		t.Fatalf("expected 1 purged row got %d", affected)
+	}
+}
+
+// The statistics read up to alertScanLimit alerts. The store once clamped any
+// limit over 1000 back to 100, so every chart counted only the newest 100.
+func TestAlertStatsCountBeyondOneHundred(t *testing.T) {
+	svc, store, _, _, _, _ := newReportingService(t)
+	ctx := context.Background()
+	for i := 0; i < 150; i++ {
+		if err := store.CreateAlert(ctx, Alert{
+			ID: fmt.Sprintf("a%03d", i), TenantID: "t-many", AuditEventID: fmt.Sprintf("ev%03d", i),
+			AuditAction: "key.created", Severity: severityHigh, Title: "Key Created", Status: "new", DedupCount: 1,
+			ActorID: "alice",
+		}); err != nil {
+			t.Fatalf("create alert: %v", err)
+		}
+	}
+	stats, err := svc.AlertStats(ctx, "t-many")
+	if err != nil {
+		t.Fatalf("stats: %v", err)
+	}
+	if stats["total"] != 150 {
+		t.Fatalf("total = %v, want 150", stats["total"])
+	}
+	top, err := svc.TopSources(ctx, "t-many")
+	if err != nil {
+		t.Fatalf("top sources: %v", err)
+	}
+	if actors, _ := top["actors"].([]kv); len(actors) != 1 || actors[0].Count != 150 {
+		t.Fatalf("top actors = %v, want alice:150", top["actors"])
 	}
 }

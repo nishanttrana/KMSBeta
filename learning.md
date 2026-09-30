@@ -5,6 +5,30 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Charts must drill into the entries they count, and a server clamp had hidden most alerts
+- **What happened:** the owner asked that clicking any graph or bar show the
+  entries behind it, and that each chart live beside its entries (audit
+  charts in the Audit Log, alert charts in the Alert Center). Building the
+  alert drill-down meant listing the same alerts the statistics count. That
+  exposed a bug: `AlertStats`, `MTTRStats`, `MTTDStats` and `TopSources`
+  asked the store for 5000 alerts, but `SQLStore.ListAlerts` reset any limit
+  over 1000 to 100. Every alert chart, the MTTR figure and the report
+  summaries counted only the newest 100 alerts, while the UI called the
+  result the total.
+- **How it slipped through:** the clamp belonged to the HTTP page size but
+  lived in the store, which every internal caller shares. Nothing ever
+  compared a statistic with the rows behind it, and test data never had more
+  than 100 alerts. A chart you can't click into can be wrong silently.
+- **Rule:** every chart segment is clickable and lists exactly the entries
+  it counts, through one predicate shared by the chart and the drill-down
+  (`components/v3/chartDrill.tsx`). When a chart comes from a server
+  aggregate, the drill-down reads the same set the aggregate reads, so a
+  mismatch shows up on screen. Page limits belong to the HTTP handler, not
+  the store. `TestAlertStatsCountBeyondOneHundred` covers the clamp.
+- **Test trap:** Playwright clicks the centre of an element's bounding box,
+  and for a donut slice that is the hole, so the SVG takes the click.
+  Dispatch the click on `.recharts-pie-sector path` instead.
+
 ### Fake removed: the DevSecOps / IaC tab advertised a Terraform provider, SDKs and a sidecar that never existed
 - **What happened:** the tab was about 1,000 lines of hard-coded snippets
   with no API calls. It showed install commands for four SDKs and a

@@ -41,6 +41,7 @@ import {
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Chk, Inp, Modal, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { clickable, clickedIndex, DrillHint, DrillPanel, type Drill } from "../chartDrill";
 import {
   executePostureAction,
   getPostureDashboard,
@@ -145,6 +146,18 @@ function slaBadge(slaDueAt: any) {
   return { label: "On track", tone: "green" };
 }
 
+// Buckets shared by the findings charts and their drill-downs, so a clicked
+// segment lists exactly the findings it counts.
+const findingSeverityBucket = (f: any): "critical" | "high" | "warning" | "info" => {
+  const s = String(f?.severity || "").toLowerCase();
+  return s === "critical" ? "critical" : s === "high" ? "high" : s === "warning" || s === "medium" ? "warning" : "info";
+};
+const findingRiskBucket = (f: any) => { const score = toNum(f?.risk_score); return score <= 20 ? 0 : score <= 40 ? 1 : score <= 60 ? 2 : score <= 80 ? 3 : 4; };
+const findingStatusBucket = (f: any): "open" | "acknowledged" | "resolved" | "reopened" => {
+  const s = String(f?.status || "").toLowerCase();
+  return s === "acknowledged" || s === "resolved" || s === "reopened" ? s : "open";
+};
+
 // ── Chart Tooltips ──────────────────────────────────────────────
 
 const ChartTooltip = ({ containerStyle, children }: any) => (
@@ -195,6 +208,9 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [mode, setMode] = useState("Executive");
   const [selectedFinding, setSelectedFinding] = useState<any>(null);
   const [selectedAction, setSelectedAction] = useState<any>(null);
+  // Chart drill-down: findings a clicked segment counts, or one risk snapshot.
+  const [drill, setDrill] = useState<Drill<any> | null>(null);
+  const [snapshot, setSnapshot] = useState<any>(null);
 
   // ── Data loading ──────────────────────────────────────────────
 
@@ -411,21 +427,17 @@ export const PostureTab = ({ session, onToast }: any) => {
 
   const trendData = useMemo(() => {
     const items = Array.isArray(history) ? history.slice(0, 60).reverse() : [];
-    return items.map((entry: any) => ({ name: shortTS(entry?.captured_at), risk: Math.max(0, Math.min(100, toNum(entry?.risk_24h))) }));
+    return items.map((entry: any) => ({ name: shortTS(entry?.captured_at), risk: Math.max(0, Math.min(100, toNum(entry?.risk_24h))), entry }));
   }, [history]);
+  const drillRows = useMemo(() => drill ? (Array.isArray(findings) ? findings : []).filter(drill.match) : [], [drill, findings]);
+  const drillEngine = (engine: string) => setDrill({ label: `Engine: ${engine}`, match: (f) => String(f?.engine || "").toLowerCase() === engine });
 
   const domainBarData = useMemo(() => domainMetrics.map((d: any) => ({ name: d.label, Events: d.events, Failures: d.failures })), [domainMetrics]);
 
   const severityDonut = useMemo(() => {
     const rows = Array.isArray(findings) ? findings : [];
     const counts = { critical: 0, high: 0, warning: 0, info: 0 };
-    rows.forEach((f: any) => {
-      const s = String(f?.severity || "").toLowerCase();
-      if (s === "critical") counts.critical++;
-      else if (s === "high") counts.high++;
-      else if (s === "warning" || s === "medium") counts.warning++;
-      else counts.info++;
-    });
+    rows.forEach((f: any) => { counts[findingSeverityBucket(f)]++; });
     return [
       { name: "Critical", value: counts.critical, fill: C.red },
       { name: "High", value: counts.high, fill: C.amber },
@@ -443,28 +455,14 @@ export const PostureTab = ({ session, onToast }: any) => {
       { name: "61-80", count: 0, fill: C.amber },
       { name: "81-100", count: 0, fill: C.red }
     ];
-    rows.forEach((f: any) => {
-      const score = toNum(f?.risk_score);
-      if (score <= 20) buckets[0].count++;
-      else if (score <= 40) buckets[1].count++;
-      else if (score <= 60) buckets[2].count++;
-      else if (score <= 80) buckets[3].count++;
-      else buckets[4].count++;
-    });
+    rows.forEach((f: any) => { buckets[findingRiskBucket(f)].count++; });
     return buckets;
   }, [findings]);
 
   const statusCounts = useMemo(() => {
     const rows = Array.isArray(findings) ? findings : [];
     const counts = { open: 0, acknowledged: 0, resolved: 0, reopened: 0 };
-    rows.forEach((f: any) => {
-      const s = String(f?.status || "").toLowerCase();
-      if (s === "open") counts.open++;
-      else if (s === "acknowledged") counts.acknowledged++;
-      else if (s === "resolved") counts.resolved++;
-      else if (s === "reopened") counts.reopened++;
-      else counts.open++;
-    });
+    rows.forEach((f: any) => { counts[findingStatusBucket(f)]++; });
     return counts;
   }, [findings]);
   const statusTotal = statusCounts.open + statusCounts.acknowledged + statusCounts.resolved + statusCounts.reopened;
@@ -762,6 +760,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         </div>
       </div>}
 
+      <DrillHint />
       {/* Row 1: Risk Gauge + Engine Radar + Severity Donut */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {/* Risk Gauge */}
@@ -771,7 +770,7 @@ export const PostureTab = ({ session, onToast }: any) => {
             <B c={riskTone24}>{`${risk24}/100`}</B>
           </div>
           <ResponsiveContainer width="100%" height={140}>
-            <RadialBarChart cx="50%" cy="50%" innerRadius="40%" outerRadius="90%" startAngle={210} endAngle={-30} data={gaugeData} barSize={10}>
+            <RadialBarChart cx="50%" cy="50%" innerRadius="40%" outerRadius="90%" startAngle={210} endAngle={-30} data={gaugeData} barSize={10} style={clickable} onClick={() => setSnapshot(risk)}>
               <RadialBar dataKey="value" cornerRadius={5} background={{ fill: C.border }} />
             </RadialBarChart>
           </ResponsiveContainer>
@@ -789,7 +788,8 @@ export const PostureTab = ({ session, onToast }: any) => {
             <B c="blue">Live</B>
           </div>
           <ResponsiveContainer width="100%" height={160}>
-            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%" style={clickable}
+              onClick={(st) => { const p = radarData[clickedIndex(st)]; if (p) drillEngine(p.axis.toLowerCase()); }}>
               <PolarGrid stroke={C.border} />
               <PolarAngleAxis dataKey="axis" tick={{ fill: C.dim, fontSize: 10 }} />
               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 8 }} tickCount={4} />
@@ -797,9 +797,9 @@ export const PostureTab = ({ session, onToast }: any) => {
             </RadarChart>
           </ResponsiveContainer>
           <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 2 }}>
-            <div style={{ fontSize: 9, color: C.muted }}>Predictive: <span style={{ color: C.blue, fontWeight: 700 }}>{pred}</span></div>
-            <div style={{ fontSize: 9, color: C.muted }}>Preventive: <span style={{ color: C.amber, fontWeight: 700 }}>{prev}</span></div>
-            <div style={{ fontSize: 9, color: C.muted }}>Corrective: <span style={{ color: C.green, fontWeight: 700 }}>{corr}</span></div>
+            <div onClick={() => drillEngine("predictive")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Predictive: <span style={{ color: C.blue, fontWeight: 700 }}>{pred}</span></div>
+            <div onClick={() => drillEngine("preventive")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Preventive: <span style={{ color: C.amber, fontWeight: 700 }}>{prev}</span></div>
+            <div onClick={() => drillEngine("corrective")} style={{ fontSize: 9, color: C.muted, ...clickable }}>Corrective: <span style={{ color: C.green, fontWeight: 700 }}>{corr}</span></div>
           </div>
         </Card>
 
@@ -811,8 +811,9 @@ export const PostureTab = ({ session, onToast }: any) => {
           </div>
           {severityDonut.length > 0 ? <ResponsiveContainer width="100%" height={160}>
             <PieChart>
-              <Pie data={severityDonut} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                {severityDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+              <Pie data={severityDonut} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" strokeWidth={0}
+                onClick={(d) => { const name = String(d?.payload?.name || ""); setDrill({ label: `Severity: ${name}`, match: (f) => findingSeverityBucket(f) === name.toLowerCase() }); }}>
+                {severityDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} style={clickable} />)}
               </Pie>
               <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTooltip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}</ChartTooltip> : null} />
               <Legend verticalAlign="bottom" height={28} iconType="circle" iconSize={8} formatter={(value) => <span style={{ color: C.dim, fontSize: 9 }}>{value}</span>} />
@@ -829,7 +830,7 @@ export const PostureTab = ({ session, onToast }: any) => {
             <B c="blue">{trendData.length ? `${trendData[trendData.length - 1]?.risk || 0} latest` : "No history"}</B>
           </div>
           {trendData.length > 0 ? <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={trendData}>
+            <AreaChart data={trendData} style={clickable} onClick={(st) => { const p = trendData[clickedIndex(st)]; if (p) setSnapshot(p.entry); }}>
               <defs><linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.accent} stopOpacity={0.25} /><stop offset="95%" stopColor={C.accent} stopOpacity={0} /></linearGradient></defs>
               <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
               <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
@@ -849,7 +850,10 @@ export const PostureTab = ({ session, onToast }: any) => {
               <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 9 }} axisLine={{ stroke: C.border }} tickLine={false} />
               <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
               <Tooltip content={HistogramTooltip} cursor={{ fill: C.accentDim }} />
-              <RBar dataKey="count" radius={[4, 4, 0, 0]}>{riskHistogram.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}</RBar>
+              <RBar dataKey="count" radius={[4, 4, 0, 0]} style={clickable}
+                onClick={(_, i) => setDrill({ label: `Risk score ${riskHistogram[i]?.name}`, match: (f) => findingRiskBucket(f) === i })}>
+                {riskHistogram.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+              </RBar>
             </BarChart>
           </ResponsiveContainer> : <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No findings data</span></div>}
         </Card>
@@ -862,17 +866,30 @@ export const PostureTab = ({ session, onToast }: any) => {
           <span style={{ fontSize: 9, color: C.muted }}>{statusTotal} total</span>
         </div>
         <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}` }}>
-          {statusCounts.resolved > 0 && <div style={{ width: `${(statusCounts.resolved / statusTotal) * 100}%`, background: C.green, transition: "width .4s" }} title={`Resolved: ${statusCounts.resolved}`} />}
-          {statusCounts.acknowledged > 0 && <div style={{ width: `${(statusCounts.acknowledged / statusTotal) * 100}%`, background: C.blue, transition: "width .4s" }} title={`Acknowledged: ${statusCounts.acknowledged}`} />}
-          {statusCounts.open > 0 && <div style={{ width: `${(statusCounts.open / statusTotal) * 100}%`, background: C.amber, transition: "width .4s" }} title={`Open: ${statusCounts.open}`} />}
-          {statusCounts.reopened > 0 && <div style={{ width: `${(statusCounts.reopened / statusTotal) * 100}%`, background: C.red, transition: "width .4s" }} title={`Reopened: ${statusCounts.reopened}`} />}
+          {statusCounts.resolved > 0 && <div style={{ width: `${(statusCounts.resolved / statusTotal) * 100}%`, background: C.green, transition: "width .4s", ...clickable }} title={`Resolved: ${statusCounts.resolved}`} onClick={() => setDrill({ label: "Status: resolved", match: (f) => findingStatusBucket(f) === "resolved" })} />}
+          {statusCounts.acknowledged > 0 && <div style={{ width: `${(statusCounts.acknowledged / statusTotal) * 100}%`, background: C.blue, transition: "width .4s", ...clickable }} title={`Acknowledged: ${statusCounts.acknowledged}`} onClick={() => setDrill({ label: "Status: acknowledged", match: (f) => findingStatusBucket(f) === "acknowledged" })} />}
+          {statusCounts.open > 0 && <div style={{ width: `${(statusCounts.open / statusTotal) * 100}%`, background: C.amber, transition: "width .4s", ...clickable }} title={`Open: ${statusCounts.open}`} onClick={() => setDrill({ label: "Status: open", match: (f) => findingStatusBucket(f) === "open" })} />}
+          {statusCounts.reopened > 0 && <div style={{ width: `${(statusCounts.reopened / statusTotal) * 100}%`, background: C.red, transition: "width .4s", ...clickable }} title={`Reopened: ${statusCounts.reopened}`} onClick={() => setDrill({ label: "Status: reopened", match: (f) => findingStatusBucket(f) === "reopened" })} />}
         </div>
         <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
-          {[{ label: "Resolved", color: C.green, count: statusCounts.resolved }, { label: "Acknowledged", color: C.blue, count: statusCounts.acknowledged }, { label: "Open", color: C.amber, count: statusCounts.open }, { label: "Reopened", color: C.red, count: statusCounts.reopened }].map((s) => <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+          {[{ label: "Resolved", color: C.green, count: statusCounts.resolved }, { label: "Acknowledged", color: C.blue, count: statusCounts.acknowledged }, { label: "Open", color: C.amber, count: statusCounts.open }, { label: "Reopened", color: C.red, count: statusCounts.reopened }].map((s) => <div key={s.label} onClick={() => setDrill({ label: `Status: ${s.label.toLowerCase()}`, match: (f) => findingStatusBucket(f) === s.label.toLowerCase() })} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim, ...clickable }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color }} />{s.label} ({s.count})
           </div>)}
         </div>
       </Card>}
+
+      {drill && <DrillPanel label={drill.label} count={drillRows.length} onClear={() => setDrill(null)}>
+        {drillRows.map((item: any) => (
+          <div key={String(item.id)} onClick={() => setSelectedFinding(item)} style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 80px 60px 1fr", gap: 8, padding: "7px 0", borderBottom: `1px solid ${C.border}`, fontSize: 11, alignItems: "center", ...clickable }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = C.cardHover)} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <span style={{ fontWeight: 600, color: C.text }}>{String(item?.title || item?.finding_type || "-")}</span>
+            <span style={{ color: C.dim, fontSize: 10 }}>{String(item?.engine || "-")}</span>
+            <span><B c={severityTone(String(item?.severity || ""))}>{String(item?.severity || "-")}</B></span>
+            <span style={{ color: C.text, fontWeight: 700 }}>{Number(item?.risk_score || 0)}</span>
+            <span style={{ color: C.dim, fontSize: 10 }}>{String(item?.status || "-")}</span>
+          </div>
+        ))}
+      </DrillPanel>}
     </>}
 
     {/* ══════════════════════════════════════════════════════════════ */}
@@ -990,8 +1007,8 @@ export const PostureTab = ({ session, onToast }: any) => {
             <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={{ stroke: C.border }} tickLine={false} />
             <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={35} />
             <Tooltip content={DomainBarTooltip} cursor={{ fill: C.accentDim }} />
-            <RBar dataKey="Events" fill={C.blue} radius={[3, 3, 0, 0]} />
-            <RBar dataKey="Failures" fill={C.red} radius={[3, 3, 0, 0]} />
+            <RBar dataKey="Events" fill={C.blue} radius={[3, 3, 0, 0]} style={clickable} onClick={(_, i) => { const d = domainMetrics[i]; if (d) drillDomain(d.key); }} />
+            <RBar dataKey="Failures" fill={C.red} radius={[3, 3, 0, 0]} style={clickable} onClick={(_, i) => { const d = domainMetrics[i]; if (d) drillDomain(d.key); }} />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -1058,6 +1075,23 @@ export const PostureTab = ({ session, onToast }: any) => {
     {/* ══════════════════════════════════════════════════════════════ */}
     {/* FINDING DETAIL MODAL                                          */}
     {/* ══════════════════════════════════════════════════════════════ */}
+    <Modal open={Boolean(snapshot)} onClose={() => setSnapshot(null)} title={`Risk snapshot ${fmtTS(snapshot?.captured_at)}`} wide>
+      {snapshot && <>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8, marginBottom: 12 }}>
+          {[["Risk 24h", snapshot.risk_24h], ["Risk 7d", snapshot.risk_7d], ["Predictive", snapshot.predictive_score], ["Preventive", snapshot.preventive_score], ["Corrective", snapshot.corrective_score]].map(([l, v]) => (
+            <div key={String(l)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 8, textAlign: "center" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{Number(v || 0)}</div>
+              <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Signals behind this score</div>
+        {snapshot.top_signals && Object.keys(snapshot.top_signals).length
+          ? <pre style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, fontSize: 9, color: C.dim, overflow: "auto", maxHeight: 320, fontFamily: "'JetBrains Mono',monospace" }}>{JSON.stringify(snapshot.top_signals, null, 2)}</pre>
+          : <div style={{ fontSize: 10, color: C.muted }}>This snapshot recorded no signals.</div>}
+      </>}
+    </Modal>
+
     <Modal open={Boolean(selectedFinding)} onClose={() => setSelectedFinding(null)} title={String(selectedFinding?.title || "Finding Detail")} wide>
       {selectedFinding && <>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>

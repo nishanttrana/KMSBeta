@@ -709,40 +709,40 @@ pqc|GET|/pqc/migration/plans/{param}/runs,pqc,GET,/pqc/migration/plans/{id}/runs
 pqc|GET|/pqc/timeline,pqc,GET,/pqc/timeline,/pqc/timeline,,timeline,services/pqc/handler.go,188,Timeline,,,,
 pqc|GET|/pqc/cbom/export,pqc,GET,/pqc/cbom/export,/pqc/cbom/export,,exportCBOM,services/pqc/handler.go,200,ExportCBOM,,,,
 reconciler|GET|/reconciler/status,reconciler,GET,/reconciler/status,/reconciler/status,web/dashboard/src/lib/health.ts:45,<inline func>,,,,,,,
-reporting|GET|/alerts,reporting,GET,/alerts,/alerts,web/dashboard/src/lib/reporting.ts:161,alerts,services/reporting/handler.go,140,ListAlerts,ListAlerts,,pkg/clusterstate.RunsPrimaryJobs,"strings.ToLower, strings.TrimSpace"
+reporting|GET|/alerts,reporting,GET,/alerts,/alerts,web/dashboard/src/lib/reporting.ts:163,alerts,services/reporting/handler.go,140,ListAlerts,ListAlerts,,pkg/clusterstate.RunsPrimaryJobs,"strings.ToLower, strings.TrimSpace"
 reporting|GET|/alerts/feed,reporting,GET,/alerts/feed,/alerts/feed,,alertsFeed,services/reporting/handler.go,163,,,,,"net/http.NewResponseController, time.NewTicker, time.Now"
-reporting|GET|/alerts/unread,reporting,GET,/alerts/unread,/alerts/unread,web/dashboard/src/lib/reporting.ts:169,alertsUnread,services/reporting/handler.go,191,CountUnread,CountUnreadBySeverity,,,
+reporting|GET|/alerts/unread,reporting,GET,/alerts/unread,/alerts/unread,web/dashboard/src/lib/reporting.ts:185,alertsUnread,services/reporting/handler.go,191,CountUnread,CountUnreadBySeverity,,,
 reporting|GET|/alerts/{param},reporting,GET,/alerts/{id},/alerts/{param},,alert,services/reporting/handler.go,200,GetAlert,,,,
 reporting|PUT|/alerts/{param}/{param},reporting,PUT,/alerts/{id}/{op},/alerts/{param}/{param},,alertOperation,services/reporting/handler.go,211,"AcknowledgeAlert, ResolveAlert, MarkFalsePositive, EscalateAlert","UpdateAlertStatus, EscalateAlert",,,strings.ReplaceAll
-reporting|POST|/alerts/bulk/acknowledge,reporting,POST,/alerts/bulk/acknowledge,/alerts/bulk/acknowledge,web/dashboard/src/lib/reporting.ts:289,bulkStatus,services/reporting/handler.go,253,BulkAlertStatus,BulkUpdateAlertStatus,,,strings.TrimSpace
+reporting|POST|/alerts/bulk/acknowledge,reporting,POST,/alerts/bulk/acknowledge,/alerts/bulk/acknowledge,web/dashboard/src/lib/reporting.ts:305,bulkStatus,services/reporting/handler.go,253,BulkAlertStatus,BulkUpdateAlertStatus,,,strings.TrimSpace
 reporting|POST|/alerts/bulk/resolve,reporting,POST,/alerts/bulk/resolve,/alerts/bulk/resolve,,bulkStatus,services/reporting/handler.go,253,BulkAlertStatus,BulkUpdateAlertStatus,,,strings.TrimSpace
 reporting|GET|/incidents,reporting,GET,/incidents,/incidents,,incidents,services/reporting/handler.go,279,ListIncidents,ListIncidents,,,
 reporting|GET|/incidents/{param},reporting,GET,/incidents/{id},/incidents/{param},,incident,services/reporting/handler.go,288,GetIncident,"GetIncident, ListAlerts",,,
 reporting|PUT|/incidents/{param}/status,reporting,PUT,/incidents/{id}/status,/incidents/{param}/status,,incidentStatus,services/reporting/handler.go,297,UpdateIncidentStatus,UpdateIncidentStatus,,,"strings.ToLower, strings.TrimSpace"
 reporting|PUT|/incidents/{param}/assign,reporting,PUT,/incidents/{id}/assign,/incidents/{param}/assign,,incidentAssign,services/reporting/handler.go,313,AssignIncident,AssignIncident,,,
-reporting|GET|/alerts/rules,reporting,GET,/alerts/rules,/alerts/rules,web/dashboard/src/lib/reporting.ts:206,listRules,services/reporting/handler.go,328,ListRules,ListRules,,,
-reporting|POST|/alerts/rules,reporting,POST,/alerts/rules,/alerts/rules,web/dashboard/src/lib/reporting.ts:238,createRule,services/reporting/handler.go,339,CreateRule,CreateRule,,,"strings.EqualFold, strings.TrimSpace"
-reporting|PUT|/alerts/rules/{param},reporting,PUT,/alerts/rules/{id},/alerts/rules/{param},web/dashboard/src/lib/reporting.ts:249,updateRule,services/reporting/handler.go,372,UpdateRule,UpdateRule,,,"strings.EqualFold, strings.TrimSpace"
-reporting|POST|/alerts/rules/test,reporting,POST,/alerts/rules/test,/alerts/rules/test,web/dashboard/src/lib/reporting.ts:230,testRule,services/reporting/handler.go,356,CheckRule,,,,
-reporting|DELETE|/alerts/rules/{param},reporting,DELETE,/alerts/rules/{id},/alerts/rules/{param},web/dashboard/src/lib/reporting.ts:256,deleteRule,services/reporting/handler.go,384,DeleteRule,DeleteRule,,,
+reporting|GET|/alerts/rules,reporting,GET,/alerts/rules,/alerts/rules,web/dashboard/src/lib/reporting.ts:222,listRules,services/reporting/handler.go,328,ListRules,ListRules,,,
+reporting|POST|/alerts/rules,reporting,POST,/alerts/rules,/alerts/rules,web/dashboard/src/lib/reporting.ts:254,createRule,services/reporting/handler.go,339,CreateRule,CreateRule,,,"strings.EqualFold, strings.TrimSpace"
+reporting|PUT|/alerts/rules/{param},reporting,PUT,/alerts/rules/{id},/alerts/rules/{param},web/dashboard/src/lib/reporting.ts:265,updateRule,services/reporting/handler.go,372,UpdateRule,UpdateRule,,,"strings.EqualFold, strings.TrimSpace"
+reporting|POST|/alerts/rules/test,reporting,POST,/alerts/rules/test,/alerts/rules/test,web/dashboard/src/lib/reporting.ts:246,testRule,services/reporting/handler.go,356,CheckRule,,,,
+reporting|DELETE|/alerts/rules/{param},reporting,DELETE,/alerts/rules/{id},/alerts/rules/{param},web/dashboard/src/lib/reporting.ts:272,deleteRule,services/reporting/handler.go,384,DeleteRule,DeleteRule,,,
 reporting|GET|/alerts/severity-config,reporting,GET,/alerts/severity-config,/alerts/severity-config,,getSeverityConfig,services/reporting/handler.go,392,GetSeverityConfig,ListSeverityOverrides,,,"strings.ToLower, strings.TrimSpace"
 reporting|PUT|/alerts/severity-config,reporting,PUT,/alerts/severity-config,/alerts/severity-config,,updateSeverityConfig,services/reporting/handler.go,401,UpdateSeverityConfig,UpsertSeverityOverride,,,"strings.TrimSpace, strings.ToLower"
-reporting|GET|/alerts/channels,reporting,GET,/alerts/channels,/alerts/channels,web/dashboard/src/lib/reporting.ts:201,listChannels,services/reporting/handler.go,414,ListChannels,,,,
+reporting|GET|/alerts/channels,reporting,GET,/alerts/channels,/alerts/channels,web/dashboard/src/lib/reporting.ts:217,listChannels,services/reporting/handler.go,414,ListChannels,,,,
 reporting|PUT|/alerts/channels,reporting,PUT,/alerts/channels,/alerts/channels,,updateChannels,services/reporting/handler.go,423,UpdateChannels,UpsertChannel,,,
-reporting|GET|/reports/templates,reporting,GET,/reports/templates,/reports/templates,web/dashboard/src/lib/reporting.ts:330,reportTemplates,services/reporting/handler.go,437,Templates,,,,
-reporting|POST|/reports/generate,reporting,POST,/reports/generate,/reports/generate,web/dashboard/src/lib/reporting.ts:343,generateReport,services/reporting/handler.go,443,GenerateReport,,,,
-reporting|GET|/reports/jobs,reporting,GET,/reports/jobs,/reports/jobs,web/dashboard/src/lib/reporting.ts:370,listReportJobs,services/reporting/handler.go,473,ListReportJobs,ListReportJobs,,,
-reporting|GET|/reports/jobs/{param},reporting,GET,/reports/jobs/{id},/reports/jobs/{param},web/dashboard/src/lib/reporting.ts:358,reportJob,services/reporting/handler.go,464,GetReportJob,GetReportJob,,,
-reporting|GET|/reports/jobs/{param}/download,reporting,GET,/reports/jobs/{id}/download,/reports/jobs/{param}/download,web/dashboard/src/lib/reporting.ts:388,reportDownload,services/reporting/handler.go,482,GetReportJob,GetReportJob,,,
-reporting|DELETE|/reports/jobs/{param},reporting,DELETE,/reports/jobs/{id},/reports/jobs/{param},web/dashboard/src/lib/reporting.ts:404,deleteReportJob,services/reporting/handler.go,504,DeleteReportJob,"GetReportJob, DeleteReportJob",,,strings.TrimSpace
-reporting|GET|/reports/scheduled,reporting,GET,/reports/scheduled,/reports/scheduled,web/dashboard/src/lib/reporting.ts:410,listScheduledReports,services/reporting/handler.go,516,ListScheduledReports,ListScheduledReports,,,
-reporting|POST|/reports/scheduled,reporting,POST,/reports/scheduled,/reports/scheduled,web/dashboard/src/lib/reporting.ts:424,createScheduledReport,services/reporting/handler.go,525,ScheduleReport,,,,
+reporting|GET|/reports/templates,reporting,GET,/reports/templates,/reports/templates,web/dashboard/src/lib/reporting.ts:346,reportTemplates,services/reporting/handler.go,437,Templates,,,,
+reporting|POST|/reports/generate,reporting,POST,/reports/generate,/reports/generate,web/dashboard/src/lib/reporting.ts:359,generateReport,services/reporting/handler.go,443,GenerateReport,,,,
+reporting|GET|/reports/jobs,reporting,GET,/reports/jobs,/reports/jobs,web/dashboard/src/lib/reporting.ts:386,listReportJobs,services/reporting/handler.go,473,ListReportJobs,ListReportJobs,,,
+reporting|GET|/reports/jobs/{param},reporting,GET,/reports/jobs/{id},/reports/jobs/{param},web/dashboard/src/lib/reporting.ts:374,reportJob,services/reporting/handler.go,464,GetReportJob,GetReportJob,,,
+reporting|GET|/reports/jobs/{param}/download,reporting,GET,/reports/jobs/{id}/download,/reports/jobs/{param}/download,web/dashboard/src/lib/reporting.ts:404,reportDownload,services/reporting/handler.go,482,GetReportJob,GetReportJob,,,
+reporting|DELETE|/reports/jobs/{param},reporting,DELETE,/reports/jobs/{id},/reports/jobs/{param},web/dashboard/src/lib/reporting.ts:420,deleteReportJob,services/reporting/handler.go,504,DeleteReportJob,"GetReportJob, DeleteReportJob",,,strings.TrimSpace
+reporting|GET|/reports/scheduled,reporting,GET,/reports/scheduled,/reports/scheduled,web/dashboard/src/lib/reporting.ts:426,listScheduledReports,services/reporting/handler.go,516,ListScheduledReports,ListScheduledReports,,,
+reporting|POST|/reports/scheduled,reporting,POST,/reports/scheduled,/reports/scheduled,web/dashboard/src/lib/reporting.ts:440,createScheduledReport,services/reporting/handler.go,525,ScheduleReport,,,,
 reporting|POST|/telemetry/errors,reporting,POST,/telemetry/errors,/telemetry/errors,web/dashboard/src/lib/telemetry.ts:59,captureErrorTelemetry,services/reporting/handler.go,548,CaptureErrorTelemetry,CreateErrorTelemetry,,,"strings.TrimSpace, strings.ToLower, time.Now"
 reporting|GET|/telemetry/errors,reporting,GET,/telemetry/errors,/telemetry/errors,,listErrorTelemetry,services/reporting/handler.go,593,ListErrorTelemetry,ListErrorTelemetry,,,"strings.ToLower, strings.TrimSpace"
-reporting|GET|/alerts/stats,reporting,GET,/alerts/stats,/alerts/stats,web/dashboard/src/lib/reporting.ts:178,alertStats,services/reporting/handler.go,615,AlertStats,,,,
-reporting|GET|/alerts/stats/mttd,reporting,GET,/alerts/stats/mttd,/alerts/stats/mttd,web/dashboard/src/lib/reporting.ts:194,mttdStats,services/reporting/handler.go,633,MTTDStats,,,,
-reporting|GET|/alerts/stats/mttr,reporting,GET,/alerts/stats/mttr,/alerts/stats/mttr,web/dashboard/src/lib/reporting.ts:189,mttrStats,services/reporting/handler.go,624,MTTRStats,ListAlerts,,,
-reporting|GET|/alerts/stats/top-sources,reporting,GET,/alerts/stats/top-sources,/alerts/stats/top-sources,web/dashboard/src/lib/reporting.ts:317,topSources,services/reporting/handler.go,644,TopSources,,,,
+reporting|GET|/alerts/stats,reporting,GET,/alerts/stats,/alerts/stats,web/dashboard/src/lib/reporting.ts:194,alertStats,services/reporting/handler.go,615,AlertStats,,,,
+reporting|GET|/alerts/stats/mttd,reporting,GET,/alerts/stats/mttd,/alerts/stats/mttd,web/dashboard/src/lib/reporting.ts:210,mttdStats,services/reporting/handler.go,633,MTTDStats,,,,
+reporting|GET|/alerts/stats/mttr,reporting,GET,/alerts/stats/mttr,/alerts/stats/mttr,web/dashboard/src/lib/reporting.ts:205,mttrStats,services/reporting/handler.go,624,MTTRStats,ListAlerts,,,
+reporting|GET|/alerts/stats/top-sources,reporting,GET,/alerts/stats/top-sources,/alerts/stats/top-sources,web/dashboard/src/lib/reporting.ts:333,topSources,services/reporting/handler.go,644,TopSources,,,,
 sbom|POST|/sbom/generate,sbom,POST,/sbom/generate,/sbom/generate,web/dashboard/src/lib/sbom.ts:91,generateSBOM,services/sbom/handler.go,89,GenerateSBOM,"SaveSBOMSnapshot, GetSBOMSnapshotByID",,,
 sbom|GET|/sbom/latest,sbom,GET,/sbom/latest,/sbom/latest,web/dashboard/src/lib/sbom.ts:99,latestSBOM,services/sbom/handler.go,107,GetLatestSBOM,GetLatestSBOMSnapshot,,,
 sbom|GET|/sbom/history,sbom,GET,/sbom/history,/sbom/history,web/dashboard/src/lib/sbom.ts:104,sbomHistory,services/sbom/handler.go,117,ListSBOMHistory,ListSBOMSnapshots,,,

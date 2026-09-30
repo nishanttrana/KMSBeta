@@ -1196,8 +1196,17 @@ func nextRunTime(now time.Time, schedule string) time.Time {
 	}
 }
 
+// alertScanLimit is how many of the newest alerts the statistics read, and
+// the most the store returns in one query. The HTTP list caps its own page at
+// alertPageLimit; the dashboard pages through up to this many to drill into a
+// chart, so a chart and its drill-down count the same alerts.
+const (
+	alertScanLimit = 5000
+	alertPageLimit = 500
+)
+
 func (s *Service) AlertStats(ctx context.Context, tenantID string) (map[string]interface{}, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
+	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
 	if err != nil {
 		return nil, err
 	}
@@ -1223,7 +1232,7 @@ func (s *Service) AlertStats(ctx context.Context, tenantID string) (map[string]i
 }
 
 func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]float64, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
+	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
 	if err != nil {
 		return nil, err
 	}
@@ -1252,7 +1261,7 @@ func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]fl
 }
 
 func (s *Service) computeMTTDStats(ctx context.Context, tenantID string) (map[string]float64, int, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
+	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1295,7 +1304,7 @@ func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]fl
 }
 
 func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]interface{}, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
+	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
 	if err != nil {
 		return nil, err
 	}

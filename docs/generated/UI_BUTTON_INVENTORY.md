@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T15:52:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T16:08:17Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -25,6 +25,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1027 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1062 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
+| web/dashboard/src/components/v3/chartDrill.tsx | 29 | - | Btn | Clear | onClear |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 165 | - | Btn | (icon or dynamic label) | submit |
@@ -32,15 +33,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 650 | - | button | (icon or dynamic label) | onClick} disabled={disabled |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: active === t ? C.accentDim : "transparent",... |  |
 | web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
-| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 60 | - | Btn | void load()}>Retry |  |
-| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 67 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 411 | alerts | Btn | void refresh(false)}> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 412 | alerts | Btn | void ackAllAlerts()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 422 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 459 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 460 | alerts | Btn | void escalateOne(item)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 481 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 483 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 97 | - | Btn | void load()}>Retry |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 104 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 426 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 427 | alerts | Btn | void escalateOne(item)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 453 | alerts | Btn | void refresh(false)}> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 454 | alerts | Btn | void ackAllAlerts()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 464 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 493 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 495 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 236 | - | Btn | void load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 237 | - | Btn | void saveSettings()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 263 | - | Btn | void submitSign()} disabled= > |  |
@@ -48,16 +49,16 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 342 | - | Btn | editProfile(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 90 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 443 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 447 | audit | Btn | load()} disabled= >Refresh |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 538 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 539 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 565 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 673 | audit | Btn | }> View Timeline ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 678 | audit | Btn | }> View Session ( ) |  |
-| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 683 | audit | Btn | }> View Correlation ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 445 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 448 | audit | Btn | load()} disabled= >Refresh |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 539 | audit | Btn | setOffset(Math.max(0, offset - PAGE_SIZE))}>Previous |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 540 | audit | Btn | setOffset(offset + PAGE_SIZE)}>Next |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 566 | audit | Btn | (icon or dynamic label) | loadForensic} disabled={forensicLoading |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 674 | audit | Btn | }> View Timeline ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 679 | audit | Btn | }> View Session ( ) |  |
+| web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 684 | audit | Btn | }> View Correlation ( ) |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 371 | - | Btn | refresh(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 372 | - | Btn | Save Settings | saveSettings} disabled={busy \|\| loading |
 | web/dashboard/src/components/v3/tabs/AutokeyTab.tsx | 476 | - | Btn | Save Settings | saveSettings} disabled={busy |
@@ -375,10 +376,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 250 | - | Btn | void saveRule()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 288 | - | Btn | editRule(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/KeyAccessTab.tsx | 289 | - | Btn | void removeRule(item)}>Delete |  |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 18 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 66 | key_analytics | Btn | Export JSON | handleExport |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 67 | key_analytics | Btn | (icon or dynamic label) | load |
-| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 73 | key_analytics | button | setView(id)} style={{ padding: "8px 16px", border: "none", background: "trans... |  |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 16 | key_analytics | button | (icon or dynamic label) | onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", bor... |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 64 | key_analytics | Btn | Export JSON | handleExport |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 65 | key_analytics | Btn | (icon or dynamic label) | load |
+| web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | 71 | key_analytics | button | setView(id)} style={{ padding: "8px 16px", border: "none", background: "trans... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 53 | - | Btn | void load()}>Refresh |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 77 | - | Btn | void run(k.key_id, "start migration", () => kdfTransition(session, k.key_id,... |  |
 | web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx | 81 | - | Btn | void run(k.key_id, "re-protect vault tokens", () => kdfReprotectVault(session... |  |
@@ -472,15 +473,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 750 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 753 | playbooks | Btn | }>Cancel |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 518 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 519 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 905 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1141 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1142 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1143 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1144 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1235 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1237 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 516 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 517 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 922 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1175 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1176 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1177 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1178 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1269 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1271 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 477 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 508 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 515 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

@@ -9,7 +9,8 @@ import {
   listReportingAlerts,
   listReportingChannels
 } from "../../../lib/reporting";
-import { B, Btn, Card, Section, Sel } from "../legacyPrimitives";
+import { B, Btn, Card, Section, Sel, Tabs } from "../legacyPrimitives";
+import { AlertAnalyticsPanel } from "./AlertAnalyticsPanel";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 
@@ -186,6 +187,9 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   const [ackBusy,setAckBusy]=useState("");
   const [ackAllBusy,setAckAllBusy]=useState(false);
   const [escBusy,setEscBusy]=useState("");
+  const [view,setView]=useState("Alerts");
+  // Bumped after a triage action so Analytics reloads its counts.
+  const [triaged,setTriaged]=useState(0);
 
   const refresh=useCallback(async(silent=false)=>{
     if(!session?.token){
@@ -340,6 +344,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     try{
       await acknowledgeAlert(session,alertID);
       onToast?.("Alert acknowledged.");
+      setTriaged((n)=>n+1);
       await refresh(true);
     }catch(error){
       onToast?.(`Acknowledge failed: ${errMsg(error)}`);
@@ -363,6 +368,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     try{
       const updated=await acknowledgeAlertsBulk(session,{ids});
       onToast?.(`Acknowledged ${updated} alert${updated===1?"":"s"}.`);
+      setTriaged((n)=>n+1);
       await refresh(true);
     }catch(error){
       onToast?.(`Acknowledge all failed: ${errMsg(error)}`);
@@ -383,6 +389,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     try{
       await escalateAlert(session,alertID,"critical");
       onToast?.("Alert escalated to critical.");
+      setTriaged((n)=>n+1);
       await refresh(true);
     }catch(error){
       onToast?.(`Escalation failed: ${errMsg(error)}`);
@@ -393,7 +400,42 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
 
   const palette=C as Record<string,string>;
 
+  const renderAlertCard=(item:any)=>{
+    const sev=String(item?.severity||"info").toLowerCase();
+    const status=String(item?.status||"new").toLowerCase();
+    const tone=severityTone(sev);
+    const canAck=status==="new";
+    const canEscalate=status==="new"&&sev!=="critical";
+    const actionLabel=actionLabelForAlert(item);
+    return <Card key={String(item?.id||"")} style={{padding:"12px 14px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+        <div style={{minWidth:0,flex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+            <B c={tone}>{sev.toUpperCase()}</B>
+            <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{alertHeadline(item)}</div>
+          </div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:4}}>{`Alert For: ${actionLabel}`}</div>
+          <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{alertReason(item)}</div>
+          <div style={{fontSize:9,color:C.muted}}>
+            {alertContext(item)}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:170}}>
+          <div style={{fontSize:10,color:C.muted}}>{formatAgo(String(item?.created_at||item?.updated_at||""))}</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+            {canAck?<Btn small onClick={()=>void ackAlert(item)} disabled={ackBusy===String(item?.id||"")||escBusy===String(item?.id||"")} style={{height:30}}>{ackBusy===String(item?.id||"")?"Ack...":"Acknowledge"}</Btn>:null}
+            {canEscalate?<Btn small danger onClick={()=>void escalateOne(item)} disabled={escBusy===String(item?.id||"")||ackBusy===String(item?.id||"")} style={{height:30}}>{escBusy===String(item?.id||"")?"Esc...":"Escalate"}</Btn>:null}
+            {!canAck&&!canEscalate?<B c={status==="resolved"||status==="acknowledged"?"green":status==="false_positive"?"purple":"blue"}>{status}</B>:null}
+          </div>
+        </div>
+      </div>
+    </Card>;
+  };
+
   return <div>
+    <Tabs tabs={["Alerts","Analytics"]} active={view} onChange={setView}/>
+    {view==="Analytics"&&session?<AlertAnalyticsPanel session={session} refreshKey={triaged} renderAlert={renderAlertCard}/>:null}
+    {view==="Alerts"&&<>
     <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:10}}>
       {alertCards.map((card)=><Card key={card.label} style={{padding:"8px 10px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -433,37 +475,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
       </div>
 
       <div style={{display:"grid",gap:8}}>
-        {pagedItems.map((item:any)=>{
-          const sev=String(item?.severity||"info").toLowerCase();
-          const status=String(item?.status||"new").toLowerCase();
-          const tone=severityTone(sev);
-          const canAck=status==="new";
-          const canEscalate=status==="new"&&sev!=="critical";
-          const actionLabel=actionLabelForAlert(item);
-          return <Card key={String(item?.id||"")} style={{padding:"12px 14px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
-              <div style={{minWidth:0,flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
-                  <B c={tone}>{sev.toUpperCase()}</B>
-                  <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{alertHeadline(item)}</div>
-                </div>
-                <div style={{fontSize:10,color:C.muted,marginBottom:4}}>{`Alert For: ${actionLabel}`}</div>
-                <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{alertReason(item)}</div>
-                <div style={{fontSize:9,color:C.muted}}>
-                  {alertContext(item)}
-                </div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:170}}>
-                <div style={{fontSize:10,color:C.muted}}>{formatAgo(String(item?.created_at||item?.updated_at||""))}</div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                  {canAck?<Btn small onClick={()=>void ackAlert(item)} disabled={ackBusy===String(item?.id||"")||escBusy===String(item?.id||"")} style={{height:30}}>{ackBusy===String(item?.id||"")?"Ack...":"Acknowledge"}</Btn>:null}
-                  {canEscalate?<Btn small danger onClick={()=>void escalateOne(item)} disabled={escBusy===String(item?.id||"")||ackBusy===String(item?.id||"")} style={{height:30}}>{escBusy===String(item?.id||"")?"Esc...":"Escalate"}</Btn>:null}
-                  {!canAck&&!canEscalate?<B c={status==="resolved"||status==="acknowledged"?"green":status==="false_positive"?"purple":"blue"}>{status}</B>:null}
-                </div>
-              </div>
-            </div>
-          </Card>;
-        })}
+        {pagedItems.map(renderAlertCard)}
         {!pagedItems.length&&!loading?<Card><div style={{fontSize:10,color:C.muted}}>No alerts found for current filter.</div></Card>:null}
       </div>
 
@@ -484,6 +496,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
         </div>
       </div>
     </Section>
+    </>}
   </div>;
 };
 

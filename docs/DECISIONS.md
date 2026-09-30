@@ -941,6 +941,43 @@ against the exported SBOM.
 `TestComplianceSBOMRoutesRemoved`, and the CLAUDE.md rule under "How we
 build".
 
+## 2026-09-30 — Charts live beside their entries and drill into them (7.15.0-beta)
+
+**Decision.** Audit charts moved from Overview → Analytics to Audit Log →
+Activity, and alert charts to Alert Center → Analytics. Overview → Analytics
+keeps key inventory and operations. Every chart segment (bar, slice, point,
+count row) is clickable and lists exactly the entries it counts. An entry
+opens its existing detail: the audit event modal, the Alert Center triage
+card (Acknowledge and Escalate work from the drill-down), or the Posture
+finding modal. A posture risk point or the gauge opens that snapshot's
+scores and signals.
+
+**How the counts stay equal.** Each drill is a predicate over the same rows
+the chart was built from, using bucket functions shared with the chart
+(`riskBucket`, `findingSeverityBucket`, and so on). Alert charts come from
+reporting's aggregates, so the panel also pages through the same newest 5000
+alerts that `AlertStats`, `MTTRStats`, `MTTDStats` and `TopSources` read, and
+filters them with predicates that mirror the Go code (`normalizeSeverity`,
+UTC creation day, set `resolved_at`).
+
+**Why.** The owner wants to go from a number to the records behind it in one
+click. A chart in a separate Analytics tab made that a hunt through another
+tab's filters, and some groupings (risk bucket, hour, top actor) had no
+filter at all.
+
+**Rejected.** Having a click switch to the Events or Alerts list with its
+filters set. Those lists filter only on some dimensions (not risk bucket,
+hour or MTTR), and the Alerts list hides informational alerts that the
+charts count. The two would have disagreed.
+
+**Amends** the 2026-09-28 decision below: charts no longer all live in
+Overview → Analytics.
+
+**Enforced by** the CLAUDE.md rule "Every chart drills into its entries" and
+`tests/smoke-tabs.spec.ts` ("analytics, alerts and audit each have a single
+home"). That test clicks a top-actor row and a severity slice and asserts
+that the drill-down lists only the matching entries.
+
 ## 2026-09-28 — One home per kind of view (2.12.0-beta)
 
 **Decision.** Charts and trends live only in Overview → Analytics (Key

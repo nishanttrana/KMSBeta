@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T15:52:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T16:08:17Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -434,28 +434,28 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|POST\|/pqc/migration/plans/{param}/execute | POST /pqc/migration/plans/{id}/execute | executePlan (services/pqc/handler.go:152) | ExecuteMigrationPlan | GetMigrationPlan, CreateMigrationRun, UpdateMigrationPlan, UpdateMigrationRun |  |  | web/dashboard/src/lib/pqc.ts:186 |
 | pqc\|POST\|/pqc/migration/plans/{param}/rollback | POST /pqc/migration/plans/{id}/rollback | rollbackPlan (services/pqc/handler.go:167) | RollbackMigrationPlan | GetMigrationPlan, UpdateMigrationPlan, CreateMigrationRun | s.keycore.DeactivateKey, s.keycore.RotateKey |  | web/dashboard/src/lib/pqc.ts:194 |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
-| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
-| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
-| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:253) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:289 |
-| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:328) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
-| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:339) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:238 |
-| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:372) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:249 |
-| reporting\|POST\|/alerts/rules/test | POST /alerts/rules/test | testRule (services/reporting/handler.go:356) | CheckRule |  |  |  | web/dashboard/src/lib/reporting.ts:230 |
-| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:384) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:256 |
-| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:414) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
-| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:437) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:330 |
-| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:443) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:343 |
-| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:473) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:370 |
-| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:464) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:358 |
-| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:482) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:388 |
-| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:504) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:404 |
-| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:516) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:410 |
-| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:525) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:424 |
+| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:163 |
+| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:185 |
+| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:253) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:305 |
+| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:328) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:222 |
+| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:339) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:254 |
+| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:372) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:265 |
+| reporting\|POST\|/alerts/rules/test | POST /alerts/rules/test | testRule (services/reporting/handler.go:356) | CheckRule |  |  |  | web/dashboard/src/lib/reporting.ts:246 |
+| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:384) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:272 |
+| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:414) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:217 |
+| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:437) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:346 |
+| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:443) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:359 |
+| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:473) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:386 |
+| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:464) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:374 |
+| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:482) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:404 |
+| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:504) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:420 |
+| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:516) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:426 |
+| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:525) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:440 |
 | reporting\|POST\|/telemetry/errors | POST /telemetry/errors | captureErrorTelemetry (services/reporting/handler.go:548) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
-| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:615) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
-| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
-| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
-| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:317 |
+| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:615) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
+| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:210 |
+| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:205 |
+| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:333 |
 | sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
 | sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
 | sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |
@@ -1231,40 +1231,40 @@ This file connects frontend requests to backend Go processing. It is static anal
 | pqc\|GET\|/pqc/timeline | GET /pqc/timeline | timeline (services/pqc/handler.go:188) | Timeline |  |  |  |  |
 | pqc\|GET\|/pqc/cbom/export | GET /pqc/cbom/export | exportCBOM (services/pqc/handler.go:200) | ExportCBOM |  |  |  |  |
 | reconciler\|GET\|/reconciler/status | GET /reconciler/status | <inline func> (:) |  |  |  |  | web/dashboard/src/lib/health.ts:45 |
-| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:161 |
+| reporting\|GET\|/alerts | GET /alerts | alerts (services/reporting/handler.go:140) | ListAlerts | ListAlerts |  | pkg/clusterstate.RunsPrimaryJobs | web/dashboard/src/lib/reporting.ts:163 |
 | reporting\|GET\|/alerts/feed | GET /alerts/feed | alertsFeed (services/reporting/handler.go:163) |  |  |  |  |  |
-| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:169 |
+| reporting\|GET\|/alerts/unread | GET /alerts/unread | alertsUnread (services/reporting/handler.go:191) | CountUnread | CountUnreadBySeverity |  |  | web/dashboard/src/lib/reporting.ts:185 |
 | reporting\|GET\|/alerts/{param} | GET /alerts/{id} | alert (services/reporting/handler.go:200) | GetAlert |  |  |  |  |
 | reporting\|PUT\|/alerts/{param}/{param} | PUT /alerts/{id}/{op} | alertOperation (services/reporting/handler.go:211) | AcknowledgeAlert, ResolveAlert, MarkFalsePositive, EscalateAlert | UpdateAlertStatus, EscalateAlert |  |  |  |
-| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:253) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:289 |
+| reporting\|POST\|/alerts/bulk/acknowledge | POST /alerts/bulk/acknowledge | bulkStatus (services/reporting/handler.go:253) | BulkAlertStatus | BulkUpdateAlertStatus |  |  | web/dashboard/src/lib/reporting.ts:305 |
 | reporting\|POST\|/alerts/bulk/resolve | POST /alerts/bulk/resolve | bulkStatus (services/reporting/handler.go:253) | BulkAlertStatus | BulkUpdateAlertStatus |  |  |  |
 | reporting\|GET\|/incidents | GET /incidents | incidents (services/reporting/handler.go:279) | ListIncidents | ListIncidents |  |  |  |
 | reporting\|GET\|/incidents/{param} | GET /incidents/{id} | incident (services/reporting/handler.go:288) | GetIncident | GetIncident, ListAlerts |  |  |  |
 | reporting\|PUT\|/incidents/{param}/status | PUT /incidents/{id}/status | incidentStatus (services/reporting/handler.go:297) | UpdateIncidentStatus | UpdateIncidentStatus |  |  |  |
 | reporting\|PUT\|/incidents/{param}/assign | PUT /incidents/{id}/assign | incidentAssign (services/reporting/handler.go:313) | AssignIncident | AssignIncident |  |  |  |
-| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:328) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:206 |
-| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:339) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:238 |
-| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:372) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:249 |
-| reporting\|POST\|/alerts/rules/test | POST /alerts/rules/test | testRule (services/reporting/handler.go:356) | CheckRule |  |  |  | web/dashboard/src/lib/reporting.ts:230 |
-| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:384) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:256 |
+| reporting\|GET\|/alerts/rules | GET /alerts/rules | listRules (services/reporting/handler.go:328) | ListRules | ListRules |  |  | web/dashboard/src/lib/reporting.ts:222 |
+| reporting\|POST\|/alerts/rules | POST /alerts/rules | createRule (services/reporting/handler.go:339) | CreateRule | CreateRule |  |  | web/dashboard/src/lib/reporting.ts:254 |
+| reporting\|PUT\|/alerts/rules/{param} | PUT /alerts/rules/{id} | updateRule (services/reporting/handler.go:372) | UpdateRule | UpdateRule |  |  | web/dashboard/src/lib/reporting.ts:265 |
+| reporting\|POST\|/alerts/rules/test | POST /alerts/rules/test | testRule (services/reporting/handler.go:356) | CheckRule |  |  |  | web/dashboard/src/lib/reporting.ts:246 |
+| reporting\|DELETE\|/alerts/rules/{param} | DELETE /alerts/rules/{id} | deleteRule (services/reporting/handler.go:384) | DeleteRule | DeleteRule |  |  | web/dashboard/src/lib/reporting.ts:272 |
 | reporting\|GET\|/alerts/severity-config | GET /alerts/severity-config | getSeverityConfig (services/reporting/handler.go:392) | GetSeverityConfig | ListSeverityOverrides |  |  |  |
 | reporting\|PUT\|/alerts/severity-config | PUT /alerts/severity-config | updateSeverityConfig (services/reporting/handler.go:401) | UpdateSeverityConfig | UpsertSeverityOverride |  |  |  |
-| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:414) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:201 |
+| reporting\|GET\|/alerts/channels | GET /alerts/channels | listChannels (services/reporting/handler.go:414) | ListChannels |  |  |  | web/dashboard/src/lib/reporting.ts:217 |
 | reporting\|PUT\|/alerts/channels | PUT /alerts/channels | updateChannels (services/reporting/handler.go:423) | UpdateChannels | UpsertChannel |  |  |  |
-| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:437) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:330 |
-| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:443) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:343 |
-| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:473) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:370 |
-| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:464) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:358 |
-| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:482) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:388 |
-| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:504) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:404 |
-| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:516) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:410 |
-| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:525) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:424 |
+| reporting\|GET\|/reports/templates | GET /reports/templates | reportTemplates (services/reporting/handler.go:437) | Templates |  |  |  | web/dashboard/src/lib/reporting.ts:346 |
+| reporting\|POST\|/reports/generate | POST /reports/generate | generateReport (services/reporting/handler.go:443) | GenerateReport |  |  |  | web/dashboard/src/lib/reporting.ts:359 |
+| reporting\|GET\|/reports/jobs | GET /reports/jobs | listReportJobs (services/reporting/handler.go:473) | ListReportJobs | ListReportJobs |  |  | web/dashboard/src/lib/reporting.ts:386 |
+| reporting\|GET\|/reports/jobs/{param} | GET /reports/jobs/{id} | reportJob (services/reporting/handler.go:464) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:374 |
+| reporting\|GET\|/reports/jobs/{param}/download | GET /reports/jobs/{id}/download | reportDownload (services/reporting/handler.go:482) | GetReportJob | GetReportJob |  |  | web/dashboard/src/lib/reporting.ts:404 |
+| reporting\|DELETE\|/reports/jobs/{param} | DELETE /reports/jobs/{id} | deleteReportJob (services/reporting/handler.go:504) | DeleteReportJob | GetReportJob, DeleteReportJob |  |  | web/dashboard/src/lib/reporting.ts:420 |
+| reporting\|GET\|/reports/scheduled | GET /reports/scheduled | listScheduledReports (services/reporting/handler.go:516) | ListScheduledReports | ListScheduledReports |  |  | web/dashboard/src/lib/reporting.ts:426 |
+| reporting\|POST\|/reports/scheduled | POST /reports/scheduled | createScheduledReport (services/reporting/handler.go:525) | ScheduleReport |  |  |  | web/dashboard/src/lib/reporting.ts:440 |
 | reporting\|POST\|/telemetry/errors | POST /telemetry/errors | captureErrorTelemetry (services/reporting/handler.go:548) | CaptureErrorTelemetry | CreateErrorTelemetry |  |  | web/dashboard/src/lib/telemetry.ts:59 |
 | reporting\|GET\|/telemetry/errors | GET /telemetry/errors | listErrorTelemetry (services/reporting/handler.go:593) | ListErrorTelemetry | ListErrorTelemetry |  |  |  |
-| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:615) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:178 |
-| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
-| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:189 |
-| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:317 |
+| reporting\|GET\|/alerts/stats | GET /alerts/stats | alertStats (services/reporting/handler.go:615) | AlertStats |  |  |  | web/dashboard/src/lib/reporting.ts:194 |
+| reporting\|GET\|/alerts/stats/mttd | GET /alerts/stats/mttd | mttdStats (services/reporting/handler.go:633) | MTTDStats |  |  |  | web/dashboard/src/lib/reporting.ts:210 |
+| reporting\|GET\|/alerts/stats/mttr | GET /alerts/stats/mttr | mttrStats (services/reporting/handler.go:624) | MTTRStats | ListAlerts |  |  | web/dashboard/src/lib/reporting.ts:205 |
+| reporting\|GET\|/alerts/stats/top-sources | GET /alerts/stats/top-sources | topSources (services/reporting/handler.go:644) | TopSources |  |  |  | web/dashboard/src/lib/reporting.ts:333 |
 | sbom\|POST\|/sbom/generate | POST /sbom/generate | generateSBOM (services/sbom/handler.go:89) | GenerateSBOM | SaveSBOMSnapshot, GetSBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:91 |
 | sbom\|GET\|/sbom/latest | GET /sbom/latest | latestSBOM (services/sbom/handler.go:107) | GetLatestSBOM | GetLatestSBOMSnapshot |  |  | web/dashboard/src/lib/sbom.ts:99 |
 | sbom\|GET\|/sbom/history | GET /sbom/history | sbomHistory (services/sbom/handler.go:117) | ListSBOMHistory | ListSBOMSnapshots |  |  | web/dashboard/src/lib/sbom.ts:104 |

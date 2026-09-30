@@ -2487,10 +2487,10 @@ const SectionUIMonitoring = () => (
     <P>- Bulk acknowledge alerts to clear the queue after review</P>
     <P>- Escalate an alert's severity to critical</P>
     <P>- See open, critical, today's and resolved counts, MTTR and enabled notification channels</P>
-    <P>Trends (severity mix, daily volume, MTTD/MTTR, top sources) are under Overview → Analytics → Alerts. The Alert Center is the only place alerts are triaged.</P>
+    <P>The Analytics tab beside Alerts charts severity mix, daily volume, MTTD/MTTR and top sources. Click any slice, bar or row to list the alerts it counts and triage them there. The Alert Center is the only place alerts are triaged.</P>
 
     <H2>Audit Log Sub-Pane</H2>
-    <P>Every operation in the KMS is recorded in an append-only, hash-chained, HMAC-signed audit trail covered by signed checkpoints. The Audit Log has three tabs: Events, Forensics and Checkpoints. Charts of audit activity are under Overview → Analytics → Audit activity.</P>
+    <P>Every operation in the KMS is recorded in an append-only, hash-chained, HMAC-signed audit trail covered by signed checkpoints. The Audit Log has four tabs: Events, Activity, Forensics and Checkpoints. Activity charts results, services, risk, volume and actors. Click any slice, bar, point or actor to list the events it counts, then open one for its detail.</P>
     <H3>Events Tab:</H3>
     <P>Search and filter audit events by service (keycore, auth, secrets, certs, etc.), result (success, failure, denied), severity, time range, and user. Each event shows who did what, when, from where, and the result. Export events as CSV or CEF for SIEM integration.</P>
     <H3>Forensics Tab:</H3>

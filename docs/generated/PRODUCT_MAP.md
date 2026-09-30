@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-30T15:52:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T16:08:17Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -14,7 +14,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Frontend API call sites discovered: `525`
 - Frontend call sites with exact backend route match: `483`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `717`
+- Clickable controls with static `onClick` handlers: `718`
 - Backend request flows with handler/service/package summaries: `843`
 
 ## How To Use This For Launch
@@ -277,8 +277,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /compliance/regulatory | trackedFetch | web/dashboard/src/lib/regulatory.ts | 6 |
 | keycore | GET | /compliance/dashboard | trackedFetch | web/dashboard/src/lib/regulatory.ts | 12 |
 | keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
-| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 263 |
-| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 302 |
+| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 279 |
+| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 318 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
 Showing `42` of `42`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.

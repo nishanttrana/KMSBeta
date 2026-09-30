@@ -16,6 +16,8 @@ export type ReportingAlert = {
   source_ip?: string;
   actor_type?: string;
   target_type?: string;
+  audit_event_id?: string;
+  resolved_at?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -160,6 +162,20 @@ export async function listReportingAlerts(
   }
   const out = await serviceRequest<AlertsResponse>(session, "reporting", `/alerts?${q.toString()}`);
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+// The newest alerts the reporting statistics count (the service reads up to
+// 5000, alertScanLimit). A chart's drill-down filters this same set, so its
+// list matches the number on the bar.
+export const ALERT_STATS_SCAN = 5000;
+
+export async function listReportingAlertsForStats(session: AuthSession): Promise<ReportingAlert[]> {
+  const out: ReportingAlert[] = [];
+  for (;;) {
+    const page = await listReportingAlerts(session, { limit: 500, offset: out.length });
+    out.push(...page);
+    if (page.length < 500 || out.length >= ALERT_STATS_SCAN) return out.slice(0, ALERT_STATS_SCAN);
+  }
 }
 
 export async function getUnreadAlertCounts(

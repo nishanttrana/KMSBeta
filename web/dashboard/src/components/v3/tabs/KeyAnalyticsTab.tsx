@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
 import { OpsMetricsPanel } from "./OpsMetricsPanel";
-import { AuditAnalyticsPanel } from "./AuditAnalyticsPanel";
-import { AlertAnalyticsPanel } from "./AlertAnalyticsPanel";
 
 const base = "/svc/keycore";
 const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
@@ -20,7 +18,7 @@ const Btn = ({ onClick, children, small, variant = "default" }: any) => {
 const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
 
 export function KeyAnalyticsTab({ session }: any) {
-  const [view, setView] = useState<"keys" | "ops" | "audit" | "alerts">("keys");
+  const [view, setView] = useState<"keys" | "ops">("keys");
   const [analytics, setAnalytics] = useState<any>({});
   const [keyStats, setKeyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +67,7 @@ export function KeyAnalyticsTab({ session }: any) {
       </div>
 
       <div style={{ display: "flex", gap: 2, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-        {([["keys", "Key inventory"], ["ops", "Operations"], ["audit", "Audit activity"], ["alerts", "Alerts"]] as const).map(([id, label]) => (
+        {([["keys", "Key inventory"], ["ops", "Operations"]] as const).map(([id, label]) => (
           <button key={id} onClick={() => setView(id)} style={{
             padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12,
             fontWeight: view === id ? 700 : 400, color: view === id ? C.accent : C.muted,
@@ -78,7 +76,7 @@ export function KeyAnalyticsTab({ session }: any) {
         ))}
       </div>
 
-      {view === "ops" ? <OpsMetricsPanel session={session} /> : view === "audit" ? <AuditAnalyticsPanel session={session} /> : view === "alerts" ? <AlertAnalyticsPanel session={session} /> : <>
+      {view === "ops" ? <OpsMetricsPanel session={session} /> : <>
 
       {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
