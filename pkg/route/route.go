@@ -70,6 +70,7 @@ const (
 // Refusal reasons the kernel itself produces.
 const (
 	ReasonUnauthenticated  = "unauthenticated"
+	ReasonInvalidToken     = "invalid_token"
 	ReasonPermissionDenied = "permission_denied"
 	ReasonTenantMismatch   = "tenant_mismatch"
 	ReasonTenantConflict   = "tenant_conflict"
@@ -166,6 +167,17 @@ func (rt *Router) Public(r *http.Request) bool {
 	for _, x := range rt.routes {
 		if x.Pattern == pattern {
 			return x.Spec.Public
+		}
+	}
+	return false
+}
+
+// Routed reports whether r matches a registered route (method included).
+func (rt *Router) Routed(r *http.Request) bool {
+	_, pattern := rt.mux.Handler(r)
+	for _, x := range rt.routes {
+		if x.Pattern == pattern {
+			return true
 		}
 	}
 	return false
@@ -337,6 +349,10 @@ func (rt *Router) serve(w http.ResponseWriter, r *http.Request, spec Spec, h fun
 	}
 	defer func() { rt.emit(c, spec, cw.status, time.Since(start)) }()
 
+	if invalidToken(r.Context()) {
+		c.Refuse(http.StatusUnauthorized, ReasonInvalidToken, "invalid bearer token")
+		return
+	}
 	if c.Claims == nil && !spec.Public {
 		c.Refuse(http.StatusUnauthorized, ReasonUnauthenticated, "authentication required")
 		return
@@ -369,6 +385,17 @@ func (rt *Router) serve(w http.ResponseWriter, r *http.Request, spec Spec, h fun
 	}
 	h(c)
 }
+
+type invalidTokenKey struct{}
+
+// WithInvalidToken marks a request whose bearer token failed verification,
+// so the kernel refuses it and audits the refusal under the route's own
+// action (pkg/jwtauth.MustWrapRouter), on Public routes too.
+func WithInvalidToken(ctx context.Context) context.Context {
+	return context.WithValue(ctx, invalidTokenKey{}, true)
+}
+
+func invalidToken(ctx context.Context) bool { v, _ := ctx.Value(invalidTokenKey{}).(bool); return v }
 
 // CoarseDomains are the data-plane domains covered by the coarse grants that
 // activated API clients hold (kms.read, kms.write). A domain joins only by an

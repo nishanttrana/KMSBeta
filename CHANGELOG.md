@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.10.0-beta] — 2026-09-30
+
+### A missing or bad token is audited as its own event on kernel services
+- **Fixed:** on services fully on the route kernel, the JWT middleware
+  answered a request with no token, or a token that failed verification,
+  with a 401 itself. Only the generic HTTP request log recorded it. Now
+  `pkg/jwtauth.MustWrapRouter` hands the request to the kernel, which refuses
+  it and emits `audit.<service>.<action>` with `result: refused` and `reason`
+  `unauthenticated` or `invalid_token`. A bad token is refused on Public
+  routes too. A request that matches no route still gets a plain 401, so an
+  unauthenticated caller learns nothing about which paths exist.
+- **Services:** confidential, discovery, keyaccess, pqc, reconciler,
+  reporting, sbom and watchdog move from `MustWrap` to `MustWrapRouter`
+  (workload already used it). Services on a raw mux keep `MustWrap`; they
+  get this when they migrate.
+- **Test:** `TestKernelWrapperAuditsTokenRefusals`.
+
 ## [7.9.0-beta] — 2026-09-30
 
 ### Workload Identity, Confidential Compute and Crypto Discovery are back in the dashboard

@@ -62,7 +62,7 @@ func main() {
 		logger.Fatalf("refusing to start: %v", err)
 	}
 	router := newRouter(probe.Snapshot, pb.Incidents, audit, logger)
-	handler := pkgjwtauth.MustWrap("WATCHDOG", cfg.JWTIssuer, cfg.JWTAudience, router, logger)
+	handler := pkgjwtauth.MustWrapRouter("WATCHDOG", cfg.JWTIssuer, cfg.JWTAudience, router, logger)
 
 	port := envOr("HTTP_PORT", "8480")
 	srv := pkgconfig.NewHTTPServer(port, handler)

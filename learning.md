@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A refusal before the kernel is a refusal nobody audits
+- **What happened:** `pkg/jwtauth.MustWrap` returned 401 before the route
+  kernel ran, so a missing or forged token on a kernel service left only the
+  generic request log, not `audit.<service>.<action>`.
+- **Rule:** in front of a kernel router, verify the token and pass the
+  outcome on (`route.WithInvalidToken`); let the kernel refuse. Only a
+  request that matches no route is refused before it, because there's no
+  action to audit it under.
+
+
 ### Never again: a working service with no page, and a tenant check with no token
 - **What happened:** Workload Identity, Confidential Compute and Discovery ran
   in every deployment with no dashboard page. Two UI cleanups (f8e7162c4,

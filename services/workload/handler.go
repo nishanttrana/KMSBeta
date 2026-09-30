@@ -306,3 +306,6 @@ func writeServiceError(c *route.Call, err error) {
 		c.Error(http.StatusInternalServerError, "internal_error", "internal server error")
 	}
 }
+
+// Routed reports whether r matches a route (pkg/jwtauth.MustWrapRouter).
+func (h *Handler) Routed(r *http.Request) bool { return h.router.Routed(r) }

@@ -72,7 +72,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf("refusing to start: %v", err)
 	}
-	handler := pkgjwtauth.MustWrap("RECONCILER", cfg.JWTIssuer, cfg.JWTAudience, newRouter(runner.Status, audit, logger), logger)
+	handler := pkgjwtauth.MustWrapRouter("RECONCILER", cfg.JWTIssuer, cfg.JWTAudience, newRouter(runner.Status, audit, logger), logger)
 
 	port := envOr("HTTP_PORT", "8470")
 	srv := pkgconfig.NewHTTPServer(port, handler)

@@ -3353,7 +3353,11 @@ uses only the key the authorization token names.
 
 ## Appendix: Audit Action Subject Reference
 
-Audit events use dot-separated action subjects. Common prefixes:
+Audit events use dot-separated action subjects. On a service fully on the
+route kernel, a request with no bearer token or an invalid one is refused
+by the kernel and audited as `audit.<service>.<action>` with `result:
+refused` and `reason` `unauthenticated` or `invalid_token` (7.10.0-beta).
+Common prefixes:
 
 | Prefix | Domain |
 |--------|--------|

@@ -90,7 +90,7 @@ func main() {
 	)
 	// Every route needs a verified JWT: the kernel binds the tenant and the
 	// actor to it (CLAUDE.md rule 4).
-	handler := pkgjwtauth.MustWrap("PQC", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
+	handler := pkgjwtauth.MustWrapRouter("PQC", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 
 	httpPort := envOr("HTTP_PORT", "8060")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "pqc"))

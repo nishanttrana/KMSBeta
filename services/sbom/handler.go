@@ -287,3 +287,9 @@ func atoi(v string) int {
 	}
 	return n
 }
+
+// Public reports whether r reaches a Public route (pkg/jwtauth.MustWrapRouter).
+func (h *Handler) Public(r *http.Request) bool { return h.router.Public(r) }
+
+// Routed reports whether r matches a route (pkg/jwtauth.MustWrapRouter).
+func (h *Handler) Routed(r *http.Request) bool { return h.router.Routed(r) }

@@ -90,7 +90,7 @@ func main() {
 	svc.cloud = NewHTTPCloudClient(envOr("CLOUD_URL", "https://cloud:8080"), 30*time.Second)
 	// Every route needs a verified platform JWT; the kernel checks the
 	// permission and tenant and audits each call (handler.go).
-	handler := pkgjwtauth.MustWrap("DISCOVERY", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
+	handler := pkgjwtauth.MustWrapRouter("DISCOVERY", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 
 	httpPort := envOr("HTTP_PORT", "8100")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "discovery"))

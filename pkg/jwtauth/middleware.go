@@ -3,8 +3,10 @@ package jwtauth
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/route"
 )
 
 // MustWrap is the single-call helper services use in main.go to require
@@ -30,25 +32,50 @@ func MustWrap(prefix, issuer, audience string, next http.Handler, logger *log.Lo
 	return pkgauth.HTTPMiddleware(next, parser)
 }
 
-// PublicRouter is a handler that knows which requests reach a route that
-// authenticates without a bearer token (*route.Router satisfies it).
+// PublicRouter is a pkg/route router: it knows which requests reach a
+// Public route (*route.Router satisfies it).
 type PublicRouter interface {
 	http.Handler
 	Public(r *http.Request) bool
+	Routed(r *http.Request) bool
 }
 
-// MustWrapRouter is MustWrap for a pkg/route router that has Public routes.
-// A request without an Authorization header that the router sends to a
-// Public route reaches it unauthenticated; the route's handler verifies its
-// own credential (for example an SVID) and the kernel audits the call. Every
-// other request, and any request that carries a token, needs a valid token.
+// MustWrapRouter is MustWrap for a service whose every route is on the
+// pkg/route kernel. It verifies a bearer token when one is sent, but leaves
+// the refusal to the kernel: a request without a token reaches the router
+// with no claims, and one with a token that fails verification is marked
+// (route.WithInvalidToken). The kernel then refuses it, on Public routes
+// too for a bad token, and audits the refusal as audit.<service>.<action>
+// with reason unauthenticated or invalid_token. Until 7.10.0-beta this
+// middleware answered 401 itself and only the generic request log saw it.
+// Never use it for a raw http.ServeMux, which has no kernel to refuse.
 func MustWrapRouter(prefix, issuer, audience string, rt PublicRouter, logger *log.Logger) http.Handler {
-	authed := MustWrap(prefix, issuer, audience, rt, logger)
+	parser, err := LoadParser(Config{Prefix: prefix, Issuer: issuer, Audience: audience})
+	if err != nil {
+		logger.Fatalf("%s jwt parser init failed: %v", prefix, err)
+	}
+	if parser == nil {
+		logger.Fatalf("%s_JWT_PUBLIC_KEY_PEM (or _B64) is required to start this service", prefix)
+	}
+	return wrapKernel(parser, rt)
+}
+
+func wrapKernel(parser func(string) (*pkgauth.Claims, error), rt PublicRouter) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") == "" && rt.Public(r) {
-			rt.ServeHTTP(w, r)
+		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+		ctx := r.Context()
+		claims, err := parser(raw)
+		switch {
+		case raw != "" && err == nil:
+			ctx = pkgauth.ContextWithVerifiedToken(pkgauth.ContextWithClaims(ctx, claims), raw)
+		case !rt.Routed(r):
+			// No route, so no action to audit under; don't reveal which
+			// paths or methods exist to an unauthenticated caller.
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
+		case raw != "":
+			ctx = route.WithInvalidToken(ctx)
 		}
-		authed.ServeHTTP(w, r)
+		rt.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

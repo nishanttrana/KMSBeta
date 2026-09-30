@@ -98,7 +98,7 @@ func main() {
 	handler := NewHandler(svc, audit, logger)
 
 	httpPort := envOr("HTTP_PORT", "8140")
-	authedHandler := pkgjwtauth.MustWrap("REPORTING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	authedHandler := pkgjwtauth.MustWrapRouter("REPORTING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "reporting"))
 	go func() {
 		logger.Printf("https (mTLS) listening on :%s", httpPort)

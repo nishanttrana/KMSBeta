@@ -223,3 +223,9 @@ func (h *Handler) ok(c *route.Call, err error) bool {
 	c.Error(status, "internal_error", msg)
 	return false
 }
+
+// Public reports whether r reaches a Public route (pkg/jwtauth.MustWrapRouter).
+func (h *Handler) Public(r *http.Request) bool { return h.router.Public(r) }
+
+// Routed reports whether r matches a route (pkg/jwtauth.MustWrapRouter).
+func (h *Handler) Routed(r *http.Request) bool { return h.router.Routed(r) }
