@@ -4,6 +4,53 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.16.0-beta] — 2026-09-30
+
+### REST client key rotation works; client credentials managed in the dashboard
+- **Fixed (security):** rotating a REST client's API key
+  (`POST /auth/clients/{id}/rotate-key`) only rewrote the registration's
+  prefix. `/auth/client-token` checks keys in `auth_api_keys`, so the new
+  key it returned was never accepted, the old key kept working, and the
+  audit log recorded `client_key_rotated` as a success. Rotation now
+  deletes the client's keys and inserts the new one in one transaction, and
+  it refuses a client that isn't approved (`409 client_state`).
+- **Fixed (security):** revoking a client left its API key row behind. It
+  is now deleted in the same transaction as the status change.
+- **Fixed:** activating a client that was no longer pending returned an
+  unaudited `400`. It is now `409 client_state` (or `404`), audited as
+  `audit.auth.client_activation_refused`.
+- **Removed (security):** `POST /auth/api-keys`. It stored any permissions
+  its caller named, including ones the caller didn't hold, on a key bound
+  to no client. `/auth/client-token` never accepted such keys, but nothing
+  should mint them. Auth deletes any that exist at startup, on the node
+  that runs primary jobs (`audit.auth.unbound_api_keys_retired`).
+- **Changed:** client revoke, client key rotation and `DELETE
+  /auth/api-keys/{id}` run on the route kernel, so each call and refusal
+  is audited as its own event. They refuse platform service identities
+  (`kms-*`) with `409 service_identity_protected`: those keys are derived
+  from the bootstrap secret, and revoking one would only lock the service
+  out.
+- **Added:** Workbench → REST API → REST Client Security can register a
+  client, approve it (the API key is shown once and never stored by the
+  dashboard), rotate its key, and revoke it. Before this, approval was
+  API-only and the rotate and revoke helpers had no UI.
+- **Docs:** `docs/API_REFERENCE.md` was checked field by field against the
+  handlers. Conventions (error format, no `pageToken` paging, no
+  idempotency key, no `X-RateLimit-*` headers, snake_case fields), auth,
+  keycore (key object, create, list, encrypt, sign, derive: HKDF only,
+  export, versions), certs CA, audit events, governance system state,
+  compliance assessments, dataprotect, autokey, KMIP clients, signing,
+  secrets (addressed by ID, not path), SBOM, and the workflow appendix now
+  match the code. Every example passes credentials on stdin. Part of this
+  (the Conventions and first keycore sections) was swept into 458de9a7b by
+  a concurrent session's commit; the rest is here.
+- **Tests:** `TestRotatedClientKeyWorksAndOldKeyStops`,
+  `TestRevokedClientKeyStops`, `TestPendingClientKeyRotationRefused`,
+  `TestActivationOfApprovedClientRefusedAndAudited`,
+  `TestServiceIdentityClientProtected`, `TestUnboundAPIKeysRemovedAndRetired`,
+  `TestClientAdminRefusalsAudited`, and `TestClientKeyLifecyclePostgres`
+  (real Postgres).
+
 ## [7.15.0-beta] — 2026-09-30
 
 ### Charts sit beside their entries, and every chart drills into them

@@ -15,6 +15,10 @@ import (
 
 var errNotFound = errors.New("not found")
 
+// errClientState is returned when a client registration is not in the state
+// an operation needs (activation needs pending, key rotation approved).
+var errClientState = errors.New("client registration state")
+
 type Store interface {
 	// Cluster-wide lockout (cluster_lockout.go).
 	RecordLoginAttempt(ctx context.Context, a LoginAttempt) error
@@ -56,7 +60,7 @@ type Store interface {
 	UpdateClientRegistrationSecurity(ctx context.Context, tenantID string, registrationID string, cfg ClientSecurityConfig) error
 	ActivateClientRegistration(ctx context.Context, tenantID string, registrationID string, apiKey APIKey, approver string, approvalID string) error
 	RevokeClientRegistration(ctx context.Context, tenantID string, registrationID string) error
-	RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, keyHash []byte, keyPrefix string) error
+	RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, apiKey APIKey) error
 	GetAPIKeyByHash(ctx context.Context, tenantID string, keyHash []byte) (APIKey, error)
 	ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error
 
@@ -65,6 +69,7 @@ type Store interface {
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
 	GetAPIKeyByID(ctx context.Context, tenantID string, keyID string) (APIKey, error)
 	DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error)
+	DeleteUnboundAPIKeys(ctx context.Context, tenantID string) (int64, error)
 
 	CreateSession(ctx context.Context, s Session) error
 	DeleteSession(ctx context.Context, tenantID string, sessionID string) error
@@ -1022,7 +1027,7 @@ SELECT status FROM auth_client_registrations WHERE tenant_id=$1 AND id=$2
 			return err
 		}
 		if status != "pending" {
-			return fmt.Errorf("registration is %s", status)
+			return fmt.Errorf("%w: registration is %s", errClientState, status)
 		}
 
 		approversJSON, _ := json.Marshal([]string{approver})
@@ -1048,34 +1053,73 @@ INSERT INTO auth_api_keys (
 	return nil
 }
 
+// RevokeClientRegistration marks the registration revoked and deletes its
+// API keys in one transaction, so no key of a revoked client survives.
 func (s *SQLStore) RevokeClientRegistration(ctx context.Context, tenantID string, registrationID string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
+	return s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `
 UPDATE auth_client_registrations SET status='revoked' WHERE tenant_id=$1 AND id=$2
 `, tenantID, registrationID)
-	if err != nil {
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return errNotFound
+		}
+		_, err = tx.ExecContext(ctx, `DELETE FROM auth_api_keys WHERE tenant_id=$1 AND client_id=$2`, tenantID, registrationID)
 		return err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return errNotFound
-	}
-	return nil
+	})
 }
 
-func (s *SQLStore) RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, keyHash []byte, keyPrefix string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
-UPDATE auth_client_registrations
-SET api_key_hash=$1, api_key_prefix=$2, last_used=NULL
+// RotateClientAPIKey replaces an approved client's API key: every existing
+// key of the client is deleted and apiKey inserted in one transaction, so the
+// old key stops working the moment the new one exists. /auth/client-token
+// validates against auth_api_keys, so the key row, not the registration's
+// prefix, is what makes a key usable.
+func (s *SQLStore) RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, apiKey APIKey) error {
+	return s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		var status string
+		err := tx.QueryRowContext(ctx, `
+SELECT status FROM auth_client_registrations WHERE tenant_id=$1 AND id=$2
+`, tenantID, registrationID).Scan(&status)
+		if errors.Is(err, sql.ErrNoRows) {
+			return errNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if status != "approved" {
+			return fmt.Errorf("%w: registration is %s", errClientState, status)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM auth_api_keys WHERE tenant_id=$1 AND client_id=$2`, tenantID, registrationID); err != nil {
+			return err
+		}
+		perms, _ := json.Marshal(apiKey.Permissions)
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO auth_api_keys (
+    id, tenant_id, user_id, client_id, key_hash, name, permissions, expires_at, created_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP)
+`, apiKey.ID, tenantID, nullableString(apiKey.UserID), registrationID, apiKey.KeyHash, apiKey.Name, perms, apiKey.ExpiresAt); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `
+UPDATE auth_client_registrations SET api_key_hash=$1, api_key_prefix=$2, last_used=NULL
 WHERE tenant_id=$3 AND id=$4
-`, keyHash, keyPrefix, tenantID, registrationID)
-	if err != nil {
+`, apiKey.KeyHash, apiKey.KeyPrefix, tenantID, registrationID)
 		return err
+	})
+}
+
+// DeleteUnboundAPIKeys removes the tenant's API keys bound to no client.
+// Only the removed POST /auth/api-keys created them (7.16.0-beta).
+func (s *SQLStore) DeleteUnboundAPIKeys(ctx context.Context, tenantID string) (int64, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM auth_api_keys WHERE tenant_id=$1 AND (client_id IS NULL OR client_id='')
+`, tenantID)
+	if err != nil {
+		return 0, err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return errNotFound
-	}
-	return nil
+	return res.RowsAffected()
 }
 
 // GetAPIKeyByID reads one API key of the tenant.

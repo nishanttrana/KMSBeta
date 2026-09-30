@@ -33,7 +33,7 @@ Complete endpoint reference for all 27 Vecta KMS services.
 
 ## Conventions
 
-Checked against the code in 7.15.0-beta.
+Checked against the code in 7.16.0-beta.
 
 **Base URL**: `https://{host}`. Everything is TLS; there is no plain-HTTP
 listener. For a local install, pass the internal root CA
@@ -160,79 +160,116 @@ Bearer required. No body. Invalidates token. Response: 204.
 
 ### POST /svc/auth/auth/refresh
 
-Public. Body: `refreshToken`. Response: `token`, `refreshToken`, `expiresAt`.
+Bearer (`auth.token.refresh`). No refresh tokens exist: the caller's
+current, still-valid token is exchanged for a new one. Response:
+`access_token`, `expires_at`.
 
 ---
 
-### POST /svc/auth/auth/client-token
+### REST clients: register, approve, token, rotate, revoke
 
-Issues sender-constrained client tokens. Supports mTLS (`oauth_mtls`), DPoP, HTTP Message Signature binding.
+The pipeline flow is in [CI_CD_AUTOMATION.md](CI_CD_AUTOMATION.md). In the
+dashboard: Workbench → REST API → REST Client Security.
 
-Body: `clientId`, `clientSecret` (for secret mode), `grantType: client_credentials`, `scope`
+| Route | Auth | Body / response | Audit |
+|---|---|---|---|
+| `POST /svc/auth/auth/register` | public | `tenant_id`, `client_name` (required), `interface_name` (default `rest`), `auth_mode` (`api_key`, `oauth_mtls`, `dpop`, `http_message_signature`), `subject_id`, `description`, `contact_email`, `requested_role` → `registration_id`, `status: pending` | `audit.auth.client_registered` |
+| `POST /svc/auth/auth/register/{id}/activate` | `auth.client.activate` | `tenant_id`, `approval_id` (when governance requires it), `ip_whitelist[]`, `rate_limit` → `api_key` (**shown once**), `api_key_prefix` | `audit.auth.client_activated`; refused (`governance_required`, `client_state` when not pending, `not_found`): `audit.auth.client_activation_refused` |
+| `POST /svc/auth/auth/client-token` | public, API key in `X-API-Key` (or `Authorization: ApiKey ...`) | `tenant_id`, `client_id` (the registration ID), optional `permissions[]` (a subset of the key's), `ttl_seconds` (60–3600, default 300) → `access_token`, `token_type`, `expires_at`, `client_id`, `subject_id`, `interface_name`. `oauth_mtls`, `dpop` and `http_message_signature` clients also present their certificate, `DPoP` proof or signature | binding and replay refusals: `audit.auth.mtls_binding_failed`, `client_dpop_failed`, `dpop_replay_detected`, `client_http_signature_failed`, `http_signature_replay_detected` |
+| `POST /svc/auth/auth/clients/{id}/rotate-key` | `auth.client.write` | → `api_key` (**shown once**), `api_key_prefix`. The previous key is deleted in the same transaction and stops working immediately | `audit.auth.client_key_rotated`; refused `client_state` (not approved), `service_identity_protected` (409) |
+| `POST /svc/auth/auth/clients/{id}/revoke` | `auth.client.write` | status becomes `revoked` and the client's API keys are deleted | `audit.auth.client_revoked`; refused `service_identity_protected` (409) |
+| `DELETE /svc/auth/auth/api-keys/{id}` | `auth.api_key.write` | deletes one API key; platform service keys are refused | `audit.auth.api_key_revoked`; refused `service_identity_protected` (409) |
+| `GET /svc/auth/auth/clients`, `GET/PUT /svc/auth/auth/clients/{id}` | `auth.client.read` / `auth.client.write` | list, read, and update security settings (`auth_mode`, `ip_whitelist`, `rate_limit`, `replay_protection_enabled`, mTLS and HTTP-signature bindings) | `audit.auth.client_updated` |
 
-Response: `token`, `expiresAt`, `tokenType`, `boundThumbprint` (if sender-constrained)
+A client token holds the key's `kms.read` / `kms.write`, which the route
+kernel honours only in the `secrets` domain. Key operations need a user
+whose role holds `key.*`. `POST /auth/api-keys` was removed in 7.16.0-beta:
+it minted keys bound to no client, with any permissions the caller named,
+and auth deletes any such keys left over at startup
+(`audit.auth.unbound_api_keys_retired`).
 
 ---
 
 ### GET /svc/auth/auth/rest-client-security/summary
 
-Bearer, admin. Response: `totalClients`, `senderConstrainedClients`, `legacyClients`, `replayProtectedClients`, `replayViolations`, `signatureFailures`, `unsignedRequestRejects`
+`auth.client.read`. Response `summary`: `total_clients`,
+`sender_constrained_clients`, `oauth_mtls_clients`, `dpop_clients`,
+`http_message_signature_clients`, `replay_protected_clients`,
+`verified_requests`, `replay_violations`, `signature_failures`,
+`unsigned_rejects`, `non_compliant_clients`, `last_violation_at`.
 
 ---
 
 ### GET /svc/auth/auth/users
 
-Bearer, admin. Query: `pageSize`, `pageToken`, `search`, `role`, `tenantId`, `locked`. Response: paginated UserSummary[].
-
-UserSummary fields: id, username, email, displayName, roles[], tenantId, lastLoginAt, locked, mfaEnabled, createdAt
+`auth.user.read`. Query: `tenant_id` (another tenant needs
+`auth.tenant.read`). Response `items[]`: `id`, `tenant_id`, `username`,
+`email`, `role`, `status`, `must_change_password`, `created_at`. Not paged.
 
 ---
 
 ### POST /svc/auth/auth/users
 
-Bearer, admin. Body: `username`, `email`, `displayName`, `password`, `roles[]`, `tenantId`, `sendWelcomeEmail`. Response 201: User.
+`auth.user.write`. Body: `username`, `email`, `password`, `role`,
+`status`, `must_change_password`, `totp_secret` (optional), `tenant_id`.
+The password must meet the tenant's password policy. Response `201`:
+`user_id`.
 
 ```bash
-curl -sk -X POST https://localhost/svc/auth/auth/users \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"username":"bob","email":"bob@example.com","password":"SecurePass123!","roles":["operator"],"tenantId":"root"}'
+jq -n '{tenant_id: "root", username: "bob", email: "bob@example.com", role: "operator",
+        password: env.NEW_USER_PASSWORD, must_change_password: true}' |
+  { printf 'Authorization: Bearer %s\n' "$TOKEN" > "$HDR"; \
+    curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/auth/auth/users \
+      -H @"$HDR" -H "Content-Type: application/json" --data-binary @-; rm -f "$HDR"; }
 ```
 
 ---
 
 ### POST /svc/auth/auth/users/{id}/reset-password
 
-Body: `newPassword` OR `sendResetEmail: true`. Response 200: `{"message": "Password reset successful"}`
+`auth.user.write`. Body: `new_password`, `must_change_password`
+(optional). Response: `{"status": "ok"}`. Audited
+`audit.auth.user_password_reset`.
 
 ---
 
-### GET/POST /svc/auth/tenants / GET/DELETE /svc/auth/tenants/{id}
+### GET/POST /svc/auth/tenants / GET/PUT/DELETE /svc/auth/tenants/{id}
 
-Create body: `id` (slug), `name`, `plan`, `config` (maxKeys, maxUsers, enforceMfa, sessionTimeoutMinutes, allowedIpRanges[]).
-
-```bash
-curl -sk -X POST https://localhost/svc/auth/tenants \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"id":"acme-corp","name":"Acme Corporation","plan":"enterprise","config":{"maxKeys":10000,"enforceMfa":true}}'
-```
+`auth.tenant.read` / `auth.tenant.write` (or the `super-admin` role).
+Create body: `id`, `name`, `status`, and the tenant's first administrator
+`admin_username`, `admin_email`, `admin_password`, `admin_role`,
+`admin_status`, `admin_must_change_password`. Response: `status`,
+`tenant_id`, `admin_user_id`. `GET /tenants/{id}` returns `tenant`
+(`id`, `name`, `status`, `created_at`). Other routes:
+`GET /tenants/{id}/delete-readiness`, `POST /tenants/{id}/disable`, and
+`POST /tenants/{id}/roles` and `PUT`/`DELETE /tenants/{id}/roles/{name}`.
 
 ---
 
 ### GET/PUT /svc/auth/auth/scim/settings
 
-Settings: `enabled`, `defaultRole`, `deprovisionMode` (disable/delete), `groupRoleMappingActive`, `requirePasswordChangeOnFirstLogin`
+`auth.user.read` / `auth.user.write`. `settings`: `enabled`,
+`token_prefix`, `default_role`, `default_status`,
+`default_must_change_password`, `deprovision_mode`,
+`group_role_mappings_enabled`, `updated_by`, `updated_at`.
 
 ---
 
 ### POST /svc/auth/auth/scim/settings/rotate-token
 
-Returns raw SCIM bearer token once. Response: `{"token": "...", "rotatedAt": "..."}`
+`auth.user.write`. Response: `settings` and `bearer_token`, which is
+**shown once** and is the SCIM client's credential. Audited
+`audit.auth.scim_token_rotated`.
 
 ---
 
 ### GET /svc/auth/auth/scim/summary
 
-Response: `managedUsers`, `managedGroups`, `memberships`, `roleMappedGroups`, `lastProvisionedAt`, `lastDeprovisionedAt`
+`auth.user.read`. Response `summary`: `enabled`, `token_configured`,
+`token_prefix`, `default_role`, `default_status`, `deprovision_mode`,
+`group_role_mappings_enabled`, `managed_users`, `active_users`,
+`disabled_users`, `managed_groups`, `managed_memberships`,
+`role_mapped_groups`, `last_provisioned_at`, `last_deprovisioned_at`.
 
 ---
 
@@ -342,88 +379,83 @@ variable each profile names (or `<name>_FILE`). Keycore and governance use
 
 ### Key Object Schema
 
+What `GET /svc/keycore/keys/{id}` returns under `key`, and each item of
+`GET /svc/keycore/keys`. Key material is never returned.
+
 | Field | Type | Description |
 |-------|------|-------------|
-| id | string | UUID key identifier |
-| name | string | Unique name within tenant |
-| algorithm | string | AES-256, AES-128, EC-P256, EC-P384, EC-P521, Ed25519, RSA-2048, RSA-4096, ML-KEM-512/768/1024, ML-DSA-44/65/87, SLH-DSA-SHA2-128s |
-| purpose | string | encrypt / sign / both / wrap / derive |
-| state | string | PENDING / ACTIVE / DEACTIVATED / PENDING_DELETION / DESTROYED |
-| currentVersion | int | Active version number |
-| publicKey | string | PEM public key (asymmetric) |
-| fingerprint | string | SHA-256 of key material |
-| hsmBacked | boolean | Key material in HSM |
-| hsmGroupId | string | HSM group ID |
-| tenantId | string | Owning tenant |
-| tags | object | Searchable key-value pairs |
-| metadata | object | Non-indexed metadata |
-| expiresAt | string | Expiry or null |
-| rotationPolicy | object | intervalDays, notifyDaysBefore, autoRotate |
-| exportPolicy | object | mode (disabled/enabled/wrapped), requireWrapping |
-| interfacePolicy | object | maxUsesPerPeriod, periodSeconds, blockedOperations[] |
-| accessPolicy | object | grants[] |
-| createdAt | string | Creation timestamp |
-| createdBy | string | Creator identity |
-| updatedAt | string | Last update |
+| id | string | Key ID |
+| tenant_id | string | Owning tenant |
+| name | string | Name |
+| algorithm | string | For example `AES-256`, `RSA-3072`, `ECDSA-P384`, `ML-DSA-65` |
+| key_type | string | For example `symmetric`, `asymmetric` (or `public` for a public half) |
+| purpose | string | Intended use as given at creation |
+| status | string | `pre-active`, `active`, `disabled`, `deactivated`, `destroy-pending`, `deleted` |
+| activation_date, expires_at, destroy_date | string or null | RFC 3339 |
+| current_version | int | Current version number |
+| kcv, kcv_algorithm | string | Key check value (uppercase hex) and how it was computed |
+| iv_mode | string | IV handling for AEAD encryption |
+| tags | string[] | Tags |
+| labels | object | String key/value labels |
+| export_allowed | bool | Whether export is permitted |
+| ops_total, ops_encrypt, ops_decrypt, ops_sign | int | Usage counters |
+| ops_limit, ops_limit_window | int, string | Usage limit and its window |
+| approval_required, approval_policy_id | bool, string | Operations need a governance approval |
+| created_at, updated_at | string | RFC 3339 |
+
+Rotation schedules are separate objects: `/svc/keycore/rotation/policies`.
 
 ---
 
 ### POST /svc/keycore/keys
 
-Bearer, roles: operator or admin.
+Permission `key.create`.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| name | string | Yes | Unique key name |
+| name | string | Yes | Key name |
 | algorithm | string | Yes | One keycore generates: AES-128/192/256[-mode], 3DES, HMAC-SHA256/384/512, RSA-2048/3072/4096/8192, ECDSA/ECDH P-256/P-384/P-521, Ed25519, X25519, ML-KEM-768/1024, ML-DSA-65/87, SLH-DSA-{SHA2,SHAKE}-{128,192,256}{s,f}. Anything else: `400 algorithm_unsupported` (audited `audit.key.create_refused`) |
-| purpose | string | Yes | encrypt / sign / both / wrap / derive |
-| hsmGroup | string | No | HSM group name |
-| tags | object | No | Searchable tags |
-| metadata | object | No | Non-indexed metadata |
-| expiresAt | string | No | Expiry timestamp |
-| rotationPolicy | object | No | intervalDays, notifyDaysBefore, autoRotate |
-| exportPolicy | object | No | mode, requireWrapping |
-| interfacePolicy | object | No | maxUsesPerPeriod, periodSeconds, blockedOperations[] |
-| accessPolicy | object | No | Access grants |
+| purpose | string | No | Intended use (for example `encrypt`, `sign`, `wrap`) |
+| key_type | string | No | Derived from the algorithm when omitted |
+| activation_mode | string | No | `immediate` (default), `pre-active`, or `scheduled` with `activation_date` |
+| activation_date | string | For `scheduled` | RFC 3339 |
+| tags | string[] | No | Tags |
+| labels | object | No | String key/value labels |
+| owner, cloud, region | string | No | Descriptive ownership fields |
+| compliance | string[] | No | Compliance labels |
+| iv_mode | string | No | IV handling for AEAD encryption |
+| export_allowed | bool | No | Allow export (default false) |
+| ops_limit, ops_limit_window | int, string | No | Usage limit |
+| approval_required, approval_policy_id | bool, string | No | Require governance approval for operations |
+| hsm | bool | No | Generate and keep the key in the tenant's HSM ([HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATION.md)) |
 
 ```bash
-curl -sk -X POST https://localhost/svc/keycore/keys \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"customer-data-key","algorithm":"AES-256","purpose":"encrypt","tags":{"env":"prod","dataClass":"pii"},"rotationPolicy":{"intervalDays":90,"notifyDaysBefore":14,"autoRotate":true},"exportPolicy":{"mode":"disabled"}}'
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/keycore/keys \
+    -H @- -H "Content-Type: application/json" \
+    -d '{"name":"customer-data-key","algorithm":"AES-256","purpose":"encrypt","tags":["prod","pii"],"labels":{"owner":"payments"}}'
 ```
 
-Response:
+Response `201`:
 ```json
-{
-  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "customer-data-key",
-  "algorithm": "AES-256",
-  "purpose": "encrypt",
-  "state": "ACTIVE",
-  "currentVersion": 1,
-  "hsmBacked": false,
-  "tenantId": "root",
-  "tags": {"env": "prod", "dataClass": "pii"},
-  "rotationPolicy": {"intervalDays": 90, "notifyDaysBefore": 14, "autoRotate": true},
-  "exportPolicy": {"mode": "disabled"},
-  "fingerprint": "sha256:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
-  "createdAt": "2025-03-15T14:22:00Z",
-  "createdBy": "user-admin",
-  "updatedAt": "2025-03-15T14:22:00Z"
-}
+{"key_id": "key_...", "tenant_id": "root", "kcv": "A1B2C3", "request_id": "req_..."}
 ```
 
 ---
 
 ### GET /svc/keycore/keys
 
-Query: `pageSize`, `pageToken`, `algorithm`, `purpose`, `state`, `search`, `tag:{key}={value}`, `hsmBacked`
+Query: `tenant_id` (required), `limit`, `offset`, `include_deleted`.
+For cursor paging pass `after_created_at` (RFC 3339) and `after_id` from
+the previous page's `next_cursor`; the response then also carries
+`has_more`. Response: `{"items": [Key, ...], "request_id": "..."}`. Only
+keys the caller may see are listed ([KEY_ACCESS_MODEL.md](SECURITY/KEY_ACCESS_MODEL.md)).
 
 ---
 
 ### GET /svc/keycore/keys/{id}
 
-Returns full Key object.
+Response: `{"key": Key, "request_id": "..."}`.
 
 ---
 
@@ -472,26 +504,23 @@ Irreversible. All versions and material destroyed. State → DESTROYED.
 
 ### POST /svc/keycore/keys/{id}/encrypt
 
-Body: `plaintext` (base64), `aad` (base64, optional), `iv` (optional), `keyVersion` (optional)
+Body: `plaintext` (base64, standard encoding), `aad` (base64, optional),
+`iv` (base64, optional), `iv_mode` (optional), `reference_id` (optional).
 
-Response: `ciphertext`, `iv`, `tag`, `keyId`, `keyVersion`, `algorithm`
+Response: `ciphertext` (base64), `iv` (base64), `version`, `key_id`,
+`kcv`. A key with `approval_required` answers `202` with
+`status: pending_approval` and `approval_request_id` instead.
 
 ```bash
-curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/encrypt \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"plaintext":"SGVsbG8sIFdvcmxkIQ==","aad":"dXNlcklkPTEyMw=="}'
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST "https://localhost/svc/keycore/keys/$KEY_ID/encrypt" \
+    -H @- -H "Content-Type: application/json" \
+    -d '{"plaintext":"SGVsbG8sIFdvcmxkIQ==","aad":"dXNlcklkPTEyMw=="}'
 ```
 
 Response:
 ```json
-{
-  "ciphertext": "7Yp3K2vXmNqL8fGhRtAzBw==",
-  "iv": "YWJjZGVmZ2hpamts",
-  "tag": "a1b2c3d4e5f6a7b8",
-  "keyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "keyVersion": 1,
-  "algorithm": "AES-256-GCM"
-}
+{"ciphertext": "7Yp3K2vX...", "iv": "YWJjZGVmZ2hpamts", "version": 1, "key_id": "key_...", "kcv": "A1B2C3", "request_id": "req_..."}
 ```
 
 ---
@@ -524,9 +553,11 @@ The plaintext never leaves keycore. Body: `ciphertext`, `iv`, `aad`
 
 ### POST /svc/keycore/keys/{id}/sign
 
-Body: `message` (base64), `messageType` (raw/digest), `algorithm` (ECDSA-SHA256, ECDSA-SHA384, EdDSA, RSA-PSS-SHA256, ML-DSA, SLH-DSA), `keyVersion`
+Body: `data` (base64), `algorithm` (optional signature/hash choice for the
+key's type), `prehashed` (optional, below).
 
-Response: `signature` (base64), `algorithm`, `keyId`, `keyVersion`, `publicKeyPem`
+Response: `signature` (base64), `version`, `key_id`. The public key is at
+`GET /svc/keycore/keys/{id}/public-key`.
 
 `prehashed: true` signs `data` as an already computed digest (the HSM CA
 path). HSM keys only; the hash (`algorithm` SHA-256/384/512) must match the
@@ -844,9 +875,13 @@ trail every minute: `new_actor`, `volume_spike`, `dormant_key_activity`, and
 
 ### POST /svc/keycore/keys/{id}/derive
 
-Body: `algorithm` (HKDF-SHA256/384/512, PBKDF2-SHA256, SP800-108-CTR), `salt`, `info`, `outputLength` (16–64), `outputKeySpec` (optional)
+Body: `algorithm` (`hkdf-sha256`, `hkdf-sha384` or `hkdf-sha512`; anything
+else is refused), `salt` and `info` (base64, optional), `length_bits`
+(multiple of 8, at most 4096, default 256), `reference_id` (optional).
 
-Response: Key object or `derivedKeyMaterial` (base64)
+Response: `derived_key` (base64), `key_id`, `version`, `algorithm`,
+`length_bits`. A key with `approval_required` answers `202`
+`pending_approval`.
 
 `info` must not start with the reserved prefix `vecta/service-derive/`. Such a
 request is refused and audited as `audit.key.derive_refused` (critical).
@@ -877,13 +912,20 @@ Body: `data`, `operation` (generate/verify), `mac` (for verify), `algorithm` (HM
 
 ### POST /svc/keycore/keys/{id}/export
 
-Body: `format` (raw/pkcs8/spki/jwk/pkcs12), `wrappingKeyId` (if required). Response: `keyMaterial` (base64) or `jwk`.
+Body: `wrapping_key_id` (a KEK in the same tenant) or `export_mode:
+"public-plaintext"` (public half of an asymmetric key only). Needs the key's
+`export_allowed`. Wrapped export responds `wrapped_material`, `material_iv`,
+`kcv`, `wrapping_key_id`, `wrapping_key_kcv`, `export_format:
+"aes-gcm-wrapped-by-kek"`. Public export responds `public_key_plaintext`,
+`plaintext_encoding`, `component_type`, `export_format:
+"public-plaintext"`. Private material never leaves keycore in the clear.
 
 ---
 
 ### GET /svc/keycore/keys/{id}/versions
 
-Response: `KeyVersion[]` — version, state, fingerprint, createdAt, retiredAt
+Response `items[]`: `id`, `key_id`, `version`, `status`, `public_key`
+(asymmetric), `rotated_from`, `rotation_reason`, `created_at`.
 
 ---
 
@@ -1307,9 +1349,14 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 
 ---
 
-### GET /svc/certs/certs/ca
+### GET/POST /svc/certs/certs/ca
 
-Create: `name`, `type`, `keyId`, `subject`, `validityDays`, `pathLen`, `permittedDNS[]`, `permittedIP[]`, `crlUrls[]`, `ocspUrls[]`, `issuingCaId` (required for non-root)
+`GET` lists CAs (`items[]`: `id`, `tenant_id`, `name`, `parent_ca_id`,
+`ca_level`, `algorithm`, `ca_type`, `key_backend`, `key_ref`, `cert_pem`,
+`subject`, `status`, `created_at`, `updated_at`). `POST` creates one. Body:
+`name`, `ca_level` (`root` or `intermediate`), `parent_ca_id` (required for
+an intermediate), `algorithm`, `ca_type`, `key_backend`, `key_ref`,
+`subject` (DN string), `validity_days`. Response `201`: `ca`.
 
 `key_backend`: `software` (default), `keycore` (software key, keycore
 co-signs) or `hsm`: the CA key is generated in the tenant's HSM through
@@ -1370,45 +1417,30 @@ Immutable audit log: SHA-256 hash chain, per-event HMAC and signed checkpoints (
 
 ### AuditEvent Object
 
-id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorName, actorIp, resourceType, resourceId, resourceName, outcome (success/failure/denied), errorCode, requestId, chain_hash, previous_hash, hmac_sig, metadata
+`id`, `tenant_id`, `sequence`, `timestamp`, `service`, `action` (the
+subject, e.g. `audit.key.decrypt`), `actor_id`, `actor_type` (`user`,
+`client`, `service`, `system`), `target_type`, `target_id`, `method`,
+`endpoint`, `source_ip`, `user_agent`, `correlation_id`,
+`parent_event_id`, `session_id`, `result` (`success`, `failure`,
+`refused`), `status_code`, `error_message`, `duration_ms`,
+`fips_compliant`, `approval_id`, `risk_score`, `tags`, `details`, and the
+integrity fields `chain_hash`, `previous_hash`, `hmac_sig`, `hmac_key_id`.
 
 ---
 
 ### GET /svc/audit/audit/events
 
-Bearer, roles: auditor or admin.
-
-Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`, `action_prefix` (repeatable, up to 5, OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`)
+Query: `tenant_id`, `action` (exact), `action_prefix` (repeatable, up to 5,
+OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses
+`action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`), `actor_id`,
+`result`, `target_id`, `session_id`, `correlation_id`, `risk_min`, `from`
+and `to` (RFC 3339), `limit`, `offset`. Response:
+`{"items": [AuditEvent, ...], "request_id": "..."}`.
 
 ```bash
-curl -sk "https://localhost/svc/audit/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
-```
-
-Response:
-```json
-{
-  "items": [{
-    "id": "evt-01ARZ3NDEKTSV4RRFFQ69G5FAV",
-    "tenantId": "root",
-    "timestamp": "2025-03-15T14:22:00Z",
-    "action": "audit.key.decrypt",
-    "actorType": "user",
-    "actorId": "user-alice",
-    "actorName": "Alice Smith",
-    "actorIp": "10.0.1.42",
-    "resourceType": "key",
-    "resourceId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "resourceName": "customer-data-key",
-    "outcome": "failure",
-    "errorCode": "UNAUTHORIZED",
-    "requestId": "req-01ARZ3NDEKTSV4RRFFQ69G5FAV",
-    "chain_hash": "aabbccddeeff...",
-    "previous_hash": "001122334455..."
-  }],
-  "nextPageToken": null,
-  "totalCount": 1
-}
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -H @- \
+    "https://localhost/svc/audit/audit/events?tenant_id=root&action_prefix=audit.key.&result=refused&from=2026-09-01T00:00:00Z&limit=50"
 ```
 
 ---
@@ -1629,7 +1661,7 @@ used; packages from it (`key_derivation` v1/v2) are refused.
 
 ### GET /svc/governance/governance/system/state
 
-Response: `status`, `services` (map of service → up/down), `pendingApprovals`, `lastBackupAt`, `clusterNodes`, `healthyNodes`, `checkedAt`
+System administrators only. Response `state`: the platform's system settings, which include the FIPS fields (`fips_mode`, `fips_mode_policy`, `fips_crypto_library`, `fips_module_version`, `fips_library_validated`, `fips_runtime_enabled`, `fips_runtime_enforced`, `fips_tls_profile`, `fips_rng_mode`, `fips_entropy_source`, `fips_entropy_health`), `go_runtime_version`, `flight_recorder_ready`, `runtime_secret_ready` and the posture switches (`posture_force_quorum_destructive_ops`, `posture_require_step_up_auth`, `posture_pause_connector_sync`). It holds no service up/down map; service health is `GET /svc/auth/auth/system-health`.
 
 ---
 
@@ -1658,7 +1690,8 @@ Services apply the change by a staggered graceful restart.
 
 Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
-- `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
+- `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant), not pending (`client_state`) or unknown
+- `audit.auth.client_key_rotated`, `audit.auth.client_revoked`, `audit.auth.api_key_revoked` (kernel events; refusals `client_state`, `service_identity_protected`), `audit.auth.unbound_api_keys_retired` (startup): REST client credentials (7.16.0-beta)
 - `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), `builtin_policy_required` (disabling or narrowing the playbook policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
 - `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable`, `result: refused` (key access deployed but unreachable)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
@@ -1702,19 +1735,19 @@ Framework detail with controls: id, title, description, status (pass/fail/not_ap
 
 Compares latest vs previous assessment.
 
-Response: `addedFindings`, `resolvedFindings`, `recoveredDomains[]`, `regressedDomains[]`, `newFailingConnectors[]`
+Query: `template_id` (optional). Response `delta`: `latest_assessment_id`, `previous_assessment_id`, `latest_score`, `previous_score`, `score_delta`, `summary`, `added_findings`, `resolved_findings`, `recovered_domains`, `regressed_domains`, `new_failing_connectors`, `compared_at`.
 
 ---
 
 ### GET /svc/compliance/compliance/assessment/history
 
-Query: `frameworkId`, `startTime`, `endTime`, `granularity` (day/week/month). Response: trend data points.
+Query: `template_id` (optional), `limit`. Response `items[]`: past assessments, newest first.
 
 ---
 
 ### POST /svc/compliance/compliance/assessment/run
 
-Body: `frameworkId`, `templateId`, `scope`, `recompute`. Response 202: assessment job.
+Body (or query): `template_id`, `recompute` (optional). Runs synchronously. Response `200`: `assessment`.
 
 ---
 
@@ -2527,60 +2560,42 @@ Audit: `audit.dataprotect.kdf_vault_reprotected`.
 
 ### POST /svc/dataprotect/tokenize
 
-Tokenizes a single value.
+`dataprotect.use`. Tokenizes one or more values.
 
-**Request Body**: `value` (string), `schemeId` (string), `context` (object, optional)
+**Body**: `values[]`, `mode` (`vault` or `vaultless`), `vault_id` (vault
+mode), `key_id` (vaultless mode), `token_type`, `format`,
+`custom_token_format`, `custom_regex`, `ttl_hours`, `one_time_token`,
+`metadata_tags`.
 
-**Response 200**: `token` (string), `schemeId`, `tokenId` (for vault lookup)
+**Response 200**: `items[]`, one per value: `input` index, `token`,
+`token_type`, `mode` (or `error` for a value that failed).
 
 ```bash
-curl -sk -X POST https://localhost/svc/dataprotect/tokenize \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"value":"4111111111111111","schemeId":"pci-pan-scheme"}'
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/dataprotect/tokenize \
+    -H @- -H "Content-Type: application/json" \
+    -d '{"mode":"vault","vault_id":"'"$VAULT_ID"'","token_type":"pan","values":["4111111111111111"]}'
 ```
-
-Response:
-```json
-{
-  "token": "4111XXXXXXXX1111",
-  "schemeId": "pci-pan-scheme",
-  "tokenId": "tok-01ARZ3NDEKTSV4RRFFQ69G5FAV"
-}
-```
-
----
-
-### POST /svc/dataprotect/tokenize/batch
-
-Tokenizes multiple values in one request.
-
-**Request Body**: `items[]` — each: value, schemeId, context. **Response 200**: `results[]` matching order.
 
 ---
 
 ### POST /svc/dataprotect/detokenize
 
-Retrieves the original value for a token.
+`dataprotect.use` (audited at `warning`). **Body**: `tokens[]`, `purpose`,
+`workflow`, `justification`, `metadata_tags`, `renew_ttl_hours`.
 
-**Request Body**: `token` (string), `schemeId` (string), `justification` (string, if required)
-
-**Response 200**: `value` (original string), `tokenId`, `schemeId`
-
----
-
-### POST /svc/dataprotect/detokenize/batch
-
-Detokenizes multiple tokens. Body: `items[]`. Response: `results[]`.
+**Response 200**: `items[]`: `token`, `value` (or `error`), `vault_id`,
+`purpose`, `workflow`, `use_count`, `use_limit`, `renew_count`,
+`created_at`, `expires_at`.
 
 ---
 
 ### POST /svc/dataprotect/mask
 
-Applies a masking policy to a data object.
-
-**Request Body**: `data` (object), `policyId` (string)
-
-**Response 200**: `maskedData` (object with masked fields), `fieldsAffected[]`
+`dataprotect.use`. Applies a masking policy. **Body**: `policy_id`, `data`
+(object), `role`, or `document` with `field_path`.
+`POST /svc/dataprotect/mask/preview` is the same call audited as `mask_preview`. **Response
+200**: `masked`.
 
 ---
 
@@ -2592,46 +2607,44 @@ Policy-driven key provisioning: templates, handles, per-service defaults, govern
 
 ### GET /svc/autokey/autokey/settings
 
-Returns tenant Autokey control settings.
-
-**Response 200**:
-| Field | Type | Description |
-|-------|------|-------------|
-| enabled | boolean | Whether Autokey is active |
-| enforceMode | string | enforce / audit |
-| requireApproval | boolean | Whether handle creation requires approval |
-| requireJustification | boolean | Whether justification is required |
-| templateOverrideRules | object | Rules for template selection |
+Response `settings`: `enabled`, `mode` (`enforce` or `audit`),
+`require_approval`, `require_justification`, `allow_template_override`,
+`default_policy_id`, `default_rotation_days`, `updated_by`, `updated_at`.
 
 ```bash
-curl -sk "https://localhost/svc/autokey/autokey/settings?tenant_id=root" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -H @- "https://localhost/svc/autokey/autokey/settings?tenant_id=root"
 ```
 
 ---
 
 ### PUT /svc/autokey/autokey/settings
 
-Updates Autokey settings.
+Updates the fields above.
 
 ---
 
 ### GET /svc/autokey/autokey/summary
 
-Dashboard/posture/compliance summary.
-
-**Response 200**: `templateCount`, `servicePolicyCount`, `handleCount`, `pendingApprovals`, `provisionedLast24h`, `deniedCount`, `policyMatchedCount`, `policyMismatchedCount`
+Response `summary`: `enabled`, `mode`, `template_count`,
+`service_policy_count`, `handle_count`, `pending_approvals`,
+`provisioned_24h`, `denied_count`, `failed_count`, `policy_matched_count`,
+`policy_mismatch_count`, `services[]`.
 
 ---
 
 ### GET /svc/autokey/autokey/templates / POST /svc/autokey/autokey/templates
 
-Template: name, resourceType, keyNameTemplate, algorithm, purpose, labels (object), rotationPolicyTemplate, exportPolicyTemplate, approvalRequired
+Template: `name`, `service_name`, `resource_type`, `handle_name_pattern`,
+`key_name_pattern`, `algorithm`, `key_type`, `purpose`, `export_allowed`,
+`iv_mode`, `tags[]`, `labels`, `ops_limit`, `ops_limit_window`,
+`approval_required`, `approval_policy_id`, `description`, `enabled`.
 
 ```bash
-curl -sk -X POST https://localhost/svc/autokey/autokey/templates \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"s3-encryption","resourceType":"s3-bucket","keyNameTemplate":"s3-{resource}-dek","algorithm":"AES-256","purpose":"encrypt","labels":{"managed-by":"autokey"},"approvalRequired":false}'
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/autokey/autokey/templates \
+    -H @- -H "Content-Type: application/json" \
+    -d '{"tenant_id":"root","name":"s3-encryption","service_name":"storage","resource_type":"s3-bucket","key_name_pattern":"s3-{resource}-dek","algorithm":"AES-256","purpose":"encrypt","labels":{"managed-by":"autokey"},"approval_required":false}'
 ```
 
 ---
@@ -2642,7 +2655,11 @@ curl -sk -X POST https://localhost/svc/autokey/autokey/templates \
 
 ### GET /svc/autokey/autokey/service-policies / POST /svc/autokey/autokey/service-policies
 
-Service policy: service (identifier), defaultTemplateId, centralKeyPolicy (object), autoApprove (boolean)
+Service policy: `service_name`, `display_name`, `default_template_id`,
+key defaults (`algorithm`, `key_type`, `purpose`, `export_allowed`,
+`iv_mode`, `tags`, `labels`, `ops_limit`, `ops_limit_window`),
+`approval_required`, `approval_policy_id`, `enforce_policy`,
+`description`, `enabled`.
 
 ---
 
@@ -2657,14 +2674,19 @@ Creates a key-handle provisioning request. The service either reuses an existing
 **Request Body**:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| resourceType | string | Yes | Resource type requesting the key |
-| resourceId | string | Yes | Unique resource identifier |
-| service | string | Yes | Service requesting the key |
-| templateId | string | No | Override template (if allowed) |
-| justification | string | Conditional | Required if enforced |
-| labels | object | No | Additional labels |
+| service_name | string | Yes | Service requesting the key |
+| resource_type | string | Yes | Resource type requesting the key |
+| resource_ref | string | Yes | Resource identifier |
+| template_id | string | No | Override template (if `allow_template_override`) |
+| handle_name, key_name | string | No | Names; default from the template patterns |
+| requested_algorithm, requested_key_type, requested_purpose | string | No | Checked against the policy (a mismatch is recorded as `policy_mismatch_reason`) |
+| justification | string | Conditional | Required when `require_justification` |
+| tags, labels | string[], object | No | Added to the key |
 
-**Response 201/202**: Handle request — id, status (fulfilled/pending_approval/reused), handleId, keyId (if fulfilled), approvalRequestId (if pending)
+**Response**: `request`: `id`, `status` (`pending_approval`, `provisioned`, `denied`, `failed`), `approval_required`,
+`governance_request_id` (when pending), `handle_id`, `key_id` (when
+provisioned), `policy_matched`, `policy_mismatch_reason`,
+`failure_reason`, `created_at`, `fulfilled_at`.
 
 ---
 
@@ -2756,12 +2778,27 @@ KMIP profile: name, kmipVersion (1.1/1.2/2.0), allowedOperations[], requireMtls,
 
 ### GET /svc/kmip/kmip/clients / POST /svc/kmip/kmip/clients
 
-KMIP client: name, profileId, certificate (PEM), allowedIps[], enabled
+Create body: `name`, `profile_id`, `role` (`kmip-client`, `kmip-admin`,
+`kmip-service`), `enrollment_mode`:
+- `internal`: the profile's CA issues the client certificate. Send
+  `csr_pem` to keep the private key on the client. Without a CSR the
+  response carries `issued_key_pem` once.
+- `external`: send the client's `certificate_pem` (and optionally
+  `ca_bundle_pem`; a `private_key_pem`, if sent, is only checked against
+  the certificate).
+
+Optional: `common_name`, `registration_token`, `metadata_json`. Response
+`201`: `client` (`id`, `profile_id`, `name`, `role`, `status`,
+`enrollment_mode`, `cert_subject`, `cert_issuer`, `cert_serial`,
+`cert_fingerprint_sha256`, `cert_not_before`, `cert_not_after`), plus
+`issued_cert_pem` / `issued_key_pem` for internal enrollment.
 
 ```bash
-curl -sk -X POST https://localhost/svc/kmip/kmip/clients \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"NetApp StorageGrid","profileId":"kmip-profile-01","certificate":"-----BEGIN CERTIFICATE-----\n...","allowedIps":["10.0.10.0/24"]}'
+jq -n --rawfile csr client.csr '{tenant_id: "root", name: "storage-array", profile_id: env.KMIP_PROFILE_ID,
+        role: "kmip-client", enrollment_mode: "internal", csr_pem: $csr}' |
+  { printf 'Authorization: Bearer %s\n' "$TOKEN" > "$HDR"; \
+    curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/kmip/kmip/clients \
+      -H @"$HDR" -H "Content-Type: application/json" --data-binary @-; rm -f "$HDR"; }
 ```
 
 ---
@@ -2778,32 +2815,40 @@ Artifact signing, container image signing, Git artifact signing, keyless provena
 
 ### GET /svc/signing/signing/settings
 
-Tenant signing policy and allowed identity modes.
-
-**Response 200**: `enabled`, `allowedIdentityModes[]` (key/workload/oidc), `requireTransparencyLog`, `defaultProfileId`, `verificationPolicyId`
+Response `settings`: `enabled`, `default_profile_id`,
+`allowed_identity_modes[]` (`oidc`, `workload`), `updated_by`,
+`updated_at`.
 
 ---
 
 ### PUT /svc/signing/signing/settings
 
-Updates tenant signing defaults and transparency requirements.
+Updates `enabled`, `default_profile_id`, `allowed_identity_modes`.
 
 ---
 
 ### GET /svc/signing/signing/summary
 
-Dashboard summary: `profileCount`, `signedLast24h`, `transparencyLoggedCount`, `workloadSigningCount`, `oidcSigningCount`, `verificationFailures`
+Response `summary`: `enabled`, `profile_count`, `record_count_24h`,
+`transparency_logged_24h`, `workload_signed_24h`, `oidc_signed_24h`,
+`verification_failures_24h`, `artifact_counts`.
 
 ---
 
 ### GET /svc/signing/signing/profiles / POST /svc/signing/signing/profiles
 
-Profile: name, keyId, identityMode (key/workload/oidc), allowedSpiffeIds[], allowedOidcIssuers[], requireTransparency, format (cosign/sigstore/pkcs7/raw)
+Profile: `name`, `artifact_type`, `key_id`, `signing_algorithm`,
+`identity_mode` (`oidc` or `workload`), `allowed_oidc_issuers[]` (exact
+match), `allowed_subject_patterns[]`, `allowed_workload_patterns[]`,
+`allowed_repositories[]`, `policy` (`required_branch_patterns`,
+`required_artifact_tags`, `allowed_digests`, `block_non_ci_commits`,
+`require_commit_signature`), `enabled`, `description`.
 
 ```bash
-curl -sk -X POST https://localhost/svc/signing/signing/profiles \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Release Pipeline","keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","identityMode":"workload","allowedSpiffeIds":["spiffe://acme.example/pipeline"],"requireTransparency":true}'
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/signing/signing/profiles \
+    -H @- -H "Content-Type: application/json" \
+    -d '{"tenant_id":"root","name":"release","artifact_type":"blob","key_id":"'"$KEY_ID"'","identity_mode":"oidc","allowed_oidc_issuers":["https://token.actions.githubusercontent.com"],"allowed_subject_patterns":["repo:acme/app:ref:refs/heads/main"],"enabled":true}'
 ```
 
 ---
@@ -2812,23 +2857,23 @@ curl -sk -X POST https://localhost/svc/signing/signing/profiles \
 
 ---
 
-### POST /svc/signing/signing/blob
+### POST /svc/signing/signing/blob, POST /svc/signing/signing/git
 
-Signs a generic blob artifact.
+Signs an artifact with the profile's keycore key; the key never leaves
+keycore. **Body**: `profile_id` (else the default profile),
+`artifact_type`, `artifact_name`, `digest_sha256` (hex) or `payload`
+(base64, hashed server side), `identity_mode` with `oidc_token` (the CI
+job's ID token, audience `vecta-kms-signing`) for `oidc`; for git also
+`repository`, `commit_sha`; `oci_reference`, `metadata`. Issuer, subject
+and repository are taken only from the verified token.
 
-**Request Body**: `artifact` (base64), `profileId`, `artifactType` (string), `annotations` (object), `mediaType` (string)
-
-**Response 200**: `recordId`, `signature` (base64), `publicKeyPem`, `transparencyLogEntry` (object if logged), `signedAt`
-
----
-
-### POST /svc/signing/signing/git
-
-Signs Git-oriented artifact metadata.
-
-**Request Body**: `profileId`, `commitSha` (string), `repoUrl`, `ref`, `annotations`
-
-**Response 200**: `recordId`, `signature`, `signedPayload`, `transparencyLogEntry`, `signedAt`
+**Response 201**: `result.record` (`id`, `profile_id`, `artifact_type`,
+`artifact_name`, `digest_sha256`, `signature`, `key_id`,
+`signing_algorithm`, `identity_mode`, `oidc_issuer`, `oidc_subject`,
+`workload_identity`, `repository`, `commit_sha`, `oci_reference`,
+`transparency_entry_id`, `transparency_hash`, `transparency_index`,
+`created_at`) and `result.envelope` (the exact signed statement). A refusal
+is audited `audit.signing.sign_refused` with its `code`.
 
 ---
 
@@ -2850,11 +2895,8 @@ The audit event `audit.signing.artifact_verified` carries `verification_status`:
 
 ### GET /svc/signing/signing/records
 
-Lists signing records.
-
-**Query Parameters**: `profileId`, `artifactType`, `startTime`, `endTime`, `pageSize`, `pageToken`
-
-**Response 200**: Paginated record[] — id, profileId, artifactType, signerIdentity, transparencyLogged, signedAt
+Query: `profile_id`, `artifact_type`, `limit`. Response `items[]`: signing
+records (fields above), newest first.
 
 ---
 
@@ -3033,77 +3075,37 @@ set to the verified caller.
 
 ---
 
-### GET /svc/secrets/secrets
+### Secrets by ID
 
-Lists secrets at the root path.
+Secrets are addressed by ID (`/secrets/{id}`), not by path. Values are
+sealed under the secrets service's master key and are returned only by
+`/value`. Permissions: `secrets.read` (metadata), `secrets.value.read`
+(value, audited at `warning`), `secrets.write`, `secrets.delete`.
 
-**Query Parameters**: `path` (prefix), `pageSize`, `pageToken`
+Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
+`labels`, `metadata`, `status`, `lease_ttl_seconds`, `expires_at`,
+`current_version`, `created_by`, `created_at`, `updated_at`.
 
-**Response 200**: Paginated path entries — path, version, updatedAt, createdBy (no secret values)
+`secret_type`: `api_key`, `password`, `token`, `database_credentials`,
+`oauth_client_secret`, `ssh_private_key`, `ssh_public_key`,
+`pgp_private_key`, `pgp_public_key`, `ppk`, `x509_certificate`,
+`tls_certificate`, `tls_private_key`, `pkcs12`, `jwk`, `kerberos_keytab`,
+`wireguard_private_key`, `wireguard_public_key`, `bitlocker_keys`,
+`age_key`, `binary_blob`.
 
----
-
-### POST /svc/secrets/secrets
-
-Creates or updates a secret at a path.
-
-**Request Body**: `path` (string), `value` (object or string), `metadata` (object), `ttl` (int seconds, optional)
-
-**Response 201**: `{"path": "...", "version": 1, "createdAt": "..."}`
-
----
-
-### GET /svc/secrets/secrets/{path}
-
-Retrieves the current version of a secret.
-
-**Response 200**: `{"path": "...", "value": {...}, "version": 3, "metadata": {...}, "createdAt": "...", "updatedAt": "..."}`
-
-Response:
-```json
-{
-  "path": "services/database/credentials",
-  "value": {"username": "app_user", "password": "retrieved_from_vault"},
-  "version": 3,
-  "metadata": {"environment": "production"},
-  "createdAt": "2025-01-01T00:00:00Z",
-  "updatedAt": "2025-03-15T14:22:00Z"
-}
-```
-
----
-
-### PUT /svc/secrets/secrets/{path}
-
-Full replacement of a secret value. Creates new version.
-
-**Request Body**: `value` (object or string), `metadata` (optional), `ttl` (optional)
-
-**Response 200**: Updated secret metadata (version incremented, no value returned)
-
----
-
-### DELETE /svc/secrets/secrets/{path}
-
-Soft-deletes the current version. All versions remain accessible.
-
-**Response**: 204 No Content
-
----
-
-### GET /svc/secrets/secrets/{path}/versions
-
-Lists all versions of a secret (no values).
-
-**Response 200**: `Version[]` — version, state (current/deleted/destroyed), createdAt, deletedAt
-
----
-
-### GET /svc/secrets/secrets/policy/{path}
-
-Returns the access policy for a path (and all sub-paths).
-
-**Response 200**: Policy object with `grants[]` — subject, subjectType, operations[], pathPattern
+| Route | Body / query | Response |
+|---|---|---|
+| `GET /svc/secrets/secrets` | `secret_type`, `limit`, `offset` | `items[]` (no values) |
+| `POST /svc/secrets/secrets` | `name`, `secret_type`, `value`, `description`, `labels`, `metadata`, `lease_ttl_seconds` | `201` `secret` |
+| `GET /svc/secrets/secrets/{id}` | | `secret` |
+| `GET /svc/secrets/secrets/{id}/value` | `format` (optional) | `value`, `format`, `content_type` |
+| `PUT /svc/secrets/secrets/{id}` | any of `name`, `description`, `labels`, `metadata`, `lease_ttl_seconds`, `value` (a new value makes a new version) | `secret` |
+| `POST /svc/secrets/secrets/{id}/rotate` | `value` | `secret` |
+| `DELETE /svc/secrets/secrets/{id}` | | `status: deleted` |
+| `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `value_hash`, `created_at` |
+| `GET /svc/secrets/secrets/{id}/audit` | | the secret's audit trail |
+| `GET /svc/secrets/secrets/stats` | | counts |
+| `POST /svc/secrets/secrets/generate/ssh_key`, `/generate/keypair` | key parameters | `201` `secret` (generated server side) |
 
 ---
 
@@ -3192,56 +3194,32 @@ reason `platform_tenant_required`.
 
 ### GET /svc/sbom/sbom/latest
 
-Returns the latest SBOM snapshot.
-
-**Response 200**: `snapshotId`, `createdAt`, `componentCount`, `components[]` (name, version, ecosystem, purl, license)
+Returns the latest SBOM snapshot. **Response 200**: `item`: `id`,
+`source_hash`, `created_at`, `document` (the components), `summary`.
 
 ---
 
 ### POST /svc/sbom/sbom/generate
 
-Generates a fresh software BOM snapshot.
-
-**Request Body**: `trigger` (manual/scheduled), `format` (cyclonedx/spdx, optional)
-
-**Response 202**: `{"status": "accepted", "snapshot": {"id": "sbom_20260311_001", "createdAt": "2026-03-11T09:45:00Z"}}`
-
-```bash
-curl -sk -X POST https://localhost/svc/sbom/sbom/generate \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"trigger":"manual"}'
-```
+Generates a fresh software BOM snapshot (platform tenant only, see above).
+**Body** (optional): `trigger`. **Response 202**: `status: accepted`,
+`snapshot` (as above). Export with `GET /svc/sbom/sbom/{id}/export`.
 
 ---
 
 ### POST /svc/sbom/cbom/generate
 
 Generates a Cryptographic BOM snapshot for the token's tenant (a named
-`tenant_id` must match it).
-
-**Request Body**: `trigger` (optional)
-
-**Response 202**: `{"status": "accepted", "snapshot": {"id": "cbom_20260311_001", "createdAt": "..."}}`
+`tenant_id` must match it). **Body** (optional): `trigger`. **Response
+202**: `status: accepted`, `snapshot` (`id`, `tenant_id`, `source_hash`,
+`created_at`, `document`, `summary`).
 
 ---
 
 ### GET /svc/sbom/cbom/pqc-readiness
 
-Returns PQC readiness metrics from the latest CBOM.
-
-**Response 200**:
-```json
-{
-  "pqcReadiness": {
-    "totalAssets": 42,
-    "pqcReadyCount": 8,
-    "pqcReadinessPercent": 19,
-    "deprecatedCount": 4,
-    "algorithmDistribution": {"AES": 16, "RSA": 9, "ECDSA": 9, "ML-DSA": 8},
-    "strengthHistogram": {"128": 8, "256": 34}
-  }
-}
-```
+From the latest CBOM. **Response 200**: `pqc_readiness`: `tenant_id`,
+`total_assets`, `pqc_ready_count`, `pqc_readiness_percent`, `status`.
 
 ---
 
@@ -3507,41 +3485,52 @@ Selected events with dedicated audit classification:
 
 ## Appendix: Common Workflows
 
+Credentials go to curl on stdin, never in argv
+([SECRET_HANDLING.md](SECURITY/SECRET_HANDLING.md)). `kms` below is a small
+helper; `vecta-root-ca.pem` is the internal root CA from the PKI tab.
+
+```bash
+kms() {  # kms METHOD PATH [JSON]
+  printf 'Authorization: Bearer %s\n' "$TOKEN" |
+    curl -sS --fail-with-body --cacert vecta-root-ca.pem -X "$1" -H @- \
+      -H "Content-Type: application/json" "https://localhost$2" ${3:+-d "$3"}
+}
+```
+
 ### Encrypt application data
 
 ```bash
-# 1. Login
-export TOKEN=$(curl -sk -X POST https://localhost/svc/auth/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"app-service","password":"pass","tenantId":"root"}' | jq -r '.token')
+# 1. Log in (a user whose role holds key.create and key.encrypt)
+export TOKEN=$(jq -n '{tenant_id: "root", username: env.KMS_USER, password: env.KMS_PASSWORD}' |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/auth/auth/login \
+    -H "Content-Type: application/json" --data-binary @- | jq -r .access_token)
 
-# 2. Create key (once)
-KEY_ID=$(curl -sk -X POST https://localhost/svc/keycore/keys \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"app-data-key","algorithm":"AES-256","purpose":"encrypt"}' | jq -r '.id')
+# 2. Create a key (once)
+KEY_ID=$(kms POST /svc/keycore/keys '{"name":"app-data-key","algorithm":"AES-256","purpose":"encrypt"}' | jq -r .key_id)
 
-# 3. Encrypt
-curl -sk -X POST "https://localhost/svc/keycore/keys/$KEY_ID/encrypt" \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"plaintext":"c2Vuc2l0aXZlIGRhdGE="}'
+# 3. Encrypt; keep ciphertext, iv and version for decrypt
+kms POST "/svc/keycore/keys/$KEY_ID/encrypt" '{"plaintext":"c2Vuc2l0aXZlIGRhdGE="}'
 ```
 
-### Issue a TLS certificate
+### Issue a TLS certificate from a CSR
 
 ```bash
-# 1. Generate CSR with openssl
-openssl req -new -newkey rsa:2048 -nodes -keyout server.key \
+# 1. Generate the key and CSR where the key will live
+openssl req -new -newkey ec -pkeyopt ec_paramgen_curve:P-384 -nodes -keyout server.key \
   -subj "/CN=api.acme.example/O=Acme Corp" -out server.csr
 
+# 2. Have a KMS CA sign it (the private key never leaves your host)
+kms POST /svc/certs/certs/sign-csr "$(jq -n --rawfile csr server.csr --arg ca "$CA_ID" \
+  '{ca_id: $ca, cert_type: "server", csr_pem: $csr, sans: ["api.acme.example"], validity_days: 90}')" |
+  jq -r .certificate.cert_pem > server.crt
 ```
 
 ### Provision a workload key via Autokey
 
 ```bash
-# 1. Create a provisioning request
-curl -sk -X POST https://localhost/svc/autokey/autokey/requests \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"resourceType":"s3-bucket","resourceId":"my-app-data-bucket","service":"data-pipeline","justification":"production encryption for GDPR scope data"}'
+kms POST /svc/autokey/autokey/requests \
+  '{"tenant_id":"root","service_name":"data-pipeline","resource_type":"s3-bucket","resource_ref":"my-app-data-bucket","justification":"production encryption"}' |
+  jq '.request | {status, key_id, governance_request_id}'
 ```
 
 ## Appendix: Route index (generated)
@@ -3586,7 +3575,6 @@ from the code; do not edit by hand.
 
 ### auth (`/svc/auth/`)
 
-- `POST /svc/auth/auth/api-keys`
 - `DELETE /svc/auth/auth/api-keys/{id}`
 - `POST /svc/auth/auth/change-password`
 - `GET /svc/auth/auth/cli/hsm/config`

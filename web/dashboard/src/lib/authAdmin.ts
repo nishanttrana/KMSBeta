@@ -478,6 +478,41 @@ export async function updateAuthClient(
   );
 }
 
+export type RegisterClientInput = {
+  client_name: string;
+  auth_mode?: string;
+  description?: string;
+  contact_email?: string;
+};
+
+// registerAuthClient creates a pending REST client registration; it gets no
+// credential until an administrator approves it.
+export async function registerAuthClient(session: AuthSession, input: RegisterClientInput): Promise<string> {
+  const out = await serviceRequest<{ registration_id?: string }>(session, "auth", "/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ ...input, tenant_id: session.tenantId, interface_name: "rest" })
+  });
+  return String(out?.registration_id || "");
+}
+
+// activateAuthClient approves a pending client. The API key in the response
+// is shown once and never stored by the dashboard.
+export async function activateAuthClient(
+  session: AuthSession,
+  clientID: string,
+  approvalID?: string
+): Promise<RotateClientKeyResponse> {
+  return serviceRequest<RotateClientKeyResponse>(
+    session,
+    "auth",
+    `/auth/register/${encodeURIComponent(String(clientID || "").trim())}/activate`,
+    {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, approval_id: String(approvalID || "").trim() || undefined })
+    }
+  );
+}
+
 export async function rotateAuthClientKey(
   session: AuthSession,
   clientID: string

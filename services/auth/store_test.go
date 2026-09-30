@@ -237,11 +237,24 @@ func TestSQLStoreClientActivationRoundTrip(t *testing.T) {
 	if out.APIKeyPrefix != key.KeyPrefix {
 		t.Fatalf("prefix=%s want %s", out.APIKeyPrefix, key.KeyPrefix)
 	}
-	if err := s.RotateClientAPIKey(ctx, "t2", reg.ID, []byte("h2"), "vk_new"); err != nil {
+	if err := s.RotateClientAPIKey(ctx, "t2", reg.ID, APIKey{ID: "k2", ClientID: reg.ID, KeyHash: []byte("h2"), KeyPrefix: "vk_new", Permissions: []string{"kms.read"}}); err != nil {
 		t.Fatal(err)
+	}
+	// Rotation replaces the key row that /auth/client-token checks.
+	if _, err := s.GetAPIKeyByHash(ctx, "t2", []byte("hash")); !errors.Is(err, errNotFound) {
+		t.Fatalf("old key survived rotation: %v", err)
+	}
+	if _, err := s.GetAPIKeyByHash(ctx, "t2", []byte("h2")); err != nil {
+		t.Fatalf("new key not stored: %v", err)
 	}
 	if err := s.RevokeClientRegistration(ctx, "t2", reg.ID); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := s.GetAPIKeyByHash(ctx, "t2", []byte("h2")); !errors.Is(err, errNotFound) {
+		t.Fatalf("key survived revocation: %v", err)
+	}
+	if err := s.RotateClientAPIKey(ctx, "t2", reg.ID, APIKey{ID: "k3", KeyHash: []byte("h3")}); !errors.Is(err, errClientState) {
+		t.Fatalf("rotating a revoked client: %v", err)
 	}
 }
 

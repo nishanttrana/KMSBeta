@@ -24,6 +24,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -105,6 +106,9 @@ func main() {
 	}
 	bootstrapDefaultAdmin(ctx, store, logger)
 	bootstrapInternalServiceClients(ctx, store, logger, auditPublisher)
+	if clusterstate.RunsPrimaryJobs(ctx) {
+		retireUnboundAPIKeys(ctx, store, logger, auditPublisher)
+	}
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)

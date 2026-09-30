@@ -493,12 +493,14 @@ const SectionApiAuth = () => (
     </Collapse>
     <Collapse title="API Keys & Clients">
       <EndpointTable rows={[
-        ["POST", "/auth/api-keys", "Create API key for programmatic access"],
-        ["DELETE", "/auth/api-keys/{id}", "Revoke API key"],
+        ["POST", "/auth/register", "Register a REST client (pending until approved)"],
+        ["POST", "/auth/register/{id}/activate", "Approve a client; returns its API key once"],
+        ["POST", "/auth/clients/{id}/rotate-key", "Replace a client's API key; the old key stops working at once"],
+        ["POST", "/auth/clients/{id}/revoke", "Revoke a client and delete its API key"],
+        ["DELETE", "/auth/api-keys/{id}", "Delete one API key (platform service keys refused)"],
         ["POST", "/auth/client-token", "Issue client token with OAuth mTLS, DPoP, or HTTP Message Signature binding"],
         ["GET", "/auth/clients", "List registered clients"],
         ["PUT", "/auth/clients/{id}", "Update client auth mode, replay protection, and sender-constrained binding"],
-        ["POST", "/auth/clients/{id}/rotate-key", "Rotate client credentials"],
         ["GET", "/auth/rest-client-security/summary", "Get tenant REST client security posture summary"],
       ]} />
     </Collapse>
@@ -3025,7 +3027,7 @@ const SectionGuideAutomation = () => (
     </table>
     <H2>1. Pipeline identity</H2>
     <H3>REST client: secrets and signing</H3>
-    <P>Register with POST /svc/auth/auth/register (created pending). An administrator holding <IC>auth.client.activate</IC> approves it with POST /svc/auth/auth/register/{"{id}"}/activate, which returns <IC>api_key</IC> once: store it straight into the CI secret store. Each job exchanges it for a token that lasts 60 to 3600 s:</P>
+    <P>Register, approve, rotate and revoke in Workbench → REST API → REST Client Security, or over the API: POST /svc/auth/auth/register (created pending), then an administrator holding <IC>auth.client.activate</IC> approves it with POST /svc/auth/auth/register/{"{id}"}/activate. Approval returns <IC>api_key</IC> once: store it straight into the CI secret store. Rotating (POST /svc/auth/auth/clients/{"{id}"}/rotate-key) issues a new key and deletes the old one at once. Each job exchanges the key for a token that lasts 60 to 3600 s:</P>
     <Code>{`printf 'X-API-Key: %s\\n' "$KMS_API_KEY" |
   curl -sS --fail-with-body -X POST "$KMS_URL/svc/auth/auth/client-token" \\
     -H @- -H 'Content-Type: application/json' \\

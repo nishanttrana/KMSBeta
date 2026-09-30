@@ -55,6 +55,7 @@ func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *met
 	h.mux = h.routes()
 	h.mountKernel(h.mux, h.delegatedRouter())
 	h.mountKernel(h.mux, h.tenantIDsRouter())
+	h.mountKernel(h.mux, h.clientAdminRouter())
 	return h
 }
 
@@ -119,8 +120,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /auth/cli/hsm/config", h.withAuth(h.handleGetCLIHSMConfig, "auth.user.read"))
 	mux.HandleFunc("PUT /auth/cli/hsm/config", h.withAuth(h.handleUpdateCLIHSMConfig, "auth.user.write"))
 	mux.HandleFunc("GET /auth/cli/hsm/partitions", h.withAuth(h.handleCLIHSMPartitions, "auth.user.read"))
-	mux.HandleFunc("POST /auth/api-keys", h.withAuth(h.handleCreateAPIKey, "auth.api_key.write"))
-	mux.HandleFunc("DELETE /auth/api-keys/{id}", h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write"))
 
 	// SSO routes (public, no auth required)
 	mux.HandleFunc("GET /auth/sso/providers", h.handleListSSOProviders)
@@ -132,8 +131,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /auth/clients", h.withAuth(h.handleListClients, "auth.client.read"))
 	mux.HandleFunc("GET /auth/clients/{id}", h.withAuth(h.handleGetClient, "auth.client.read"))
 	mux.HandleFunc("PUT /auth/clients/{id}", h.withAuth(h.handleUpdateClient, "auth.client.write"))
-	mux.HandleFunc("POST /auth/clients/{id}/revoke", h.withAuth(h.handleRevokeClient, "auth.client.write"))
-	mux.HandleFunc("POST /auth/clients/{id}/rotate-key", h.withAuth(h.handleRotateClientKey, "auth.client.write"))
 	mux.HandleFunc("GET /auth/rest-client-security/summary", h.withAuth(h.handleRESTClientSecuritySummary, "auth.client.read"))
 	mux.HandleFunc("GET /scim/v2/ServiceProviderConfig", h.handleSCIMServiceProviderConfig)
 	mux.HandleFunc("GET /scim/v2/Schemas", h.handleSCIMSchemas)
@@ -335,9 +332,17 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 		KeyHash:     hash,
 		KeyPrefix:   prefix,
 		Name:        "client:" + r.PathValue("id"),
-		Permissions: []string{"kms.read", "kms.write"},
+		Permissions: clientKeyPermissions,
 	}
-	if err := h.store.ActivateClientRegistration(r.Context(), tenantID, r.PathValue("id"), apiKey, claims.UserID, req.ApprovalID); err != nil {
+	if err := h.store.ActivateClientRegistration(r.Context(), tenantID, r.PathValue("id"), apiKey, claims.UserID, req.ApprovalID); errors.Is(err, errClientState) || errors.Is(err, errNotFound) {
+		status, code := http.StatusConflict, reasonClientState
+		if errors.Is(err, errNotFound) {
+			status, code = http.StatusNotFound, "not_found"
+		}
+		h.refuseClientActivation(r, reqID, claims, tenantID, req.ApprovalID, status, code, err.Error())
+		writeErr(w, status, code, err.Error(), reqID, tenantID)
+		return
+	} else if err != nil {
 		writeErr(w, http.StatusBadRequest, "activation_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -2213,64 +2218,6 @@ func (h *Handler) handleCLIHSMPartitions(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func (h *Handler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	var req struct {
-		Name        string   `json:"name"`
-		Permissions []string `json:"permissions"`
-	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
-		return
-	}
-	rawKey, hash, prefix, err := GenerateAPIKey()
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "key_generation_failed", "failed to create api key", reqID, claims.TenantID)
-		return
-	}
-	defer pkgcrypto.Zeroize(hash)
-	key := APIKey{
-		ID:          NewID("api"),
-		TenantID:    claims.TenantID,
-		UserID:      claims.UserID,
-		KeyHash:     hash,
-		KeyPrefix:   prefix,
-		Name:        req.Name,
-		Permissions: tenantcheck.StripReserved(req.Permissions),
-	}
-	if err := h.store.CreateAPIKey(r.Context(), key); err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create api key", reqID, claims.TenantID)
-		return
-	}
-	if h.meter != nil {
-		_ = h.meter.IncrementOps()
-	}
-	if err := h.publishAudit(r.Context(), "audit.auth.api_key_created", reqID, claims.TenantID, map[string]any{"api_key_id": key.ID, "api_key_prefix": prefix}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{"api_key_id": key.ID, "api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
-}
-
-func (h *Handler) handleDeleteAPIKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if err := h.store.DeleteAPIKey(r.Context(), claims.TenantID, r.PathValue("id")); err != nil {
-		code := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "store_error", "failed to delete api key", reqID, claims.TenantID)
-		return
-	}
-	if err := h.publishAudit(r.Context(), "audit.auth.api_key_revoked", reqID, claims.TenantID, map[string]any{"api_key_id": r.PathValue("id")}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
 func (h *Handler) handleListClients(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
@@ -2373,51 +2320,6 @@ func (h *Handler) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	if err := h.store.RevokeClientRegistration(r.Context(), claims.TenantID, r.PathValue("id")); err != nil {
-		code := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "store_error", "failed to revoke client", reqID, claims.TenantID)
-		return
-	}
-	if err := h.publishAudit(r.Context(), "audit.auth.client_revoked", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id")}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
-}
-
-func (h *Handler) handleRotateClientKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	rawKey, hash, prefix, err := GenerateAPIKey()
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "key_generation_failed", "failed to rotate key", reqID, claims.TenantID)
-		return
-	}
-	defer pkgcrypto.Zeroize(hash)
-	if err := h.store.RotateClientAPIKey(r.Context(), claims.TenantID, r.PathValue("id"), hash, prefix); err != nil {
-		code := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			code = http.StatusNotFound
-		}
-		writeErr(w, code, "store_error", "failed to rotate key", reqID, claims.TenantID)
-		return
-	}
-	if h.meter != nil {
-		_ = h.meter.IncrementOps()
-	}
-	if err := h.publishAudit(r.Context(), "audit.auth.client_key_rotated", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id"), "api_key_prefix": prefix}); err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
 }
 
 func (h *Handler) handleRESTClientSecuritySummary(w http.ResponseWriter, r *http.Request) {

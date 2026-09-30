@@ -425,3 +425,17 @@ are gone too.
 | Event | When | Test |
 |---|---|---|
 | `audit.key.cryptoperiods_listed`, `audit.key.cryptoperiod_set`, `audit.key.cryptoperiod_reset` | Kernel events for the tenant's cryptoperiods (`days`, `default_days`); refusals `invalid_days`, `unknown_category`, `not_custom` with `result: refused` | `TestTenantCryptoperiodDrivesRotation`, `TestRotationRoutesRefusalsAudited` |
+
+## REST client credentials (7.16.0-beta, docs/CI_CD_AUTOMATION.md)
+
+Rotation, revocation and API-key deletion moved onto the route kernel, so
+each call and each refusal is its own event.
+
+| Event | When | Test |
+|---|---|---|
+| `audit.auth.client_key_rotated` | An approved client's API key was replaced; the old key row is deleted in the same transaction (`api_key_prefix`). Refused (`result: refused`): `client_state` (not approved), `service_identity_protected` (a `kms-*` identity) | `TestRotatedClientKeyWorksAndOldKeyStops`, `TestRevokedClientKeyStops`, `TestPendingClientKeyRotationRefused`, `TestServiceIdentityClientProtected` |
+| `audit.auth.client_revoked` | A client was revoked and its API keys deleted. Refused: `service_identity_protected` | `TestRevokedClientKeyStops`, `TestServiceIdentityClientProtected` |
+| `audit.auth.api_key_revoked` | One API key was deleted. Refused: `service_identity_protected` (a platform service key) | `TestServiceIdentityClientProtected` |
+| `audit.auth.client_activation_refused` (`code: client_state` or `not_found`) | Activation of a client that is no longer pending (it would have minted a second key) or doesn't exist | `TestActivationOfApprovedClientRefusedAndAudited` |
+| `audit.auth.unbound_api_keys_retired` | Auth startup deleted API keys bound to no client, which only the removed `POST /auth/api-keys` created (`keys_deleted`, `reason: endpoint_removed`) | `TestUnboundAPIKeysRemovedAndRetired`, `TestClientKeyLifecyclePostgres` |
+| (all of the above, unauthenticated / wrong tenant / missing permission) | Kernel refusals | `TestClientAdminRefusalsAudited` |

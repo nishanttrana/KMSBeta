@@ -10,6 +10,7 @@ import { listSecrets } from "../../../lib/secrets";
 import { DISCOVERED_REST_API_CATALOG } from "../../../generated/restApiCatalog.generated";
 import { executeRestPlaygroundRequest } from "../../../lib/restPlayground";
 import { REST_API_CATALOG } from "../restApiCatalog";
+import { RestClientLifecycle, RestClientRegister } from "./RestClientLifecycle";
 import { B, Btn, Card, Chk, FG, Inp, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
@@ -507,6 +508,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
             </div>
             <Btn small onClick={()=>void loadClientSecurity(false)} disabled={clientLoading}>{clientLoading?"Refreshing...":"Refresh Security"}</Btn>
           </div>
+          {session&&<div style={{marginBottom:10}}><RestClientRegister session={session} onChanged={()=>void loadClientSecurity(true)} onToast={onToast}/></div>}
           <div style={{display:"grid",gridTemplateColumns:"1.1fr 1.3fr",gap:10}}>
             <div style={{display:"grid",gap:8,alignContent:"start"}}>
               {clientItems.length===0&&<div style={{fontSize:10,color:C.muted}}>No REST client registrations found yet.</div>}
@@ -527,7 +529,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
                 >
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div style={{fontSize:11,fontWeight:700,color:C.text}}>{String(item?.client_name||item?.id||"-")}</div>
-                    <B c={String(item?.status||"").toLowerCase()==="approved"?"green":"amber"}>{String(item?.status||"pending")}</B>
+                    <B c={String(item?.status||"").toLowerCase()==="approved"?"green":String(item?.status||"").toLowerCase()==="revoked"?"red":"amber"}>{String(item?.status||"pending")}</B>
                   </div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
                     <B c={restClientAuthModeColor(String(item?.auth_mode||"api_key"))}>{restClientAuthModeLabel(String(item?.auth_mode||"api_key"))}</B>
@@ -543,6 +545,7 @@ export const RestAPITab=({session,keyCatalog,onToast}: RestAPITabProps)=>{
             </div>
             <div>
               {clientDraft?<div style={{display:"grid",gap:8}}>
+                {session&&selectedClient&&<RestClientLifecycle session={session} client={selectedClient} onChanged={()=>void loadClientSecurity(true)} onToast={onToast}/>}
                 <Row2>
                   <FG label="Client"><Inp value={String(clientDraft?.client_name||"")} readOnly/></FG>
                   <FG label="Requested Role"><Inp value={String(clientDraft?.requested_role||"")} readOnly/></FG>

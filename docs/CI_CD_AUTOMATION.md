@@ -2,7 +2,7 @@
 
 How a pipeline (GitHub Actions, GitLab CI, Jenkins, Ansible, or any job
 runner) uses Vecta KMS: authenticate, read a secret, rotate a key, and sign
-a release. Everything here was checked against the code in 7.14.0-beta.
+a release. Everything here was checked against the code in 7.16.0-beta.
 Every call goes through the public REST API behind Envoy, is authorised by
 the route kernel, and is recorded in the Audit Log like any dashboard
 action.
@@ -28,6 +28,10 @@ identity, and they can do different things.
 
 ### REST client (secrets and signing)
 
+In the dashboard all of this is in **Workbench → REST API → REST Client
+Security**: register, approve (the key is shown once), rotate the key,
+revoke. The same calls over the API:
+
 1. Register the client (public call; it is created as `pending`):
 
    ```bash
@@ -40,11 +44,11 @@ identity, and they can do different things.
    `audit.auth.client_registered`.
 
 2. An administrator holding `auth.client.activate` approves it with
-   `POST /svc/auth/auth/register/{registration_id}/activate`. The response
-   contains `api_key` **once**. Store it straight into the CI secret store
-   (for example as `KMS_API_KEY`) and never print it. Activation is audited
-   as `audit.auth.client_activated`, and a refusal as
-   `audit.auth.client_activation_refused`.
+   `POST /svc/auth/auth/register/{registration_id}/activate` (or **Approve**
+   in the dashboard). The response contains `api_key` **once**. Store it
+   straight into the CI secret store (for example as `KMS_API_KEY`) and
+   never print it. Activation is audited as `audit.auth.client_activated`,
+   and a refusal as `audit.auth.client_activation_refused`.
 
 3. In each job, exchange the API key for a short-lived token (default 300 s,
    between 60 and 3600 s via `ttl_seconds`):
@@ -63,6 +67,15 @@ identity, and they can do different things.
    `KMS_CLIENT_ID` is the `registration_id`. `printf` is a shell builtin,
    so the key reaches curl on stdin and never appears in a process listing
    or an echoed command ([SECRET_HANDLING.md](SECURITY/SECRET_HANDLING.md)).
+
+**Rotating and revoking.** `POST /svc/auth/auth/clients/{id}/rotate-key`
+(or **Rotate key**) issues a new key, shown once, and deletes the old one
+in the same transaction: update the CI secret before the next run.
+`POST /svc/auth/auth/clients/{id}/revoke` deletes the client's key and
+ends its access. Both need `auth.client.write`, and both are audited
+(`client_key_rotated`, `client_revoked`), refusals included. Before
+7.16.0-beta, rotation returned a key that never worked and left the old
+one active.
 
 **What a client token can do.** Activation grants the key `kms.read` and
 `kms.write`. The route kernel honours those two broad grants only in the

@@ -5,6 +5,34 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Fake fixed: client key rotation returned a key that never worked, and audited success
+- **What happened:** `RotateClientAPIKey` updated
+  `auth_client_registrations.api_key_hash`, but `/auth/client-token`
+  validates against `auth_api_keys`. The new key was dead, the old key
+  stayed live, and `audit.auth.client_key_rotated` said `success`. Revoking
+  also left the key row, although the status check happened to block it.
+- **How it slipped through:** two tables hold key hashes, and the test
+  called `RotateClientAPIKey` and checked only that it returned no error.
+  Nothing exchanged the rotated key for a token. The UI never called rotate,
+  so no one saw it fail.
+- **Rule:** a credential operation's test must use the credential: after
+  rotate, the new key gets a token and the old one gets 401. When two
+  tables carry the same secret, find the one the verifier reads
+  (`GetAPIKeyByHash`) and write that one.
+
+### A concurrent session's commit swept in my in-progress doc edits
+- **What happened:** while I was rewriting `docs/API_REFERENCE.md` in the
+  shared checkout, another session committed that file as part of
+  458de9a7b. Half my edits shipped under its message. The generated route
+  index I refreshed also listed a route that existed only in that session's
+  uncommitted code.
+- **Rule:** when another session is active, do multi-step doc edits in a
+  worktree from the start, not only at commit time
+  ([[feedback_concurrent_session_staging]]). Regenerate generated files
+  (`docs/generated/`, the route index) in the clean worktree, never in the
+  shared checkout.
+
+
 ### Charts must drill into the entries they count, and a server clamp had hidden most alerts
 - **What happened:** the owner asked that clicking any graph or bar show the
   entries behind it, and that each chart live beside its entries (audit

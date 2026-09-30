@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T16:08:17Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T16:20:20Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -482,13 +482,19 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1178 | posture | Btn | setSelectedFinding(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1269 | posture | Btn | executeAction(selectedAction)}> Execute |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1271 | posture | Btn | setSelectedAction(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 477 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 508 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 515 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 611 | restapi | Btn | setClientDraft(selectedClient? :null)}>Reset |  |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 612 | restapi | Btn | (icon or dynamic label) | saveClientSecurity} disabled={clientSaving |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 733 | restapi | Btn | Refresh cURL | buildPreview |
-| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 734 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 614 | restapi | Btn | setClientDraft(selectedClient? :null)}>Reset |  |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 615 | restapi | Btn | (icon or dynamic label) | saveClientSecurity} disabled={clientSaving |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 736 | restapi | Btn | Refresh cURL | buildPreview |
+| web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 737 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 24 | - | Btn | }> |  |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 25 | - | Btn | I stored it | onDismiss |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 49 | - | Btn | (icon or dynamic label) | submit} disabled={busy \|\| !name.trim() |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 103 | - | Btn | void approve()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 105 | - | Btn | (icon or dynamic label) | rotate} disabled={Boolean(busy) |
+| web/dashboard/src/components/v3/tabs/RestClientLifecycle.tsx | 106 | - | Btn | (icon or dynamic label) | revoke} disabled={Boolean(busy) |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 204 | - | Btn | void refresh()}> Retry |  |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 243 | - | Btn | Create Policy | openCreateModal |
 | web/dashboard/src/components/v3/tabs/RotationSchedulerTab.tsx | 245 | - | Btn | void refresh()} disabled= > |  |

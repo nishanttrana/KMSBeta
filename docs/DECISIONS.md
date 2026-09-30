@@ -7,6 +7,27 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Remove user-minted API keys; REST client keys are the only API keys (7.16.0-beta)
+
+- **Decision:** `POST /auth/api-keys` is removed, and keys it left behind are
+  deleted at startup. The only API keys are an approved REST client's key
+  (issued at activation, replaced by rotation, deleted by revocation) and
+  the platform's service keys (derived from the bootstrap secret).
+- **Why:** the endpoint stored any permissions its caller named, even ones
+  the caller didn't hold, on a key bound to no client. `/auth/client-token`
+  refuses unbound keys, so the keys did nothing today. A later change that
+  accepted them would have been a privilege escalation.
+- **Rejected:** keeping it and capping permissions at the caller's. That
+  would add a second, weaker credential path next to REST clients, which
+  already have approval, governance, sender-constrained binding, rotation
+  and revocation.
+- **Enforced by:** the route is gone
+  (`TestUnboundAPIKeysRemovedAndRetired`). Client key admin runs on the
+  route kernel (`TestClientAdminRefusalsAudited`), and rotation is proven
+  by using the key (`TestRotatedClientKeyWorksAndOldKeyStops`).
+
+---
+
 ## 2026-09-30 — Integration how-tos live in Documentation, not a product tab (7.14.0-beta)
 
 - **Decision:** the DevSecOps / IaC tab is removed. How to drive the KMS
