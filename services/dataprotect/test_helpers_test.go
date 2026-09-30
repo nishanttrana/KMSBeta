@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sync"
 	"testing"
 	pkgauth "vecta-kms/pkg/auth"
@@ -129,10 +130,17 @@ func newDataProtectService(t *testing.T) (*Service, *SQLStore, *nopDataProtectPu
 	return svc, store, pub
 }
 
-func newDataProtectHandler(t *testing.T) (*Handler, *Service, *nopDataProtectPublisher) {
+// newDataProtectHandler serves requests as a verified tenant-less admin
+// token, so each test names its own tenant; auth_gate_test.go covers
+// authentication and handler_routes_test.go the permissions.
+func newDataProtectHandler(t *testing.T) (http.Handler, *Service, *nopDataProtectPublisher) {
 	t.Helper()
 	svc, _, pub := newDataProtectService(t)
-	return NewHandler(svc), svc, pub
+	h := NewHandler(svc, nil)
+	admin := &pkgauth.Claims{UserID: "test-admin", Role: "admin", Permissions: []string{"*"}}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), admin)))
+	}), svc, pub
 }
 
 func createDataProtectSchemaForTest(conn *pkgdb.DB) error {

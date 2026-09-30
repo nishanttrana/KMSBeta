@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Authenticated is not authorised: dataprotect's second gap
+- **What happened:** after 7.2.0-beta closed the tokenless hole, a readonly
+  token could still change dataprotect's policy, delete vaults, detokenize or
+  complete a wrapper registration. The service was on the route-kernel
+  burn-down list, so no route declared a permission.
+- **How it slipped through:** the burn-down list records "not migrated yet",
+  and nothing forced the question "what does a low-privilege token reach
+  meanwhile?". Fixing authentication alone looked like the whole fix.
+- **Rule:** when closing an authentication hole in a service on the
+  burn-down list, move it onto the kernel in the same stretch of work, and
+  test a low-privilege token against its writes
+  (`TestDataProtectRoutesNeedTheirPermission`).
+
 ### A documented parameter the code never read
 - **What happened:** the API reference said decrypt and verify accept a key
   version, but `RunCryptoTx` always loaded the current version. After any

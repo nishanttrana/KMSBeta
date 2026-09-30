@@ -16,7 +16,6 @@ services/certs/handler.go
 services/cloud/handler.go
 services/cluster-manager/handler.go
 services/compliance/handler.go
-services/dataprotect/handler.go
 services/discovery/handler.go
 services/ekm/handler.go
 services/governance/handler.go

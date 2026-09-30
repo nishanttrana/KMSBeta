@@ -12,17 +12,22 @@ import (
 	"strconv"
 	"strings"
 
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
+// NewHandler serves dataprotect through the route kernel (7.4.0-beta): every
+// route has a permission (dataprotect.read | use | write | delete) and emits
+// audit.dataprotect.<action>, refusals included. Which keys a caller may use
+// is still decided by keycore from the caller's own grants (pkg/delegation).
+func NewHandler(svc *Service, audit route.Emitter) *Handler {
 	h := &Handler{svc: svc}
-	h.mux = h.routes()
+	h.router = h.routes(audit)
 	return h
 }
 
@@ -30,72 +35,86 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if v := strings.TrimSpace(r.Header.Get(KDFVersionHeader)); v != "" {
 		r = r.WithContext(withRequestedKDF(r.Context(), v))
 	}
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
+// legacy adapts a handler not yet rewritten onto route.Call.
+func legacy(fn http.HandlerFunc) func(*route.Call) { return func(c *route.Call) { fn(c.W, c.R) } }
 
-	mux.HandleFunc("POST /tokenize", h.handleTokenize)
-	// Working-key derivation migration (docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md).
-	mux.HandleFunc("GET /kdf/keys", h.handleListKeyKDF)
-	mux.HandleFunc("POST /kdf/keys/{key_id}/start-migration", h.handleKDFTransition)
-	mux.HandleFunc("POST /kdf/keys/{key_id}/reprotect-vault", h.handleKDFReprotectVault)
-	mux.HandleFunc("POST /kdf/keys/{key_id}/complete", h.handleKDFTransition)
-	mux.HandleFunc("POST /kdf/keys/{key_id}/abort", h.handleKDFTransition)
-	mux.HandleFunc("POST /detokenize", h.handleDetokenize)
-	mux.HandleFunc("POST /tokenize/batch", h.handleTokenize)
-	mux.HandleFunc("POST /detokenize/batch", h.handleDetokenize)
-	mux.HandleFunc("GET /token-vaults", h.handleListTokenVaults)
-	mux.HandleFunc("POST /token-vaults", h.handleCreateTokenVault)
-	mux.HandleFunc("GET /token-vaults/external-schema", h.handleGetTokenVaultExternalSchema)
-	mux.HandleFunc("GET /token-vaults/{id}", h.handleGetTokenVault)
-	mux.HandleFunc("DELETE /token-vaults/{id}", h.handleDeleteTokenVault)
+// wrapperOr serves a wrapper runtime route. A registered wrapper calls it
+// with its X-Wrapper-Token (verified by the service against its
+// registration), so the route is Public to the kernel; anyone else needs a
+// platform token with perm.
+func wrapperOr(perm string, fn http.HandlerFunc) func(*route.Call) {
+	return func(c *route.Call) {
+		if wrapperTokenFromRequest(c.R) == "" {
+			if c.Claims == nil {
+				c.Refuse(http.StatusUnauthorized, route.ReasonUnauthenticated, "authentication required")
+				return
+			}
+			if !route.Allowed(c.Claims, perm) {
+				c.Refuse(http.StatusForbidden, route.ReasonPermissionDenied, "missing permission "+perm)
+				return
+			}
+		}
+		fn(c.W, c.R)
+	}
+}
 
-	mux.HandleFunc("POST /fpe/encrypt", h.handleFPEEncrypt)
-	mux.HandleFunc("POST /fpe/decrypt", h.handleFPEDecrypt)
-
-	mux.HandleFunc("POST /mask", h.handleMask)
-	mux.HandleFunc("POST /mask/preview", h.handleMaskPreview)
-	mux.HandleFunc("GET /masking-policies", h.handleListMaskingPolicies)
-	mux.HandleFunc("POST /masking-policies", h.handleCreateMaskingPolicy)
-	mux.HandleFunc("PUT /masking-policies/{id}", h.handleUpdateMaskingPolicy)
-	mux.HandleFunc("DELETE /masking-policies/{id}", h.handleDeleteMaskingPolicy)
-
-	mux.HandleFunc("POST /redact", h.handleRedact)
-	mux.HandleFunc("POST /redact/detect", h.handleRedactDetect)
-	mux.HandleFunc("GET /redaction-policies", h.handleListRedactionPolicies)
-	mux.HandleFunc("POST /redaction-policies", h.handleCreateRedactionPolicy)
-
-	mux.HandleFunc("POST /app/encrypt-fields", h.handleAppEncryptFields)
-	mux.HandleFunc("POST /app/decrypt-fields", h.handleAppDecryptFields)
-	mux.HandleFunc("POST /app/envelope-encrypt", h.handleAppEnvelopeEncrypt)
-	mux.HandleFunc("POST /app/envelope-decrypt", h.handleAppEnvelopeDecrypt)
-	mux.HandleFunc("POST /app/searchable-encrypt", h.handleAppSearchableEncrypt)
-	mux.HandleFunc("POST /app/searchable-decrypt", h.handleAppSearchableDecrypt)
-
-	mux.HandleFunc("GET /policy", h.handleGetDataProtectionPolicy)
-	mux.HandleFunc("PUT /policy", h.handleSetDataProtectionPolicy)
-	mux.HandleFunc("GET /field-protection/profiles", h.handleListFieldProtectionProfiles)
-	mux.HandleFunc("POST /field-protection/profiles", h.handleCreateFieldProtectionProfile)
-	mux.HandleFunc("PUT /field-protection/profiles/{id}", h.handleUpdateFieldProtectionProfile)
-	mux.HandleFunc("DELETE /field-protection/profiles/{id}", h.handleDeleteFieldProtectionProfile)
-	mux.HandleFunc("GET /field-protection/resolve", h.handleResolveFieldProtectionPolicy)
-
-	mux.HandleFunc("GET /field-encryption/wrappers", h.handleListFieldEncryptionWrappers)
-	mux.HandleFunc("POST /field-encryption/register/init", h.handleInitFieldEncryptionWrapperRegistration)
-	mux.HandleFunc("POST /field-encryption/register/complete", h.handleCompleteFieldEncryptionWrapperRegistration)
-	mux.HandleFunc("GET /field-encryption/sdk/download", h.handleDownloadFieldEncryptionWrapperSDK)
-	mux.HandleFunc("POST /field-encryption/leases", h.handleIssueFieldEncryptionLease)
-	mux.HandleFunc("GET /field-encryption/leases", h.handleListFieldEncryptionLeases)
-	mux.HandleFunc("POST /field-encryption/receipts", h.handleSubmitFieldEncryptionReceipt)
-	mux.HandleFunc("POST /field-encryption/leases/{id}/renew", h.handleRenewFieldEncryptionLease)
-	mux.HandleFunc("POST /field-encryption/leases/{id}/revoke", h.handleRevokeFieldEncryptionLease)
-
-	mux.HandleFunc("GET /audit-log", h.handleListAuditLog)
-	mux.HandleFunc("GET /stats", h.handleGetStats)
-
-	return mux
+func (h *Handler) routes(audit route.Emitter) *route.Router {
+	r := route.New("dataprotect", audit, nil)
+	// Working-key derivation migration: docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md.
+	r.Handle("POST /tokenize", route.Spec{Action: "tokenize", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleTokenize))
+	r.Handle("GET /kdf/keys", route.Spec{Action: "kdf_keys_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListKeyKDF))
+	r.Handle("POST /kdf/keys/{key_id}/start-migration", route.Spec{Action: "kdf_migration_start", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "key_id"}, legacy(h.handleKDFTransition))
+	r.Handle("POST /kdf/keys/{key_id}/reprotect-vault", route.Spec{Action: "kdf_vault_reprotect", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "key_id"}, legacy(h.handleKDFReprotectVault))
+	r.Handle("POST /kdf/keys/{key_id}/complete", route.Spec{Action: "kdf_migration_complete", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "key_id", Severity: "warning"}, legacy(h.handleKDFTransition))
+	r.Handle("POST /kdf/keys/{key_id}/abort", route.Spec{Action: "kdf_migration_abort", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "key_id", Severity: "warning"}, legacy(h.handleKDFTransition))
+	r.Handle("POST /detokenize", route.Spec{Action: "detokenize", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleDetokenize))
+	r.Handle("POST /tokenize/batch", route.Spec{Action: "tokenize_batch", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleTokenize))
+	r.Handle("POST /detokenize/batch", route.Spec{Action: "detokenize_batch", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleDetokenize))
+	r.Handle("GET /token-vaults", route.Spec{Action: "token_vaults_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListTokenVaults))
+	r.Handle("POST /token-vaults", route.Spec{Action: "token_vault_create", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleCreateTokenVault))
+	r.Handle("GET /token-vaults/external-schema", route.Spec{Action: "token_vault_schema_read", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleGetTokenVaultExternalSchema))
+	r.Handle("GET /token-vaults/{id}", route.Spec{Action: "token_vault_read", Permission: "dataprotect.read", Resource: "dataprotect", TargetParam: "id"}, legacy(h.handleGetTokenVault))
+	r.Handle("DELETE /token-vaults/{id}", route.Spec{Action: "token_vault_delete", Permission: "dataprotect.delete", Resource: "dataprotect", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteTokenVault))
+	r.Handle("POST /fpe/encrypt", route.Spec{Action: "fpe_encrypt", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleFPEEncrypt))
+	r.Handle("POST /fpe/decrypt", route.Spec{Action: "fpe_decrypt", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleFPEDecrypt))
+	r.Handle("POST /mask", route.Spec{Action: "mask", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleMask))
+	r.Handle("POST /mask/preview", route.Spec{Action: "mask_preview", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleMaskPreview))
+	r.Handle("GET /masking-policies", route.Spec{Action: "masking_policies_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListMaskingPolicies))
+	r.Handle("POST /masking-policies", route.Spec{Action: "masking_policy_create", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleCreateMaskingPolicy))
+	r.Handle("PUT /masking-policies/{id}", route.Spec{Action: "masking_policy_update", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "id"}, legacy(h.handleUpdateMaskingPolicy))
+	r.Handle("DELETE /masking-policies/{id}", route.Spec{Action: "masking_policy_delete", Permission: "dataprotect.delete", Resource: "dataprotect", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteMaskingPolicy))
+	r.Handle("POST /redact", route.Spec{Action: "redact", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleRedact))
+	r.Handle("POST /redact/detect", route.Spec{Action: "redact_detect", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleRedactDetect))
+	r.Handle("GET /redaction-policies", route.Spec{Action: "redaction_policies_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListRedactionPolicies))
+	r.Handle("POST /redaction-policies", route.Spec{Action: "redaction_policy_create", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleCreateRedactionPolicy))
+	r.Handle("POST /app/encrypt-fields", route.Spec{Action: "app_fields_encrypt", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleAppEncryptFields))
+	r.Handle("POST /app/decrypt-fields", route.Spec{Action: "app_fields_decrypt", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleAppDecryptFields))
+	r.Handle("POST /app/envelope-encrypt", route.Spec{Action: "app_envelope_encrypt", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleAppEnvelopeEncrypt))
+	r.Handle("POST /app/envelope-decrypt", route.Spec{Action: "app_envelope_decrypt", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleAppEnvelopeDecrypt))
+	r.Handle("POST /app/searchable-encrypt", route.Spec{Action: "app_searchable_encrypt", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleAppSearchableEncrypt))
+	r.Handle("POST /app/searchable-decrypt", route.Spec{Action: "app_searchable_decrypt", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleAppSearchableDecrypt))
+	r.Handle("GET /policy", route.Spec{Action: "policy_read", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleGetDataProtectionPolicy))
+	r.Handle("PUT /policy", route.Spec{Action: "policy_update", Permission: "dataprotect.write", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleSetDataProtectionPolicy))
+	r.Handle("GET /field-protection/profiles", route.Spec{Action: "field_profiles_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListFieldProtectionProfiles))
+	r.Handle("POST /field-protection/profiles", route.Spec{Action: "field_profile_create", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleCreateFieldProtectionProfile))
+	r.Handle("PUT /field-protection/profiles/{id}", route.Spec{Action: "field_profile_update", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "id"}, legacy(h.handleUpdateFieldProtectionProfile))
+	r.Handle("DELETE /field-protection/profiles/{id}", route.Spec{Action: "field_profile_delete", Permission: "dataprotect.delete", Resource: "dataprotect", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteFieldProtectionProfile))
+	r.Handle("GET /field-protection/resolve", route.Spec{Action: "field_policy_resolve", Public: true, Resource: "dataprotect"}, wrapperOr("dataprotect.read", h.handleResolveFieldProtectionPolicy))
+	r.Handle("GET /field-encryption/wrappers", route.Spec{Action: "wrappers_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListFieldEncryptionWrappers))
+	r.Handle("POST /field-encryption/register/init", route.Spec{Action: "wrapper_register_init", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleInitFieldEncryptionWrapperRegistration))
+	r.Handle("POST /field-encryption/register/complete", route.Spec{Action: "wrapper_register_complete", Permission: "dataprotect.write", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleCompleteFieldEncryptionWrapperRegistration))
+	r.Handle("GET /field-encryption/sdk/download", route.Spec{Action: "wrapper_sdk_download", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleDownloadFieldEncryptionWrapperSDK))
+	r.Handle("POST /field-encryption/leases", route.Spec{Action: "lease_issue", Public: true, Resource: "dataprotect"}, wrapperOr("dataprotect.use", h.handleIssueFieldEncryptionLease))
+	r.Handle("GET /field-encryption/leases", route.Spec{Action: "leases_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListFieldEncryptionLeases))
+	r.Handle("POST /field-encryption/receipts", route.Spec{Action: "receipt_submit", Public: true, Resource: "dataprotect"}, wrapperOr("dataprotect.use", h.handleSubmitFieldEncryptionReceipt))
+	r.Handle("POST /field-encryption/leases/{id}/renew", route.Spec{Action: "lease_renew", Public: true, Resource: "dataprotect", TargetParam: "id"}, wrapperOr("dataprotect.use", h.handleRenewFieldEncryptionLease))
+	r.Handle("POST /field-encryption/leases/{id}/revoke", route.Spec{Action: "lease_revoke", Permission: "dataprotect.write", Resource: "dataprotect", TargetParam: "id"}, legacy(h.handleRevokeFieldEncryptionLease))
+	r.Handle("GET /audit-log", route.Spec{Action: "audit_log_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListAuditLog))
+	r.Handle("GET /stats", route.Spec{Action: "stats_read", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleGetStats))
+	return r
 }
 
 func (h *Handler) handleTokenize(w http.ResponseWriter, r *http.Request) {

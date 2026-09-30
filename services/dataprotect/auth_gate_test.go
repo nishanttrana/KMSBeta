@@ -14,13 +14,13 @@ func gateParser(raw string) (*pkgauth.Claims, error) {
 	if raw != "valid-token" {
 		return nil, errors.New("invalid")
 	}
-	return &pkgauth.Claims{UserID: "alice", TenantID: "t1", Role: "operator"}, nil
+	return &pkgauth.Claims{UserID: "alice", TenantID: "t1", Role: "operator", Permissions: []string{"dataprotect.use"}}, nil
 }
 
 func newGatedHandler(t *testing.T) (http.Handler, *nopDataProtectPublisher) {
 	t.Helper()
 	svc, _, pub := newDataProtectService(t)
-	h, err := NewAuthenticatedHandler(svc, gateParser)
+	h, err := NewAuthenticatedHandler(svc, nil, gateParser)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func newGatedHandler(t *testing.T) (http.Handler, *nopDataProtectPublisher) {
 
 func TestAuthenticatedHandlerNeedsAParser(t *testing.T) {
 	svc, _, _ := newDataProtectService(t)
-	if _, err := NewAuthenticatedHandler(svc, nil); err == nil {
+	if _, err := NewAuthenticatedHandler(svc, nil, nil); err == nil {
 		t.Fatal("a handler without a token parser must not be built")
 	}
 }
@@ -74,7 +74,7 @@ func TestUnauthenticatedRequestsAreRefusedAndAudited(t *testing.T) {
 // to keycore and the key is used as the user (KEY_ACCESS_MODEL.md section 5).
 func TestVerifiedTokenReachesTheService(t *testing.T) {
 	svc, _, pub := newDataProtectService(t)
-	h, err := NewAuthenticatedHandler(svc, gateParser)
+	h, err := NewAuthenticatedHandler(svc, nil, gateParser)
 	if err != nil {
 		t.Fatal(err)
 	}

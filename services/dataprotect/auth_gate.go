@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/route"
 )
 
 // NewAuthenticatedHandler is the handler dataprotect serves. Until 7.2.0-beta
@@ -19,11 +20,11 @@ import (
 // X-Wrapper-Token; the service verifies that token against the wrapper's
 // registration (verifyWrapperAuthProfileToken). Every refusal is audited as
 // audit.dataprotect.request_refused.
-func NewAuthenticatedHandler(svc *Service, parser func(string) (*pkgauth.Claims, error)) (http.Handler, error) {
+func NewAuthenticatedHandler(svc *Service, audit route.Emitter, parser func(string) (*pkgauth.Claims, error)) (http.Handler, error) {
 	if parser == nil {
 		return nil, errors.New("dataprotect needs the platform JWT public key to verify callers")
 	}
-	h := NewHandler(svc)
+	h := NewHandler(svc, audit)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := strings.TrimSpace(r.Header.Get("Authorization"))
 		reason := "unauthenticated"

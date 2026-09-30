@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-30T06:32:13Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T06:38:15Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -10,7 +10,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Tab/component mappings: `34`
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `875` across `29` services
-- Backend routes on the `pkg/route` kernel: `350` (permission and audit action in `backend-routes.csv`)
+- Backend routes on the `pkg/route` kernel: `400` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `548`
 - Frontend call sites with exact backend route match: `503`
 - Frontend call sites needing review or dynamic/runtime confirmation: `45`

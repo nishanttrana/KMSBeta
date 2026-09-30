@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.4.0-beta] — 2026-09-30
+
+### Dataprotect on the route kernel: a permission on every route (breaking for custom roles)
+- **Before:** once authenticated (7.2.0-beta), any token, even a readonly
+  user's, could change the data protection policy, delete token vaults and
+  masking policies, complete a wrapper registration (asserting governance
+  approval), or detokenize and decrypt. No route checked a permission.
+- **Now:** every route is registered through `pkg/route` with a
+  permission: `dataprotect.read` (lists, reads, stats, audit log, SDK),
+  `dataprotect.use` (tokenize, detokenize, FPE, mask, redact, field,
+  envelope and searchable encryption, leases and receipts),
+  `dataprotect.write` (vaults, policies, profiles, wrapper registration,
+  lease revoke, KDF migration) and `dataprotect.delete`. Which keys a caller
+  may use is still decided by keycore from the caller's own grants. Each
+  request emits `audit.dataprotect.<action>`, refusals included. The wrapper
+  runtime routes still accept a wrapper's `X-Wrapper-Token` alone; without
+  one they need the permission. `services/dataprotect/handler.go` leaves the
+  route-kernel burn-down list.
+- **Upgrade note:** admins (`*`) are unaffected; custom roles that use Data
+  Protection need the new grants.
+
 ## [7.3.0-beta] — 2026-09-30
 
 ### Crypto agility under a stable key ID (NIST CSWP 39)

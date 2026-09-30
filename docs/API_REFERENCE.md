@@ -2441,6 +2441,16 @@ event was removed in 6.9.0-beta).
 
 Tokenization, masking, field-level encryption, and secure vault search.
 
+**Permissions and audit (7.4.0-beta).** Every route is on the route kernel:
+`dataprotect.read` for GETs, `dataprotect.use` for data operations
+(tokenize/detokenize, FPE, mask, redact, `/app/*`, leases, receipts),
+`dataprotect.write` for configuration (vaults, policies, profiles, wrapper
+registration, lease revoke, `/kdf/keys/*`), `dataprotect.delete` for
+DELETEs. Each request emits `audit.dataprotect.<action>` (for example
+`tokenize`, `fpe_decrypt`, `policy_update`, `token_vault_delete`), refusals
+included (`reason` = `unauthenticated`, `permission_denied`,
+`tenant_mismatch`, `tenant_conflict`).
+
 **Authentication (7.2.0-beta).** Every route needs a verified platform JWT
 (`Authorization: Bearer`), which dataprotect forwards to keycore so keys are
 used as the user (pkg/delegation). The exceptions are the wrapper runtime

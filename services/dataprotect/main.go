@@ -69,7 +69,7 @@ func main() {
 	if err != nil {
 		rt.Logger.Fatalf("refusing to start: jwt parser: %v", err)
 	}
-	handler, err := NewAuthenticatedHandler(svc, parser)
+	handler, err := NewAuthenticatedHandler(svc, rt.Audit, parser)
 	if err != nil {
 		rt.Logger.Fatalf("refusing to start: %v", err)
 	}
