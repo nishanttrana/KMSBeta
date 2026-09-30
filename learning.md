@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A feature that sounds like security isn't a security feature
+- **What happened:** the AI gateway shipped for months as "prompt-injection
+  protection" and "encrypted" provider keys. It was a list of regexes, and the
+  keys sat in plaintext under a schema comment saying `encrypted at rest`.
+- **How it slipped through:** it lived on the route-kernel burn-down list,
+  so it never got per-route audit or permission review, and nobody asked
+  whether content inspection belonged in a KMS at all. The comment was
+  trusted instead of the store code.
+- **Rule:** ask "is this a key, secret, identity or signature job?" before
+  hardening a feature. If not, cut it (CLAUDE.md). Check an "encrypted"
+  claim by following the value into the `INSERT`.
+
 ### Authenticated is not authorised: dataprotect's second gap
 - **What happened:** after 7.2.0-beta closed the tokenless hole, a readonly
   token could still change dataprotect's policy, delete vaults, detokenize or

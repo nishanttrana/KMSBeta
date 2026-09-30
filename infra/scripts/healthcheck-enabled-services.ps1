@@ -35,7 +35,6 @@ $profileToService = @{
     "sbom_cbom" = @("sbom")
     "reporting_alerting" = @("reporting")
     "posture_management" = @("posture")
-    "ai_llm" = @("ai", "ai-gateway")
     "pqc_migration" = @("pqc")
     "crypto_discovery" = @("discovery")
     "mpc_engine" = @("mpc")

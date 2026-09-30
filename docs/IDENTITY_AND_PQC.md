@@ -14,7 +14,7 @@ This guide covers four capability areas and what each one actually does:
    SLH-DSA keys, hybrid TLS key exchange, and the readiness and migration
    tooling.
 
-Section 5 points to the AI gateway, and Section 6 walks through use cases
+Section 6 walks through use cases
 built only from the routes below.
 
 Every claim was checked against the code in 6.6.0-beta, following each one
@@ -33,7 +33,6 @@ token. `$TOKEN` holds it; never paste a token into a command line.
 - [Section 2: Attested key release](#section-2-attested-key-release)
 - [Section 3: Key access justifications](#section-3-key-access-justifications)
 - [Section 4: Post-quantum cryptography](#section-4-post-quantum-cryptography)
-- [Section 5: AI gateway](#section-5-ai-gateway)
 - [Section 6: Use cases](#section-6-use-cases)
 - [Open items](#open-items)
 - [Removed claims (6.6.0-beta)](#removed-claims-660-beta)
@@ -597,17 +596,6 @@ curl -sk -X POST https://localhost/svc/keycore/agility/policy/rules \
        "match_kind": "quantum_vulnerable", "action": "decrypt_only",
        "effective_date": "2027-01-01"}'
 ```
-
----
-
-## Section 5: AI gateway
-
-There is no `/svc/ai` service. AI traffic goes through the AI gateway
-(`/svc/ai-gateway/ai-gateway/v1/...`): chat and completion proxying with DLP
-scanning, redaction and guardrails (`POST .../v1/chat/completions`,
-`.../v1/scan`, `.../v1/redact`, `.../v1/evaluate`), plus model, policy,
-guardrail, access-rule and budget administration. See the route index in
-[API_REFERENCE.md](API_REFERENCE.md#appendix-route-index-generated).
 
 ---
 

@@ -15,7 +15,6 @@ import (
 // Services maps a service binary to its internal HTTP URL on a node. The
 // primary's cluster-manager proxies forwarded requests there.
 var Services = map[string]string{
-	"kms-ai-gateway":        "https://ai-gateway:8320",
 	"kms-audit":             "https://audit:8070",
 	"kms-auth":              "https://auth:8001",
 	"kms-autokey":           "https://autokey:8260",

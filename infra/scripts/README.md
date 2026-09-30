@@ -20,7 +20,7 @@ Feature-to-profile coverage includes:
 - release and access controls: `artifact_signing`, `key_access_justifications`, `workload_identity`, `confidential_compute`
 - integrations: `cloud_byok`, `hyok_proxy`, `kmip_server`, `ekm_database`
 - advanced crypto: `qkd_interface`, `qrng_generator`, `pqc_migration`, `mpc_engine`
-- monitoring and governance: `compliance_dashboard`, `sbom_cbom`, `reporting_alerting`, `posture_management`, `crypto_discovery`, `ai_llm`
+- monitoring and governance: `compliance_dashboard`, `sbom_cbom`, `reporting_alerting`, `posture_management`, `crypto_discovery`
 - HA and replication: `clustering`
 
 Installer flows also understand these built-in cluster replication profile IDs:

@@ -44,7 +44,6 @@ services/ekm/ekm
 services/*/__debug_bin*
 /workload
 # every other service binary `go build ./services/<name>` drops at the root
-/ai-gateway
 /autokey
 /backup
 /cluster-manager
@@ -72,7 +71,6 @@ services/*/__debug_bin*
 .cloudbuild/
 
 # Binaries `go build` drops inside a service directory
-services/ai-gateway/ai-gateway
 services/audit/audit
 services/auth/auth
 services/autokey/autokey

@@ -7,6 +7,21 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — No content inspection in the KMS; AI gateway to KMS Extension (7.5.0-beta)
+
+- **Decision:** the KMS serves AI workloads only through keys, secrets,
+  identity, tokenization and signing. It doesn't proxy LLM traffic or
+  inspect, score or filter prompts and responses.
+- **Why:** a KMS in the data path of every LLM call holds every prompt,
+  widens the FIPS boundary to six outbound providers, and turns a KMS outage
+  into an AI outage. Content classifiers are a different product category,
+  and a regex version can't honestly be called protection (rule 8).
+- **Rejected:** keeping the gateway and fixing its defects. That fixes the
+  credentials and audit but leaves a weak classifier in a product whose
+  reviewers expect everything it claims to hold up.
+- **Enforced by:** the CLAUDE.md standing rule; the service and tab are
+  deleted; the sources live in KMS Extension `seeds/services/ai-gateway`.
+
 ## 2026-09-30 — Algorithm change by rotation under the same key ID (7.3.0-beta)
 
 **Decision.** A key's algorithm changes by rotation: the new version carries

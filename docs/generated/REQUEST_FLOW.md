@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T06:38:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T07:00:31Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `875`
-- Routes with exact frontend call sites: `512`
+- Backend routes analyzed: `844`
+- Routes with exact frontend call sites: `489`
 - Routes whose handlers call `h.svc.*`: `501`
-- Routes with detected store calls: `628`
+- Routes with detected store calls: `602`
 - Routes with detected internal `pkg/*` calls: `147`
 
 ## How To Trace One Frontend Click
@@ -24,29 +24,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ai-gateway\|POST\|/ai-gateway/v1/scan | POST /ai-gateway/v1/scan | handleScan (services/ai-gateway/handler.go:534) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:117 |
-| ai-gateway\|POST\|/ai-gateway/v1/redact | POST /ai-gateway/v1/redact | handleRedact (services/ai-gateway/handler.go:548) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:123 |
-| ai-gateway\|POST\|/ai-gateway/v1/evaluate | POST /ai-gateway/v1/evaluate | handleEvaluate (services/ai-gateway/handler.go:568) |  | ListGuardrails |  |  | web/dashboard/src/lib/aigateway.ts:129 |
-| ai-gateway\|POST\|/ai-gateway/v1/policies | POST /ai-gateway/v1/policies | handleCreatePolicy (services/ai-gateway/handler.go:622) |  | CreatePolicy |  |  | web/dashboard/src/lib/aigateway.ts:150 |
-| ai-gateway\|GET\|/ai-gateway/v1/policies | GET /ai-gateway/v1/policies | handleListPolicies (services/ai-gateway/handler.go:641) |  | ListPolicies |  |  | web/dashboard/src/lib/aigateway.ts:146 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/policies/{param} | DELETE /ai-gateway/v1/policies/{id} | handleDeletePolicy (services/ai-gateway/handler.go:680) |  | DeletePolicy |  |  | web/dashboard/src/lib/aigateway.ts:153 |
-| ai-gateway\|POST\|/ai-gateway/v1/models | POST /ai-gateway/v1/models | handleCreateModel (services/ai-gateway/handler.go:691) |  | CreateProvider |  |  | web/dashboard/src/lib/aigateway.ts:67 |
-| ai-gateway\|GET\|/ai-gateway/v1/models | GET /ai-gateway/v1/models | handleListModels (services/ai-gateway/handler.go:713) |  | ListProviders |  |  | web/dashboard/src/lib/aigateway.ts:63 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/models/{param} | DELETE /ai-gateway/v1/models/{id} | handleDeleteModel (services/ai-gateway/handler.go:750) |  | DeleteProvider |  |  | web/dashboard/src/lib/aigateway.ts:70 |
-| ai-gateway\|POST\|/ai-gateway/v1/models/{param}/test | POST /ai-gateway/v1/models/{id}/test | handleTestModel (services/ai-gateway/handler.go:759) |  | GetProvider |  |  | web/dashboard/src/lib/aigateway.ts:73 |
-| ai-gateway\|POST\|/ai-gateway/v1/access-rules | POST /ai-gateway/v1/access-rules | handleCreateAccessRule (services/ai-gateway/handler.go:780) |  | CreateAccessRule |  |  | web/dashboard/src/lib/aigateway.ts:82 |
-| ai-gateway\|GET\|/ai-gateway/v1/access-rules | GET /ai-gateway/v1/access-rules | handleListAccessRules (services/ai-gateway/handler.go:796) |  | ListAccessRules |  |  | web/dashboard/src/lib/aigateway.ts:78 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/access-rules/{param} | DELETE /ai-gateway/v1/access-rules/{id} | handleDeleteAccessRule (services/ai-gateway/handler.go:808) |  | DeleteAccessRule |  |  | web/dashboard/src/lib/aigateway.ts:85 |
-| ai-gateway\|POST\|/ai-gateway/v1/budgets | POST /ai-gateway/v1/budgets | handleCreateBudget (services/ai-gateway/handler.go:819) |  | CreateBudget |  |  | web/dashboard/src/lib/aigateway.ts:94 |
-| ai-gateway\|GET\|/ai-gateway/v1/budgets | GET /ai-gateway/v1/budgets | handleListBudgets (services/ai-gateway/handler.go:844) |  | ListBudgets |  |  | web/dashboard/src/lib/aigateway.ts:90 |
-| ai-gateway\|PUT\|/ai-gateway/v1/budgets/{param} | PUT /ai-gateway/v1/budgets/{id} | handleUpdateBudget (services/ai-gateway/handler.go:856) |  | UpdateBudget |  |  | web/dashboard/src/lib/aigateway.ts:97 |
-| ai-gateway\|GET\|/ai-gateway/v1/budgets/usage | GET /ai-gateway/v1/budgets/usage | handleBudgetUsage (services/ai-gateway/handler.go:873) |  | ListBudgets |  |  | web/dashboard/src/lib/aigateway.ts:100 |
-| ai-gateway\|POST\|/ai-gateway/v1/guardrails | POST /ai-gateway/v1/guardrails | handleCreateGuardrail (services/ai-gateway/handler.go:887) |  | CreateGuardrail |  |  | web/dashboard/src/lib/aigateway.ts:109 |
-| ai-gateway\|GET\|/ai-gateway/v1/guardrails | GET /ai-gateway/v1/guardrails | handleListGuardrails (services/ai-gateway/handler.go:906) |  | ListGuardrails |  |  | web/dashboard/src/lib/aigateway.ts:105 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/guardrails/{param} | DELETE /ai-gateway/v1/guardrails/{id} | handleDeleteGuardrail (services/ai-gateway/handler.go:918) |  | DeleteGuardrail |  |  | web/dashboard/src/lib/aigateway.ts:112 |
-| ai-gateway\|GET\|/ai-gateway/v1/audit | GET /ai-gateway/v1/audit | handleListAudit (services/ai-gateway/handler.go:929) |  | ListAudit |  |  | web/dashboard/src/lib/aigateway.ts:137 |
-| ai-gateway\|GET\|/ai-gateway/v1/audit/stats | GET /ai-gateway/v1/audit/stats | handleAuditStats (services/ai-gateway/handler.go:964) |  | GetAuditStats |  |  | web/dashboard/src/lib/aigateway.ts:141 |
-| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:178) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:88 |
 | audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:206) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:93 |
 | audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:224) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:110 |
@@ -541,37 +518,6 @@ This file connects frontend requests to backend Go processing. It is static anal
 
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ai-gateway\|POST\|/ai-gateway/v1/chat/completions | POST /ai-gateway/v1/chat/completions | handleChatCompletions (services/ai-gateway/handler.go:300) |  | ListGuardrails, ListProviders |  |  |  |
-| ai-gateway\|POST\|/ai-gateway/v1/completions | POST /ai-gateway/v1/completions | handleCompletions (services/ai-gateway/handler.go:439) |  |  |  |  |  |
-| ai-gateway\|POST\|/ai-gateway/v1/embeddings | POST /ai-gateway/v1/embeddings | handleEmbeddings (services/ai-gateway/handler.go:489) |  |  |  |  |  |
-| ai-gateway\|POST\|/ai-gateway/v1/scan | POST /ai-gateway/v1/scan | handleScan (services/ai-gateway/handler.go:534) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:117 |
-| ai-gateway\|POST\|/ai-gateway/v1/redact | POST /ai-gateway/v1/redact | handleRedact (services/ai-gateway/handler.go:548) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:123 |
-| ai-gateway\|POST\|/ai-gateway/v1/evaluate | POST /ai-gateway/v1/evaluate | handleEvaluate (services/ai-gateway/handler.go:568) |  | ListGuardrails |  |  | web/dashboard/src/lib/aigateway.ts:129 |
-| ai-gateway\|POST\|/ai-gateway/v1/policies | POST /ai-gateway/v1/policies | handleCreatePolicy (services/ai-gateway/handler.go:622) |  | CreatePolicy |  |  | web/dashboard/src/lib/aigateway.ts:150 |
-| ai-gateway\|GET\|/ai-gateway/v1/policies | GET /ai-gateway/v1/policies | handleListPolicies (services/ai-gateway/handler.go:641) |  | ListPolicies |  |  | web/dashboard/src/lib/aigateway.ts:146 |
-| ai-gateway\|GET\|/ai-gateway/v1/policies/{param} | GET /ai-gateway/v1/policies/{id} | handleGetPolicy (services/ai-gateway/handler.go:653) |  | GetPolicy |  |  |  |
-| ai-gateway\|PUT\|/ai-gateway/v1/policies/{param} | PUT /ai-gateway/v1/policies/{id} | handleUpdatePolicy (services/ai-gateway/handler.go:663) |  | UpdatePolicy |  |  |  |
-| ai-gateway\|DELETE\|/ai-gateway/v1/policies/{param} | DELETE /ai-gateway/v1/policies/{id} | handleDeletePolicy (services/ai-gateway/handler.go:680) |  | DeletePolicy |  |  | web/dashboard/src/lib/aigateway.ts:153 |
-| ai-gateway\|POST\|/ai-gateway/v1/models | POST /ai-gateway/v1/models | handleCreateModel (services/ai-gateway/handler.go:691) |  | CreateProvider |  |  | web/dashboard/src/lib/aigateway.ts:67 |
-| ai-gateway\|GET\|/ai-gateway/v1/models | GET /ai-gateway/v1/models | handleListModels (services/ai-gateway/handler.go:713) |  | ListProviders |  |  | web/dashboard/src/lib/aigateway.ts:63 |
-| ai-gateway\|PUT\|/ai-gateway/v1/models/{param} | PUT /ai-gateway/v1/models/{id} | handleUpdateModel (services/ai-gateway/handler.go:733) |  | UpdateProvider |  |  |  |
-| ai-gateway\|DELETE\|/ai-gateway/v1/models/{param} | DELETE /ai-gateway/v1/models/{id} | handleDeleteModel (services/ai-gateway/handler.go:750) |  | DeleteProvider |  |  | web/dashboard/src/lib/aigateway.ts:70 |
-| ai-gateway\|POST\|/ai-gateway/v1/models/{param}/test | POST /ai-gateway/v1/models/{id}/test | handleTestModel (services/ai-gateway/handler.go:759) |  | GetProvider |  |  | web/dashboard/src/lib/aigateway.ts:73 |
-| ai-gateway\|POST\|/ai-gateway/v1/access-rules | POST /ai-gateway/v1/access-rules | handleCreateAccessRule (services/ai-gateway/handler.go:780) |  | CreateAccessRule |  |  | web/dashboard/src/lib/aigateway.ts:82 |
-| ai-gateway\|GET\|/ai-gateway/v1/access-rules | GET /ai-gateway/v1/access-rules | handleListAccessRules (services/ai-gateway/handler.go:796) |  | ListAccessRules |  |  | web/dashboard/src/lib/aigateway.ts:78 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/access-rules/{param} | DELETE /ai-gateway/v1/access-rules/{id} | handleDeleteAccessRule (services/ai-gateway/handler.go:808) |  | DeleteAccessRule |  |  | web/dashboard/src/lib/aigateway.ts:85 |
-| ai-gateway\|POST\|/ai-gateway/v1/budgets | POST /ai-gateway/v1/budgets | handleCreateBudget (services/ai-gateway/handler.go:819) |  | CreateBudget |  |  | web/dashboard/src/lib/aigateway.ts:94 |
-| ai-gateway\|GET\|/ai-gateway/v1/budgets | GET /ai-gateway/v1/budgets | handleListBudgets (services/ai-gateway/handler.go:844) |  | ListBudgets |  |  | web/dashboard/src/lib/aigateway.ts:90 |
-| ai-gateway\|PUT\|/ai-gateway/v1/budgets/{param} | PUT /ai-gateway/v1/budgets/{id} | handleUpdateBudget (services/ai-gateway/handler.go:856) |  | UpdateBudget |  |  | web/dashboard/src/lib/aigateway.ts:97 |
-| ai-gateway\|GET\|/ai-gateway/v1/budgets/usage | GET /ai-gateway/v1/budgets/usage | handleBudgetUsage (services/ai-gateway/handler.go:873) |  | ListBudgets |  |  | web/dashboard/src/lib/aigateway.ts:100 |
-| ai-gateway\|POST\|/ai-gateway/v1/guardrails | POST /ai-gateway/v1/guardrails | handleCreateGuardrail (services/ai-gateway/handler.go:887) |  | CreateGuardrail |  |  | web/dashboard/src/lib/aigateway.ts:109 |
-| ai-gateway\|GET\|/ai-gateway/v1/guardrails | GET /ai-gateway/v1/guardrails | handleListGuardrails (services/ai-gateway/handler.go:906) |  | ListGuardrails |  |  | web/dashboard/src/lib/aigateway.ts:105 |
-| ai-gateway\|DELETE\|/ai-gateway/v1/guardrails/{param} | DELETE /ai-gateway/v1/guardrails/{id} | handleDeleteGuardrail (services/ai-gateway/handler.go:918) |  | DeleteGuardrail |  |  | web/dashboard/src/lib/aigateway.ts:112 |
-| ai-gateway\|GET\|/ai-gateway/v1/audit | GET /ai-gateway/v1/audit | handleListAudit (services/ai-gateway/handler.go:929) |  | ListAudit |  |  | web/dashboard/src/lib/aigateway.ts:137 |
-| ai-gateway\|GET\|/ai-gateway/v1/audit/stats | GET /ai-gateway/v1/audit/stats | handleAuditStats (services/ai-gateway/handler.go:964) |  | GetAuditStats |  |  | web/dashboard/src/lib/aigateway.ts:141 |
-| ai-gateway\|GET\|/ai-gateway/v1/audit/{param} | GET /ai-gateway/v1/audit/{id} | handleGetAudit (services/ai-gateway/handler.go:954) |  | GetAudit |  |  |  |
-| ai-gateway\|GET\|/ai-gateway/v1/health | GET /ai-gateway/v1/health | handleHealth (services/ai-gateway/handler.go:978) |  |  |  |  | web/dashboard/src/lib/aigateway.ts:58 |
-| ai-gateway\|GET\|/ai-gateway/v1/metrics | GET /ai-gateway/v1/metrics | handleMetrics (services/ai-gateway/handler.go:1009) |  | GetAuditStats |  |  |  |
 | audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:114) | PublishAudit, VerifyChain | QueryEvents, GetEvent | h.cluster.Publish, s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:178) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:88 |
 | audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:206) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:93 |

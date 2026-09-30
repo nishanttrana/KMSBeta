@@ -271,6 +271,12 @@ an approach, record it here or in the matching doc below.
   enforces it and a test of the refusal; services acting for a user pass the
   user's verified token and the usage; deny wins. A departure updates that
   document and docs/DECISIONS.md in the same commit.
+- **No content inspection in the KMS** (owner, 2026-09-30: the AI security
+  gateway "seems to be like gimmick", "not in purview of KMS"). No LLM
+  proxy, prompt or response scanning, toxicity or topic filters, or token
+  budgets. AI workloads are served through secrets, workload identity,
+  dataprotect, signing and BYOK/HYOK ([docs/AI_WORKLOADS.md](docs/AI_WORKLOADS.md)).
+  The removed gateway is a KMS Extension seed (docs/DECISIONS.md).
 - **One home per view** (owner, 2026-09-28: Analytics under both Audit Log
   and Overview, Alerts under both Audit Log and Alert Center, and a
   Compliance page that "is not accurate"). Charts and trends go in Overview →

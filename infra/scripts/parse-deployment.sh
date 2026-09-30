@@ -24,7 +24,6 @@ FEATURE_ORDER=(
   sbom_cbom
   reporting_alerting
   posture_management
-  ai_gateway
   pqc_migration
   crypto_discovery
   data_protection

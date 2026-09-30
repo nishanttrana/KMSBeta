@@ -13,7 +13,7 @@ Edit the script, never the generated files.
 
 Each spec covers a subset of its service's routes. The full list of routes
 every service registers is the generated route index in
-[../API_REFERENCE.md](../API_REFERENCE.md). There is no spec for `ai-gateway`.
+[../API_REFERENCE.md](../API_REFERENCE.md).
 
 Regenerate, then check the committed files match:
 

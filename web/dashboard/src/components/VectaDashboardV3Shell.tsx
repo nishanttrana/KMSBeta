@@ -92,7 +92,6 @@ const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
-const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
@@ -190,7 +189,6 @@ const TABS: Record<string, any> = {
   crypto_agility: CryptoAgilityTab,
   backup: BackupTab,
   devsecops: DevSecOpsTab,
-  ai_gateway: AIGatewayTab,
   playbooks: PlaybooksTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
@@ -228,7 +226,6 @@ const TITLES: Record<string, string> = {
   crypto_agility: "Crypto Agility",
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
-  ai_gateway: "AI Security Gateway",
   playbooks: "Playbooks",
   // Enterprise Advanced Features
   key_analytics: "Analytics",
@@ -256,7 +253,6 @@ const NAV = [
     { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
     { id: "ekm", icon: Database, label: "Enterprise KM" },
     { id: "hsm", icon: Cpu, label: "HSM" },
-    { id: "ai_gateway", icon: Shield, label: "AI Security Gateway" },
   ]},
   { g: "Security & compliance", items: [
     { id: "audit", icon: ScrollText, label: "Audit Log" },

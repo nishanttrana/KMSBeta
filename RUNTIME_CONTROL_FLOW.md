@@ -44,7 +44,6 @@ This document describes the **actual runtime flow** and **control flow** of the 
 | `compliance_dashboard` | `compliance_dashboard` | `compliance` |
 | `sbom_cbom` | `sbom_cbom` | `sbom` |
 | `reporting_alerting` | `reporting_alerting` | `reporting` |
-| `ai_llm` | `ai_llm` | `ai` |
 | `pqc_migration` | `pqc_migration` | `pqc` |
 | `crypto_discovery` | `crypto_discovery` | `discovery` |
 | `mpc_engine` | `mpc_engine` | `mpc` |

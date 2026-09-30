@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.5.0-beta] — 2026-09-30
+
+### AI security gateway removed (breaking)
+- **Removed:** the `ai-gateway` service, the "AI Security Gateway" tab, the
+  `ai_gateway` deployment feature, its compose service, Envoy routes
+  (`/api/ai-gateway`, `/svc/ai-gateway/`), service identity and cluster
+  tables. Also removed the dead `ai_llm` feature flag, "AI / LLM" REST
+  catalog entries and docs, and the "AI Protect" developer entries: they
+  pointed at the `ai` service that was already gone.
+- **Why:** content inspection is not a KMS job. The detectors were keyword
+  regexes sold as prompt-injection and toxicity protection. Provider API
+  keys were stored in plaintext under an `encrypted at rest` comment, and the
+  list API returned part of each key. It also used `crypto/hmac` directly and
+  audited only a generic request event. The dashboard's DLP view called a
+  service that didn't exist.
+- **Moved to:** KMS Extension `seeds/services/ai-gateway` (commit `5c75fde`),
+  with these defects listed as promotion blockers.
+- **What the KMS offers AI workloads instead:** secrets for provider
+  credentials, workload identity for agents, tokenization/FPE/masking before
+  data reaches a model, signing for model artifacts, BYOK/HYOK for cloud AI
+  services. All already exist; [docs/AI_WORKLOADS.md](docs/AI_WORKLOADS.md)
+  maps each need to its routes.
+- **Upgrade:** drop `ai_gateway` / `ai_llm` from `deployment.yaml`. The
+  `ai_gateway_*` tables are left in place; drop them once you no longer need
+  their data.
+
 ## [7.4.0-beta] — 2026-09-30
 
 ### Dataprotect on the route kernel: a permission on every route (breaking for custom roles)

@@ -46,7 +46,6 @@ import (
 // network. Enrolment assigns SANs from here, never from the CSR, and the
 // client router treats these hosts as internal.
 var Services = map[string]string{
-	"kms-ai-gateway":        "ai-gateway",
 	"kms-audit":             "audit",
 	"kms-auth":              "auth",
 	"kms-autokey":           "autokey",

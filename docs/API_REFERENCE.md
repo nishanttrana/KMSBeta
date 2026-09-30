@@ -28,7 +28,6 @@ Complete endpoint reference for all 27 Vecta KMS services.
 | cluster | /svc/cluster/ | Cluster nodes, HSM registration |
 | secrets | /svc/secrets/ | Secret vault |
 | sbom | /svc/sbom/ | SBOM/CBOM inventory |
-| ai-gateway | /svc/ai-gateway/ | AI gateway (DLP, guardrails) |
 
 ---
 
@@ -3214,14 +3213,6 @@ keycore, kmip, audit and policy publish their own.
 
 ---
 
-## AI gateway health
-
-`GET /ai-gateway/v1/health` returns the checks it ran: `database` (a
-round trip), and `dlp` / `guardrails` (the detectors run on a known input).
-It answers `503` with `status: degraded` when any check fails.
-
----
-
 ## Authentication and capability changes in 1.27.0-beta
 
 Behaviour that changed in 1.27.0-beta (CHANGELOG 1.27.0-beta,
@@ -3498,40 +3489,6 @@ curl -sk -X POST https://localhost/svc/autokey/autokey/requests \
 
 Every route each service registers, as reached through the edge. Generated
 from the code; do not edit by hand.
-
-### ai-gateway (`/svc/ai-gateway/`)
-
-- `GET /svc/ai-gateway/ai-gateway/v1/access-rules`
-- `POST /svc/ai-gateway/ai-gateway/v1/access-rules`
-- `DELETE /svc/ai-gateway/ai-gateway/v1/access-rules/{id}`
-- `GET /svc/ai-gateway/ai-gateway/v1/audit`
-- `GET /svc/ai-gateway/ai-gateway/v1/audit/stats`
-- `GET /svc/ai-gateway/ai-gateway/v1/audit/{id}`
-- `GET /svc/ai-gateway/ai-gateway/v1/budgets`
-- `POST /svc/ai-gateway/ai-gateway/v1/budgets`
-- `GET /svc/ai-gateway/ai-gateway/v1/budgets/usage`
-- `PUT /svc/ai-gateway/ai-gateway/v1/budgets/{id}`
-- `POST /svc/ai-gateway/ai-gateway/v1/chat/completions`
-- `POST /svc/ai-gateway/ai-gateway/v1/completions`
-- `POST /svc/ai-gateway/ai-gateway/v1/embeddings`
-- `POST /svc/ai-gateway/ai-gateway/v1/evaluate`
-- `GET /svc/ai-gateway/ai-gateway/v1/guardrails`
-- `POST /svc/ai-gateway/ai-gateway/v1/guardrails`
-- `DELETE /svc/ai-gateway/ai-gateway/v1/guardrails/{id}`
-- `GET /svc/ai-gateway/ai-gateway/v1/health`
-- `GET /svc/ai-gateway/ai-gateway/v1/metrics`
-- `GET /svc/ai-gateway/ai-gateway/v1/models`
-- `POST /svc/ai-gateway/ai-gateway/v1/models`
-- `DELETE /svc/ai-gateway/ai-gateway/v1/models/{id}`
-- `PUT /svc/ai-gateway/ai-gateway/v1/models/{id}`
-- `POST /svc/ai-gateway/ai-gateway/v1/models/{id}/test`
-- `GET /svc/ai-gateway/ai-gateway/v1/policies`
-- `POST /svc/ai-gateway/ai-gateway/v1/policies`
-- `DELETE /svc/ai-gateway/ai-gateway/v1/policies/{id}`
-- `GET /svc/ai-gateway/ai-gateway/v1/policies/{id}`
-- `PUT /svc/ai-gateway/ai-gateway/v1/policies/{id}`
-- `POST /svc/ai-gateway/ai-gateway/v1/redact`
-- `POST /svc/ai-gateway/ai-gateway/v1/scan`
 
 ### audit (`/svc/audit/`)
 

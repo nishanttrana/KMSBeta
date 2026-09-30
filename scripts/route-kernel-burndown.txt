@@ -7,7 +7,6 @@
 # one service at a time (docs/ARCHITECTURE_MIGRATION.md); remove a file here
 # in the same change that migrates it. This list only shrinks: a new file
 # can't be added, and a migrated file left here fails the check.
-services/ai-gateway/handler.go
 services/audit/handler.go
 services/auth/handler.go
 services/autokey/handler.go

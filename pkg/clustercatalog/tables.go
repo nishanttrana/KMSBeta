@@ -7,12 +7,6 @@ package clustercatalog
 // Replicated maps a cluster component to the tables it owns. A member that
 // is assigned the component receives these tables from the primary.
 var Replicated = map[string][]string{
-	"ai": {
-		"ai_gateway_access_rules",
-		"ai_gateway_guardrails",
-		"ai_gateway_policies",
-		"ai_gateway_providers",
-	},
 	"audit": {
 		"alert_rules", // dropped by migration 011 (2.14.0-beta); 001 still creates it first
 		"alerts",      // dropped by migration 012 (2.16.0-beta); 001 still creates it first
@@ -251,8 +245,6 @@ var NodeLocal = map[string]string{
 	"key_op_counters":                     "per-key operation counters of a cluster member (written during crypto operations)",
 	"cluster_local_state":                 "this node's cluster role and its primary; the forwarding credential authenticates this node only",
 	"cluster_member_credentials":          "credentials a primary issued to its members",
-	"ai_gateway_audit":                    "per-node AI gateway log",
-	"ai_gateway_token_budgets":            "per-node usage counters",
 	"auth_hsm_provider_configs":           "HSM hardware configuration of this node",
 	"auth_request_nonce_cache":            "anti-replay nonces are checked where the request lands",
 	"auth_sessions":                       "sessions are bound to the node that issued them",

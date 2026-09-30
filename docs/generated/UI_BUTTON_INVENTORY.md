@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T06:38:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T07:00:31Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 700 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 860 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 911 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 934 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 984 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1021 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1056 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 696 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 856 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 907 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 930 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 980 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1017 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1052 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -32,48 +32,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 650 | - | button | (icon or dynamic label) | onClick} disabled={disabled |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: active === t ? C.accentDim : "transparent",... |  |
 | web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 759 | ai_gateway | Btn | Refresh | refreshAll} disabled={loadingModels |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 769 | ai_gateway | button | setErr("")} style={ }>Dismiss |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 783 | ai_gateway | button | { setView(vc.key); if (vc.key === "governance" && accessRules.length === 0) i... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 938 | ai_gateway | Btn | { setView(s.target); if (s.target === "dlp_policies") void loadDlpPolicies();... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 948 | ai_gateway | Btn | }>View All |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 981 | ai_gateway | Btn | setView("models")}> Register Model |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 982 | ai_gateway | Btn | } style={{ background: C.blueDim, border: `1px solid $ 33`, color: C.blue }}>... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 985 | ai_gateway | Btn | setView("scan")} style={{ background: C.purpleDim, border: `1px solid $ 33`,... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 988 | ai_gateway | Btn | setView("realtime")} style={{ background: C.greenDim, border: `1px solid $ 33... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1047 | ai_gateway | Btn | (icon or dynamic label) | doCreateModel} disabled={modelFormBusy |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1055 | ai_gateway | Btn | (icon or dynamic label) | loadModels} disabled={loadingModels |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1091 | ai_gateway | Btn | doTestModel(m.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1094 | ai_gateway | Btn | doDeleteModel(m.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1126 | ai_gateway | button | { setAccessForm(f => ( )); }} style={{ padding: "3px 8px", fontSize: 10, bord... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1147 | ai_gateway | button | { setAccessForm(f => ( )); }} style={{ padding: "4px 10px", fontSize: 10, bor... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1176 | ai_gateway | Btn | (icon or dynamic label) | doCreateAccessRule} disabled={accessFormBusy |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1183 | ai_gateway | Btn | (icon or dynamic label) | loadRules} disabled={loadingRules |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1207 | ai_gateway | Btn | doDeleteAccessRule(r.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1269 | ai_gateway | Btn | (icon or dynamic label) | doCreateBudget} disabled={budgetFormBusy |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1276 | ai_gateway | Btn | (icon or dynamic label) | loadBudgets} disabled={loadingBudgets |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1372 | ai_gateway | Btn | (icon or dynamic label) | doCreateGuardrail} disabled={guardrailFormBusy |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1387 | ai_gateway | Btn | (icon or dynamic label) | doTestGuardrail} disabled={guardrailTestBusy \|\| !guardrailTestText.trim() |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1410 | ai_gateway | Btn | (icon or dynamic label) | loadGuardrails} disabled={loadingGuardrails |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1440 | ai_gateway | Btn | doDeleteGuardrail(g.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1473 | ai_gateway | button | setDlpPolicyForm(f => ( ))} style={{ background: C.accentDim, border: `1px so... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1477 | ai_gateway | button | setDlpPolicyForm(f => ( ))} style={{ background: "transparent", border: `1px... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1543 | ai_gateway | Btn | (icon or dynamic label) | doCreateDlpPolicy} disabled={dlpPolicyFormBusy |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1553 | ai_gateway | Btn | (icon or dynamic label) | loadDlpPolicies} disabled={loadingDlpPolicies |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1590 | ai_gateway | Btn | doDeleteDlpPolicy(p.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1611 | ai_gateway | button | setScanMode(m)} style={{ padding: "8px 18px", fontSize: 11, fontWeight: scanM... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1636 | ai_gateway | Btn | doScan("scan")} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1639 | ai_gateway | Btn | doScan("redact")} disabled= style={{ background: C.purpleDim, border: `1px so... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1642 | ai_gateway | Btn | doScan("evaluate")} disabled= style={{ background: C.amberDim, border: `1px s... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1769 | ai_gateway | Btn | (icon or dynamic label) | doSimulateGateway} disabled={scanning |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1881 | ai_gateway | Btn | (icon or dynamic label) | loadRealtimeFeed |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1929 | ai_gateway | button | setReportPeriod(val)} style={{ padding: "6px 14px", fontSize: 10, borderRadiu... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 1937 | ai_gateway | Btn | Export JSON | exportReportJSON |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2029 | ai_gateway | button | } style={{ padding: "3px 10px", fontSize: 10, borderRadius: 4, cursor: "point... |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2037 | ai_gateway | Btn | Refresh | loadAudit} disabled={loadingAudit |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2038 | ai_gateway | Btn | Export | exportReportJSON |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2090 | ai_gateway | Btn | setAuditPage(p => Math.max(0, p - 1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 2092 | ai_gateway | Btn | setAuditPage(p => Math.min(totalAuditPages - 1, p + 1))} disabled= >Next |  |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 60 | - | Btn | void load()}>Retry |  |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 67 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 411 | alerts | Btn | void refresh(false)}> |  |
@@ -288,8 +246,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 429 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 430 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 50 | devsecops | button | {copied ? : } | handleCopy |
-| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 641 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
-| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 806 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
+| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 637 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
+| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 802 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 698 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 699 | ekm | Btn | Deploy Agent | openDeploy |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 700 | ekm | Btn | Register Database | openDbRegister |

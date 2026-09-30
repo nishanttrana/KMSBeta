@@ -476,15 +476,6 @@ Governance backups already include the stored state behind posture/compliance/re
 
 Backup artifact and key downloads now carry explicit `backup_coverage` metadata so operators can see which capability classes were preserved. When Autokey tables are present, tenant Autokey settings, resource templates, per-service defaults, request catalogs, and managed key-handle bindings are included in the encrypted snapshot.
 
-## AI Service
-
-There is no `/svc/ai` service. AI traffic goes through the AI gateway
-(`/svc/ai-gateway/ai-gateway/v1/...`): chat and completion proxying with DLP
-scanning, redaction and guardrails (`POST .../v1/chat/completions`,
-`.../v1/scan`, `.../v1/redact`, `.../v1/evaluate`), plus model, policy,
-guardrail, access-rule and budget administration. See the route index in
-[API_REFERENCE.md](API_REFERENCE.md#appendix-route-index-generated).
-
 ## SBOM and CBOM Service
 
 Service prefix:

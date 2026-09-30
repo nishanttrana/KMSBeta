@@ -87,7 +87,6 @@ Vecta KMS is organized into five working areas:
 | `workload` | SPIFFE/SVID and workload identity | workload-to-key auth, token exchange, federation |
 | `confidential` | Attested key release | verified TEE evidence releases a key sealed to the enclave's own key |
 | `pqc` | Post-quantum migration and policy | ML-KEM, ML-DSA, SLH-DSA, hybrid rollout |
-| `ai-gateway` | AI request gateway | DLP and prompt-injection checks on AI traffic |
 
 ## Quick Start
 

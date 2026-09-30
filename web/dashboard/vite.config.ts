@@ -186,11 +186,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/dam/, "")
       },
-      "/svc/ai-gateway": {
-        target: serviceURL("ai-gateway", 8320),
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/svc\/ai-gateway/, "")
-      },
       "/api": {
         target: runInDocker ? "https://envoy:443" : "https://127.0.0.1:443",
         changeOrigin: true,

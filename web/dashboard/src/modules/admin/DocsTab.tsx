@@ -112,7 +112,6 @@ const NAV = [
   { id: "api-cluster", label: "API: Cluster" },
   { id: "api-pqc", label: "API: PQC" },
   { id: "api-discovery", label: "API: Discovery" },
-  { id: "api-ai", label: "API: AI / LLM" },
   { id: "api-openapi", label: "API: OpenAPI / Swagger" },
   { id: "ui-guide", label: "UI Guide: Dashboard" },
   { id: "ui-keys", label: "UI Guide: Keys" },
@@ -362,7 +361,6 @@ const SectionArchitecture = () => (
       ["kms-reporting", "8140 / 18140", "Reporting & alerting (profile: reporting_alerting)"],
       ["kms-posture", "8220 / 18220", "Security posture (profile: posture_management)"],
       ["kms-sbom", "8180 / 18180", "SBOM/CBOM (profile: sbom_cbom)"],
-      ["kms-ai", "8090 / 18090", "AI/LLM analysis (profile: ai_llm)"],
     ]} />
 
     <H3>Infrastructure (Profile-Gated)</H3>
@@ -2098,35 +2096,6 @@ curl http://localhost:8100/discovery/assets \\
   </div>
 );
 
-const SectionApiAi = () => (
-  <div>
-    <div style={S.h1}>API: AI / LLM Integration</div>
-    <P>Service: kms-ai | Port: 8090 (HTTP) / 18090 (gRPC) | Profile: ai_llm</P>
-
-    <H2>What is AI Integration?</H2>
-    <P>The AI service connects Vecta KMS to a Large Language Model (LLM) to provide natural-language interaction with the platform. Ask questions about your security posture in plain English, get AI-powered analysis of security incidents, receive intelligent recommendations for improving your cryptographic practices, and get plain-language explanations of complex policies.</P>
-
-    <H2>Use Cases</H2>
-    <P>- Ask "Which keys haven't been rotated in 6 months?" in plain English instead of writing API queries</P>
-    <P>- Incident triage: Feed a security alert to the AI and get an analysis of impact, affected resources, and recommended response</P>
-    <P>- Policy explanation: Have the AI explain what a complex governance or access policy actually means in plain language</P>
-    <P>- Posture recommendations: Get actionable suggestions for improving your security posture score</P>
-
-    <Collapse title="AI Endpoints" defaultOpen>
-      <EndpointTable rows={[
-        ["POST", "/ai/query", "Natural language query about your KMS data and configuration"],
-        ["POST", "/ai/analyze/incident", "AI analysis of a security incident with impact assessment"],
-        ["POST", "/ai/recommend/posture", "AI-powered posture improvement recommendations"],
-        ["POST", "/ai/explain/policy", "Plain-language explanation of a policy or configuration"],
-        ["GET", "/ai/config", "Get current AI provider configuration"],
-        ["PUT", "/ai/config", "Update AI provider (OpenAI, Anthropic, Azure OpenAI, local model)"],
-      ]} />
-    </Collapse>
-  </div>
-);
-
-/* ─── UI GUIDE SECTIONS ─── */
-
 const SectionUIDashboard = () => (
   <div>
     <div style={S.h1}>UI Guide: Dashboard (Home)</div>
@@ -2863,7 +2832,6 @@ docker compose ps`}</Code>
       ["sbom_cbom", "kms-sbom", "SBOM/CBOM generation"],
       ["reporting_alerting", "kms-reporting", "Reporting and alerting"],
       ["posture_management", "kms-posture", "Security posture"],
-      ["ai_llm", "kms-ai", "AI/LLM integration"],
       ["pqc_migration", "kms-pqc", "Post-quantum crypto"],
       ["crypto_discovery", "kms-discovery", "Crypto discovery"],
       ["mpc_engine", "kms-mpc", "Multi-party computation"],
@@ -3243,7 +3211,6 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-cluster": SectionApiCluster,
   "api-pqc": SectionApiPqc,
   "api-discovery": SectionApiDiscovery,
-  "api-ai": SectionApiAi,
   "api-openapi": SectionApiOpenAPI,
   "ui-guide": SectionUIDashboard,
   "ui-keys": SectionUIKeys,

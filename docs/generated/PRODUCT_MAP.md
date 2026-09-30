@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-30T06:38:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T07:00:31Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `27`
-- Tab/component mappings: `34`
+- Dashboard navigation items: `26`
+- Tab/component mappings: `33`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `875` across `29` services
+- Backend HTTP routes discovered: `844` across `28` services
 - Backend routes on the `pkg/route` kernel: `400` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `548`
-- Frontend call sites with exact backend route match: `503`
-- Frontend call sites needing review or dynamic/runtime confirmation: `45`
-- Clickable controls with static `onClick` handlers: `758`
-- Backend request flows with handler/service/package summaries: `875`
+- Frontend API call sites discovered: `522`
+- Frontend call sites with exact backend route match: `480`
+- Frontend call sites needing review or dynamic/runtime confirmation: `42`
+- Clickable controls with static `onClick` handlers: `716`
+- Backend request flows with handler/service/package summaries: `844`
 
 ## How To Use This For Launch
 
@@ -69,10 +69,6 @@ flowchart LR
   tab_hsm["HSM"]
   UI --> tab_hsm
   tab_hsm --> svc_auth
-  tab_ai_gateway["AI Security Gateway"]
-  UI --> tab_ai_gateway
-  tab_ai_gateway --> svc_ai
-  tab_ai_gateway --> svc_ai_gateway
   tab_audit["Audit Log"]
   UI --> tab_audit
   tab_audit --> svc_audit
@@ -126,8 +122,6 @@ flowchart LR
   tab_restapi --> svc_auth_edge
   tab_restapi --> svc_certs
   tab_restapi --> svc_secrets
-  svc_ai["ai"]
-  svc_ai_gateway["ai-gateway (31 routes)"]
   svc_audit["audit (33 routes)"]
   svc_auth["auth (87 routes)"]
   svc_auth_edge["auth-edge"]
@@ -172,7 +166,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 45 |
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 45 |
-| Data & integrations | AI Security Gateway | ai_gateway | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | ai, ai-gateway | 26 |
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 9 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
@@ -197,7 +190,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
-| ai-gateway | 31 | 23 |
 | audit | 33 | 20 |
 | auth | 87 | 45 |
 | autokey | 15 | 11 |
@@ -233,9 +225,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 
 | Service | Method | Path | Source | File | Line |
 | --- | --- | --- | --- | --- | --- |
-| ai | GET | /ai/protect/policies | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 395 |
-| ai | POST | /ai/protect/policies | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 610 |
-| ai | DELETE | /ai/protect/policies/{param} | serviceRequest | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | 623 |
 | keycore | GET | /audit/chain | trackedFetch | web/dashboard/src/lib/auditChain.ts | 6 |
 | keycore | POST | /audit/chain/verify | trackedFetch | web/dashboard/src/lib/auditChain.ts | 12 |
 | keycore | POST | /audit/chain/anchor | trackedFetch | web/dashboard/src/lib/auditChain.ts | 21 |
@@ -279,7 +268,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 302 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
-Showing `45` of `45`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `42` of `42`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -287,14 +276,6 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 
 | Service | Method | Path | Handler | Permission | File | Line |
 | --- | --- | --- | --- | --- | --- | --- |
-| ai-gateway | POST | /ai-gateway/v1/chat/completions | h.handleChatCompletions |  | services/ai-gateway/handler.go | 30 |
-| ai-gateway | POST | /ai-gateway/v1/completions | h.handleCompletions |  | services/ai-gateway/handler.go | 31 |
-| ai-gateway | POST | /ai-gateway/v1/embeddings | h.handleEmbeddings |  | services/ai-gateway/handler.go | 32 |
-| ai-gateway | GET | /ai-gateway/v1/policies/{id} | h.handleGetPolicy |  | services/ai-gateway/handler.go | 42 |
-| ai-gateway | PUT | /ai-gateway/v1/policies/{id} | h.handleUpdatePolicy |  | services/ai-gateway/handler.go | 43 |
-| ai-gateway | PUT | /ai-gateway/v1/models/{id} | h.handleUpdateModel |  | services/ai-gateway/handler.go | 49 |
-| ai-gateway | GET | /ai-gateway/v1/audit/{id} | h.handleGetAudit |  | services/ai-gateway/handler.go | 72 |
-| ai-gateway | GET | /ai-gateway/v1/metrics | h.handleMetrics |  | services/ai-gateway/handler.go | 76 |
 | audit | POST | /audit/publish | h.handlePublish |  | services/audit/handler.go | 72 |
 | audit | POST | /audit/search | h.handleSearch |  | services/audit/handler.go | 78 |
 | audit | GET | /audit/stream | h.handleStream |  | services/audit/handler.go | 80 |
@@ -407,8 +388,16 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
 | compliance | DELETE | /compliance/playbooks/{id} | h.deletePlaybook | compliance.playbook.delete | services/compliance/handler_playbooks.go | 141 |
 | compliance | POST | /compliance/playbooks/{id}/run | h.runPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 142 |
+| compliance | POST | /compliance/playbooks/{id}/dry-run | h.dryRunPlaybook | compliance.playbook.run | services/compliance/handler_playbooks.go | 143 |
+| compliance | GET | /compliance/playbooks/{id}/runs | h.listPlaybookRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 144 |
+| compliance | GET | /compliance/playbook-runs | h.searchRuns | compliance.playbook.read | services/compliance/handler_playbooks.go | 145 |
+| compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
+| compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
+| compliance | POST | /compliance/playbook-runs/{run_id}/retry | h.retryRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 148 |
+| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 280 |
+| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 281 |
 
-Showing `120` of `363`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `355`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

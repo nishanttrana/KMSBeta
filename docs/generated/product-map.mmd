@@ -39,10 +39,6 @@ flowchart LR
   tab_hsm["HSM"]
   UI --> tab_hsm
   tab_hsm --> svc_auth
-  tab_ai_gateway["AI Security Gateway"]
-  UI --> tab_ai_gateway
-  tab_ai_gateway --> svc_ai
-  tab_ai_gateway --> svc_ai_gateway
   tab_audit["Audit Log"]
   UI --> tab_audit
   tab_audit --> svc_audit
@@ -96,8 +92,6 @@ flowchart LR
   tab_restapi --> svc_auth_edge
   tab_restapi --> svc_certs
   tab_restapi --> svc_secrets
-  svc_ai["ai"]
-  svc_ai_gateway["ai-gateway (31 routes)"]
   svc_audit["audit (33 routes)"]
   svc_auth["auth (87 routes)"]
   svc_auth_edge["auth-edge"]

@@ -25,7 +25,6 @@ Current install-aware feature keys:
 - `sbom_cbom`
 - `reporting_alerting`
 - `posture_management`
-- `ai_llm`
 - `pqc_migration`
 - `crypto_discovery`
 - `mpc_engine`

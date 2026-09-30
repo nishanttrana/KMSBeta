@@ -152,7 +152,6 @@ start_service autokey           8260 18260
 start_service keyaccess         8270 18270
 start_service signing           8280 18280
 start_service backup            8290 18290
-start_service ai-gateway        8320 18320
 start_service confidential      8240 18240
 start_service tfe               8450 18450
 start_service dam               8460 18460

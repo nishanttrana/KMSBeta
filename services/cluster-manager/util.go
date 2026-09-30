@@ -237,8 +237,6 @@ func normalizeComponentName(v string) string {
 		return "pqc"
 	case "discovery", "crypto_discovery":
 		return "discovery"
-	case "ai", "ai_llm":
-		return "ai"
 	case "posture", "security_posture":
 		return "posture"
 	case "qrng", "qrng_entropy":

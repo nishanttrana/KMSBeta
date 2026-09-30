@@ -36,8 +36,6 @@ const defaultDeployment: DeploymentConfig = {
       compliance_dashboard: true,
       sbom_cbom: true,
       reporting_alerting: true,
-      ai_llm: true,
-      ai_gateway: true,
       pqc_migration: true,
       crypto_discovery: true,
       mpc_engine: true,

@@ -590,10 +590,6 @@ const API_ENDPOINTS = [
   { group: "DAM",            method: "GET",    path: "/svc/dam/activity/stats",             desc: "Activity statistics and actor summary",     auth: true },
   { group: "DAM",            method: "GET",    path: "/svc/dam/activity/actors",            desc: "Get top actors / access patterns",          auth: true },
   // AI Protect
-  { group: "AI Protect",     method: "POST",   path: "/svc/aiprotect/scan",                 desc: "Scan AI prompt / response for PII",         auth: true },
-  { group: "AI Protect",     method: "POST",   path: "/svc/aiprotect/redact",               desc: "Redact sensitive data from AI content",     auth: true },
-  { group: "AI Protect",     method: "GET",    path: "/svc/aiprotect/policies",             desc: "List AI content inspection policies",       auth: true },
-  { group: "AI Protect",     method: "POST",   path: "/svc/aiprotect/policies",             desc: "Create an AI content inspection policy",    auth: true },
   // Auth
   { group: "Auth",           method: "POST",   path: "/svc/auth/login",                     desc: "Authenticate and receive bearer token",     auth: false },
   { group: "Auth",           method: "POST",   path: "/svc/auth/sso/callback",              desc: "SSO OAuth callback handler",                auth: false },

@@ -87,8 +87,6 @@ func categoryGroupForService(service string) CategoryGroup {
 		return CatFinancial
 	case "byok", "cloud":
 		return CatCloudIntegration
-	case "ai", "ai-gateway":
-		return CatSystemAdministration
 	default:
 		return CatSystemAdministration
 	}
