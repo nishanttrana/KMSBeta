@@ -12,6 +12,7 @@ import {
   Cpu,
   Database,
   FileText,
+  Fingerprint,
   Gauge,
   GitBranch,
   Home as HomeIcon,
@@ -37,6 +38,7 @@ import {
   Users,
   Server,
   RefreshCw,
+  Radar,
   Archive,
   Info,
 } from "lucide-react";
@@ -92,6 +94,9 @@ const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
+const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
+const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
+const DiscoveryTab = lazy(() => import("./v3/tabs/DiscoveryTab").then(m => ({ default: m.DiscoveryTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
@@ -190,6 +195,9 @@ const TABS: Record<string, any> = {
   backup: BackupTab,
   devsecops: DevSecOpsTab,
   playbooks: PlaybooksTab,
+  workload: WorkloadIdentityTab,
+  confidential: ConfidentialComputeTab,
+  discovery: DiscoveryTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
 };
@@ -227,6 +235,9 @@ const TITLES: Record<string, string> = {
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
   playbooks: "Playbooks",
+  workload: "Workload Identity",
+  confidential: "Confidential Compute",
+  discovery: "Crypto Discovery",
   // Enterprise Advanced Features
   key_analytics: "Analytics",
 };
@@ -243,6 +254,7 @@ const NAV = [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
+    { id: "discovery", icon: Radar, label: "Crypto Discovery" },
   ]},
   { g: "PKI & certificates", items: [
     { id: "certs", icon: FileText, label: "Certificates / PKI" },
@@ -253,6 +265,8 @@ const NAV = [
     { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
     { id: "ekm", icon: Database, label: "Enterprise KM" },
     { id: "hsm", icon: Cpu, label: "HSM" },
+    { id: "workload", icon: Fingerprint, label: "Workload Identity" },
+    { id: "confidential", icon: ShieldCheck, label: "Confidential Compute" },
   ]},
   { g: "Security & compliance", items: [
     { id: "audit", icon: ScrollText, label: "Audit Log" },

@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T07:21:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T08:23:55Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `844`
+- Backend routes analyzed: `840`
 - Routes with exact frontend call sites: `489`
-- Routes whose handlers call `h.svc.*`: `501`
-- Routes with detected store calls: `602`
+- Routes whose handlers call `h.svc.*`: `499`
+- Routes with detected store calls: `601`
 - Routes with detected internal `pkg/*` calls: `147`
 
 ## How To Trace One Frontend Click
@@ -229,12 +229,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:919) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:799 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1090) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:868 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1121) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:852 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:50) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
-| discovery\|GET\|/discovery/scans | GET /discovery/scans | handleListScans (services/discovery/handler.go:66) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:77 |
-| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | handleGetScan (services/discovery/handler.go:80) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:89 |
-| discovery\|GET\|/discovery/assets | GET /discovery/assets | handleListAssets (services/discovery/handler.go:94) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:112 |
-| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | handleClassifyAsset (services/discovery/handler.go:130) | ClassifyAsset | GetAsset, UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:126 |
-| discovery\|GET\|/discovery/summary | GET /discovery/summary | handleSummary (services/discovery/handler.go:146) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:145 |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:44) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:58 |
+| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:61) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:78 |
+| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:70) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:90 |
+| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:79) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:113 |
+| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:109) | ClassifyAsset | GetAsset, UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:129 |
+| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:127) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:144 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |
@@ -867,18 +867,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | dataprotect\|POST\|/field-encryption/leases/{param}/revoke | POST /field-encryption/leases/{id}/revoke | handleRevokeFieldEncryptionLease (services/dataprotect/handler.go:919) | RevokeFieldEncryptionLease | RevokeFieldEncryptionLease |  |  | web/dashboard/src/lib/dataprotect.ts:799 |
 | dataprotect\|GET\|/audit-log | GET /audit-log | handleListAuditLog (services/dataprotect/handler.go:1090) | ListAuditLog | ListAuditLog |  |  | web/dashboard/src/lib/dataprotect.ts:868 |
 | dataprotect\|GET\|/stats | GET /stats | handleGetStats (services/dataprotect/handler.go:1121) | GetStats | GetStats |  |  | web/dashboard/src/lib/dataprotect.ts:852 |
-| discovery\|POST\|/discovery/scan | POST /discovery/scan | handleStartScan (services/discovery/handler.go:50) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:57 |
-| discovery\|GET\|/discovery/scans | GET /discovery/scans | handleListScans (services/discovery/handler.go:66) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:77 |
-| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | handleGetScan (services/discovery/handler.go:80) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:89 |
-| discovery\|GET\|/discovery/assets | GET /discovery/assets | handleListAssets (services/discovery/handler.go:94) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:112 |
-| discovery\|GET\|/discovery/crypto/assets | GET /discovery/crypto/assets | handleListAssets (services/discovery/handler.go:94) | ListAssets | ListAssets |  |  |  |
-| discovery\|GET\|/discovery/assets/{param} | GET /discovery/assets/{id} | handleGetAsset (services/discovery/handler.go:116) | GetAsset | GetAsset |  |  |  |
-| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | handleClassifyAsset (services/discovery/handler.go:130) | ClassifyAsset | GetAsset, UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:126 |
-| discovery\|GET\|/discovery/summary | GET /discovery/summary | handleSummary (services/discovery/handler.go:146) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:145 |
-| discovery\|GET\|/discovery/posture | GET /discovery/posture | handleSummary (services/discovery/handler.go:146) | Summary |  |  |  |  |
-| discovery\|POST\|/discovery/pii/scan | POST /discovery/pii/scan | handlePIIScan (services/discovery/handler_pii.go:137) |  |  |  |  |  |
-| discovery\|GET\|/discovery/pii/patterns | GET /discovery/pii/patterns | handleListPIIPatterns (services/discovery/handler_pii.go:186) |  |  |  |  |  |
-| discovery\|GET\|/discovery/data-inventory | GET /discovery/data-inventory | handleGetDataInventory (services/discovery/handler_pii.go:203) | ListAssets | ListAssets |  |  |  |
+| discovery\|POST\|/discovery/scan | POST /discovery/scan | startScan (services/discovery/handler.go:44) | StartScan | CreateScan, UpsertAsset, UpdateScan, GetScan |  |  | web/dashboard/src/lib/discovery.ts:58 |
+| discovery\|GET\|/discovery/scans | GET /discovery/scans | listScans (services/discovery/handler.go:61) | ListScans | ListScans |  |  | web/dashboard/src/lib/discovery.ts:78 |
+| discovery\|GET\|/discovery/scans/{param} | GET /discovery/scans/{id} | getScan (services/discovery/handler.go:70) | GetScan | GetScan |  |  | web/dashboard/src/lib/discovery.ts:90 |
+| discovery\|GET\|/discovery/assets | GET /discovery/assets | listAssets (services/discovery/handler.go:79) | ListAssets | ListAssets |  |  | web/dashboard/src/lib/discovery.ts:113 |
+| discovery\|GET\|/discovery/crypto/assets | GET /discovery/crypto/assets | listAssets (services/discovery/handler.go:79) | ListAssets | ListAssets |  |  |  |
+| discovery\|GET\|/discovery/assets/{param} | GET /discovery/assets/{id} | getAsset (services/discovery/handler.go:97) | GetAsset | GetAsset |  |  |  |
+| discovery\|PUT\|/discovery/assets/{param}/classify | PUT /discovery/assets/{id}/classify | reviewAsset (services/discovery/handler.go:109) | ClassifyAsset | GetAsset, UpsertAsset |  |  | web/dashboard/src/lib/discovery.ts:129 |
+| discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:127) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:144 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |

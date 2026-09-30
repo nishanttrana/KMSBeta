@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Never again: a working service with no page, and a tenant check with no token
+- **What happened:** Workload Identity, Confidential Compute and Discovery ran
+  in every deployment with no dashboard page. Two UI cleanups (f8e7162c4,
+  1980954dd) removed the tab registration or the tab holding the view, and
+  left the backend, the feature flag and the module gate in place, so nothing
+  failed. The owner noticed only because the cluster replication profiles
+  still listed them.
+- **Also found:** discovery called `tenantcheck.Enforce`, which returns nil
+  when there are no claims in the context. The service had no JWT middleware,
+  so the check never ran, and the code read as if it did.
+- **How it slipped through:** no check ties a deployed feature to a page.
+  `Enforce` fails open by design (for service-internal calls), so it proves
+  nothing unless something verifies the token first.
+- **Rule:** when you remove a tab, either remove its feature or move its view
+  (CLAUDE.md "One home per view"). Treat a tenant check as real only when a
+  verified-JWT layer (`pkg/jwtauth`) sits in front of it. The route kernel
+  gives both, because it refuses a request that has no claims.
+
+
 ### Never again: an internal call without a service token (enforced)
 - **What happened:** the Alert Center was empty because reporting read
   audit with no token (7.6.0-beta). Once `service-token` checked every

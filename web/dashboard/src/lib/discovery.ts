@@ -42,9 +42,10 @@ export type DiscoverySummary = {
   classification_counts: Record<string, number>;
   pqc_ready_count: number;
   pqc_readiness_percent: number;
-  average_qsl: number;
-  posture_score: number;
 };
+
+// Sources a scan can read (services/discovery normalizeScanTypes).
+export const DISCOVERY_SCAN_TYPES = ["network", "cloud", "certs", "code"] as const;
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -52,7 +53,7 @@ function tenantQuery(session: AuthSession): string {
 
 export async function startDiscoveryScan(
   session: AuthSession,
-  scanTypes: string[] = ["keys", "certificates", "secrets"]
+  scanTypes: string[] = [...DISCOVERY_SCAN_TYPES]
 ): Promise<DiscoveryScan> {
   const res = await serviceRequest<{ scan?: DiscoveryScan }>(
     session,
@@ -117,10 +118,12 @@ export async function listDiscoveryAssets(
   return Array.isArray(res?.items) ? res.items : [];
 }
 
-export async function classifyAsset(
+// reviewAsset records an operator review (status, notes). The
+// classification is the algorithm catalogue's and can't be changed here.
+export async function reviewAsset(
   session: AuthSession,
   id: string,
-  classification: string,
+  status: string,
   notes = ""
 ): Promise<CryptoAsset> {
   const res = await serviceRequest<{ asset?: CryptoAsset }>(
@@ -129,11 +132,7 @@ export async function classifyAsset(
     `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        tenant_id: session.tenantId,
-        classification,
-        notes,
-      }),
+      body: JSON.stringify({ tenant_id: session.tenantId, status, notes }),
     }
   );
   return res?.asset ?? ({} as CryptoAsset);
@@ -147,17 +146,8 @@ export async function getDiscoverySummary(
     "discovery",
     `/discovery/summary?${tenantQuery(session)}`
   );
-  return (
-    res?.summary ?? {
-      tenant_id: session.tenantId,
-      total_assets: 0,
-      source_distribution: {},
-      algorithm_distribution: {},
-      classification_counts: {},
-      pqc_ready_count: 0,
-      pqc_readiness_percent: 0,
-      average_qsl: 0,
-      posture_score: 0,
-    }
-  );
+  if (!res?.summary) {
+    throw new Error("discovery returned no summary");
+  }
+  return res.summary;
 }

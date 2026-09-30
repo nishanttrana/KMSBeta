@@ -3095,6 +3095,21 @@ Returns the access policy for a path (and all sub-paths).
 
 ## Discovery (`/svc/discovery/`) — scan sources
 
+**Authentication, permissions and audit (7.9.0-beta).** Every route needs a
+verified platform JWT and is on the route kernel: `discovery.read` for GETs,
+`discovery.write` for `POST /discovery/scan` and
+`PUT /discovery/assets/{id}/classify`. The tenant comes from the token (a
+different `tenant_id` is refused as `tenant_mismatch`). Each request emits
+`audit.discovery.<action>` (`scan_start`, `scans_list`, `scan_read`,
+`assets_list`, `asset_read`, `asset_review`, `summary_read`), refusals
+included. `PUT .../classify` records a review (`status`, `notes`); a
+`classification` other than the catalogue's is refused with `409
+classification_is_catalogue`. The summary no longer returns `average_qsl` or
+`posture_score`, and `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
+`GET /discovery/data-inventory` and the `GET /discovery/posture` alias are
+removed (content inspection is out of the KMS's scope). The dashboard page is
+Keys & lifecycle → Crypto Discovery.
+
 `POST /discovery/scan` (body `tenant_id`, `scan_types`: `network`, `cloud`,
 `certs`, `code`) records only what each source observed:
 
@@ -3351,6 +3366,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
+| audit.discovery.* | Discovery scans, inventory reads and asset reviews (route kernel, 7.9.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified` |
 | audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
@@ -3874,10 +3890,6 @@ from the code; do not edit by hand.
 - `GET /svc/discovery/discovery/assets/{id}`
 - `PUT /svc/discovery/discovery/assets/{id}/classify`
 - `GET /svc/discovery/discovery/crypto/assets`
-- `GET /svc/discovery/discovery/data-inventory`
-- `GET /svc/discovery/discovery/pii/patterns`
-- `POST /svc/discovery/discovery/pii/scan`
-- `GET /svc/discovery/discovery/posture`
 - `POST /svc/discovery/discovery/scan`
 - `GET /svc/discovery/discovery/scans`
 - `GET /svc/discovery/discovery/scans/{id}`

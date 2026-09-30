@@ -122,26 +122,27 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
   const [attesterCsv, setAttesterCsv] = useState("");
   const [clusterNodeCsv, setClusterNodeCsv] = useState("");
   const [claimsJson, setClaimsJson] = useState("{}");
-  const [measurementsJson, setMeasurementsJson] = useState("{\n  \"pcr0\": \"\",\n  \"pcr8\": \"\"\n}");
-  const [evalClaimsJson, setEvalClaimsJson] = useState("{\n  \"environment\": \"prod\",\n  \"team\": \"payments\"\n}");
-  const [evalMeasurementsJson, setEvalMeasurementsJson] = useState("{\n  \"pcr0\": \"baseline-image-hash\",\n  \"pcr8\": \"secure-boot-chain-hash\"\n}");
+  const [measurementsJson, setMeasurementsJson] = useState("{}");
+  const [evalClaimsJson, setEvalClaimsJson] = useState("{}");
+  const [evalMeasurementsJson, setEvalMeasurementsJson] = useState("{}");
   const [releaseInput, setReleaseInput] = useState<any>({
-    key_id: "key-prod-root",
-    key_scope: "payments-prod",
+    key_id: "",
+    key_scope: "",
     provider: "aws_nitro_enclaves",
     attestation_document: "",
     attestation_format: "auto",
-    workload_identity: "spiffe://root/workloads/payments-authorizer",
-    attester: "arn:aws:iam::123456789012:role/nitro-attestation",
-    image_ref: "123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2",
-    image_digest: "sha256:1f2d3c4b5a6978877665544332211000aabbccddeeff00112233445566778899",
+    workload_identity: "",
+    attester: "",
+    image_ref: "",
+    image_digest: "",
     audience: "kms-key-release",
-    nonce: "nonce-demo-001",
+    nonce: "",
     evidence_issued_at: new Date().toISOString(),
     secure_boot: true,
     debug_disabled: true,
-    cluster_node_id: "vecta-kms-01",
-    release_reason: "Authorize payment service in enclave runtime",
+    cluster_node_id: "",
+    requester: "",
+    release_reason: "",
     dry_run: true
   });
 
@@ -434,10 +435,10 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 12 }}>Release Request</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <FG label="Key ID">
-                  <Inp value={releaseInput.key_id} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, key_id: e.target.value }))} />
+                  <Inp placeholder="key ID" value={releaseInput.key_id} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, key_id: e.target.value }))} />
                 </FG>
                 <FG label="Key Scope">
-                  <Inp value={releaseInput.key_scope} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, key_scope: e.target.value }))} />
+                  <Inp placeholder="key scope" value={releaseInput.key_scope} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, key_scope: e.target.value }))} />
                 </FG>
                 <FG label="Provider">
                   <Sel value={releaseInput.provider} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, provider: e.target.value }))}>
@@ -445,13 +446,13 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                   </Sel>
                 </FG>
                 <FG label="Cluster Node ID">
-                  <Inp value={releaseInput.cluster_node_id} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, cluster_node_id: e.target.value }))} />
+                  <Inp placeholder="node ID" value={releaseInput.cluster_node_id} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, cluster_node_id: e.target.value }))} />
                 </FG>
                 <FG label="Audience">
                   <Inp value={releaseInput.audience} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, audience: e.target.value }))} />
                 </FG>
                 <FG label="Nonce">
-                  <Inp value={releaseInput.nonce} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, nonce: e.target.value }))} />
+                  <Inp placeholder="nonce bound into the attestation" value={releaseInput.nonce} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, nonce: e.target.value }))} />
                 </FG>
                 {providerRequiresDocument ? (
                   <FG label="Attestation Format">
@@ -469,22 +470,22 @@ export const ConfidentialComputeTab = ({ session, onToast }: any) => {
                 {!providerRequiresDocument ? (
                   <>
                     <FG label="Workload Identity">
-                      <Inp value={releaseInput.workload_identity} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, workload_identity: e.target.value }))} />
+                      <Inp placeholder="spiffe://<trust-domain>/<workload>" value={releaseInput.workload_identity} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, workload_identity: e.target.value }))} />
                     </FG>
                     <FG label="Attester">
-                      <Inp value={releaseInput.attester} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, attester: e.target.value }))} />
+                      <Inp placeholder="attester identity" value={releaseInput.attester} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, attester: e.target.value }))} />
                     </FG>
                     <FG label="Image Ref">
-                      <Inp value={releaseInput.image_ref} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, image_ref: e.target.value }))} />
+                      <Inp placeholder="registry/repo:tag" value={releaseInput.image_ref} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, image_ref: e.target.value }))} />
                     </FG>
                     <FG label="Image Digest">
-                      <Inp value={releaseInput.image_digest} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, image_digest: e.target.value }))} mono />
+                      <Inp placeholder="sha256:…" value={releaseInput.image_digest} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, image_digest: e.target.value }))} mono />
                     </FG>
                   </>
                 ) : null}
               </div>
               <FG label="Release Reason">
-                <Inp value={releaseInput.release_reason} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, release_reason: e.target.value }))} />
+                <Inp placeholder="why this workload needs the key" value={releaseInput.release_reason} onChange={(e) => setReleaseInput((prev: any) => ({ ...prev, release_reason: e.target.value }))} />
               </FG>
               {providerRequiresDocument ? (
                 <>

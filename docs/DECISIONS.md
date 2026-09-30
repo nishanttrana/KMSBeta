@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Keep Workload Identity, Confidential Compute and Discovery; restore their pages (7.9.0-beta)
+
+- **Decision** (owner, choosing among keep, remove or fix): keep all three and
+  restore their dashboard pages. Discovery was the weak one: no verified
+  caller, a hand-weighted posture score, and PII scanning. It was fixed
+  rather than removed: moved onto the route kernel with `discovery.read` /
+  `discovery.write`, scores dropped, PII scanning removed.
+- **Why:** Workload Identity is how agents and AI workloads get their own
+  identity (docs/AI_WORKLOADS.md), and Confidential Compute is the only path
+  for attested key release. Both are on the route kernel and real end to
+  end. pqc and sbom read discovery's inventory.
+- **Rejected:** removing discovery. That would have meant rewriting pqc and
+  sbom first. Also rejected: a user-set classification. The classification
+  is a catalogue fact about the algorithm (CLAUDE.md, customer decides
+  migration), so a review records only a status and notes.
+- **Enforced:** `TestDiscoveryRoutesRefusalsAudited`,
+  `TestDiscoveryWritesNeedPermissionAndOwnTenant`,
+  `TestDiscoveryRelabelRefusedAndAudited`; discovery left
+  `scripts/route-kernel-burndown.txt`.
+
+---
+
 ## 2026-09-30 — No content inspection in the KMS; AI gateway to KMS Extension (7.5.0-beta)
 
 - **Decision:** the KMS serves AI workloads only through keys, secrets,

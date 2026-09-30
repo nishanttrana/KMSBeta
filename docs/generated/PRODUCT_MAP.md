@@ -1,21 +1,21 @@
 # Generated Product Map
 
-Generated at `2026-09-30T07:21:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T08:23:55Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `26`
-- Tab/component mappings: `33`
+- Dashboard navigation items: `29`
+- Tab/component mappings: `36`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `844` across `28` services
-- Backend routes on the `pkg/route` kernel: `400` (permission and audit action in `backend-routes.csv`)
+- Backend HTTP routes discovered: `840` across `28` services
+- Backend routes on the `pkg/route` kernel: `408` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `522`
 - Frontend call sites with exact backend route match: `480`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `716`
-- Backend request flows with handler/service/package summaries: `844`
+- Clickable controls with static `onClick` handlers: `718`
+- Backend request flows with handler/service/package summaries: `840`
 
 ## How To Use This For Launch
 
@@ -54,6 +54,9 @@ flowchart LR
   tab_crypto_agility["Crypto Agility"]
   UI --> tab_crypto_agility
   tab_crypto_agility --> svc_keycore
+  tab_discovery["Crypto Discovery"]
+  UI --> tab_discovery
+  tab_discovery --> svc_discovery
   tab_certs["Certificates / PKI"]
   UI --> tab_certs
   tab_certs --> svc_certs
@@ -69,6 +72,12 @@ flowchart LR
   tab_hsm["HSM"]
   UI --> tab_hsm
   tab_hsm --> svc_auth
+  tab_workload["Workload Identity"]
+  UI --> tab_workload
+  tab_workload --> svc_workload
+  tab_confidential["Confidential Compute"]
+  UI --> tab_confidential
+  tab_confidential --> svc_confidential
   tab_audit["Audit Log"]
   UI --> tab_audit
   tab_audit --> svc_audit
@@ -131,6 +140,8 @@ flowchart LR
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (54 routes)"]
+  svc_confidential["confidential (7 routes)"]
+  svc_discovery["discovery (8 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
@@ -160,12 +171,15 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 94 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
+| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | discovery | 6 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 101 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 45 |
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 45 |
+| Data & integrations | Workload Identity | workload | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | workload | 13 |
+| Data & integrations | Confidential Compute | confidential | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | confidential | 6 |
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 9 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
@@ -200,7 +214,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | compliance | 54 | 19 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
-| discovery | 12 | 6 |
+| discovery | 8 | 6 |
 | ekm | 64 | 44 |
 | governance | 35 | 23 |
 | hsm-connector | 12 | 0 |
@@ -397,7 +411,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 280 |
 | compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 281 |
 
-Showing `120` of `355`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `351`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

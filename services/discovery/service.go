@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"sort"
 	"strings"
@@ -163,6 +164,11 @@ func (s *Service) GetAsset(ctx context.Context, tenantID string, id string) (Cry
 	return s.store.GetAsset(ctx, tenantID, id)
 }
 
+// errClassificationIsCatalogue: an asset's classification is what
+// pkg/cryptocatalog says about its algorithm; a review records status and
+// notes only, never a different label.
+var errClassificationIsCatalogue = errors.New("classification comes from the algorithm catalogue and can't be overridden; record a status or notes instead")
+
 func (s *Service) ClassifyAsset(ctx context.Context, tenantID string, id string, req ClassifyRequest) (CryptoAsset, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	id = strings.TrimSpace(id)
@@ -173,8 +179,8 @@ func (s *Service) ClassifyAsset(ctx context.Context, tenantID string, id string,
 	if err != nil {
 		return CryptoAsset{}, err
 	}
-	if strings.TrimSpace(req.Classification) != "" {
-		item.Classification = strings.ToLower(strings.TrimSpace(req.Classification))
+	if c := strings.ToLower(strings.TrimSpace(req.Classification)); c != "" && c != item.Classification {
+		return CryptoAsset{}, errClassificationIsCatalogue
 	}
 	if strings.TrimSpace(req.Status) != "" {
 		item.Status = strings.ToLower(strings.TrimSpace(req.Status))
@@ -208,25 +214,19 @@ func (s *Service) Summary(ctx context.Context, tenantID string) (DiscoverySummar
 		TotalAssets:           len(items),
 		SourceDistribution:    map[string]int{},
 		AlgorithmDistribution: map[string]int{},
-		ClassificationCounts:  map[string]int{"strong": 0, "weak": 0, "vulnerable": 0},
+		ClassificationCounts:  map[string]int{"strong": 0, "vulnerable": 0, "unknown": 0},
 	}
-	qslTotal := 0.0
-	pqcReady := 0
 	for _, it := range items {
 		sum.SourceDistribution[it.Source]++
 		sum.AlgorithmDistribution[it.Algorithm]++
 		sum.ClassificationCounts[it.Classification]++
-		qslTotal += it.QSLScore
 		if it.PQCReady {
-			pqcReady++
+			sum.PQCReadyCount++
 		}
 	}
-	sum.PQCReadyCount = pqcReady
 	if sum.TotalAssets > 0 {
-		sum.AverageQSL = round2(qslTotal / float64(sum.TotalAssets))
 		sum.PQCReadinessPercent = round2(pct(sum.PQCReadyCount, sum.TotalAssets))
 	}
-	sum.PostureScore = clampScore(int(0.45*sum.PQCReadinessPercent + 0.35*sum.AverageQSL + 0.20*pct(sum.ClassificationCounts["strong"], max(1, sum.TotalAssets))))
 	return sum, nil
 }
 

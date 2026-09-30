@@ -1,241 +1,148 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
+	"log"
 	"net/http"
 	"strings"
 
-	"vecta-kms/pkg/tenantcheck"
+	"vecta-kms/pkg/route"
 )
 
+// Handler serves discovery through the route kernel (7.9.0-beta). Until then
+// the service verified no token at all: tenantcheck.Enforce skipped every
+// request because nothing put claims in the context, and scans and
+// classifications took the tenant from the body. Every route now needs a
+// verified JWT (pkg/jwtauth in main.go) and discovery.read or
+// discovery.write, and emits audit.discovery.<action>, refusals included.
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
 	h := &Handler{svc: svc}
-	h.mux = h.routes()
+	r := route.New("discovery", audit, logger)
+	read := func(action string) route.Spec {
+		return route.Spec{Action: action, Permission: "discovery.read", Resource: "discovery"}
+	}
+	r.Handle("POST /discovery/scan", route.Spec{Action: "scan_start", Permission: "discovery.write", Resource: "discovery_scan"}, h.startScan)
+	r.Handle("GET /discovery/scans", read("scans_list"), h.listScans)
+	r.Handle("GET /discovery/scans/{id}", route.Spec{Action: "scan_read", Permission: "discovery.read", Resource: "discovery_scan", TargetParam: "id"}, h.getScan)
+	r.Handle("GET /discovery/assets", read("assets_list"), h.listAssets)
+	// pqc and sbom read the inventory here with their service tokens.
+	r.Handle("GET /discovery/crypto/assets", read("assets_list"), h.listAssets)
+	r.Handle("GET /discovery/assets/{id}", route.Spec{Action: "asset_read", Permission: "discovery.read", Resource: "crypto_asset", TargetParam: "id"}, h.getAsset)
+	r.Handle("PUT /discovery/assets/{id}/classify", route.Spec{Action: "asset_review", Permission: "discovery.write", Resource: "crypto_asset", TargetParam: "id"}, h.reviewAsset)
+	r.Handle("GET /discovery/summary", read("summary_read"), h.summary)
+	h.router = r
 	return h
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
-}
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.router.ServeHTTP(w, r) }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /discovery/scan", h.handleStartScan)
-	mux.HandleFunc("GET /discovery/scans", h.handleListScans)
-	mux.HandleFunc("GET /discovery/scans/{id}", h.handleGetScan)
-
-	mux.HandleFunc("GET /discovery/assets", h.handleListAssets)
-	mux.HandleFunc("GET /discovery/crypto/assets", h.handleListAssets)
-	mux.HandleFunc("GET /discovery/assets/{id}", h.handleGetAsset)
-	mux.HandleFunc("PUT /discovery/assets/{id}/classify", h.handleClassifyAsset)
-
-	mux.HandleFunc("GET /discovery/summary", h.handleSummary)
-	mux.HandleFunc("GET /discovery/posture", h.handleSummary)
-
-	// PII & structured data scanning
-	mux.HandleFunc("POST /discovery/pii/scan", h.handlePIIScan)
-	mux.HandleFunc("GET /discovery/pii/patterns", h.handleListPIIPatterns)
-	mux.HandleFunc("GET /discovery/data-inventory", h.handleGetDataInventory)
-
-	return mux
-}
-
-func (h *Handler) handleStartScan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) startScan(c *route.Call) {
 	var req ScanRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.StartScan(r.Context(), req)
+	req.TenantID = c.Tenant
+	item, err := h.svc.StartScan(c.R.Context(), req)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{"scan": item, "request_id": reqID})
+	c.Target(item.ID)
+	c.Detail("scan_types", item.ScanType)
+	c.Detail("status", item.Status)
+	c.JSON(http.StatusAccepted, map[string]interface{}{"scan": item})
 }
 
-func (h *Handler) handleListScans(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	items, err := h.svc.ListScans(r.Context(), tenantID, atoi(r.URL.Query().Get("limit")), atoi(r.URL.Query().Get("offset")))
+func (h *Handler) listScans(c *route.Call) {
+	items, err := h.svc.ListScans(c.R.Context(), c.Tenant, atoi(c.R.URL.Query().Get("limit")), atoi(c.R.URL.Query().Get("offset")))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetScan(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.GetScan(r.Context(), tenantID, r.PathValue("id"))
+func (h *Handler) getScan(c *route.Call) {
+	item, err := h.svc.GetScan(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"scan": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"scan": item})
 }
 
-func (h *Handler) handleListAssets(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
+func (h *Handler) listAssets(c *route.Call) {
+	q := c.R.URL.Query()
 	items, err := h.svc.ListAssets(
-		r.Context(),
-		tenantID,
-		atoi(r.URL.Query().Get("limit")),
-		atoi(r.URL.Query().Get("offset")),
-		strings.ToLower(strings.TrimSpace(r.URL.Query().Get("source"))),
-		strings.ToLower(strings.TrimSpace(r.URL.Query().Get("asset_type"))),
-		strings.ToLower(strings.TrimSpace(r.URL.Query().Get("classification"))),
+		c.R.Context(),
+		c.Tenant,
+		atoi(q.Get("limit")),
+		atoi(q.Get("offset")),
+		strings.ToLower(strings.TrimSpace(q.Get("source"))),
+		strings.ToLower(strings.TrimSpace(q.Get("asset_type"))),
+		strings.ToLower(strings.TrimSpace(q.Get("classification"))),
 	)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetAsset(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.GetAsset(r.Context(), tenantID, r.PathValue("id"))
+func (h *Handler) getAsset(c *route.Call) {
+	item, err := h.svc.GetAsset(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"asset": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"asset": item})
 }
 
-func (h *Handler) handleClassifyAsset(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+// reviewAsset records an operator's review (status, notes). The
+// classification is a catalogue fact about the algorithm and can't be
+// overridden here; a request that tries is refused.
+func (h *Handler) reviewAsset(c *route.Call) {
 	var req ClassifyRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
-	item, err := h.svc.ClassifyAsset(r.Context(), req.TenantID, r.PathValue("id"), req)
+	item, err := h.svc.ClassifyAsset(c.R.Context(), c.Tenant, c.R.PathValue("id"), req)
+	if errors.Is(err, errClassificationIsCatalogue) {
+		c.Refuse(http.StatusConflict, "classification_is_catalogue", err.Error())
+		return
+	}
 	if err != nil {
-		h.writeServiceError(w, err, reqID, req.TenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"asset": item, "request_id": reqID})
+	c.Detail("status", item.Status)
+	c.JSON(http.StatusOK, map[string]interface{}{"asset": item})
 }
 
-func (h *Handler) handleSummary(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	item, err := h.svc.Summary(r.Context(), tenantID)
+func (h *Handler) summary(c *route.Call) {
+	item, err := h.svc.Summary(c.R.Context(), c.Tenant)
 	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
+		h.fail(c, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"summary": item, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"summary": item})
 }
 
-func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
+func (h *Handler) fail(c *route.Call, err error) {
 	var svcErr serviceError
 	if errors.As(err, &svcErr) {
-		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
+		c.Error(svcErr.HTTPStatus, svcErr.Code, svcErr.Message)
 		return
 	}
-	// A05: avoid leaking internal error details for 5xx responses
-	status := httpStatusForErr(err)
-	msg := err.Error()
-	if status >= 500 {
-		msg = "internal server error"
+	// Don't leak internal error details on 5xx.
+	if status := httpStatusForErr(err); status < 500 {
+		c.Error(status, "not_found", err.Error())
+		return
 	}
-	writeErr(w, status, "internal_error", msg, reqID, tenantID)
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(out); err != nil {
-		if errors.Is(err, io.EOF) {
-			return errors.New("request body is required")
-		}
-		return err
-	}
-	return nil
-}
-
-func requestID(r *http.Request) string {
-	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-	if id != "" {
-		return id
-	}
-	return newID("req")
-}
-
-func tenantFromRequest(r *http.Request) string {
-	if v := strings.TrimSpace(r.URL.Query().Get("tenant_id")); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-}
-
-func firstTenant(values ...string) string {
-	for _, v := range values {
-		if strings.TrimSpace(v) != "" {
-			return strings.TrimSpace(v)
-		}
-	}
-	return ""
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := tenantFromRequest(r)
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
-		return ""
-	}
-	return tenantID
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeErr(w http.ResponseWriter, status int, code string, message string, requestID string, tenantID string) {
-	writeJSON(w, status, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       code,
-			"message":    message,
-			"request_id": requestID,
-			"tenant_id":  tenantID,
-		},
-	})
+	c.Error(http.StatusInternalServerError, "internal_error", "internal server error")
 }

@@ -4,6 +4,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.9.0-beta] — 2026-09-30
+
+### Workload Identity, Confidential Compute and Crypto Discovery are back in the dashboard
+- **Fixed:** the three services ran and were enforced, but had no page. The
+  Workload Identity and Confidential Compute tabs were unregistered from the
+  shell in f8e7162c4 (March), and Discovery's view went with the DSPM tab in
+  1980954dd (June). Workload Identity and Confidential Compute are under
+  Data & integrations, and a new Crypto Discovery page under Keys &
+  lifecycle runs scans (network, cloud, certs, code), lists the inventory
+  and scan history with each source that wasn't scanned and why, and records
+  reviews. Each page appears when its feature is enabled.
+- **Fixed:** the Confidential Compute release form was pre-filled with an
+  invented AWS account, image digest, nonce, claims and measurements. The
+  fields are now empty with placeholders. The Workload Identity Refresh
+  button was passed to a prop `Section` doesn't read, so it didn't show.
+
+### Discovery: verified caller, permission and audit on every route (breaking)
+- **Security:** discovery verified no token. Its `tenantcheck.Enforce` calls
+  skipped every request because nothing put claims in the context, and scans
+  and classifications ran for whatever tenant the body named. Every route
+  now needs a verified platform JWT and goes through `pkg/route`:
+  `discovery.read` (GETs) or `discovery.write` (scan, review), with the
+  tenant taken from the token. Each request emits `audit.discovery.<action>`,
+  refusals included. Discovery leaves the route-kernel burn-down list.
+- **Changed:** `PUT /discovery/assets/{id}/classify` records a review
+  (`status`, `notes`). A `classification` other than the algorithm
+  catalogue's is refused (`409 classification_is_catalogue`, audited),
+  because a label must match the algorithm.
+- **Removed:** the summary's `posture_score` (a hand-weighted blend) and
+  `average_qsl`; `POST /discovery/pii/scan` and `GET /discovery/pii/patterns`
+  (content inspection, out of the KMS's scope since 7.5.0-beta);
+  `GET /discovery/data-inventory` and the `GET /discovery/posture` alias,
+  which nothing called.
+- **Tests:** `TestDiscoveryRoutesRefusalsAudited`,
+  `TestDiscoveryWritesNeedPermissionAndOwnTenant`,
+  `TestDiscoveryRelabelRefusedAndAudited`.
+
 ## [7.8.0-beta] — 2026-09-30
 
 ### Every internal client sends its service token (enforced)

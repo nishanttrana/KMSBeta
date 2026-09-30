@@ -205,16 +205,6 @@ func uniqueStrings(in []string) []string {
 	return out
 }
 
-func clampScore(v int) int {
-	if v < 0 {
-		return 0
-	}
-	if v > 100 {
-		return 100
-	}
-	return v
-}
-
 func pct(n int, d int) float64 {
 	if d <= 0 {
 		return 0

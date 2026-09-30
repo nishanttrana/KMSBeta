@@ -64,7 +64,7 @@ func TestHandlerDiscoveryFlow(t *testing.T) {
 		t.Fatalf("crypto assets alias status=%d body=%s", aliasRR.Code, aliasRR.Body.String())
 	}
 
-	classReq := httptest.NewRequest(http.MethodPut, "/discovery/assets/"+assetID+"/classify", strings.NewReader(`{"tenant_id":"`+tenantID+`","classification":"strong","status":"reviewed"}`))
+	classReq := httptest.NewRequest(http.MethodPut, "/discovery/assets/"+assetID+"/classify", strings.NewReader(`{"tenant_id":"`+tenantID+`","status":"reviewed"}`))
 	classReq.Header.Set("Content-Type", "application/json")
 	classRR := httptest.NewRecorder()
 	h.ServeHTTP(classRR, classReq)
@@ -77,12 +77,5 @@ func TestHandlerDiscoveryFlow(t *testing.T) {
 	h.ServeHTTP(summaryRR, summaryReq)
 	if summaryRR.Code != http.StatusOK {
 		t.Fatalf("summary status=%d body=%s", summaryRR.Code, summaryRR.Body.String())
-	}
-
-	postureReq := httptest.NewRequest(http.MethodGet, "/discovery/posture?tenant_id="+tenantID, nil)
-	postureRR := httptest.NewRecorder()
-	h.ServeHTTP(postureRR, postureReq)
-	if postureRR.Code != http.StatusOK {
-		t.Fatalf("posture status=%d body=%s", postureRR.Code, postureRR.Body.String())
 	}
 }

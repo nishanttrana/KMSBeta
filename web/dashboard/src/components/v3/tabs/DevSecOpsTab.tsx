@@ -564,11 +564,10 @@ const API_ENDPOINTS = [
   { group: "Compliance",     method: "GET",    path: "/svc/compliance/risk/summary",        desc: "Overall data risk summary",                 auth: true },
   { group: "Compliance",     method: "GET",    path: "/svc/compliance/risk/remediation",    desc: "Guided remediation action items",           auth: true },
   // Discovery
-  { group: "Discovery",      method: "POST",   path: "/svc/discovery/scans",                desc: "Start a new discovery scan",                auth: true },
-  { group: "Discovery",      method: "GET",    path: "/svc/discovery/scans",                desc: "List past discovery scans",                 auth: true },
-  { group: "Discovery",      method: "GET",    path: "/svc/discovery/assets",               desc: "List discovered crypto assets",             auth: true },
-  { group: "Discovery",      method: "POST",   path: "/svc/discovery/pii/scan",             desc: "Scan content for PII / PAN / PHI",         auth: true },
-  { group: "Discovery",      method: "GET",    path: "/svc/discovery/summary",              desc: "Discovery fleet summary stats",             auth: true },
+  { group: "Discovery",      method: "POST",   path: "/svc/discovery/discovery/scan",       desc: "Start a new discovery scan",                auth: true },
+  { group: "Discovery",      method: "GET",    path: "/svc/discovery/discovery/scans",      desc: "List past discovery scans",                 auth: true },
+  { group: "Discovery",      method: "GET",    path: "/svc/discovery/discovery/assets",     desc: "List discovered crypto assets",             auth: true },
+  { group: "Discovery",      method: "GET",    path: "/svc/discovery/discovery/summary",    desc: "Discovery fleet summary stats",             auth: true },
   // EKM TDE (Database Encryption)
   { group: "EKM",            method: "POST",   path: "/svc/ekm/agents/register",            desc: "Register EKM agent for TDE",                auth: true },
   { group: "EKM",            method: "GET",    path: "/svc/ekm/agents",                     desc: "List EKM agents",                           auth: true },

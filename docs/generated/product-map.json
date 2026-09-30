@@ -5236,183 +5236,123 @@
       "service": "dataprotect"
     },
     {
-      "action": "",
+      "action": "scan_start",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleStartScan",
-      "line": 30,
+      "handler": "h.startScan",
+      "line": 29,
       "match_key": "discovery|POST|/discovery/scan",
       "method": "POST",
       "normalized_path": "/discovery/scan",
       "path": "/discovery/scan",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "discovery_scan",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "scans_list",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleListScans",
-      "line": 31,
+      "handler": "h.listScans",
+      "line": 30,
       "match_key": "discovery|GET|/discovery/scans",
       "method": "GET",
       "normalized_path": "/discovery/scans",
       "path": "/discovery/scans",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "scan_read",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleGetScan",
-      "line": 32,
+      "handler": "h.getScan",
+      "line": 31,
       "match_key": "discovery|GET|/discovery/scans/{param}",
       "method": "GET",
       "normalized_path": "/discovery/scans/{param}",
       "path": "/discovery/scans/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery_scan",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "assets_list",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleListAssets",
-      "line": 34,
+      "handler": "h.listAssets",
+      "line": 32,
       "match_key": "discovery|GET|/discovery/assets",
       "method": "GET",
       "normalized_path": "/discovery/assets",
       "path": "/discovery/assets",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "assets_list",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleListAssets",
-      "line": 35,
+      "handler": "h.listAssets",
+      "line": 34,
       "match_key": "discovery|GET|/discovery/crypto/assets",
       "method": "GET",
       "normalized_path": "/discovery/crypto/assets",
       "path": "/discovery/crypto/assets",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "asset_read",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleGetAsset",
-      "line": 36,
+      "handler": "h.getAsset",
+      "line": 35,
       "match_key": "discovery|GET|/discovery/assets/{param}",
       "method": "GET",
       "normalized_path": "/discovery/assets/{param}",
       "path": "/discovery/assets/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "crypto_asset",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "asset_review",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleClassifyAsset",
-      "line": 37,
+      "handler": "h.reviewAsset",
+      "line": 36,
       "match_key": "discovery|PUT|/discovery/assets/{param}/classify",
       "method": "PUT",
       "normalized_path": "/discovery/assets/{param}/classify",
       "path": "/discovery/assets/{id}/classify",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "crypto_asset",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "summary_read",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleSummary",
-      "line": 39,
+      "handler": "h.summary",
+      "line": 37,
       "match_key": "discovery|GET|/discovery/summary",
       "method": "GET",
       "normalized_path": "/discovery/summary",
       "path": "/discovery/summary",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleSummary",
-      "line": 40,
-      "match_key": "discovery|GET|/discovery/posture",
-      "method": "GET",
-      "normalized_path": "/discovery/posture",
-      "path": "/discovery/posture",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handlePIIScan",
-      "line": 43,
-      "match_key": "discovery|POST|/discovery/pii/scan",
-      "method": "POST",
-      "normalized_path": "/discovery/pii/scan",
-      "path": "/discovery/pii/scan",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleListPIIPatterns",
-      "line": 44,
-      "match_key": "discovery|GET|/discovery/pii/patterns",
-      "method": "GET",
-      "normalized_path": "/discovery/pii/patterns",
-      "path": "/discovery/pii/patterns",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleGetDataInventory",
-      "line": 45,
-      "match_key": "discovery|GET|/discovery/data-inventory",
-      "method": "GET",
-      "normalized_path": "/discovery/data-inventory",
-      "path": "/discovery/data-inventory",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
       "service": "discovery"
     },
     {
@@ -14823,93 +14763,33 @@
       "service": "dataprotect"
     },
     {
-      "action": "",
+      "action": "assets_list",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleListAssets",
-      "line": 35,
+      "handler": "h.listAssets",
+      "line": 34,
       "match_key": "discovery|GET|/discovery/crypto/assets",
       "method": "GET",
       "normalized_path": "/discovery/crypto/assets",
       "path": "/discovery/crypto/assets",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
       "service": "discovery"
     },
     {
-      "action": "",
+      "action": "asset_read",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
-      "handler": "h.handleGetAsset",
-      "line": 36,
+      "handler": "h.getAsset",
+      "line": 35,
       "match_key": "discovery|GET|/discovery/assets/{param}",
       "method": "GET",
       "normalized_path": "/discovery/assets/{param}",
       "path": "/discovery/assets/{id}",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleSummary",
-      "line": 40,
-      "match_key": "discovery|GET|/discovery/posture",
-      "method": "GET",
-      "normalized_path": "/discovery/posture",
-      "path": "/discovery/posture",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handlePIIScan",
-      "line": 43,
-      "match_key": "discovery|POST|/discovery/pii/scan",
-      "method": "POST",
-      "normalized_path": "/discovery/pii/scan",
-      "path": "/discovery/pii/scan",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleListPIIPatterns",
-      "line": 44,
-      "match_key": "discovery|GET|/discovery/pii/patterns",
-      "method": "GET",
-      "normalized_path": "/discovery/pii/patterns",
-      "path": "/discovery/pii/patterns",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
-      "service": "discovery"
-    },
-    {
-      "action": "",
-      "code_scope": "discovery",
-      "file": "services/discovery/handler.go",
-      "handler": "h.handleGetDataInventory",
-      "line": 45,
-      "match_key": "discovery|GET|/discovery/data-inventory",
-      "method": "GET",
-      "normalized_path": "/discovery/data-inventory",
-      "path": "/discovery/data-inventory",
-      "permission": "",
-      "registration": "mux",
-      "resource": "",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "crypto_asset",
       "service": "discovery"
     },
     {
@@ -18081,7 +17961,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 696,
+      "line": 710,
       "tabs": [],
       "tag": "button"
     },
@@ -18089,7 +17969,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 856,
+      "line": 870,
       "tabs": [],
       "tag": "button"
     },
@@ -18097,7 +17977,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 907,
+      "line": 921,
       "tabs": [],
       "tag": "button"
     },
@@ -18105,7 +17985,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 930,
+      "line": 944,
       "tabs": [],
       "tag": "button"
     },
@@ -18113,7 +17993,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 980,
+      "line": 994,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18121,7 +18001,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1017,
+      "line": 1031,
       "tabs": [],
       "tag": "button"
     },
@@ -18129,7 +18009,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1052,
+      "line": 1066,
       "tabs": [],
       "tag": "button"
     },
@@ -20012,40 +19892,50 @@
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh",
-      "line": 290,
-      "tabs": [],
+      "line": 291,
+      "tabs": [
+        "confidential"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Reload",
-      "line": 323,
-      "tabs": [],
+      "line": 324,
+      "tabs": [
+        "confidential"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void savePolicy()} disabled= >",
-      "line": 324,
-      "tabs": [],
+      "line": 325,
+      "tabs": [
+        "confidential"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void runEvaluation()} disabled= >",
-      "line": 430,
-      "tabs": [],
+      "line": 431,
+      "tabs": [
+        "confidential"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>Refresh History",
-      "line": 600,
-      "tabs": [],
+      "line": 601,
+      "tabs": [
+        "confidential"
+      ],
       "tag": "Btn"
     },
     {
@@ -20248,7 +20138,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
       "handler": "",
       "label": "setView(id)} style={{ padding: \"9px 18px\", border: \"none\", background: \"trans...",
-      "line": 637,
+      "line": 636,
       "tabs": [
         "devsecops"
       ],
@@ -20258,11 +20148,31 @@
       "file": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
       "handler": "",
       "label": "setApiGroupFilter(g)} style={{ padding: \"4px 10px\", borderRadius: 5, border:...",
-      "line": 802,
+      "line": 801,
       "tabs": [
         "devsecops"
       ],
       "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
+      "handler": "",
+      "label": "void load()}>",
+      "line": 117,
+      "tabs": [
+        "discovery"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
+      "handler": "",
+      "label": "void runScan()} disabled= >",
+      "line": 146,
+      "tabs": [
+        "discovery"
+      ],
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/EKMTab.tsx",
@@ -23430,88 +23340,110 @@
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "load(false)}>",
-      "line": 305,
-      "tabs": [],
+      "line": 304,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "rotateSigningKeys} disabled={busy",
       "label": "Rotate Signing Keys",
-      "line": 344,
-      "tabs": [],
+      "line": 343,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveSettings} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 345,
-      "tabs": [],
+      "line": 344,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveRegistration} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 396,
-      "tabs": [],
+      "line": 395,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setRegistrationDraft( )}>Edit",
-      "line": 416,
-      "tabs": [],
+      "line": 415,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 417,
-      "tabs": [],
+      "line": 416,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "saveFederation} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 437,
-      "tabs": [],
+      "line": 436,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "setFederationDraft( )}>Edit",
-      "line": 452,
-      "tabs": [],
+      "line": 451,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "",
       "label": "{ try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete",
-      "line": 453,
-      "tabs": [],
+      "line": 452,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runIssue} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 486,
-      "tabs": [],
+      "line": 485,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
       "handler": "runExchange} disabled={busy",
       "label": "(icon or dynamic label)",
-      "line": 526,
-      "tabs": [],
+      "line": 525,
+      "tabs": [
+        "workload"
+      ],
       "tag": "Btn"
     },
     {
@@ -27539,7 +27471,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 57,
+      "line": 58,
       "match_key": "discovery|POST|/discovery/scan",
       "method": "POST",
       "normalized_path": "/discovery/scan",
@@ -27552,7 +27484,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 77,
+      "line": 78,
       "match_key": "discovery|GET|/discovery/scans",
       "method": "GET",
       "normalized_path": "/discovery/scans",
@@ -27565,7 +27497,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 89,
+      "line": 90,
       "match_key": "discovery|GET|/discovery/scans/{param}",
       "method": "GET",
       "normalized_path": "/discovery/scans/{param}",
@@ -27578,7 +27510,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 112,
+      "line": 113,
       "match_key": "discovery|GET|/discovery/assets",
       "method": "GET",
       "normalized_path": "/discovery/assets",
@@ -27591,7 +27523,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 126,
+      "line": 129,
       "match_key": "discovery|PUT|/discovery/assets/{param}/classify",
       "method": "PUT",
       "normalized_path": "/discovery/assets/{param}/classify",
@@ -27604,7 +27536,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 145,
+      "line": 144,
       "match_key": "discovery|GET|/discovery/summary",
       "method": "GET",
       "normalized_path": "/discovery/summary",
@@ -31319,7 +31251,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T07:21:15Z",
+  "generated_at": "2026-09-30T08:23:55Z",
   "navigation": [
     {
       "group": "Overview",
@@ -31362,6 +31294,11 @@
       "label": "Crypto Agility"
     },
     {
+      "group": "Keys & lifecycle",
+      "id": "discovery",
+      "label": "Crypto Discovery"
+    },
+    {
       "group": "PKI & certificates",
       "id": "certs",
       "label": "Certificates / PKI"
@@ -31390,6 +31327,16 @@
       "group": "Data & integrations",
       "id": "hsm",
       "label": "HSM"
+    },
+    {
+      "group": "Data & integrations",
+      "id": "workload",
+      "label": "Workload Identity"
+    },
+    {
+      "group": "Data & integrations",
+      "id": "confidential",
+      "label": "Confidential Compute"
     },
     {
       "group": "Security & compliance",
@@ -53564,27 +53511,20 @@
         {
           "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 57,
+          "line": 58,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleStartScan",
+      "handler": "h.startScan",
       "handler_external_package_calls": [],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "firstTenant",
-        "tenantFromRequest",
         "StartScan",
-        "writeServiceError",
-        "writeJSON"
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 50,
-      "handler_name": "handleStartScan",
+      "handler_line": 44,
+      "handler_name": "startScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "StartScan"
@@ -53594,7 +53534,7 @@
       "normalized_path": "/discovery/scan",
       "path": "/discovery/scan",
       "route_file": "services/discovery/handler.go",
-      "route_line": 30,
+      "route_line": 29,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -53641,7 +53581,7 @@
             "GetScan"
           ],
           "internal_package_calls": [],
-          "line": 34,
+          "line": 35,
           "name": "StartScan",
           "receiver_calls": [],
           "store_calls": [
@@ -53665,24 +53605,21 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 77,
+          "line": 78,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleListScans",
+      "handler": "h.listScans",
       "handler_external_package_calls": [],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
         "ListScans",
         "atoi",
-        "writeServiceError",
-        "writeJSON"
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 66,
-      "handler_name": "handleListScans",
+      "handler_line": 61,
+      "handler_name": "listScans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListScans"
@@ -53691,6 +53628,66 @@
       "method": "GET",
       "normalized_path": "/discovery/scans",
       "path": "/discovery/scans",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 30,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "newServiceError"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.TrimSpace"
+          ],
+          "file": "services/discovery/service.go",
+          "helper_calls": [
+            "newServiceError"
+          ],
+          "internal_package_calls": [],
+          "line": 133,
+          "name": "ListScans",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListScans"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListScans"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 90,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.getScan",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "GetScan",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 70,
+      "handler_name": "getScan",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "GetScan"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/discovery/scans/{param}",
+      "path": "/discovery/scans/{id}",
       "route_file": "services/discovery/handler.go",
       "route_line": 31,
       "service": "discovery",
@@ -53711,49 +53708,50 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 132,
-          "name": "ListScans",
+          "line": 141,
+          "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
-            "ListScans"
+            "GetScan"
           ]
         }
       ],
       "service_receiver_calls": [],
       "service_store_calls": [
-        "ListScans"
+        "GetScan"
       ]
     },
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+          "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 89,
+          "line": 113,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleGetScan",
-      "handler_external_package_calls": [],
+      "handler": "h.listAssets",
+      "handler_external_package_calls": [
+        "strings.ToLower",
+        "strings.TrimSpace"
+      ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetScan",
-        "writeServiceError",
-        "writeJSON"
+        "ListAssets",
+        "atoi",
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 80,
-      "handler_name": "handleGetScan",
+      "handler_line": 79,
+      "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
-        "GetScan"
+        "ListAssets"
       ],
       "handler_store_calls": [],
       "method": "GET",
-      "normalized_path": "/discovery/scans/{param}",
-      "path": "/discovery/scans/{id}",
+      "normalized_path": "/discovery/assets",
+      "path": "/discovery/assets",
       "route_file": "services/discovery/handler.go",
       "route_line": 32,
       "service": "discovery",
@@ -53774,53 +53772,43 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 140,
-          "name": "GetScan",
+          "line": 150,
+          "name": "ListAssets",
           "receiver_calls": [],
           "store_calls": [
-            "GetScan"
+            "ListAssets"
           ]
         }
       ],
       "service_receiver_calls": [],
       "service_store_calls": [
-        "GetScan"
+        "ListAssets"
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
-          "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 112,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListAssets",
+      "frontend_call_sites": [],
+      "handler": "h.listAssets",
       "handler_external_package_calls": [
         "strings.ToLower",
         "strings.TrimSpace"
       ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
         "ListAssets",
         "atoi",
-        "writeServiceError",
-        "writeJSON"
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
-      "handler_name": "handleListAssets",
+      "handler_line": 79,
+      "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ListAssets"
       ],
       "handler_store_calls": [],
       "method": "GET",
-      "normalized_path": "/discovery/assets",
-      "path": "/discovery/assets",
+      "normalized_path": "/discovery/crypto/assets",
+      "path": "/discovery/crypto/assets",
       "route_file": "services/discovery/handler.go",
       "route_line": 34,
       "service": "discovery",
@@ -53841,7 +53829,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 149,
+          "line": 150,
           "name": "ListAssets",
           "receiver_calls": [],
           "store_calls": [
@@ -53856,31 +53844,24 @@
     },
     {
       "frontend_call_sites": [],
-      "handler": "h.handleListAssets",
-      "handler_external_package_calls": [
-        "strings.ToLower",
-        "strings.TrimSpace"
-      ],
+      "handler": "h.getAsset",
+      "handler_external_package_calls": [],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListAssets",
-        "atoi",
-        "writeServiceError",
-        "writeJSON"
+        "GetAsset",
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 94,
-      "handler_name": "handleListAssets",
+      "handler_line": 97,
+      "handler_name": "getAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
-        "ListAssets"
+        "GetAsset"
       ],
       "handler_store_calls": [],
       "method": "GET",
-      "normalized_path": "/discovery/crypto/assets",
-      "path": "/discovery/crypto/assets",
+      "normalized_path": "/discovery/assets/{param}",
+      "path": "/discovery/assets/{id}",
       "route_file": "services/discovery/handler.go",
       "route_line": 35,
       "service": "discovery",
@@ -53901,63 +53882,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 149,
-          "name": "ListAssets",
-          "receiver_calls": [],
-          "store_calls": [
-            "ListAssets"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "ListAssets"
-      ]
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleGetAsset",
-      "handler_external_package_calls": [],
-      "handler_file": "services/discovery/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetAsset",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 116,
-      "handler_name": "handleGetAsset",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "GetAsset"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/discovery/assets/{param}",
-      "path": "/discovery/assets/{id}",
-      "route_file": "services/discovery/handler.go",
-      "route_line": 36,
-      "service": "discovery",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "newServiceError"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/discovery/service.go",
-          "helper_calls": [
-            "newServiceError"
-          ],
-          "internal_package_calls": [],
-          "line": 157,
+          "line": 158,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -53975,27 +53900,23 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 126,
+          "line": 129,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleClassifyAsset",
-      "handler_external_package_calls": [],
+      "handler": "h.reviewAsset",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "firstTenant",
-        "tenantFromRequest",
         "ClassifyAsset",
-        "writeServiceError",
-        "writeJSON"
+        "Error",
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 130,
-      "handler_name": "handleClassifyAsset",
+      "handler_line": 109,
+      "handler_name": "reviewAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "ClassifyAsset"
@@ -54005,7 +53926,7 @@
       "normalized_path": "/discovery/assets/{param}/classify",
       "path": "/discovery/assets/{id}/classify",
       "route_file": "services/discovery/handler.go",
-      "route_line": 37,
+      "route_line": 36,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -54032,7 +53953,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 166,
+          "line": 172,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -54052,23 +53973,20 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 145,
+          "line": 144,
           "source": "serviceRequest"
         }
       ],
-      "handler": "h.handleSummary",
+      "handler": "h.summary",
       "handler_external_package_calls": [],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
         "Summary",
-        "writeServiceError",
-        "writeJSON"
+        "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 146,
-      "handler_name": "handleSummary",
+      "handler_line": 127,
+      "handler_name": "summary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
         "Summary"
@@ -54078,15 +53996,13 @@
       "normalized_path": "/discovery/summary",
       "path": "/discovery/summary",
       "route_file": "services/discovery/handler.go",
-      "route_line": 39,
+      "route_line": 37,
       "service": "discovery",
       "service_external_package_calls": [],
       "service_helper_calls": [
         "ListAssets",
         "round2",
-        "pct",
-        "clampScore",
-        "max"
+        "pct"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -54096,12 +54012,10 @@
           "helper_calls": [
             "ListAssets",
             "round2",
-            "pct",
-            "clampScore",
-            "max"
+            "pct"
           ],
           "internal_package_calls": [],
-          "line": 201,
+          "line": 207,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -54109,182 +54023,6 @@
       ],
       "service_receiver_calls": [],
       "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleSummary",
-      "handler_external_package_calls": [],
-      "handler_file": "services/discovery/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "Summary",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 146,
-      "handler_name": "handleSummary",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "Summary"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/discovery/posture",
-      "path": "/discovery/posture",
-      "route_file": "services/discovery/handler.go",
-      "route_line": 40,
-      "service": "discovery",
-      "service_external_package_calls": [],
-      "service_helper_calls": [
-        "ListAssets",
-        "round2",
-        "pct",
-        "clampScore",
-        "max"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [],
-          "file": "services/discovery/service.go",
-          "helper_calls": [
-            "ListAssets",
-            "round2",
-            "pct",
-            "clampScore",
-            "max"
-          ],
-          "internal_package_calls": [],
-          "line": 201,
-          "name": "Summary",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handlePIIScan",
-      "handler_external_package_calls": [
-        "time.Now"
-      ],
-      "handler_file": "services/discovery/handler_pii.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "Error",
-        "firstTenant",
-        "tenantFromRequest",
-        "scanForPII",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 137,
-      "handler_name": "handlePIIScan",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/discovery/pii/scan",
-      "path": "/discovery/pii/scan",
-      "route_file": "services/discovery/handler.go",
-      "route_line": 43,
-      "service": "discovery",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleListPIIPatterns",
-      "handler_external_package_calls": [],
-      "handler_file": "services/discovery/handler_pii.go",
-      "handler_helper_calls": [
-        "requestID",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 186,
-      "handler_name": "handleListPIIPatterns",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/discovery/pii/patterns",
-      "path": "/discovery/pii/patterns",
-      "route_file": "services/discovery/handler.go",
-      "route_line": 44,
-      "service": "discovery",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleGetDataInventory",
-      "handler_external_package_calls": [],
-      "handler_file": "services/discovery/handler_pii.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListAssets",
-        "writeServiceError",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 203,
-      "handler_name": "handleGetDataInventory",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "ListAssets"
-      ],
-      "handler_store_calls": [],
-      "method": "GET",
-      "normalized_path": "/discovery/data-inventory",
-      "path": "/discovery/data-inventory",
-      "route_file": "services/discovery/handler.go",
-      "route_line": 45,
-      "service": "discovery",
-      "service_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "service_helper_calls": [
-        "newServiceError"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "strings.TrimSpace"
-          ],
-          "file": "services/discovery/service.go",
-          "helper_calls": [
-            "newServiceError"
-          ],
-          "internal_package_calls": [],
-          "line": 149,
-          "name": "ListAssets",
-          "receiver_calls": [],
-          "store_calls": [
-            "ListAssets"
-          ]
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": [
-        "ListAssets"
-      ]
     },
     {
       "frontend_call_sites": [
@@ -84272,7 +84010,7 @@
       "compliance": 54,
       "confidential": 7,
       "dataprotect": 50,
-      "discovery": 12,
+      "discovery": 8,
       "ekm": 64,
       "governance": 35,
       "hsm-connector": 12,
@@ -84332,6 +84070,8 @@
       "cloud": 1,
       "cluster-manager": 2,
       "compliance": 3,
+      "confidential": 1,
+      "discovery": 1,
       "ekm": 2,
       "governance": 2,
       "hyok": 1,
@@ -84344,7 +84084,7 @@
       "secrets": 3,
       "signing": 1,
       "tfe": 2,
-      "workload": 1
+      "workload": 2
     }
   },
   "subpanes": {
@@ -84498,19 +84238,19 @@
     ]
   },
   "summary": {
-    "backend_routes": 844,
+    "backend_routes": 840,
     "backend_services": 28,
-    "button_inventory": 716,
+    "button_inventory": 718,
     "frontend_call_sites": 522,
     "matched_frontend_call_sites": 480,
-    "nav_items": 26,
-    "request_flows": 844,
+    "nav_items": 29,
+    "request_flows": 840,
     "request_flows_with_frontend": 489,
     "request_flows_with_internal_package_calls": 147,
-    "request_flows_with_service_calls": 501,
-    "request_flows_with_store_calls": 602,
+    "request_flows_with_service_calls": 499,
+    "request_flows_with_store_calls": 601,
     "subpane_groups": 8,
-    "tab_components": 33,
+    "tab_components": 36,
     "unmatched_frontend_call_sites": 42
   },
   "tabs": [
@@ -84634,6 +84374,19 @@
       ]
     },
     {
+      "call_count": 6,
+      "component": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
+      "group": "Keys & lifecycle",
+      "id": "discovery",
+      "label": "Crypto Discovery",
+      "services": [
+        "discovery"
+      ],
+      "support_files": [
+        "web/dashboard/src/lib/discovery.ts"
+      ]
+    },
+    {
       "call_count": 101,
       "component": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
       "group": "PKI & certificates",
@@ -84710,6 +84463,32 @@
         "web/dashboard/src/modules/hsm/HSMActivityPanel.tsx",
         "web/dashboard/src/modules/hsm/HSMIntegrationCard.tsx",
         "web/dashboard/src/modules/hsm/vendorProfiles.ts"
+      ]
+    },
+    {
+      "call_count": 13,
+      "component": "web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx",
+      "group": "Data & integrations",
+      "id": "workload",
+      "label": "Workload Identity",
+      "services": [
+        "workload"
+      ],
+      "support_files": [
+        "web/dashboard/src/lib/workloadIdentity.ts"
+      ]
+    },
+    {
+      "call_count": 6,
+      "component": "web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx",
+      "group": "Data & integrations",
+      "id": "confidential",
+      "label": "Confidential Compute",
+      "services": [
+        "confidential"
+      ],
+      "support_files": [
+        "web/dashboard/src/lib/confidential.ts"
       ]
     },
     {
@@ -95838,7 +95617,7 @@
           "GetAttestationPolicy"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -95872,7 +95651,7 @@
           "UpsertAttestationPolicy"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -95909,7 +95688,7 @@
           "ListReleaseRecords"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -95943,7 +95722,7 @@
           "InsertReleaseRecord"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -95980,7 +95759,7 @@
           "ListReleaseRecords"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -96016,7 +95795,7 @@
           "GetReleaseRecord"
         ],
         "uiLabels": [
-          "confidential"
+          "Confidential Compute"
         ]
       },
       {
@@ -97771,13 +97550,13 @@
           {
             "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 57,
+            "line": 58,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleStartScan",
+        "handler": "startScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 50,
+        "handlerLine": 44,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97798,7 +97577,7 @@
           "GetScan"
         ],
         "uiLabels": [
-          "discovery"
+          "Crypto Discovery"
         ]
       },
       {
@@ -97810,13 +97589,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 77,
+            "line": 78,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListScans",
+        "handler": "listScans",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 66,
+        "handlerLine": 61,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97834,7 +97613,7 @@
           "ListScans"
         ],
         "uiLabels": [
-          "discovery"
+          "Crypto Discovery"
         ]
       },
       {
@@ -97846,13 +97625,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 89,
+            "line": 90,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleGetScan",
+        "handler": "getScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 80,
+        "handlerLine": 70,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97870,7 +97649,7 @@
           "GetScan"
         ],
         "uiLabels": [
-          "discovery"
+          "Crypto Discovery"
         ]
       },
       {
@@ -97883,13 +97662,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 112,
+            "line": 113,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleListAssets",
+        "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 79,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97907,7 +97686,7 @@
           "ListAssets"
         ],
         "uiLabels": [
-          "discovery"
+          "Crypto Discovery"
         ]
       },
       {
@@ -97917,9 +97696,9 @@
           "strings.TrimSpace"
         ],
         "frontendSites": [],
-        "handler": "handleListAssets",
+        "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 94,
+        "handlerLine": 79,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97946,9 +97725,9 @@
           "strings.TrimSpace"
         ],
         "frontendSites": [],
-        "handler": "handleGetAsset",
+        "handler": "getAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 116,
+        "handlerLine": 97,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97972,6 +97751,7 @@
       {
         "complexity": 2,
         "externalPackages": [
+          "errors.Is",
           "strings.TrimSpace",
           "strings.ToLower"
         ],
@@ -97979,13 +97759,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 126,
+            "line": 129,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleClassifyAsset",
+        "handler": "reviewAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 130,
+        "handlerLine": 109,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -98004,7 +97784,7 @@
           "UpsertAsset"
         ],
         "uiLabels": [
-          "discovery"
+          "Crypto Discovery"
         ]
       },
       {
@@ -98014,13 +97794,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 145,
+            "line": 144,
             "source": "serviceRequest"
           }
         ],
-        "handler": "handleSummary",
+        "handler": "summary",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 146,
+        "handlerLine": 127,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98036,109 +97816,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "discovery"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleSummary",
-        "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 146,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/discovery/posture",
-        "path": "/discovery/posture",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "discovery|GET|/discovery/posture",
-        "sensitive": false,
-        "service": "discovery",
-        "serviceCalls": [
-          "Summary"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [
-          "time.Now"
-        ],
-        "frontendSites": [],
-        "handler": "handlePIIScan",
-        "handlerFile": "services/discovery/handler_pii.go",
-        "handlerLine": 137,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/discovery/pii/scan",
-        "path": "/discovery/pii/scan",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "discovery|POST|/discovery/pii/scan",
-        "sensitive": false,
-        "service": "discovery",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 0,
-        "externalPackages": [],
-        "frontendSites": [],
-        "handler": "handleListPIIPatterns",
-        "handlerFile": "services/discovery/handler_pii.go",
-        "handlerLine": 186,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/discovery/pii/patterns",
-        "path": "/discovery/pii/patterns",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "discovery|GET|/discovery/pii/patterns",
-        "sensitive": false,
-        "service": "discovery",
-        "serviceCalls": [],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [],
-        "handler": "handleGetDataInventory",
-        "handlerFile": "services/discovery/handler_pii.go",
-        "handlerLine": 203,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/discovery/data-inventory",
-        "path": "/discovery/data-inventory",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "discovery|GET|/discovery/data-inventory",
-        "sensitive": false,
-        "service": "discovery",
-        "serviceCalls": [
-          "ListAssets"
-        ],
-        "storeCalls": [
-          "ListAssets"
-        ],
-        "uiLabels": [
-          "API only"
+          "Crypto Discovery"
         ]
       },
       {
@@ -113055,6 +112733,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113093,6 +112772,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113131,6 +112811,7 @@
           "UpsertSettings"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113169,6 +112850,7 @@
           "ListIssuanceRecords"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113203,6 +112885,7 @@
           "ListRegistrations"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113291,6 +112974,7 @@
           "DeleteRegistration"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113325,6 +113009,7 @@
           "ListFederationBundles"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113413,6 +113098,7 @@
           "DeleteFederationBundle"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113450,6 +113136,7 @@
           "TouchRegistrationIssued"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113484,6 +113171,7 @@
           "ListIssuanceRecords"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113529,6 +113217,7 @@
           "TouchRegistrationUsed"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113566,6 +113255,7 @@
           "ListRegistrations"
         ],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -113598,6 +113288,7 @@
         ],
         "storeCalls": [],
         "uiLabels": [
+          "Workload Identity",
           "Posture"
         ]
       },
@@ -114516,7 +114207,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T07:21:15Z",
+    "generatedAt": "2026-09-30T08:23:55Z",
     "methods": [
       "DELETE",
       "GET",
@@ -114556,7 +114247,7 @@
       "workload"
     ],
     "summary": {
-      "flows": 844,
+      "flows": 840,
       "frontendBacked": 489,
       "highRisk": 331,
       "services": 28

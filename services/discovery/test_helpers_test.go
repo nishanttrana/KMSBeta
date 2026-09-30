@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -74,10 +75,17 @@ func newDiscoveryService(t *testing.T) (*Service, *SQLStore, *nopDiscoveryPublis
 	return svc, store, pub
 }
 
-func newDiscoveryHandler(t *testing.T) (*Handler, *Service, *nopDiscoveryPublisher) {
+// newDiscoveryHandler serves requests as a verified tenant-less admin token,
+// so each test names its own tenant; handler_routes_test.go covers
+// authentication, permissions and tenancy.
+func newDiscoveryHandler(t *testing.T) (http.Handler, *Service, *nopDiscoveryPublisher) {
 	t.Helper()
 	svc, _, pub := newDiscoveryService(t)
-	return NewHandler(svc), svc, pub
+	h := NewHandler(svc, nil, nil)
+	admin := &pkgauth.Claims{UserID: "test-admin", Role: "admin", Permissions: []string{"*"}}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), admin)))
+	}), svc, pub
 }
 
 func createDiscoverySchemaForTest(conn *pkgdb.DB) error {

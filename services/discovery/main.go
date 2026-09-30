@@ -26,6 +26,8 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -68,9 +70,13 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit route.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.discovery.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "discovery"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, discovery event publishing disabled: %v", err)
 	}
@@ -82,7 +88,9 @@ func main() {
 		publisher,
 	)
 	svc.cloud = NewHTTPCloudClient(envOr("CLOUD_URL", "https://cloud:8080"), 30*time.Second)
-	handler := NewHandler(svc)
+	// Every route needs a verified platform JWT; the kernel checks the
+	// permission and tenant and audits each call (handler.go).
+	handler := pkgjwtauth.MustWrap("DISCOVERY", cfg.JWTIssuer, cfg.JWTAudience, NewHandler(svc, audit, logger), logger)
 
 	httpPort := envOr("HTTP_PORT", "8100")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "discovery"))

@@ -70,8 +70,6 @@ type DiscoverySummary struct {
 	ClassificationCounts  map[string]int `json:"classification_counts"`
 	PQCReadyCount         int            `json:"pqc_ready_count"`
 	PQCReadinessPercent   float64        `json:"pqc_readiness_percent"`
-	AverageQSL            float64        `json:"average_qsl"`
-	PostureScore          int            `json:"posture_score"`
 }
 
 type ScanRequest struct {

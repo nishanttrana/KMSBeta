@@ -2076,9 +2076,8 @@ const SectionApiDiscovery = () => (
         ["POST", "/discovery/scan", "Start a cryptographic asset discovery scan"],
         ["GET", "/discovery/scans", "List completed scans with statistics"],
         ["GET", "/discovery/assets", "List all discovered cryptographic assets"],
-        ["PUT", "/discovery/assets/{id}/classify", "Classify a discovered asset (managed, external, deprecated)"],
-        ["GET", "/discovery/summary", "Summary: total assets, by type, by algorithm, risk breakdown"],
-        ["GET", "/discovery/posture", "Crypto posture score based on discovery findings"],
+        ["PUT", "/discovery/assets/{id}/classify", "Record a review (status, notes); the classification comes from the algorithm catalogue"],
+        ["GET", "/discovery/summary", "Summary: total assets, by source, by algorithm, by classification"],
       ]} />
     </Collapse>
 
@@ -2086,7 +2085,7 @@ const SectionApiDiscovery = () => (
     <Code>{`# Run a discovery scan
 curl -X POST http://localhost:8100/discovery/scan \\
   -H "Authorization: Bearer $TOKEN" \\
-  -d '{ "scope": "all" }'
+  -d '{ "scan_types": ["network", "cloud", "certs", "code"] }'
 
 # View discovered assets
 curl http://localhost:8100/discovery/assets \\

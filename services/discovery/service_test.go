@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -31,16 +32,23 @@ func TestServiceScanAndSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("summary: %v", err)
 	}
-	if summary.TotalAssets == 0 || summary.PostureScore <= 0 {
+	if summary.TotalAssets == 0 || summary.PQCReadyCount == 0 {
 		t.Fatalf("unexpected summary: %+v", summary)
 	}
 
 	asset := assets[0]
-	updated, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Classification: "strong", Status: "reviewed", Notes: "manual override"})
+	relabel := "strong"
+	if asset.Classification == "strong" {
+		relabel = "vulnerable"
+	}
+	if _, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Classification: relabel}); !errors.Is(err, errClassificationIsCatalogue) {
+		t.Fatalf("relabel %s as %s: err=%v, want errClassificationIsCatalogue", asset.Classification, relabel, err)
+	}
+	updated, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Status: "reviewed", Notes: "owner confirmed"})
 	if err != nil {
 		t.Fatalf("classify asset: %v", err)
 	}
-	if updated.Classification != "strong" || updated.Status != "reviewed" {
+	if updated.Classification != asset.Classification || updated.Status != "reviewed" {
 		t.Fatalf("unexpected classified asset: %+v", updated)
 	}
 	if pub.Count("audit.discovery.asset_classified") == 0 {

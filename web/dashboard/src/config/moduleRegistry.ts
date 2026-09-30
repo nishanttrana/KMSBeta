@@ -15,10 +15,9 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   dataenc: "data_protection",
   autokey: "autokey_provisioning",
   keyaccess: "key_access_justifications",
-  // CLOUD & IDENTITY — workload now hosts confidential as a sub-pane
+  // CLOUD & IDENTITY
   signing: "artifact_signing",
-  // Workload & Identity tab visible if either workload or confidential is enabled
-  workload: ["workload_identity", "confidential_compute"],
+  workload: "workload_identity",
   confidential: "confidential_compute",
   // Cloud Keys tab merges BYOK + HYOK — visible if either feature enabled
   cloudctl: ["cloud_byok", "hyok_proxy"],

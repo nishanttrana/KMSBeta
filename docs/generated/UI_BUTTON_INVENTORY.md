@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T07:21:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T08:23:55Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 696 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 856 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 907 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 930 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 980 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1017 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1052 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 710 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 870 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 921 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 944 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 994 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1031 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1066 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -220,11 +220,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 648 | compliance | Btn | void saveSchedule()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 666 | compliance | Btn | void runNow()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | 1145 | compliance | Btn | { setEvidenceBusy(true); try { await downloadEvidenceReport(session, ); onToa... |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 290 | - | Btn | void refresh(false)}>Refresh |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 323 | - | Btn | void refresh(false)}>Reload |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 324 | - | Btn | void savePolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 430 | - | Btn | void runEvaluation()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 600 | - | Btn | void refresh(false)}>Refresh History |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 291 | confidential | Btn | void refresh(false)}>Refresh |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 324 | confidential | Btn | void refresh(false)}>Reload |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 325 | confidential | Btn | void savePolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 431 | confidential | Btn | void runEvaluation()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | 601 | confidential | Btn | void refresh(false)}>Refresh History |  |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 97 | crypto_agility | button | Retry | onRetry} style={{ marginTop: 14, background: C.card, border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 313 | crypto_agility | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
 | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | 316 | crypto_agility | button | setRuleModal( )} disabled= style={{ background: C.card, border: `1px solid $... |  |
@@ -246,8 +246,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 429 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 430 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 50 | devsecops | button | {copied ? : } | handleCopy |
-| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 637 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
-| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 802 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
+| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 636 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
+| web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 801 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 117 | discovery | Btn | void load()}> |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 146 | discovery | Btn | void runScan()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 698 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 699 | ekm | Btn | Deploy Agent | openDeploy |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 700 | ekm | Btn | Register Database | openDbRegister |
@@ -584,17 +586,17 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 313 | - | button | {logOpen ? : } | onViewLog} title="View log" style={{ background: "none", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 404 | - | button | load(true)} disabled= style={{ background: C.card, border: `1px solid $ `, bo... |  |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 411 | - | button | } style={ } > New stream |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 305 | - | Btn | load(false)}> |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 344 | - | Btn | Rotate Signing Keys | rotateSigningKeys} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 345 | - | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 396 | - | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 416 | - | Btn | setRegistrationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 417 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 437 | - | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 452 | - | Btn | setFederationDraft( )}>Edit |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 453 | - | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 486 | - | Btn | (icon or dynamic label) | runIssue} disabled={busy |
-| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 526 | - | Btn | (icon or dynamic label) | runExchange} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 304 | workload | Btn | load(false)}> |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 343 | workload | Btn | Rotate Signing Keys | rotateSigningKeys} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 344 | workload | Btn | (icon or dynamic label) | saveSettings} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 395 | workload | Btn | (icon or dynamic label) | saveRegistration} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 415 | workload | Btn | setRegistrationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 416 | workload | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 436 | workload | Btn | (icon or dynamic label) | saveFederation} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 451 | workload | Btn | setFederationDraft( )}>Edit |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 452 | workload | Btn | { try catch (error) { onToast?.(`Delete failed: $ `); } }}>Delete |  |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 485 | workload | Btn | (icon or dynamic label) | runIssue} disabled={busy |
+| web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | 525 | workload | Btn | (icon or dynamic label) | runExchange} disabled={busy |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 362 | - | button | setThreatModal( )}> Add threat |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 376 | - | button | setThreatModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 377 | - | button | void remove("threat", t.id, t.name)}> |  |

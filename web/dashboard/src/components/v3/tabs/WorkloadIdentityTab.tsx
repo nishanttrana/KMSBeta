@@ -301,8 +301,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
     <div>
       <Section
         title="Workload Identity"
-        desc="Tenant-scoped SPIFFE trust domains, SVID issuance, federation, and workload-to-key authorization."
-        right={<Btn onClick={() => load(false)}>{loading ? "Refreshing..." : "Refresh"}</Btn>}
+        actions={<Btn onClick={() => load(false)}>{loading ? "Refreshing..." : "Refresh"}</Btn>}
       />
 
       <Row2>
