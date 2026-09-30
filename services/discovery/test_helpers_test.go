@@ -123,6 +123,16 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE discovery_scan_targets (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			host TEXT NOT NULL,
+			port INTEGER NOT NULL,
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id),
+			UNIQUE (tenant_id, host, port)
+		);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {

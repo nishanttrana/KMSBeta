@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -29,26 +30,48 @@ import (
 
 var errScanNotConfigured = errors.New("scan source not configured")
 
-// scanNetwork handshakes with each endpoint in DISCOVERY_TLS_ENDPOINTS and
-// records the negotiated key exchange and the leaf certificate's key. The list
-// is operator configuration, never request input (SSRF).
+// scanNetwork handshakes with each endpoint in DISCOVERY_TLS_ENDPOINTS
+// (operator configuration) and each target the tenant added
+// (POST /discovery/targets), and records the negotiated key exchange and the
+// leaf certificate's key. A tenant's target is dialled through s.targetGuard,
+// which refuses loopback, link-local and other reserved addresses after DNS
+// resolution (SSRF).
 func (s *Service) scanNetwork(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	endpoints := parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS"))
-	if len(endpoints) == 0 {
-		return nil, fmt.Errorf("%w: set DISCOVERY_TLS_ENDPOINTS to host:port,... to scan TLS endpoints", errScanNotConfigured)
+	type probeTarget struct {
+		endpoint string
+		guard    func(network, address string, c syscall.RawConn) error
 	}
-	out := make([]CryptoAsset, 0, 2*len(endpoints))
+	var targets []probeTarget
+	seen := map[string]bool{}
+	for _, ep := range parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS")) {
+		seen[ep] = true
+		targets = append(targets, probeTarget{endpoint: ep})
+	}
+	tenantTargets, err := s.store.ListTargets(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("read scan targets: %w", err)
+	}
+	for _, t := range tenantTargets {
+		if ep := t.endpoint(); !seen[ep] {
+			seen[ep] = true
+			targets = append(targets, probeTarget{endpoint: ep, guard: s.targetGuard})
+		}
+	}
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("%w: add a TLS target (host and port) in Crypto Discovery, or set DISCOVERY_TLS_ENDPOINTS", errScanNotConfigured)
+	}
+	out := make([]CryptoAsset, 0, 2*len(targets))
 	var failed []string
-	for _, ep := range endpoints {
-		probe, err := probeTLS(ctx, ep, 8*time.Second)
+	for _, t := range targets {
+		probe, err := probeTLS(ctx, t.endpoint, 8*time.Second, t.guard)
 		if err != nil {
-			failed = append(failed, ep+": "+err.Error())
+			failed = append(failed, t.endpoint+": "+err.Error())
 			continue
 		}
-		out = append(out, s.tlsAssets(tenantID, scanID, ep, probe)...)
+		out = append(out, s.tlsAssets(tenantID, scanID, t.endpoint, probe)...)
 	}
 	if len(failed) > 0 {
-		return out, fmt.Errorf("%d of %d endpoints failed: %s", len(failed), len(endpoints), strings.Join(failed, "; "))
+		return out, fmt.Errorf("%d of %d endpoints failed: %s", len(failed), len(targets), strings.Join(failed, "; "))
 	}
 	return out, nil
 }
@@ -60,7 +83,7 @@ type tlsProbe struct {
 	trusted         bool
 }
 
-func probeTLS(ctx context.Context, endpoint string, timeout time.Duration) (tlsProbe, error) {
+func probeTLS(ctx context.Context, endpoint string, timeout time.Duration, guard func(network, address string, c syscall.RawConn) error) (tlsProbe, error) {
 	host, _, err := net.SplitHostPort(endpoint)
 	if err != nil {
 		return tlsProbe{}, err
@@ -90,7 +113,7 @@ func probeTLS(ctx context.Context, endpoint string, timeout time.Duration) (tlsP
 	}
 	dctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	conn, err := (&tls.Dialer{Config: cfg}).DialContext(dctx, "tcp", endpoint)
+	conn, err := (&tls.Dialer{NetDialer: &net.Dialer{Control: guard}, Config: cfg}).DialContext(dctx, "tcp", endpoint)
 	if err != nil {
 		return tlsProbe{}, err
 	}
@@ -280,7 +303,7 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			out = append(out, CryptoAsset{
 				ID: assetDeterministicID(tenantID, "code", f.kind, rel, fmt.Sprint(f.line), f.fingerprint), TenantID: tenantID, ScanID: scanID,
 				AssetType: f.kind, Name: filepath.Base(rel), Location: fmt.Sprintf("%s:%d", rel, f.line), Source: "code",
-				Algorithm: f.algorithm, StrengthBits: strengthBits(f.algorithm), Status: "active", Classification: "vulnerable",
+				Algorithm: f.algorithm, StrengthBits: strengthBits(f.algorithm), Status: "active", Classification: "exposed",
 				Metadata:  map[string]interface{}{"fingerprint_sha256_prefix": f.fingerprint, "line": f.line},
 				FirstSeen: now, LastSeen: now,
 			})

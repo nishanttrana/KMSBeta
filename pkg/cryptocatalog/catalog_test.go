@@ -90,12 +90,14 @@ func TestHybridKeyEstablishment(t *testing.T) {
 // The mislabels this catalogue replaced (learning.md 2026-09-29).
 func TestAssessmentDoesNotRepeatTheOldMislabels(t *testing.T) {
 	for name, want := range map[string]string{
-		"RSA-4096":          "vulnerable",
-		"ECDSA-P256":        "vulnerable",
+		"RSA-4096":          "quantum_vulnerable",
+		"ECDSA-P256":        "quantum_vulnerable",
+		"ECDH-P256":         "quantum_vulnerable",
+		"RSA-1024":          "weak",
 		"SLH-DSA-SHA2-128s": "strong",
 		"AES-128-CBC":       "strong",
-		"AES-256-ECB":       "vulnerable",
-		"3DES":              "vulnerable",
+		"AES-256-ECB":       "weak",
+		"3DES":              "weak",
 		"X25519MLKEM768":    "strong",
 	} {
 		if got := Assess(name).Class; got != want {

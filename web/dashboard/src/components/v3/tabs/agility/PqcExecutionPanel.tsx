@@ -20,7 +20,8 @@ import { Badge, errText, Field, Grid2, inputStyle, Modal, S, StatCard } from "./
 // Only measured facts are shown: no readiness score.
 
 const CLASS: Record<string, [string, string]> = {
-  vulnerable: [C.red, C.redDim], strong: [C.green, C.greenDim], unknown: [C.dim, C.dimTint],
+  weak: [C.red, C.redDim], exposed: [C.red, C.redDim], quantum_vulnerable: [C.amber, C.amberDim],
+  strong: [C.green, C.greenDim], unknown: [C.dim, C.dimTint],
 };
 const STEP: Record<string, [string, string]> = {
   algorithm_changed: [C.green, C.greenDim], successor_created: [C.green, C.greenDim], rotated: [C.green, C.greenDim], completed: [C.green, C.greenDim],

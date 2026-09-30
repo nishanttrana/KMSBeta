@@ -238,8 +238,10 @@ func hashEntry(isHMAC bool, h string) Entry {
 type Assessment struct {
 	Assessed bool
 	Entry    Entry
-	// Class: "vulnerable" (weak today, or broken by a quantum computer),
-	// "strong" (neither) or "unknown" (not assessed).
+	// Class: "weak" (weak today), "quantum_vulnerable" (sound today, broken
+	// by a quantum computer), "strong" (neither) or "unknown" (not
+	// assessed). Before 7.11.0-beta the first two were one "vulnerable",
+	// which put ECDSA-P256 in the same bucket as RSA-1024.
 	Class string
 	// Ready: neither weak nor quantum-vulnerable.
 	Ready bool
@@ -254,8 +256,11 @@ func Assess(algorithm string) Assessment {
 		return Assessment{Class: "unknown"}
 	}
 	a := Assessment{Assessed: true, Entry: e, Class: "strong", Ready: true, PQCReady: e.PostQuantum}
-	if e.Weak || e.QuantumVulnerable {
-		a.Class, a.Ready = "vulnerable", false
+	switch {
+	case e.Weak:
+		a.Class, a.Ready = "weak", false
+	case e.QuantumVulnerable:
+		a.Class, a.Ready = "quantum_vulnerable", false
 	}
 	return a
 }

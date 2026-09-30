@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -18,6 +19,9 @@ type Service struct {
 	now     func() time.Time
 	cloud   CloudClient
 	root    string
+	// targetGuard vets the address each tenant-added target dials
+	// (refuseReservedAddr; tests swap it to reach their loopback server).
+	targetGuard func(network, address string, c syscall.RawConn) error
 }
 
 func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events EventPublisher) *Service {
@@ -29,6 +33,8 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events Ev
 		events:  events,
 		now:     func() time.Time { return time.Now().UTC() },
 		root:    root,
+
+		targetGuard: refuseReservedAddr,
 	}
 }
 
@@ -152,7 +158,42 @@ func (s *Service) ListAssets(ctx context.Context, tenantID string, limit int, of
 	if tenantID == "" {
 		return nil, newServiceError(400, "bad_request", "tenant_id is required")
 	}
-	return s.store.ListAssets(ctx, tenantID, limit, offset, source, assetType, classification)
+	if classification == "" {
+		items, err := s.store.ListAssets(ctx, tenantID, limit, offset, source, assetType, "")
+		for i := range items {
+			items[i].Classification = assetClass(items[i])
+		}
+		return items, err
+	}
+	// The stored column can predate a catalogue change, so filter on the
+	// derived class, then page.
+	all, err := s.store.ListAssets(ctx, tenantID, 10000, 0, source, assetType, "")
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CryptoAsset, 0)
+	for _, a := range all {
+		if a.Classification = assetClass(a); a.Classification == classification {
+			out = append(out, a)
+		}
+	}
+	if limit <= 0 || limit > 10000 {
+		limit = 1000
+	}
+	offset = min(max(offset, 0), len(out))
+	return out[offset:min(offset+limit, len(out))], nil
+}
+
+// assetClass is an asset's classification, derived on every read: a secret
+// found in source code is "exposed" whatever its algorithm; anything else is
+// the catalogue's class for its algorithm (weak, quantum_vulnerable, strong
+// or unknown). Rows stored before 7.11.0-beta say "vulnerable" for both of
+// the first two; deriving means none of them shows that stale label.
+func assetClass(a CryptoAsset) string {
+	if a.Source == "code" {
+		return "exposed"
+	}
+	return classifyAlgorithm(a.Algorithm)
 }
 
 func (s *Service) GetAsset(ctx context.Context, tenantID string, id string) (CryptoAsset, error) {
@@ -161,7 +202,9 @@ func (s *Service) GetAsset(ctx context.Context, tenantID string, id string) (Cry
 	if tenantID == "" || id == "" {
 		return CryptoAsset{}, newServiceError(400, "bad_request", "tenant_id and id are required")
 	}
-	return s.store.GetAsset(ctx, tenantID, id)
+	item, err := s.store.GetAsset(ctx, tenantID, id)
+	item.Classification = assetClass(item)
+	return item, err
 }
 
 // errClassificationIsCatalogue: an asset's classification is what
@@ -175,7 +218,7 @@ func (s *Service) ClassifyAsset(ctx context.Context, tenantID string, id string,
 	if tenantID == "" || id == "" {
 		return CryptoAsset{}, newServiceError(400, "bad_request", "tenant_id and id are required")
 	}
-	item, err := s.store.GetAsset(ctx, tenantID, id)
+	item, err := s.GetAsset(ctx, tenantID, id)
 	if err != nil {
 		return CryptoAsset{}, err
 	}
@@ -201,7 +244,7 @@ func (s *Service) ClassifyAsset(ctx context.Context, tenantID string, id string,
 		"classification": item.Classification,
 		"status":         item.Status,
 	})
-	return s.store.GetAsset(ctx, tenantID, id)
+	return s.GetAsset(ctx, tenantID, id)
 }
 
 func (s *Service) Summary(ctx context.Context, tenantID string) (DiscoverySummary, error) {
@@ -214,7 +257,7 @@ func (s *Service) Summary(ctx context.Context, tenantID string) (DiscoverySummar
 		TotalAssets:           len(items),
 		SourceDistribution:    map[string]int{},
 		AlgorithmDistribution: map[string]int{},
-		ClassificationCounts:  map[string]int{"strong": 0, "vulnerable": 0, "unknown": 0},
+		ClassificationCounts:  map[string]int{"strong": 0, "quantum_vulnerable": 0, "weak": 0, "exposed": 0, "unknown": 0},
 	}
 	for _, it := range items {
 		sum.SourceDistribution[it.Source]++

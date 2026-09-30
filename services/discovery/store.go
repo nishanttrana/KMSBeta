@@ -176,6 +176,53 @@ SELECT COUNT(*) FROM discovery_assets WHERE tenant_id = $1
 	return n, nil
 }
 
+func (s *SQLStore) CreateTarget(ctx context.Context, t ScanTarget) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO discovery_scan_targets (tenant_id, id, host, port, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+`, t.TenantID, t.ID, t.Host, t.Port, t.CreatedBy)
+	return err
+}
+
+func (s *SQLStore) ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, host, port, created_by, created_at
+FROM discovery_scan_targets
+WHERE tenant_id = $1
+ORDER BY host, port
+`, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]ScanTarget, 0)
+	for rows.Next() {
+		var (
+			t          ScanTarget
+			createdRaw interface{}
+		)
+		if err := rows.Scan(&t.TenantID, &t.ID, &t.Host, &t.Port, &t.CreatedBy, &createdRaw); err != nil {
+			return nil, err
+		}
+		t.CreatedAt = parseTimeValue(createdRaw)
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteTarget(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM discovery_scan_targets WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
 func scanDiscoveryScan(scanner interface {
 	Scan(dest ...interface{}) error
 }) (DiscoveryScan, error) {

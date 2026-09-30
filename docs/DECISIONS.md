@@ -7,6 +7,35 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Discovery: weak and quantum-vulnerable are separate classes; tenants add TLS targets (7.11.0-beta)
+
+- **Decision:** `cryptocatalog.Assess` reports `weak` and
+  `quantum_vulnerable` separately instead of one `vulnerable`, and discovery
+  derives the class on read. Tenants add network scan targets (host and port)
+  through the API and dashboard, in addition to `DISCOVERY_TLS_ENDPOINTS`.
+- **Why:** the merged class marked ECDSA-P256 as vulnerable, which reads as
+  "broken now". Both facts are in the catalogue already, and the customer
+  decides when to migrate quantum-vulnerable algorithms (CLAUDE.md, crypto
+  standards). The environment variable was the only way to name a target, so
+  a tenant couldn't scan its own endpoints.
+- **Rejected:** a startup job rewriting stored classes. It writes a
+  replicated table and would need primary-only gating against a cluster
+  reader that may still be pending at boot, whereas deriving on read writes
+  nothing. Also rejected: blocking private (RFC 1918) ranges. Scanning the
+  customer's internal endpoints is the point of the feature.
+- **SSRF boundary:** only `discovery.write` holders add targets. Loopback,
+  link-local (cloud metadata), multicast and unspecified addresses are
+  refused when a target is added and at dial time after DNS resolution. The
+  probe sends only a TLS ClientHello and records the server's handshake.
+  **Still open:** a target can name a platform-internal host on a routable
+  address. It learns only that host's certificate, which is in the PKI tab
+  anyway, and whether the port answers.
+- **Enforced by:** `TestRefuseReservedAddr`, `TestTenantTargetDialGuard`,
+  `TestNormalizeTarget`, `TestStoredVulnerableIsReclassifiedOnRead`,
+  `TestAssessmentDoesNotRepeatTheOldMislabels`.
+
+---
+
 ## 2026-09-30 — Keep Workload Identity, Confidential Compute and Discovery; restore their pages (7.9.0-beta)
 
 - **Decision** (owner, choosing among keep, remove or fix): keep all three and

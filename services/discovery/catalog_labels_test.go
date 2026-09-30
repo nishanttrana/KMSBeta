@@ -7,7 +7,8 @@ import (
 
 // strength_bits is the security strength, not the key or parameter
 // size (RSA-2048 was stored as 2048, ML-KEM-768 as 768), and classification
-// follows pkg/cryptocatalog (RSA-4096 was "strong").
+// follows pkg/cryptocatalog (RSA-4096 was "strong"; until 7.11.0-beta
+// ECDSA-P256 was "vulnerable", like RSA-1024).
 func TestDiscoveryLabelsFollowTheCatalogue(t *testing.T) {
 	for alg, want := range map[string]int{"RSA-2048": 112, "ECDSA-P384": 192, "ECDH-P256": 128, "ML-KEM-768": 192, "UNKNOWN": 0} {
 		if got := strengthBits(alg); got != want {
@@ -20,7 +21,7 @@ func TestDiscoveryLabelsFollowTheCatalogue(t *testing.T) {
 			t.Errorf("%s: pqcReady=%v, want %v", kex, !ready, ready)
 		}
 	}
-	for alg, want := range map[string]string{"RSA-4096": "vulnerable", "ML-DSA-65": "strong", "X25519-ML-KEM-768-HYBRID": "strong", "RSA-KEX": "unknown"} {
+	for alg, want := range map[string]string{"RSA-4096": "quantum_vulnerable", "ECDSA-P256": "quantum_vulnerable", "RSA-1024": "weak", "ML-DSA-65": "strong", "X25519-ML-KEM-768-HYBRID": "strong", "RSA-KEX": "unknown"} {
 		if got := classifyAlgorithm(alg); got != want {
 			t.Errorf("classifyAlgorithm(%s) = %s, want %s", alg, got, want)
 		}

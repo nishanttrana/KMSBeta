@@ -35,6 +35,10 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r.Handle("GET /discovery/assets/{id}", route.Spec{Action: "asset_read", Permission: "discovery.read", Resource: "crypto_asset", TargetParam: "id"}, h.getAsset)
 	r.Handle("PUT /discovery/assets/{id}/classify", route.Spec{Action: "asset_review", Permission: "discovery.write", Resource: "crypto_asset", TargetParam: "id"}, h.reviewAsset)
 	r.Handle("GET /discovery/summary", read("summary_read"), h.summary)
+	// TLS endpoints the network scan handshakes with (7.11.0-beta).
+	r.Handle("GET /discovery/targets", read("targets_list"), h.listTargets)
+	r.Handle("POST /discovery/targets", route.Spec{Action: "target_add", Permission: "discovery.write", Resource: "discovery_target"}, h.addTarget)
+	r.Handle("DELETE /discovery/targets/{id}", route.Spec{Action: "target_remove", Permission: "discovery.write", Resource: "discovery_target", TargetParam: "id"}, h.removeTarget)
 	h.router = r
 	return h
 }
@@ -131,6 +135,58 @@ func (h *Handler) summary(c *route.Call) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"summary": item})
+}
+
+func (h *Handler) listTargets(c *route.Call) {
+	items, err := h.svc.ListTargets(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+}
+
+// addTarget refuses, with its reason audited, a host that isn't a DNS name
+// or IP, a reserved address (loopback, link-local, metadata), a duplicate,
+// and the per-tenant limit.
+func (h *Handler) addTarget(c *route.Call) {
+	var req struct {
+		Host string `json:"host"`
+		Port int    `json:"port"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Detail("host", req.Host)
+	c.Detail("port", req.Port)
+	t, err := h.svc.AddTarget(c.R.Context(), c.Tenant, req.Host, req.Port, c.Actor())
+	switch {
+	case errors.Is(err, errInvalidTarget):
+		c.Refuse(http.StatusBadRequest, "invalid_target", err.Error())
+		return
+	case errors.Is(err, errTargetExists):
+		c.Refuse(http.StatusConflict, "target_exists", err.Error())
+		return
+	case errors.Is(err, errTargetLimit):
+		c.Refuse(http.StatusConflict, "target_limit", err.Error())
+		return
+	case err != nil:
+		h.fail(c, err)
+		return
+	}
+	c.Target(t.ID)
+	c.JSON(http.StatusCreated, map[string]interface{}{"target": t})
+}
+
+func (h *Handler) removeTarget(c *route.Call) {
+	t, err := h.svc.RemoveTarget(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("host", t.Host)
+	c.Detail("port", t.Port)
+	c.JSON(http.StatusOK, map[string]interface{}{"removed": t.ID})
 }
 
 func (h *Handler) fail(c *route.Call, err error) {

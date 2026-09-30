@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T08:31:19Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T10:48:04Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -248,8 +248,10 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 50 | devsecops | button | {copied ? : } | handleCopy |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 636 | devsecops | button | setView(id)} style={{ padding: "9px 18px", border: "none", background: "trans... |  |
 | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | 801 | devsecops | button | setApiGroupFilter(g)} style={{ padding: "4px 10px", borderRadius: 5, border:... |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 117 | discovery | Btn | void load()}> |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 146 | discovery | Btn | void runScan()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 176 | discovery | Btn | void load()}> |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 216 | discovery | Btn | void addTarget()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 225 | discovery | button | void removeTarget(t)} style={ }>× |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 235 | discovery | Btn | void runScan()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 698 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 699 | ekm | Btn | Deploy Agent | openDeploy |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 700 | ekm | Btn | Register Database | openDbRegister |
@@ -605,12 +607,12 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 419 | - | button | setAssetModal( )}> |  |
 | web/dashboard/src/components/v3/tabs/agility/CarafPanel.tsx | 420 | - | button | void remove("asset", x.asset.id, x.asset.name)}> |  |
 | web/dashboard/src/components/v3/tabs/agility/DrillPanel.tsx | 56 | - | button | void run()}> |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 98 | - | button | void act("scan", async () => { const s = await runPQCScan(session); return `S... |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 101 | - | button | setShowPlan(true)}> Build execution plan |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 148 | - | button | setOpen(expanded ? null : p.id)}> {expanded ? : } |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 159 | - | button | void act(`dry-$ `, async () => { await executePQCPlan(session, p.id, true); r... |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 162 | - | button | { if (!window.confirm(`Execute "$ "? Each key step creates a new key of its t... |  |
-| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 168 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 99 | - | button | void act("scan", async () => { const s = await runPQCScan(session); return `S... |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 102 | - | button | setShowPlan(true)}> Build execution plan |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 149 | - | button | setOpen(expanded ? null : p.id)}> {expanded ? : } |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 160 | - | button | void act(`dry-$ `, async () => { await executePQCPlan(session, p.id, true); r... |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 163 | - | button | { if (!window.confirm(`Execute "$ "? Each key step creates a new key of its t... |  |
+| web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 89 | - | Btn | { setAck( ); setReason(""); }}>Acknowledge |  |

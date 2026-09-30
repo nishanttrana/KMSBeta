@@ -356,6 +356,9 @@ discovery,GET,/discovery/crypto/assets,/discovery/crypto/assets,h.listAssets,ker
 discovery,GET,/discovery/assets/{id},/discovery/assets/{param},h.getAsset,kernel,discovery.read,asset_read,crypto_asset,services/discovery/handler.go,35,discovery|GET|/discovery/assets/{param}
 discovery,PUT,/discovery/assets/{id}/classify,/discovery/assets/{param}/classify,h.reviewAsset,kernel,discovery.write,asset_review,crypto_asset,services/discovery/handler.go,36,discovery|PUT|/discovery/assets/{param}/classify
 discovery,GET,/discovery/summary,/discovery/summary,h.summary,kernel,discovery.read,summary_read,discovery,services/discovery/handler.go,37,discovery|GET|/discovery/summary
+discovery,GET,/discovery/targets,/discovery/targets,h.listTargets,kernel,discovery.read,targets_list,discovery,services/discovery/handler.go,39,discovery|GET|/discovery/targets
+discovery,POST,/discovery/targets,/discovery/targets,h.addTarget,kernel,discovery.write,target_add,discovery_target,services/discovery/handler.go,40,discovery|POST|/discovery/targets
+discovery,DELETE,/discovery/targets/{id},/discovery/targets/{param},h.removeTarget,kernel,discovery.write,target_remove,discovery_target,services/discovery/handler.go,41,discovery|DELETE|/discovery/targets/{param}
 ekm,POST,/ekm/agents/register,/ekm/agents/register,h.handleRegisterAgent,mux,,,,services/ekm/handler.go,55,ekm|POST|/ekm/agents/register
 ekm,GET,/ekm/agents,/ekm/agents,h.handleListAgents,mux,,,,services/ekm/handler.go,56,ekm|GET|/ekm/agents
 ekm,GET,/ekm/agents/{id}/status,/ekm/agents/{param}/status,h.handleAgentStatus,mux,,,,services/ekm/handler.go,57,ekm|GET|/ekm/agents/{param}/status

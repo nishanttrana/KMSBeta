@@ -259,7 +259,8 @@ func algorithmQSL(alg string) float64 {
 	return 0
 }
 
-// classifyAlgorithm is vulnerable, strong or unknown (cryptocatalog.Assess).
+// classifyAlgorithm is weak, quantum_vulnerable, strong or unknown
+// (cryptocatalog.Assess).
 func classifyAlgorithm(alg string) string {
 	return cryptocatalog.Assess(alg).Class
 }

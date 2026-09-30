@@ -4,6 +4,38 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.11.0-beta] — 2026-09-30
+
+### Crypto Discovery: ECDSA-P256 is no longer "vulnerable"; add TLS targets from the page
+- **Fixed:** the algorithm catalogue had one non-ready class, `vulnerable`,
+  for both "weak today" and "broken by a quantum computer". An ECDSA-P256
+  certificate (128-bit, sound today) was therefore shown in red next to
+  RSA-1024, and the "Quantum-vulnerable" card counted weak algorithms too.
+  `cryptocatalog.Assess` now returns `weak`, `quantum_vulnerable`, `strong`
+  or `unknown`, and discovery adds `exposed` for a secret found in code. The
+  page shows weak and exposed in red and quantum-vulnerable in amber, with a
+  card for each. Discovery derives the class from the algorithm on every
+  read, so rows stored as `vulnerable` show the right class without a rescan.
+  The summary's `classification_counts` keys change to match. pqc gives all
+  four non-ready classes the same risk weight as the old `vulnerable`.
+- **Added:** TLS targets. A `discovery.write` holder adds a host (DNS name or
+  IP) and port on the Crypto Discovery page (`GET`/`POST
+  /discovery/targets`, `DELETE /discovery/targets/{id}`). The network scan
+  handshakes with them, as well as with `DISCOVERY_TLS_ENDPOINTS`, and records
+  the key exchange, protocol, cipher and certificate key. Before, the only
+  way to name a target was that operator environment variable. Loopback,
+  link-local (including cloud metadata), multicast and unspecified addresses
+  are refused when the target is added, and again at dial time after DNS
+  resolution. At most 256 targets per tenant.
+- **Audit:** `audit.discovery.targets_list`, `target_add` and
+  `target_remove`, with refusals `invalid_target`, `target_exists`,
+  `target_limit`, `permission_denied` and `tenant_mismatch`.
+- **Tests:** `TestTargetRoutesAudited`, `TestTenantTargetIsScanned`,
+  `TestTenantTargetDialGuard`, `TestRefuseReservedAddr`,
+  `TestNormalizeTarget`, `TestStoredVulnerableIsReclassifiedOnRead`.
+- **Schema:** discovery migration 004 adds `discovery_scan_targets`
+  (replicated under discovery).
+
 ## [7.10.0-beta] — 2026-09-30
 
 ### A missing or bad token is audited as its own event on kernel services

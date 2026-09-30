@@ -67,9 +67,9 @@ func TestDiscoveryRelabelRefusedAndAudited(t *testing.T) {
 	if _, err := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"certs"}}); err != nil {
 		t.Fatalf("scan: %v", err)
 	}
-	assets, err := svc.ListAssets(ctx, "t1", 10, 0, "", "", "vulnerable")
+	assets, err := svc.ListAssets(ctx, "t1", 10, 0, "", "", "quantum_vulnerable")
 	if err != nil || len(assets) == 0 {
-		t.Fatalf("no vulnerable asset to relabel: %v", err)
+		t.Fatalf("no quantum-vulnerable asset to relabel: %v", err)
 	}
 	rec := &routetest.Recorder{}
 	h := NewHandler(svc, rec, nil)
@@ -81,7 +81,7 @@ func TestDiscoveryRelabelRefusedAndAudited(t *testing.T) {
 	if ev := rec.Last(t); ev.Action != "asset_review" || ev.Event.Result != route.ResultRefused || ev.Event.Details["reason"] != "classification_is_catalogue" {
 		t.Fatalf("relabel audited as %s %+v", ev.Action, ev.Event.Details)
 	}
-	if got, _ := svc.GetAsset(ctx, "t1", assets[0].ID); got.Classification != "vulnerable" {
+	if got, _ := svc.GetAsset(ctx, "t1", assets[0].ID); got.Classification != "quantum_vulnerable" {
 		t.Fatalf("classification changed to %q", got.Classification)
 	}
 }

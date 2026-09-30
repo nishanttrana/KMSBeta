@@ -44,6 +44,16 @@ export type DiscoverySummary = {
   pqc_readiness_percent: number;
 };
 
+// A TLS endpoint the tenant added for the network scan.
+export type DiscoveryTarget = {
+  id: string;
+  tenant_id: string;
+  host: string;
+  port: number;
+  created_by: string;
+  created_at: string;
+};
+
 // Sources a scan can read (services/discovery normalizeScanTypes).
 export const DISCOVERY_SCAN_TYPES = ["network", "cloud", "certs", "code"] as const;
 
@@ -150,4 +160,36 @@ export async function getDiscoverySummary(
     throw new Error("discovery returned no summary");
   }
   return res.summary;
+}
+
+export async function listDiscoveryTargets(session: AuthSession): Promise<DiscoveryTarget[]> {
+  const res = await serviceRequest<{ items?: DiscoveryTarget[] }>(
+    session,
+    "discovery",
+    `/discovery/targets?${tenantQuery(session)}`
+  );
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export async function addDiscoveryTarget(
+  session: AuthSession,
+  host: string,
+  port: number
+): Promise<DiscoveryTarget> {
+  const res = await serviceRequest<{ target?: DiscoveryTarget }>(
+    session,
+    "discovery",
+    `/discovery/targets?${tenantQuery(session)}`,
+    { method: "POST", body: JSON.stringify({ host, port }) }
+  );
+  return res?.target ?? ({} as DiscoveryTarget);
+}
+
+export async function removeDiscoveryTarget(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(
+    session,
+    "discovery",
+    `/discovery/targets/${encodeURIComponent(id)}?${tenantQuery(session)}`,
+    { method: "DELETE" }
+  );
 }

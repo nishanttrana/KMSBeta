@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-30T08:31:19Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T10:48:04Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `29`
 - Tab/component mappings: `36`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `840` across `28` services
-- Backend routes on the `pkg/route` kernel: `408` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `522`
-- Frontend call sites with exact backend route match: `480`
+- Backend HTTP routes discovered: `843` across `28` services
+- Backend routes on the `pkg/route` kernel: `411` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `525`
+- Frontend call sites with exact backend route match: `483`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `718`
-- Backend request flows with handler/service/package summaries: `840`
+- Clickable controls with static `onClick` handlers: `720`
+- Backend request flows with handler/service/package summaries: `843`
 
 ## How To Use This For Launch
 
@@ -141,7 +141,7 @@ flowchart LR
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (54 routes)"]
   svc_confidential["confidential (7 routes)"]
-  svc_discovery["discovery (8 routes)"]
+  svc_discovery["discovery (11 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
@@ -171,7 +171,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 94 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
-| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | discovery | 6 |
+| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | discovery | 9 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 101 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -214,7 +214,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | compliance | 54 | 19 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
-| discovery | 8 | 6 |
+| discovery | 11 | 9 |
 | ekm | 64 | 44 |
 | governance | 35 | 23 |
 | hsm-connector | 12 | 0 |

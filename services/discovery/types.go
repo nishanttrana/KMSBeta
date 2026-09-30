@@ -27,6 +27,20 @@ type Store interface {
 	GetAsset(ctx context.Context, tenantID string, id string) (CryptoAsset, error)
 	ListAssets(ctx context.Context, tenantID string, limit int, offset int, source string, assetType string, classification string) ([]CryptoAsset, error)
 	CountAssets(ctx context.Context, tenantID string) (int, error)
+
+	CreateTarget(ctx context.Context, target ScanTarget) error
+	ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error)
+	DeleteTarget(ctx context.Context, tenantID string, id string) error
+}
+
+// ScanTarget is a TLS endpoint a tenant added for the network scan.
+type ScanTarget struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	Host      string    `json:"host"`
+	Port      int       `json:"port"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type DiscoveryScan struct {

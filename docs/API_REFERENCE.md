@@ -2322,8 +2322,9 @@ none exists. Algorithm facts come from `pkg/cryptocatalog`
 - `total_assets`, `pqc_ready_assets` (ML-KEM, ML-DSA, SLH-DSA, LMS/XMSS),
   `hybrid_assets`, `classical_assets`, `algorithm_summary`.
 - `risk_items`: assets that are weak or quantum-vulnerable (or not
-  assessed), each with `classification` (`vulnerable`, `strong`, `unknown`
-  when the name states no parameter set), `qsl_score` (100 when neither weak
+  assessed), each with `classification` (`weak`, `quantum_vulnerable`,
+  `exposed` for a secret in code, `unknown` when the name states no
+  parameter set; discovery's pre-7.11.0-beta `vulnerable` may appear), `qsl_score` (100 when neither weak
   nor quantum-vulnerable, else 0) and `migration_target` (empty when not
   assessed).
 - `timeline_status`: the customer's plan deadlines
@@ -3097,12 +3098,13 @@ Returns the access policy for a path (and all sub-paths).
 
 **Authentication, permissions and audit (7.9.0-beta).** Every route needs a
 verified platform JWT and is on the route kernel: `discovery.read` for GETs,
-`discovery.write` for `POST /discovery/scan` and
-`PUT /discovery/assets/{id}/classify`. The tenant comes from the token (a
+`discovery.write` for `POST /discovery/scan`,
+`PUT /discovery/assets/{id}/classify`, `POST /discovery/targets` and
+`DELETE /discovery/targets/{id}`. The tenant comes from the token (a
 different `tenant_id` is refused as `tenant_mismatch`). Each request emits
 `audit.discovery.<action>` (`scan_start`, `scans_list`, `scan_read`,
-`assets_list`, `asset_read`, `asset_review`, `summary_read`), refusals
-included. `PUT .../classify` records a review (`status`, `notes`); a
+`assets_list`, `asset_read`, `asset_review`, `summary_read`,
+`targets_list`, `target_add`, `target_remove`), refusals included. `PUT .../classify` records a review (`status`, `notes`); a
 `classification` other than the catalogue's is refused with `409
 classification_is_catalogue`. The summary no longer returns `average_qsl` or
 `posture_score`, and `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
@@ -3114,18 +3116,36 @@ Keys & lifecycle → Crypto Discovery.
 `certs`, `code`) records only what each source observed:
 
 - `network`: a TLS handshake with each endpoint in `DISCOVERY_TLS_ENDPOINTS`
-  (operator config, no default). It records the negotiated key exchange,
-  protocol, cipher, leaf key and `chain_trusted`.
+  (operator config, no default) and each tenant target (below). It records
+  the negotiated key exchange, protocol, cipher, leaf key and
+  `chain_trusted`.
 
 Each asset's `strength_bits` is the classical security strength (RSA-2048 is
 112, ML-KEM-768 192; 0 when not assessed), and `classification`, `pqc_ready`
 and `qsl_score` come from `pkg/cryptocatalog` (since 3.2.0-beta; before, the
-key or parameter size and a hand-kept score).
+key or parameter size and a hand-kept score). `classification` is `weak`,
+`quantum_vulnerable` (sound today, broken by a quantum computer, for example
+ECDSA-P256), `strong`, `unknown` (not assessed), or `exposed` for a secret
+found by the code scan. It is derived from the algorithm on every read; before
+7.11.0-beta `weak` and `quantum_vulnerable` were one `vulnerable`. The
+summary's `classification_counts` has these keys.
 - `cloud`: each registered account's live KMS inventory via the cloud
   service (`CLOUD_URL`, default `https://cloud:8080`).
 - `certs`: the certs service's certificates.
 - `code`: the tree mounted at `WORKSPACE_ROOT` (required). It records
   file:line and `fingerprint_sha256_prefix`, never the secret.
+
+**TLS targets (7.11.0-beta).** `GET /discovery/targets` lists the
+tenant's targets (`{"items": [{id, host, port, created_by, created_at}]}`).
+`POST /discovery/targets` with body `{"host": "api.example.com", "port": 443}`
+adds one (`201 {"target": {...}}`). `host` is a DNS name or IP address,
+without scheme or path, and is stored lower-case. `DELETE
+/discovery/targets/{id}` removes one. Refusals: `400 invalid_target` (bad
+host or port, or a loopback, link-local, metadata, multicast or unspecified
+address), `409 target_exists`, and `409 target_limit` (256 per tenant). The
+scan dials each target through the same address check after DNS
+resolution, so a name that resolves to a reserved address fails as
+`refused <addr>` in `stats.errors`.
 
 An unconfigured or failed source is recorded in `stats.errors`. The scan
 status is then `completed_with_errors`, or `failed` if every source failed.
@@ -3370,7 +3390,7 @@ Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
-| audit.discovery.* | Discovery scans, inventory reads and asset reviews (route kernel, 7.9.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified` |
+| audit.discovery.* | Discovery scans, inventory reads, asset reviews and TLS targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified` |
 | audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
@@ -3898,6 +3918,9 @@ from the code; do not edit by hand.
 - `GET /svc/discovery/discovery/scans`
 - `GET /svc/discovery/discovery/scans/{id}`
 - `GET /svc/discovery/discovery/summary`
+- `GET /svc/discovery/discovery/targets`
+- `POST /svc/discovery/discovery/targets`
+- `DELETE /svc/discovery/discovery/targets/{id}`
 
 ### ekm (`/svc/ekm/`)
 

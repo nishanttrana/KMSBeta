@@ -1059,10 +1059,11 @@ func riskPriority(alg string, classification string, qsl float64, source string)
 	priority := 40
 	classification = strings.ToLower(strings.TrimSpace(classification))
 	source = strings.ToLower(strings.TrimSpace(source))
-	if classification == "vulnerable" {
+	// "vulnerable" is what discovery stored before 7.11.0-beta split it into
+	// weak and quantum_vulnerable; "exposed" is a secret found in code.
+	switch classification {
+	case "weak", "quantum_vulnerable", "exposed", "vulnerable":
 		priority += 25
-	} else if classification == "weak" {
-		priority += 12
 	}
 	if isDeprecatedAlgorithm(alg) {
 		priority += 18

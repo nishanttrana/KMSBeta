@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### One label for two facts hides the one that matters
+- **What happened:** the catalogue reported "weak" and "quantum-vulnerable"
+  as one class, `vulnerable`. Discovery showed an ECDSA-P256 certificate in
+  red beside RSA-1024, and its "Quantum-vulnerable" card counted weak
+  algorithms. The catalogue already kept `Weak` and `QuantumVulnerable` as
+  separate flags; only `Assess` merged them. pqc even had a `weak` branch
+  that never fired.
+- **Rule:** a class is a fact the reader acts on. Don't fold two facts with
+  different urgency into one label. When a stored label is derived, derive
+  it on read so a catalogue change never leaves stale rows.
+
+### An SSRF guard on the hostname is not a guard
+- **What happened:** adding tenant TLS targets needed a block on loopback and
+  metadata addresses. Checking the typed host alone misses a DNS name that
+  resolves, or rebinds, to 127.0.0.1 or 169.254.169.254.
+- **Rule:** check the literal when it's added, for a clear error, and check
+  the resolved address in the dialer's `Control` hook, which sees what is
+  actually dialled.
+
 ### A refusal before the kernel is a refusal nobody audits
 - **What happened:** `pkg/jwtauth.MustWrap` returned 401 before the route
   kernel ran, so a missing or forged token on a kernel service left only the
