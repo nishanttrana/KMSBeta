@@ -4,6 +4,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.6.0-beta] — 2026-09-30
+
+### Alert Center shows alerts again
+- **Fixed:** the Alert Center was empty. Reporting builds alerts by reading
+  audit events, but its audit client sent no credential. Since audit started
+  requiring a JWT on every read (`91a9be084`), every one-minute alert sync
+  failed on audit's plain-text `401`, logged as `alert sync tenant=root:
+  invalid character 'u' looking for beginning of value`, and no alert was
+  ever created.
+- Reporting now sends its `kms-reporting` service token to audit
+  (`/audit/events`) and to compliance (`/compliance/posture`, which fed the
+  posture section of generated reports and failed the same way, silently).
+- Compliance's audit client had the same gap: its assessments read audit
+  events without a token and treated the refusal as "no events". It now
+  sends the `kms-compliance` service token.
+- An upstream refusal now reads as `401 Unauthorized: …` in the log, not
+  as a JSON syntax error.
+- **Tests:** `TestAuditAndComplianceCallsCarryServiceIdentity` (reporting),
+  `TestAuditReadsCarryServiceIdentity` (compliance).
+- **Still open:** compliance's `fetchEvents`, `fetchAlertStats` and the
+  connector-delta read still turn an audit error into an empty result, and
+  `AlertStats` calls `/alerts/stats` on the audit URL, a route audit
+  doesn't have. A failed source should show "unavailable".
+
 ## [7.5.0-beta] — 2026-09-30
 
 ### AI security gateway removed (breaking)

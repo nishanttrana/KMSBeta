@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type AuditClient interface {
@@ -82,6 +84,8 @@ func (c *HTTPAuditClient) doJSON(ctx context.Context, method string, path string
 	if err != nil {
 		return nil, err
 	}
+	// Audit refuses tokenless callers; compliance reads as its own identity.
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err

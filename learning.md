@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Fixing one client of a service leaves its siblings broken
+- **What happened:** the Alert Center was empty for every tenant. Reporting's
+  audit client never sent a service token. When audit started requiring a
+  JWT, every alert sync got `401 unauthorized` in plain text and logged it
+  as `invalid character 'u'`, a JSON error that hid the refusal.
+- **How it slipped through:** when posture moved onto the route kernel,
+  reporting's posture client got `servicetoken.Authorize` and a test, but
+  the audit and compliance clients next to it didn't get the same review.
+  The sync error only went to the log, and the empty tab looked like "no
+  alerts yet".
+- **Rule:** when a service starts refusing tokenless callers, grep every
+  client of it (`<service>_client.go` in each caller) and add the token and
+  a test to all of them in the same change. Check the status before
+  decoding an error body: gates may answer in plain text.
+
 ### A feature that sounds like security isn't a security feature
 - **What happened:** the AI gateway shipped for months as "prompt-injection
   protection" and "encrypted" provider keys. It was a list of regexes, and the

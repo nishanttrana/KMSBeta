@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPAuditClient struct {
@@ -77,17 +80,33 @@ func (c *HTTPAuditClient) doJSON(ctx context.Context, path string) (map[string]i
 	if err != nil {
 		return nil, err
 	}
+	// Audit authenticates every read; reporting is a verified service
+	// principal there. Without the token the alert sync gets 401 and the
+	// Alert Center stays empty.
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close() //nolint:errcheck
+	return decodeResponse(resp)
+}
+
+// decodeResponse returns the JSON body of a successful response, or an error
+// naming the status and the service's message. An error body need not be
+// JSON (the JWT gate answers in plain text).
+func decodeResponse(resp *http.Response) (map[string]interface{}, error) {
 	out := map[string]interface{}{}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
-	}
+	decErr := json.NewDecoder(io.LimitReader(resp.Body, 32<<20)).Decode(&out)
 	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, errors.New(extractErrorMessage(out))
+		msg := "request failed"
+		if decErr == nil {
+			msg = extractErrorMessage(out)
+		}
+		return nil, fmt.Errorf("%s: %s", resp.Status, msg)
+	}
+	if decErr != nil {
+		return nil, decErr
 	}
 	return out, nil
 }

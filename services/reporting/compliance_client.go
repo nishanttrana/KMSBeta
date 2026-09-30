@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPComplianceClient struct {
@@ -35,17 +35,15 @@ func (c *HTTPComplianceClient) GetPosture(ctx context.Context, tenantID string) 
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close() //nolint:errcheck
-	out := map[string]interface{}{}
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	out, err := decodeResponse(resp)
+	if err != nil {
 		return nil, err
-	}
-	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, errors.New(extractErrorMessage(out))
 	}
 	posture, _ := out["posture"].(map[string]interface{})
 	if posture == nil {
