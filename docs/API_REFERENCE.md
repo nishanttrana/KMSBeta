@@ -2401,6 +2401,19 @@ event was removed in 6.9.0-beta).
 
 Tokenization, masking, field-level encryption, and secure vault search.
 
+**Authentication (7.2.0-beta).** Every route needs a verified platform JWT
+(`Authorization: Bearer`), which dataprotect forwards to keycore so keys are
+used as the user (pkg/delegation). The exceptions are the wrapper runtime
+routes `POST /field-encryption/leases`, `POST /field-encryption/receipts`,
+`POST /field-encryption/leases/{id}/renew` and `GET /field-protection/resolve`
+with a named `wrapper_id`: a registered wrapper calls them with
+`X-Wrapper-Token` alone, verified against its registration. Wrapper
+registration (`register/init`, `register/complete`) needs a platform token.
+Anything else gets `401 unauthorized`, audited as
+`audit.dataprotect.request_refused` (`reason: unauthenticated |
+invalid_token`). Dataprotect refuses to start without the key that verifies
+tokens. Before 7.2.0-beta nothing checked a token on any route.
+
 **FPE** (`POST /fpe/encrypt`, `POST /fpe/decrypt`; body `tenant_id`, `key_id`,
 `algorithm`, `radix` 2–36, `tweak`, `plaintext`/`ciphertext`): `FF1` (NIST
 SP 800-38G; the default). `FF3`/`FF3-1` → `400 fpe_algorithm_refused`
@@ -2936,6 +2949,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm, audit, compliance, workload: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
+- `audit.dataprotect.request_refused` (a dataprotect request without a verified platform token, or without a wrapper token on a wrapper runtime route; `reason: unauthenticated | invalid_token`): dataprotect authentication (7.2.0-beta)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.status_transition_refused`: keycore refused a key status change the lifecycle state table does not allow
 - `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access

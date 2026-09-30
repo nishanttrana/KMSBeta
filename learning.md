@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### "Authenticates per-route" was a comment, not code: dataprotect was open
+- **What happened:** dataprotect booted with `SkipJWT` and a comment saying
+  "operator APIs validate platform JWTs in handlers". No handler did.
+  `mustTenant` calls `tenantcheck.Enforce`, which skips when there are no
+  claims, so a request with no token passed every check. A tokenless
+  `POST /fpe/encrypt` returned ciphertext through the public gateway route.
+- **Knock-on:** 6.0.0-beta delegation was documented as done for dataprotect,
+  but `delegation.Attach` found no verified token and silently sent every
+  call as the bare service. Its tests fed a token straight into the context,
+  so they never went through the way requests actually arrive.
+- **How it slipped through:** `SkipJWT` is a documented burn-down exception,
+  and its justifying comment was trusted rather than tested. No test sent a
+  request without a token.
+- **Rule:** a service that opts out of the platform JWT middleware needs a
+  test that a tokenless call to a crypto route is refused
+  (`TestUnauthenticatedRequestsAreRefusedAndAudited`). A delegation claim
+  needs a test that runs from the HTTP entry point to the keycore call
+  (`TestVerifiedTokenReachesTheService`), not one that puts the token into
+  the context by hand.
+
 ### Finish or discard: a half-done removal sat uncommitted for a day
 - **What happened:** a session deleted the payment service in the shared
   checkout (108 files, about 14,600 lines) but never documented, versioned or

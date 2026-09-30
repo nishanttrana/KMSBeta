@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	pkgauth "vecta-kms/pkg/auth"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -59,6 +60,12 @@ type fakeDataProtectKeyCore struct {
 	deriveCalls   int
 	deriveHistory []string
 	usages        []string // usage per MeterUsage call (pkg/delegation)
+	tokens        []string // verified user token in the context of each MeterUsage call
+}
+
+func verifiedToken(ctx context.Context) string {
+	raw, _ := pkgauth.VerifiedTokenFromContext(ctx)
+	return raw
 }
 
 // ServiceDerive stands in for keycore's HKDF over secret material: a
@@ -88,9 +95,10 @@ func (f *fakeDataProtectKeyCore) GetKey(_ context.Context, _ string, keyID strin
 	return map[string]interface{}{"id": keyID, "kcv": "ABCD12"}, nil
 }
 
-func (f *fakeDataProtectKeyCore) MeterUsage(_ context.Context, _ string, _ string, _ string, usage string) error {
+func (f *fakeDataProtectKeyCore) MeterUsage(ctx context.Context, _ string, _ string, _ string, usage string) error {
 	f.mu.Lock()
 	f.usages = append(f.usages, usage)
+	f.tokens = append(f.tokens, verifiedToken(ctx))
 	f.mu.Unlock()
 	return nil
 }

@@ -7,6 +7,32 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Dataprotect: platform token everywhere, wrapper token only on wrapper runtime routes (7.2.0-beta)
+
+**Decision.** Dataprotect verifies a platform JWT on every route in one
+gate (`NewAuthenticatedHandler`), in front of the handlers. Without a
+platform token, only the wrapper runtime routes (lease, receipt, renew,
+resolve for a named wrapper) are admitted, and only with an
+`X-Wrapper-Token`, which the service verifies against the wrapper's
+registration. Registration needs an operator token.
+
+**Why.** Nothing verified tokens before (see learning.md). A single gate
+can't be skipped by a new handler; checking inside each handler is what
+failed.
+
+**Rejected.** Dropping `SkipJWT` for the platform middleware: it can't admit
+the wrapper routes, and its 401 isn't audited as a specific event. Moving
+all about 50 routes onto `pkg/route` in this fix: that is the right end
+state (dataprotect is on the burn-down list), but closing the hole shouldn't
+wait for it. Tokenless registration: `register/complete` takes
+`governance_approved` from the body, so it has to come from an operator.
+
+**Enforced by:** `TestUnauthenticatedRequestsAreRefusedAndAudited`,
+`TestWrapperRuntimeRoutesReachTheWrapperCheck`,
+`TestVerifiedTokenReachesTheService`, `TestAuthenticatedHandlerNeedsAParser`.
+
+---
+
 ## 2026-09-30 — Payment sources go to KMS Extension as a seed (7.1.0-beta)
 
 **Decision.** The owner asked to move the payments tab and codebase "to kms

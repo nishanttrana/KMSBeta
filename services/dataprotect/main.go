@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"vecta-kms/pkg/clusterstate"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	"vecta-kms/pkg/servicetoken"
 
 	pkgplatform "vecta-kms/pkg/platform"
@@ -15,9 +16,10 @@ import (
 var logger = log.New(os.Stderr, "[kms-dataprotect] ", log.LstdFlags|log.Lmsgprefix)
 
 // main boots the platform spine and mounts the data protection service with
-// its missing-receipt reconciler loop. SkipJWT is set because dataprotect
-// authenticates per-route: operator APIs validate platform JWTs in handlers
-// and field-encryption wrappers use their own wrapper JWTs (WithWrapperJWT).
+// its missing-receipt reconciler loop. SkipJWT is set because the wrapper
+// runtime routes authenticate with wrapper JWTs (WithWrapperJWT) instead of a
+// platform token; NewAuthenticatedHandler verifies the platform JWT on every
+// other route and refuses (and audits) anything unauthenticated.
 func main() {
 	// Attach this service's per-service JWT to internal keycore calls (no-op
 	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
@@ -63,7 +65,15 @@ func main() {
 	}
 	go startMissingReceiptReconciler(rt.Ctx, logger, svc, reconcileInterval, reconcileBatch)
 
-	if err := rt.Serve(NewHandler(svc)); err != nil {
+	parser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "DATAPROTECT", Issuer: rt.Cfg.JWTIssuer, Audience: rt.Cfg.JWTAudience})
+	if err != nil {
+		rt.Logger.Fatalf("refusing to start: jwt parser: %v", err)
+	}
+	handler, err := NewAuthenticatedHandler(svc, parser)
+	if err != nil {
+		rt.Logger.Fatalf("refusing to start: %v", err)
+	}
+	if err := rt.Serve(handler); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}
 }

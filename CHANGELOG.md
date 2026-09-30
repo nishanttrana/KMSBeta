@@ -4,6 +4,29 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.2.0-beta] — 2026-09-30
+
+### Security: dataprotect verifies who is calling (critical fix)
+- **Before:** dataprotect booted with the platform JWT check off
+  (`SkipJWT`) and no route checked a token, and `/svc/dataprotect/` is
+  routed through the gateway. Anyone who could reach it could tokenize,
+  detokenize, FPE-encrypt or decrypt, mask and read policies with any key
+  (a tokenless `POST /fpe/encrypt?tenant_id=…` returned ciphertext). The
+  6.0.0-beta delegation (keys used as the user) also never engaged in
+  dataprotect, because no verified user token was in its context.
+- **Now:** every route needs a verified platform token, which is forwarded
+  to keycore so the user's own key grants decide. The field-encryption
+  wrapper runtime routes (lease, receipt, renew, resolve for a named
+  wrapper) still accept a wrapper's `X-Wrapper-Token` alone, verified
+  against its registration. Wrapper registration now needs an operator
+  token (completing it asserts a governance approval). Every refusal is
+  audited as `audit.dataprotect.request_refused` (`unauthenticated` or
+  `invalid_token`). Dataprotect refuses to start without the key that
+  verifies tokens.
+- **Upgrade note:** a client that called dataprotect without a bearer
+  token (other than a registered wrapper on its runtime routes) now gets
+  `401`; send the user's or service's platform token.
+
 ## [7.1.0-beta] — 2026-09-30
 
 ### Payments: sources kept in KMS Extension; removal finished

@@ -140,6 +140,15 @@ event keycore emits carries `on_behalf_of`, `via` and `usage`. The route
 permission is still checked against the calling service. The edge (Envoy)
 strips both headers from outside requests.
 
+**Correction (7.2.0-beta).** In dataprotect this engaged only from
+7.2.0-beta: until then dataprotect booted without JWT verification
+(`SkipJWT`) and no route checked a token, so no verified user token was
+ever in its context and every call reached keycore as the bare service,
+while tokenless callers could use any key. `NewAuthenticatedHandler` now
+requires a verified platform token on every route except the wrapper
+runtime routes (wrapper token), and `TestVerifiedTokenReachesTheService`
+proves the token reaches the keycore call.
+
 A workload token forwarded this way names key operations only
 (`key.encrypt`, ...), so its permission check accepts the usage's base
 operation (`fpe-encrypt` → encrypt); its key binding still applies.
@@ -333,7 +342,7 @@ Every slice of this work meets all of these, or it isn't done:
 |---|---|---|
 | 0 | Tokenless refusal; access and key-management routes on the kernel with permissions; owner-or-admin for grant changes; actor from token | **done, 4.0.0-beta** |
 | 0 | Key visibility (option A, `key.inventory.read`, `read` grants); every remaining keycore write on the kernel | **done, 5.0.0-beta** |
-| 0 | Delegated usage with the user's token for dataprotect, payment, certs (section 5) | **done, 6.0.0-beta** (payment moved out in 7.0.0-beta) |
+| 0 | Delegated usage with the user's token for dataprotect, payment, certs (section 5) | **done, 6.0.0-beta** (payment moved out in 7.0.0-beta; engaged in dataprotect only from 7.2.0-beta, when it began verifying tokens) |
 | 0 | Enforce the declared usage; bare service identities limited to their usages; field-encryption lease decision; step-up from a verified MFA claim | open |
 | 1 | Usage-mask column (full vocabulary, per-key migration, KMIP mask kept); owner and change-owner; subjects from auth; explicit deny | open |
 | 2 | Label policies, cache with NATS invalidation, explainers, dry run; tags into labels | open |
