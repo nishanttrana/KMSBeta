@@ -7,6 +7,25 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Integration how-tos live in Documentation, not a product tab (7.14.0-beta)
+
+- **Decision:** the DevSecOps / IaC tab is removed. How to drive the KMS
+  from CI/CD is documented in `docs/CI_CD_AUTOMATION.md` and mirrored in
+  Documentation → Guides. A dashboard tab must operate on live data. Static
+  how-to content goes in Documentation (one home per view).
+- **Why:** the tab was static and described integrations that don't exist
+  (Terraform provider, SDKs, Helm chart, sidecar). Rule 8 forbids UI that
+  presents a capability that isn't built.
+- **Rejected:** keeping the tab with a "preview" badge, because there's
+  nothing to preview: no backend and no stored configuration. We also
+  rejected building a Terraform provider or SDKs to make the claims true,
+  which is a separate product decision for the owner.
+- **Enforced by:** the product map (`docs/generated/`) lists each tab's API
+  calls, and a new tab with 0 calls is reviewed against this entry. The
+  guide names only routes and fields verified in source.
+
+---
+
 ## 2026-09-30 — Discovery: weak and quantum-vulnerable are separate classes; tenants add TLS targets (7.11.0-beta)
 
 - **Decision:** `cryptocatalog.Assess` reports `weak` and

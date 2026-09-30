@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### Fake removed: the DevSecOps / IaC tab advertised a Terraform provider, SDKs and a sidecar that never existed
+- **What happened:** the tab was about 1,000 lines of hard-coded snippets
+  with no API calls. It showed install commands for four SDKs and a
+  registry provider, a sidecar image, dead buttons, and a REST table with
+  unregistered routes. It looked like product documentation, so nobody
+  checked that any of it existed.
+- **How it slipped through:** `real-capability` conformance looks for
+  `mock*`/`fake*`/`simulate*` functions and `Math.random`. A static page of
+  code samples naming non-existent packages trips none of those. The product
+  map showed it with **0 API calls**, and that was the tell.
+- **Rule:** a dashboard tab with zero backend calls is documentation, and it
+  belongs in the Documentation tab and `docs/`. Every package, image, route
+  and field a doc names must be found in the repo first (`grep` the route
+  registration, the request struct's JSON tags). Two more drifts turned up
+  while checking: login returns `access_token`, not `token`, and a client
+  token's `kms.read`/`kms.write` only reach the `secrets` domain
+  (`pkg/route.CoarseDomains`), so a registered REST client cannot rotate
+  keys.
+
+
 ### Never again: resetting a shared doc in a checkout another session is using
 - **What happened:** after pushing 8f0dd192c from a worktree, I ran
   `git checkout HEAD -- <my files>` in the shared checkout. The list

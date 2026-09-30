@@ -93,7 +93,6 @@ const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ defa
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
-const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
 const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
 const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
 const DiscoveryTab = lazy(() => import("./v3/tabs/DiscoveryTab").then(m => ({ default: m.DiscoveryTab })));
@@ -193,7 +192,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   backup: BackupTab,
-  devsecops: DevSecOpsTab,
   playbooks: PlaybooksTab,
   workload: WorkloadIdentityTab,
   confidential: ConfidentialComputeTab,
@@ -233,7 +231,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   backup: "Backup & Restore",
-  devsecops: "DevSecOps / IaC",
   playbooks: "Playbooks",
   workload: "Workload Identity",
   confidential: "Confidential Compute",
@@ -280,7 +277,6 @@ const NAV = [
   { g: "Platform", items: [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
-    { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "admin", icon: Settings, label: "Administration" },
     { id: "docs", icon: FileText, label: "Documentation" },
   ]},
@@ -341,7 +337,7 @@ const SUB_PANES: Record<string, any[]> = {
 // Tabs merged into another; a saved or linked id opens the new home.
 // Platform > Health went to Administration > Health (1.38.0-beta),
 // Operations Metrics to Analytics > Operations (2.1.0-beta).
-const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "key_analytics" };
+const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "key_analytics", devsecops: "docs" };
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;

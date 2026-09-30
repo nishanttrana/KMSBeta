@@ -124,33 +124,25 @@ request is refused (`403` with `delegator_unknown`, `delegator_inactive` or
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| tenant_id | string | Yes | Tenant to authenticate against |
 | username | string | Yes | Username or email |
 | password | string | Yes | Password |
-| tenantId | string | Yes | Tenant to authenticate against |
-| mfaCode | string | No | TOTP code if MFA enabled |
+| totp_code | string | No | TOTP code if MFA is enabled |
 
-**Response 200**: `token`, `refreshToken`, `expiresAt`, `userId`, `tenantId`, `roles[]`, `mfaRequired`
+**Response 200**: `access_token`, `token_type` (`Bearer`), `expires_at`,
+`must_change_password`, `security_policy`, `request_id`. While
+`must_change_password` is true the token only carries
+`auth.password.change`.
 
 ```bash
-export TOKEN=$(curl -sk -X POST https://localhost/svc/auth/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"changeme","tenantId":"root"}' | jq -r '.token')
+# Password comes from the environment and goes to curl on stdin, never argv.
+export TOKEN=$(jq -n '{tenant_id: "root", username: env.KMS_USER, password: env.KMS_PASSWORD}' |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -X POST https://localhost/svc/auth/auth/login \
+    -H "Content-Type: application/json" --data-binary @- | jq -r .access_token)
 ```
 
-Response:
-```json
-{
-  "token": "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ1c2VyLTAxQVJaMk5ERUtUU1Y0UlJGRlE2OUc1RkFWIiwidGlkIjoicm9vdCIsInJvbGVzIjpbImFkbWluIl0sImlhdCI6MTc0MDU2ODAwMCwiZXhwIjoxNzQwNTcxNjAwfQ.signature",
-  "refreshToken": "rt_01ARZ3NDEKTSV4RRFFQ69G5FAV_longstring",
-  "expiresAt": "2025-03-15T15:22:00Z",
-  "userId": "user-01ARZ3NDEKTSV4RRFFQ69G5FAV",
-  "tenantId": "root",
-  "roles": ["admin"],
-  "mfaRequired": false
-}
-```
-
-Errors: `INVALID_CREDENTIALS` (401), `MFA_REQUIRED` (401), `ACCOUNT_LOCKED` (401), `TENANT_NOT_FOUND` (404)
+Errors: `401 unauthorized` (bad credentials, disabled user or bad MFA code), `429` (locked out
+after repeated failures).
 
 ---
 

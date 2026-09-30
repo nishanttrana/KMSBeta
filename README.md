@@ -31,6 +31,7 @@ This README is the landing page. Detailed operator documentation now lives under
 - [REST API Additions](docs/REST_API_ADDITIONS.md)
   - Detailed REST notes and expanded API coverage for the newer features.
 - [Automation, ALKM, and PQC](docs/AUTOMATION_ALKM_PQC.md)
+- [CI/CD and Automation](docs/CI_CD_AUTOMATION.md)
   - Reconciler (tenant manifests, key rotation by cryptoperiod, expiry and ops limit), the sustained-risk signal, PQC key generation (ML-KEM, ML-DSA, SLH-DSA), CBOM and PQC migration plans, and what that page no longer claims.
 ## Security & Compliance
 

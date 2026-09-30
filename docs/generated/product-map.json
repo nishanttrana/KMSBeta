@@ -18006,7 +18006,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 710,
+      "line": 706,
       "tabs": [],
       "tag": "button"
     },
@@ -18014,7 +18014,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 870,
+      "line": 866,
       "tabs": [],
       "tag": "button"
     },
@@ -18022,7 +18022,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 921,
+      "line": 917,
       "tabs": [],
       "tag": "button"
     },
@@ -18030,7 +18030,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 944,
+      "line": 940,
       "tabs": [],
       "tag": "button"
     },
@@ -18038,7 +18038,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 994,
+      "line": 990,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18046,7 +18046,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1031,
+      "line": 1027,
       "tabs": [],
       "tag": "button"
     },
@@ -18054,7 +18054,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1066,
+      "line": 1062,
       "tabs": [],
       "tag": "button"
     },
@@ -20168,36 +20168,6 @@
       "line": 430,
       "tabs": [],
       "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
-      "handler": "handleCopy",
-      "label": "{copied ? : }",
-      "line": 50,
-      "tabs": [
-        "devsecops"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
-      "handler": "",
-      "label": "setView(id)} style={{ padding: \"9px 18px\", border: \"none\", background: \"trans...",
-      "line": 636,
-      "tabs": [
-        "devsecops"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
-      "handler": "",
-      "label": "setApiGroupFilter(g)} style={{ padding: \"4px 10px\", borderRadius: 5, border:...",
-      "line": 801,
-      "tabs": [
-        "devsecops"
-      ],
-      "tag": "button"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
@@ -31355,7 +31325,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T15:40:50Z",
+  "generated_at": "2026-09-30T15:52:55Z",
   "navigation": [
     {
       "group": "Overview",
@@ -31486,11 +31456,6 @@
       "group": "Platform",
       "id": "backup",
       "label": "Backup & Restore"
-    },
-    {
-      "group": "Platform",
-      "id": "devsecops",
-      "label": "DevSecOps / IaC"
     },
     {
       "group": "Platform",
@@ -84537,17 +84502,17 @@
   "summary": {
     "backend_routes": 843,
     "backend_services": 28,
-    "button_inventory": 720,
+    "button_inventory": 717,
     "frontend_call_sites": 525,
     "matched_frontend_call_sites": 483,
-    "nav_items": 29,
+    "nav_items": 28,
     "request_flows": 843,
     "request_flows_with_frontend": 492,
     "request_flows_with_internal_package_calls": 147,
     "request_flows_with_service_calls": 502,
     "request_flows_with_store_calls": 604,
     "subpane_groups": 8,
-    "tab_components": 36,
+    "tab_components": 35,
     "unmatched_frontend_call_sites": 42
   },
   "tabs": [
@@ -84920,15 +84885,6 @@
         "web/dashboard/src/lib/backup.ts",
         "web/dashboard/src/lib/featureStatus.ts"
       ]
-    },
-    {
-      "call_count": 0,
-      "component": "web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx",
-      "group": "Platform",
-      "id": "devsecops",
-      "label": "DevSecOps / IaC",
-      "services": [],
-      "support_files": []
     },
     {
       "call_count": 0,
@@ -114609,7 +114565,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T15:40:50Z",
+    "generatedAt": "2026-09-30T15:52:55Z",
     "methods": [
       "DELETE",
       "GET",

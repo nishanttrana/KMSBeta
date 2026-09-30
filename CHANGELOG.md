@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.14.0-beta] — 2026-09-30
+
+### DevSecOps / IaC tab removed; real CI/CD guide in Documentation
+- **Removed:** the DevSecOps / IaC tab. It made no API calls and presented
+  things that don't exist as available: a Terraform provider
+  (`vecta-io/vectakms`), Go/Python/Node.js/Java SDKs, a Helm chart and a
+  `kms-sidecar` image, and "Download Provider Docs" / "Registry" buttons
+  that did nothing. Its REST table listed routes that aren't registered
+  (`DELETE /keys/{id}`, `GET /keys/{id}/status`, `/auth/sso/callback`), and
+  its examples put tokens on the curl command line and pulled a signing
+  private key onto the CI runner. A saved or bookmarked `#devsecops` now
+  opens Documentation.
+- **Added:** [docs/CI_CD_AUTOMATION.md](docs/CI_CD_AUTOMATION.md) and
+  Documentation → Guides → CI/CD & Automation, checked against the code:
+  the two pipeline identities and exactly what each can do (a REST client
+  token reaches secrets and signing only, and key operations need a
+  dedicated user holding `key.*`), secret injection, key rotation, and
+  release signing with the CI job's OIDC token (audience
+  `vecta-kms-signing`). Every example passes credentials on stdin, never in
+  argv.
+- **Fixed:** Documentation's sidebar never showed the `guide-*` sections
+  (Agent Deploy, Vault Hierarchy, HSM Certificates) because no nav group
+  included them. They now appear under Guides.
+- **Fixed:** `docs/API_REFERENCE.md` login: the response field is
+  `access_token` (the example read `.token`, which is `null`), and the body
+  is `tenant_id` / `username` / `password` / `totp_code`.
+
 ## [7.13.0-beta] — 2026-09-30
 
 ### Crypto Discovery never scans or lists the KMS's own internal services

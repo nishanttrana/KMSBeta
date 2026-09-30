@@ -33,6 +33,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) | Feature overview (concise) |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Install, startup, health, backup, cluster |
 | [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) | Step-by-step scenario walkthroughs |
+| [CI_CD_AUTOMATION.md](CI_CD_AUTOMATION.md) | Pipelines: identities, secrets, key rotation, OIDC release signing |
 | [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) | Supplementary REST surface detail |
 | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Operator day-to-day guidance |
 | [RECOMMENDATIONS.md](RECOMMENDATIONS.md) | Command Center posture score and recommendation rule catalogue |

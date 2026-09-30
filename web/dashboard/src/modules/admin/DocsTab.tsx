@@ -144,6 +144,7 @@ const NAV = [
   { id: "config-fastinstall", label: "Config: Fast Install" },
   { id: "guide-vault-hierarchy", label: "Guide: Vault Hierarchy" },
   { id: "guide-hsm-certs", label: "Guide: HSM Certificates" },
+  { id: "guide-automation", label: "Guide: CI/CD & Automation" },
   { id: "troubleshooting", label: "Troubleshooting" },
 ];
 
@@ -3005,6 +3006,55 @@ path "secret/data/finance/*" {
 );
 
 /* ───────── HSM Certificate Storage Guide ───────── */
+const SectionGuideAutomation = () => (
+  <div>
+    <div style={S.h1}>CI/CD and Automation</div>
+    <P>Pipelines (GitHub Actions, GitLab CI, Jenkins, Ansible or any job runner) use the public REST API through Envoy. Every call is authorised by the route kernel and recorded in the Audit Log like a dashboard action. Full guide with examples: docs/CI_CD_AUTOMATION.md.</P>
+    <H2>What exists</H2>
+    <table style={S.table}>
+      <thead><tr><th style={S.th}>Integration</th><th style={S.th}>Status</th></tr></thead>
+      <tbody>
+        {[
+          ["REST API /svc/<service>/...", "Yes: API sections here and API: OpenAPI / Swagger"],
+          ["PKCS#11 / JCA providers, KMIP", "Yes: API: PKCS#11/JCA"],
+          ["Artifact signing with a CI OIDC token", "Yes: below"],
+          ["Automatic key rotation, tenant manifests", "Yes, server side: rotation policies and the reconciler"],
+          ["Terraform provider, Go/Python/Node/Java SDKs, Helm chart, sidecar", "No. None is published; call the REST API"],
+        ].map(([a, b]) => <tr key={a}><td style={S.td}>{a}</td><td style={{ ...S.td, fontFamily: "inherit" }}>{b}</td></tr>)}
+      </tbody>
+    </table>
+    <H2>1. Pipeline identity</H2>
+    <H3>REST client: secrets and signing</H3>
+    <P>Register with POST /svc/auth/auth/register (created pending). An administrator holding <IC>auth.client.activate</IC> approves it with POST /svc/auth/auth/register/{"{id}"}/activate, which returns <IC>api_key</IC> once: store it straight into the CI secret store. Each job exchanges it for a token that lasts 60 to 3600 s:</P>
+    <Code>{`printf 'X-API-Key: %s\\n' "$KMS_API_KEY" |
+  curl -sS --fail-with-body -X POST "$KMS_URL/svc/auth/auth/client-token" \\
+    -H @- -H 'Content-Type: application/json' \\
+    -d "{\\"tenant_id\\":\\"$KMS_TENANT\\",\\"client_id\\":\\"$KMS_CLIENT_ID\\"}" | jq -r .access_token`}</Code>
+    <P>The client token carries <IC>kms.read</IC> and <IC>kms.write</IC>, which the route kernel honours only in the secrets domain. It can read and manage secrets and call artifact signing. It cannot create, rotate or use keycore keys.</P>
+    <H3>Dedicated user: key operations</H3>
+    <P>For a job that rotates or creates keys, create a user whose role holds only what it needs (for example <IC>key.rotate</IC>). Complete the forced password change once, then log in with POST /svc/auth/auth/login and read <IC>access_token</IC>. Build the body with jq from environment variables so the password never appears in argv.</P>
+    <H2>2. Calling safely</H2>
+    <P>- Never use -k. Pass the internal CA root from the PKI tab with --cacert when the edge certificate comes from it.</P>
+    <P>- Pass tokens on stdin: printf 'Authorization: Bearer %s\n' "$KMS_TOKEN" | curl -H @- ... (printf is a shell builtin, so nothing appears in a process listing).</P>
+    <P>- The tenant comes from the token. An X-Tenant-ID header or tenant_id field must match it, or the request is refused as tenant_mismatch.</P>
+    <H2>3. Inject a secret</H2>
+    <Code>{`GET /svc/secrets/secrets/{id}/value   ->  { "value": "..." }   (secrets.value.read, audited value_read)`}</Code>
+    <H2>4. Rotate a key</H2>
+    <P>Prefer server-side rotation policies, which need no credential in CI. When a pipeline has to rotate, use a dedicated-user token holding <IC>key.rotate</IC>:</P>
+    <Code>{`POST /svc/keycore/keys/{id}/rotate
+{ "reason": "post-deploy rotation", "old_version_action": "deactivate" }`}</Code>
+    <H2>5. Sign a release with the job's OIDC token</H2>
+    <P>The signing key never leaves the KMS. Create a signing profile with <IC>identity_mode: "oidc"</IC>, the <IC>key_id</IC>, and <IC>allowed_oidc_issuers</IC> set exactly to the CI issuer (GitHub: https://token.actions.githubusercontent.com), plus subject patterns. The job requests its OIDC token for the audience <IC>vecta-kms-signing</IC> and sends a SHA-256 digest:</P>
+    <Code>{`POST /svc/signing/signing/blob
+{ "profile_id": "...", "artifact_type": "blob", "artifact_name": "release.tar.gz",
+  "digest_sha256": "<hex>", "identity_mode": "oidc", "oidc_token": "<CI job token>" }
+
+POST /svc/signing/signing/verify
+{ "record_id": "...", "digest_sha256": "<hex>" }   ->  result.valid`}</Code>
+    <P>Issuer, subject and repository are read only from the verified token. A refused request is audited as audit.signing.sign_refused with its code.</P>
+  </div>
+);
+
 const SectionGuideHsmCerts = () => (
   <div>
     <div style={S.h1}>HSM Certificate Storage</div>
@@ -3242,6 +3292,7 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "config-fastinstall": SectionConfigFastInstall,
   "guide-vault-hierarchy": SectionGuideVaultHierarchy,
   "guide-hsm-certs": SectionGuideHsmCerts,
+  "guide-automation": SectionGuideAutomation,
   troubleshooting: SectionTroubleshooting,
 };
 
@@ -3271,6 +3322,7 @@ export const DocsTab = () => {
           { label: "REST API Reference", ids: NAV.filter((n) => n.id.startsWith("api-")).map((n) => n.id) },
           { label: "UI Guide", ids: NAV.filter((n) => n.id.startsWith("ui-")).map((n) => n.id) },
           { label: "Configuration", ids: NAV.filter((n) => n.id.startsWith("config-")).map((n) => n.id) },
+          { label: "Guides", ids: NAV.filter((n) => n.id.startsWith("guide-")).map((n) => n.id) },
           { label: "Operations", ids: ["troubleshooting"] },
         ].map((group) => {
           const items = filtered.filter((n) => group.ids.includes(n.id));

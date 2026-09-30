@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-09-30T15:40:50Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T15:52:55Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `29`
-- Tab/component mappings: `36`
+- Dashboard navigation items: `28`
+- Tab/component mappings: `35`
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `843` across `28` services
 - Backend routes on the `pkg/route` kernel: `411` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `525`
 - Frontend call sites with exact backend route match: `483`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `720`
+- Clickable controls with static `onClick` handlers: `717`
 - Backend request flows with handler/service/package summaries: `843`
 
 ## How To Use This For Launch
@@ -189,7 +189,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
-| Platform | DevSecOps / IaC | devsecops | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | - | 0 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
 | Platform | Documentation | docs | web/dashboard/src/components/v3/tabs/DocsViewTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
