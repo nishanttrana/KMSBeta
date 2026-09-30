@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T04:44:45Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T04:51:56Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
