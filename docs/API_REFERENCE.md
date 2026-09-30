@@ -1023,10 +1023,10 @@ not_found` as a missing one and emits `audit.key.access_refused`
 
 **Delegated key use (6.0.0-beta).** A platform service performing a user's
 request sends `X-Vecta-Delegated-Token` (the user's bearer token) and
-`X-Vecta-Key-Usage` (one of `read`, `encrypt`, `decrypt`, `wrap`, `unwrap`,
-`export`, `sign`, `verify`, `mac`, `fpe-encrypt`, `fpe-decrypt`,
-`tokenize`, `detokenize`, `translate-wrap`, `translate-unwrap`,
-`translate-encrypt`, `translate-decrypt`, `certificate-sign`, `crl-sign`).
+`X-Vecta-Key-Usage` (one of `encrypt`, `decrypt`, `wrap`, `unwrap`,
+`fpe-encrypt`, `fpe-decrypt`, `tokenize`, `detokenize` from dataprotect,
+`certificate-sign`, `crl-sign` from certs, and `read` from ekm; payment's
+usages left with it in 7.0.0-beta).
 Keycore verifies the token, accepts it only from a service identity and for
 a user of the key's tenant, and decides key access as that user for that
 usage; otherwise `403 delegation_refused` with the reason. These headers are

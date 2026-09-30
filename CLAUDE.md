@@ -213,11 +213,14 @@ an approach, record it here or in the matching doc below.
   to CHANGELOG.md in the same change. The dashboard's ⓘ button (next to the
   header clock) shows the version, commit and build time.
   `scripts/check-docs.sh` enforces this.
-- **All work happens in KMSBeta** (owner directive, 2026-09-26: "all the
-  work have to be done on KMS beta only"; "stop touching KMSExtension").
-  Never commit to the `KMSExtension` repo. A feature cut from the core is
-  simply removed; it stays recoverable from KMSBeta's git history. Name the
-  removing commit in CHANGELOG.md so it can be found.
+- **Development happens in KMSBeta; cut features may move to KMSExtension**
+  (owner directive, 2026-09-26, "all the work have to be done on KMS beta
+  only"; amended 2026-09-29 when the owner chose to move Payments there).
+  Build and fix only in KMSBeta. When the owner cuts a feature, it is
+  removed from KMSBeta, and, if the owner asks, its sources are copied as a
+  seed into `KMSExtension/seeds/` (with its promotion caveats in
+  `seeds/README.md`), committed and pushed there. Don't otherwise develop in
+  KMSExtension. Name the removing commit in CHANGELOG.md either way.
 - **HSMs are real integrations only** (owner directive, 2026-09-26: "there is
   no vecta HSM", "it has to be actual integration no fake"). Every HSM
   goes through the customer's own PKCS#11 library in `hsm-connector`

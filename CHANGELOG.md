@@ -4,6 +4,26 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.1.0-beta] — 2026-09-30
+
+### Payments: sources kept in KMS Extension; removal finished
+- The payment sources removed in 7.0.0-beta are kept as a seed in the KMS
+  Extension repository (`seeds/services/payment`, `seeds/pkg/payment`, with
+  its dashboard tab, client, gRPC contract and API docs; KMSExtension
+  `fa2ae8c`), with the conditions for promoting it: it does its own
+  cryptography on raw key material, and its key-by-ID path never worked
+  against the real keycore. The last KMSBeta commit that contains it is
+  `4146dc70c`.
+- CLAUDE.md: development stays in KMSBeta; a feature the owner cuts may be
+  copied to `KMSExtension/seeds/` when the owner asks (amends the
+  2026-09-26 "never commit to KMSExtension" rule).
+- `pkg/delegation` no longer accepts the `export`, `sign`, `verify` and `mac`
+  usages: only payment sent them. The accepted usages are the ones a
+  remaining service enforces (dataprotect, certs, ekm).
+- The audit-events register drops the payment rows (their tests left with
+  the service) and lists `audit.auth.service_identity_retired`.
+- The runtime control-flow doc no longer describes a payment flow.
+
 ## [7.0.0-beta] — 2026-09-30
 
 ### Removed: the payment service (breaking)

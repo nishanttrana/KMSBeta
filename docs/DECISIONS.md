@@ -7,6 +7,21 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Payment sources go to KMS Extension as a seed (7.1.0-beta)
+
+**Decision.** The owner asked to move the payments tab and codebase "to kms
+extension github". The removal from KMSBeta shipped in 7.0.0-beta; the
+sources are a seed in `KMSExtension/seeds/` (`fa2ae8c`), which amends the
+2026-09-26 rule that nothing more goes to KMSExtension. Development still
+happens only in KMSBeta (CLAUDE.md).
+
+**Why a seed, not a live extension service.** KMS Extension's contract is
+that extension services hold no key material and do no cryptography; payment
+does both. The seed's README lists that and the broken key-by-ID path as
+conditions for promotion.
+
+---
+
 ## 2026-09-30 — Remove the payment service
 
 - **Decision:** the owner chose to remove payment from the core product.

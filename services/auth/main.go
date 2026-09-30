@@ -297,7 +297,7 @@ var internalServiceClients = []string{
 // 3: revoke what a removed default produced), so every start deletes their
 // API keys and revokes their registration.
 var retiredServiceClients = []string{
-	"kms-payment", // payment service removed, 7.0.0-beta
+	"kms-payment", // moved to KMS Extension, 7.0.0-beta
 }
 
 // retireRemovedServiceClients revokes the identities in retiredServiceClients

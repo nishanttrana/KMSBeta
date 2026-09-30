@@ -41,7 +41,6 @@ This document describes the **actual runtime flow** and **control flow** of the 
 | `kmip_server` | `kmip_server` | `kmip` |
 | `qkd_interface` | `qkd_interface` | `qkd` |
 | `ekm_database` | `ekm_database` | `ekm` |
-| `payment_crypto` | `payment_crypto` | `payment` |
 | `compliance_dashboard` | `compliance_dashboard` | `compliance` |
 | `sbom_cbom` | `sbom_cbom` | `sbom` |
 | `reporting_alerting` | `reporting_alerting` | `reporting` |
@@ -139,14 +138,7 @@ flowchart LR
 2. FPE, mask, redact, field/envelope/searchable encryption paths in `dataprotect`.
 3. Policy-based masking/redaction endpoints supported.
 
-### 3.8 Payment crypto flow
-
-1. Payment key lifecycle under `/payment/keys*`.
-2. TR-31 create/parse/translate/validate paths.
-3. PIN, PVV, offset, CVV, MAC, and ISO20022 security endpoints.
-4. Operations emit audit events for traceability.
-
-### 3.9 BYOK/HYOK/KMIP/QKD/EKM flows
+### 3.8 BYOK/HYOK/KMIP/QKD/EKM flows
 
 - `cloud` (`BYOK`): connector accounts, inventory, sync/import/rotate bindings.
 - `hyok`: DKE/tenant-held key proxy endpoints (Microsoft and others).
@@ -154,7 +146,7 @@ flowchart LR
 - `qkd`: ETSI/open API endpoints, key pool and inject flow.
 - `ekm`: TDE/agent lifecycle, deploy package, heartbeat, logs, key wrap/unwrap/rotate.
 
-### 3.10 Compliance/Reporting/SBOM/AI/Discovery/PQC/MPC flows
+### 3.9 Compliance/Reporting/SBOM/AI/Discovery/PQC/MPC flows
 
 - `compliance`: posture, framework checks, key hygiene, assessment schedule/run.
 - `reporting`: alerts, incidents, alert rules/channels, report generation/download.
@@ -222,7 +214,6 @@ If a feature flag is false, corresponding profile service is not started.
 | `kmip` | KMIP client/profile management + KMIP server runtime |
 | `qkd` | ETSI QKD and key injection endpoints |
 | `ekm` | agent lifecycle, TDE support endpoints, SDK downloads |
-| `payment` | TR-31/PIN/CVV/MAC/ISO20022 operations |
 | `compliance` | posture/assessment/framework checks and exports |
 | `sbom` | SBOM/CBOM generation/history/export/diff |
 | `reporting` | alert center, incidents, report jobs/templates |

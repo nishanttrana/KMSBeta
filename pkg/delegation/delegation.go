@@ -35,12 +35,10 @@ const (
 // is a per-key read (a public key): keycore decides it by the user's view of
 // the key and refuses it for any key operation.
 var Usages = map[string]bool{
-	"read":    true,
-	"encrypt": true, "decrypt": true, "wrap": true, "unwrap": true, "export": true,
-	"sign": true, "verify": true, "mac": true,
-	"fpe-encrypt": true, "fpe-decrypt": true,
-	"tokenize": true, "detokenize": true,
-	"certificate-sign": true, "crl-sign": true,
+	"read":    true,                                                // ekm per-key reads
+	"encrypt": true, "decrypt": true, "wrap": true, "unwrap": true, // dataprotect
+	"fpe-encrypt": true, "fpe-decrypt": true, "tokenize": true, "detokenize": true, // dataprotect
+	"certificate-sign": true, "crl-sign": true, // certs
 }
 
 // Attach forwards ctx's verified user token and usage on req. It adds
