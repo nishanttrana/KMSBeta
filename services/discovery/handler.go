@@ -147,8 +147,8 @@ func (h *Handler) listTargets(c *route.Call) {
 }
 
 // addTarget refuses, with its reason audited, a host that isn't a DNS name
-// or IP, a reserved address (loopback, link-local, metadata), a duplicate,
-// and the per-tenant limit.
+// or IP, a reserved address (loopback, link-local, metadata), a KMS
+// platform host, a duplicate, and the per-tenant limit.
 func (h *Handler) addTarget(c *route.Call) {
 	var req struct {
 		Host string `json:"host"`
@@ -163,6 +163,9 @@ func (h *Handler) addTarget(c *route.Call) {
 	switch {
 	case errors.Is(err, errInvalidTarget):
 		c.Refuse(http.StatusBadRequest, "invalid_target", err.Error())
+		return
+	case errors.Is(err, errPlatformTarget):
+		c.Refuse(http.StatusBadRequest, "platform_target", err.Error())
 		return
 	case errors.Is(err, errTargetExists):
 		c.Refuse(http.StatusConflict, "target_exists", err.Error())

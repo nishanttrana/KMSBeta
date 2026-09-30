@@ -207,7 +207,7 @@ export const DiscoveryTab = ({ session, onToast }: any) => {
           <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 10 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: C.text, marginBottom: 4 }}>TLS targets</div>
             <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
-              The network scan completes a TLS handshake with each host and port and records the key exchange, protocol, cipher and certificate key. Loopback, link-local and metadata addresses are refused. Endpoints in DISCOVERY_TLS_ENDPOINTS are scanned too.
+              The network scan completes a TLS handshake with each host and port and records the key exchange, protocol, cipher and certificate key. Private addresses are allowed. Loopback, link-local and metadata addresses and the KMS's own internal services are refused; their certificates are in the PKI tab. Endpoints in DISCOVERY_TLS_ENDPOINTS are scanned too.
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <Inp mono placeholder="host or IP, e.g. api.example.com" value={targetHost} onChange={(e) => setTargetHost(e.target.value)}

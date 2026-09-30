@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-09-30T10:48:04Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-30T15:40:50Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -237,7 +237,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:131) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:154 |
 | discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:140) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:166 |
 | discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:152) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:179 |
-| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:181) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:189 |
+| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:184) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:189 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |
@@ -880,7 +880,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|GET\|/discovery/summary | GET /discovery/summary | summary (services/discovery/handler.go:131) | Summary |  |  |  | web/dashboard/src/lib/discovery.ts:154 |
 | discovery\|GET\|/discovery/targets | GET /discovery/targets | listTargets (services/discovery/handler.go:140) | ListTargets | ListTargets |  |  | web/dashboard/src/lib/discovery.ts:166 |
 | discovery\|POST\|/discovery/targets | POST /discovery/targets | addTarget (services/discovery/handler.go:152) | AddTarget | ListTargets, CreateTarget |  |  | web/dashboard/src/lib/discovery.ts:179 |
-| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:181) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:189 |
+| discovery\|DELETE\|/discovery/targets/{param} | DELETE /discovery/targets/{id} | removeTarget (services/discovery/handler.go:184) | RemoveTarget | ListTargets, DeleteTarget |  |  | web/dashboard/src/lib/discovery.ts:189 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |

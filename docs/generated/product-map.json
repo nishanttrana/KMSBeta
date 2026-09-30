@@ -31355,7 +31355,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T10:48:04Z",
+  "generated_at": "2026-09-30T15:40:50Z",
   "navigation": [
     {
       "group": "Overview",
@@ -53685,7 +53685,7 @@
             "GetScan"
           ],
           "internal_package_calls": [],
-          "line": 41,
+          "line": 43,
           "name": "StartScan",
           "receiver_calls": [],
           "store_calls": [
@@ -53752,7 +53752,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 139,
+          "line": 141,
           "name": "ListScans",
           "receiver_calls": [],
           "store_calls": [
@@ -53812,7 +53812,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 147,
+          "line": 149,
           "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
@@ -53864,6 +53864,7 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "isPlatformAsset",
         "assetClass",
         "max"
       ],
@@ -53876,11 +53877,12 @@
           "file": "services/discovery/service.go",
           "helper_calls": [
             "newServiceError",
+            "isPlatformAsset",
             "assetClass",
             "max"
           ],
           "internal_package_calls": [],
-          "line": 156,
+          "line": 158,
           "name": "ListAssets",
           "receiver_calls": [],
           "store_calls": [
@@ -53925,6 +53927,7 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "isPlatformAsset",
         "assetClass",
         "max"
       ],
@@ -53937,11 +53940,12 @@
           "file": "services/discovery/service.go",
           "helper_calls": [
             "newServiceError",
+            "isPlatformAsset",
             "assetClass",
             "max"
           ],
           "internal_package_calls": [],
-          "line": 156,
+          "line": 158,
           "name": "ListAssets",
           "receiver_calls": [],
           "store_calls": [
@@ -53982,6 +53986,7 @@
       ],
       "service_helper_calls": [
         "newServiceError",
+        "isPlatformAsset",
         "assetClass"
       ],
       "service_internal_package_calls": [],
@@ -53993,10 +53998,11 @@
           "file": "services/discovery/service.go",
           "helper_calls": [
             "newServiceError",
+            "isPlatformAsset",
             "assetClass"
           ],
           "internal_package_calls": [],
-          "line": 199,
+          "line": 213,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -54067,7 +54073,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 215,
+          "line": 232,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -54127,7 +54133,7 @@
             "pct"
           ],
           "internal_package_calls": [],
-          "line": 250,
+          "line": 267,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -54175,7 +54181,7 @@
           "file": "services/discovery/targets.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 103,
+          "line": 181,
           "name": "ListTargets",
           "receiver_calls": [],
           "store_calls": [
@@ -54240,7 +54246,7 @@
             "CreateTarget"
           ],
           "internal_package_calls": [],
-          "line": 78,
+          "line": 156,
           "name": "AddTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -54272,7 +54278,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 181,
+      "handler_line": 184,
       "handler_name": "removeTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54300,7 +54306,7 @@
             "DeleteTarget"
           ],
           "internal_package_calls": [],
-          "line": 107,
+          "line": 185,
           "name": "RemoveTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -98193,7 +98199,7 @@
         ],
         "handler": "removeTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 181,
+        "handlerLine": 184,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -114603,7 +114609,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T10:48:04Z",
+    "generatedAt": "2026-09-30T15:40:50Z",
     "methods": [
       "DELETE",
       "GET",

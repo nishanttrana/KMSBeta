@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
+
+	"vecta-kms/pkg/svctls"
 )
 
 type Service struct {
@@ -19,9 +21,9 @@ type Service struct {
 	now     func() time.Time
 	cloud   CloudClient
 	root    string
-	// targetGuard vets the address each tenant-added target dials
-	// (refuseReservedAddr; tests swap it to reach their loopback server).
-	targetGuard func(network, address string, c syscall.RawConn) error
+	// targetGuard builds, per scan, the dial guard for every network target
+	// (newTargetGuard; tests swap it to reach their loopback server).
+	targetGuard func(ctx context.Context) dialControl
 }
 
 func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events EventPublisher) *Service {
@@ -34,7 +36,7 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events Ev
 		now:     func() time.Time { return time.Now().UTC() },
 		root:    root,
 
-		targetGuard: refuseReservedAddr,
+		targetGuard: newTargetGuard,
 	}
 }
 
@@ -158,22 +160,19 @@ func (s *Service) ListAssets(ctx context.Context, tenantID string, limit int, of
 	if tenantID == "" {
 		return nil, newServiceError(400, "bad_request", "tenant_id is required")
 	}
-	if classification == "" {
-		items, err := s.store.ListAssets(ctx, tenantID, limit, offset, source, assetType, "")
-		for i := range items {
-			items[i].Classification = assetClass(items[i])
-		}
-		return items, err
-	}
-	// The stored column can predate a catalogue change, so filter on the
-	// derived class, then page.
+	// The stored column can predate a catalogue change, and rows from
+	// before 7.13.0-beta can name platform services, so filter on read,
+	// then page.
 	all, err := s.store.ListAssets(ctx, tenantID, 10000, 0, source, assetType, "")
 	if err != nil {
 		return nil, err
 	}
 	out := make([]CryptoAsset, 0)
 	for _, a := range all {
-		if a.Classification = assetClass(a); a.Classification == classification {
+		if isPlatformAsset(a) {
+			continue
+		}
+		if a.Classification = assetClass(a); classification == "" || a.Classification == classification {
 			out = append(out, a)
 		}
 	}
@@ -182,6 +181,21 @@ func (s *Service) ListAssets(ctx context.Context, tenantID string, limit int, of
 	}
 	offset = min(max(offset, 0), len(out))
 	return out[offset:min(offset+limit, len(out))], nil
+}
+
+// isPlatformAsset: a KMS service's own certificate or TLS endpoint, stored
+// by a scan before 7.13.0-beta. The inventory is the customer's estate; the
+// platform's certificates are in the PKI tab.
+func isPlatformAsset(a CryptoAsset) bool {
+	switch a.Source {
+	case "certs":
+		_, ok := svctls.HostFor(a.Name)
+		return ok
+	case "network":
+		host, _, err := net.SplitHostPort(a.Location)
+		return err == nil && isPlatformHost(host)
+	}
+	return false
 }
 
 // assetClass is an asset's classification, derived on every read: a secret
@@ -203,6 +217,9 @@ func (s *Service) GetAsset(ctx context.Context, tenantID string, id string) (Cry
 		return CryptoAsset{}, newServiceError(400, "bad_request", "tenant_id and id are required")
 	}
 	item, err := s.store.GetAsset(ctx, tenantID, id)
+	if err == nil && isPlatformAsset(item) {
+		return CryptoAsset{}, errNotFound
+	}
 	item.Classification = assetClass(item)
 	return item, err
 }

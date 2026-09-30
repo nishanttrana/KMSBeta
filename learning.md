@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A name check for "internal" would have blocked auth.example.com
+- **What happened:** the first draft of the platform-host check matched a
+  target's first DNS label against the service names. `auth`, `certs`,
+  `cloud`, `backup` and `policy` are ordinary customer hostnames, so it
+  would have refused `auth.example.com`.
+- **Rule:** refuse only bare platform names at input. Catch everything else
+  by address: resolve the platform's hostnames and compare them with the
+  address the dialer actually connects to.
+
 ### The last unaudited refusal was in the middleware every service shares
 - **What happened:** after 7.10.0-beta, kernel services audited token
   refusals, but `MustWrap` still answered 401 silently for the rest. The

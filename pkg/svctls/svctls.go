@@ -127,6 +127,15 @@ func IsInternalHost(host string) bool {
 	return internalHostSet[strings.ToLower(strings.TrimSpace(host))]
 }
 
+// InternalHosts lists every platform hostname IsInternalHost accepts.
+func InternalHosts() []string {
+	out := make([]string, 0, len(internalHostSet))
+	for h := range internalHostSet {
+		out = append(out, h)
+	}
+	return out
+}
+
 // HostFor returns the service hostname of a platform identity.
 func HostFor(identity string) (string, bool) {
 	if h, ok := Services[identity]; ok {

@@ -4,6 +4,31 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.13.0-beta] — 2026-09-30
+
+### Crypto Discovery never scans or lists the KMS's own internal services
+- **Changed:** the network scan refuses any endpoint that is a KMS platform
+  host (every service, Envoy, the dashboard, Postgres, NATS, Valkey,
+  Consul, and the HSM CLI container) or resolves to one, and discovery's own
+  addresses. The check runs on the address actually dialled, after DNS
+  resolution, and now covers `DISCOVERY_TLS_ENDPOINTS` as well as tenant
+  targets. Adding a bare platform hostname (`keycore`, `postgres`) as a
+  target is refused as `platform_target`. Customer hosts that only share a
+  label (`auth.example.com`) are allowed, and so are private (RFC 1918)
+  addresses.
+- **Changed:** the certs source skips `cert_class: internal-mtls`, the
+  platform's own service certificates. Assets that earlier scans stored for
+  platform services are hidden from the inventory, the summary and
+  `GET /discovery/assets/{id}`. Those certificates are in the PKI tab (CA
+  hierarchy, service mTLS certificates).
+- **Why:** closes the gap left open in 7.11.0-beta, where a tenant target
+  could reach an internal service. Before it, a tenant could use the scan to
+  see which internal ports answer.
+- **Tests:** `TestPlatformHostTargetRefused`, `TestPlatformAddrsRefusedAtDial`,
+  `TestTenantTargetDialGuard` (operator endpoints too),
+  `TestCertsScanSkipsInternalServiceCerts`, `TestStoredPlatformAssetsHidden`,
+  `TestTargetRoutesAudited` (`platform_target` refusal audited).
+
 ## [7.12.0-beta] — 2026-09-30
 
 ### Every JWT refusal is audited, on raw-mux services too

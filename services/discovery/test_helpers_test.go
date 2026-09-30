@@ -51,6 +51,7 @@ func (f *fakeDiscoveryCerts) ListCertificates(_ context.Context, _ string, _ int
 	return []map[string]interface{}{
 		{"id": "c1", "subject_cn": "api.vecta.local", "algorithm": "RSA-3072", "status": "active"},
 		{"id": "c2", "subject_cn": "pqc.vecta.local", "algorithm": "ML-DSA-65", "status": "active", "cert_class": "pqc"},
+		{"id": "c3", "subject_cn": "keycore", "algorithm": "ECDSA-P256", "status": "active", "cert_class": "internal-mtls"},
 	}, nil
 }
 
@@ -68,6 +69,9 @@ func newDiscoveryService(t *testing.T) (*Service, *SQLStore, *nopDiscoveryPublis
 	pub := &nopDiscoveryPublisher{}
 	svc := NewService(store, &fakeDiscoveryKeyCore{}, &fakeDiscoveryCerts{}, pub)
 	svc.cloud = &testCloud{}
+	// httptest listens on loopback, which the real dial guard refuses
+	// (TestTenantTargetDialGuard and TestPlatformAddrsRefusedAtDial cover it).
+	svc.targetGuard = func(context.Context) dialControl { return nil }
 	// A real TLS endpoint: the network scan handshakes with it.
 	tlsSrv := httptest.NewTLSServer(http.NotFoundHandler())
 	t.Cleanup(tlsSrv.Close)

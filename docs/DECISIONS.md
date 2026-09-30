@@ -27,9 +27,13 @@ rejected, and how it's enforced.
   link-local (cloud metadata), multicast and unspecified addresses are
   refused when a target is added and at dial time after DNS resolution. The
   probe sends only a TLS ClientHello and records the server's handshake.
-  **Still open:** a target can name a platform-internal host on a routable
-  address. It learns only that host's certificate, which is in the PKI tab
-  anyway, and whether the port answers.
+  **Closed in 7.13.0-beta** (owner: "do not show internal services"): every
+  address a platform host resolves to, and discovery's own, is refused at
+  dial time for operator and tenant endpoints alike. Internal mTLS
+  certificates are skipped by the certs source and hidden if already
+  stored; the PKI tab is their one home. Still not blocked: the Docker
+  host's gateway address, where a port the operator published is reachable.
+  That is the KMS's published, external surface.
 - **Enforced by:** `TestRefuseReservedAddr`, `TestTenantTargetDialGuard`,
   `TestNormalizeTarget`, `TestStoredVulnerableIsReclassifiedOnRead`,
   `TestAssessmentDoesNotRepeatTheOldMislabels`.

@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strconv"
 	"strings"
 	"testing"
@@ -57,7 +59,6 @@ func TestTenantTargetIsScanned(t *testing.T) {
 	srv := httptest.NewTLSServer(http.NotFoundHandler())
 	defer srv.Close()
 	t.Setenv("DISCOVERY_TLS_ENDPOINTS", "")
-	svc.targetGuard = nil // the test server is on loopback, which the real guard refuses
 	port, _ := strconv.Atoi(srv.URL[strings.LastIndex(srv.URL, ":")+1:])
 	if err := svc.store.CreateTarget(ctx, ScanTarget{ID: "target_1", TenantID: "t1", Host: "127.0.0.1", Port: port}); err != nil {
 		t.Fatal(err)
@@ -72,13 +73,14 @@ func TestTenantTargetIsScanned(t *testing.T) {
 }
 
 // A stored target that resolves to a reserved address is refused when
-// dialled, not handshaken.
+// dialled, not handshaken, and so is an operator endpoint.
 func TestTenantTargetDialGuard(t *testing.T) {
 	svc, _, _ := newDiscoveryService(t)
 	ctx := context.Background()
 	srv := httptest.NewTLSServer(http.NotFoundHandler())
 	defer srv.Close()
 	t.Setenv("DISCOVERY_TLS_ENDPOINTS", "")
+	svc.targetGuard = newTargetGuard
 	port, _ := strconv.Atoi(srv.URL[strings.LastIndex(srv.URL, ":")+1:])
 	if err := svc.store.CreateTarget(ctx, ScanTarget{ID: "target_1", TenantID: "t1", Host: "127.0.0.1", Port: port}); err != nil {
 		t.Fatal(err)
@@ -86,6 +88,96 @@ func TestTenantTargetDialGuard(t *testing.T) {
 	a, err := svc.scanNetwork(ctx, "t1", "s")
 	if err == nil || !strings.Contains(err.Error(), errReservedTarget.Error()) || len(a) != 0 {
 		t.Fatalf("loopback target: %d assets, %v", len(a), err)
+	}
+	t.Setenv("DISCOVERY_TLS_ENDPOINTS", strings.TrimPrefix(srv.URL, "https://"))
+	if a, err := svc.scanNetwork(ctx, "t2", "s"); err == nil || !strings.Contains(err.Error(), errReservedTarget.Error()) || len(a) != 0 {
+		t.Fatalf("loopback operator endpoint: %d assets, %v", len(a), err)
+	}
+}
+
+// A target naming a KMS platform host is refused when added; customer hosts
+// that share a label with one (auth.example.com) are not.
+func TestPlatformHostTargetRefused(t *testing.T) {
+	for _, h := range []string{"keycore", "Postgres", "nats.", "envoy", "hsm-integration", "discovery"} {
+		if _, err := normalizeTarget(h, 443); !errors.Is(err, errPlatformTarget) {
+			t.Errorf("%s: %v, want errPlatformTarget", h, err)
+		}
+	}
+	for _, h := range []string{"auth.example.com", "certs.corp.internal", "keycore-backup"} {
+		if _, err := normalizeTarget(h, 443); err != nil {
+			t.Errorf("%s refused: %v", h, err)
+		}
+	}
+}
+
+// At dial time the guard refuses every address a platform host resolves to
+// and this container's own, whatever name the target used.
+func TestPlatformAddrsRefusedAtDial(t *testing.T) {
+	lookup := func(_ context.Context, h string) ([]netip.Addr, error) {
+		switch h {
+		case "keycore":
+			return []netip.Addr{netip.MustParseAddr("172.20.0.11")}, nil
+		case "postgres":
+			return []netip.Addr{netip.MustParseAddr("::ffff:172.20.0.5")}, nil
+		}
+		return nil, errors.New("no such host")
+	}
+	own := func() ([]net.Addr, error) {
+		return []net.Addr{&net.IPNet{IP: net.ParseIP("172.20.0.30"), Mask: net.CIDRMask(16, 32)}}, nil
+	}
+	guard := guardAddrs(platformAddrs(context.Background(), lookup, own))
+	for _, a := range []string{"172.20.0.11:8010", "172.20.0.5:5432", "172.20.0.30:8100"} {
+		if err := guard("tcp", a, nil); !errors.Is(err, errPlatformTarget) {
+			t.Errorf("%s: %v, want errPlatformTarget", a, err)
+		}
+	}
+	if err := guard("tcp", "169.254.169.254:80", nil); !errors.Is(err, errReservedTarget) {
+		t.Errorf("metadata: %v", err)
+	}
+	for _, a := range []string{"172.20.0.99:443", "10.0.0.5:443"} {
+		if err := guard("tcp", a, nil); err != nil {
+			t.Errorf("%s refused: %v", a, err)
+		}
+	}
+}
+
+// The certs source skips the platform's internal service certificates.
+func TestCertsScanSkipsInternalServiceCerts(t *testing.T) {
+	svc, _, _ := newDiscoveryService(t)
+	assets, err := svc.scanCertificates(context.Background(), "t1", "s")
+	if err != nil || len(assets) != 2 {
+		t.Fatalf("assets %d, %v", len(assets), err)
+	}
+	for _, a := range assets {
+		if a.Metadata["cert_id"] == "c3" {
+			t.Fatalf("internal mTLS certificate inventoried: %+v", a)
+		}
+	}
+}
+
+// Assets a pre-7.13.0-beta scan stored for platform services are hidden.
+func TestStoredPlatformAssetsHidden(t *testing.T) {
+	svc, store, _ := newDiscoveryService(t)
+	ctx := context.Background()
+	for _, a := range []CryptoAsset{
+		{ID: "p1", Source: "certs", AssetType: "certificate", Name: "kms-keycore", Algorithm: "ECDSA-P256"},
+		{ID: "p2", Source: "network", AssetType: "tls_endpoint", Name: "postgres:5432", Location: "postgres:5432", Algorithm: "X25519"},
+		{ID: "c1", Source: "network", AssetType: "tls_endpoint", Name: "auth.example.com:443", Location: "auth.example.com:443", Algorithm: "X25519"},
+	} {
+		a.TenantID, a.Status = "t1", "active"
+		if err := store.UpsertAsset(ctx, a); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, _ := svc.ListAssets(ctx, "t1", 10, 0, "", "", "")
+	if len(got) != 1 || got[0].ID != "c1" {
+		t.Fatalf("listed %+v", got)
+	}
+	if _, err := svc.GetAsset(ctx, "t1", "p1"); !errors.Is(err, errNotFound) {
+		t.Fatalf("platform asset readable: %v", err)
+	}
+	if sum, _ := svc.Summary(ctx, "t1"); sum.TotalAssets != 1 {
+		t.Fatalf("summary counts platform assets: %+v", sum)
 	}
 }
 

@@ -3142,10 +3142,16 @@ adds one (`201 {"target": {...}}`). `host` is a DNS name or IP address,
 without scheme or path, and is stored lower-case. `DELETE
 /discovery/targets/{id}` removes one. Refusals: `400 invalid_target` (bad
 host or port, or a loopback, link-local, metadata, multicast or unspecified
-address), `409 target_exists`, and `409 target_limit` (256 per tenant). The
-scan dials each target through the same address check after DNS
-resolution, so a name that resolves to a reserved address fails as
-`refused <addr>` in `stats.errors`.
+address), `400 platform_target` (a bare KMS platform hostname such as
+`keycore` or `postgres`; 7.13.0-beta), `409 target_exists`, and
+`409 target_limit` (256 per tenant). Private addresses are allowed. The
+scan dials every endpoint, operator and tenant alike, through the same
+check after DNS resolution: a reserved address, or one that a platform
+host or discovery itself uses, fails as `refused <addr>` in
+`stats.errors`. The inventory never lists the KMS's own services. The
+certs source skips `cert_class: internal-mtls`, and assets earlier scans
+stored for platform services are hidden. Their certificates are in the
+PKI tab.
 
 An unconfigured or failed source is recorded in `stats.errors`. The scan
 status is then `completed_with_errors`, or `failed` if every source failed.

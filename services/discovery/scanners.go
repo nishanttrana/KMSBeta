@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -33,19 +32,15 @@ var errScanNotConfigured = errors.New("scan source not configured")
 // scanNetwork handshakes with each endpoint in DISCOVERY_TLS_ENDPOINTS
 // (operator configuration) and each target the tenant added
 // (POST /discovery/targets), and records the negotiated key exchange and the
-// leaf certificate's key. A tenant's target is dialled through s.targetGuard,
-// which refuses loopback, link-local and other reserved addresses after DNS
-// resolution (SSRF).
+// leaf certificate's key. Every endpoint is dialled through s.targetGuard,
+// which refuses reserved addresses and the KMS platform's own after DNS
+// resolution (targets.go). The inventory is the customer's estate; the KMS's
+// internal certificates are in the PKI tab (7.13.0-beta).
 func (s *Service) scanNetwork(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	type probeTarget struct {
-		endpoint string
-		guard    func(network, address string, c syscall.RawConn) error
-	}
-	var targets []probeTarget
+	targets := parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS"))
 	seen := map[string]bool{}
-	for _, ep := range parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS")) {
+	for _, ep := range targets {
 		seen[ep] = true
-		targets = append(targets, probeTarget{endpoint: ep})
 	}
 	tenantTargets, err := s.store.ListTargets(ctx, tenantID)
 	if err != nil {
@@ -54,21 +49,22 @@ func (s *Service) scanNetwork(ctx context.Context, tenantID string, scanID strin
 	for _, t := range tenantTargets {
 		if ep := t.endpoint(); !seen[ep] {
 			seen[ep] = true
-			targets = append(targets, probeTarget{endpoint: ep, guard: s.targetGuard})
+			targets = append(targets, ep)
 		}
 	}
 	if len(targets) == 0 {
 		return nil, fmt.Errorf("%w: add a TLS target (host and port) in Crypto Discovery, or set DISCOVERY_TLS_ENDPOINTS", errScanNotConfigured)
 	}
+	guard := s.targetGuard(ctx)
 	out := make([]CryptoAsset, 0, 2*len(targets))
 	var failed []string
-	for _, t := range targets {
-		probe, err := probeTLS(ctx, t.endpoint, 8*time.Second, t.guard)
+	for _, ep := range targets {
+		probe, err := probeTLS(ctx, ep, 8*time.Second, guard)
 		if err != nil {
-			failed = append(failed, t.endpoint+": "+err.Error())
+			failed = append(failed, ep+": "+err.Error())
 			continue
 		}
-		out = append(out, s.tlsAssets(tenantID, scanID, t.endpoint, probe)...)
+		out = append(out, s.tlsAssets(tenantID, scanID, ep, probe)...)
 	}
 	if len(failed) > 0 {
 		return out, fmt.Errorf("%d of %d endpoints failed: %s", len(failed), len(targets), strings.Join(failed, "; "))
@@ -83,7 +79,7 @@ type tlsProbe struct {
 	trusted         bool
 }
 
-func probeTLS(ctx context.Context, endpoint string, timeout time.Duration, guard func(network, address string, c syscall.RawConn) error) (tlsProbe, error) {
+func probeTLS(ctx context.Context, endpoint string, timeout time.Duration, guard dialControl) (tlsProbe, error) {
 	host, _, err := net.SplitHostPort(endpoint)
 	if err != nil {
 		return tlsProbe{}, err
@@ -245,6 +241,11 @@ func (s *Service) scanCertificates(ctx context.Context, tenantID string, scanID 
 	}
 	out := make([]CryptoAsset, 0, len(items))
 	for _, c := range items {
+		// The platform's own service mTLS certificates (internal-services
+		// Sub CA) are shown in the PKI tab, not the customer's inventory.
+		if strings.EqualFold(firstString(c["cert_class"]), "internal-mtls") {
+			continue
+		}
 		alg := normalizeAlgorithm(firstString(c["algorithm"], c["signature_algorithm"]))
 		cn := firstString(c["subject_cn"], c["id"])
 		id := firstString(c["id"])
