@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import {
-  AlertTriangle, ArrowRight, Plus, RefreshCw, CheckCircle, Clock, Pause, Activity, XCircle,
+  AlertTriangle, RefreshCw, XCircle,
   Atom, HelpCircle, KeyRound, CalendarClock, ShieldAlert, Pencil, Trash2, ListChecks,
 } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -14,18 +14,12 @@ import {
   createAgilityRule,
   updateAgilityRule,
   deleteAgilityRule,
-  listMigrationPlans,
-  createMigrationPlan,
-  updateMigrationPlanStatus,
   ruleCovers,
   type AgilityPosture,
   type AgilityRule,
   type AlgorithmUsage,
   type MatchKind,
-  type MigrationPlan,
-  type MigrationPlanStatus,
   type NewAgilityRule,
-  type NewMigrationPlan,
   type PolicyAction,
   type PolicyStatus,
 } from "../../../lib/cryptoAgility";
@@ -43,7 +37,6 @@ interface Props {
   keyCatalog?: any[];
 }
 
-const PLAN_STATUSES: MigrationPlanStatus[] = ["planned", "in_progress", "paused", "completed"];
 // Suggestions for a migration target: algorithms keycore generates.
 const MIGRATION_TARGETS = ["ML-KEM-768", "ML-KEM-1024", "ML-DSA-65", "ML-DSA-87", "SLH-DSA-SHA2-128s", "AES-256", "RSA-3072", "ECDSA-P384"];
 
@@ -73,22 +66,6 @@ function statusColor(s?: PolicyStatus): [string, string] {
     case "decrypt_only":
     case "disallowed": return [C.red, C.redDim];
     default: return [C.dim, C.dimTint];
-  }
-}
-function planStatusIcon(s: string) {
-  switch (s) {
-    case "in_progress": return <Activity size={13} color={C.accent} />;
-    case "completed": return <CheckCircle size={13} color={C.green} />;
-    case "paused": return <Pause size={13} color={C.amber} />;
-    default: return <Clock size={13} color={C.dim} />;
-  }
-}
-function planStatusColor(s: string) {
-  switch (s) {
-    case "in_progress": return C.accent;
-    case "completed": return C.green;
-    case "paused": return C.amber;
-    default: return C.dim;
   }
 }
 function describeMatch(r: Pick<AgilityRule, "match_kind" | "match_value">) {
@@ -238,77 +215,6 @@ function RuleModal({ rule, algorithms, onClose, onSave }: {
   );
 }
 
-/* ─── Create Plan Modal ───────────────────────────────────── */
-function CreatePlanModal({ algorithms, onClose, onSave }: {
-  algorithms: AlgorithmUsage[];
-  onClose: () => void;
-  onSave: (data: NewMigrationPlan) => Promise<void>;
-}) {
-  const [name, setName] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const valid = Boolean(name.trim() && from && to.trim() && from !== to.trim());
-  const source = algorithms.find(a => a.algorithm === from);
-  const policyDate = source?.next_change?.date;
-
-  async function handleSave() {
-    if (!valid) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const plan: NewMigrationPlan = { name: name.trim(), from_algorithm: from, to_algorithm: to.trim() };
-      if (targetDate) plan.target_date = targetDate;
-      await onSave(plan);
-      onClose();
-    } catch (e) {
-      setError(errText(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Modal
-      title="Create Migration Plan"
-      hint="Affected keys are counted by keycore when the plan is created; progress is measured as keys leave the source algorithm."
-      onClose={onClose} onSave={handleSave} saving={saving} valid={valid} saveLabel="Create Plan"
-    >
-      <div>
-        <div style={labelStyle}>Plan Name</div>
-        <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. RSA-2048 PQC Migration" />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div>
-          <div style={labelStyle}>From Algorithm (in use)</div>
-          <select style={inputStyle} value={from} onChange={e => { setFrom(e.target.value); const a = algorithms.find(x => x.algorithm === e.target.value); if (a?.target_algorithm && !to) setTo(a.target_algorithm); }}>
-            <option value="">Select…</option>
-            {algorithms.map(a => <option key={a.algorithm} value={a.algorithm}>{a.algorithm} ({a.key_count})</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={labelStyle}>To Algorithm</div>
-          <input style={inputStyle} list="agility-targets" value={to} onChange={e => setTo(e.target.value)} placeholder="e.g. ML-KEM-768" />
-          <datalist id="agility-targets">{MIGRATION_TARGETS.map(a => <option key={a} value={a} />)}</datalist>
-        </div>
-      </div>
-      <div>
-        <div style={labelStyle}>Target Date (optional)</div>
-        <input type="date" style={inputStyle} value={targetDate} onChange={e => setTargetDate(e.target.value)} />
-        {policyDate && source?.next_change && (
-          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-            Your rule "{source.next_change.rule_name}" makes {from} {STATUS_LABEL[source.next_change.action].toLowerCase()} from {policyDate}.
-          </div>
-        )}
-      </div>
-      {error && <div style={{ fontSize: 12, color: C.red }}>Plan not created: {error}</div>}
-    </Modal>
-  );
-}
-
 /* ─── Main Component ─────────────────────────────────────── */
 type View = "policy" | "risk" | "execution" | "drill";
 const VIEWS: [View, string][] = [["policy", "Migration policy"], ["risk", "Risk assessment"], ["execution", "Readiness & execution"], ["drill", "Swap drill"]];
@@ -317,11 +223,9 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
   const [view, setView] = useState<View>("policy");
   const [posture, setPosture] = useState<AgilityPosture | null>(null);
   const [rules, setRules] = useState<AgilityRule[]>([]);
-  const [plans, setPlans] = useState<MigrationPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [showPlanModal, setShowPlanModal] = useState(false);
   const [ruleModal, setRuleModal] = useState<{ rule: AgilityRule | null } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -338,10 +242,10 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
     setError(null);
     setActionError(null);
     try {
-      const [p, r, mp] = await Promise.all([getAgilityPosture(session), listAgilityRules(session), listMigrationPlans(session)]);
-      setPosture(p); setRules(r); setPlans(mp);
+      const [p, r] = await Promise.all([getAgilityPosture(session), listAgilityRules(session)]);
+      setPosture(p); setRules(r);
     } catch (e) {
-      setPosture(null); setRules([]); setPlans([]);
+      setPosture(null); setRules([]);
       setError(errText(e));
     } finally {
       setLoading(false); setRefreshing(false);
@@ -365,21 +269,6 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
       await load(true);
     } catch (e) {
       setActionError(`${rule.name}: ${errText(e)}`);
-    }
-  }
-
-  async function handleCreatePlan(data: NewMigrationPlan) {
-    const plan = await createMigrationPlan(session, data);
-    setPlans(prev => [plan, ...prev]);
-  }
-
-  async function handleStatus(plan: MigrationPlan, status: MigrationPlanStatus) {
-    setActionError(null);
-    try {
-      const updated = await updateMigrationPlanStatus(session, plan.id, status);
-      setPlans(prev => prev.map(p => (p.id === updated.id ? updated : p)));
-    } catch (e) {
-      setActionError(`${plan.name}: ${errText(e)}`);
     }
   }
 
@@ -426,9 +315,6 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
           </button>
           <button onClick={() => setRuleModal({ rule: null })} disabled={Boolean(error)} style={{ background: C.card, border: `1px solid ${C.accent}`, borderRadius: 7, color: C.accent, padding: "7px 13px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
             <ListChecks size={13} /> Add Migration Rule
-          </button>
-          <button onClick={() => setShowPlanModal(true)} disabled={Boolean(error)} style={{ background: C.accent, border: "none", borderRadius: 7, color: C.bg, padding: "7px 14px", cursor: error ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: error ? 0.5 : 1 }}>
-            <Plus size={13} /> Create Migration Plan
           </button>
         </div>}
       </div>
@@ -610,66 +496,10 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
 
           <div style={divider} />
 
-          {/* Migration Plans */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={sectionTitle}>Migration Plans</div>
-            <span style={{ fontSize: 11, color: C.muted }}>{plans.length} total</span>
+          <div style={sectionHint}>
+            Keys move to a rule's target in <button onClick={() => setView("execution")} style={{ background: "none", border: "none", color: C.accent, cursor: "pointer", padding: 0, fontSize: 11 }}>Readiness &amp; execution</button>:
+            keycore keys rotate onto the target under the same key ID; older versions keep decrypting and verifying what they protected.
           </div>
-          {plans.length === 0 ? (
-            <div style={empty}>No migration plans created yet.</div>
-          ) : (
-            <div style={panel}>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                      {["Name", "Migration", "Progress", "Status", "Target Date"].map(h => <th key={h} style={th}>{h}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {plans.map((plan, i) => {
-                      const done = plan.affected_keys > 0 ? Math.round((plan.completed_keys / plan.affected_keys) * 100) : 0;
-                      return (
-                        <tr key={plan.id} style={{ borderBottom: i < plans.length - 1 ? `1px solid ${C.border}` : "none" }}>
-                          <td style={td}><span style={{ fontWeight: 600 }}>{plan.name}</span></td>
-                          <td style={td}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, ...mono, fontSize: 11 }}>
-                              <span style={{ color: C.red }}>{plan.from_algorithm}</span>
-                              <ArrowRight size={11} color={C.dim} />
-                              <span style={{ color: C.green }}>{plan.to_algorithm}</span>
-                            </div>
-                          </td>
-                          <td style={td}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 160 }}>
-                              <div style={{ flex: 1, background: C.border, borderRadius: 99, height: 5, overflow: "hidden" }}>
-                                <div style={{ width: `${done}%`, background: done === 100 ? C.green : C.accent, height: "100%", borderRadius: 99, transition: "width 0.5s ease" }} />
-                              </div>
-                              <span title={`${plan.remaining_keys} ${plan.from_algorithm} keys still live`} style={{ fontSize: 11, color: C.dim, ...mono, whiteSpace: "nowrap" }}>
-                                {plan.completed_keys}/{plan.affected_keys} · {plan.remaining_keys} left
-                              </span>
-                            </div>
-                          </td>
-                          <td style={td}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                              {planStatusIcon(plan.status)}
-                              <select
-                                value={plan.status}
-                                onChange={e => handleStatus(plan, e.target.value as MigrationPlanStatus)}
-                                style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: planStatusColor(plan.status), fontSize: 11, fontWeight: 600, padding: "2px 4px" }}
-                              >
-                                {PLAN_STATUSES.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
-                              </select>
-                            </div>
-                          </td>
-                          <td style={{ ...td, ...mono, fontSize: 11, color: C.dim }}>{plan.target_date ? plan.target_date.slice(0, 10) : "—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -680,9 +510,6 @@ export function CryptoAgilityTab({ session, keyCatalog }: Props) {
           onClose={() => setRuleModal(null)}
           onSave={data => handleSaveRule(ruleModal.rule, data)}
         />
-      )}
-      {showPlanModal && (
-        <CreatePlanModal algorithms={algorithms} onClose={() => setShowPlanModal(false)} onSave={handleCreatePlan} />
       )}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>

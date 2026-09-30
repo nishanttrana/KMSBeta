@@ -11,7 +11,9 @@ type EventPublisher interface {
 
 type KeyCoreClient interface {
 	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
-	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error
+	// RotateKey rotates a key; a non-empty targetAlgorithm moves it to that
+	// algorithm under the same key ID (keycore refuses what it can't serve).
+	RotateKey(ctx context.Context, tenantID string, keyID string, reason string, targetAlgorithm string) error
 	CreateKey(ctx context.Context, tenantID string, req map[string]interface{}) (string, error)
 	DeactivateKey(ctx context.Context, tenantID string, keyID string, reason string) error
 }

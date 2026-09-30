@@ -79,13 +79,12 @@ type Store interface {
 	GetIVByReference(ctx context.Context, tenantID string, keyID string, reference string) (IVLogRecord, error)
 
 	RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error)
+	// RunCryptoTxAt is RunCryptoTx on a stated version (0 = current).
+	RunCryptoTxAt(ctx context.Context, tenantID string, keyID string, op string, version int, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error)
 
 	// Crypto Agility
 	GetAlgorithmDistribution(ctx context.Context, tenantID string) ([]AlgorithmUsage, error)
 	ListKeysByAlgorithm(ctx context.Context, tenantID, algorithm string) ([]Key, error)
-	ListMigrationPlans(ctx context.Context, tenantID string) ([]MigrationPlan, error)
-	CreateMigrationPlan(ctx context.Context, mp MigrationPlan) (MigrationPlan, error)
-	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string) (MigrationPlan, error)
 	ListAgilityRules(ctx context.Context, tenantID string) ([]AgilityRule, error)
 	CreateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
 	UpdateAgilityRule(ctx context.Context, r AgilityRule) (AgilityRule, error)
@@ -287,6 +286,11 @@ type KeyVersion struct {
 	// HSMLabel) or "hsm_resident" (the key is the HSM object HSMLabel).
 	Protection string `json:"protection,omitempty"`
 	HSMLabel   string `json:"hsm_label,omitempty"`
+	// Algorithm is the version's own algorithm when a rotation changed it;
+	// empty means the key's algorithm (no rotation has changed it since).
+	Algorithm string `json:"algorithm,omitempty"`
+	// KCVAlgorithm goes to the keys row when a rotation changes the algorithm.
+	KCVAlgorithm string `json:"-"`
 }
 
 type IVLogRecord struct {
@@ -833,11 +837,11 @@ func (s *SQLStore) GetVersion(ctx context.Context, tenantID string, keyID string
 	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
        COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at,
-       COALESCE(protection,'mek'), COALESCE(hsm_label,'')
+       COALESCE(protection,'mek'), COALESCE(hsm_label,''), COALESCE(algorithm,'')
 FROM key_versions
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, version).Scan(&v.ID, &v.TenantID, &v.KeyID, &v.Version, &v.EncryptedMaterial, &v.MaterialIV, &v.WrappedDEK, &v.PublicKey, &v.KCV,
-		&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt, &v.Protection, &v.HSMLabel)
+		&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt, &v.Protection, &v.HSMLabel, &v.Algorithm)
 	if errors.Is(err, sql.ErrNoRows) {
 		return KeyVersion{}, errStoreNotFound
 	}
@@ -847,11 +851,27 @@ WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 func (s *SQLStore) RotateVersion(ctx context.Context, tenantID string, keyID string, newVer KeyVersion, reason string, oldVersionAction string) error {
 	return s.withTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
 		var current int
-		if err := tx.QueryRowContext(ctx, `SELECT current_version FROM keys WHERE tenant_id=$1 AND id=$2`, tenantID, keyID).Scan(&current); err != nil {
+		var keyAlg string
+		if err := tx.QueryRowContext(ctx, `SELECT current_version, algorithm FROM keys WHERE tenant_id=$1 AND id=$2`, tenantID, keyID).Scan(&current, &keyAlg); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return errStoreNotFound
 			}
 			return err
+		}
+		newAlg := newVer.Algorithm
+		if newAlg != "" && newAlg != keyAlg {
+			// The key's algorithm changes: pin every older version to the
+			// algorithm its material belongs to before the key moves on.
+			if _, err := tx.ExecContext(ctx, `
+UPDATE key_versions SET algorithm=$3
+WHERE tenant_id=$1 AND key_id=$2 AND (algorithm IS NULL OR algorithm='')
+`, tenantID, keyID, keyAlg); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `UPDATE keys SET algorithm=$3, kcv_algorithm=$4 WHERE tenant_id=$1 AND id=$2`,
+				tenantID, keyID, newAlg, newVer.KCVAlgorithm); err != nil {
+				return err
+			}
 		}
 		switch strings.ToLower(strings.TrimSpace(oldVersionAction)) {
 		case "", "deactivate":
@@ -878,9 +898,9 @@ WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 		_, err := tx.ExecContext(ctx, `
 INSERT INTO key_versions (
     id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-    rotated_from, rotation_reason, status, created_at, protection, hsm_label
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14)
-`, newVer.ID, tenantID, keyID, current+1, newVer.EncryptedMaterial, newVer.MaterialIV, newVer.WrappedDEK, nullableBytes(newVer.PublicKey), newVer.KCV, current, reason, "active", protectionOf(newVer), newVer.HSMLabel)
+    rotated_from, rotation_reason, status, created_at, protection, hsm_label, algorithm
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14,$15)
+`, newVer.ID, tenantID, keyID, current+1, newVer.EncryptedMaterial, newVer.MaterialIV, newVer.WrappedDEK, nullableBytes(newVer.PublicKey), newVer.KCV, current, reason, "active", protectionOf(newVer), newVer.HSMLabel, nullable(newAlg))
 		if err != nil {
 			return err
 		}
@@ -956,7 +976,21 @@ ORDER BY created_at DESC LIMIT 1
 	return rec, err
 }
 
+// errVersionRefused: the stated key version can't serve the operation.
+var errVersionRefused = errors.New("key version refused")
+
 func (s *SQLStore) RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
+	return s.RunCryptoTxAt(ctx, tenantID, keyID, op, 0, fn)
+}
+
+// processOnlyOps may run on a version older than the current one: they only
+// process data that version already protected (SP 800-57 deactivated use).
+var processOnlyOps = map[string]bool{"decrypt": true, "verify": true, "unwrap": true, "kem-decapsulate": true}
+
+// RunCryptoTxAt runs fn on version (0 = current). An older version serves
+// only processOnlyOps, and only while active or deactivated. fn sees the
+// version's own algorithm in k.Algorithm when a rotation changed it.
+func (s *SQLStore) RunCryptoTxAt(ctx context.Context, tenantID string, keyID string, op string, version int, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
 	startedAt := time.Now()
 	// On a cluster member the keys row is replicated from the primary: count
 	// this node's operations in the node-local key_op_counters instead.
@@ -1012,23 +1046,33 @@ FROM keys WHERE tenant_id=$1 AND id=$2
 		return CryptoTxResult{}, fmt.Errorf("key status is %s", keyStatus)
 	}
 
+	older := version > 0 && version != key.CurrentVersion
+	if version <= 0 {
+		version = key.CurrentVersion
+	}
+	if older && (version > key.CurrentVersion || !processOnlyOps[op]) {
+		return CryptoTxResult{}, fmt.Errorf("%w: only the current version serves %s", errVersionRefused, op)
+	}
 	var ver KeyVersion
 	err = tx.QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
        COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at,
-       COALESCE(protection,'mek'), COALESCE(hsm_label,'')
+       COALESCE(protection,'mek'), COALESCE(hsm_label,''), COALESCE(algorithm,'')
 FROM key_versions
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
-`, tenantID, keyID, key.CurrentVersion).Scan(&ver.ID, &ver.TenantID, &ver.KeyID, &ver.Version, &ver.EncryptedMaterial, &ver.MaterialIV, &ver.WrappedDEK, &ver.PublicKey, &ver.KCV,
-		&ver.RotatedFrom, &ver.RotationReason, &ver.Status, &ver.CreatedAt, &ver.Protection, &ver.HSMLabel)
+`, tenantID, keyID, version).Scan(&ver.ID, &ver.TenantID, &ver.KeyID, &ver.Version, &ver.EncryptedMaterial, &ver.MaterialIV, &ver.WrappedDEK, &ver.PublicKey, &ver.KCV,
+		&ver.RotatedFrom, &ver.RotationReason, &ver.Status, &ver.CreatedAt, &ver.Protection, &ver.HSMLabel, &ver.Algorithm)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CryptoTxResult{}, errStoreNotFound
 	}
 	if err != nil {
 		return CryptoTxResult{}, err
 	}
-	if ver.Status != "active" {
-		return CryptoTxResult{}, fmt.Errorf("key version status is %s", ver.Status)
+	if ver.Status != "active" && !(older && ver.Status == "deactivated") {
+		return CryptoTxResult{}, fmt.Errorf("%w: key version status is %s", errVersionRefused, ver.Status)
+	}
+	if ver.Algorithm != "" {
+		key.Algorithm = ver.Algorithm
 	}
 
 	result, err := fn(key, ver)

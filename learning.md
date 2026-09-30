@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A documented parameter the code never read
+- **What happened:** the API reference said decrypt and verify accept a key
+  version, but `RunCryptoTx` always loaded the current version. After any
+  rotation, ciphertext and signatures from older versions could not be
+  processed through `/decrypt` or `/verify`, and "rotation keeps old versions
+  for decryption" was true only in the database.
+- **How it slipped through:** every test encrypted and decrypted under the
+  same version; none rotated between the two. The doc was written from the
+  intended design, not from the handler's request struct.
+- **Rule:** a test of any versioned operation rotates between producing and
+  consuming the data. Document a request field only after reading the struct
+  that decodes it.
+
+### Progress inferred from aggregate counts is not progress
+- **What happened:** keycore migration plans measured progress as "live keys
+  on the source algorithm now" against the count at creation. Deleting a key
+  counted as migrated; creating one moved progress backwards; nothing linked
+  a plan to the keys it covered.
+- **Fix:** removed; the pqc engine tracks each key as a step with its own
+  outcome. Progress is measured per item that was actually changed.
 ### "Authenticates per-route" was a comment, not code: dataprotect was open
 - **What happened:** dataprotect booted with `SkipJWT` and a comment saying
   "operator APIs validate platform JWTs in handlers". No handler did.

@@ -80,6 +80,7 @@ export interface AgilityPosture {
   milestones: PolicyMilestone[];
   algorithms: AlgorithmUsage[];
   findings: string[];
+  unlinked: { algorithm: string; keys: number; threats: string[] }[]; // threatened live keys no asset links
 }
 
 // ruleCovers mirrors keycore's AgilityRule.matches for previewing a rule.
@@ -96,21 +97,6 @@ export function ruleCovers(rule: Pick<NewAgilityRule, "match_kind" | "match_valu
     }
   }
   return false;
-}
-
-export type MigrationPlanStatus = "planned" | "in_progress" | "paused" | "completed";
-
-export interface MigrationPlan {
-  id: string;
-  name: string;
-  from_algorithm: string;
-  to_algorithm: string;
-  affected_keys: number; // live from_algorithm keys when the plan was created
-  completed_keys: number; // derived from the keys table
-  remaining_keys: number; // live from_algorithm keys now
-  status: MigrationPlanStatus;
-  created_at: string;
-  target_date?: string;
 }
 
 export async function getAgilityPosture(session: AuthSession): Promise<AgilityPosture> {
@@ -135,31 +121,6 @@ export async function updateAgilityRule(session: AuthSession, id: string, rule: 
 
 export async function deleteAgilityRule(session: AuthSession, id: string): Promise<void> {
   await serviceRequest(session, "keycore", `/agility/policy/rules/${encodeURIComponent(id)}`, { method: "DELETE" });
-}
-
-export async function listMigrationPlans(session: AuthSession): Promise<MigrationPlan[]> {
-  const res = await serviceRequest<{ data: MigrationPlan[] }>(session, "keycore", "/agility/migration-plans");
-  return res.data ?? [];
-}
-
-export interface NewMigrationPlan {
-  name: string;
-  from_algorithm: string;
-  to_algorithm: string;
-  target_date?: string; // YYYY-MM-DD
-}
-
-export async function createMigrationPlan(
-  session: AuthSession,
-  data: NewMigrationPlan,
-): Promise<MigrationPlan> {
-  const res = await serviceRequest<{ data: MigrationPlan }>(session, "keycore", "/agility/migration-plans", { method: "POST", body: JSON.stringify(data) });
-  return res.data;
-}
-
-export async function updateMigrationPlanStatus(session: AuthSession, id: string, status: MigrationPlanStatus): Promise<MigrationPlan> {
-  const res = await serviceRequest<{ data: MigrationPlan }>(session, "keycore", `/agility/migration-plans/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }) });
-  return res.data;
 }
 
 // ---- Crypto agility risk assessment (CARAF), keycore /agility/caraf ----
@@ -226,6 +187,7 @@ export interface CarafAssetAssessment {
   missing: string[];
   suggestion?: "secure" | "accept" | "phase_out";
   decision_state: string; // undecided, accepted, acceptance_expired, open, in_progress, done, overdue
+  consumers: string[]; // measured callers of its live linked keys ("actor via interface")
 }
 
 export interface CarafAssessment {

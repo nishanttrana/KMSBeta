@@ -402,7 +402,7 @@ func (s *Service) ExecuteMigrationPlan(ctx context.Context, tenantID string, pla
 	failed := 0
 	skipped := 0
 	manual := 0
-	done := map[string]bool{"completed": true, "rotated": true, "successor_created": true}
+	done := map[string]bool{"completed": true, "rotated": true, "algorithm_changed": true, "successor_created": true}
 	for i := range plan.Steps {
 		step := &plan.Steps[i]
 		if step.Metadata == nil {
@@ -526,7 +526,8 @@ func (s *Service) RollbackMigrationPlan(ctx context.Context, tenantID string, pl
 	if err != nil {
 		return MigrationPlan{}, err
 	}
-	// Rollback deactivates the successor keys this plan created. A rotation
+	// Rollback deactivates the successor keys this plan created and rotates
+	// changed keys back to their old algorithm. A same-algorithm rotation
 	// cannot be undone and is reported as such, never marked rolled back.
 	rolled, irreversible, rollbackFailed := 0, 0, 0
 	for i := range plan.Steps {
@@ -539,6 +540,22 @@ func (s *Service) RollbackMigrationPlan(ctx context.Context, tenantID string, pl
 				continue
 			}
 			if err := s.keycore.DeactivateKey(ctx, tenantID, id, "pqc migration rollback by "+defaultString(actor, "system")); err != nil {
+				rollbackFailed++
+				step.Metadata["rollback_error"] = err.Error()
+				continue
+			}
+			step.Status = "rolled_back"
+			step.RolledBackAt = s.now()
+			step.RolledBackBy = defaultString(actor, "system")
+			rolled++
+		case "algorithm_changed":
+			// Rotate back: the key returns to its old algorithm under the
+			// same ID; data protected meanwhile stays decryptable by version.
+			if s.keycore == nil {
+				rollbackFailed++
+				continue
+			}
+			if err := s.keycore.RotateKey(ctx, tenantID, step.AssetID, "pqc migration rollback by "+defaultString(actor, "system"), step.CurrentAlg); err != nil {
 				rollbackFailed++
 				step.Metadata["rollback_error"] = err.Error()
 				continue
@@ -877,7 +894,8 @@ func (s *Service) collectAssets(ctx context.Context, tenantID string) ([]discove
 var errManualStep = errors.New("manual step")
 
 // applyMigrationStep performs a key step in keycore and returns what it did:
-// "rotated" (target is the current algorithm) or "successor_created" (a new
+// "rotated" (target is the current algorithm), "algorithm_changed" (same key
+// ID, new algorithm) or "successor_created" (a new
 // key of the target algorithm, id returned). Non-key assets return
 // errManualStep: nothing is changed and the step is never marked completed.
 // Before 1.26.0-beta every step was marked completed after a same-algorithm
@@ -891,7 +909,21 @@ func (s *Service) applyMigrationStep(ctx context.Context, tenantID string, step 
 	}
 	reason := "pqc migration by " + defaultString(actor, "system") + ": " + step.CurrentAlg + " -> " + step.TargetAlg
 	if normalizeAlgorithm(step.TargetAlg) == normalizeAlgorithm(step.CurrentAlg) {
-		return "rotated", "", s.keycore.RotateKey(ctx, tenantID, step.AssetID, reason)
+		return "rotated", "", s.keycore.RotateKey(ctx, tenantID, step.AssetID, reason, "")
+	}
+	// Preferred: the key moves to the target under the same key ID, so its
+	// callers change nothing. Keycore refuses when the target can't serve
+	// what the key does (e.g. an RSA encryption key to ML-KEM); only then is
+	// a successor key created, which callers must adopt.
+	// A discovered key (cloud KMS, …) isn't keycore's to rotate.
+	if firstString(step.Metadata["source"]) == "keycore" {
+		err := s.keycore.RotateKey(ctx, tenantID, step.AssetID, reason, step.TargetAlg)
+		if err == nil {
+			return "algorithm_changed", "", nil
+		}
+		if !strings.HasPrefix(err.Error(), "algorithm change refused") {
+			return "", "", err
+		}
 	}
 	keyType, purpose := "symmetric", "encrypt-decrypt"
 	switch target := normalizeAlgorithm(step.TargetAlg); {
@@ -922,7 +954,7 @@ func (s *Service) buildTimelineMilestones(ctx context.Context, tenantID string) 
 		return out
 	}
 	now := s.now()
-	done := map[string]bool{"completed": true, "rotated": true, "successor_created": true}
+	done := map[string]bool{"completed": true, "rotated": true, "algorithm_changed": true, "successor_created": true}
 	for _, p := range plans {
 		if p.Deadline.IsZero() || p.Status == "rolled_back" {
 			continue

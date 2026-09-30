@@ -12,6 +12,10 @@ import (
 
 func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 	svc, _, pub, keycore := newPQCService(t)
+	// keycore refuses to move this key in place, so the plan falls back to
+	// a successor key (TestPQCMigrationChangesAlgorithmInPlace covers the
+	// preferred path).
+	keycore.refuseAlgorithmChange = map[string]bool{"k1": true}
 	ctx := context.Background()
 	tenantID := "tenant-svc"
 
@@ -207,5 +211,53 @@ func TestCertsClientEdgeMeasurement(t *testing.T) {
 	got, err := NewHTTPCertsClient(srv.URL, time.Second).EdgeMeasurement(context.Background(), "t1")
 	if err != nil || len(got) != 1 || got[0].Name != "envoy" || got[0].AcceptedGroups[0] != "X25519MLKEM768" || got[0].MeasuredAt.IsZero() {
 		t.Fatalf("measurement: %+v %v", got, err)
+	}
+}
+
+// The preferred migration keeps the key ID: keycore rotates the key onto the
+// target algorithm, and rollback rotates it back.
+func TestPQCMigrationChangesAlgorithmInPlace(t *testing.T) {
+	svc, _, pub, keycore := newPQCService(t)
+	ctx := context.Background()
+	tenantID := "tenant-inplace"
+	if _, err := svc.StartReadinessScan(ctx, ScanRequest{TenantID: tenantID, Trigger: "test"}); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := svc.CreateMigrationPlan(ctx, PlanRequest{TenantID: tenantID, Name: "plan", CreatedBy: "tester"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.ExecuteMigrationPlan(ctx, tenantID, plan.ID, ExecuteRequest{TenantID: tenantID, Actor: "tester"}); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := svc.GetMigrationPlan(ctx, tenantID, plan.ID)
+	changed := 0
+	for _, step := range after.Steps {
+		if step.Status == "algorithm_changed" {
+			changed++
+			if step.AssetID != "k1" || step.Metadata["successor_key_id"] != nil || step.Metadata["source"] != "keycore" {
+				t.Fatalf("in-place step %+v", step)
+			}
+		}
+	}
+	keycore.mu.Lock()
+	created := len(keycore.created)
+	keycore.mu.Unlock()
+	// k1 (keycore) moves in place; a discovered cloud key still gets a
+	// keycore successor, as it isn't keycore's to rotate.
+	if changed != 1 || created != 1 {
+		t.Fatalf("changed %d in place, created %d successors", changed, created)
+	}
+	if pub.Count("audit.pqc.migration_step_executed") == 0 {
+		t.Fatal("no step event")
+	}
+	rolled, err := svc.RollbackMigrationPlan(ctx, tenantID, plan.ID, "tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, step := range rolled.Steps {
+		if step.AssetID == "k1" && step.Status != "rolled_back" {
+			t.Fatalf("in-place change not rolled back: %+v", step)
+		}
 	}
 }

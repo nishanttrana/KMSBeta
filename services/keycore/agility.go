@@ -168,21 +168,6 @@ type KeysByAlgorithm struct {
 	Keys      []Key  `json:"keys"`
 }
 
-// MigrationPlan describes a planned algorithm migration.
-type MigrationPlan struct {
-	ID            string     `json:"id"`
-	TenantID      string     `json:"tenant_id"`
-	Name          string     `json:"name"`
-	FromAlgorithm string     `json:"from_algorithm"`
-	ToAlgorithm   string     `json:"to_algorithm"`
-	AffectedKeys  int        `json:"affected_keys"`  // live from_algorithm keys when the plan was created
-	CompletedKeys int        `json:"completed_keys"` // derived: affected_keys - remaining_keys, floored at 0
-	RemainingKeys int        `json:"remaining_keys"` // derived: live from_algorithm keys now
-	Status        string     `json:"status"`
-	CreatedAt     time.Time  `json:"created_at"`
-	TargetDate    *time.Time `json:"target_date,omitempty"`
-}
-
 func changeOf(r *AgilityRule) *PolicyChange {
 	if r == nil {
 		return nil

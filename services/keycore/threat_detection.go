@@ -66,7 +66,12 @@ const (
 // success so the detection rules have a trail to run over. Recording is
 // best-effort and off the request's critical path.
 func (s *Service) runCryptoTx(ctx context.Context, tenantID, keyID, operation string, fn func(Key, KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
-	result, err := s.store.RunCryptoTx(ctx, tenantID, keyID, operation, fn)
+	return s.runCryptoTxAt(ctx, tenantID, keyID, operation, 0, fn)
+}
+
+// runCryptoTxAt is runCryptoTx on a stated key version (0 = current).
+func (s *Service) runCryptoTxAt(ctx context.Context, tenantID, keyID, operation string, version int, fn func(Key, KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTxAt(ctx, tenantID, keyID, operation, version, fn)
 	if err == nil {
 		s.recordKeyUsage(ctx, tenantID, keyID, operation)
 	}

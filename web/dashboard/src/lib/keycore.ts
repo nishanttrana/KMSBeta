@@ -731,11 +731,14 @@ export async function rotateKey(
   session: AuthSession,
   keyId: string,
   reason = "manual",
-  oldVersionAction: "deactivate" | "keep-active" | "destroy" = "deactivate"
+  oldVersionAction: "deactivate" | "keep-active" | "destroy" = "deactivate",
+  // targetAlgorithm moves the key to that algorithm under the same key ID;
+  // older versions keep decrypting and verifying what they protected.
+  targetAlgorithm = ""
 ): Promise<void> {
   await apiRequest<Record<string, unknown>>(session, `/keys/${encodeURIComponent(keyId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`, {
     method: "POST",
-    body: JSON.stringify({ reason, old_version_action: oldVersionAction })
+    body: JSON.stringify({ reason, old_version_action: oldVersionAction, target_algorithm: targetAlgorithm })
   });
 }
 

@@ -59,13 +59,13 @@ func (c *HTTPKeyCoreClient) ListKeys(ctx context.Context, tenantID string, limit
 
 var errKeycoreNotConfigured = errors.New("keycore URL not configured")
 
-func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error {
+func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyID string, reason string, targetAlgorithm string) error {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return errKeycoreNotConfigured
 	}
 	q := url.Values{}
 	q.Set("tenant_id", strings.TrimSpace(tenantID))
-	body := map[string]string{"reason": strings.TrimSpace(reason)}
+	body := map[string]string{"reason": strings.TrimSpace(reason), "target_algorithm": strings.TrimSpace(targetAlgorithm)}
 	_, err := c.doJSON(ctx, http.MethodPost, "/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/rotate?"+q.Encode(), body)
 	return err
 }

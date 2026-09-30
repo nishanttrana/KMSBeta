@@ -444,7 +444,21 @@ ACTIVE → DEACTIVATED. Existing ciphertext can still be decrypted.
 
 ### POST /svc/keycore/keys/{id}/rotate
 
-New version created, previous retired but still available for decryption.
+New version created; the previous one is deactivated (default), kept active
+or destroyed per `old_version_action`, and while not destroyed it still
+decrypts and verifies what it protected (pass its `version`).
+
+Body (all optional): `reason`, `old_version_action` (`deactivate`,
+`keep-active`, `destroy`), `target_algorithm`. A `target_algorithm` other
+than the key's moves the key to it **under the same key ID**: the new
+version uses the target, older versions keep their own algorithm, and callers
+change nothing (NIST CSWP 39 crypto agility). Keycore checks the FIPS mode
+and the tenant's migration policy against the target, and answers `409
+algorithm_change_refused` (audited `audit.key.algorithm_change_refused`) when
+the target is unknown or weak, can't serve an operation the key serves (e.g.
+an encryption key to ML-DSA), or the key is HSM-resident. Success emits
+`audit.key.algorithm_changed` besides `audit.key.rotate`. Response:
+`version_id`, `version`, `algorithm` (set when it changed), `kcv`.
 
 ```bash
 curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/rotate \
@@ -487,7 +501,27 @@ Response:
 
 ### POST /svc/keycore/keys/{id}/decrypt
 
-Body: `ciphertext`, `iv`, `tag`, `aad` (optional), `keyVersion` (optional). Response: `plaintext` (base64), `keyId`, `keyVersion`
+Body: `ciphertext`, `iv`, `aad` (optional), `version` (optional: the key
+version encrypt returned; `0` or absent = current). Response: `plaintext`
+(base64), `key_id`, `version`. An older version decrypts while it is `active`
+or `deactivated` (SP 800-57 processing use); a deleted version, or a version
+above the current one, answers `400` (`key version refused`).
+
+---
+
+### POST /svc/keycore/keys/{id}/rewrap
+
+`key.rewrap`. Moves ciphertext onto the key's current version inside
+keycore: it decrypts under `version` and encrypts under the current version,
+with every check decrypt and encrypt make (key access, migration policy,
+approval, FIPS) and their `audit.key.decrypt` / `audit.key.encrypt` events.
+The plaintext never leaves keycore. Body: `ciphertext`, `iv`, `aad`
+(optional, kept), `version` (the version that produced the ciphertext),
+`reference_id` (optional). Response `data`: `key_id`, `from_version`,
+`version`, `ciphertext`, `iv`. Audited as `audit.key.ciphertext_rewrapped`
+(details `from_version`, `version`); refusals `result: refused` with
+`version_refused` (`409`), `policy_denied`, `fips_mode_violation`,
+`access_denied` (`403`).
 
 ---
 
@@ -506,7 +540,10 @@ is supported for HSM keys only").
 
 ### POST /svc/keycore/keys/{id}/verify
 
-Body: `message`, `signature`, `messageType`, `algorithm`, `keyVersion`. Response: `valid` (boolean), `keyId`, `keyVersion`, `algorithm`
+Body: `data`, `signature`, `algorithm`, `version` (optional: the version
+sign returned; `0` = current). Response: `verified` (boolean), `key_id`,
+`version`. An older version verifies with its own algorithm while `active` or
+`deactivated`.
 
 ---
 
@@ -573,9 +610,12 @@ included.
 | `PUT /agility/policy/rules/{id}` | `key.agility.write` | `audit.key.agility_policy_rule_updated` | the updated rule |
 | `DELETE /agility/policy/rules/{id}` | `key.agility.write` | `audit.key.agility_policy_rule_deleted` | `{deleted: true}` |
 | `GET /agility/keys-by-algorithm?algorithm=` | `key.agility.read` | `audit.key.agility_keys_by_algorithm_read` | `{algorithm, keys}` |
-| `GET /agility/migration-plans` | `key.agility.read` | `audit.key.agility_migration_plans_listed` | plans with derived progress |
-| `POST /agility/migration-plans` | `key.agility.write` | `audit.key.agility_migration_plan_created` | the new plan (`201`) |
-| `PATCH /agility/migration-plans/{id}` | `key.agility.write` | `audit.key.agility_migration_plan_updated` | the updated plan |
+
+The keycore migration plans (`/agility/migration-plans`) were removed in
+7.3.0-beta: they recorded intent only and inferred progress from
+tenant-wide algorithm counts. Migrations run in the pqc service
+(`/pqc/migration/plans`, execute and rollback), which moves a keycore key to
+its target with `POST /keys/{id}/rotate` `target_algorithm`.
 
 **Migration policy rules.** Body: `name`; `match_kind` `algorithm` (with
 `match_value` the algorithm), `family` (`match_value` e.g. `RSA`, `ECDSA`,
@@ -3369,7 +3409,8 @@ Selected events with dedicated audit classification:
 - `audit.security.sustained_risk_detected` (audit's sustained-risk signal: 3 events scoring ≥80 on one target within 5 minutes, once per window; `target_type` / `target_id` name the key, target or tenant, details `reason`, `score_threshold`, `window_seconds`, `result: warning`). It changes nothing itself; the `sustained_risk_detected` playbook trigger responds. Replaced `audit.security.auto_quarantined` in 5.3.0-beta, which quarantined nothing
 - `audit.policy.floor_refused` (a policy create or update refused because `spec.minAlgorithmTier` is not a floor; `result: refused`, `reason: invalid_min_algorithm_tier`, `policy_name`, `min_algorithm_tier`). A request denied by a valid floor emits `audit.policy.violated` (`result: refused`, `rules: ["crypto-floor"]`, `algorithm`) and `audit.policy.crypto_floor_violation` (`reason: below_min_algorithm_tier`, `policy_id`, `algorithm`, `tier`)
 - `audit.key.agility_drill_run`, `audit.key.agility_drills_listed` (swap drill kernel events, above), `audit.key.caraf_*` (risk assessment kernel events, above), `audit.key.crypto_policy_refused` (a key operation refused by the tenant's migration policy; `result: refused`, `reason`, `operation`, `algorithm`, `key_id`, `rule_id`, `rule_name`, `rule_action`), `audit.key.agility_policy_rules_listed`, `audit.key.agility_policy_rule_created`, `audit.key.agility_policy_rule_updated`, `audit.key.agility_policy_rule_deleted` (kernel events; refusals `result: refused`)
-- `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read`, `audit.key.agility_migration_plans_listed`, `audit.key.agility_migration_plan_created`, `audit.key.agility_migration_plan_updated` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
+- `audit.key.algorithm_changed` (a rotation moved the key to `to_algorithm` under the same key ID; `from_algorithm`, `version`), `audit.key.algorithm_change_refused` (`result: refused`, `reason`), `audit.key.ciphertext_rewrapped` (kernel event; refusals as below): crypto agility under a stable key ID
+- `audit.key.agility_posture_read`, `audit.key.agility_inventory_read`, `audit.key.agility_keys_by_algorithm_read` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`): crypto agility
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
@@ -4038,9 +4079,6 @@ from the code; do not edit by hand.
 - `GET /svc/keycore/agility/drills`
 - `POST /svc/keycore/agility/drills`
 - `GET /svc/keycore/agility/keys-by-algorithm`
-- `GET /svc/keycore/agility/migration-plans`
-- `POST /svc/keycore/agility/migration-plans`
-- `PATCH /svc/keycore/agility/migration-plans/{id}`
 - `GET /svc/keycore/agility/policy/rules`
 - `POST /svc/keycore/agility/policy/rules`
 - `DELETE /svc/keycore/agility/policy/rules/{id}`
@@ -4151,6 +4189,7 @@ from the code; do not edit by hand.
 - `POST /svc/keycore/keys/{id}/kem/encapsulate`
 - `POST /svc/keycore/keys/{id}/mac`
 - `GET /svc/keycore/keys/{id}/public-key`
+- `POST /svc/keycore/keys/{id}/rewrap`
 - `POST /svc/keycore/keys/{id}/rotate`
 - `GET /svc/keycore/keys/{id}/rotation-metrics`
 - `POST /svc/keycore/keys/{id}/rotation-metrics`

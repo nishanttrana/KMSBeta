@@ -454,6 +454,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [rotating,setRotating]=useState(false);
   const [rotateType,setRotateType]=useState("standard");
   const [rotateOldVersionAction,setRotateOldVersionAction]=useState("deactivate");
+  const [rotateTargetAlgorithm,setRotateTargetAlgorithm]=useState("");
   const [exporting,setExporting]=useState(false);
   const [exportWrappingKeyId,setExportWrappingKeyId]=useState("");
   const [exportMode,setExportMode]=useState("wrapped");
@@ -1287,7 +1288,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     setRotating(true);
     try{
       const reason=rotateType==="rekey"?"rekey":"manual";
-      await rotateKey(session,selectedKey.id,reason,rotateOldVersionAction==="keep-active"?"keep-active":rotateOldVersionAction==="destroy"?"destroy":"deactivate");
+      await rotateKey(session,selectedKey.id,reason,rotateOldVersionAction==="keep-active"?"keep-active":rotateOldVersionAction==="destroy"?"destroy":"deactivate",rotateTargetAlgorithm.trim());
       await refreshKeyCatalog(selectedKey.id);
       await loadVersions(selectedKey.id);
       setModal(null);
@@ -2572,7 +2573,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       </FG>
       <KeyHistoryPanel session={session} keyID={selectedKey.id}/>
       <div style={{display:"flex",gap:6,marginTop:12}}>
-        {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
+        {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateTargetAlgorithm("");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
         {selectedCanExport&&<Btn onClick={()=>{setExportWrappingKeyId("");setExportMode(isPublicComponentLike(selectedKey)?"public-plaintext":"wrapped");setModal("export");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}
         {isAsymmetricKeyLike(selectedKey)&&!selectedDeletedLike&&<Btn onClick={downloadSelectedPublicKey}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ArrowDownToLine size={12}/>Public key (PEM)</span></Btn>}
         {selectedCanEditPolicy&&<Btn onClick={()=>openPolicyEditor(selectedKey)}>Edit Key Policy</Btn>}
@@ -2706,6 +2707,10 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           <option value="keep-active">Keep old version active (dual-active period)</option>
           <option value="destroy">Destroy old version immediately</option>
         </Sel>
+      </FG>
+      <FG label="Change Algorithm (optional)">
+        <Inp placeholder={`Keep ${selectedKey?.algo||selectedKey?.algorithm||"current"}, or e.g. AES-256, ML-DSA-65`} value={rotateTargetAlgorithm} onChange={(e)=>setRotateTargetAlgorithm(e.target.value)}/>
+        <div style={{fontSize:10,color:C.muted,marginTop:4}}>The key keeps its ID. Older versions still decrypt and verify what they protected (pass their version); rewrap moves ciphertext onto the new version. Keycore refuses a target that can't do what this key does.</div>
       </FG>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={rotateSelectedKey} disabled={rotating}>{rotating?"Rotating...":"Rotate Key"}</Btn></div>
     </Modal>

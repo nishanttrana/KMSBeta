@@ -115,6 +115,9 @@ type CarafAssetAssessment struct {
 	Missing       []string         `json:"missing"`
 	Suggestion    string           `json:"suggestion,omitempty"`
 	DecisionState string           `json:"decision_state"`
+	// Consumers are the callers measured using its live linked keys in the
+	// usage window (this node's trail): who a migration would touch.
+	Consumers []string `json:"consumers"`
 }
 
 // CarafRoadmapItem is a recorded decision with its date.
@@ -163,6 +166,9 @@ type CarafAssessment struct {
 	// unknown) and timeline.
 	Heatmap  map[string]map[string]int `json:"heatmap"`
 	Assets   []CarafAssetAssessment    `json:"assets"`
+	// Unlinked are live keys on algorithms a recorded threat reaches that no
+	// asset links: the inventory gap, counted from the keys table.
+	Unlinked []CarafUnlinked `json:"unlinked"`
 	Roadmap  []CarafRoadmapItem        `json:"roadmap"`
 	Findings []string                  `json:"findings"`
 }
@@ -362,6 +368,35 @@ func carafFindings(a CarafAssessment) []string {
 	}
 	if n, l := names(func(x CarafAssetAssessment) bool { return len(x.MissingKeys) > 0 }); n > 0 {
 		out = append(out, fmt.Sprintf("Linked keys that are no longer live (%d assets): %s.", n, l))
+	}
+	return out
+}
+
+// CarafUnlinked is one threatened algorithm's live keys outside every asset.
+type CarafUnlinked struct {
+	Algorithm string   `json:"algorithm"`
+	Keys      int      `json:"keys"`
+	Threats   []string `json:"threats"`
+}
+
+// unlinkedThreatenedKeys counts, per algorithm a threat reaches, the live
+// keys no asset links (distribution minus the linked live keys).
+func unlinkedThreatenedKeys(threats []CarafThreat, distribution []AlgorithmUsage, linked map[string]string) []CarafUnlinked {
+	perAlg := map[string]int{}
+	for _, alg := range linked {
+		perAlg[alg]++
+	}
+	out := []CarafUnlinked{}
+	for _, d := range distribution {
+		names := []string{}
+		for _, t := range threats {
+			if t.reaches(d.Algorithm) {
+				names = append(names, t.Name)
+			}
+		}
+		if n := d.KeyCount - perAlg[d.Algorithm]; n > 0 && len(names) > 0 {
+			out = append(out, CarafUnlinked{Algorithm: d.Algorithm, Keys: n, Threats: names})
+		}
 	}
 	return out
 }

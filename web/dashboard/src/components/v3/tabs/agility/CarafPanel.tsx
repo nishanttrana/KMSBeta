@@ -401,6 +401,7 @@ export function CarafPanel({ session, keyCatalog }: { session: any; keyCatalog: 
                     <b>{x.asset.name}</b>
                     <div style={{ fontSize: 10, color: C.muted }}>{[x.asset.owner, x.asset.ownership !== "unknown" ? x.asset.ownership.replace("_", " ") : "", x.asset.sensitivity !== "unknown" ? `${x.asset.sensitivity} sensitivity` : ""].filter(Boolean).join(" · ")}</div>
                     {x.missing_keys.length > 0 && <div style={{ fontSize: 10, color: C.red }}>{x.missing_keys.length} linked key(s) no longer live</div>}
+                    {(x.consumers ?? []).length > 0 && <div title={x.consumers.join("\n")} style={{ fontSize: 10, color: C.dim }}>used by {x.consumers.length} caller(s): {x.consumers.slice(0, 2).join(", ")}{x.consumers.length > 2 ? "…" : ""}</div>}
                   </td>
                   <td style={{ ...S.td, ...S.mono, fontSize: 11 }}>{x.algorithms.join(", ") || "—"}</td>
                   <td style={{ ...S.td, ...S.mono }}>{x.x ?? "—"}</td>

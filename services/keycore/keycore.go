@@ -46,6 +46,7 @@ import (
 	"golang.org/x/crypto/sha3"
 	"vecta-kms/pkg/clustersync"
 	"vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/cryptocatalog"
 	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
 	"vecta-kms/pkg/payment"
@@ -242,7 +243,10 @@ type DecryptRequest struct {
 	IVB64         string `json:"iv"`
 	AADB64        string `json:"aad"`
 	ReferenceID   string `json:"reference_id"`
-	Operation     string `json:"-"`
+	// Version is the key version that produced the ciphertext (encrypt
+	// returns it); 0 means the current version.
+	Version   int    `json:"version"`
+	Operation string `json:"-"`
 }
 
 type SignRequest struct {
@@ -260,7 +264,9 @@ type VerifyRequest struct {
 	DataB64      string `json:"data"`
 	SignatureB64 string `json:"signature"`
 	Algorithm    string `json:"algorithm"`
-	Operation    string `json:"-"`
+	// Version is the key version that signed (sign returns it); 0 = current.
+	Version   int    `json:"version"`
+	Operation string `json:"-"`
 }
 
 type CryptoResponse struct {
@@ -1788,7 +1794,37 @@ func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID stri
 	}, nil
 }
 
-func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, reason string, oldVersionAction string) (out KeyVersion, err error) {
+func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, reason string, oldVersionAction string) (KeyVersion, error) {
+	return s.RotateKeyTo(ctx, tenantID, keyID, reason, oldVersionAction, "")
+}
+
+// errAlgorithmChangeRefused: a rotation can't move the key to the target.
+var errAlgorithmChangeRefused = errors.New("algorithm change refused")
+
+// algorithmChangeProblem says why key can't rotate onto target ("" = it can).
+// The key ID stays; older versions keep their own algorithm for decrypt and
+// verify, so the new algorithm must serve every operation the key serves.
+func algorithmChangeProblem(key Key, target string) string {
+	e, known := cryptocatalog.Lookup(target)
+	if !known || e.Weak {
+		return "target_algorithm must name a parameter set that is not weak"
+	}
+	if key.Labels[labelHSM] == labelHSMResident {
+		return "an HSM-resident key keeps its algorithm; create a new HSM key for the target"
+	}
+	candidate := key
+	candidate.Algorithm = target
+	for _, op := range []string{"encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"} {
+		if ensureKeySupportsOperation(key, op) == nil && ensureKeySupportsOperation(candidate, op) != nil {
+			return target + " can't " + op + ", which this key does"
+		}
+	}
+	return ""
+}
+
+// RotateKeyTo rotates the key; a non-empty targetAlgorithm different from the
+// key's makes the new version use it under the same key ID.
+func (s *Service) RotateKeyTo(ctx context.Context, tenantID string, keyID string, reason string, oldVersionAction string, targetAlgorithm string) (out KeyVersion, err error) {
 	startedAt := time.Now().UTC()
 	rotationID := newID("rotm")
 	oldVersion := 0
@@ -1839,11 +1875,24 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 	if err := s.enforceKeyAccess(ctx, key, "all"); err != nil {
 		return KeyVersion{}, err
 	}
+	fromAlg, alg := key.Algorithm, key.Algorithm
+	if t := strings.TrimSpace(targetAlgorithm); t != "" && !strings.EqualFold(t, key.Algorithm) {
+		if problem := algorithmChangeProblem(key, t); problem != "" {
+			_ = s.publishAudit(ctx, "audit.key.algorithm_change_refused", tenantID, map[string]any{
+				"key_id": keyID, "from_algorithm": fromAlg, "to_algorithm": t, "result": "refused", "reason": problem,
+			})
+			return KeyVersion{}, fmt.Errorf("%w: %s", errAlgorithmChangeRefused, problem)
+		}
+		alg = t
+		if err := s.enforceFIPSKeyAlgorithm(ctx, tenantID, alg, "key.rotate"); err != nil {
+			return KeyVersion{}, err
+		}
+	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
 		TenantID:          tenantID,
 		Operation:         "key.rotate",
 		KeyID:             keyID,
-		Algorithm:         key.Algorithm,
+		Algorithm:         alg,
 		Purpose:           key.Purpose,
 		IVMode:            key.IVMode,
 		OpsTotal:          key.OpsTotal,
@@ -1861,12 +1910,12 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 		}
 		newVer.RotationReason = reason
 	} else {
-		raw, err := generateMaterialForCreate(key.Algorithm, key.KeyType)
+		raw, err := generateMaterialForCreate(alg, key.KeyType)
 		if err != nil {
 			return KeyVersion{}, err
 		}
 		defer crypto.Zeroize(raw)
-		newKCV, _, err := computeKCVStrict(key.Algorithm, raw)
+		newKCV, kcvAlg, err := computeKCVStrict(alg, raw)
 		if err != nil {
 			return KeyVersion{}, err
 		}
@@ -1882,6 +1931,9 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 			RotatedFrom:    key.CurrentVersion,
 			RotationReason: reason,
 			Status:         "active",
+		}
+		if alg != fromAlg {
+			newVer.Algorithm, newVer.KCVAlgorithm = alg, kcvAlg
 		}
 		if err := s.protectMaterial(ctx, &newVer, raw); err != nil {
 			return KeyVersion{}, err
@@ -1899,6 +1951,11 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 	}
 	_ = s.cache.Delete(ctx, tenantID, keyID)
 	_ = s.publishAudit(ctx, "audit.key.rotate", tenantID, map[string]any{"key_id": keyID, "reason": reason, "old_version_action": action})
+	if alg != fromAlg {
+		_ = s.publishAudit(ctx, "audit.key.algorithm_changed", tenantID, map[string]any{
+			"key_id": keyID, "from_algorithm": fromAlg, "to_algorithm": alg, "version": newVer.Version, "result": "success",
+		})
+	}
 	return newVer, nil
 }
 
@@ -2959,7 +3016,7 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTxAt(ctx, req.TenantID, keyID, operation, req.Version, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		if kv.Protection == protectionHSMResident {
 			plain, err := s.hsm.Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
 			if err != nil {
@@ -2967,12 +3024,15 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			}
 			return CryptoTxResult{Payload: plain, IV: iv}, nil
 		}
+		if err := s.enforceVersionAlgorithm(ctx, req.TenantID, key, k, "key.decrypt"); err != nil {
+			return CryptoTxResult{}, err
+		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
 		}
 		defer crypto.Zeroize(raw)
-		plain, err := decryptWithKeyAlgorithm(key.Algorithm, key.KeyType, raw, iv, cipherRaw, aad)
+		plain, err := decryptWithKeyAlgorithm(k.Algorithm, k.KeyType, raw, iv, cipherRaw, aad)
 		if err != nil {
 			return CryptoTxResult{}, err
 		}
@@ -3142,7 +3202,10 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 		version  int
 		verified bool
 	)
-	_, err = s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	_, err = s.runCryptoTxAt(ctx, req.TenantID, keyID, operation, req.Version, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if err := s.enforceVersionAlgorithm(ctx, req.TenantID, key, k, "key.verify"); err != nil {
+			return CryptoTxResult{}, err
+		}
 		if kv.Protection == protectionHSMResident {
 			digest, hash, err := hsmDigest(k, req.Algorithm, data)
 			if err != nil {

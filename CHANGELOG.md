@@ -4,6 +4,41 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.3.0-beta] — 2026-09-30
+
+### Crypto agility under a stable key ID (NIST CSWP 39)
+- **Rotation can change a key's algorithm.** `POST /keys/{id}/rotate` takes
+  `target_algorithm`: the new version uses it under the same key ID, so
+  applications change nothing. Older versions keep their own algorithm
+  (`key_versions.algorithm`, migration 034) and keep decrypting and verifying
+  what they protected. Keycore refuses (`409 algorithm_change_refused`) a
+  target that is unknown or weak, can't serve an operation the key serves, or
+  an HSM-resident key; the FIPS mode and the tenant's migration policy are
+  checked against the target. Audited: `audit.key.algorithm_changed`,
+  `audit.key.algorithm_change_refused`. Keys → Rotate has a "Change
+  algorithm" field.
+- **Decrypt and verify honour `version`.** They always used the current
+  version, so ciphertext and signatures from before any rotation could not
+  be processed, although the API reference said `keyVersion` was accepted.
+  An older version now serves decrypt, verify and unwrap while `active` or
+  `deactivated` (SP 800-57), never encrypt or sign.
+- **`POST /keys/{id}/rewrap`** (`key.rewrap`) moves ciphertext onto the
+  current version inside keycore; the plaintext never leaves it. Audited
+  `audit.key.ciphertext_rewrapped`, refusals included.
+- **PQC migrations keep the key ID.** An executed pqc plan now rotates a
+  keycore key onto its target (step `algorithm_changed`) and rolls back by
+  rotating it back. Only when keycore refuses the change, or the key was
+  discovered outside keycore, does it create a successor key as before.
+- **Removed: keycore's record-only migration plans** (`/agility/migration-plans`,
+  table `agility_migration_plans` dropped by migration 034). Their progress
+  counted every live key on the source algorithm in the tenant, so deleting
+  a key read as "migrated" and creating one set progress back. Migrations
+  run in Readiness & execution.
+- **CARAF assessment measures, not only records:** each asset lists the
+  callers of its linked keys (key usage trail, this node), and the
+  assessment lists live keys on threatened algorithms that no asset links,
+  with a finding for each.
+
 ## [7.2.0-beta] — 2026-09-30
 
 ### Security: dataprotect verifies who is calling (critical fix)

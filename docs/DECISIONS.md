@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-30 — Algorithm change by rotation under the same key ID (7.3.0-beta)
+
+**Decision.** A key's algorithm changes by rotation: the new version carries
+the target algorithm, older versions keep theirs for decrypt and verify, and
+the key ID stays. PQC migrations prefer this and create a successor key only
+when keycore refuses the change.
+
+**Why.** NIST CSWP 39 asks that an algorithm change not require changing the
+applications that use it. A successor key has a new ID, so every caller had to
+be found and changed, which is exactly the agility gap CARAF measures as Y.
+
+**Rejected.** (1) Successor keys only: pushes the change onto every caller.
+(2) Changing the algorithm of existing material: impossible, the material
+belongs to its algorithm. (3) Letting an old version encrypt or sign: would
+keep producing data under the algorithm being retired; old versions only
+process (SP 800-57). (4) Moving an HSM-resident key in place: the HSM object
+defines the algorithm; a new HSM key is created instead.
+
+**Limits.** The target must serve every operation the key serves (an
+encryption key can't become ML-DSA; an RSA encryption key to ML-KEM gets a
+successor). Rewrap moves ciphertext only when the caller sends it; keycore
+does not hold the customer's data.
 ## 2026-09-30 — Dataprotect: platform token everywhere, wrapper token only on wrapper runtime routes (7.2.0-beta)
 
 **Decision.** Dataprotect verifies a platform JWT on every route in one

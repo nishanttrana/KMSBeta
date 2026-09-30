@@ -37,7 +37,6 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 		`CREATE TABLE agility_drills (id TEXT NOT NULL, tenant_id TEXT NOT NULL, from_algorithm TEXT NOT NULL, to_algorithm TEXT NOT NULL, iterations INT NOT NULL, result TEXT NOT NULL, error TEXT NOT NULL DEFAULT '', measurements TEXT NOT NULL DEFAULT '{}', run_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
 		`CREATE TABLE cryptoperiod_overrides (tenant_id TEXT NOT NULL, category TEXT NOT NULL, days INT NOT NULL, updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, category));`,
 		`CREATE TABLE agility_policy_rules (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, match_kind TEXT NOT NULL, match_value TEXT NOT NULL DEFAULT '', action TEXT NOT NULL, effective_date TIMESTAMP NOT NULL, target_algorithm TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id));`,
-		`CREATE TABLE agility_migration_plans (id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, from_algorithm TEXT NOT NULL, to_algorithm TEXT NOT NULL, affected_keys INT NOT NULL DEFAULT 0, completed_keys INT NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'planned', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, target_date TIMESTAMP);`,
 		`CREATE TABLE keys (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, algorithm TEXT NOT NULL, key_type TEXT NOT NULL,
 			purpose TEXT NOT NULL, status TEXT NOT NULL, current_version INTEGER NOT NULL, kcv BLOB, kcv_algorithm TEXT,
@@ -54,7 +53,7 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, version INTEGER NOT NULL,
 			encrypted_material BLOB NOT NULL, material_iv BLOB NOT NULL, wrapped_dek BLOB NOT NULL, public_key BLOB, kcv BLOB,
 			rotated_from INTEGER, rotation_reason TEXT, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			protection TEXT NOT NULL DEFAULT 'mek', hsm_label TEXT NOT NULL DEFAULT '',
+			protection TEXT NOT NULL DEFAULT 'mek', hsm_label TEXT NOT NULL DEFAULT '', algorithm TEXT,
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE keycore_hsm_settings (tenant_id TEXT PRIMARY KEY, tenant_key_enabled BOOLEAN NOT NULL DEFAULT FALSE, hsm_keys_enabled BOOLEAN NOT NULL DEFAULT FALSE, tenant_key_label TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);`,

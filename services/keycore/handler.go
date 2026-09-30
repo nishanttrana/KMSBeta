@@ -228,6 +228,7 @@ func (h *Handler) routes() *http.ServeMux {
 	h.attestedReleaseRouter(kernelEmitter{h}).MountOn(mux)
 	h.hsmRouter(kernelEmitter{h}).MountOn(mux)
 	h.keyConsumersRouter(kernelEmitter{h}).MountOn(mux)
+	h.rewrapRouter(kernelEmitter{h}).MountOn(mux)
 	h.publicKeyRouter(kernelEmitter{h}).MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)
@@ -608,10 +609,15 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Reason           string `json:"reason"`
 		OldVersionAction string `json:"old_version_action"`
+		TargetAlgorithm  string `json:"target_algorithm"`
 	}
 	_ = decodeJSON(r, &req)
-	ver, err := h.svc.RotateKey(r.Context(), tenantID, r.PathValue("id"), req.Reason, req.OldVersionAction)
+	ver, err := h.svc.RotateKeyTo(r.Context(), tenantID, r.PathValue("id"), req.Reason, req.OldVersionAction, req.TargetAlgorithm)
 	if err != nil {
+		if errors.Is(err, errAlgorithmChangeRefused) {
+			writeErr(w, http.StatusConflict, "algorithm_change_refused", err.Error(), reqID, tenantID)
+			return
+		}
 		if writeHSMError(w, err, reqID, tenantID) {
 			return
 		}
@@ -630,6 +636,8 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":     "ok",
 		"version_id": ver.ID,
+		"version":    ver.Version,
+		"algorithm":  ver.Algorithm,
 		"kcv":        strings.ToUpper(hex.EncodeToString(ver.KCV)),
 		"request_id": reqID,
 	})

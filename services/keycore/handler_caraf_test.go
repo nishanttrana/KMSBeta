@@ -156,3 +156,49 @@ func TestCarafRoutesValidatedAndAudited(t *testing.T) {
 		t.Fatalf("delete event %+v", e)
 	}
 }
+
+// The assessment adds what it can measure: the callers of each asset's
+// linked keys, and threatened live keys that no asset links.
+func TestCarafAssessmentMeasuresConsumersAndGaps(t *testing.T) {
+	h, svc := newHandlerForTest(t)
+	ctx := adminCtx()
+	var ids []string
+	for i := 0; i < 3; i++ {
+		k, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t1", Name: "k", Algorithm: "AES-128", KeyType: "symmetric", Purpose: "encrypt", Owner: "ops", CreatedBy: "tester"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, k.ID)
+	}
+	if rr, _ := agilityCall(t, h, http.MethodPost, "/agility/caraf/threats",
+		`{"name":"AES-128 retirement","category":"regulatory","match_kind":"algorithm","match_value":"AES-128","years_to_threat":3}`); rr.Code != http.StatusCreated {
+		t.Fatalf("threat: %d %s", rr.Code, rr.Body)
+	}
+	if rr, _ := agilityCall(t, h, http.MethodPost, "/agility/caraf/assets",
+		`{"name":"Billing","ownership":"enterprise","implementation":"software","pqc_support":"unknown","location":"on_prem","sensitivity":"high","cost":"low","key_ids":["`+ids[0]+`"]}`); rr.Code != http.StatusCreated {
+		t.Fatalf("asset: %d %s", rr.Code, rr.Body)
+	}
+	if _, err := svc.Encrypt(ctx, ids[0], EncryptRequest{TenantID: "t1", PlaintextB64: "aGk="}); err != nil {
+		t.Fatal(err)
+	}
+	var a map[string]any
+	for i := 0; i < 50; i++ { // the usage trail is written off the request path
+		_, out := agilityCall(t, h, http.MethodGet, "/agility/caraf/assessment", "")
+		a, _ = out["data"].(map[string]any)
+		assets, _ := a["assets"].([]any)
+		if len(assets) == 1 {
+			if c, _ := assets[0].(map[string]any)["consumers"].([]any); len(c) > 0 {
+				break
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	consumers := a["assets"].([]any)[0].(map[string]any)["consumers"].([]any)
+	if len(consumers) != 1 || !strings.HasPrefix(consumers[0].(string), "tester") {
+		t.Fatalf("consumers %v", consumers)
+	}
+	unlinked, _ := a["unlinked"].([]any)
+	if len(unlinked) != 1 || unlinked[0].(map[string]any)["keys"] != float64(2) || unlinked[0].(map[string]any)["algorithm"] != "AES-128" {
+		t.Fatalf("unlinked %v", a["unlinked"])
+	}
+}

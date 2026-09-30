@@ -23,7 +23,7 @@ const CLASS: Record<string, [string, string]> = {
   vulnerable: [C.red, C.redDim], strong: [C.green, C.greenDim], unknown: [C.dim, C.dimTint],
 };
 const STEP: Record<string, [string, string]> = {
-  successor_created: [C.green, C.greenDim], rotated: [C.green, C.greenDim], completed: [C.green, C.greenDim],
+  algorithm_changed: [C.green, C.greenDim], successor_created: [C.green, C.greenDim], rotated: [C.green, C.greenDim], completed: [C.green, C.greenDim],
   manual_required: [C.amber, C.amberDim], failed: [C.red, C.redDim], rolled_back: [C.dim, C.dimTint], pending: [C.accent, C.accentTint],
 };
 const tone = (m: Record<string, [string, string]>, k: string): [string, string] => m[k] ?? [C.dim, C.dimTint];

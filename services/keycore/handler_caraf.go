@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -53,8 +54,39 @@ func (h *Handler) getCarafAssessment(c *route.Call) {
 		}
 	}
 	out := computeCarafAssessment(assets, threats, live, time.Now())
+	dist, err := h.svc.store.GetAlgorithmDistribution(ctx, c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "caraf_assessment_failed", err.Error())
+		return
+	}
+	out.Unlinked = unlinkedThreatenedKeys(threats, dist, live)
+	for _, u := range out.Unlinked {
+		out.Findings = append(out.Findings, fmt.Sprintf("%s on %s (%s) belong to no asset: link them so their exposure is assessed.", keysN(u.Keys), u.Algorithm, strings.Join(u.Threats, ", ")))
+	}
+	since := time.Now().UTC().Add(-usageRetention)
+	for i := range out.Assets {
+		seen := map[string]bool{}
+		out.Assets[i].Consumers = []string{}
+		for _, id := range out.Assets[i].Asset.KeyIDs {
+			if _, ok := live[id]; !ok {
+				continue
+			}
+			consumers, err := h.svc.store.ListKeyConsumers(ctx, c.Tenant, id, since)
+			if err != nil {
+				c.Error(http.StatusInternalServerError, "caraf_assessment_failed", err.Error())
+				return
+			}
+			for _, k := range consumers {
+				if name := k.ActorID + " via " + k.Interface; !seen[name] {
+					seen[name] = true
+					out.Assets[i].Consumers = append(out.Assets[i].Consumers, name)
+				}
+			}
+		}
+	}
 	c.Detail("assets", out.Summary.Assets)
 	c.Detail("exposed", out.Summary.Exposed)
+	c.Detail("unlinked_algorithms", len(out.Unlinked))
 	c.Detail("undecided_at_risk", out.Summary.UndecidedAtRisk)
 	c.JSON(http.StatusOK, map[string]interface{}{"data": out})
 }

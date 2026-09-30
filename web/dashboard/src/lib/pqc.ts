@@ -140,7 +140,7 @@ export type PQCMigrationStep = {
   current_algorithm: string;
   target_algorithm: string;
   phase: string;
-  status: string; // pending, successor_created, rotated, manual_required, failed, rolled_back
+  status: string; // pending, algorithm_changed (same key ID), successor_created, rotated, manual_required, failed, rolled_back
   reason: string;
   metadata?: Record<string, unknown>;
   executed_at?: string;

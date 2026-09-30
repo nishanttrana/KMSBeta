@@ -142,7 +142,7 @@ var Replicated = map[string][]string{
 	"keycore": {
 		"keycore_system_keys",
 		"keycore_hsm_settings",
-		"agility_migration_plans",
+		"agility_migration_plans", // dropped by keycore migration 034; 009 still creates it
 		"agility_policy_rules",
 		"agility_drills",
 		"cryptoperiod_overrides",

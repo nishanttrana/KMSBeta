@@ -23,9 +23,7 @@ func agilityCall(t *testing.T, h *Handler, method, path, body string) (*httptest
 	return rr, out
 }
 
-// Inventory, posture and plan progress all come from the tenant's keys table:
-// affected_keys is counted server-side at creation (a client value is
-// rejected), and progress moves only when keys leave from_algorithm.
+// Inventory and posture come from the tenant's keys table.
 func TestAgilityFiguresComeFromKeys(t *testing.T) {
 	h, svc := newHandlerForTest(t)
 	rec := &routetest.Recorder{}
@@ -55,47 +53,13 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 		t.Fatalf("posture event %+v", e)
 	}
 
-	if rr, _ := agilityCall(t, h, http.MethodPost, "/agility/migration-plans",
-		`{"tenant_id":"t1","name":"p","from_algorithm":"RSA-2048","to_algorithm":"ML-KEM-768","affected_keys":999}`); rr.Code != http.StatusBadRequest {
-		t.Fatalf("client-supplied affected_keys accepted: %d %s", rr.Code, rr.Body)
-	}
-	rr, out = agilityCall(t, h, http.MethodPost, "/agility/migration-plans",
-		`{"tenant_id":"t1","name":"RSA to PQC","from_algorithm":"RSA-2048","to_algorithm":"ML-KEM-768","target_date":"2027-06-30"}`)
-	plan, _ := out["data"].(map[string]any)
-	if rr.Code != http.StatusCreated || plan["affected_keys"] != float64(2) || plan["completed_keys"] != float64(0) {
-		t.Fatalf("create: %d %s", rr.Code, rr.Body)
-	}
-	if e := rec.Last(t); e.Action != "agility_migration_plan_created" || e.Event.Result != "success" || e.Event.TargetID != plan["id"] {
-		t.Fatalf("create event %+v", e)
-	}
-
-	if err := svc.store.HardDeleteKey(ctx, "t1", rsaIDs[0]); err != nil {
-		t.Fatal(err)
-	}
-	_, out = agilityCall(t, h, http.MethodGet, "/agility/migration-plans", "")
-	plans, _ := out["data"].([]any)
-	if len(plans) != 1 {
-		t.Fatalf("plans %v", out)
-	}
-	got := plans[0].(map[string]any)
-	if got["completed_keys"] != float64(1) || got["remaining_keys"] != float64(1) {
-		t.Fatalf("progress not derived from keys: %v", got)
-	}
-
-	if rr, _ := agilityCall(t, h, http.MethodPatch, "/agility/migration-plans/"+plan["id"].(string), `{"status":"in_progress","completed_keys":2}`); rr.Code != http.StatusBadRequest {
-		t.Fatalf("client-supplied completed_keys accepted: %d", rr.Code)
-	}
-	rr, out = agilityCall(t, h, http.MethodPatch, "/agility/migration-plans/"+plan["id"].(string), `{"status":"in_progress"}`)
-	if upd, _ := out["data"].(map[string]any); rr.Code != http.StatusOK || upd["status"] != "in_progress" || upd["completed_keys"] != float64(1) {
-		t.Fatalf("update: %d %s", rr.Code, rr.Body)
-	}
-	if e := rec.Last(t); e.Action != "agility_migration_plan_updated" || e.Event.Details["status"] != "in_progress" {
-		t.Fatalf("update event %+v", e)
+	// Record-only migration plans are gone: migrations run in the pqc service.
+	if rr, _ := agilityCall(t, h, http.MethodGet, "/agility/migration-plans", ""); rr.Code != http.StatusNotFound {
+		t.Fatalf("keycore migration plans still served: %d", rr.Code)
 	}
 	for path, action := range map[string]string{
 		"/agility/algorithms":                           "agility_inventory_read",
 		"/agility/keys-by-algorithm?algorithm=RSA-2048": "agility_keys_by_algorithm_read",
-		"/agility/migration-plans":                      "agility_migration_plans_listed",
 		"/agility/policy/rules":                         "agility_policy_rules_listed",
 	} {
 		if rr, _ := agilityCall(t, h, http.MethodGet, path, ""); rr.Code != http.StatusOK {
@@ -109,16 +73,16 @@ func TestAgilityFiguresComeFromKeys(t *testing.T) {
 
 // A plan cannot be written into another tenant by naming it in the body (the
 // old handler trusted body tenant_id without checking the token).
-func TestAgilityPlanTenantSmugglingRefused(t *testing.T) {
+func TestAgilityRuleTenantSmugglingRefused(t *testing.T) {
 	h, _ := newHandlerForTest(t)
 	rec := &routetest.Recorder{}
 	h.kernelAudit = rec
-	rr, _ := agilityCall(t, h, http.MethodPost, "/agility/migration-plans",
-		`{"tenant_id":"t2","name":"x","from_algorithm":"RSA-2048","to_algorithm":"ML-KEM-768"}`)
+	rr, _ := agilityCall(t, h, http.MethodPost, "/agility/policy/rules",
+		`{"tenant_id":"t2","name":"x","match_kind":"weak","action":"disallowed","effective_date":"2027-01-01"}`)
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("cross-tenant create: %d %s", rr.Code, rr.Body)
 	}
-	if e := rec.Last(t); e.Action != "agility_migration_plan_created" || e.Event.Result != "refused" || e.Event.Details["reason"] != "tenant_mismatch" {
+	if e := rec.Last(t); e.Action != "agility_policy_rule_created" || e.Event.Result != "refused" || e.Event.Details["reason"] != "tenant_mismatch" {
 		t.Fatalf("refusal event %+v", e)
 	}
 }
@@ -127,6 +91,7 @@ func TestAgilityRoutesRefusalsAudited(t *testing.T) {
 	h, _, _ := newActorTestHandler(t)
 	rec := &routetest.Recorder{}
 	routetest.RefusalsAudited(t, h.agilityRouter(rec), rec)
+	routetest.RefusalsAudited(t, h.rewrapRouter(rec), rec)
 }
 
 // With no live keys there is nothing to measure: the result says so.

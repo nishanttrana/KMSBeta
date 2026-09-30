@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -36,11 +37,13 @@ func (p *nopPQCPublisher) Count(subject string) int {
 }
 
 type fakePQCKeyCore struct {
-	mu              sync.Mutex
-	rotateCalls     []string
-	failRotateFor   map[string]bool
-	created         []map[string]interface{}
-	deactivateCalls []string
+	mu            sync.Mutex
+	rotateCalls   []string
+	failRotateFor map[string]bool
+	// refuseAlgorithmChange: keys keycore won't move to another algorithm.
+	refuseAlgorithmChange map[string]bool
+	created               []map[string]interface{}
+	deactivateCalls       []string
 }
 
 func (f *fakePQCKeyCore) CreateKey(_ context.Context, _ string, req map[string]interface{}) (string, error) {
@@ -65,11 +68,14 @@ func (f *fakePQCKeyCore) ListKeys(_ context.Context, _ string, _ int) ([]map[str
 	}, nil
 }
 
-func (f *fakePQCKeyCore) RotateKey(_ context.Context, _ string, keyID string, _ string) error {
+func (f *fakePQCKeyCore) RotateKey(_ context.Context, _ string, keyID string, _ string, target string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.failRotateFor != nil && f.failRotateFor[keyID] {
 		return newServiceError(500, "rotate_failed", "rotation failed")
+	}
+	if target != "" && f.refuseAlgorithmChange[keyID] {
+		return errors.New("algorithm change refused: " + target + " can't encrypt, which this key does")
 	}
 	f.rotateCalls = append(f.rotateCalls, keyID)
 	return nil
