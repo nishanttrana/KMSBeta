@@ -49,6 +49,7 @@ type Store interface {
 	RetentionTenants(ctx context.Context) ([]VaultSettings, error)
 	PruneVersions(ctx context.Context, tenantID string, secretID string, keep int, actor string) (int, error)
 	RuleTenants(ctx context.Context) ([]string, error)
+	CapTenants(ctx context.Context) ([]string, error)
 	SetSubjectMissing(ctx context.Context, tenantID string, ruleID string, missing bool) error
 	ListVersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error)
 	PutVersionCap(ctx context.Context, c VersionCap) error
@@ -581,6 +582,26 @@ DELETE FROM secret_values WHERE tenant_id = $1 AND secret_id = $2
 // RuleTenants lists the tenants that have access rules.
 func (s *SQLStore) RuleTenants(ctx context.Context) ([]string, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `SELECT DISTINCT tenant_id FROM secret_access_rules`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// CapTenants lists the tenants that cap versions, tenant-wide or on a path.
+func (s *SQLStore) CapTenants(ctx context.Context) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id FROM secret_vault_settings WHERE max_versions > 0
+UNION SELECT tenant_id FROM secret_version_caps WHERE max_versions > 0`)
 	if err != nil {
 		return nil, err
 	}

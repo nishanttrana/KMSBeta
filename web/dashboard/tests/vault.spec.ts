@@ -37,11 +37,12 @@ const CAPS = [{ id: "svc_1", path: "/logs/*", max_versions: 3, updated_by: "alic
 const GROUPS = [{ id: "grp_aud", tenant_id: "root", name: "Auditors", member_count: 3 }, { id: "grp_dba", tenant_id: "root", name: "Database admins", member_count: 2 }];
 const SETTINGS = { tenant_id: "root", default_deny: false, max_versions: 0, deleted_retention_days: 30, updated_by: "alice" };
 
-type Opts = { listDown?: boolean; statsDown?: boolean; rulesDown?: boolean; noValue?: boolean; settingsDown?: boolean };
+type Opts = { listDown?: boolean; statsDown?: boolean; rulesDown?: boolean; noValue?: boolean; settingsDown?: boolean; pruning?: boolean };
 type Write = { call: string; body: unknown };
 
 async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<string[]> {
   const calls: string[] = [];
+  let prunePolls = 0;
   const down = json({ error: { message: "service unavailable" } }, 503);
   await page.route("**/auth/**", (r) => r.fulfill(json({})));
   await page.route("**/api/**", (r) => r.fulfill(json({})));
@@ -50,6 +51,10 @@ async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<
     const p = new URL(req.url()).pathname;
     if (p.includes("/svc/secrets/")) calls.push(`${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`);
     if (req.method() !== "GET" && p.includes("/svc/secrets/")) writes.push({ call: `${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`, body: req.postDataJSON() });
+    if (p.endsWith("/secrets/version-caps/prune")) {
+      prunePolls += 1; // running on the first look, done after
+      return route.fulfill(json({ prune: opts.pruning && prunePolls === 1 ? { state: "running", secrets_pruned: 0, versions_pruned: 0 } : opts.pruning ? { state: "done", secrets_pruned: 2, versions_pruned: 6 } : { state: "idle", secrets_pruned: 0, versions_pruned: 0 } }));
+    }
     if (p.endsWith("/secrets/version-caps") && req.method() === "PUT") return route.fulfill(json({ cap: { id: "svc_new", ...req.postDataJSON() } }));
     if (p.endsWith("/secrets/version-caps")) return route.fulfill(json({ items: CAPS }));
     if (p.includes("/secrets/version-caps/")) return route.fulfill(json({ status: "deleted" }));
@@ -287,7 +292,7 @@ test("vault settings: deny by default asks first and names the secrets it would 
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-default-deny.png` });
   await page.getByRole("button", { name: "Deny by default" }).click();
   // Lowering the cap removes versions at once, so that is confirmed too.
-  await expect(page.getByText(/Versions beyond the newest 10 of every secret.*removed now/)).toBeVisible();
+  await expect(page.getByText(/Versions beyond the newest 10 of every secret.*removed, starting now/)).toBeVisible();
   expect(writes.filter((w) => w.call === "PUT /secrets/settings")).toHaveLength(0);
   await page.getByRole("button", { name: "Remove older versions" }).click();
   await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/settings")?.body).toEqual({ tenant_id: "root", default_deny: true, max_versions: 10, deleted_retention_days: 30 });
@@ -344,11 +349,19 @@ test("version caps by path are listed, set and removed, and a secret shows the c
   await page.getByLabel("Version cap path").fill("/db/*");
   await page.getByLabel("Versions kept on this path").fill("10");
   await page.getByRole("button", { name: "Set cap" }).click();
-  await expect(page.getByText(/Versions beyond the newest 10 under \/db\/\* are removed now/)).toBeVisible();
+  await expect(page.getByText(/Versions beyond the newest 10 under \/db\/\* are removed, starting now/)).toBeVisible();
   expect(writes.filter((w) => w.call === "PUT /secrets/version-caps")).toHaveLength(0);
   await page.getByRole("button", { name: "Set cap" }).last().click();
   await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/version-caps")?.body).toEqual({ tenant_id: "root", path: "/db/*", max_versions: 10 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-caps.png`, fullPage: true });
   await page.getByTitle("Remove cap").first().click();
   await expect.poll(() => writes.some((w) => w.call === "DELETE /secrets/version-caps/svc_1")).toBe(true);
+});
+
+test("a prune in the background is shown while it runs and reported when done", async ({ page }) => {
+  await stub(page, { pruning: true });
+  await open(page);
+  await page.getByText("Access rules", { exact: true }).click();
+  await expect(page.getByText("Removing older versions in the background…")).toBeVisible();
+  await expect(page.getByText("Last prune removed 6 versions from 2 secrets.")).toBeVisible({ timeout: 8000 });
 });

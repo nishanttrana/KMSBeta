@@ -21763,6 +21763,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-get-secrets-version-caps-prune",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/version-caps/prune",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/version-caps/prune?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/version-caps/prune?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-get-v1-mount-path",
     "group": "Secret Vault (secrets)",
     "title": "GET /v1/{mount}/{path...}",

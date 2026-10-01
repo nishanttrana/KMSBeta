@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secrets: subject changes are heard on the live audit subjects; pruning is a background job with a sweep behind it (7.33.0-beta)
+
+**Decision.** The secrets service subscribes to the audit subjects that can
+remove a rule's subject and re-checks the tenant on each, debounced, acting
+on the primary only; the hourly check stays. Pruning to a changed cap runs
+in a goroutine on the node that took the request (the primary), reports
+through an audit event and a status route, and is re-applied hourly.
+
+**Why.** An hour between a role being deleted and its rule being raised is
+an hour of unexplained lockout. A prune over tens of thousands of secrets
+does not belong inside an HTTP request.
+
+**Rejected.** A durable JetStream consumer: nodes sharing the durable would
+split the events, and a member that receives one cannot act on it. Polling
+auth, keycore and workload every minute: three audited calls per tenant per
+minute to learn nothing most of the time. A persisted job table for prunes:
+pruning is idempotent, so "run it again" is the whole recovery. Returning
+202: the change itself is complete and stored; only its consequence is
+pending, which the response and the status route say.
+
+**Enforced by.** `TestWatchSubjectsNATS` (real NATS: relevant event, burst
+checked once, login ignored), `TestSubjectEventMatters`, `TestStaleSubjects`
+(raise on list), `TestBackgroundPrune` (returns before the prune, queued
+second run, status, sweep, member mode), run with `-race`.
+
+---
+
 ## 2026-10-01 — Secrets: stale rules are raised and removed by a person; caps apply at once (7.32.0-beta)
 
 **Decision.** A rule whose subject has gone is stamped and raised by an

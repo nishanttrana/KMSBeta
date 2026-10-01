@@ -251,6 +251,15 @@ export async function putVersionCap(session: AuthSession, path: string, maxVersi
   return res.cap;
 }
 
+// The background prune to the caps in force: it starts when a cap or the
+// tenant's setting changes, and the request does not wait for it.
+export type PruneStatus = { state: "idle" | "running" | "done" | "failed" | string; secrets_pruned: number; versions_pruned: number; finished_at?: string; error?: string };
+
+export async function getPruneStatus(session: AuthSession): Promise<PruneStatus> {
+  const res = await serviceRequest<{ prune: PruneStatus }>(session, "secrets", `/secrets/version-caps/prune?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return res.prune;
+}
+
 export async function deleteVersionCap(session: AuthSession, capId: string): Promise<void> {
   await serviceRequest(session, "secrets", `/secrets/version-caps/${encodeURIComponent(capId)}?tenant_id=${encodeURIComponent(session.tenantId)}`, { method: "DELETE" });
 }

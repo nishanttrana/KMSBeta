@@ -4,6 +4,29 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.33.0-beta] — 2026-10-01
+
+### Secrets: stale rules raised in seconds; cap pruning runs in the background
+- **Changed: a rule whose subject has gone is raised within seconds.** The
+  secrets service now listens for the audit events after which a subject may
+  no longer exist (a user, role or client change in auth, an access group
+  deleted in keycore, a workload registration removed) and re-checks that
+  tenant's rules about two seconds later; a burst of events is one check.
+  Listing rules also raises what it sees gone. The hourly check remains as
+  the backstop for an event missed while the service was down.
+- **Changed: pruning to a changed version cap no longer runs inside the
+  request.** The change is saved and answered at once (`prune: started`); the
+  prune runs in the background, one per tenant, and a change made during a
+  run queues one more. Its outcome is audited as
+  `audit.secrets.cap_prune_completed` (who asked, how many secrets and
+  versions) and readable at `GET /secrets/version-caps/prune`. If the
+  service stops mid-prune, the hourly sweep on the primary finishes it.
+  **API change:** `settings_updated`, `version_cap_set` and
+  `version_cap_deleted` no longer carry `secrets_pruned` / `versions_pruned`;
+  `cap_prune_completed` does.
+- **Dashboard:** the Access rules view shows the prune while it runs and
+  what the last one removed.
+
 ## [7.32.0-beta] — 2026-10-01
 
 ### Secrets: a lowered cap holds at once; a rule cannot reopen a path silently

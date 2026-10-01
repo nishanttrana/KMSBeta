@@ -8,8 +8,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go"
 
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterstate"
@@ -36,7 +39,7 @@ func TestAccessAndVersionsPostgres(t *testing.T) {
 	}
 	for name, run := range map[string]func(*testing.T, *Handler, *Service, *routetest.Recorder){
 		"access rules": runAccessRules, "paging": runListPaging, "soft delete": runSoftDelete, "versions": runVersions,
-		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention, "path caps": runPathCaps, "subjects": runSubjects, "reopen guard": runReopenGuard, "cap applies now": runCapAppliesNow, "stale subjects": runStaleSubjects,
+		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention, "path caps": runPathCaps, "subjects": runSubjects, "reopen guard": runReopenGuard, "cap applies now": runCapAppliesNow, "stale subjects": runStaleSubjects, "background prune": runBackgroundPrune,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules, secret_vault_settings, secret_version_caps`); err != nil {
@@ -46,6 +49,7 @@ func TestAccessAndVersionsPostgres(t *testing.T) {
 			rec := &routetest.Recorder{}
 			h := NewHandler(svc, rec, nil, nil)
 			h.directory = &directory{}
+			h.spawn = func(run func()) { run() }
 			run(t, h, svc, rec)
 		})
 	}
@@ -674,8 +678,8 @@ func runVersionCap(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder
 	if code, _ := putSettings(t, h, admin, `{"max_versions":2}`); code != http.StatusOK {
 		t.Fatal("set cap")
 	}
-	if ev := rec.Last(t); ev.Event.Details["versions_pruned"] != 1 { // the cap holds at once: v1 goes now
-		t.Fatalf("settings event %v", ev.Event.Details)
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.Details["versions_pruned"] != 1 { // the cap holds at once: v1 goes now
+		t.Fatalf("prune event %v", ev.Event.Details)
 	}
 	rotate("four")
 	if ev := rec.Last(t); ev.Action != "rotated" || ev.Event.Details["versions_pruned"] != 1 {
@@ -1140,8 +1144,14 @@ func runCapAppliesNow(t *testing.T, h *Handler, _ *Service, rec *routetest.Recor
 	if code, _ := putSettings(t, h, admin, `{"max_versions":3}`); code != http.StatusOK {
 		t.Fatal("settings")
 	}
-	if ev := rec.Last(t); ev.Event.Details["secrets_pruned"] != 3 || ev.Event.Details["versions_pruned"] != 6 {
+	if ev := rec.Last(t); ev.Action != "settings_updated" || ev.Event.Details["prune"] != "started" {
 		t.Fatalf("settings event %v", ev.Event.Details)
+	}
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.Details["secrets_pruned"] != 3 || ev.Event.Details["versions_pruned"] != 6 || ev.Event.ActorID != "u-t1" || ev.Event.Result != "success" {
+		t.Fatalf("prune event %+v", ev)
+	}
+	if _, out := call(t, h, admin, "GET", "/secrets/version-caps/prune", ""); out["prune"].(map[string]interface{})["state"] != "done" || out["prune"].(map[string]interface{})["versions_pruned"] != float64(6) {
+		t.Fatalf("prune status %v", out)
 	}
 	if count(a) != 3 || count(b) != 3 || count(gone) != 3 {
 		t.Fatalf("tenant cap not applied at once: %d %d %d", count(a), count(b), count(gone))
@@ -1149,8 +1159,8 @@ func runCapAppliesNow(t *testing.T, h *Handler, _ *Service, rec *routetest.Recor
 	if code, _ := call(t, h, admin, "PUT", "/secrets/version-caps", `{"path":"/logs/*","max_versions":1}`); code != http.StatusOK {
 		t.Fatal("path cap")
 	}
-	if ev := rec.Last(t); ev.Action != "version_cap_set" || ev.Event.Details["secrets_pruned"] != 1 || ev.Event.Details["versions_pruned"] != 2 {
-		t.Fatalf("cap event %v", ev.Event.Details)
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.Details["secrets_pruned"] != 1 || ev.Event.Details["versions_pruned"] != 2 {
+		t.Fatalf("prune event %v", ev.Event.Details)
 	}
 	if count(a) != 1 || count(b) != 3 {
 		t.Fatalf("path cap not applied at once: %d %d", count(a), count(b))
@@ -1165,7 +1175,7 @@ func runCapAppliesNow(t *testing.T, h *Handler, _ *Service, rec *routetest.Recor
 	}
 	// Raising a cap removes nothing.
 	putSettings(t, h, admin, `{"max_versions":0}`)
-	if ev := rec.Last(t); ev.Event.Details["versions_pruned"] != 0 || count(b) != 3 {
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.Details["versions_pruned"] != 0 || count(b) != 3 {
 		t.Fatalf("raising the cap pruned: %v", ev.Event.Details)
 	}
 }
@@ -1219,6 +1229,15 @@ func runStaleSubjects(t *testing.T, h *Handler, svc *Service, rec *routetest.Rec
 	if n := h.checkRuleSubjects(ctx); n != 0 {
 		t.Fatalf("raised again for the same rule: %d", n)
 	}
+	// Listing rules raises what it sees gone, without waiting for a sweep.
+	dir.gone[subject{"role", "ops"}] = true
+	rec.Reset()
+	call(t, h, admin, "GET", "/secrets/access/rules", "")
+	if ev := lastOf(t, rec, "access_rule_subject_missing"); ev.Event.Details["subject"] != "role:ops" || stamped() != 2 {
+		t.Fatalf("the list did not raise the stale rule: %+v stamped %d", ev, stamped())
+	}
+	delete(dir.gone, subject{"role", "ops"})
+	h.checkRuleSubjects(ctx)
 	// Unreachable owner: nothing changes, nothing is raised.
 	dir.err = fmt.Errorf("auth unreachable")
 	if n := h.checkRuleSubjects(ctx); n != 0 || stamped() != 1 {
@@ -1227,5 +1246,169 @@ func runStaleSubjects(t *testing.T, h *Handler, svc *Service, rec *routetest.Rec
 	dir.err, dir.gone = nil, nil
 	if n := h.checkRuleSubjects(ctx); n != 0 || stamped() != 0 {
 		t.Fatalf("a returned subject stayed stamped: raised %d stamped %d", n, stamped())
+	}
+}
+
+// lastOf is the most recent recorded event with an action.
+func lastOf(t *testing.T, rec *routetest.Recorder, action string) routetest.Recorded {
+	t.Helper()
+	events := rec.Events()
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].Action == action {
+			return events[i]
+		}
+	}
+	t.Fatalf("no %s event among %d", action, len(events))
+	return routetest.Recorded{}
+}
+
+func TestBackgroundPrune(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runBackgroundPrune(t, h, svc, rec)
+}
+
+// The cap change returns before the prune finishes; a change during a run
+// queues one more; the status and the audit event report the outcome; and
+// the sweep finishes a prune that never ran, on the primary only.
+func runBackgroundPrune(t *testing.T, h *Handler, svc *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	ids := []string{}
+	for _, name := range []string{"p1", "p2"} {
+		id := mustCreate(t, h, admin, name, "/bg")
+		for i := 0; i < 3; i++ {
+			call(t, h, admin, "POST", "/secrets/"+id+"/rotate", fmt.Sprintf(`{"value":"v%d"}`, i))
+		}
+		ids = append(ids, id)
+	}
+	// Hold the background run until released, as a slow prune would.
+	var wg sync.WaitGroup
+	release := make(chan struct{})
+	h.spawn = func(run func()) {
+		wg.Add(1)
+		go func() { defer wg.Done(); <-release; run() }()
+	}
+	defer func() { h.spawn = func(run func()) { run() } }()
+
+	if code, out := call(t, h, admin, "PUT", "/secrets/version-caps", `{"path":"/bg/*","max_versions":2}`); code != http.StatusOK {
+		t.Fatalf("cap: %d %v", code, out)
+	}
+	if st := h.pruneState("t1"); st.State != "running" || st.RequestedBy != "u-t1" {
+		t.Fatalf("status while running: %+v", st)
+	}
+	if counts, _ := svc.store.VersionCounts(context.Background(), "t1"); counts[ids[0]] != 4 {
+		t.Fatalf("the request waited for the prune: %d versions", counts[ids[0]])
+	}
+	// A second change during the run is queued, not run alongside.
+	if code, _ := call(t, h, admin, "PUT", "/secrets/version-caps", `{"path":"/bg/*","max_versions":1}`); code != http.StatusOK {
+		t.Fatal("second cap")
+	}
+	close(release)
+	wg.Wait()
+	st := h.pruneState("t1")
+	if st.State != "done" || st.Secrets != 2 || st.Versions != 6 || st.FinishedAt == nil {
+		t.Fatalf("final status: %+v", st)
+	}
+	if counts, _ := svc.store.VersionCounts(context.Background(), "t1"); counts[ids[0]] != 1 || counts[ids[1]] != 1 {
+		t.Fatalf("after the queued run: %v", counts)
+	}
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.Details["versions_pruned"] != 6 {
+		t.Fatalf("prune event %v", ev.Event.Details)
+	}
+
+	// A prune that never ran (the process stopped): the sweep does it, on the
+	// primary, and says nothing when there is nothing to remove.
+	id := mustCreate(t, h, admin, "late", "/bg")
+	call(t, h, admin, "POST", "/secrets/"+id+"/rotate", `{"value":"x"}`) // pruned to 1 at the write
+	if _, err := svc.store.(*SQLStore).db.SQL().Exec(`UPDATE secret_version_caps SET max_versions = 5 WHERE tenant_id = 't1'`); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		call(t, h, admin, "POST", "/secrets/"+id+"/rotate", fmt.Sprintf(`{"value":"y%d"}`, i))
+	}
+	if _, err := svc.store.(*SQLStore).db.SQL().Exec(`UPDATE secret_version_caps SET max_versions = 2 WHERE tenant_id = 't1'`); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{NodeID: "n2", Role: clusterstate.RoleFollower, PrimaryURL: "https://primary:8443", ForwardCredential: "cred"}))
+	n := h.reconcileCaps(ctx)
+	clusterstate.SetDefault(nil)
+	if n != 0 {
+		t.Fatalf("a member pruned %d versions", n)
+	}
+	rec.Reset()
+	if n := h.reconcileCaps(ctx); n != 2 {
+		t.Fatalf("reconcile pruned %d, want 2", n)
+	}
+	if ev := lastOf(t, rec, "cap_prune_completed"); ev.Event.ActorID != "system:cap-reconcile" || ev.Event.Details["versions_pruned"] != 2 {
+		t.Fatalf("reconcile event %+v", ev)
+	}
+	rec.Reset()
+	if n := h.reconcileCaps(ctx); n != 0 || len(rec.Events()) != 0 {
+		t.Fatalf("an idle reconcile pruned %d and emitted %d events", n, len(rec.Events()))
+	}
+}
+
+func TestSubjectEventMatters(t *testing.T) {
+	for subject, want := range map[string]bool{
+		"audit.auth.role_deleted": true, "audit.auth.user_role_updated": true, "audit.auth.client_revoked": true, "audit.auth.scim_user_deprovisioned": true,
+		"audit.key.access_group_deleted": true, "audit.workload.registration_deleted": true,
+		"audit.auth.login_failed": false, "audit.auth.client_token_issued": false, "audit.auth.subjects_checked": false,
+	} {
+		if subjectEventMatters(subject) != want {
+			t.Errorf("subjectEventMatters(%s) = %v", subject, !want)
+		}
+	}
+}
+
+// On a real NATS server: an audit event saying a role was deleted makes the
+// tenant's rules be checked within the delay, a burst is checked once, and a
+// login event is ignored.
+func TestWatchSubjectsNATS(t *testing.T) {
+	url := strings.TrimSpace(os.Getenv("VECTA_TEST_NATS_URL"))
+	if url == "" {
+		t.Skip("set VECTA_TEST_NATS_URL to a disposable NATS server")
+	}
+	nc, err := nats.Connect(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer nc.Close()
+	h, _, _, rec := newRecordedHandler(t)
+	admin := tenantAdmin("t1")
+	dir := &directory{}
+	h.directory = dir
+	call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/a/*","subject_type":"role","subject_id":"ops","capabilities":["value"]}`)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := h.watchSubjects(ctx, nc, 150*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	raised := func() int {
+		n := 0
+		for _, e := range rec.Events() {
+			if e.Action == "access_rule_subject_missing" {
+				n++
+			}
+		}
+		return n
+	}
+	dir.gone = map[subject]bool{{"role", "ops"}: true}
+	_ = nc.Publish("audit.auth.login_failed", []byte(`{"tenant_id":"t1"}`))
+	_ = nc.Flush()
+	time.Sleep(500 * time.Millisecond)
+	if raised() != 0 {
+		t.Fatal("a login event triggered the check")
+	}
+	for i := 0; i < 5; i++ {
+		_ = nc.Publish("audit.auth.role_deleted", []byte(`{"tenant_id":"t1","result":"success"}`))
+	}
+	_ = nc.Flush()
+	deadline := time.Now().Add(5 * time.Second)
+	for raised() == 0 && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	time.Sleep(400 * time.Millisecond)
+	if raised() != 1 {
+		t.Fatalf("raised %d times, want once within seconds of the event", raised())
 	}
 }

@@ -8,6 +8,7 @@ import {
   deleteSecret as deleteVaultSecret,
   generateKeyPairSecret,
   getSecretValue,
+  getPruneStatus,
   getVaultSettings,
   getVaultStats,
   listAccessRules,
@@ -54,6 +55,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const [settings, setSettings] = useState(null);
   const [groups, setGroups] = useState(null); // access group names by ID
   const [caps, setCaps] = useState(null); // version caps by path
+  const [prune, setPrune] = useState(null); // background prune to the caps
   const [sideError, setSideError] = useState({ deleted: "", rules: "", settings: "", caps: "" });
   const [view, setView] = useState("Secrets");
   const [stats, setStats] = useState(null);
@@ -90,9 +92,10 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const loadAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    const [items, vaultStats, gone, ruleList, vaultSettings, groupList, capList] = await Promise.allSettled([
-      listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session), getVaultSettings(session), listKeyAccessGroups(session), listVersionCaps(session)]);
+    const [items, vaultStats, gone, ruleList, vaultSettings, groupList, capList, pruneStatus] = await Promise.allSettled([
+      listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session), getVaultSettings(session), listKeyAccessGroups(session), listVersionCaps(session), getPruneStatus(session)]);
     setCaps(capList.status === "fulfilled" ? capList.value : null);
+    setPrune(pruneStatus.status === "fulfilled" ? pruneStatus.value : null);
     setSettings(vaultSettings.status === "fulfilled" ? vaultSettings.value : null);
     setGroups(groupList.status === "fulfilled" ? Object.fromEntries(groupList.value.map((g) => [g.id, g.name])) : null);
     setDeleted(gone.status === "fulfilled" ? gone.value : null);
@@ -259,7 +262,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
     {!loadError && view === "Access rules" && <VaultSettingsCard session={session} settings={settings} error={sideError.settings} uncovered={settings?.default_deny ? null : secrets.filter((s) => !s.restricted).length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
-    {!loadError && view === "Access rules" && <VersionCaps session={session} caps={caps} error={sideError.caps} confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
+    {!loadError && view === "Access rules" && <VersionCaps session={session} caps={caps} prune={prune} error={sideError.caps} confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
     {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} groups={groups} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
 

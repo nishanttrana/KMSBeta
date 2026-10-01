@@ -39,6 +39,7 @@ func newRecordedHandler(t *testing.T) (*Handler, *Service, *SQLStore, *routetest
 	rec := &routetest.Recorder{}
 	h := NewHandler(svc, rec, nil, nil)
 	h.directory = &directory{}
+	h.spawn = func(run func()) { run() } // background prunes run inline, so tests see their result
 	return h, svc, store, rec
 }
 

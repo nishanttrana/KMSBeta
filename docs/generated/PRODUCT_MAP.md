@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-01T16:41:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T17:02:39Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `34`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `869` across `28` services
-- Backend routes on the `pkg/route` kernel: `441` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `550`
-- Frontend call sites with exact backend route match: `506`
+- Backend HTTP routes discovered: `870` across `28` services
+- Backend routes on the `pkg/route` kernel: `442` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `551`
+- Frontend call sites with exact backend route match: `507`
 - Frontend call sites needing review or dynamic/runtime confirmation: `44`
 - Clickable controls with static `onClick` handlers: `756`
-- Backend request flows with handler/service/package summaries: `869`
+- Backend request flows with handler/service/package summaries: `870`
 
 ## How To Use This For Launch
 
@@ -153,7 +153,7 @@ flowchart LR
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
   svc_sbom["sbom (14 routes)"]
-  svc_secrets["secrets (39 routes)"]
+  svc_secrets["secrets (40 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (20 routes)"]
@@ -167,14 +167,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 202 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 203 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 96 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
 | Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 19 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 101 |
-| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 73 |
+| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 74 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 45 |
@@ -197,7 +197,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
-| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 123 |
+| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 124 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
 ## Backend Route Counts
@@ -228,7 +228,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
 | sbom | 14 | 12 |
-| secrets | 39 | 20 |
+| secrets | 40 | 21 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
 | workload | 20 | 13 |

@@ -1,9 +1,9 @@
 import { Plus, Trash2, UserCheck, UserX } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AuthSession } from "../../../../lib/auth";
 import {
   ACCESS_CAPABILITIES, ACCESS_SUBJECT_TYPES, createAccessRule, deleteAccessRule, deleteVersionCap, getAccessRuleImpact, putVaultSettings, putVersionCap,
-  type AccessRule, type VaultSettings, type VersionCap,
+  type AccessRule, type PruneStatus, type VaultSettings, type VersionCap,
 } from "../../../../lib/secrets";
 import { B, Btn, Chk, FG, Inp, Modal, Row2, Sel } from "../../legacyPrimitives";
 import { errMsg } from "../../runtimeUtils";
@@ -76,7 +76,7 @@ export function VaultSettingsCard({ session, settings, error, uncovered, confirm
       if (!ok) return;
     }
     if (next.max_versions > 0 && (settings.max_versions === 0 || next.max_versions < settings.max_versions)) {
-      const ok = await confirm({ title: "Lower the version cap", message: `Versions beyond the newest ${next.max_versions} of every secret without its own cap are removed now. They cannot be recovered.`, confirmLabel: "Remove older versions", danger: true });
+      const ok = await confirm({ title: "Lower the version cap", message: `Versions beyond the newest ${next.max_versions} of every secret without its own cap are removed, starting now. They cannot be recovered.`, confirmLabel: "Remove older versions", danger: true });
       if (!ok) return;
     }
     setBusy(true);
@@ -115,6 +115,7 @@ export function VaultSettingsCard({ session, settings, error, uncovered, confirm
 type CapsProps = {
   session: AuthSession;
   caps: VersionCap[] | null;
+  prune: PruneStatus | null;
   error: string;
   confirm: (opts: Record<string, unknown>) => Promise<boolean>;
   onChanged: () => void;
@@ -123,7 +124,7 @@ type CapsProps = {
 
 // Version caps for one secret or one folder. The most specific wins: a cap
 // on the secret, then the nearest folder above it, then the tenant's.
-export function VersionCaps({ session, caps, error, confirm, onChanged, onToast }: CapsProps) {
+export function VersionCaps({ session, caps, prune, error, confirm, onChanged, onToast }: CapsProps) {
   const [path, setPath] = useState("");
   const [max, setMax] = useState("5");
   const [busy, setBusy] = useState(false);
@@ -131,10 +132,23 @@ export function VersionCaps({ session, caps, error, confirm, onChanged, onToast 
     setBusy(true);
     try { await fn(); onToast?.(done); onChanged(); } catch (e) { onToast?.(`Version cap refused: ${errMsg(e)}`); } finally { setBusy(false); }
   };
+  // The prune runs in the background; look again while it does.
+  const running = prune?.state === "running";
+  // onChanged is a new function on every parent render (the header clock
+  // ticks each second), so it is read through a ref: as a dependency it
+  // would restart the timer before it ever fired.
+  const reload = useRef(onChanged);
+  useEffect(() => { reload.current = onChanged; });
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => reload.current(), 2000);
+    return () => clearInterval(timer);
+  }, [running]);
+
   // A cap takes effect at once, so setting one removes versions now.
   const setCap = async () => {
     const keep = Math.trunc(Number(max) || 0);
-    if (keep > 0 && !(await confirm({ title: "Set version cap", message: `Versions beyond the newest ${keep} under ${path.trim()} are removed now. They cannot be recovered.`, confirmLabel: "Set cap", danger: true }))) return;
+    if (keep > 0 && !(await confirm({ title: "Set version cap", message: `Versions beyond the newest ${keep} under ${path.trim()} are removed, starting now. They cannot be recovered.`, confirmLabel: "Set cap", danger: true }))) return;
     await act("Version cap set.", async () => { await putVersionCap(session, path.trim(), keep); setPath(""); });
   };
   return (
@@ -145,6 +159,11 @@ export function VersionCaps({ session, caps, error, confirm, onChanged, onToast 
         <Inp w={70} type="number" min="0" max="1000" aria-label="Versions kept on this path" value={max} onChange={(e) => setMax(e.target.value)} />
         <Btn small disabled={busy || !path.trim()} onClick={() => void setCap()}><Plus size={12} />Set cap</Btn>
       </div>
+      {prune && prune.state !== "idle" && <div style={{ fontSize: 10.5, marginTop: 8, color: prune.state === "failed" ? C.redFg : C.muted }}>
+        {running ? "Removing older versions in the background…"
+          : prune.state === "failed" ? `The last prune did not finish: ${prune.error || "unknown error"}. It is retried within the hour.`
+          : `Last prune removed ${prune.versions_pruned} version${prune.versions_pruned === 1 ? "" : "s"} from ${prune.secrets_pruned} secret${prune.secrets_pruned === 1 ? "" : "s"}.`}
+      </div>}
       {error ? <div style={{ fontSize: 11, color: C.redFg, marginTop: 8 }}>Version caps unavailable: {error}</div>
         : (caps || []).map((c) => (
           <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr auto 28px", gap: 10, alignItems: "center", padding: "6px 2px", borderTop: `1px solid ${C.border}`, marginTop: 8, fontSize: 11 }}>

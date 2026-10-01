@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Event-driven check and background job in secrets (7.33.0-beta)
+- **A durable consumer shared by cluster nodes would have lost events.** With
+  one durable name, each event goes to one node; when that node is a member
+  it must not write, so the check never runs. The watcher subscribes to the
+  live subjects instead: every node hears, only the primary acts, and the
+  hourly sweep covers what was missed while down.
+- **Moving work out of a request moves its audit record too.** The counts
+  that were details of `settings_updated` now belong to a separate
+  `cap_prune_completed` event; tests that read `rec.Last` had to look the
+  event up by action. A background job with no event of its own would have
+  been unaudited destruction.
+- **A background job needs a finisher.** In-memory "running" state dies with
+  the process. Pruning is idempotent, so the hourly sweep re-applies every
+  tenant's caps and emits only when it removed something.
+- **React: a callback prop in an effect's dependencies restarts the timer on
+  every parent render.** The shell re-renders each second for the header
+  clock, so a 2-second `setTimeout(onChanged)` never fired and the "running"
+  line stayed forever. The browser test caught it; the callback is read
+  through a ref.
+
 ### Deleting a restriction is a grant (7.32.0-beta)
 - With "an allow rule restricts", deleting the last allow rule over a path
   widens access to everyone with the permission. It looked like cleanup and

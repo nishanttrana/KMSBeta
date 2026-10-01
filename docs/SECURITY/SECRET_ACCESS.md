@@ -86,7 +86,7 @@ new and previous values; Playbooks trigger `secret_access_rule_changed`).
 | Setting | Effect |
 |---|---|
 | `default_deny` | a path no allow rule covers is refused for every capability. Uncovered secrets disappear from every caller's lists and counts until a rule covers them; rules can still be managed |
-| `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Changing the cap prunes every secret at once |
+| `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Changing the cap starts a background prune of every secret |
 | `deleted_retention_days` (0 to 3650, 0: keep) | a deleted secret is destroyed this many days after its delete. The sweep runs hourly, on the primary only (a member never writes the replicated tables), and emits `audit.secrets.retention_purged` per secret (actor `system:retention`, with `deleted_by`, `deleted_at`, `retention_days`), or the same event with `result: failure` |
 
 ## Version caps by path
@@ -98,9 +98,17 @@ new and previous values; Playbooks trigger `secret_access_rule_changed`).
 rule's form. For a secret, the cap that applies is the one on its own path,
 else the one on the nearest folder above it, else the tenant's
 `max_versions`. 0 on a path keeps every version there. A change to a cap or
-to the tenant's `max_versions` prunes every secret, deleted ones included,
-to the cap that now applies, in the same request (`secrets_pruned`,
-`versions_pruned` in the event); the current version always stays.
+to the tenant's `max_versions` starts a background prune of every secret,
+deleted ones included, to the cap that now applies; the current version
+always stays. The request returns at once (`prune: started`). One prune runs
+per tenant; a change during a run queues one more. The outcome is audited as
+`audit.secrets.cap_prune_completed` (actor: who made the change;
+`secrets_pruned`, `versions_pruned`; `result: failure` if it did not
+finish) and `GET /secrets/version-caps/prune` returns the last run's
+`state` (`idle`, `running`, `done`, `failed`) and counts. The hourly sweep
+on the primary re-applies every tenant's caps, which finishes a prune a
+restart interrupted (actor `system:cap-reconcile`, emitted only when it
+removed something).
 `GET /secrets/{id}/access` returns `max_versions` and `max_versions_from`.
 
 ## Subjects must exist
@@ -120,8 +128,14 @@ refusals of `access_rule_created`. When rules are listed, each carries
 `subject_status` (`found`, `missing`, `unchecked`) and `subject_label`, and
 the list event carries `subjects_missing`.
 
-**Subjects that disappear.** Hourly, on the primary only, every rule's
-subject is looked up (`checkRuleSubjects`). The first time one is found gone
+**Subjects that disappear.** The service listens for the audit events after
+which a subject may be gone (`audit.auth.user_*`, `role_*`, `scim_*`,
+`group_role_*`, `client_revoked`, `client_updated`;
+`audit.key.access_group_deleted`; `audit.workload.registration_deleted`)
+and re-checks that tenant's rules two seconds later, once per burst
+(`watchSubjects`). Listing rules raises what it sees gone. Hourly, as the
+backstop, every rule's subject is looked up (`checkRuleSubjects`). All of it
+acts on the primary only. The first time one is found gone
 the rule gets `subject_missing_since` and
 `audit.secrets.access_rule_subject_missing` is emitted (actor
 `system:rule-check`; Playbooks trigger `secret_access_rule_stale`). The
@@ -166,7 +180,7 @@ A recoverable delete keeps the material, so an exposure-register entry
 ## Open
 
 - Group membership is cached for 30 seconds per user.
-- The stale-subject check runs hourly, so a rule can name a deleted subject
-  for up to an hour before it is raised (the list shows it live).
-- Pruning to a new cap runs inside the request; a tenant with very many
-  secrets waits for it.
+- An event missed while the service is down is caught by the hourly check,
+  so the raise can lag by up to an hour in that case only.
+- The prune status is held in memory: after a restart it reads `idle` until
+  the next prune, though the audit event of the earlier one remains.

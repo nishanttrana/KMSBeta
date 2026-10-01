@@ -57,6 +57,12 @@ func main() {
 	// Group subjects in access rules are keycore's access groups.
 	h.groups = newKeycoreGroups(envOr("KEYCORE_URL", "https://keycore:8010"))
 	h.directory = newPlatformDirectory(envOr("AUTH_URL", "https://auth:8001"), envOr("KEYCORE_URL", "https://keycore:8010"), envOr("WORKLOAD_URL", "https://workload:8250"))
+	h.ctx = rt.Ctx
+	if rt.NC != nil {
+		if err := h.watchSubjects(rt.Ctx, rt.NC, 2*time.Second); err != nil {
+			rt.Logger.Printf("rule subject watch unavailable, the hourly check still runs: %v", err)
+		}
+	}
 	go h.runRetention(rt.Ctx, time.Hour)
 	if err := rt.Serve(h); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)

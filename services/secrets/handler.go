@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -29,6 +31,12 @@ type Handler struct {
 	groups GroupResolver
 	// directory says whether a rule's subject exists; nil refuses new rules.
 	directory SubjectDirectory
+
+	// Background pruning to changed version caps (retention.go).
+	ctx     context.Context // the service's lifetime; nil in tests
+	spawn   func(func())    // nil: a goroutine
+	pruneMu sync.Mutex
+	prunes  map[string]*pruneStatus
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
@@ -96,6 +104,7 @@ func (h *Handler) routes() {
 	r.Handle("GET /secrets/settings", route.Spec{Action: "settings_read", Permission: permAccessRead, Resource: "secret_vault_settings"}, h.getSettings)
 	r.Handle("PUT /secrets/settings", warn(route.Spec{Action: "settings_updated", Permission: permAccessManage, Resource: "secret_vault_settings"}), h.putSettings)
 	r.Handle("GET /secrets/version-caps", route.Spec{Action: "version_caps_listed", Permission: permAccessRead, Resource: "secret_version_cap"}, h.listVersionCaps)
+	r.Handle("GET /secrets/version-caps/prune", route.Spec{Action: "cap_prune_status_read", Permission: permAccessRead, Resource: "secret_version_cap"}, h.pruneStatusRoute)
 	r.Handle("PUT /secrets/version-caps", warn(route.Spec{Action: "version_cap_set", Permission: permAccessManage, Resource: "secret_version_cap"}), h.putVersionCap)
 	r.Handle("DELETE /secrets/version-caps/{cap_id}", warn(route.Spec{Action: "version_cap_deleted", Permission: permAccessManage, Resource: "secret_version_cap", TargetParam: "cap_id"}), h.deleteVersionCap)
 	r.Handle("GET /secrets/access/rules", route.Spec{Action: "access_rules_listed", Permission: permAccessRead, Resource: "secret_access_rule"}, h.listAccessRules)
@@ -624,6 +633,14 @@ func (h *Handler) listAccessRules(c *route.Call) {
 	}
 	c.Detail("count", len(rules))
 	if missing := h.annotate(c, rules); missing > 0 {
+		// What the list sees gone is raised now, not at the next sweep.
+		found := map[subject]subjectInfo{}
+		for _, r := range rules {
+			if r.SubjectStatus != subjectUnchecked {
+				found[subject{r.SubjectType, r.SubjectID}] = subjectInfo{Exists: r.SubjectStatus == subjectFound}
+			}
+		}
+		h.recordSubjects(c.R.Context(), c.Tenant, rules, found)
 		c.Detail("subjects_missing", missing)
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"items": rules})
@@ -746,18 +763,17 @@ func (h *Handler) deleteVersionCap(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
-// applyCaps prunes the tenant's secrets to the caps in force after a cap or
-// setting change, and records what went. The change itself is already
-// stored; a failed prune is reported as such.
+// applyCaps starts the background prune to the caps in force after a cap
+// or setting change. The outcome is audited as cap_prune_completed.
 func (h *Handler) applyCaps(c *route.Call) bool {
-	secrets, versions, err := h.svc.ApplyVersionCaps(c.R.Context(), c.Tenant, c.Actor())
-	c.Detail("secrets_pruned", secrets)
-	c.Detail("versions_pruned", versions)
-	if err != nil {
-		c.Error(http.StatusInternalServerError, "prune_failed", "the change is saved, but pruning to the new cap did not finish: "+err.Error())
-		return false
-	}
+	h.startPrune(c.Tenant, c.Actor())
+	c.Detail("prune", "started")
 	return true
+}
+
+func (h *Handler) pruneStatusRoute(c *route.Call) {
+	st := h.pruneState(c.Tenant)
+	c.JSON(http.StatusOK, map[string]interface{}{"prune": st})
 }
 
 // ruleImpact says what deleting a rule would open: the capabilities left

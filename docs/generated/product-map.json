@@ -11555,7 +11555,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.createSecret",
-      "line": 79,
+      "line": 87,
       "match_key": "secrets|POST|/secrets",
       "method": "POST",
       "normalized_path": "/secrets",
@@ -11570,7 +11570,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.listSecrets",
-      "line": 80,
+      "line": 88,
       "match_key": "secrets|GET|/secrets",
       "method": "GET",
       "normalized_path": "/secrets",
@@ -11585,7 +11585,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.getSecret",
-      "line": 81,
+      "line": 89,
       "match_key": "secrets|GET|/secrets/{param}",
       "method": "GET",
       "normalized_path": "/secrets/{param}",
@@ -11600,7 +11600,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.getSecretValue",
-      "line": 82,
+      "line": 90,
       "match_key": "secrets|GET|/secrets/{param}/value",
       "method": "GET",
       "normalized_path": "/secrets/{param}/value",
@@ -11615,7 +11615,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.updateSecret",
-      "line": 83,
+      "line": 91,
       "match_key": "secrets|PUT|/secrets/{param}",
       "method": "PUT",
       "normalized_path": "/secrets/{param}",
@@ -11630,7 +11630,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.deleteSecret",
-      "line": 84,
+      "line": 92,
       "match_key": "secrets|DELETE|/secrets/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/{param}",
@@ -11645,7 +11645,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.restoreSecret",
-      "line": 85,
+      "line": 93,
       "match_key": "secrets|POST|/secrets/{param}/restore",
       "method": "POST",
       "normalized_path": "/secrets/{param}/restore",
@@ -11660,7 +11660,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.destroySecret",
-      "line": 86,
+      "line": 94,
       "match_key": "secrets|POST|/secrets/{param}/destroy",
       "method": "POST",
       "normalized_path": "/secrets/{param}/destroy",
@@ -11675,7 +11675,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.generateSSHKey",
-      "line": 87,
+      "line": 95,
       "match_key": "secrets|POST|/secrets/generate/ssh_key",
       "method": "POST",
       "normalized_path": "/secrets/generate/ssh_key",
@@ -11690,7 +11690,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.generateKeyPair",
-      "line": 88,
+      "line": 96,
       "match_key": "secrets|POST|/secrets/generate/keypair",
       "method": "POST",
       "normalized_path": "/secrets/generate/keypair",
@@ -11705,7 +11705,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.listVersions",
-      "line": 89,
+      "line": 97,
       "match_key": "secrets|GET|/secrets/{param}/versions",
       "method": "GET",
       "normalized_path": "/secrets/{param}/versions",
@@ -11720,7 +11720,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.destroyVersion",
-      "line": 90,
+      "line": 98,
       "match_key": "secrets|DELETE|/secrets/{param}/versions/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/{param}/versions/{param}",
@@ -11735,7 +11735,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.secretAuditLog",
-      "line": 91,
+      "line": 99,
       "match_key": "secrets|GET|/secrets/{param}/audit",
       "method": "GET",
       "normalized_path": "/secrets/{param}/audit",
@@ -11750,7 +11750,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.rotateSecret",
-      "line": 92,
+      "line": 100,
       "match_key": "secrets|POST|/secrets/{param}/rotate",
       "method": "POST",
       "normalized_path": "/secrets/{param}/rotate",
@@ -11765,7 +11765,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.rollbackSecret",
-      "line": 93,
+      "line": 101,
       "match_key": "secrets|POST|/secrets/{param}/rollback",
       "method": "POST",
       "normalized_path": "/secrets/{param}/rollback",
@@ -11780,7 +11780,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.secretAccess",
-      "line": 94,
+      "line": 102,
       "match_key": "secrets|GET|/secrets/{param}/access",
       "method": "GET",
       "normalized_path": "/secrets/{param}/access",
@@ -11795,7 +11795,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.stats",
-      "line": 95,
+      "line": 103,
       "match_key": "secrets|GET|/secrets/stats",
       "method": "GET",
       "normalized_path": "/secrets/stats",
@@ -11810,7 +11810,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.getSettings",
-      "line": 96,
+      "line": 104,
       "match_key": "secrets|GET|/secrets/settings",
       "method": "GET",
       "normalized_path": "/secrets/settings",
@@ -11825,7 +11825,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.putSettings",
-      "line": 97,
+      "line": 105,
       "match_key": "secrets|PUT|/secrets/settings",
       "method": "PUT",
       "normalized_path": "/secrets/settings",
@@ -11840,7 +11840,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.listVersionCaps",
-      "line": 98,
+      "line": 106,
       "match_key": "secrets|GET|/secrets/version-caps",
       "method": "GET",
       "normalized_path": "/secrets/version-caps",
@@ -11851,11 +11851,26 @@
       "service": "secrets"
     },
     {
+      "action": "cap_prune_status_read",
+      "code_scope": "secrets",
+      "file": "services/secrets/handler.go",
+      "handler": "h.pruneStatusRoute",
+      "line": 107,
+      "match_key": "secrets|GET|/secrets/version-caps/prune",
+      "method": "GET",
+      "normalized_path": "/secrets/version-caps/prune",
+      "path": "/secrets/version-caps/prune",
+      "permission": "secrets.access.read",
+      "registration": "kernel",
+      "resource": "secret_version_cap",
+      "service": "secrets"
+    },
+    {
       "action": "",
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.putVersionCap",
-      "line": 99,
+      "line": 108,
       "match_key": "secrets|PUT|/secrets/version-caps",
       "method": "PUT",
       "normalized_path": "/secrets/version-caps",
@@ -11870,7 +11885,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.deleteVersionCap",
-      "line": 100,
+      "line": 109,
       "match_key": "secrets|DELETE|/secrets/version-caps/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/version-caps/{param}",
@@ -11885,7 +11900,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.listAccessRules",
-      "line": 101,
+      "line": 110,
       "match_key": "secrets|GET|/secrets/access/rules",
       "method": "GET",
       "normalized_path": "/secrets/access/rules",
@@ -11900,7 +11915,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.createAccessRule",
-      "line": 102,
+      "line": 111,
       "match_key": "secrets|POST|/secrets/access/rules",
       "method": "POST",
       "normalized_path": "/secrets/access/rules",
@@ -11915,7 +11930,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.accessRuleImpact",
-      "line": 103,
+      "line": 112,
       "match_key": "secrets|GET|/secrets/access/rules/{param}/impact",
       "method": "GET",
       "normalized_path": "/secrets/access/rules/{param}/impact",
@@ -11930,7 +11945,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.deleteAccessRule",
-      "line": 104,
+      "line": 113,
       "match_key": "secrets|DELETE|/secrets/access/rules/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/access/rules/{param}",
@@ -11945,7 +11960,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultSysHealth",
-      "line": 115,
+      "line": 124,
       "match_key": "secrets|GET|/v1/sys/health",
       "method": "GET",
       "normalized_path": "/v1/sys/health",
@@ -11960,7 +11975,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultSealStatus",
-      "line": 117,
+      "line": 126,
       "match_key": "secrets|GET|/v1/sys/seal-status",
       "method": "GET",
       "normalized_path": "/v1/sys/seal-status",
@@ -11975,7 +11990,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultTokenLookupSelf",
-      "line": 118,
+      "line": 127,
       "match_key": "secrets|POST|/v1/auth/token/lookup-self",
       "method": "POST",
       "normalized_path": "/v1/auth/token/lookup-self",
@@ -11990,7 +12005,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVRead(true)",
-      "line": 119,
+      "line": 128,
       "match_key": "secrets|GET|/v1/{param}/data/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -12005,7 +12020,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVWrite(true)",
-      "line": 120,
+      "line": 129,
       "match_key": "secrets|POST|/v1/{param}/data/{param}",
       "method": "POST",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -12020,7 +12035,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVDelete",
-      "line": 121,
+      "line": 130,
       "match_key": "secrets|DELETE|/v1/{param}/data/{param}",
       "method": "DELETE",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -12035,7 +12050,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKV2Metadata",
-      "line": 122,
+      "line": 131,
       "match_key": "secrets|GET|/v1/{param}/metadata/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/metadata/{param}",
@@ -12050,7 +12065,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVRead(false)",
-      "line": 123,
+      "line": 132,
       "match_key": "secrets|GET|/v1/{param}/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/{param}",
@@ -12065,7 +12080,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVWrite(false)",
-      "line": 124,
+      "line": 133,
       "match_key": "secrets|POST|/v1/{param}/{param}",
       "method": "POST",
       "normalized_path": "/v1/{param}/{param}",
@@ -12080,7 +12095,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVDelete",
-      "line": 125,
+      "line": 134,
       "match_key": "secrets|DELETE|/v1/{param}/{param}",
       "method": "DELETE",
       "normalized_path": "/v1/{param}/{param}",
@@ -17737,7 +17752,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.getSecret",
-      "line": 81,
+      "line": 89,
       "match_key": "secrets|GET|/secrets/{param}",
       "method": "GET",
       "normalized_path": "/secrets/{param}",
@@ -17752,7 +17767,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.getSecretValue",
-      "line": 82,
+      "line": 90,
       "match_key": "secrets|GET|/secrets/{param}/value",
       "method": "GET",
       "normalized_path": "/secrets/{param}/value",
@@ -17767,7 +17782,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.restoreSecret",
-      "line": 85,
+      "line": 93,
       "match_key": "secrets|POST|/secrets/{param}/restore",
       "method": "POST",
       "normalized_path": "/secrets/{param}/restore",
@@ -17782,7 +17797,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.destroySecret",
-      "line": 86,
+      "line": 94,
       "match_key": "secrets|POST|/secrets/{param}/destroy",
       "method": "POST",
       "normalized_path": "/secrets/{param}/destroy",
@@ -17797,7 +17812,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.generateSSHKey",
-      "line": 87,
+      "line": 95,
       "match_key": "secrets|POST|/secrets/generate/ssh_key",
       "method": "POST",
       "normalized_path": "/secrets/generate/ssh_key",
@@ -17812,7 +17827,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.destroyVersion",
-      "line": 90,
+      "line": 98,
       "match_key": "secrets|DELETE|/secrets/{param}/versions/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/{param}/versions/{param}",
@@ -17827,7 +17842,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.rollbackSecret",
-      "line": 93,
+      "line": 101,
       "match_key": "secrets|POST|/secrets/{param}/rollback",
       "method": "POST",
       "normalized_path": "/secrets/{param}/rollback",
@@ -17842,7 +17857,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.secretAccess",
-      "line": 94,
+      "line": 102,
       "match_key": "secrets|GET|/secrets/{param}/access",
       "method": "GET",
       "normalized_path": "/secrets/{param}/access",
@@ -17857,7 +17872,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.createAccessRule",
-      "line": 102,
+      "line": 111,
       "match_key": "secrets|POST|/secrets/access/rules",
       "method": "POST",
       "normalized_path": "/secrets/access/rules",
@@ -17872,7 +17887,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultSysHealth",
-      "line": 115,
+      "line": 124,
       "match_key": "secrets|GET|/v1/sys/health",
       "method": "GET",
       "normalized_path": "/v1/sys/health",
@@ -17887,7 +17902,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultSealStatus",
-      "line": 117,
+      "line": 126,
       "match_key": "secrets|GET|/v1/sys/seal-status",
       "method": "GET",
       "normalized_path": "/v1/sys/seal-status",
@@ -17902,7 +17917,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultTokenLookupSelf",
-      "line": 118,
+      "line": 127,
       "match_key": "secrets|POST|/v1/auth/token/lookup-self",
       "method": "POST",
       "normalized_path": "/v1/auth/token/lookup-self",
@@ -17917,7 +17932,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVRead(true)",
-      "line": 119,
+      "line": 128,
       "match_key": "secrets|GET|/v1/{param}/data/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -17932,7 +17947,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVWrite(true)",
-      "line": 120,
+      "line": 129,
       "match_key": "secrets|POST|/v1/{param}/data/{param}",
       "method": "POST",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -17947,7 +17962,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVDelete",
-      "line": 121,
+      "line": 130,
       "match_key": "secrets|DELETE|/v1/{param}/data/{param}",
       "method": "DELETE",
       "normalized_path": "/v1/{param}/data/{param}",
@@ -17962,7 +17977,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKV2Metadata",
-      "line": 122,
+      "line": 131,
       "match_key": "secrets|GET|/v1/{param}/metadata/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/metadata/{param}",
@@ -17977,7 +17992,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVRead(false)",
-      "line": 123,
+      "line": 132,
       "match_key": "secrets|GET|/v1/{param}/{param}",
       "method": "GET",
       "normalized_path": "/v1/{param}/{param}",
@@ -17992,7 +18007,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVWrite(false)",
-      "line": 124,
+      "line": 133,
       "match_key": "secrets|POST|/v1/{param}/{param}",
       "method": "POST",
       "normalized_path": "/v1/{param}/{param}",
@@ -18007,7 +18022,7 @@
       "code_scope": "secrets",
       "file": "services/secrets/handler.go",
       "handler": "h.vaultKVDelete",
-      "line": 125,
+      "line": 134,
       "match_key": "secrets|DELETE|/v1/{param}/{param}",
       "method": "DELETE",
       "normalized_path": "/v1/{param}/{param}",
@@ -23539,7 +23554,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "void loadAll()} disabled= >",
-      "line": 232,
+      "line": 235,
       "tabs": [
         "vault"
       ],
@@ -23549,7 +23564,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "openGenerate",
       "label": "Generate key pair",
-      "line": 233,
+      "line": 236,
       "tabs": [
         "vault"
       ],
@@ -23559,7 +23574,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "openCreate",
       "label": "Store secret",
-      "line": 234,
+      "line": 237,
       "tabs": [
         "vault"
       ],
@@ -23569,7 +23584,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "setCategory(cat.id)} style= >",
-      "line": 269,
+      "line": 272,
       "tabs": [
         "vault"
       ],
@@ -23579,7 +23594,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "setCurrentPath(path)} title= style={{ display: \"inline-flex\", alignItems: \"ce...",
-      "line": 299,
+      "line": 302,
       "tabs": [
         "vault"
       ],
@@ -23589,7 +23604,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "} style={ }>",
-      "line": 330,
+      "line": 333,
       "tabs": [
         "vault"
       ],
@@ -23599,7 +23614,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "} style={ }>",
-      "line": 331,
+      "line": 334,
       "tabs": [
         "vault"
       ],
@@ -23609,7 +23624,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "setShown((n) => n + PAGE)}>Show more ( left)",
-      "line": 338,
+      "line": 341,
       "tabs": [
         "vault"
       ],
@@ -23619,7 +23634,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "openCreate",
       "label": "Store a secret",
-      "line": 346,
+      "line": 349,
       "tabs": [
         "vault"
       ],
@@ -23629,7 +23644,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "openGenerate",
       "label": "Generate key pair",
-      "line": 347,
+      "line": 350,
       "tabs": [
         "vault"
       ],
@@ -23639,7 +23654,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 388,
+      "line": 391,
       "tabs": [
         "vault"
       ],
@@ -23649,7 +23664,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "void submitCreate()} disabled= >",
-      "line": 389,
+      "line": 392,
       "tabs": [
         "vault"
       ],
@@ -23659,16 +23674,6 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "copyToClipboard(generatedPublicKey, onToast)}> Copy Public Key",
-      "line": 403,
-      "tabs": [
-        "vault"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
-      "handler": "",
-      "label": "setModal(null)} disabled= >Cancel",
       "line": 406,
       "tabs": [
         "vault"
@@ -23678,8 +23683,18 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
+      "label": "setModal(null)} disabled= >Cancel",
+      "line": 409,
+      "tabs": [
+        "vault"
+      ],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
+      "handler": "",
       "label": "void submitGenerate()} disabled= >",
-      "line": 407,
+      "line": 410,
       "tabs": [
         "vault"
       ],
@@ -23689,7 +23704,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "setModal(null)} disabled= >Cancel",
-      "line": 421,
+      "line": 424,
       "tabs": [
         "vault"
       ],
@@ -23699,7 +23714,7 @@
       "file": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "handler": "",
       "label": "void submitRotate()} disabled= >",
-      "line": 422,
+      "line": 425,
       "tabs": [
         "vault"
       ],
@@ -24243,7 +24258,7 @@
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
       "handler": "",
       "label": "void setCap()}> Set cap",
-      "line": 146,
+      "line": 160,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24251,7 +24266,7 @@
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
       "handler": "",
       "label": "void act(\"Version cap removed.\", () => deleteVersionCap(session, c.id))} styl...",
-      "line": 153,
+      "line": 172,
       "tabs": [],
       "tag": "button"
     },
@@ -24259,7 +24274,7 @@
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
       "handler": "",
       "label": "setOpen(true)}> Add rule",
-      "line": 215,
+      "line": 234,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24267,7 +24282,7 @@
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
       "handler": "",
       "label": "setOpen(false)} disabled= >Cancel",
-      "line": 255,
+      "line": 274,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24275,7 +24290,7 @@
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
       "handler": "",
       "label": "void save()} disabled= >",
-      "line": 256,
+      "line": 275,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31910,9 +31925,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/prune?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+      "file": "web/dashboard/src/lib/secrets.ts",
+      "line": 259,
+      "match_key": "secrets|GET|/secrets/version-caps/prune",
+      "method": "GET",
+      "normalized_path": "/secrets/version-caps/prune",
+      "path": "/secrets/version-caps/prune?tenant_id={param}",
+      "service": "secrets",
+      "service_key": "secrets",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/${encodeURIComponent(capId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 255,
+      "line": 264,
       "match_key": "secrets|DELETE|/secrets/version-caps/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/version-caps/{param}",
@@ -31925,7 +31953,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 269,
+      "line": 278,
       "match_key": "secrets|GET|/secrets/access/rules",
       "method": "GET",
       "normalized_path": "/secrets/access/rules",
@@ -31938,7 +31966,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"secrets\", \"/secrets/access/rules\")",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 274,
+      "line": 283,
       "match_key": "secrets|GET|/secrets/access/rules",
       "method": "GET",
       "normalized_path": "/secrets/access/rules",
@@ -31951,7 +31979,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}/impact?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 283,
+      "line": 292,
       "match_key": "secrets|GET|/secrets/access/rules/{param}/impact",
       "method": "GET",
       "normalized_path": "/secrets/access/rules/{param}/impact",
@@ -31964,7 +31992,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}${confirm...",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 289,
+      "line": 298,
       "match_key": "secrets|DELETE|/secrets/access/rules/{param}",
       "method": "DELETE",
       "normalized_path": "/secrets/access/rules/{param}",
@@ -31977,7 +32005,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/stats?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 320,
+      "line": 329,
       "match_key": "secrets|GET|/secrets/stats",
       "method": "GET",
       "normalized_path": "/secrets/stats",
@@ -31990,7 +32018,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 325,
+      "line": 334,
       "match_key": "secrets|GET|/secrets/{param}/versions",
       "method": "GET",
       "normalized_path": "/secrets/{param}/versions",
@@ -32003,7 +32031,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/audit?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 333,
+      "line": 342,
       "match_key": "secrets|GET|/secrets/{param}/audit",
       "method": "GET",
       "normalized_path": "/secrets/{param}/audit",
@@ -32016,7 +32044,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 343,
+      "line": 352,
       "match_key": "secrets|POST|/secrets/{param}/rotate",
       "method": "POST",
       "normalized_path": "/secrets/{param}/rotate",
@@ -32029,7 +32057,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"secrets\", \"/secrets/generate/keypair\")",
       "file": "web/dashboard/src/lib/secrets.ts",
-      "line": 364,
+      "line": 373,
       "match_key": "secrets|POST|/secrets/generate/keypair",
       "method": "POST",
       "normalized_path": "/secrets/generate/keypair",
@@ -32416,7 +32444,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T16:41:15Z",
+  "generated_at": "2026-10-01T17:02:39Z",
   "navigation": [
     {
       "group": "Overview",
@@ -81984,7 +82012,7 @@
         "toRFC3339"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 256,
+      "handler_line": 265,
       "handler_name": "createSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -81996,7 +82024,7 @@
       "normalized_path": "/secrets",
       "path": "/secrets",
       "route_file": "services/secrets/handler.go",
-      "route_line": 79,
+      "route_line": 87,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82084,7 +82112,7 @@
         "atoi"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 284,
+      "handler_line": 293,
       "handler_name": "listSecrets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82095,7 +82123,7 @@
       "normalized_path": "/secrets",
       "path": "/secrets",
       "route_file": "services/secrets/handler.go",
-      "route_line": 80,
+      "route_line": 88,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82142,7 +82170,7 @@
         "secretFor"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 314,
+      "handler_line": 323,
       "handler_name": "getSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -82151,7 +82179,7 @@
       "normalized_path": "/secrets/{param}",
       "path": "/secrets/{id}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 81,
+      "route_line": 89,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -82175,7 +82203,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 322,
+      "handler_line": 331,
       "handler_name": "getSecretValue",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82186,7 +82214,7 @@
       "normalized_path": "/secrets/{param}/value",
       "path": "/secrets/{id}/value",
       "route_file": "services/secrets/handler.go",
-      "route_line": 82,
+      "route_line": 90,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82255,7 +82283,7 @@
         "remediate"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 343,
+      "handler_line": 352,
       "handler_name": "updateSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82266,7 +82294,7 @@
       "normalized_path": "/secrets/{param}",
       "path": "/secrets/{id}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 83,
+      "route_line": 91,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82330,7 +82358,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 382,
+      "handler_line": 391,
       "handler_name": "deleteSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82341,7 +82369,7 @@
       "normalized_path": "/secrets/{param}",
       "path": "/secrets/{id}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 84,
+      "route_line": 92,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -82386,7 +82414,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 395,
+      "handler_line": 404,
       "handler_name": "restoreSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82397,7 +82425,7 @@
       "normalized_path": "/secrets/{param}/restore",
       "path": "/secrets/{id}/restore",
       "route_file": "services/secrets/handler.go",
-      "route_line": 85,
+      "route_line": 93,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -82441,7 +82469,7 @@
         "remediate"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 407,
+      "handler_line": 416,
       "handler_name": "destroySecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82452,7 +82480,7 @@
       "normalized_path": "/secrets/{param}/destroy",
       "path": "/secrets/{id}/destroy",
       "route_file": "services/secrets/handler.go",
-      "route_line": 86,
+      "route_line": 94,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -82496,7 +82524,7 @@
         "GenerateSSHKey"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 439,
+      "handler_line": 448,
       "handler_name": "generateSSHKey",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82507,7 +82535,7 @@
       "normalized_path": "/secrets/generate/ssh_key",
       "path": "/secrets/generate/ssh_key",
       "route_file": "services/secrets/handler.go",
-      "route_line": 87,
+      "route_line": 95,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -82552,7 +82580,7 @@
         {
           "expression": "serviceRequest(\"secrets\", \"/secrets/generate/keypair\")",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 364,
+          "line": 373,
           "source": "serviceRequest"
         }
       ],
@@ -82566,7 +82594,7 @@
         "GenerateKeyPair"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 458,
+      "handler_line": 467,
       "handler_name": "generateKeyPair",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82577,7 +82605,7 @@
       "normalized_path": "/secrets/generate/keypair",
       "path": "/secrets/generate/keypair",
       "route_file": "services/secrets/handler.go",
-      "route_line": 88,
+      "route_line": 96,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82622,7 +82650,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 325,
+          "line": 334,
           "source": "serviceRequest"
         }
       ],
@@ -82635,7 +82663,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 483,
+      "handler_line": 492,
       "handler_name": "listVersions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82646,7 +82674,7 @@
       "normalized_path": "/secrets/{param}/versions",
       "path": "/secrets/{id}/versions",
       "route_file": "services/secrets/handler.go",
-      "route_line": 89,
+      "route_line": 97,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82688,7 +82716,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 421,
+      "handler_line": 430,
       "handler_name": "destroyVersion",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82699,7 +82727,7 @@
       "normalized_path": "/secrets/{param}/versions/{param}",
       "path": "/secrets/{id}/versions/{version}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 90,
+      "route_line": 98,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -82736,7 +82764,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/audit?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 333,
+          "line": 342,
           "source": "serviceRequest"
         }
       ],
@@ -82750,7 +82778,7 @@
         "GetSecretAuditLog"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 497,
+      "handler_line": 506,
       "handler_name": "secretAuditLog",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82762,7 +82790,7 @@
       "normalized_path": "/secrets/{param}/audit",
       "path": "/secrets/{id}/audit",
       "route_file": "services/secrets/handler.go",
-      "route_line": 91,
+      "route_line": 99,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82813,7 +82841,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 343,
+          "line": 352,
           "source": "serviceRequest"
         }
       ],
@@ -82829,7 +82857,7 @@
         "remediate"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 515,
+      "handler_line": 524,
       "handler_name": "rotateSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82840,7 +82868,7 @@
       "normalized_path": "/secrets/{param}/rotate",
       "path": "/secrets/{id}/rotate",
       "route_file": "services/secrets/handler.go",
-      "route_line": 92,
+      "route_line": 100,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -82882,7 +82910,7 @@
         "pruned"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 543,
+      "handler_line": 552,
       "handler_name": "rollbackSecret",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82893,7 +82921,7 @@
       "normalized_path": "/secrets/{param}/rollback",
       "path": "/secrets/{id}/rollback",
       "route_file": "services/secrets/handler.go",
-      "route_line": 93,
+      "route_line": 101,
       "service": "secrets",
       "service_external_package_calls": [
         "fmt.Sprintf"
@@ -82955,7 +82983,7 @@
         "annotate"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 588,
+      "handler_line": 597,
       "handler_name": "secretAccess",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -82966,7 +82994,7 @@
       "normalized_path": "/secrets/{param}/access",
       "path": "/secrets/{id}/access",
       "route_file": "services/secrets/handler.go",
-      "route_line": 94,
+      "route_line": 102,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -83005,7 +83033,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/stats?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 320,
+          "line": 329,
           "source": "serviceRequest"
         }
       ],
@@ -83017,7 +83045,7 @@
         "GetStats"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 573,
+      "handler_line": 582,
       "handler_name": "stats",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83028,7 +83056,7 @@
       "normalized_path": "/secrets/stats",
       "path": "/secrets/stats",
       "route_file": "services/secrets/handler.go",
-      "route_line": 95,
+      "route_line": 103,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -83086,7 +83114,7 @@
         "Settings"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 632,
+      "handler_line": 649,
       "handler_name": "getSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83097,7 +83125,7 @@
       "normalized_path": "/secrets/settings",
       "path": "/secrets/settings",
       "route_file": "services/secrets/handler.go",
-      "route_line": 96,
+      "route_line": 104,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83147,7 +83175,7 @@
         "applyCaps"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 641,
+      "handler_line": 658,
       "handler_name": "putSettings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83159,7 +83187,7 @@
       "normalized_path": "/secrets/settings",
       "path": "/secrets/settings",
       "route_file": "services/secrets/handler.go",
-      "route_line": 97,
+      "route_line": 105,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -83226,7 +83254,7 @@
         "VersionCaps"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 702,
+      "handler_line": 719,
       "handler_name": "listVersionCaps",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83237,7 +83265,7 @@
       "normalized_path": "/secrets/version-caps",
       "path": "/secrets/version-caps",
       "route_file": "services/secrets/handler.go",
-      "route_line": 98,
+      "route_line": 106,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83272,6 +83300,40 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/prune?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+          "file": "web/dashboard/src/lib/secrets.ts",
+          "line": 259,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.pruneStatusRoute",
+      "handler_external_package_calls": [],
+      "handler_file": "services/secrets/handler.go",
+      "handler_helper_calls": [
+        "pruneState"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 774,
+      "handler_name": "pruneStatusRoute",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/secrets/version-caps/prune",
+      "path": "/secrets/version-caps/prune",
+      "route_file": "services/secrets/handler.go",
+      "route_line": 107,
+      "service": "secrets",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"secrets\", \"/secrets/version-caps\")",
           "file": "web/dashboard/src/lib/secrets.ts",
           "line": 250,
@@ -83288,7 +83350,7 @@
         "applyCaps"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 712,
+      "handler_line": 729,
       "handler_name": "putVersionCap",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83299,7 +83361,7 @@
       "normalized_path": "/secrets/version-caps",
       "path": "/secrets/version-caps",
       "route_file": "services/secrets/handler.go",
-      "route_line": 99,
+      "route_line": 108,
       "service": "secrets",
       "service_external_package_calls": [
         "fmt.Errorf",
@@ -83344,7 +83406,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/${encodeURIComponent(capId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 255,
+          "line": 264,
           "source": "serviceRequest"
         }
       ],
@@ -83357,7 +83419,7 @@
         "applyCaps"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 735,
+      "handler_line": 752,
       "handler_name": "deleteVersionCap",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83368,7 +83430,7 @@
       "normalized_path": "/secrets/version-caps/{param}",
       "path": "/secrets/version-caps/{cap_id}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 100,
+      "route_line": 109,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83401,13 +83463,13 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 269,
+          "line": 278,
           "source": "serviceRequest"
         },
         {
           "expression": "serviceRequest(\"secrets\", \"/secrets/access/rules\")",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 274,
+          "line": 283,
           "source": "serviceRequest"
         }
       ],
@@ -83416,10 +83478,11 @@
       "handler_file": "services/secrets/handler.go",
       "handler_helper_calls": [
         "AccessRules",
-        "annotate"
+        "annotate",
+        "recordSubjects"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 619,
+      "handler_line": 628,
       "handler_name": "listAccessRules",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83430,7 +83493,7 @@
       "normalized_path": "/secrets/access/rules",
       "path": "/secrets/access/rules",
       "route_file": "services/secrets/handler.go",
-      "route_line": 101,
+      "route_line": 110,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83474,7 +83537,7 @@
         "ruleDetails"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 815,
+      "handler_line": 831,
       "handler_name": "createAccessRule",
       "handler_receiver_calls": [
         "h.directory.Lookup"
@@ -83487,7 +83550,7 @@
       "normalized_path": "/secrets/access/rules",
       "path": "/secrets/access/rules",
       "route_file": "services/secrets/handler.go",
-      "route_line": 102,
+      "route_line": 111,
       "service": "secrets",
       "service_external_package_calls": [
         "fmt.Errorf",
@@ -83532,7 +83595,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}/impact?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 283,
+          "line": 292,
           "source": "serviceRequest"
         }
       ],
@@ -83543,7 +83606,7 @@
         "ruleImpact"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 797,
+      "handler_line": 813,
       "handler_name": "accessRuleImpact",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -83552,7 +83615,7 @@
       "normalized_path": "/secrets/access/rules/{param}/impact",
       "path": "/secrets/access/rules/{rule_id}/impact",
       "route_file": "services/secrets/handler.go",
-      "route_line": 103,
+      "route_line": 112,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83566,7 +83629,7 @@
         {
           "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}${confirm...",
           "file": "web/dashboard/src/lib/secrets.ts",
-          "line": 289,
+          "line": 298,
           "source": "serviceRequest"
         }
       ],
@@ -83583,7 +83646,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 867,
+      "handler_line": 883,
       "handler_name": "deleteAccessRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83594,7 +83657,7 @@
       "normalized_path": "/secrets/access/rules/{param}",
       "path": "/secrets/access/rules/{rule_id}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 104,
+      "route_line": 113,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83631,7 +83694,7 @@
       "handler_file": "services/secrets/handler.go",
       "handler_helper_calls": [],
       "handler_internal_package_calls": [],
-      "handler_line": 894,
+      "handler_line": 910,
       "handler_name": "vaultSysHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -83640,7 +83703,7 @@
       "normalized_path": "/v1/sys/health",
       "path": "/v1/sys/health",
       "route_file": "services/secrets/handler.go",
-      "route_line": 115,
+      "route_line": 124,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83656,7 +83719,7 @@
       "handler_file": "services/secrets/handler.go",
       "handler_helper_calls": [],
       "handler_internal_package_calls": [],
-      "handler_line": 904,
+      "handler_line": 920,
       "handler_name": "vaultSealStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -83665,7 +83728,7 @@
       "normalized_path": "/v1/sys/seal-status",
       "path": "/v1/sys/seal-status",
       "route_file": "services/secrets/handler.go",
-      "route_line": 117,
+      "route_line": 126,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83685,7 +83748,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 915,
+      "handler_line": 931,
       "handler_name": "vaultTokenLookupSelf",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -83694,7 +83757,7 @@
       "normalized_path": "/v1/auth/token/lookup-self",
       "path": "/v1/auth/token/lookup-self",
       "route_file": "services/secrets/handler.go",
-      "route_line": 118,
+      "route_line": 127,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83716,7 +83779,7 @@
         "parseVaultDataMap"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 976,
+      "handler_line": 992,
       "handler_name": "vaultKVRead",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83727,7 +83790,7 @@
       "normalized_path": "/v1/{param}/data/{param}",
       "path": "/v1/{mount}/data/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 119,
+      "route_line": 128,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -83798,7 +83861,7 @@
         "pruned"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1010,
+      "handler_line": 1026,
       "handler_name": "vaultKVWrite",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83812,7 +83875,7 @@
       "normalized_path": "/v1/{param}/data/{param}",
       "path": "/v1/{mount}/data/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 120,
+      "route_line": 129,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -83934,7 +83997,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1084,
+      "handler_line": 1100,
       "handler_name": "vaultKVDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -83945,7 +84008,7 @@
       "normalized_path": "/v1/{param}/data/{param}",
       "path": "/v1/{mount}/data/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 121,
+      "route_line": 130,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -83989,7 +84052,7 @@
         "toRFC3339"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1097,
+      "handler_line": 1113,
       "handler_name": "vaultKV2Metadata",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -83998,7 +84061,7 @@
       "normalized_path": "/v1/{param}/metadata/{param}",
       "path": "/v1/{mount}/metadata/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 122,
+      "route_line": 131,
       "service": "secrets",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -84020,7 +84083,7 @@
         "parseVaultDataMap"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 976,
+      "handler_line": 992,
       "handler_name": "vaultKVRead",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84031,7 +84094,7 @@
       "normalized_path": "/v1/{param}/{param}",
       "path": "/v1/{mount}/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 123,
+      "route_line": 132,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -84102,7 +84165,7 @@
         "pruned"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1010,
+      "handler_line": 1026,
       "handler_name": "vaultKVWrite",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84116,7 +84179,7 @@
       "normalized_path": "/v1/{param}/{param}",
       "path": "/v1/{mount}/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 124,
+      "route_line": 133,
       "service": "secrets",
       "service_external_package_calls": [
         "errors.New",
@@ -84238,7 +84301,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1084,
+      "handler_line": 1100,
       "handler_name": "vaultKVDelete",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -84249,7 +84312,7 @@
       "normalized_path": "/v1/{param}/{param}",
       "path": "/v1/{mount}/{path...}",
       "route_file": "services/secrets/handler.go",
-      "route_line": 125,
+      "route_line": 134,
       "service": "secrets",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -87228,7 +87291,7 @@
       "reconciler": 1,
       "reporting": 34,
       "sbom": 14,
-      "secrets": 39,
+      "secrets": 40,
       "signing": 11,
       "watchdog": 2,
       "workload": 20
@@ -87258,7 +87321,7 @@
       "reconciler": 1,
       "reporting": 24,
       "sbom": 12,
-      "secrets": 20,
+      "secrets": 21,
       "signing": 9,
       "tfe": 1,
       "watchdog": 2,
@@ -87442,14 +87505,14 @@
     ]
   },
   "summary": {
-    "backend_routes": 869,
+    "backend_routes": 870,
     "backend_services": 28,
     "button_inventory": 756,
-    "frontend_call_sites": 550,
-    "matched_frontend_call_sites": 506,
+    "frontend_call_sites": 551,
+    "matched_frontend_call_sites": 507,
     "nav_items": 27,
-    "request_flows": 869,
-    "request_flows_with_frontend": 512,
+    "request_flows": 870,
+    "request_flows_with_frontend": 513,
     "request_flows_with_internal_package_calls": 153,
     "request_flows_with_service_calls": 523,
     "request_flows_with_store_calls": 624,
@@ -87489,7 +87552,7 @@
       ]
     },
     {
-      "call_count": 202,
+      "call_count": 203,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -87597,7 +87660,7 @@
       ]
     },
     {
-      "call_count": 73,
+      "call_count": 74,
       "component": "web/dashboard/src/components/v3/tabs/VaultTab.tsx",
       "group": "Data & integrations",
       "id": "vault",
@@ -87906,7 +87969,7 @@
       ]
     },
     {
-      "call_count": 123,
+      "call_count": 124,
       "component": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "group": "UNLISTED",
       "id": "restapi",
@@ -115335,7 +115398,7 @@
         ],
         "handler": "createSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 256,
+        "handlerLine": 265,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -115379,7 +115442,7 @@
         ],
         "handler": "listSecrets",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 284,
+        "handlerLine": 293,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115408,7 +115471,7 @@
         "frontendSites": [],
         "handler": "getSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 314,
+        "handlerLine": 323,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -115436,7 +115499,7 @@
         "frontendSites": [],
         "handler": "getSecretValue",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 322,
+        "handlerLine": 331,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -115475,7 +115538,7 @@
         ],
         "handler": "updateSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 343,
+        "handlerLine": 352,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -115516,7 +115579,7 @@
         ],
         "handler": "deleteSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 382,
+        "handlerLine": 391,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -115547,7 +115610,7 @@
         "frontendSites": [],
         "handler": "restoreSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 395,
+        "handlerLine": 404,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -115576,7 +115639,7 @@
         "frontendSites": [],
         "handler": "destroySecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 407,
+        "handlerLine": 416,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -115607,7 +115670,7 @@
         "frontendSites": [],
         "handler": "generateSSHKey",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 439,
+        "handlerLine": 448,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.GenerateKeyPair",
@@ -115640,13 +115703,13 @@
           {
             "expression": "serviceRequest(\"secrets\", \"/secrets/generate/keypair\")",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 364,
+            "line": 373,
             "source": "serviceRequest"
           }
         ],
         "handler": "generateKeyPair",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 458,
+        "handlerLine": 467,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -115677,13 +115740,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 325,
+            "line": 334,
             "source": "serviceRequest"
           }
         ],
         "handler": "listVersions",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 483,
+        "handlerLine": 492,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115714,7 +115777,7 @@
         "frontendSites": [],
         "handler": "destroyVersion",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 421,
+        "handlerLine": 430,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -115745,13 +115808,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/audit?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 333,
+            "line": 342,
             "source": "serviceRequest"
           }
         ],
         "handler": "secretAuditLog",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 497,
+        "handlerLine": 506,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115786,13 +115849,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/${encodeURIComponent(secretId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 343,
+            "line": 352,
             "source": "serviceRequest"
           }
         ],
         "handler": "rotateSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 515,
+        "handlerLine": 524,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -115821,7 +115884,7 @@
         "frontendSites": [],
         "handler": "rollbackSecret",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 543,
+        "handlerLine": 552,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -115851,7 +115914,7 @@
         "frontendSites": [],
         "handler": "secretAccess",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 588,
+        "handlerLine": 597,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -115884,13 +115947,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/stats?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 320,
+            "line": 329,
             "source": "serviceRequest"
           }
         ],
         "handler": "stats",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 573,
+        "handlerLine": 582,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115929,7 +115992,7 @@
         ],
         "handler": "getSettings",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 632,
+        "handlerLine": 649,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115968,7 +116031,7 @@
         ],
         "handler": "putSettings",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 641,
+        "handlerLine": 658,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -116008,7 +116071,7 @@
         ],
         "handler": "listVersionCaps",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 702,
+        "handlerLine": 719,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -116032,6 +116095,38 @@
         ]
       },
       {
+        "complexity": 0,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/prune?tenant_id=${encodeURIComponent(session.tenantId)}`)",
+            "file": "web/dashboard/src/lib/secrets.ts",
+            "line": 259,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "pruneStatusRoute",
+        "handlerFile": "services/secrets/handler.go",
+        "handlerLine": 774,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/secrets/version-caps/prune",
+        "path": "/secrets/version-caps/prune",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "secrets|GET|/secrets/version-caps/prune",
+        "sensitive": true,
+        "service": "secrets",
+        "serviceCalls": [],
+        "storeCalls": [],
+        "uiLabels": [
+          "Operations",
+          "Secret Vault",
+          "restapi"
+        ]
+      },
+      {
         "complexity": 2,
         "externalPackages": [
           "strings.TrimSpace",
@@ -116047,7 +116142,7 @@
         ],
         "handler": "putVersionCap",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 712,
+        "handlerLine": 729,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -116080,13 +116175,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/version-caps/${encodeURIComponent(capId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 255,
+            "line": 264,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteVersionCap",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 735,
+        "handlerLine": 752,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -116118,19 +116213,19 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 269,
+            "line": 278,
             "source": "serviceRequest"
           },
           {
             "expression": "serviceRequest(\"secrets\", \"/secrets/access/rules\")",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 274,
+            "line": 283,
             "source": "serviceRequest"
           }
         ],
         "handler": "listAccessRules",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 619,
+        "handlerLine": 628,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -116162,7 +116257,7 @@
         "frontendSites": [],
         "handler": "createAccessRule",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 815,
+        "handlerLine": 831,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -116193,13 +116288,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}/impact?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 283,
+            "line": 292,
             "source": "serviceRequest"
           }
         ],
         "handler": "accessRuleImpact",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 797,
+        "handlerLine": 813,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -116229,13 +116324,13 @@
           {
             "expression": "serviceRequest(\"secrets\", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}${confirm...",
             "file": "web/dashboard/src/lib/secrets.ts",
-            "line": 289,
+            "line": 298,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteAccessRule",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 867,
+        "handlerLine": 883,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -116266,7 +116361,7 @@
         "frontendSites": [],
         "handler": "vaultSysHealth",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 894,
+        "handlerLine": 910,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -116289,7 +116384,7 @@
         "frontendSites": [],
         "handler": "vaultSealStatus",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 904,
+        "handlerLine": 920,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -116314,7 +116409,7 @@
         "frontendSites": [],
         "handler": "vaultTokenLookupSelf",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 915,
+        "handlerLine": 931,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -116344,7 +116439,7 @@
         "frontendSites": [],
         "handler": "vaultKVRead",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 976,
+        "handlerLine": 992,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -116377,7 +116472,7 @@
         "frontendSites": [],
         "handler": "vaultKVWrite",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 1010,
+        "handlerLine": 1026,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -116415,7 +116510,7 @@
         "frontendSites": [],
         "handler": "vaultKVDelete",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 1084,
+        "handlerLine": 1100,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -116442,7 +116537,7 @@
         "frontendSites": [],
         "handler": "vaultKV2Metadata",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 1097,
+        "handlerLine": 1113,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -116470,7 +116565,7 @@
         "frontendSites": [],
         "handler": "vaultKVRead",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 976,
+        "handlerLine": 992,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -116503,7 +116598,7 @@
         "frontendSites": [],
         "handler": "vaultKVWrite",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 1010,
+        "handlerLine": 1026,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -116541,7 +116636,7 @@
         "frontendSites": [],
         "handler": "vaultKVDelete",
         "handlerFile": "services/secrets/handler.go",
-        "handlerLine": 1084,
+        "handlerLine": 1100,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -118496,7 +118591,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T16:41:15Z",
+    "generatedAt": "2026-10-01T17:02:39Z",
     "methods": [
       "DELETE",
       "GET",
@@ -118536,8 +118631,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 869,
-      "frontendBacked": 512,
+      "flows": 870,
+      "frontendBacked": 513,
       "highRisk": 338,
       "services": 28
     }
