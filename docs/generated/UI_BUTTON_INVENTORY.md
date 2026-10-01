@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T11:12:40Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T11:14:59Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -36,13 +36,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 99 | - | Btn | void load()}>Retry |  |
 | web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 426 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 427 | alerts | Btn | void escalateOne(item)} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 453 | alerts | Btn | void refresh(false)}> |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 454 | alerts | Btn | void ackAllAlerts()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 464 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 493 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
-| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 495 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 272 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 273 | alerts | Btn | void escalateOne(item)} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 299 | alerts | Btn | void refresh(false)}> |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 300 | alerts | Btn | void ackAllAlerts()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 310 | alerts | Btn | setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`... |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 339 | alerts | Btn | setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev |  |
+| web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 341 | alerts | Btn | setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 236 | - | Btn | void load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 237 | - | Btn | void saveSettings()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 263 | - | Btn | void submitSign()} disabled= > |  |
@@ -472,15 +472,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 754 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 755 | playbooks | Btn | }>Cancel |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 547 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 548 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1001 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1254 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1255 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1256 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1257 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1348 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1350 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 548 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 549 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 972 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1225 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1226 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1227 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1228 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1319 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1321 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

@@ -89,6 +89,6 @@ test("the Administration exposure register lists playbook connections and how th
   await page.getByRole("button", { name: "Security", exact: true }).first().click();
   await expect(page.getByText("Key exposure register", { exact: true })).toBeVisible();
   await expect(page.getByText("Playbook connections", { exact: true })).toBeVisible();
-  await expect(page.getByText(/pbconn_exposed · stored in plaintext before 2\.5\.0-beta/)).toBeVisible();
+  await expect(page.getByText(/pbconn_exposed · stored in plaintext by an earlier release/)).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-exposure.png` });
 });

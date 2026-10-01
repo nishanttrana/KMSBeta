@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Btn, Card, Inp, Section } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
@@ -21,7 +21,7 @@ export const CryptoperiodPanel = ({ session }: { session: any }) => {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const rows = await listCryptoperiods(session);
       setItems(rows);
@@ -30,8 +30,8 @@ export const CryptoperiodPanel = ({ session }: { session: any }) => {
     } catch (e) {
       setError(`Cryptoperiods unavailable: ${errMsg(e)}`);
     }
-  };
-  useEffect(() => { void load(); }, [session]);
+  }, [session]);
+  useEffect(() => { void load(); }, [load]);
 
   const run = async (category: string, fn: () => Promise<void>) => {
     setBusy(category);

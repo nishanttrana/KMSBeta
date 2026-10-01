@@ -5,6 +5,31 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### A red CI step hides every step after it, and a gate that can only fail is not a gate
+- **What happened:** the dashboard CI job stopped at lint on every commit
+  since 6.25.0-beta. Nobody saw the steps after it, so a stale browser test
+  (6.11.0-beta), a stale generated REST catalogue and a size gate with 30
+  violations all sat unnoticed. In 7.15.0 to 7.19.0 I ran type-check, lint on
+  the files I touched and one smoke spec, and reported the dashboard as
+  passing. I never ran the CI job's own sequence, and I discarded the
+  regenerated REST catalogue as a "build artefact" when it was a committed
+  file that had drifted. I also wrote Postgres tests "for CI
+  integration-postgres" in packages that job never ran.
+- **How it slipped through:** each check I ran was real but narrower than
+  CI's. Lint on touched files passes while the repo's lint fails. A test
+  that skips without a DSN looks green everywhere it isn't given one. The
+  size gate had an empty allowlist and 30 offenders, so its failure carried
+  no information and was ignored.
+- **Rule:** before pushing a dashboard change, run the CI job's steps as CI
+  runs them, in order, on the locked dependencies (`npm ci` first: a stale
+  `node_modules` produced a false OpenAPI drift here). A regenerated file
+  that differs from the committed one is a finding, not noise: commit it or
+  explain it. A new test that needs a service only counts once CI's job
+  lists its package. A gate with standing violations becomes a ratchet
+  (ceilings that only go down), so that it can fail for a reason.
+- **Trap:** `gh` is not installed here and the repo is private, so CI results
+  can't be read from this machine. Reproduce the workflow locally instead.
+
 ### The Playwright smoke test runs the last build, not the source
 - **What happened:** after merging Overview → Analytics into Operations
   (7.24.0-beta), the updated smoke test failed with the Analytics menu entry

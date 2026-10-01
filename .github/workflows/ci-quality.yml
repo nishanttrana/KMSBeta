@@ -91,8 +91,9 @@ jobs:
         run: ./scripts/test-volume-repair.sh
 
   integration-postgres:
-    # Backup/restore, signing, the backup service, the secrets MEK migration
-    # and HSM key storage (with SoftHSM2) against real Postgres: they rely on information_schema, JSONB,
+    # Backup/restore, signing, the backup service, the secrets MEK migration,
+    # the audit, alert and posture statistics (window bounds, GROUP BY and the
+    # posture baseline) and HSM key storage (with SoftHSM2) against real Postgres: they rely on information_schema, JSONB,
     # TRUNCATE ... CASCADE and BYTEA/row-value comparisons, which SQLite cannot
     # prove. The database is disposable.
     name: Integration tests (Postgres)
@@ -123,7 +124,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
 
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./services/workload ./pkg/mek
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./services/workload ./services/posture ./services/reporting ./pkg/mek
 
       - name: Edge key exchange through a real Envoy (hot restart, measured by handshake)
         env:

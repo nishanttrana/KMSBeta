@@ -21,7 +21,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   Users,
-  Wallet,
   Waypoints,
   Gauge
 } from "lucide-react";

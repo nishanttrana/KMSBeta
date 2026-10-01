@@ -4,6 +4,31 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.25.0-beta] — 2026-10-01
+
+### Dashboard CI passes again, and checks what it claimed to
+- **Fixed:** the dashboard quality job failed at lint on every commit since
+  6.25.0-beta (two errors: a hook dependency in the cryptoperiod panel and an
+  unused icon import). Every step after lint (size gate, type check, unit
+  tests, build, dependency audit, browser tests) had not run in CI since.
+- **Fixed:** a browser test of the Administration exposure register still
+  expected wording that changed in 6.11.0-beta. It had been failing unseen.
+- **Fixed:** the REST API explorer's catalogue was stale. It now lists the
+  routes added since, including `GET /audit/activity/stats` and
+  `GET /posture/baseline`.
+- **Changed:** the component size gate is now a ratchet. It demanded every
+  component be under 500 lines with an empty allowlist, while 30 files were
+  larger, so it could only fail. The 29 files still over the limit are listed
+  in `web/dashboard/scripts/component-size-burndown.json` with their current
+  size as a ceiling. A listed file may not grow, a new file must be within
+  500 lines, and an entry must be removed once its file is within the limit.
+- **Changed:** the Alert Center tab is back under the limit (its wording
+  helpers moved to `alertText.ts`), and the Posture baseline card is its own
+  component.
+- **CI:** the Postgres integration job now runs the posture and reporting
+  tests. Their Postgres tests (statistics windows, the posture baseline) were
+  written in 7.17.0 and 7.19.0 but the job did not include those packages.
+
 ## [7.24.0-beta] — 2026-10-01
 
 ### Overview → Analytics is merged into Overview → Operations

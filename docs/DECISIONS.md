@@ -7,6 +7,28 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — The component size gate is a ratchet (7.25.0-beta)
+
+**Decision.** `check:component-size` keeps the 500-line limit for every new
+component. The 29 files already over it are listed in
+`web/dashboard/scripts/component-size-burndown.json` with a ceiling at their
+current size. A listed file may not grow; a file not listed must be within
+the limit; an entry must be removed once its file is within the limit or
+gone. `--tighten` lowers ceilings to current sizes and never raises one.
+
+**Why.** The gate had an empty allowlist and 30 files over the limit (one of
+2,778 lines), so it failed on every commit and told nobody anything. It sat
+behind an already-red lint step, so it had not even been seen.
+
+**Rejected.** Raising the limit to fit the largest file: no limit at all.
+Removing the gate: new 2,000-line tabs would keep arriving. Splitting 29
+files in one change: a large refactor of working screens with no test
+coverage to protect it. The ratchet stops the growth now and lets each file
+be split when it is next worked on.
+
+**Enforced by** `tests/unit/componentSizeGate.test.ts` (growth, a new
+oversized file and a stale entry each fail) and the CI dashboard job.
+
 ## 2026-10-01 — Overview → Analytics merged into Overview → Operations (7.24.0-beta)
 
 - **Decision:** key and operations trends live in Overview → Operations, as

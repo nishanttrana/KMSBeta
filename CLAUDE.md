@@ -355,6 +355,14 @@ changes code without touching CHANGELOG.md or learning.md.
   shrinks, and a new entry needs a crypto-boundary justification.
 - `go vet` and `go test` pass for the touched packages. New security behaviour
   gets a test that proves the bad case is rejected.
+- A dashboard change passes the CI dashboard job's own steps, run in order
+  on the locked dependencies (`npm ci`): `generate:rest-catalog`,
+  `validate:openapi`, `lint`, `check:component-size`, `typecheck`,
+  `test:unit`, `build`, `test:smoke` (every spec). Commit the regenerated
+  REST catalogue when it changes. The component size burn-down list
+  (`web/dashboard/scripts/component-size-burndown.json`) only shrinks: put new
+  code in its own file, never raise a ceiling. A test that needs Postgres
+  counts only once CI's `integration-postgres` job lists its package.
 - The documentation above is updated in the same change. New or changed
   endpoints, headers and env vars also go in `docs/API_REFERENCE.md`.
 - Every security-relevant action and refusal emits a specific audit event

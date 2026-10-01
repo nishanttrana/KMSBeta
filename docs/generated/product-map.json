@@ -18263,7 +18263,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void ackAlert(item)} disabled= style={ }>",
-      "line": 426,
+      "line": 272,
       "tabs": [
         "alerts"
       ],
@@ -18273,7 +18273,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void escalateOne(item)} disabled= style={ }>",
-      "line": 427,
+      "line": 273,
       "tabs": [
         "alerts"
       ],
@@ -18283,7 +18283,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void refresh(false)}>",
-      "line": 453,
+      "line": 299,
       "tabs": [
         "alerts"
       ],
@@ -18293,7 +18293,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "void ackAllAlerts()} disabled= >",
-      "line": 454,
+      "line": 300,
       "tabs": [
         "alerts"
       ],
@@ -18303,7 +18303,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "setActiveFilter(tab.id)} style={{ background:activeFilter===tab.id?(palette[`...",
-      "line": 464,
+      "line": 310,
       "tabs": [
         "alerts"
       ],
@@ -18313,7 +18313,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.max(0,prev-1))} disabled= >Prev",
-      "line": 493,
+      "line": 339,
       "tabs": [
         "alerts"
       ],
@@ -18323,7 +18323,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertsTab.tsx",
       "handler": "",
       "label": "setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled= >Next",
-      "line": 495,
+      "line": 341,
       "tabs": [
         "alerts"
       ],
@@ -22456,7 +22456,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
-      "line": 547,
+      "line": 548,
       "tabs": [
         "posture"
       ],
@@ -22466,7 +22466,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "runScan} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 548,
+      "line": 549,
       "tabs": [
         "posture"
       ],
@@ -22476,7 +22476,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 1001,
+      "line": 972,
       "tabs": [
         "posture"
       ],
@@ -22486,7 +22486,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1254,
+      "line": 1225,
       "tabs": [
         "posture"
       ],
@@ -22496,7 +22496,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1255,
+      "line": 1226,
       "tabs": [
         "posture"
       ],
@@ -22506,7 +22506,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1256,
+      "line": 1227,
       "tabs": [
         "posture"
       ],
@@ -22516,7 +22516,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1257,
+      "line": 1228,
       "tabs": [
         "posture"
       ],
@@ -22526,7 +22526,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1348,
+      "line": 1319,
       "tabs": [
         "posture"
       ],
@@ -22536,7 +22536,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1350,
+      "line": 1321,
       "tabs": [
         "posture"
       ],
@@ -31839,7 +31839,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T11:12:40Z",
+  "generated_at": "2026-10-01T11:14:59Z",
   "navigation": [
     {
       "group": "Overview",
@@ -116441,7 +116441,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T11:12:40Z",
+    "generatedAt": "2026-10-01T11:14:59Z",
     "methods": [
       "DELETE",
       "GET",
