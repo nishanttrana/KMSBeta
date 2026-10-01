@@ -20254,7 +20254,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(\"certs\")}>View Certificates \u2192",
-      "line": 218,
+      "line": 223,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20262,7 +20262,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } >",
-      "line": 245,
+      "line": 250,
       "tabs": [],
       "tag": "button"
     },
@@ -20270,7 +20270,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(tabId)} style={{ display: \"inline-flex\", alignItems: \"center\", g...",
-      "line": 255,
+      "line": 260,
       "tabs": [],
       "tag": "button"
     },
@@ -20278,7 +20278,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"approved\")} disabled={approvalVoteBusy ===...",
-      "line": 384,
+      "line": 389,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20286,7 +20286,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"denied\")} disabled={approvalVoteBusy === `...",
-      "line": 385,
+      "line": 390,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31829,7 +31829,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T11:25:49Z",
+  "generated_at": "2026-10-01T11:31:41Z",
   "navigation": [
     {
       "group": "Overview",
@@ -116425,7 +116425,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T11:25:49Z",
+    "generatedAt": "2026-10-01T11:31:41Z",
     "methods": [
       "DELETE",
       "GET",

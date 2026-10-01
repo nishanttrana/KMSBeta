@@ -67,14 +67,17 @@ export const DashboardTabView = (props: any) => {
   const complianceHasAssessment = Boolean(homeSummary?.complianceHasAssessment);
   const complianceTrendPos = Number(homeSummary?.complianceDeltaWeek || 0) >= 0;
   const alertTrendPos = Number(homeSummary?.criticalAlerts || 0) === 0;
+  // A count whose source did not answer is null: shown as a dash, never 0.
+  const num = (v: any) => (v == null ? "—" : fmtInt(v));
+  const sub = (v: any, text: string) => (v == null ? (homeLoading ? "Loading…" : "Unavailable") : text);
   const pinnedList = Array.isArray(pinnedTabs) ? pinnedTabs.filter((id: string) => id !== "home") : [];
 
   const getWidgetPrimary = (tabId: string) => {
     switch (tabId) {
-      case "keys": return fmtInt(homeSummary?.keys || 0);
-      case "certs": return fmtInt(homeSummary?.certs || 0);
-      case "vault": case "secrets": return fmtInt(homeSummary?.secrets || 0);
-      case "alerts": return fmtInt(homeSummary?.alerts || 0);
+      case "keys": return num(homeSummary?.keys);
+      case "certs": return num(homeSummary?.certs);
+      case "vault": case "secrets": return num(homeSummary?.secrets);
+      case "alerts": return num(homeSummary?.alerts);
       case "posture": return homeSummary?.postureRisk != null ? `${Number(homeSummary.postureRisk).toFixed(0)}%` : "—";
       case "compliance": return complianceHasAssessment ? `${homeSummary?.complianceScore || 0}/100` : "Not assessed";
       case "cluster": return clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
@@ -85,10 +88,10 @@ export const DashboardTabView = (props: any) => {
 
   const getWidgetSecondary = (tabId: string) => {
     switch (tabId) {
-      case "keys": return `+${fmtInt(homeSummary?.keyGrowthWeek || 0)} this week`;
-      case "certs": return Number(homeSummary?.expiring) > 0 ? `${fmtInt(homeSummary.expiring)} expiring` : "All valid";
+      case "keys": return sub(homeSummary?.keyGrowthWeek, `+${fmtInt(homeSummary?.keyGrowthWeek)} this week`);
+      case "certs": return sub(homeSummary?.expiring, Number(homeSummary?.expiring) > 0 ? `${fmtInt(homeSummary.expiring)} expiring` : "None expiring");
       case "vault": case "secrets": return "encrypted at rest";
-      case "alerts": return `${fmtInt(homeSummary?.criticalAlerts || 0)} critical`;
+      case "alerts": return sub(homeSummary?.criticalAlerts, `${fmtInt(homeSummary?.criticalAlerts)} critical`);
       case "audit": return "Integrity in Checkpoints";
       case "posture": return "24h risk score";
       case "compliance": return complianceHasAssessment ? `+${fmtInt(homeSummary?.complianceDeltaWeek || 0)} this week` : "No score yet";
@@ -179,9 +182,11 @@ export const DashboardTabView = (props: any) => {
 
       {/* KPI hero cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-        <Kpi label="Total Keys" value={fmtInt(homeSummary.keys)} icon={KeyRound}
-          color={C.accentFg} dim={C.accentDim} deltaIcon={TrendingUp} deltaColor={C.greenFg}
-          delta={`+${fmtInt(homeSummary.keyGrowthWeek)} this week`}
+        <Kpi label="Total Keys" value={num(homeSummary.keys)} icon={KeyRound}
+          color={C.accentFg} dim={C.accentDim}
+          deltaIcon={homeSummary.keyGrowthWeek == null ? undefined : TrendingUp}
+          deltaColor={homeSummary.keyGrowthWeek == null ? C.dim : C.greenFg}
+          delta={sub(homeSummary.keyGrowthWeek, `+${fmtInt(homeSummary.keyGrowthWeek)} this week`)}
           />
         <Kpi label="Ops / Day" value={homeSummary.opsPerDay == null ? "—" : fmtCompact(homeSummary.opsPerDay)} icon={Zap}
           color={C.greenFg} dim={C.greenDim} deltaColor={C.dim}
@@ -193,12 +198,12 @@ export const DashboardTabView = (props: any) => {
           deltaColor={complianceHasAssessment ? (complianceTrendPos ? C.greenFg : C.redFg) : C.dim}
           delta={complianceHasAssessment ? `${homeSummary.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(homeSummary.complianceDeltaWeek)} this week · score /100` : "Not assessed"}
           barPct={complianceHasAssessment ? Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0))) : undefined} />
-        <Kpi label="Open Alerts" value={fmtInt(homeSummary.alerts)} icon={Bell}
+        <Kpi label="Open Alerts" value={num(homeSummary.alerts)} icon={Bell}
           color={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redFg : C.amberFg}
           dim={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redDim : C.amberDim}
-          deltaIcon={alertTrendPos ? TrendingDown : TrendingUp}
-          deltaColor={alertTrendPos ? C.greenFg : C.redFg}
-          delta={`${fmtInt(homeSummary.criticalAlerts)} critical`}
+          deltaIcon={homeSummary.criticalAlerts == null ? undefined : alertTrendPos ? TrendingDown : TrendingUp}
+          deltaColor={homeSummary.criticalAlerts == null ? C.dim : alertTrendPos ? C.greenFg : C.redFg}
+          delta={sub(homeSummary.criticalAlerts, `${fmtInt(homeSummary.criticalAlerts)} critical`)}
           />
       </div>
 
@@ -311,7 +316,7 @@ export const DashboardTabView = (props: any) => {
                 </div>
               );
             })}
-            {!algos.length && <div style={{ fontSize: 10, color: C.muted }}>No keys yet.</div>}
+            {!algos.length && <div style={{ fontSize: 10, color: C.muted }}>{homeSummary?.keys == null ? "Unavailable" : "No keys yet."}</div>}
           </div>
         </Card>
 

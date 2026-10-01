@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### A zero that means "the call failed" (7.28.0-beta)
+- **What was wrong:** the Operations Status loader awaited keys, secrets,
+  certificates, alert counts and the expiry policy in one `Promise.all`
+  with no catch on those five. One failure threw away every result, and the
+  cards kept the zeros the state was initialised with: "0 keys", "0
+  critical" for a service that was down.
+- **How it slipped through:** the zero came from `useState({keys:0,...})`
+  and `|| 0` at the render site, so there was no line that said "on error,
+  show 0". The smoke test mocks every call with 200.
+- **Rule of thumb:** initialise a measured value to `null`, not 0; let each
+  source fail alone (`.catch(()=>null)`); render null as "—" with
+  "Unavailable". The smoke test now fails keycore and reporting and asserts
+  no 0 on those cards.
+
 ### Fake removed: the Secret Vault's OpenBao panel, folders and form options (7.27.0-beta)
 - **What was fake:** a panel listing Vault endpoints the service never
   registered (`sys/policies/acl`, `secret/undelete`, `sys/mounts`) and seven
@@ -55,9 +69,6 @@ Newest entries on top.
   response field is this?". A literal number, a `?? "ok"`, a `!== false`
   and a `list.length ? list : [{...}]` are the shapes to grep for. The smoke
   test now asserts these strings are absent with an empty cluster.
-- **Open:** Total Keys and Open Alerts still show 0 when their call fails
-  (the refresh aborts and the initial zeros stay). They should show
-  "unavailable"; not changed here.
 
 ### A red CI step hides every step after it, and a gate that can only fail is not a gate
 - **What happened:** the dashboard CI job stopped at lint on every commit

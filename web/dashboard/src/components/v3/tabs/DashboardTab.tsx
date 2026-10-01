@@ -40,19 +40,19 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
   const [homeRefreshNonce,setHomeRefreshNonce]=useState(0);
   const promptDialog=usePromptDialog();
   const [homeSummary,setHomeSummary]=useState<any>({
-    keys:0,
-    secrets:0,
-    certs:0,
-    alerts:0,
-    criticalAlerts:0,
-    keyGrowthWeek:0,
+    keys:null,
+    secrets:null,
+    certs:null,
+    alerts:null,
+    criticalAlerts:null,
+    keyGrowthWeek:null,
     opsPerDay:null,
     opsWeekTotal:null,
     complianceScore:0,
     complianceDeltaWeek:0,
     complianceHasAssessment:false,
     alertDays:30,
-    expiring:0,
+    expiring:null,
     myPendingApprovals:0,
     approverIdentity:"",
     govChallengeRequired:false,
@@ -130,19 +130,19 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
   };
   const isRealComplianceAssessment=(item:any)=>Boolean(item&&typeof item==="object"&&String(item?.id||"").trim()&&!/^auto$/i.test(String(item?.trigger||"").trim()));
   const refreshEmpty=()=>({
-    keys:0,
-    secrets:0,
-    certs:0,
-    alerts:0,
-    criticalAlerts:0,
-    keyGrowthWeek:0,
+    keys:null,
+    secrets:null,
+    certs:null,
+    alerts:null,
+    criticalAlerts:null,
+    keyGrowthWeek:null,
     opsPerDay:null,
     opsWeekTotal:null,
     complianceScore:0,
     complianceDeltaWeek:0,
     complianceHasAssessment:false,
     alertDays:30,
-    expiring:0,
+    expiring:null,
     myPendingApprovals:0,
     approverIdentity:"",
     govChallengeRequired:false,
@@ -166,11 +166,12 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
       setHomeLoading(true);
       try{
         const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,opsDay,opsWeek]=await Promise.all([
-          listKeys(session),
-          listSecrets(session),
-          listCertificates(session,{limit:1000,offset:0}),
-          getUnreadAlertCounts(session),
-          getCertExpiryAlertPolicy(session),
+          // A failed source is null and shows "unavailable", never 0.
+          listKeys(session).catch(()=>null),
+          listSecrets(session).catch(()=>null),
+          listCertificates(session,{limit:1000,offset:0}).catch(()=>null),
+          getUnreadAlertCounts(session).catch(()=>null),
+          getCertExpiryAlertPolicy(session).catch(()=>null),
           listGovernanceRequests(session,{status:"pending"}).catch(()=>[]),
           listGovernancePolicies(session,{status:"active"}).catch(()=>[]),
           getGovernanceSettings(session).catch(()=>null),
@@ -216,10 +217,10 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           .filter((item:any)=>Boolean(item))
           .filter((item:any)=>item.expiresAt<=threshold)
           .sort((a:any,b:any)=>a.expiresAt-b.expiresAt);
-        const unreadTotal=Object.values(counts||{}).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0);
-        const criticalAlerts=Math.max(0,Number(counts?.critical||0));
+        const unreadTotal=counts?Object.values(counts).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0):null;
+        const criticalAlerts=counts?Math.max(0,Number(counts.critical||0)):null;
         const weekAgo=now-7*24*60*60*1000;
-        const keyGrowthWeek=keyItems.filter((k:any)=>new Date(String(k?.created_at||"")).getTime()>=weekAgo).length;
+        const keyGrowthWeek=!Array.isArray(keys)?null:keyItems.filter((k:any)=>new Date(String(k?.created_at||"")).getTime()>=weekAgo).length;
         // Metered cryptographic operations (the Operation metrics tab's source).
         const opsPerDay=opsDay?Math.max(0,Number(opsDay.total_ops||0)):null;
         const opsWeekTotal=opsWeek?Math.max(0,Number(opsWeek.total_ops||0)):null;
@@ -374,9 +375,9 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
 
 
         setHomeSummary({
-          keys:keyCount,
-          secrets:Array.isArray(secretItems)?secretItems.length:0,
-          certs:Array.isArray(certItems)?certItems.length:0,
+          keys:Array.isArray(keys)?keyCount:null,
+          secrets:Array.isArray(secretItems)?secretItems.length:null,
+          certs:Array.isArray(certItems)?certItems.length:null,
           alerts:unreadTotal,
           criticalAlerts,
           keyGrowthWeek,
@@ -386,7 +387,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           complianceDeltaWeek,
           complianceHasAssessment,
           alertDays,
-          expiring:expiringItems.length,
+          expiring:Array.isArray(certItems)?expiringItems.length:null,
           myPendingApprovals:userPendingApprovals.length,
           approverIdentity,
           govChallengeRequired:Boolean(governanceSettings?.challenge_response_enabled),

@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.28.0-beta] — 2026-10-01
+
+### Overview → Operations → Status says "unavailable" when a source fails
+- **Fixed:** when the key, secret, certificate or alert service did not
+  answer, the whole Status refresh was abandoned and Total Keys and Open
+  Alerts stayed at 0. Each source now fails on its own: its count shows "—"
+  with "Unavailable", and the rest of the page still loads. The pinned
+  Keys, Certificates, Secret Vault and Alerts widgets and the Algorithm
+  Distribution card do the same. The pinned Certificates widget says "None
+  expiring" (within the alert window) where it said "All valid".
+
 ## [7.27.0-beta] — 2026-10-01
 
 ### Secret Vault: charts with drill-down, and nothing on the page that the service does not do

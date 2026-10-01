@@ -257,3 +257,19 @@ test("posture shows baseline progress instead of a score while it builds", async
   await expect(page.getByText("0/100")).toHaveCount(0);
   await assertNoRenderBoundary(page);
 });
+
+// A source that fails shows "unavailable", never 0 (7.28.0-beta): with keycore
+// and reporting answering 500, Status must not claim zero keys or zero alerts.
+test("operations status shows unavailable, not zero, when a source fails", async ({ page }) => {
+  const fail = { status: 500, contentType: "application/json", body: JSON.stringify({ error: { message: "down" } }) };
+  await page.route("**/svc/keycore/**", (r) => r.fulfill(fail));
+  await page.route("**/svc/reporting/**", (r) => r.fulfill(fail));
+  await page.getByText("Operations", { exact: true }).first().click();
+  for (const label of ["Total Keys", "Open Alerts"]) {
+    const card = page.locator(".vecta-stat-card", { hasText: label });
+    await expect(card.getByText("Unavailable", { exact: true })).toBeVisible();
+    await expect(card.getByText("—", { exact: true })).toBeVisible();
+    await expect(card.getByText("0", { exact: true })).toHaveCount(0);
+  }
+  await assertNoRenderBoundary(page);
+});

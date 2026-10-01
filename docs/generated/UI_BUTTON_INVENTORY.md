@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T11:25:49Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T11:31:41Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -242,11 +242,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | 900 | crypto | Btn | Download | downloadResult |
 | web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 51 | - | Btn | void run(r.category, () => setCryptoperiod(session, r.category, Number(draft[... |  |
 | web/dashboard/src/components/v3/tabs/CryptoperiodPanel.tsx | 52 | - | Btn | void run(r.category, () => resetCryptoperiod(session, r.category))}>Reset |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 218 | - | Btn | onNavigate?.("certs")}>View Certificates → |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 245 | - | button | onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } > |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 255 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 384 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
-| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 385 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 223 | - | Btn | onNavigate?.("certs")}>View Certificates → |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 250 | - | button | onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } > |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 260 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 389 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
+| web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 390 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 203 | discovery | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 204 | discovery | Btn | setScheduleOpen(true)} title={schedule?.paused_reason \|\| (schedule?.enabled ?... |  |
 | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 208 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
