@@ -52,3 +52,11 @@ development secrets as much as production ones.
   Rotation was recommended to the owner (`ALTER USER`, per
   SECRET_ROTATION.md). Cause and fix: see "No word-split command strings in
   zsh" above, and `learning.md` (2026-09-26).
+- **2026-10-01, root `admin` password (local deployment):** to run a live
+  test, an AI assistant session asked the owner for admin access and
+  offered a password file or a token file. The answer came back as the
+  password typed into the chat, so it is in that session's transcript. The
+  session wrote it to a mode-0600 file, passed it to the login call by file,
+  never put it on a command line, and deleted the file and the token after
+  the test. Changing the password was recommended to the owner. Cause: the
+  question allowed a free-text answer. See `learning.md` (2026-10-01).

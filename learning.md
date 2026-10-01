@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### The external edge certificate, run on the live stack: what it showed
+- **What was run:** root admin chose `external` for the HTTPS listener,
+  requested a CSR, a throwaway CA outside the KMS signed it, it was
+  installed, and the stack was fully stopped and started. Envoy served the
+  same serial from the emptied tmpfs, `edge_tls_certificate_restored` was
+  audited, the certificate certs had issued was revoked as `superseded`,
+  and switching back to `runtime` discarded the kept key.
+- **Trap:** the first two installs were refused with `bad_chain`, both
+  correctly, and the message did not say why. A CA made by `openssl req
+  -x509` without `basicConstraints=CA:TRUE` is not an issuer; and macOS's
+  LibreSSL signs `openssl x509 -req` with SHA-1 unless `-sha256` is given,
+  which Go rejects. A customer hitting either sees only "the first chain
+  certificate did not sign the certificate". Open: name the cause in the
+  refusal (not a CA, or a signature algorithm that isn't accepted).
+- **Secret exposed:** asked how to grant admin access, the owner typed the
+  admin password into the chat. A question that needs a secret must not be
+  answerable in free text: ask the owner to create the file first and only
+  confirm it exists (docs/SECURITY/SECRET_HANDLING.md, Incidents).
+
 ### A deploy script that builds "what is checked out" can ship an old release for days
 - **What happened:** the owner reported `deploy-local.sh` deploying 7.15.0
   while main was at 7.21.0. Sessions had been committing from throwaway
