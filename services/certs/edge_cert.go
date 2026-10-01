@@ -353,6 +353,13 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 	leaf, _, _ := installedLeaf(dir)
 	due := force || leaf == nil || runtimeCertNeedsRenew(filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), renewBefore)
 	kept := keptFor(cfg, listener)
+	if _, err := os.Stat(kept.issued()); os.IsNotExist(err) && leaf != nil && !files.installedExternal(leaf) {
+		// A certificate issued before certs kept this list (7.22.0-beta): find
+		// it by serial so its replacement revokes it.
+		if c, err := s.store.GetCertificateBySerial(ctx, tenantID, strings.ToLower(leaf.SerialNumber.Text(16))); err == nil {
+			_ = kept.recordIssued(c.ID)
+		}
+	}
 	s.revokeReplacedEdge(ctx, tenantID, kept)
 	if choice.Source != edgeSourceExternal {
 		// Leaving the external source ends that certificate on this node.

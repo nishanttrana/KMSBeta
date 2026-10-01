@@ -339,6 +339,16 @@ func TestEdgeCertificateReplacedIsRevoked(t *testing.T) {
 	if got := f.certStatus(t, first); got != CertStatusActive {
 		t.Fatalf("served certificate: %s", got)
 	}
+	// A certificate served from before the list existed is found by serial.
+	if err := os.Remove(f.svc.edgeKept(listenerHTTPS).issued()); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if current() != first {
+		t.Fatalf("the served certificate must be adopted into the list: %s, want %s", current(), first)
+	}
 	// A pass that changes nothing revokes nothing.
 	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
 		t.Fatal(err)

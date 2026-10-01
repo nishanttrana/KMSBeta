@@ -4,6 +4,15 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.23.0-beta] — 2026-10-01
+
+### The edge certificate already being served is tracked for revocation
+- **Fixed:** 7.22.0-beta revoked a replaced edge or KMIP certificate only if
+  certs had issued it after the upgrade. The certificate a listener is
+  serving at upgrade is now found by its serial and tracked, so its
+  replacement revokes it too. Certificates replaced before 7.22.0-beta are
+  still not revoked; revoke them in Certificates / PKI if needed.
+
 ## [7.22.0-beta] — 2026-10-01
 
 ### Fresh installs start; deploy-local.sh deploys the latest main; replaced edge certificates are revoked

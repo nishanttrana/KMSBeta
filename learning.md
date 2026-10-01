@@ -21,6 +21,15 @@ Newest entries on top.
   uncommitted files there are checked against origin by hash and file time,
   saved as a patch, then replaced; never left for the owner to trip on.
 
+### "Revoke what you replace" needs the thing being replaced on day one
+- **What happened:** 7.22.0-beta made certs record each edge certificate it
+  issues and revoke the one before it. Checked on the live stack after the
+  upgrade, the record was empty: the certificate in service predated the
+  record, so its replacement would not have revoked it.
+- **Rule:** a tracker introduced by an upgrade adopts the state that already
+  exists (here: look the served certificate up by serial). The unit test
+  started from a fresh fixture and could not see this; the live check did.
+
 ### install.sh never got the volume layout start-kms.sh prepares
 - **What happened:** internal mTLS (1.9.0-beta) added the `infra-tls`
   subdirectories and the `platform-state` owner to `start-kms.sh` only.
