@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-01T11:44:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T16:23:10Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `27`
 - Tab/component mappings: `34`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `861` across `28` services
-- Backend routes on the `pkg/route` kernel: `433` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `544`
-- Frontend call sites with exact backend route match: `500`
+- Backend HTTP routes discovered: `864` across `28` services
+- Backend routes on the `pkg/route` kernel: `436` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `546`
+- Frontend call sites with exact backend route match: `502`
 - Frontend call sites needing review or dynamic/runtime confirmation: `44`
-- Clickable controls with static `onClick` handlers: `753`
-- Backend request flows with handler/service/package summaries: `861`
+- Clickable controls with static `onClick` handlers: `754`
+- Backend request flows with handler/service/package summaries: `864`
 
 ## How To Use This For Launch
 
@@ -65,6 +65,7 @@ flowchart LR
   tab_vault["Secret Vault"]
   UI --> tab_vault
   tab_vault --> svc_auth_edge
+  tab_vault --> svc_keycore
   tab_vault --> svc_secrets
   tab_ekm["Enterprise KM"]
   UI --> tab_ekm
@@ -147,12 +148,12 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (173 routes)"]
+  svc_keycore["keycore (174 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
   svc_sbom["sbom (14 routes)"]
-  svc_secrets["secrets (33 routes)"]
+  svc_secrets["secrets (35 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (20 routes)"]
@@ -166,14 +167,14 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 196 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 198 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 96 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
 | Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 19 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 101 |
-| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 18 |
+| Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, keycore, secrets | 69 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
 | Data & integrations | Enterprise KM | ekm | web/dashboard/src/components/v3/tabs/EKMTab.tsx | ekm, tfe | 45 |
@@ -196,7 +197,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | UNLISTED | hyok | hyok | web/dashboard/src/components/v3/tabs/HYOKTab.tsx | hyok | 7 |
 | UNLISTED | pkcs11 | pkcs11 | web/dashboard/src/components/v3/tabs/ClientSDKTab.tsx | ekm, tfe | 45 |
-| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 117 |
+| UNLISTED | restapi | restapi | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | auth, auth-edge, certs, secrets | 119 |
 | UNLISTED | tokenize | tokenize | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 
 ## Backend Route Counts
@@ -219,7 +220,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 12 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 173 | 118 |
+| keycore | 174 | 118 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -227,7 +228,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
 | sbom | 14 | 12 |
-| secrets | 33 | 14 |
+| secrets | 35 | 16 |
 | signing | 11 | 9 |
 | watchdog | 2 | 2 |
 | workload | 20 | 13 |
@@ -412,7 +413,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 290 |
 | confidential | POST | /confidential/release | h.releaseKey | confidential.release | services/confidential/handler_release.go | 14 |
 
-Showing `120` of `355`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `356`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

@@ -7,6 +7,39 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secrets: root mount, keycore groups, fail closed on unknown membership (7.30.0-beta)
+
+**Decision.** (1) The Vault mount is the first segment of a secret's name,
+except `secret`, the root mount, whose paths are names as they are. Existing
+secrets written under other mounts are renamed by migration. (2) Group
+subjects in access rules are keycore's access groups, resolved by a call to
+keycore under the secrets service's identity and cached for 30 seconds.
+(3) When membership cannot be read, a request a group rule bears on is
+refused with 503. (4) Default-deny, the version cap and the retention period
+are per-tenant settings changed with `secrets.access.manage`.
+
+**Why.** (1) A root mount keeps every dashboard-created secret reachable by
+Vault clients at `/v1/secret/...` and every Vault-written secret at the URL
+it was written to, while making two mounts two namespaces. (2) One group
+store: a second one in secrets would drift from the one operators already
+manage for keys. (3) "Could not check" treated as "not a member" would skip
+a deny rule during an outage. (4) Each of these widens or destroys, so they
+sit behind the same permission as the rules.
+
+**Rejected.** Mount always the first segment, no root: dashboard secrets
+with plain names would lose their Vault address. Falling back to the bare
+path when `<mount>/<path>` is missing: that is the bug, by another route.
+Carrying groups in the token: membership would be as stale as the token.
+Purging deleted secrets with no audit event because no request caused it:
+every destroy is audited, so the sweep emits its own.
+
+**Enforced by.** `TestMounts`, `TestMigration005Postgres`, `TestGroupRules`,
+`TestDefaultDeny`, `TestVersionCap`, `TestRetention` (member mode
+included), all also run on real Postgres in `TestAccessAndVersionsPostgres`;
+`TestListUserAccessGroups` in keycore.
+
+---
+
 ## 2026-10-01 — Secret access rules restrict, on top of the route permission (7.29.0-beta)
 
 **Decision.** Access to a secret needs the route permission **and**, where

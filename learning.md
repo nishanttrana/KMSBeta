@@ -5,6 +5,33 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Secrets hardening follow-ups (7.30.0-beta)
+- **"Ignores a parameter" is a tenancy-shaped bug.** The Vault KV handlers
+  recorded the mount in metadata and audit details and then looked the
+  secret up by path alone. Everything looked mount-aware; nothing was. A
+  path parameter that is logged but never used in the lookup deserves a test
+  with two values (`TestMounts`).
+- **Fixing a key means migrating the rows.** Making the mount part of the
+  name without renaming existing secrets would have made every one written
+  under `kv/` unreachable at its URL. The rename is in the SQL migration,
+  skips a taken name, and is tested from a 7.29.0-shaped database on real
+  Postgres (`TestMigration005Postgres`).
+- **A migration that references a column it then drops cannot be re-run.**
+  `UPDATE ... SET value_hash` followed by `DROP COLUMN IF EXISTS` fails the
+  second time. pkg/db tracks migrations, but the test that applied it twice
+  found it; the pair is now inside a `DO` block guarded on the column.
+- **Unknown is not "no".** For group subjects, treating a failed membership
+  lookup as "not a member" would silently skip a deny rule. The decision
+  tracks "unknown" separately for allow and deny and refuses with a 503 that
+  says so, so an outage reads as an outage, not as a policy.
+- **Default-deny hides what you would need to count.** Under it, uncovered
+  secrets are invisible to every caller, so the page cannot count them
+  afterwards. The count is shown before switching, and the hint says why it
+  is unavailable after.
+- **Dropping a column does not erase it.** Postgres keeps dropped-column
+  data in existing rows. The migration empties the column first so live rows
+  hold no hash; dead rows go at the next vacuum. Old backups still hold it.
+
 ### Secrets access rules and soft delete: what bit (7.29.0-beta)
 - **A recoverable delete changes what "deleted" proves.** The exposure
   register closed an entry when its secret was deleted, because the material

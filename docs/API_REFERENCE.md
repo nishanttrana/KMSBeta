@@ -1035,6 +1035,7 @@ roles need the permission named here. Service principals are allowed.
 | `GET /keys/{id}/access-policy` | `key.access.read` | `access_policy_read` |
 | `PUT /keys/{id}/access-policy` | `key.access.manage`, and the caller created the key or is a tenant admin (else `403 not_key_owner`) | `access_policy_updated` |
 | `GET /access/groups`, `/access/settings`, `/access/interface-policies` | `key.access.read` | `access_groups_listed`, `access_settings_read`, `interface_policies_listed` |
+| `GET /access/users/{user_id}/groups` | `key.access.read` | `access_user_groups_read`: `group_ids[]` the user belongs to (7.30.0-beta; the secrets service resolves group access rules with it) |
 | `POST /access/groups`, `DELETE /access/groups/{id}`, `PUT /access/groups/{id}/members` | `key.access.admin` | `access_group_created`, `access_group_deleted`, `access_group_members_updated` |
 | `PUT /access/settings` | `key.access.admin` | `access_settings_updated` |
 | `POST /access/interface-policies`, `DELETE /access/interface-policies/{id}` | `key.access.admin` | `interface_policy_upserted` / `_deleted` |
@@ -1895,7 +1896,8 @@ this.
   `audit_chain_broken` (`audit.audit.chain_broken`),
   `secret_exposed` (`audit.discovery.secret_exposed`, 7.18.0-beta),
   `secret_access_rule_changed` (`audit.secrets.access_rule_created`,
-  `access_rule_deleted`) and `secret_destroyed` (`audit.secrets.destroyed`),
+  `access_rule_deleted`, `settings_updated`) and `secret_destroyed`
+  (`audit.secrets.destroyed`, `retention_purged`),
   both success only (7.29.0-beta),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
@@ -3097,6 +3099,8 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `POST /secrets/{id}/rollback` | `secrets.write` | `rolled_back` (warning) |
 | `DELETE /secrets/{id}/versions/{version}` | `secrets.destroy` | `version_destroyed` (warning) |
 | `GET /secrets/{id}/access` | `secrets.read` | `access_read` |
+| `GET /secrets/settings` | `secrets.access.read` | `settings_read` |
+| `PUT /secrets/settings` | `secrets.access.manage` | `settings_updated` (warning) |
 | `GET /secrets/access/rules` | `secrets.access.read` | `access_rules_listed` |
 | `POST /secrets/access/rules` | `secrets.access.manage` | `access_rule_created` (warning) |
 | `DELETE /secrets/access/rules/{rule_id}` | `secrets.access.manage` | `access_rule_deleted` (warning) |
@@ -3111,7 +3115,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.status_transition_refused`: keycore refused a key status change the lifecycle state table does not allow
 - `audit.key.delegation_refused` (a service's delegated request refused, with `reason`), `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored), `audit.key.request_refused` (a request without a verified token, `reason: unauthenticated`): keycore key access
-- `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`: keycore access management (kernel, 4.0.0-beta). `interface_tls_config_*` and `interface_port*` were removed with their routes in 6.8.0-beta
+- `audit.key.access_policy_read`, `access_policy_updated` (refusal reason `not_key_owner`), `access_groups_listed`, `access_group_created`, `access_group_deleted`, `access_group_members_updated`, `access_user_groups_read` (7.30.0-beta), `access_settings_read`, `access_settings_updated`, `interface_policies_listed`, `interface_policy_upserted`, `interface_policy_deleted`: keycore access management (kernel, 4.0.0-beta). `interface_tls_config_*` and `interface_port*` were removed with their routes in 6.8.0-beta
 - `audit.key.<action>_requested` for `create`, `import`, `form`, `bulk_import`, `bulk_rotate`, `bulk_delete`, `update`, `rotate`, `activate`, `deactivate`, `disable`, `destroy`, `export_policy_update`, `version_activate`, `version_deactivate`, `version_delete`, `usage_limit_update`, `usage_reset`, `approval_update`, `iv_mode_update`, `tag_upsert`, `tag_delete`: keycore key-management requests (kernel, 4.0.0-beta)
 - `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
@@ -3125,13 +3129,18 @@ grants the `.read` permissions and `kms.write` grants `.write` and `.delete`.
 `secrets.destroy` and `secrets.access.manage` are granted only by name,
 `secrets.*` or `*`. On top of the permission, the tenant's access rules must
 allow the caller on the secret's path, or the request is refused with
-`403 not_in_access_rule` / `access_rule_denied`.
+`403 not_in_access_rule` / `access_rule_denied` / `no_access_rule` (deny by
+default), or `503 access_groups_unavailable` when a group rule applies and
+membership cannot be read.
 A Vault KV v1 write body is the secret's data, so a `tenant_id` key inside it
 is stored, not treated as a tenant. `created_by` / `updated_by` are
 set to the verified caller.
 
 Vault responses carry only what is true here (7.27.0-beta). A KV write
 returns `data.version` and `data.created_time` of the version it produced.
+The mount is part of the secret's name (7.30.0-beta): `secret` is the root
+mount, any other mount is the first segment, so `/v1/kv/data/app/cfg` is the
+secret `kv/app/cfg` and two mounts never share a secret.
 `GET /v1/{mount}/data/{path}?version=N` reads a version. A KV delete is
 recoverable (the path then reads `404`, and its metadata carries
 `deletion_time`); writing to the path again restores it.
@@ -3176,7 +3185,9 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 | `DELETE /svc/secrets/secrets/{id}/versions/{version}` | | `status: destroyed`; `409 version_is_current` |
 | `GET /svc/secrets/secrets/{id}/access` | | `path`, `rules[]` covering it, `caller`: `{read, value, write, delete}` |
 | `GET /svc/secrets/secrets/access/rules` | | `items[]`: `id`, `path`, `subject_type`, `subject_id`, `capabilities[]`, `effect`, `created_by`, `created_at` |
-| `POST /svc/secrets/secrets/access/rules` | `path`, `subject_type` (`user`, `role`, `client`, `workload`), `subject_id`, `capabilities[]` (`read`, `value`, `write`, `delete`), `effect` (`allow` default, `deny`) | `201` `rule`; `400 invalid_access_rule` |
+| `GET /svc/secrets/secrets/settings` | | `settings`: `default_deny`, `max_versions`, `deleted_retention_days`, `updated_by`, `updated_at` |
+| `PUT /svc/secrets/secrets/settings` | `default_deny`, `max_versions` (0 to 1000), `deleted_retention_days` (0 to 3650); all three are set | `settings`; `400 invalid_settings` |
+| `POST /svc/secrets/secrets/access/rules` | `path`, `subject_type` (`user`, `role`, `group`, `client`, `workload`), `subject_id`, `capabilities[]` (`read`, `value`, `write`, `delete`), `effect` (`allow` default, `deny`) | `201` `rule`; `400 invalid_access_rule` |
 | `DELETE /svc/secrets/secrets/access/rules/{rule_id}` | | `status: deleted` |
 | `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `created_at` (no digest of the value, 7.27.0-beta) |
 | `GET /svc/secrets/secrets/{id}/audit` | | the secret's audit trail |
@@ -3681,7 +3692,7 @@ Selected events with dedicated audit classification:
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.service_derive_refused`, enterprise control upserts carry `feature_status` / `feature_id`
-- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `restored`, `destroyed`, `rolled_back`, `version_destroyed`, `access_read`, `access_rules_listed`, `access_rule_created`, `access_rule_deleted` (7.29.0-beta; refusal reasons `not_in_access_rule`, `access_rule_denied`, `secret_deleted`, `secret_not_deleted`, `version_conflict`, `version_is_current`, `already_current`, `name_held_by_deleted_secret`), `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
+- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `restored`, `destroyed`, `rolled_back`, `version_destroyed`, `access_read`, `access_rules_listed`, `access_rule_created`, `access_rule_deleted`, `settings_read`, `settings_updated`, `retention_purged` (7.30.0-beta, emitted by the retention sweep, not a route) (7.29.0-beta; refusal reasons `no_access_rule`, `access_groups_unavailable`, `not_in_access_rule`, `access_rule_denied`, `secret_deleted`, `secret_not_deleted`, `version_conflict`, `version_is_current`, `already_current`, `name_held_by_deleted_secret`), `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
@@ -4297,6 +4308,7 @@ from the code; do not edit by hand.
 - `DELETE /svc/keycore/access/interface-policies/{id}`
 - `GET /svc/keycore/access/settings`
 - `PUT /svc/keycore/access/settings`
+- `GET /svc/keycore/access/users/{user_id}/groups`
 - `GET /svc/keycore/agility/algorithms`
 - `GET /svc/keycore/agility/caraf/assessment`
 - `GET /svc/keycore/agility/caraf/assets`
@@ -4591,6 +4603,8 @@ from the code; do not edit by hand.
 - `DELETE /svc/secrets/secrets/access/rules/{rule_id}`
 - `POST /svc/secrets/secrets/generate/keypair`
 - `POST /svc/secrets/secrets/generate/ssh_key`
+- `GET /svc/secrets/secrets/settings`
+- `PUT /svc/secrets/secrets/settings`
 - `GET /svc/secrets/secrets/stats`
 - `DELETE /svc/secrets/secrets/{id}`
 - `GET /svc/secrets/secrets/{id}`

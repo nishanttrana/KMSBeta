@@ -35,6 +35,7 @@ flowchart LR
   tab_vault["Secret Vault"]
   UI --> tab_vault
   tab_vault --> svc_auth_edge
+  tab_vault --> svc_keycore
   tab_vault --> svc_secrets
   tab_ekm["Enterprise KM"]
   UI --> tab_ekm
@@ -117,12 +118,12 @@ flowchart LR
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (173 routes)"]
+  svc_keycore["keycore (174 routes)"]
   svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
   svc_sbom["sbom (14 routes)"]
-  svc_secrets["secrets (33 routes)"]
+  svc_secrets["secrets (35 routes)"]
   svc_signing["signing (11 routes)"]
   svc_tfe["tfe"]
   svc_workload["workload (20 routes)"]

@@ -201,3 +201,33 @@ func TestInterfacePortRoutesRemoved(t *testing.T) {
 		}
 	}
 }
+
+// A user's access groups, as the secrets service asks for them.
+func TestListUserAccessGroups(t *testing.T) {
+	h, svc, _ := newActorTestHandler(t)
+	admin := &pkgauth.Claims{UserID: "admin-1", TenantID: "t1", Role: "tenant-admin", Permissions: []string{"*"}}
+	for _, ddl := range []string{
+		`CREATE TABLE key_access_groups (tenant_id TEXT NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL, description TEXT, created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id), UNIQUE (tenant_id, name))`,
+		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, group_id, user_id))`,
+	} {
+		if _, err := svc.store.(*SQLStore).db.SQL().Exec(ddl); err != nil {
+			t.Fatal(err)
+		}
+	}
+	group, err := svc.CreateAccessGroup(t.Context(), "t1", "finance", "", "admin-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetAccessGroupMembers(t.Context(), "t1", group.ID, []string{"alice"}); err != nil {
+		t.Fatal(err)
+	}
+	if w := callKeycore(h, http.MethodGet, "/access/users/alice/groups", "", admin); w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(group.ID)) {
+		t.Fatalf("alice: %d %s", w.Code, w.Body)
+	}
+	if w := callKeycore(h, http.MethodGet, "/access/users/bob/groups", "", admin); w.Code != http.StatusOK || bytes.Contains(w.Body.Bytes(), []byte(group.ID)) {
+		t.Fatalf("bob: %d %s", w.Code, w.Body)
+	}
+	if w := callKeycore(h, http.MethodGet, "/access/users/alice/groups", "", &pkgauth.Claims{UserID: "x", TenantID: "t1", Role: "viewer"}); w.Code != http.StatusForbidden {
+		t.Fatalf("without key.access.read: %d", w.Code)
+	}
+}

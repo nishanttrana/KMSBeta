@@ -235,6 +235,13 @@ func (s *Service) UpdateSecret(ctx context.Context, tenantID string, secretID st
 		value = &enc
 	}
 
+	if value != nil {
+		settings, err := s.store.GetSettings(ctx, tenantID)
+		if err != nil {
+			return Secret{}, err
+		}
+		req.maxVersions = settings.MaxVersions
+	}
 	updated, err := s.store.UpdateSecret(ctx, tenantID, secretID, req, expiresAt, value)
 	if err != nil {
 		return Secret{}, err
@@ -281,7 +288,12 @@ func (s *Service) Rollback(ctx context.Context, tenantID string, secretID string
 	if err != nil {
 		return Secret{}, err
 	}
+	settings, err := s.store.GetSettings(ctx, tenantID)
+	if err != nil {
+		return Secret{}, err
+	}
 	return s.store.UpdateSecret(ctx, tenantID, secretID, UpdateSecretRequest{
+		maxVersions:     settings.MaxVersions,
 		UpdatedBy:       actorOrSystem(actor),
 		ExpectedVersion: expected,
 		changeAction:    "rolled_back",
@@ -494,6 +506,25 @@ func (s *Service) GetStats(ctx context.Context, tenantID string, visible func(Se
 	}
 }
 
+// Settings.
+
+func (s *Service) Settings(ctx context.Context, tenantID string) (VaultSettings, error) {
+	return s.store.GetSettings(ctx, strings.TrimSpace(tenantID))
+}
+
+func (s *Service) PutSettings(ctx context.Context, v VaultSettings) (VaultSettings, error) {
+	if v.MaxVersions < 0 || v.MaxVersions > maxVersionCap {
+		return VaultSettings{}, fmt.Errorf("max_versions must be 0 (no cap) to %d", maxVersionCap)
+	}
+	if v.DeletedRetentionDays < 0 || v.DeletedRetentionDays > maxRetentionDays {
+		return VaultSettings{}, fmt.Errorf("deleted_retention_days must be 0 (keep until destroyed) to %d", maxRetentionDays)
+	}
+	if err := s.store.PutSettings(ctx, v); err != nil {
+		return VaultSettings{}, err
+	}
+	return s.store.GetSettings(ctx, v.TenantID)
+}
+
 // Access rules.
 
 func (s *Service) AccessRules(ctx context.Context, tenantID string) ([]AccessRule, error) {
@@ -631,16 +662,11 @@ func (s *Service) encryptValue(plain []byte) (EncryptedSecretValue, error) {
 	if err != nil {
 		return EncryptedSecretValue{}, err
 	}
-	hash, err := pkgcrypto.Hash("SHA-256", plain)
-	if err != nil {
-		return EncryptedSecretValue{}, err
-	}
 	return EncryptedSecretValue{
 		WrappedDEK:   env.WrappedDEK,
 		WrappedDEKIV: env.WrappedDEKIV,
 		Ciphertext:   env.Ciphertext,
 		DataIV:       env.DataIV,
-		ValueHash:    hash,
 	}, nil
 }
 

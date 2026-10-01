@@ -1,7 +1,8 @@
 # Secret access rules and version operations
 
 How the secrets service decides who may touch which secret, and what can be
-done to a secret's versions. Added in 7.29.0-beta. Code:
+done to a secret's versions. Added in 7.29.0-beta; default-deny, group
+subjects, the version cap and retention in 7.30.0-beta. Code:
 `services/secrets/access.go` (the decision), `handler.go` (`allowed`,
 `secretFor`, `vaultSecret`), `store.go`.
 
@@ -19,7 +20,7 @@ done to a secret's versions. Added in 7.29.0-beta. Code:
 | Field | Meaning |
 |---|---|
 | `path` | one secret (`/finance/prod/ledger-db`) or everything under a folder at any depth (`/finance/*`). `*` is allowed only as the last segment. `/*` is every secret |
-| `subject_type`, `subject_id` | `user` (token `user_id`), `role` (token `role`), `client` (token `client_id`), `workload` (token workload identity). Always a field of the verified token, never a header or body value |
+| `subject_type`, `subject_id` | `user` (token `user_id`), `role` (token `role`), `client` (token `client_id`), `workload` (token workload identity), `group` (the ID of a keycore access group the token's user belongs to). Always derived from the verified token, never from a header or body value |
 | `capabilities` | `read` (metadata, versions, history, appearing in lists and counts), `value` (the value, any version), `write` (create, edit, rotate, roll back, restore), `delete` (delete, destroy, destroy a version) |
 | `effect` | `allow` or `deny` |
 
@@ -37,10 +38,18 @@ For one capability on one path:
    callers named by such a rule are allowed. Anyone else:
    `403 not_in_access_rule`.
 3. If no allow rule covers the path for that capability, the route permission
-   alone decides.
+   alone decides, unless the tenant is **deny by default**
+   (`default_deny`), when it is refused: `403 no_access_rule`.
+
+**Groups.** Membership comes from keycore
+(`GET /access/users/{user_id}/groups`, called with the secrets service's
+token) and is reused for 30 seconds, so removing someone from a group takes
+effect within that time. It is read only when a group rule covers the path.
+If it cannot be read, a group rule never allows and a deny group rule is
+never skipped: the request is refused with `503 access_groups_unavailable`.
 
 So rules restrict; they never grant what the route permission withholds, and
-a tenant with no rules behaves as before. Capabilities are independent: a
+a tenant with no rules and the default setting behaves as before. Capabilities are independent: a
 rule on `value` does not hide metadata.
 
 Every refusal is audited under the route's own action with `result:
@@ -68,6 +77,26 @@ the path, subject, capabilities and effect, and are the Playbooks trigger
 `secret_access_rule_changed`. A holder of that permission can always remove
 a rule, so a tenant cannot lock itself out. At most 500 rules per tenant.
 
+## Vault settings
+
+`GET /secrets/settings` (`secrets.access.read`), `PUT /secrets/settings`
+(`secrets.access.manage`, audited `settings_updated` at warning with the
+new and previous values; Playbooks trigger `secret_access_rule_changed`).
+
+| Setting | Effect |
+|---|---|
+| `default_deny` | a path no allow rule covers is refused for every capability. Uncovered secrets disappear from every caller's lists and counts until a rule covers them; rules can still be managed |
+| `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Lowering the cap prunes at each secret's next write, not at once |
+| `deleted_retention_days` (0 to 3650, 0: keep) | a deleted secret is destroyed this many days after its delete. The sweep runs hourly, on the primary only (a member never writes the replicated tables), and emits `audit.secrets.retention_purged` per secret (actor `system:retention`, with `deleted_by`, `deleted_at`, `retention_days`), or the same event with `result: failure` |
+
+## Vault mounts
+
+`/v1/{mount}/data/{path}` addresses the secret named `{path}` when the mount
+is `secret` (the root mount) and `{mount}/{path}` otherwise, so two mounts
+are two namespaces and the mount is the first segment of the path access
+rules match on. `/v1/secret/data/kv/x` and `/v1/kv/data/x` are the same
+secret, `kv/x`.
+
 ## Versions
 
 | Operation | Route | Notes |
@@ -85,7 +114,6 @@ A recoverable delete keeps the material, so an exposure-register entry
 
 ## Open
 
-- No default-deny mode: an unlisted path is open to the route permission.
-- No groups as subjects; a rule names a user, role, client or workload.
-- Deleted secrets are kept until someone destroys them; there is no
-  retention period and no cap on versions.
+- Group membership is cached for 30 seconds per user.
+- The version cap is per tenant, not per secret or path.
+- A rule's subject is not checked to exist (a role or user ID is free text).

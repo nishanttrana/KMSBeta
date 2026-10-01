@@ -69,7 +69,6 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			wrapped_dek_iv BLOB NOT NULL,
 			ciphertext BLOB NOT NULL,
 			data_iv BLOB NOT NULL,
-			value_hash BLOB NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, secret_id, version)
 		);`,
@@ -84,6 +83,14 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			created_by TEXT NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
+		);`,
+		`CREATE TABLE secret_vault_settings (
+			tenant_id TEXT PRIMARY KEY,
+			default_deny BOOLEAN NOT NULL DEFAULT FALSE,
+			max_versions INTEGER NOT NULL DEFAULT 0,
+			deleted_retention_days INTEGER NOT NULL DEFAULT 0,
+			updated_by TEXT NOT NULL DEFAULT '',
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE TABLE secret_audit_log (
 			id TEXT NOT NULL,

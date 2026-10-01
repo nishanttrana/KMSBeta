@@ -36,7 +36,7 @@ export const VaultApiCard = ({ onNavigate }: { onNavigate?: ((tab: string) => vo
   <div style={{ marginTop: 20, background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "14px 16px" }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
       <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>Vault / OpenBao KV clients</span>
-      <span style={{ fontSize: 10.5, color: C.muted }}>base <code style={{ fontFamily: MONO, color: C.text }}>/svc/secrets</code> · tenant in <code style={{ fontFamily: MONO, color: C.text }}>X-Vault-Namespace</code> · the path is the secret's name</span>
+      <span style={{ fontSize: 10.5, color: C.muted }}>base <code style={{ fontFamily: MONO, color: C.text }}>/svc/secrets</code> · tenant in <code style={{ fontFamily: MONO, color: C.text }}>X-Vault-Namespace</code> · mount <code style={{ fontFamily: MONO, color: C.text }}>secret</code> addresses a secret by its name, any other mount is the first part of the name</span>
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: "4px 16px" }}>
       {VAULT_ROUTES.map((r) => (

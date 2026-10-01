@@ -4,6 +4,55 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.30.0-beta] — 2026-10-01
+
+### Secrets: the open items from 7.29.0 are closed
+- **Added: deny by default.** A tenant can refuse every path no allow rule
+  covers (`403 no_access_rule`), instead of leaving it to the secrets
+  permission. The dashboard says how many secrets have no rule before it
+  switches. Rules can still be managed, so a tenant cannot lock itself out.
+- **Added: access groups as rule subjects.** A rule can name one of the
+  tenant's access groups (Key Management, Access groups). Membership is read
+  from keycore for the token's user and reused for 30 seconds. If it cannot
+  be read, a group rule never allows and a deny group rule is never skipped:
+  the request is refused with `503 access_groups_unavailable`.
+- **Added: a cap on stored versions** (`max_versions`): the oldest versions
+  are removed when a new one is written, recorded in the event
+  (`versions_pruned`) and the secret's change history. Lowering the cap takes
+  effect at each secret's next write.
+- **Added: a retention period for deleted secrets**
+  (`deleted_retention_days`): a deleted secret is destroyed that many days
+  after its delete unless restored. The sweep runs hourly on the primary
+  only and audits each purge as `audit.secrets.retention_purged`.
+- **Fixed: the Vault KV routes ignored the mount**, so `/v1/a/x` and
+  `/v1/b/x` were one secret. The mount is now part of the name: `secret` is
+  the root mount (a path is the secret's name as it is) and any other mount
+  is the first segment (`/v1/kv/data/app/cfg` is the secret `kv/app/cfg`).
+  **Migration:** secrets written under another mount are renamed to
+  `<mount>/<path>`, so each stays at the URL its client wrote it to; the
+  rename is in the secret's change history. One whose new name is already
+  taken is left unchanged and stays reachable under `/v1/secret/...`. A
+  renamed secret's path changes, so an access rule written for its old path
+  no longer covers it: check rules on Vault-written secrets after upgrading.
+- **Security: `secret_values.value_hash` is dropped.** It was an unsalted
+  SHA-256 of every secret value, enough for anyone holding a copy of the
+  database to test password guesses. Nothing read it. The migration empties
+  it and drops the column; nothing writes it any more. Backups taken before
+  the upgrade restore into the new table (the extra field is ignored), but
+  they still contain the hashes: treat them accordingly.
+- **Added (keycore):** `GET /access/users/{user_id}/groups`
+  (`key.access.read`), which the secrets service calls under its own
+  identity.
+- **Dashboard:** the Access rules view has the three vault settings, a group
+  rule is chosen from the tenant's groups and shown by name, and the Deleted
+  view states the retention period.
+- **Playbooks:** `secret_access_rule_changed` also fires on a settings
+  change, and `secret_destroyed` on a retention purge.
+- **Open:** in a cluster, a node still on 7.29.0 stops replicating
+  `secret_values` until it is upgraded too (its table still has the dropped
+  column); upgrade all nodes together. Dropped-column data stays in dead
+  rows until Postgres vacuums the table.
+
 ## [7.29.0-beta] — 2026-10-01
 
 ### Secrets: per-path access rules and version operations

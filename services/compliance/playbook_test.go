@@ -1001,6 +1001,8 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.secrets.access_rule_created":         {"services/secrets/handler.go", `Action: "access_rule_created"`},
 		"audit.secrets.access_rule_deleted":         {"services/secrets/handler.go", `Action: "access_rule_deleted"`},
 		"audit.secrets.destroyed":                   {"services/secrets/handler.go", `Action: "destroyed"`},
+		"audit.secrets.settings_updated":            {"services/secrets/handler.go", `Action: "settings_updated"`},
+		"audit.secrets.retention_purged":            {"services/secrets/retention.go", `Emit(emitCtx, "retention_purged"`},
 		"audit.key.create":                          {"services/keycore/keycore.go", `"audit.key.create"`},
 		"audit.key.rotate":                          {"services/keycore/keycore.go", `"audit.key.rotate"`},
 		"audit.key.destroyed":                       {"services/keycore/keycore.go", `"audit.key.destroyed"`},

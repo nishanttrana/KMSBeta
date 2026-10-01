@@ -2,11 +2,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, Copy, Download, Folder, KeyRound, Lock, Plus, RefreshCcw, Search, ShieldAlert, Trash2, UserCheck } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
+import { listKeyAccessGroups } from "../../../lib/keycore";
 import {
   createSecret,
   deleteSecret as deleteVaultSecret,
   generateKeyPairSecret,
   getSecretValue,
+  getVaultSettings,
   getVaultStats,
   listAccessRules,
   listAllSecrets,
@@ -16,7 +18,7 @@ import { DrillHint, DrillPanel, clickable } from "../chartDrill";
 import { Btn, FG, Inp, Modal, Row2, Section, Sel, Tabs, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { AccessRules } from "./vault/Access";
+import { AccessRules, VaultSettingsCard } from "./vault/Access";
 import { SecretRow, TypeBadge, VaultApiCard, VaultCharts, VaultTiles } from "./vault/Charts";
 import { SecretDetail } from "./vault/Detail";
 import {
@@ -48,7 +50,9 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   // error when their call failed, never an empty list.
   const [deleted, setDeleted] = useState(null);
   const [rules, setRules] = useState(null);
-  const [sideError, setSideError] = useState({ deleted: "", rules: "" });
+  const [settings, setSettings] = useState(null);
+  const [groups, setGroups] = useState(null); // access group names by ID
+  const [sideError, setSideError] = useState({ deleted: "", rules: "", settings: "" });
   const [view, setView] = useState("Secrets");
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState("");
@@ -84,10 +88,14 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const loadAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    const [items, vaultStats, gone, ruleList] = await Promise.allSettled([listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session)]);
+    const [items, vaultStats, gone, ruleList, vaultSettings, groupList] = await Promise.allSettled([
+      listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session), getVaultSettings(session), listKeyAccessGroups(session)]);
+    setSettings(vaultSettings.status === "fulfilled" ? vaultSettings.value : null);
+    setGroups(groupList.status === "fulfilled" ? Object.fromEntries(groupList.value.map((g) => [g.id, g.name])) : null);
     setDeleted(gone.status === "fulfilled" ? gone.value : null);
     setRules(ruleList.status === "fulfilled" ? ruleList.value : null);
-    setSideError({ deleted: gone.status === "rejected" ? errMsg(gone.reason) : "", rules: ruleList.status === "rejected" ? errMsg(ruleList.reason) : "" });
+    const why = (r) => r.status === "rejected" ? errMsg(r.reason) : "";
+    setSideError({ deleted: why(gone), rules: why(ruleList), settings: why(vaultSettings) });
     setAsOf(Date.now());
     if (items.status === "fulfilled") { setSecrets(items.value); setLoadError(""); }
     else { setSecrets([]); setLoadError(errMsg(items.reason)); }
@@ -240,10 +248,15 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
     {!loadError && view === "Deleted" && (deleted === null
       ? <div style={{ fontSize: 11.5, color: C.redFg }}>Deleted secrets unavailable: {sideError.deleted}</div>
-      : deleted.length === 0 ? <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "28px 0" }}>Nothing deleted. A deleted secret stays here until it is restored or destroyed.</div>
-      : deleted.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => openDetail(s)} />))}
+      : <>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{settings?.deleted_retention_days > 0 ? `Destroyed ${settings.deleted_retention_days} days after the delete, unless restored.` : "Kept until restored or destroyed."}</div>
+        {deleted.length === 0 ? <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "28px 0" }}>Nothing deleted.</div>
+          : deleted.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => openDetail(s)} />)}
+      </>)}
 
-    {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
+    {!loadError && view === "Access rules" && <VaultSettingsCard session={session} settings={settings} error={sideError.settings} uncovered={settings?.default_deny ? null : secrets.filter((s) => !s.restricted).length}
+      confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
+    {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} groups={groups} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
 
     {/* ── Inventory ── */}
@@ -391,7 +404,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
       </div>
     </Modal>
 
-    {modal === "detail" && session && <SecretDetail key={selectedSecret?.id} session={session} secret={selectedSecret} now={asOf} confirm={promptDialog.confirm}
+    {modal === "detail" && session && <SecretDetail key={selectedSecret?.id} session={session} secret={selectedSecret} groups={groups || undefined} now={asOf} confirm={promptDialog.confirm}
       onClose={() => setModal(null)} onChanged={() => void loadAll()} onToast={onToast}
       onRotate={() => { setRotateValue(""); setModal("rotate"); }} onDelete={() => void removeSecret(selectedSecret)} onDownload={() => void downloadSecret(selectedSecret)} />}
 

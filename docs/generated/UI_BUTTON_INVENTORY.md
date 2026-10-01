@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T11:44:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T16:23:10Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -553,23 +553,23 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2563 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2564 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2565 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 221 | vault | Btn | void loadAll()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 222 | vault | Btn | Generate key pair | openGenerate |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 223 | vault | Btn | Store secret | openCreate |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 252 | vault | button | setCategory(cat.id)} style= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 282 | vault | button | setCurrentPath(path)} title= style={{ display: "inline-flex", alignItems: "ce... |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 313 | vault | button | } style={ }> |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 314 | vault | button | } style={ }> |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 321 | vault | Btn | setShown((n) => n + PAGE)}>Show more ( left) |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 329 | vault | Btn | Store a secret | openCreate |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 330 | vault | Btn | Generate key pair | openGenerate |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 371 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 372 | vault | Btn | void submitCreate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 386 | vault | Btn | copyToClipboard(generatedPublicKey, onToast)}> Copy Public Key |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 389 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 390 | vault | Btn | void submitGenerate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 404 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 405 | vault | Btn | void submitRotate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 229 | vault | Btn | void loadAll()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 230 | vault | Btn | Generate key pair | openGenerate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 231 | vault | Btn | Store secret | openCreate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 265 | vault | button | setCategory(cat.id)} style= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 295 | vault | button | setCurrentPath(path)} title= style={{ display: "inline-flex", alignItems: "ce... |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 326 | vault | button | } style={ }> |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 327 | vault | button | } style={ }> |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 334 | vault | Btn | setShown((n) => n + PAGE)}>Show more ( left) |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 342 | vault | Btn | Store a secret | openCreate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 343 | vault | Btn | Generate key pair | openGenerate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 384 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 385 | vault | Btn | void submitCreate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 399 | vault | Btn | copyToClipboard(generatedPublicKey, onToast)}> Copy Public Key |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 402 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 403 | vault | Btn | void submitGenerate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 417 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 418 | vault | Btn | void submitRotate()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 130 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 4 |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 164 | - | button | Add | addCustom} disabled={!custom.trim() |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 169 | - | button | toggleEvent(e)} style={ }> |  |
@@ -632,22 +632,23 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 166 | - | Btn | void add()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 180 | - | button | void remove(t)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 211 | - | Btn | }>Upload files instead |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 30 | - | button | Delete rule | onDelete} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 77 | - | Btn | setOpen(true)}> Add rule |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 111 | - | Btn | setOpen(false)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 112 | - | Btn | void save()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 141 | - | Btn | setVisible((v) => !v)}>{visible ? <> Hide : <> Show } |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 142 | - | Btn | void reveal()} disabled= title= >{busy ? "Reading..." : <> Reveal } |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 143 | - | Btn | void navigator.clipboard.writeText(shown.value).then(() => onToast?.("Copied... |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 144 | - | Btn | Download | onDownload} disabled={busy \|\| !can("value") |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 162 | - | button | void reveal(v.version)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 163 | - | button | void rollback(v.version)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 164 | - | button | void destroyVersion(v.version)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 184 | - | Btn | void run("Secret restored.", () => restoreSecret(session, secret.id), "close"... |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 185 | - | Btn | Rotate value | onRotate |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 188 | - | Btn | void destroy()}> Destroy |  |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 189 | - | Btn | Delete | onDelete |
-| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 190 | - | Btn | Close | onClose |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 34 | - | button | Delete rule | onDelete} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 100 | - | Btn | void save()}> |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 149 | - | Btn | setOpen(true)}> Add rule |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 189 | - | Btn | setOpen(false)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 190 | - | Btn | void save()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 142 | - | Btn | setVisible((v) => !v)}>{visible ? <> Hide : <> Show } |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 143 | - | Btn | void reveal()} disabled= title= >{busy ? "Reading..." : <> Reveal } |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 144 | - | Btn | void navigator.clipboard.writeText(shown.value).then(() => onToast?.("Copied... |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 145 | - | Btn | Download | onDownload} disabled={busy \|\| !can("value") |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 163 | - | button | void reveal(v.version)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 164 | - | button | void rollback(v.version)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 165 | - | button | void destroyVersion(v.version)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 185 | - | Btn | void run("Secret restored.", () => restoreSecret(session, secret.id), "close"... |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 186 | - | Btn | Rotate value | onRotate |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 189 | - | Btn | void destroy()}> Destroy |  |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 190 | - | Btn | Delete | onDelete |
+| web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 191 | - | Btn | Close | onClose |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 89 | - | Btn | { setAck( ); setReason(""); }}>Acknowledge |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 101 | - | Btn | setShowClosed((v) => !v)}>{showClosed ? "Hide closed" : `Show $ closed`} |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 111 | - | Btn | setAck(null)}>Cancel |  |

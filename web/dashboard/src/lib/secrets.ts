@@ -200,7 +200,27 @@ export async function destroySecretVersion(session: AuthSession, secretId: strin
 }
 
 export const ACCESS_CAPABILITIES = ["read", "value", "write", "delete"] as const;
-export const ACCESS_SUBJECT_TYPES = ["user", "role", "client", "workload"] as const;
+// "group" is a keycore access group (Key Management, Access groups), by ID.
+export const ACCESS_SUBJECT_TYPES = ["role", "group", "user", "client", "workload"] as const;
+
+// A tenant's vault-wide choices (docs/SECURITY/SECRET_ACCESS.md).
+export type VaultSettings = {
+  default_deny: boolean; // refuse a path no allow rule covers
+  max_versions: number; // 0: no cap
+  deleted_retention_days: number; // 0: kept until destroyed
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export async function getVaultSettings(session: AuthSession): Promise<VaultSettings> {
+  const res = await serviceRequest<{ settings: VaultSettings }>(session, "secrets", `/secrets/settings?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return res.settings;
+}
+
+export async function putVaultSettings(session: AuthSession, input: Pick<VaultSettings, "default_deny" | "max_versions" | "deleted_retention_days">): Promise<VaultSettings> {
+  const res = await serviceRequest<{ settings: VaultSettings }>(session, "secrets", "/secrets/settings", { method: "PUT", body: JSON.stringify({ tenant_id: session.tenantId, ...input }) });
+  return res.settings;
+}
 
 export type AccessRule = {
   id: string;
@@ -217,7 +237,7 @@ export type AccessRuleInput = Pick<AccessRule, "path" | "subject_type" | "subjec
 
 // What the rules say about one secret: the rules covering its path, and what
 // the signed-in caller may do under them.
-export type SecretAccess = { path: string; rules: AccessRule[]; caller: Record<string, boolean> };
+export type SecretAccess = { path: string; rules: AccessRule[]; caller: Record<string, boolean>; default_deny?: boolean };
 
 export async function listAccessRules(session: AuthSession): Promise<AccessRule[]> {
   const res = await serviceRequest<{ items: AccessRule[] }>(session, "secrets", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`);

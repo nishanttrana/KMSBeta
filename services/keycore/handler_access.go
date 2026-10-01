@@ -35,6 +35,7 @@ func (h *Handler) accessRouter(audit route.Emitter) *route.Router {
 	r.Handle("POST /access/groups", admin("access_group_created", "access_group", ""), h.createAccessGroup)
 	r.Handle("DELETE /access/groups/{id}", admin("access_group_deleted", "access_group", "id"), h.deleteAccessGroup)
 	r.Handle("PUT /access/groups/{id}/members", admin("access_group_members_updated", "access_group", "id"), h.setAccessGroupMembers)
+	r.Handle("GET /access/users/{user_id}/groups", route.Spec{Action: "access_user_groups_read", Permission: "key.access.read", Resource: "user", TargetParam: "user_id"}, h.listUserAccessGroups)
 	r.Handle("GET /access/settings", read("access_settings_read", "access_settings"), h.getAccessSettings)
 	r.Handle("PUT /access/settings", admin("access_settings_updated", "access_settings", ""), h.putAccessSettings)
 	r.Handle("GET /access/interface-policies", read("interface_policies_listed", "interface_policy"), h.listInterfacePolicies)
@@ -104,6 +105,19 @@ func (h *Handler) listAccessGroups(c *route.Call) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+}
+
+// listUserAccessGroups returns the IDs of the access groups a user belongs
+// to. The secrets service asks it to apply group subjects in its access
+// rules (docs/SECURITY/SECRET_ACCESS.md).
+func (h *Handler) listUserAccessGroups(c *route.Call) {
+	ids, err := h.svc.store.ListAccessGroupIDsForUser(c.R.Context(), c.Tenant, strings.TrimSpace(c.R.PathValue("user_id")))
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "list_user_groups_failed", err.Error())
+		return
+	}
+	c.Detail("count", len(ids))
+	c.JSON(http.StatusOK, map[string]interface{}{"group_ids": ids})
 }
 
 func (h *Handler) createAccessGroup(c *route.Call) {

@@ -14403,6 +14403,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-get-access-users-user-id-groups",
+    "group": "Key Management (keycore)",
+    "title": "GET /access/users/{user_id}/groups",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/access/users/{user_id}/groups?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/access/users/{user_id}/groups?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-get-agility-algorithms",
     "group": "Key Management (keycore)",
     "title": "GET /agility/algorithms",
@@ -21567,6 +21595,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-get-secrets-settings",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/settings",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-get-secrets-stats",
     "group": "Secret Vault (secrets)",
     "title": "GET /secrets/stats",
@@ -22052,6 +22108,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "PUT /svc/secrets/secrets/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-put-secrets-settings",
+    "group": "Secret Vault (secrets)",
+    "title": "PUT /secrets/settings",
+    "service": "secrets",
+    "method": "PUT",
+    "pathTemplate": "/secrets/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "PUT /svc/secrets/secrets/settings?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

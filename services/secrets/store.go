@@ -43,6 +43,10 @@ type Store interface {
 	ListVersions(ctx context.Context, tenantID string, secretID string) ([]SecretVersionInfo, error)
 	VersionCounts(ctx context.Context, tenantID string) (map[string]int, error)
 	GetSecretAuditLog(ctx context.Context, tenantID string, secretID string, limit int) ([]SecretAuditEntry, error)
+	ListDeletedBefore(ctx context.Context, tenantID string, before time.Time) ([]Secret, error)
+	GetSettings(ctx context.Context, tenantID string) (VaultSettings, error)
+	PutSettings(ctx context.Context, settings VaultSettings) error
+	RetentionTenants(ctx context.Context) ([]VaultSettings, error)
 	ListAccessRules(ctx context.Context, tenantID string) ([]AccessRule, error)
 	CreateAccessRule(ctx context.Context, rule AccessRule) error
 	DeleteAccessRule(ctx context.Context, tenantID string, ruleID string) (AccessRule, error)
@@ -103,9 +107,9 @@ INSERT INTO secrets (
 func insertValue(ctx context.Context, tx *sql.Tx, tenantID, secretID string, version int, value EncryptedSecretValue) error {
 	_, err := tx.ExecContext(ctx, `
 INSERT INTO secret_values (
-	tenant_id, secret_id, version, wrapped_dek, wrapped_dek_iv, ciphertext, data_iv, value_hash, created_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP)
-`, tenantID, secretID, version, value.WrappedDEK, value.WrappedDEKIV, value.Ciphertext, value.DataIV, value.ValueHash)
+	tenant_id, secret_id, version, wrapped_dek, wrapped_dek_iv, ciphertext, data_iv, created_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
+`, tenantID, secretID, version, value.WrappedDEK, value.WrappedDEKIV, value.Ciphertext, value.DataIV)
 	return err
 }
 
@@ -169,9 +173,9 @@ func (s *SQLStore) GetSecretWithValue(ctx context.Context, tenantID string, secr
 	}
 	var value EncryptedSecretValue
 	err = s.db.SQL().QueryRowContext(ctx, `
-SELECT wrapped_dek, wrapped_dek_iv, ciphertext, data_iv, value_hash
+SELECT wrapped_dek, wrapped_dek_iv, ciphertext, data_iv
 FROM secret_values WHERE tenant_id = $1 AND secret_id = $2 AND version = $3
-`, tenantID, secretID, version).Scan(&value.WrappedDEK, &value.WrappedDEKIV, &value.Ciphertext, &value.DataIV, &value.ValueHash)
+`, tenantID, secretID, version).Scan(&value.WrappedDEK, &value.WrappedDEKIV, &value.Ciphertext, &value.DataIV)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Secret{}, EncryptedSecretValue{}, errVersionNotFound
 	}
@@ -241,9 +245,19 @@ WHERE tenant_id = $8 AND id = $9 AND current_version = $10 AND status = $11
 	if n, _ := res.RowsAffected(); n == 0 {
 		return Secret{}, errVersionConflict
 	}
+	pruned := 0
 	if value != nil {
 		if err := insertValue(ctx, tx, tenantID, secretID, nextVersion, *value); err != nil {
 			return Secret{}, err
+		}
+		// The version cap keeps the newest maxVersions, the new one included.
+		if req.maxVersions > 0 {
+			res, err := tx.ExecContext(ctx, `DELETE FROM secret_values WHERE tenant_id = $1 AND secret_id = $2 AND version <= $3`, tenantID, secretID, nextVersion-req.maxVersions)
+			if err != nil {
+				return Secret{}, err
+			}
+			n, _ := res.RowsAffected()
+			pruned = int(n)
 		}
 	}
 	action, detail := "updated", fmt.Sprintf("Secret updated at version %d", nextVersion)
@@ -254,10 +268,15 @@ WHERE tenant_id = $8 AND id = $9 AND current_version = $10 AND status = $11
 		action, detail = req.changeAction, req.changeDetail
 	}
 	logChange(ctx, tx, tenantID, secretID, action, req.UpdatedBy, detail)
+	if pruned > 0 {
+		logChange(ctx, tx, tenantID, secretID, "versions_pruned", req.UpdatedBy, fmt.Sprintf("%d version(s) removed by the cap of %d", pruned, req.maxVersions))
+	}
 	if err := tx.Commit(); err != nil {
 		return Secret{}, err
 	}
-	return s.GetSecret(ctx, tenantID, secretID)
+	out, err := s.GetSecret(ctx, tenantID, secretID)
+	out.pruned = pruned
+	return out, err
 }
 
 // setStatus moves a secret between active and deleted; from is the status it
@@ -454,6 +473,75 @@ LIMIT $3
 			return nil, err
 		}
 		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// ListDeletedBefore lists the tenant's deleted secrets deleted before a time.
+func (s *SQLStore) ListDeletedBefore(ctx context.Context, tenantID string, before time.Time) ([]Secret, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+secretColumns+` FROM secrets WHERE tenant_id = $1 AND status = $2 AND deleted_at IS NOT NULL AND deleted_at < $3 ORDER BY deleted_at LIMIT 500`,
+		tenantID, SecretStatusDeleted, before.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]Secret, 0)
+	for rows.Next() {
+		sec, err := scanSecret(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, sec)
+	}
+	return out, rows.Err()
+}
+
+const settingsColumns = `tenant_id, default_deny, max_versions, deleted_retention_days, updated_by, updated_at`
+
+func scanSettings(scanner interface{ Scan(...interface{}) error }) (VaultSettings, error) {
+	var v VaultSettings
+	var at sql.NullTime
+	err := scanner.Scan(&v.TenantID, &v.DefaultDeny, &v.MaxVersions, &v.DeletedRetentionDays, &v.UpdatedBy, &at)
+	if at.Valid {
+		ts := at.Time.UTC()
+		v.UpdatedAt = &ts
+	}
+	return v, err
+}
+
+// GetSettings returns the tenant's settings, the defaults when none are stored.
+func (s *SQLStore) GetSettings(ctx context.Context, tenantID string) (VaultSettings, error) {
+	v, err := scanSettings(s.db.SQL().QueryRowContext(ctx, `SELECT `+settingsColumns+` FROM secret_vault_settings WHERE tenant_id = $1`, tenantID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return VaultSettings{TenantID: tenantID}, nil
+	}
+	return v, err
+}
+
+func (s *SQLStore) PutSettings(ctx context.Context, v VaultSettings) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO secret_vault_settings (tenant_id, default_deny, max_versions, deleted_retention_days, updated_by, updated_at)
+VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id) DO UPDATE SET default_deny = excluded.default_deny, max_versions = excluded.max_versions,
+	deleted_retention_days = excluded.deleted_retention_days, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+`, v.TenantID, v.DefaultDeny, v.MaxVersions, v.DeletedRetentionDays, v.UpdatedBy)
+	return err
+}
+
+// RetentionTenants lists the tenants that purge deleted secrets after a period.
+func (s *SQLStore) RetentionTenants(ctx context.Context) ([]VaultSettings, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT `+settingsColumns+` FROM secret_vault_settings WHERE deleted_retention_days > 0`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]VaultSettings, 0)
+	for rows.Next() {
+		v, err := scanSettings(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
 	}
 	return out, rows.Err()
 }

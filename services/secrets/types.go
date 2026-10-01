@@ -50,8 +50,11 @@ type Secret struct {
 	DeletedBy       string                 `json:"deleted_by,omitempty"`
 	// Path is the folder label and the name; access rules match on it.
 	Path string `json:"path"`
-	// Restricted is set when an access rule limits who may read the value.
+	// Restricted is set when an access rule, or the tenant's default-deny
+	// setting, limits who may read the value.
 	Restricted bool `json:"restricted"`
+
+	pruned int // versions the version cap removed in the write that returned this
 }
 
 type EncryptedSecretValue struct {
@@ -59,7 +62,6 @@ type EncryptedSecretValue struct {
 	WrappedDEKIV []byte
 	Ciphertext   []byte
 	DataIV       []byte
-	ValueHash    []byte
 }
 
 type CreateSecretRequest struct {
@@ -88,6 +90,9 @@ type UpdateSecretRequest struct {
 
 	// The change-history entry, when the update is not a plain edit or rotate.
 	changeAction, changeDetail string
+	// maxVersions is the tenant's version cap (0: none), applied when the
+	// update adds a version.
+	maxVersions int
 }
 
 type GenerateSSHKeyRequest struct {

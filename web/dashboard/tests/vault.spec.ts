@@ -30,9 +30,12 @@ const DELETED = [{ ...secret("sec_9", "old-vpn", "password", 2, 30), status: "de
 const RULES = [
   { id: "sar_1", path: "/finance/*", subject_type: "role", subject_id: "finance-admin", capabilities: ["read", "value", "write", "delete"], effect: "allow", created_by: "alice", created_at: at(-9) },
   { id: "sar_2", path: "/finance/prod/billing-db", subject_type: "user", subject_id: "contractor-7", capabilities: ["value"], effect: "deny", created_by: "alice", created_at: at(-3) },
+  { id: "sar_3", path: "/finance/*", subject_type: "group", subject_id: "grp_aud", capabilities: ["read"], effect: "allow", created_by: "alice", created_at: at(-2) },
 ];
+const GROUPS = [{ id: "grp_aud", tenant_id: "root", name: "Auditors", member_count: 3 }, { id: "grp_dba", tenant_id: "root", name: "Database admins", member_count: 2 }];
+const SETTINGS = { tenant_id: "root", default_deny: false, max_versions: 0, deleted_retention_days: 30, updated_by: "alice" };
 
-type Opts = { listDown?: boolean; statsDown?: boolean; rulesDown?: boolean; noValue?: boolean };
+type Opts = { listDown?: boolean; statsDown?: boolean; rulesDown?: boolean; noValue?: boolean; settingsDown?: boolean };
 type Write = { call: string; body: unknown };
 
 async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<string[]> {
@@ -44,7 +47,10 @@ async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<
     const req = route.request();
     const p = new URL(req.url()).pathname;
     if (p.includes("/svc/secrets/")) calls.push(`${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`);
-    if (req.method() !== "GET") writes.push({ call: `${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`, body: req.postDataJSON() });
+    if (req.method() !== "GET" && p.includes("/svc/secrets/")) writes.push({ call: `${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`, body: req.postDataJSON() });
+    if (p.endsWith("/keycore/access/groups")) return route.fulfill(json({ items: GROUPS }));
+    if (p.endsWith("/secrets/settings") && req.method() === "PUT") return route.fulfill(json({ settings: { ...SETTINGS, ...req.postDataJSON() } }));
+    if (p.endsWith("/secrets/settings")) return route.fulfill(opts.settingsDown ? down : json({ settings: SETTINGS }));
     if (p.endsWith("/secrets/access/rules") && req.method() === "POST") return route.fulfill(json({ rule: { ...RULES[0], id: "sar_new" } }, 201));
     if (p.endsWith("/secrets/access/rules")) return route.fulfill(opts.rulesDown ? down : json({ items: RULES }));
     if (p.endsWith("/access")) return route.fulfill(json({ path: "/stripe-live", rules: p.includes("sec_3") ? RULES : [], caller: { read: true, value: !opts.noValue, write: true, delete: true } }));
@@ -162,10 +168,16 @@ test("access rules: the restricted tile lists its secrets, and a rule is added a
   await expect(page.getByText("Value limited by an access rule: 2 entries")).toBeVisible();
 
   await page.getByText("Access rules", { exact: true }).click();
-  await expect(page.getByText("2 rules · 2 of 6 secrets restricted")).toBeVisible();
+  await expect(page.getByText("3 rules · 2 of 6 secrets restricted")).toBeVisible();
+  await expect(page.getByText("Auditors")).toBeVisible(); // a group rule is shown by the group's name
   await expect(page.getByText("finance-admin")).toBeVisible();
   await expect(page.getByText("contractor-7")).toBeVisible();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-rules.png`, fullPage: true });
+  if (SHOTS) {
+    await page.screenshot({ path: `${SHOTS}/vault-rules.png`, fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await page.screenshot({ path: `${SHOTS}/vault-rules-dark.png`, fullPage: true });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+  }
 
   await page.getByRole("button", { name: "Add rule" }).first().click();
   await page.getByPlaceholder("/finance/*").fill("/payments/*");
@@ -177,7 +189,7 @@ test("access rules: the restricted tile lists its secrets, and a rule is added a
     tenant_id: "root", path: "/payments/*", subject_type: "role", subject_id: "payments-ops", capabilities: ["read", "value", "write"], effect: "allow",
   });
 
-  await page.getByTitle("Delete rule").last().click();
+  await page.getByTitle("Delete rule").nth(1).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await expect.poll(() => writes.some((w) => w.call === "DELETE /secrets/access/rules/sar_2")).toBe(true);
 });
@@ -213,10 +225,14 @@ test("a caller the rules do not allow cannot reveal, and sees why", async ({ pag
   const calls = await stub(page, { noValue: true });
   await open(page);
   await page.getByText("billing-db").first().click();
-  await expect(page.getByText("2 rules on this path")).toBeVisible();
+  await expect(page.getByText("3 rules on this path")).toBeVisible();
   await expect(page.getByText("no value")).toBeVisible();
   await expect(page.getByRole("button", { name: "Reveal" })).toBeDisabled();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-detail-rules.png` });
+  if (SHOTS) {
+    await page.screenshot({ path: `${SHOTS}/vault-detail-rules.png` });
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    await page.screenshot({ path: `${SHOTS}/vault-detail-rules-dark.png` });
+  }
   expect(calls.filter((c) => c.endsWith("/value"))).toHaveLength(0);
 });
 
@@ -226,10 +242,54 @@ test("a deleted secret is listed under Deleted and can be restored", async ({ pa
   await open(page);
   await expect(page.getByText("old-vpn")).toHaveCount(0);
   await page.getByText("Deleted", { exact: true }).click();
+  await expect(page.getByText("Destroyed 30 days after the delete, unless restored.")).toBeVisible();
   await page.getByText("old-vpn").click();
   await expect(page.getByText("Deleted by:")).toBeVisible();
   await expect(page.getByRole("button", { name: "Reveal" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Destroy", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Restore" }).click();
   await expect.poll(() => writes.some((w) => w.call === "POST /secrets/sec_9/restore")).toBe(true);
+});
+
+test("vault settings: deny by default asks first and names the secrets it would hide", async ({ page }) => {
+  const writes: Write[] = [];
+  await stub(page, {}, writes);
+  await open(page);
+  await page.getByText("Access rules", { exact: true }).click();
+  await expect(page.getByText("4 secrets with no allow rule")).toBeVisible();
+  await expect(page.getByLabel("Days a deleted secret is kept")).toHaveValue("30");
+  await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+
+  await page.getByLabel("Versions kept per secret").fill("10");
+  await page.getByText("Open to the secrets permission", { exact: true }).first().click();
+  await page.getByRole("option", { name: "Denied", exact: true }).click();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText(/4 secrets have no allow rule/)).toBeVisible();
+  expect(writes.filter((w) => w.call === "PUT /secrets/settings")).toHaveLength(0); // nothing sent before the confirmation
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-default-deny.png` });
+  await page.getByRole("button", { name: "Deny by default" }).click();
+  await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/settings")?.body).toEqual({ tenant_id: "root", default_deny: true, max_versions: 10, deleted_retention_days: 30 });
+});
+
+test("a group rule is chosen from the tenant's access groups", async ({ page }) => {
+  const writes: Write[] = [];
+  await stub(page, {}, writes);
+  await open(page);
+  await page.getByText("Access rules", { exact: true }).click();
+  await page.getByRole("button", { name: "Add rule" }).first().click();
+  await page.getByPlaceholder("/finance/*").fill("/db/*");
+  await page.locator("label", { hasText: "Who" }).locator("..").getByText("role", { exact: true }).first().click();
+  await page.getByRole("option", { name: "group", exact: true }).click();
+  await page.getByText("Choose a group", { exact: true }).first().click();
+  await page.getByRole("option", { name: "Database admins", exact: true }).click();
+  await page.getByRole("button", { name: "Add rule" }).last().click();
+  await expect.poll(() => writes.find((w) => w.call === "POST /secrets/access/rules")?.body).toMatchObject({ path: "/db/*", subject_type: "group", subject_id: "grp_dba" });
+});
+
+test("failed vault settings read unavailable", async ({ page }) => {
+  await stub(page, { settingsDown: true });
+  await open(page);
+  await page.getByText("Access rules", { exact: true }).click();
+  await expect(page.getByText(/Vault settings unavailable/)).toBeVisible();
+  await expect(page.getByLabel("Versions kept per secret")).toHaveCount(0);
 });

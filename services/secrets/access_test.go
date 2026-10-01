@@ -9,8 +9,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/clusterstate"
 	pkgdb "vecta-kms/pkg/db"
 	"vecta-kms/pkg/route/routetest"
 )
@@ -34,9 +36,10 @@ func TestAccessAndVersionsPostgres(t *testing.T) {
 	}
 	for name, run := range map[string]func(*testing.T, *Handler, *Service, *routetest.Recorder){
 		"access rules": runAccessRules, "paging": runListPaging, "soft delete": runSoftDelete, "versions": runVersions,
+		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention,
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules`); err != nil {
+			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules, secret_vault_settings`); err != nil {
 				t.Fatalf("reset: %v", err)
 			}
 			svc := NewService(NewSQLStore(conn), []byte("0123456789ABCDEF0123456789ABCDEF"))
@@ -109,7 +112,7 @@ func TestDecide(t *testing.T) {
 		{nil, "/finance/x", capValue, reasonNotInRule},
 		{bob, "/open", capValue, ""},
 	} {
-		if got := decide(rules, tc.who, tc.path, tc.capa); got != tc.want {
+		if got := decide(rules, false, &caller{claims: tc.who}, tc.path, tc.capa); got != tc.want {
 			t.Errorf("decide(%v, %s, %s) = %q, want %q", tc.who, tc.path, tc.capa, got, tc.want)
 		}
 	}
@@ -127,7 +130,7 @@ func TestAccessRuleValidation(t *testing.T) {
 		`{"path":"/finance*","subject_type":"user","subject_id":"a","capabilities":["value"]}`,
 		`{"path":"/finance/","subject_type":"user","subject_id":"a","capabilities":["value"]}`,
 		`{"path":"/","subject_type":"user","subject_id":"a","capabilities":["value"]}`,
-		`{"path":"/x","subject_type":"group","subject_id":"a","capabilities":["value"]}`,
+		`{"path":"/x","subject_type":"team","subject_id":"a","capabilities":["value"]}`,
 		`{"path":"/x","subject_type":"user","subject_id":"","capabilities":["value"]}`,
 		`{"path":"/x","subject_type":"user","subject_id":"a","capabilities":[]}`,
 		`{"path":"/x","subject_type":"user","subject_id":"a","capabilities":["value","admin"]}`,
@@ -182,7 +185,7 @@ func runAccessRules(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorde
 	bob := user("t1", "bob", "ops", "*")
 	ledger := mustCreate(t, h, alice, "ledger", "/finance/prod")
 	open := mustCreate(t, h, alice, "wiki", "")
-	if code, out := call(t, h, alice, "POST", "/v1/kv/data/finance/kv-item", `{"data":{"k":"v"}}`); code != http.StatusOK {
+	if code, out := call(t, h, alice, "POST", "/v1/secret/data/finance/kv-item", `{"data":{"k":"v"}}`); code != http.StatusOK {
 		t.Fatalf("kv seed: %d %v", code, out)
 	}
 	if code, out := call(t, h, alice, "POST", "/secrets/access/rules",
@@ -207,12 +210,12 @@ func runAccessRules(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorde
 		{"POST", "/secrets", `{"name":"planted","secret_type":"token","value":"x","labels":{"path":"/finance"}}`, "created"},
 		{"POST", "/secrets/generate/keypair", `{"name":"k","key_type":"ed25519","labels":{"path":"/finance"}}`, "generated"},
 		{"PUT", "/secrets/" + open, `{"labels":{"path":"/finance"}}`, "updated"}, // moving a secret in
-		{"GET", "/v1/kv/data/finance/kv-item", "", "vault_kv_read"},
-		{"GET", "/v1/kv/finance/kv-item", "", "vault_kv_read"},
-		{"GET", "/v1/kv/metadata/finance/kv-item", "", "vault_metadata_read"},
-		{"POST", "/v1/kv/data/finance/kv-item", `{"data":{"k":"2"}}`, "vault_kv_written"},
-		{"POST", "/v1/kv/data/finance/new-item", `{"data":{"k":"2"}}`, "vault_kv_written"},
-		{"DELETE", "/v1/kv/data/finance/kv-item", "", "vault_kv_deleted"},
+		{"GET", "/v1/secret/data/finance/kv-item", "", "vault_kv_read"},
+		{"GET", "/v1/secret/finance/kv-item", "", "vault_kv_read"},
+		{"GET", "/v1/secret/metadata/finance/kv-item", "", "vault_metadata_read"},
+		{"POST", "/v1/secret/data/finance/kv-item", `{"data":{"k":"2"}}`, "vault_kv_written"},
+		{"POST", "/v1/secret/data/finance/new-item", `{"data":{"k":"2"}}`, "vault_kv_written"},
+		{"DELETE", "/v1/secret/data/finance/kv-item", "", "vault_kv_deleted"},
 	} {
 		code, out := call(t, h, bob, tc.method, tc.path, tc.body)
 		if code != http.StatusForbidden {
@@ -490,4 +493,349 @@ func runVersions(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) 
 	if ev := rec.Last(t); ev.Event.Details["restored"] != true {
 		t.Fatalf("kv write did not record the restore: %v", ev.Event.Details)
 	}
+}
+
+func TestMounts(t *testing.T) { h, svc, _, rec := newRecordedHandler(t); runMounts(t, h, svc, rec) }
+func TestDefaultDeny(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runDefaultDeny(t, h, svc, rec)
+}
+func TestGroupRules(t *testing.T) { h, svc, _, rec := newRecordedHandler(t); runGroups(t, h, svc, rec) }
+func TestVersionCap(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runVersionCap(t, h, svc, rec)
+}
+func TestRetention(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runRetention(t, h, svc, rec)
+}
+
+// Two mounts are two namespaces; "secret" is the root one.
+func runMounts(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	write := func(url, v string) {
+		t.Helper()
+		if code, out := call(t, h, admin, "POST", url, `{"data":{"v":"`+v+`"}}`); code != http.StatusOK {
+			t.Fatalf("write %s: %d %v", url, code, out)
+		}
+	}
+	read := func(url string) (int, string) {
+		code, out := call(t, h, admin, "GET", url, "")
+		return code, fmt.Sprint(out["data"])
+	}
+	write("/v1/team-a/data/db", "a")
+	write("/v1/team-b/data/db", "b")
+	write("/v1/secret/data/db", "root")
+	for url, want := range map[string]string{"/v1/team-a/data/db": "v:a", "/v1/team-b/data/db": "v:b", "/v1/secret/data/db": "v:root", "/v1/secret/data/team-a/db": "v:a"} {
+		if code, got := read(url); code != http.StatusOK || !strings.Contains(got, want) {
+			t.Fatalf("%s = %d %s, want %s", url, code, got, want)
+		}
+	}
+	if code, _ := read("/v1/team-c/data/db"); code != http.StatusNotFound {
+		t.Fatalf("an unwritten mount answered: %d", code)
+	}
+	if ev := rec.Last(t); ev.Event.Details["mount"] != "team-c" || ev.Event.Details["path"] != "db" {
+		t.Fatalf("event %v", ev.Event.Details)
+	}
+	// The mount is part of the path the access rules match on.
+	call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/team-a/*","subject_type":"user","subject_id":"someone-else","capabilities":["value"]}`)
+	if code, _ := read("/v1/team-a/data/db"); code != http.StatusForbidden {
+		t.Fatalf("rule on /team-a/* did not cover the mount: %d", code)
+	}
+	if code, _ := read("/v1/team-b/data/db"); code != http.StatusOK {
+		t.Fatalf("rule on /team-a/* covered team-b: %d", code)
+	}
+}
+
+func putSettings(t *testing.T, h *Handler, who *pkgauth.Claims, body string) (int, map[string]interface{}) {
+	t.Helper()
+	return call(t, h, who, "PUT", "/secrets/settings", body)
+}
+
+// Under default-deny a path no allow rule covers is refused, for everyone.
+func runDefaultDeny(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := user("t1", "admin", "tenant-admin", "*")
+	covered := mustCreate(t, h, admin, "covered", "/ops")
+	bare := mustCreate(t, h, admin, "bare", "")
+	call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/ops/*","subject_type":"user","subject_id":"admin","capabilities":["read","value","write","delete"]}`)
+
+	for _, bad := range []string{`{"max_versions":-1}`, `{"max_versions":1001}`, `{"deleted_retention_days":-1}`, `{"deleted_retention_days":4000}`} {
+		if code, _ := putSettings(t, h, admin, bad); code != http.StatusBadRequest {
+			t.Fatalf("%s accepted: %d", bad, code)
+		}
+	}
+	if code, _ := putSettings(t, h, user("t1", "w", "ops", "kms.read", "kms.write"), `{"default_deny":true}`); code != http.StatusForbidden {
+		t.Fatalf("kms.write changed settings: %d", code)
+	}
+	refused(t, rec, "settings_updated", "permission_denied")
+
+	if code, out := putSettings(t, h, admin, `{"default_deny":true}`); code != http.StatusOK || out["settings"].(map[string]interface{})["default_deny"] != true {
+		t.Fatalf("enable: %d %v", code, out)
+	}
+	if ev := rec.Last(t); ev.Action != "settings_updated" || ev.Event.Details["default_deny"] != true || fmt.Sprint(ev.Event.Details["previous"]) == "" {
+		t.Fatalf("settings event %+v", ev.Event.Details)
+	}
+	if code, _ := call(t, h, admin, "GET", "/secrets/"+bare+"/value", ""); code != http.StatusForbidden {
+		t.Fatalf("uncovered secret readable under default-deny: %d", code)
+	}
+	refused(t, rec, "value_read", reasonNoRule)
+	if code, _ := call(t, h, admin, "POST", "/secrets", `{"name":"new","secret_type":"token","value":"x"}`); code != http.StatusForbidden {
+		t.Fatalf("create on an uncovered path: %d", code)
+	}
+	if code, _ := call(t, h, admin, "GET", "/secrets/"+covered+"/value", ""); code != http.StatusOK {
+		t.Fatalf("covered secret: %d", code)
+	}
+	_, out := call(t, h, admin, "GET", "/secrets", "")
+	if items := out["items"].([]interface{}); len(items) != 1 || items[0].(map[string]interface{})["name"] != "covered" || items[0].(map[string]interface{})["restricted"] != true {
+		t.Fatalf("list under default-deny: %v", out)
+	}
+	// Rules can still be managed, so the tenant is never locked out.
+	if code, _ := call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/bare","subject_type":"user","subject_id":"admin","capabilities":["value"]}`); code != http.StatusCreated {
+		t.Fatal("rule under default-deny")
+	}
+	if code, _ := call(t, h, admin, "GET", "/secrets/"+bare+"/value", ""); code != http.StatusOK {
+		t.Fatalf("newly covered secret: %d", code)
+	}
+	if code, _ := putSettings(t, h, admin, `{"default_deny":false}`); code != http.StatusOK {
+		t.Fatal("disable")
+	}
+}
+
+// memberships stands in for keycore's access groups.
+type memberships struct {
+	of  map[string][]string
+	err error
+}
+
+func (m *memberships) GroupsOf(_ context.Context, _ string, userID string) ([]string, error) {
+	return m.of[userID], m.err
+}
+
+// A group rule names the members keycore reports. When membership cannot be
+// read, a group rule never allows and a deny group rule is never skipped.
+func runGroups(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	groups := &memberships{of: map[string][]string{"alice": {"grp_fin"}}}
+	h.groups = groups
+	alice := user("t1", "alice", "analyst", "*")
+	bob := user("t1", "bob", "analyst", "*")
+	id := mustCreate(t, h, alice, "ledger", "/finance")
+	other := mustCreate(t, h, alice, "notes", "/misc")
+	call(t, h, alice, "POST", "/secrets/access/rules", `{"path":"/finance/*","subject_type":"group","subject_id":"grp_fin","capabilities":["read","value"]}`)
+
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+id+"/value", ""); code != http.StatusOK {
+		t.Fatalf("group member: %d", code)
+	}
+	if code, _ := call(t, h, bob, "GET", "/secrets/"+id+"/value", ""); code != http.StatusForbidden {
+		t.Fatalf("non-member: %d", code)
+	}
+	refused(t, rec, "value_read", reasonNotInRule)
+
+	groups.err = fmt.Errorf("keycore unreachable")
+	groups.of = nil
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+id+"/value", ""); code != http.StatusServiceUnavailable {
+		t.Fatalf("unknown membership allowed: %d", code)
+	}
+	refused(t, rec, "value_read", reasonGroupsUnavailable)
+	// A path no group rule covers does not need the lookup.
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+other+"/value", ""); code != http.StatusOK {
+		t.Fatalf("unrelated secret needed groups: %d", code)
+	}
+	// A deny group rule with unknown membership refuses too.
+	call(t, h, alice, "POST", "/secrets/access/rules", `{"path":"/misc/*","subject_type":"group","subject_id":"grp_out","capabilities":["value"],"effect":"deny"}`)
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+other+"/value", ""); code != http.StatusServiceUnavailable {
+		t.Fatalf("deny group rule skipped: %d", code)
+	}
+	groups.err, groups.of = nil, map[string][]string{"alice": {"grp_out"}}
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+other+"/value", ""); code != http.StatusForbidden {
+		t.Fatalf("deny group rule: %d", code)
+	}
+	refused(t, rec, "value_read", reasonRuleDenied)
+	// Without a group source, a group rule refuses rather than opens.
+	h.groups = nil
+	if code, _ := call(t, h, alice, "GET", "/secrets/"+id+"/value", ""); code != http.StatusServiceUnavailable {
+		t.Fatalf("no group source: %d", code)
+	}
+}
+
+// The cap keeps the newest versions and removes the rest at each write.
+func runVersionCap(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	id := mustCreate(t, h, admin, "capped", "")
+	rotate := func(v string) {
+		t.Helper()
+		if code, out := call(t, h, admin, "POST", "/secrets/"+id+"/rotate", `{"value":"`+v+`"}`); code != http.StatusOK {
+			t.Fatalf("rotate: %d %v", code, out)
+		}
+	}
+	rotate("two")
+	rotate("three") // three versions, no cap yet
+	if code, _ := putSettings(t, h, admin, `{"max_versions":2}`); code != http.StatusOK {
+		t.Fatal("set cap")
+	}
+	rotate("four")
+	if ev := rec.Last(t); ev.Action != "rotated" || ev.Event.Details["versions_pruned"] != 2 {
+		t.Fatalf("rotate event %v", ev.Event.Details)
+	}
+	_, out := call(t, h, admin, "GET", "/secrets/"+id+"/versions", "")
+	if got := fmt.Sprint(out["versions"]); len(out["versions"].([]interface{})) != 2 || !strings.Contains(got, "version:4") || !strings.Contains(got, "version:3") {
+		t.Fatalf("versions after cap: %s", got)
+	}
+	if code, _ := call(t, h, admin, "GET", "/secrets/"+id+"/value?version=2", ""); code != http.StatusNotFound {
+		t.Fatalf("pruned version readable: %d", code)
+	}
+	if code, out := call(t, h, admin, "POST", "/secrets/"+id+"/rollback", `{"version":3}`); code != http.StatusOK || out["secret"].(map[string]interface{})["current_version"] != float64(5) {
+		t.Fatalf("rollback under cap: %d %v", code, out)
+	}
+	if code, out := call(t, h, admin, "GET", "/secrets/"+id+"/value", ""); code != http.StatusOK || out["value"] != "three" {
+		t.Fatalf("value after rollback: %d %v", code, out)
+	}
+	_, out = call(t, h, admin, "GET", "/secrets/"+id+"/audit", "")
+	if !strings.Contains(fmt.Sprint(out["entries"]), "versions_pruned") {
+		t.Fatalf("change history lacks the prune: %v", out)
+	}
+	putSettings(t, h, admin, `{"max_versions":0}`)
+}
+
+// A deleted secret is destroyed once its tenant's retention period has
+// passed, by the primary only, and each purge is audited.
+func runRetention(t *testing.T, h *Handler, svc *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	gone := mustCreate(t, h, admin, "gone", "")
+	kept := mustCreate(t, h, admin, "kept", "")
+	live := mustCreate(t, h, admin, "live", "")
+	for _, id := range []string{gone, kept} {
+		if code, _ := call(t, h, admin, "DELETE", "/secrets/"+id, ""); code != http.StatusOK {
+			t.Fatal("delete")
+		}
+	}
+	ctx := context.Background()
+	now := time.Now().UTC()
+	// No retention period: nothing is purged however old the delete.
+	if n := h.purgeExpired(ctx, now.AddDate(1, 0, 0)); n != 0 {
+		t.Fatalf("purged %d with no retention period", n)
+	}
+	if code, _ := putSettings(t, h, admin, `{"deleted_retention_days":7}`); code != http.StatusOK {
+		t.Fatal("set retention")
+	}
+	if n := h.purgeExpired(ctx, now.AddDate(0, 0, 6)); n != 0 {
+		t.Fatalf("purged %d before the period passed", n)
+	}
+	// Restoring one before the period ends keeps it.
+	if code, _ := call(t, h, admin, "POST", "/secrets/"+kept+"/restore", ""); code != http.StatusOK {
+		t.Fatal("restore")
+	}
+
+	// A cluster member never runs the sweep.
+	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{NodeID: "n2", Role: clusterstate.RoleFollower, PrimaryURL: "https://primary:8443", ForwardCredential: "cred"}))
+	n := h.purgeExpired(ctx, now.AddDate(0, 0, 8))
+	clusterstate.SetDefault(nil)
+	if n != 0 {
+		t.Fatalf("a member purged %d secrets", n)
+	}
+	if _, err := svc.GetSecret(ctx, "t1", gone); err != nil {
+		t.Fatalf("a member destroyed the secret: %v", err)
+	}
+
+	rec.Reset()
+	if n := h.purgeExpired(ctx, now.AddDate(0, 0, 8)); n != 1 {
+		t.Fatalf("purged %d, want 1", n)
+	}
+	ev := rec.Last(t)
+	if ev.Action != "retention_purged" || ev.Event.TargetID != gone || ev.Event.ActorID != retentionActor || ev.Event.Result != "success" ||
+		ev.Event.Details["retention_days"] != 7 || ev.Event.Details["deleted_by"] != "u-t1" {
+		t.Fatalf("purge event %+v", ev)
+	}
+	if _, err := svc.GetSecret(ctx, "t1", gone); err == nil {
+		t.Fatal("secret survived its retention period")
+	}
+	for _, id := range []string{kept, live} {
+		if code, _ := call(t, h, admin, "GET", "/secrets/"+id+"/value", ""); code != http.StatusOK {
+			t.Fatalf("an active secret was purged: %d", code)
+		}
+	}
+	putSettings(t, h, admin, `{"deleted_retention_days":0}`)
+}
+
+// Migration 005 on real Postgres, from a database as 7.29.0 left it: a
+// secret written under a non-root Vault mount is renamed to <mount>/<path>
+// with a change-history entry, a name that is already taken is left alone,
+// and the value_hash column is gone.
+func TestMigration005Postgres(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	ctx := context.Background()
+	db, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 2, MaxIdle: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	conn, err := db.SQL().Conn(ctx) // one connection, so search_path holds
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close() //nolint:errcheck
+	exec := func(q string, args ...interface{}) {
+		t.Helper()
+		if _, err := conn.ExecContext(ctx, q, args...); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	file := func(path string) {
+		t.Helper()
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		exec(string(raw)) // one statement batch, as pkg/db runs a migration
+	}
+	exec(`DROP SCHEMA IF EXISTS mig005 CASCADE`)
+	exec(`CREATE SCHEMA mig005`)
+	defer conn.ExecContext(ctx, `DROP SCHEMA IF EXISTS mig005 CASCADE`) //nolint:errcheck
+	exec(`SET search_path TO mig005`)
+	for _, f := range []string{"001_initial.sql", "002_audit_log.sql", "003_mek_state.sql", "004_access_rules_soft_delete.sql"} {
+		file("migrations/" + f)
+	}
+	seed := func(id, name, metadata string) {
+		exec(`INSERT INTO secrets (id, tenant_id, name, secret_type, metadata, created_by) VALUES ($1,'t1',$2,'api_key',$3,'u')`, id, name, metadata)
+		exec(`INSERT INTO secret_values (tenant_id, secret_id, version, wrapped_dek, wrapped_dek_iv, ciphertext, data_iv, value_hash) VALUES ('t1',$1,1,'\x01','\x02','\x03','\x04','\xdeadbeef')`, id)
+	}
+	seed("s_kv", "app/cfg", `{"vault_compat":true,"mount":"kv"}`)        // renamed to kv/app/cfg
+	seed("s_root", "app/root", `{"vault_compat":true,"mount":"secret"}`) // root mount: unchanged
+	seed("s_ui", "stripe-live", `{"source":"dashboard"}`)                // not a KV secret: unchanged
+	seed("s_clash", "db", `{"vault_compat":true,"mount":"team"}`)        // target name taken: unchanged
+	seed("s_taken", "team/db", `{"source":"dashboard"}`)
+	seed("s_done", "kv/already", `{"vault_compat":true,"mount":"kv"}`) // already carries its mount
+
+	file("migrations/005_settings_mount_drop_hash.sql")
+
+	names := map[string]string{}
+	rows, err := conn.QueryContext(ctx, `SELECT id, name FROM secrets`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var id, name string
+		_ = rows.Scan(&id, &name)
+		names[id] = name
+	}
+	rows.Close() //nolint:errcheck
+	want := map[string]string{"s_kv": "kv/app/cfg", "s_root": "app/root", "s_ui": "stripe-live", "s_clash": "db", "s_taken": "team/db", "s_done": "kv/already"}
+	if fmt.Sprint(names) != fmt.Sprint(want) {
+		t.Fatalf("names after migration:\n got %v\nwant %v", names, want)
+	}
+	var renames int
+	var detail string
+	if err := conn.QueryRowContext(ctx, `SELECT COUNT(*), MAX(detail) FROM secret_audit_log WHERE action = 'renamed'`).Scan(&renames, &detail); err != nil || renames != 1 || !strings.Contains(detail, "app/cfg -> kv/app/cfg") {
+		t.Fatalf("rename history: %d %q %v", renames, detail, err)
+	}
+	var hashColumns, values int
+	_ = conn.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'mig005' AND table_name = 'secret_values' AND column_name = 'value_hash'`).Scan(&hashColumns)
+	_ = conn.QueryRowContext(ctx, `SELECT COUNT(*) FROM secret_values`).Scan(&values)
+	if hashColumns != 0 || values != 6 {
+		t.Fatalf("value_hash columns %d (want 0), value rows %d (want 6)", hashColumns, values)
+	}
+	// Applying it again changes nothing.
+	file("migrations/005_settings_mount_drop_hash.sql")
 }

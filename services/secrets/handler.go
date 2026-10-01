@@ -21,7 +21,11 @@ import (
 type Handler struct {
 	svc     *Service
 	router  *route.Router
-	keyring *mek.Keyring // nil in tests without a master key
+	keyring *mek.Keyring  // nil in tests without a master key
+	audit   route.Emitter // for events no request carries (retention.go)
+	logger  *log.Logger
+	// groups resolves group subjects in access rules; nil refuses them.
+	groups GroupResolver
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
@@ -40,7 +44,7 @@ const (
 var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
 
 func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, keyring *mek.Keyring) *Handler {
-	h := &Handler{svc: svc, router: route.New("secrets", audit, logger), keyring: keyring}
+	h := &Handler{svc: svc, router: route.New("secrets", audit, logger), keyring: keyring, audit: audit, logger: logger}
 	h.routes()
 	if keyring != nil {
 		keyring.Routes(h.router, "secrets") // exposure register, backup re-wrap
@@ -86,6 +90,8 @@ func (h *Handler) routes() {
 	r.Handle("POST /secrets/{id}/rollback", warn(secret("rolled_back", permWrite)), h.rollbackSecret)
 	r.Handle("GET /secrets/{id}/access", secret("access_read", permRead), h.secretAccess)
 	r.Handle("GET /secrets/stats", route.Spec{Action: "stats_read", Permission: permRead}, h.stats)
+	r.Handle("GET /secrets/settings", route.Spec{Action: "settings_read", Permission: permAccessRead, Resource: "secret_vault_settings"}, h.getSettings)
+	r.Handle("PUT /secrets/settings", warn(route.Spec{Action: "settings_updated", Permission: permAccessManage, Resource: "secret_vault_settings"}), h.putSettings)
 	r.Handle("GET /secrets/access/rules", route.Spec{Action: "access_rules_listed", Permission: permAccessRead, Resource: "secret_access_rule"}, h.listAccessRules)
 	r.Handle("POST /secrets/access/rules", warn(route.Spec{Action: "access_rule_created", Permission: permAccessManage, Resource: "secret_access_rule"}), h.createAccessRule)
 	r.Handle("DELETE /secrets/access/rules/{rule_id}", warn(route.Spec{Action: "access_rule_deleted", Permission: permAccessManage, Resource: "secret_access_rule", TargetParam: "rule_id"}), h.deleteAccessRule)
@@ -147,33 +153,69 @@ func actorOr(c *route.Call, claimed string) string {
 	return claimed
 }
 
+// policy is what decides access for one request: the tenant's rules, its
+// default, and the caller.
+type policy struct {
+	rules       []AccessRule
+	defaultDeny bool
+	who         *caller
+}
+
+func (p policy) decide(path, capability string) string {
+	return decide(p.rules, p.defaultDeny, p.who, path, capability)
+}
+
+func (p policy) restricted(path string) bool { return restricted(p.rules, p.defaultDeny, path) }
+
+// policy loads the tenant's rules and settings. Without them no decision can
+// be made, so a failure ends the request.
+func (h *Handler) policy(c *route.Call) (policy, bool) {
+	rules, err := h.svc.AccessRules(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
+		return policy{}, false
+	}
+	settings, err := h.svc.Settings(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
+		return policy{}, false
+	}
+	who := &caller{claims: c.Claims}
+	if c.Claims != nil {
+		who.groups = func() ([]string, error) {
+			if h.groups == nil {
+				return nil, errors.New("no access group source is configured")
+			}
+			return h.groups.GroupsOf(c.R.Context(), c.Tenant, c.Claims.UserID)
+		}
+	}
+	return policy{rules: rules, defaultDeny: settings.DefaultDeny, who: who}, true
+}
+
 // allowed applies the tenant's access rules to one capability on one path
 // (access.go). A refusal is written and audited with its reason, the path
 // and the capability. Every route that touches a secret calls it.
 func (h *Handler) allowed(c *route.Call, path, capability string) bool {
-	rules, ok := h.rules(c)
-	return ok && permitted(c, rules, path, capability)
+	p, ok := h.policy(c)
+	return ok && permitted(c, p, path, capability)
 }
 
-// rules loads the tenant's access rules. Without them no decision can be
-// made, so a failure ends the request.
-func (h *Handler) rules(c *route.Call) ([]AccessRule, bool) {
-	rules, err := h.svc.AccessRules(c.R.Context(), c.Tenant)
-	if err != nil {
-		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
-		return nil, false
+func permitted(c *route.Call, p policy, path, capability string) bool {
+	reason := p.decide(path, capability)
+	if reason == "" {
+		return true
 	}
-	return rules, true
-}
-
-func permitted(c *route.Call, rules []AccessRule, path, capability string) bool {
-	if reason := decide(rules, c.Claims, path, capability); reason != "" {
-		c.Detail("path", path)
-		c.Detail("capability", capability)
+	c.Detail("path", path)
+	c.Detail("capability", capability)
+	switch reason {
+	case reasonGroupsUnavailable: // fail closed, and say it is not a denial
+		c.Refuse(http.StatusServiceUnavailable, reason, "a group access rule covers "+path+" and group membership could not be read")
+	case reasonNoRule:
+		c.Refuse(http.StatusForbidden, reason, "no access rule allows "+capability+" on "+path+", and this tenant denies by default")
+	default:
 		c.Refuse(http.StatusForbidden, reason, "an access rule on "+path+" does not allow "+capability+" for this caller")
-		return false
 	}
-	return true
+	return false
 }
 
 // secretFor loads the secret a route names and applies the access rules.
@@ -183,24 +225,24 @@ func (h *Handler) secretFor(c *route.Call, capability string) (Secret, bool) {
 		fail(c, err, http.StatusInternalServerError, "read_failed")
 		return Secret{}, false
 	}
-	rules, ok := h.rules(c)
+	p, ok := h.policy(c)
 	if !ok {
 		return Secret{}, false
 	}
-	secret.Restricted = restricted(rules, secret.Path)
-	return secret, permitted(c, rules, secret.Path, capability)
+	secret.Restricted = p.restricted(secret.Path)
+	return secret, permitted(c, p, secret.Path, capability)
 }
 
 // visible returns the filter for listings: the secrets the caller may read,
 // each marked with whether a rule restricts its value.
 func (h *Handler) visible(c *route.Call) (func(*Secret) bool, bool) {
-	rules, ok := h.rules(c)
+	p, ok := h.policy(c)
 	if !ok {
 		return nil, false
 	}
 	return func(s *Secret) bool {
-		s.Restricted = restricted(rules, s.Path)
-		return decide(rules, c.Claims, s.Path, capRead) == ""
+		s.Restricted = p.restricted(s.Path)
+		return p.decide(s.Path, capRead) == ""
 	}, true
 }
 
@@ -323,6 +365,7 @@ func (h *Handler) updateSecret(c *route.Call) {
 	}
 	c.Detail("value_changed", req.Value != nil)
 	c.Detail("current_version", out.CurrentVersion)
+	pruned(c, out)
 	if req.Value != nil {
 		h.remediate(c, out.ID, "rotated")
 	}
@@ -485,6 +528,7 @@ func (h *Handler) rotateSecret(c *route.Call) {
 		return
 	}
 	c.Detail("new_version", out.CurrentVersion)
+	pruned(c, out)
 	h.remediate(c, out.ID, "rotated")
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
@@ -508,7 +552,15 @@ func (h *Handler) rollbackSecret(c *route.Call) {
 		return
 	}
 	c.Detail("new_version", out.CurrentVersion)
+	pruned(c, out)
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
+}
+
+// pruned records the versions the tenant's version cap removed in a write.
+func pruned(c *route.Call, s Secret) {
+	if s.pruned > 0 {
+		c.Detail("versions_pruned", s.pruned)
+	}
 }
 
 func (h *Handler) stats(c *route.Call) {
@@ -531,30 +583,70 @@ func (h *Handler) secretAccess(c *route.Call) {
 	if !ok {
 		return
 	}
-	rules, ok := h.rules(c)
+	p, ok := h.policy(c)
 	if !ok {
 		return
 	}
 	covering := make([]AccessRule, 0)
-	for _, r := range rules {
+	for _, r := range p.rules {
 		if r.covers(secret.Path) {
 			covering = append(covering, r)
 		}
 	}
 	can := map[string]bool{}
 	for _, capability := range capabilities {
-		can[capability] = decide(rules, c.Claims, secret.Path, capability) == ""
+		can[capability] = p.decide(secret.Path, capability) == ""
 	}
-	c.JSON(http.StatusOK, map[string]interface{}{"path": secret.Path, "rules": covering, "caller": can})
+	c.JSON(http.StatusOK, map[string]interface{}{"path": secret.Path, "rules": covering, "caller": can, "default_deny": p.defaultDeny})
 }
 
 func (h *Handler) listAccessRules(c *route.Call) {
-	rules, ok := h.rules(c)
-	if !ok {
+	rules, err := h.svc.AccessRules(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
 		return
 	}
 	c.Detail("count", len(rules))
 	c.JSON(http.StatusOK, map[string]interface{}{"items": rules})
+}
+
+func (h *Handler) getSettings(c *route.Call) {
+	settings, err := h.svc.Settings(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "settings_unavailable", err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"settings": settings})
+}
+
+func (h *Handler) putSettings(c *route.Call) {
+	var req struct {
+		TenantID             string `json:"tenant_id"`
+		DefaultDeny          bool   `json:"default_deny"`
+		MaxVersions          int    `json:"max_versions"`
+		DeletedRetentionDays int    `json:"deleted_retention_days"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	before, err := h.svc.Settings(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "settings_unavailable", err.Error())
+		return
+	}
+	settings, err := h.svc.PutSettings(c.R.Context(), VaultSettings{
+		TenantID: c.Tenant, DefaultDeny: req.DefaultDeny, MaxVersions: req.MaxVersions,
+		DeletedRetentionDays: req.DeletedRetentionDays, UpdatedBy: c.Actor(),
+	})
+	if err != nil {
+		c.Error(http.StatusBadRequest, "invalid_settings", err.Error())
+		return
+	}
+	c.Detail("default_deny", settings.DefaultDeny)
+	c.Detail("max_versions", settings.MaxVersions)
+	c.Detail("deleted_retention_days", settings.DeletedRetentionDays)
+	c.Detail("previous", map[string]interface{}{"default_deny": before.DefaultDeny, "max_versions": before.MaxVersions, "deleted_retention_days": before.DeletedRetentionDays})
+	c.JSON(http.StatusOK, map[string]interface{}{"settings": settings})
 }
 
 func ruleDetails(c *route.Call, r AccessRule) {
@@ -647,16 +739,26 @@ func (h *Handler) vaultTokenLookupSelf(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"data": data})
 }
 
-// vaultPath returns the KV path, recording it as the audit target.
+// rootMount is the KV mount whose paths are secret names as they are. Any
+// other mount is the first segment of the name, so /v1/a/x and /v1/b/x are
+// different secrets (a/x and b/x), and /v1/secret/data/a/x is the first.
+const rootMount = "secret"
+
+// vaultPath returns the name of the secret a KV request addresses, recording
+// the mount and path in the audit event.
 func vaultPath(c *route.Call) (string, bool) {
-	path := strings.TrimSpace(c.R.PathValue("path"))
-	if path == "" {
-		c.Error(http.StatusBadRequest, "bad_request", "path is required")
+	mount := strings.Trim(strings.TrimSpace(c.R.PathValue("mount")), "/")
+	path := strings.Trim(strings.TrimSpace(c.R.PathValue("path")), "/")
+	if path == "" || mount == "" {
+		c.Error(http.StatusBadRequest, "bad_request", "mount and path are required")
 		return "", false
 	}
-	c.Detail("mount", c.R.PathValue("mount"))
+	c.Detail("mount", mount)
 	c.Detail("path", path)
-	return path, true
+	if mount == rootMount {
+		return path, true
+	}
+	return mount + "/" + path, true
 }
 
 // vaultSecret loads the secret a KV path names and applies the access rules,
@@ -770,6 +872,7 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 			h.remediate(c, secret.ID, "rotated")
 		}
 		c.Detail("current_version", written.CurrentVersion)
+		pruned(c, written)
 		// The version this write produced, as KV v2 reports it.
 		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{
 			"created_time":  written.UpdatedAt.UTC().Format(time.RFC3339),

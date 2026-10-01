@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-01T11:44:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T16:23:10Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `861`
-- Routes with exact frontend call sites: `506`
-- Routes whose handlers call `h.svc.*`: `516`
-- Routes with detected store calls: `615`
+- Backend routes analyzed: `864`
+- Routes with exact frontend call sites: `508`
+- Routes whose handlers call `h.svc.*`: `519`
+- Routes with detected store calls: `619`
 - Routes with detected internal `pkg/*` calls: `152`
 
 ## How To Trace One Frontend Click
@@ -342,17 +342,17 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|POST\|/keys/{param}/kem/decapsulate | POST /keys/{id}/kem/decapsulate | handleKEMDecapsulate (services/keycore/handler.go:1632) | KEMDecapsulate |  |  | pkg/crypto.Zeroize | web/dashboard/src/lib/keycore.ts:1035 |
 | keycore\|POST\|/crypto/hash | POST /crypto/hash | handleHash (services/keycore/handler.go:1671) | Hash |  |  |  | web/dashboard/src/lib/keycore.ts:928 |
 | keycore\|POST\|/crypto/random | POST /crypto/random | handleRandom (services/keycore/handler.go:1699) | Random |  | s.hsm.Random | pkg/crypto.Zeroize, pkg/hsm.Random | web/dashboard/src/lib/keycore.ts:949 |
-| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:63) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1189 |
-| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:75) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1202 |
-| keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:100) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1271 |
-| keycore\|POST\|/access/groups | POST /access/groups | createAccessGroup (services/keycore/handler_access.go:109) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1282 |
-| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | deleteAccessGroup (services/keycore/handler_access.go:127) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1297 |
-| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | setAccessGroupMembers (services/keycore/handler_access.go:135) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1309 |
-| keycore\|GET\|/access/settings | GET /access/settings | getAccessSettings (services/keycore/handler_access.go:157) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1213 |
-| keycore\|PUT\|/access/settings | PUT /access/settings | putAccessSettings (services/keycore/handler_access.go:166) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1224 |
-| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | listInterfacePolicies (services/keycore/handler_access.go:226) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1240 |
-| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | upsertInterfacePolicy (services/keycore/handler_access.go:235) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1251 |
-| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | deleteInterfacePolicy (services/keycore/handler_access.go:255) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1263 |
+| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:64) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1189 |
+| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:76) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1202 |
+| keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:101) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1271 |
+| keycore\|POST\|/access/groups | POST /access/groups | createAccessGroup (services/keycore/handler_access.go:123) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1282 |
+| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | deleteAccessGroup (services/keycore/handler_access.go:141) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1297 |
+| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | setAccessGroupMembers (services/keycore/handler_access.go:149) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1309 |
+| keycore\|GET\|/access/settings | GET /access/settings | getAccessSettings (services/keycore/handler_access.go:171) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1213 |
+| keycore\|PUT\|/access/settings | PUT /access/settings | putAccessSettings (services/keycore/handler_access.go:180) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1224 |
+| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | listInterfacePolicies (services/keycore/handler_access.go:240) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1240 |
+| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | upsertInterfacePolicy (services/keycore/handler_access.go:249) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1251 |
+| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | deleteInterfacePolicy (services/keycore/handler_access.go:269) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1263 |
 | keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:48) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:103 |
 | keycore\|GET\|/agility/policy/rules | GET /agility/policy/rules | listAgilityRules (services/keycore/handler_agility.go:175) |  | ListAgilityRules |  |  | web/dashboard/src/lib/cryptoAgility.ts:108 |
 | keycore\|POST\|/agility/policy/rules | POST /agility/policy/rules | createAgilityRule (services/keycore/handler_agility.go:185) | invalidateAgilityRules | CreateAgilityRule |  |  | web/dashboard/src/lib/cryptoAgility.ts:113 |
@@ -481,17 +481,19 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/pqc-readiness | GET /cbom/pqc-readiness | cbomPQCReadiness (services/sbom/handler.go:226) | CBOMPQCReadiness |  |  |  | web/dashboard/src/lib/sbom.ts:196 |
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
-| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:207) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:110 |
-| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:235) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92 |
-| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:294) | UpdateSecret | UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:149 |
-| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:332) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:157 |
-| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:408) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:308 |
-| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:433) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:269 |
-| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:447) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:277 |
-| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:465) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:287 |
-| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:514) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:264 |
-| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:551) |  |  |  |  | web/dashboard/src/lib/secrets.ts:223, web/dashboard/src/lib/secrets.ts:228 |
-| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:592) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:233 |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:249) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:110 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:277) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92 |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:336) | UpdateSecret | GetSettings, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:149 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:375) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:157 |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:451) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:328 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:476) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:289 |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:490) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:297 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:508) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:307 |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:566) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:284 |
+| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:613) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:216 |
+| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:622) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:221 |
+| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:603) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:243, web/dashboard/src/lib/secrets.ts:248 |
+| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:684) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:253 |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:88) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:84 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:99) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/signing.ts:89 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:115) | GetSummary | ListProfiles, ListRecords |  |  | web/dashboard/src/lib/signing.ts:97 |
@@ -1066,17 +1068,18 @@ This file connects frontend requests to backend Go processing. It is static anal
 | keycore\|GET\|/attestation/public-key | GET /attestation/public-key | handleAttestationPublicKey (services/keycore/handler_attestation.go:19) | attestationPublicKeyPEM |  |  | pkg/crypto.MarshalPublicKeyPEM |  |
 | keycore\|GET\|/fips/rng-health | GET /fips/rng-health | handleRNGHealth (services/keycore/handler_fips_selftest.go:45) |  |  |  |  |  |
 | keycore\|GET\|/keys/due-for-lifecycle | GET /keys/due-for-lifecycle | handleDueForLifecycle (services/keycore/handler_lifecycle.go:19) | dueForLifecycle | ListCryptoperiodOverrides |  |  |  |
-| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:63) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1189 |
-| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:75) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1202 |
-| keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:100) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1271 |
-| keycore\|POST\|/access/groups | POST /access/groups | createAccessGroup (services/keycore/handler_access.go:109) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1282 |
-| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | deleteAccessGroup (services/keycore/handler_access.go:127) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1297 |
-| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | setAccessGroupMembers (services/keycore/handler_access.go:135) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1309 |
-| keycore\|GET\|/access/settings | GET /access/settings | getAccessSettings (services/keycore/handler_access.go:157) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1213 |
-| keycore\|PUT\|/access/settings | PUT /access/settings | putAccessSettings (services/keycore/handler_access.go:166) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1224 |
-| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | listInterfacePolicies (services/keycore/handler_access.go:226) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1240 |
-| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | upsertInterfacePolicy (services/keycore/handler_access.go:235) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1251 |
-| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | deleteInterfacePolicy (services/keycore/handler_access.go:255) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1263 |
+| keycore\|GET\|/keys/{param}/access-policy | GET /keys/{id}/access-policy | getKeyAccessPolicy (services/keycore/handler_access.go:64) | GetKeyAccessPolicy | ListKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1189 |
+| keycore\|PUT\|/keys/{param}/access-policy | PUT /keys/{id}/access-policy | putKeyAccessPolicy (services/keycore/handler_access.go:76) | ReplaceKeyAccessPolicy | GetKeyAccessSettings, ReplaceKeyAccessGrants |  |  | web/dashboard/src/lib/keycore.ts:1202 |
+| keycore\|GET\|/access/groups | GET /access/groups | listAccessGroups (services/keycore/handler_access.go:101) | ListAccessGroups | ListAccessGroups |  |  | web/dashboard/src/lib/keycore.ts:1271 |
+| keycore\|POST\|/access/groups | POST /access/groups | createAccessGroup (services/keycore/handler_access.go:123) | CreateAccessGroup | CreateAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1282 |
+| keycore\|DELETE\|/access/groups/{param} | DELETE /access/groups/{id} | deleteAccessGroup (services/keycore/handler_access.go:141) | DeleteAccessGroup | DeleteAccessGroup |  |  | web/dashboard/src/lib/keycore.ts:1297 |
+| keycore\|PUT\|/access/groups/{param}/members | PUT /access/groups/{id}/members | setAccessGroupMembers (services/keycore/handler_access.go:149) | SetAccessGroupMembers | ReplaceAccessGroupMembers |  |  | web/dashboard/src/lib/keycore.ts:1309 |
+| keycore\|GET\|/access/users/{param}/groups | GET /access/users/{user_id}/groups | listUserAccessGroups (services/keycore/handler_access.go:113) |  | ListAccessGroupIDsForUser |  |  |  |
+| keycore\|GET\|/access/settings | GET /access/settings | getAccessSettings (services/keycore/handler_access.go:171) | GetKeyAccessSettings | GetKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1213 |
+| keycore\|PUT\|/access/settings | PUT /access/settings | putAccessSettings (services/keycore/handler_access.go:180) | GetKeyAccessSettings, UpdateKeyAccessSettings | GetKeyAccessSettings, UpsertKeyAccessSettings |  |  | web/dashboard/src/lib/keycore.ts:1224 |
+| keycore\|GET\|/access/interface-policies | GET /access/interface-policies | listInterfacePolicies (services/keycore/handler_access.go:240) | ListKeyInterfaceSubjectPolicies | ListKeyInterfaceSubjectPolicies |  |  | web/dashboard/src/lib/keycore.ts:1240 |
+| keycore\|POST\|/access/interface-policies | POST /access/interface-policies | upsertInterfacePolicy (services/keycore/handler_access.go:249) | UpsertKeyInterfaceSubjectPolicy | UpsertKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1251 |
+| keycore\|DELETE\|/access/interface-policies/{param} | DELETE /access/interface-policies/{id} | deleteInterfacePolicy (services/keycore/handler_access.go:269) | DeleteKeyInterfaceSubjectPolicy | DeleteKeyInterfaceSubjectPolicy |  |  | web/dashboard/src/lib/keycore.ts:1263 |
 | keycore\|GET\|/agility/posture | GET /agility/posture | getAgilityPosture (services/keycore/handler_agility.go:48) |  |  |  |  | web/dashboard/src/lib/cryptoAgility.ts:103 |
 | keycore\|GET\|/agility/algorithms | GET /agility/algorithms | getAlgorithmInventory (services/keycore/handler_agility.go:60) |  |  |  |  |  |
 | keycore\|GET\|/agility/keys-by-algorithm | GET /agility/keys-by-algorithm | getKeysByAlgorithm (services/keycore/handler_agility.go:68) |  | ListKeysByAlgorithm |  |  |  |
@@ -1303,36 +1306,38 @@ This file connects frontend requests to backend Go processing. It is static anal
 | sbom\|GET\|/cbom/diff | GET /cbom/diff | cbomDiff (services/sbom/handler.go:235) | DiffCBOM | GetCBOMSnapshotByID |  |  | web/dashboard/src/lib/sbom.ts:167 |
 | sbom\|GET\|/cbom/{param}/export | GET /cbom/{id}/export | cbomExport (services/sbom/handler.go:206) | ExportCBOM |  |  |  | web/dashboard/src/lib/sbom.ts:158 |
 | sbom\|GET\|/cbom/{param} | GET /cbom/{id} | cbomByID (services/sbom/handler.go:197) | GetCBOMByID | GetCBOMSnapshotByID |  |  |  |
-| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:207) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:110 |
-| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:235) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92 |
-| secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:265) |  |  |  |  |  |
-| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:273) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:294) | UpdateSecret | UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:149 |
-| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:332) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:157 |
-| secrets\|POST\|/secrets/{param}/restore | POST /secrets/{id}/restore | restoreSecret (services/secrets/handler.go:345) | RestoreSecret | RestoreSecret |  |  |  |
-| secrets\|POST\|/secrets/{param}/destroy | POST /secrets/{id}/destroy | destroySecret (services/secrets/handler.go:357) | DestroySecret | DestroySecret |  |  |  |
-| secrets\|POST\|/secrets/generate/ssh_key | POST /secrets/generate/ssh_key | generateSSHKey (services/secrets/handler.go:389) | GenerateSSHKey |  |  | pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM |  |
-| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:408) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:308 |
-| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:433) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:269 |
-| secrets\|DELETE\|/secrets/{param}/versions/{param} | DELETE /secrets/{id}/versions/{version} | destroyVersion (services/secrets/handler.go:371) | DestroyVersion | DestroyVersion |  |  |  |
-| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:447) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:277 |
-| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:465) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:287 |
-| secrets\|POST\|/secrets/{param}/rollback | POST /secrets/{id}/rollback | rollbackSecret (services/secrets/handler.go:492) | Rollback | GetSecretWithValue, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|GET\|/secrets/{param}/access | GET /secrets/{id}/access | secretAccess (services/secrets/handler.go:529) |  |  |  |  |  |
-| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:514) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:264 |
-| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:551) |  |  |  |  | web/dashboard/src/lib/secrets.ts:223, web/dashboard/src/lib/secrets.ts:228 |
-| secrets\|POST\|/secrets/access/rules | POST /secrets/access/rules | createAccessRule (services/secrets/handler.go:567) | CreateAccessRule | ListAccessRules, CreateAccessRule |  |  |  |
-| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:592) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:233 |
-| secrets\|GET\|/v1/sys/health | GET /v1/sys/health | vaultSysHealth (services/secrets/handler.go:606) |  |  |  |  |  |
-| secrets\|GET\|/v1/sys/seal-status | GET /v1/sys/seal-status | vaultSealStatus (services/secrets/handler.go:616) |  |  |  |  |  |
-| secrets\|POST\|/v1/auth/token/lookup-self | POST /v1/auth/token/lookup-self | vaultTokenLookupSelf (services/secrets/handler.go:627) |  |  |  | pkg/auth.ClaimsFromContext |  |
-| secrets\|GET\|/v1/{param}/data/{param} | GET /v1/{mount}/data/{path...} | vaultKVRead (services/secrets/handler.go:678) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|POST\|/v1/{param}/data/{param} | POST /v1/{mount}/data/{path...} | vaultKVWrite (services/secrets/handler.go:712) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|DELETE\|/v1/{param}/data/{param} | DELETE /v1/{mount}/data/{path...} | vaultKVDelete (services/secrets/handler.go:785) | DeleteSecret | SoftDeleteSecret |  |  |  |
-| secrets\|GET\|/v1/{param}/metadata/{param} | GET /v1/{mount}/metadata/{path...} | vaultKV2Metadata (services/secrets/handler.go:798) |  |  |  |  |  |
-| secrets\|GET\|/v1/{param}/{param} | GET /v1/{mount}/{path...} | vaultKVRead (services/secrets/handler.go:678) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
-| secrets\|POST\|/v1/{param}/{param} | POST /v1/{mount}/{path...} | vaultKVWrite (services/secrets/handler.go:712) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, UpdateSecret |  | pkg/crypto.Zeroize |  |
-| secrets\|DELETE\|/v1/{param}/{param} | DELETE /v1/{mount}/{path...} | vaultKVDelete (services/secrets/handler.go:785) | DeleteSecret | SoftDeleteSecret |  |  |  |
+| secrets\|POST\|/secrets | POST /secrets | createSecret (services/secrets/handler.go:249) | GetSecretByName, CreateSecret | GetSecretByName, CreateSecret, GetSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:110 |
+| secrets\|GET\|/secrets | GET /secrets | listSecrets (services/secrets/handler.go:277) | ListVisible | ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:92 |
+| secrets\|GET\|/secrets/{param} | GET /secrets/{id} | getSecret (services/secrets/handler.go:307) |  |  |  |  |  |
+| secrets\|GET\|/secrets/{param}/value | GET /secrets/{id}/value | getSecretValue (services/secrets/handler.go:315) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|PUT\|/secrets/{param} | PUT /secrets/{id} | updateSecret (services/secrets/handler.go:336) | UpdateSecret | GetSettings, UpdateSecret |  | pkg/crypto.Zeroize | web/dashboard/src/lib/secrets.ts:149 |
+| secrets\|DELETE\|/secrets/{param} | DELETE /secrets/{id} | deleteSecret (services/secrets/handler.go:375) | DeleteSecret | SoftDeleteSecret |  |  | web/dashboard/src/lib/secrets.ts:157 |
+| secrets\|POST\|/secrets/{param}/restore | POST /secrets/{id}/restore | restoreSecret (services/secrets/handler.go:388) | RestoreSecret | RestoreSecret |  |  |  |
+| secrets\|POST\|/secrets/{param}/destroy | POST /secrets/{id}/destroy | destroySecret (services/secrets/handler.go:400) | DestroySecret | DestroySecret |  |  |  |
+| secrets\|POST\|/secrets/generate/ssh_key | POST /secrets/generate/ssh_key | generateSSHKey (services/secrets/handler.go:432) | GenerateSSHKey |  |  | pkg/crypto.GenerateKeyPair, pkg/crypto.MarshalPrivateKeyPEM |  |
+| secrets\|POST\|/secrets/generate/keypair | POST /secrets/generate/keypair | generateKeyPair (services/secrets/handler.go:451) | GenerateKeyPair |  |  |  | web/dashboard/src/lib/secrets.ts:328 |
+| secrets\|GET\|/secrets/{param}/versions | GET /secrets/{id}/versions | listVersions (services/secrets/handler.go:476) | ListVersions | ListVersions |  |  | web/dashboard/src/lib/secrets.ts:289 |
+| secrets\|DELETE\|/secrets/{param}/versions/{param} | DELETE /secrets/{id}/versions/{version} | destroyVersion (services/secrets/handler.go:414) | DestroyVersion | DestroyVersion |  |  |  |
+| secrets\|GET\|/secrets/{param}/audit | GET /secrets/{id}/audit | secretAuditLog (services/secrets/handler.go:490) | GetSecret, GetSecretAuditLog | GetSecret, GetSecretAuditLog |  |  | web/dashboard/src/lib/secrets.ts:297 |
+| secrets\|POST\|/secrets/{param}/rotate | POST /secrets/{id}/rotate | rotateSecret (services/secrets/handler.go:508) | RotateSecret |  |  |  | web/dashboard/src/lib/secrets.ts:307 |
+| secrets\|POST\|/secrets/{param}/rollback | POST /secrets/{id}/rollback | rollbackSecret (services/secrets/handler.go:536) | Rollback | GetSecretWithValue, GetSettings, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|GET\|/secrets/{param}/access | GET /secrets/{id}/access | secretAccess (services/secrets/handler.go:581) |  |  |  |  |  |
+| secrets\|GET\|/secrets/stats | GET /secrets/stats | stats (services/secrets/handler.go:566) | GetStats | VersionCounts, ListSecrets |  |  | web/dashboard/src/lib/secrets.ts:284 |
+| secrets\|GET\|/secrets/settings | GET /secrets/settings | getSettings (services/secrets/handler.go:613) | Settings | GetSettings |  |  | web/dashboard/src/lib/secrets.ts:216 |
+| secrets\|PUT\|/secrets/settings | PUT /secrets/settings | putSettings (services/secrets/handler.go:622) | Settings, PutSettings | GetSettings, PutSettings |  |  | web/dashboard/src/lib/secrets.ts:221 |
+| secrets\|GET\|/secrets/access/rules | GET /secrets/access/rules | listAccessRules (services/secrets/handler.go:603) | AccessRules | ListAccessRules |  |  | web/dashboard/src/lib/secrets.ts:243, web/dashboard/src/lib/secrets.ts:248 |
+| secrets\|POST\|/secrets/access/rules | POST /secrets/access/rules | createAccessRule (services/secrets/handler.go:659) | CreateAccessRule | ListAccessRules, CreateAccessRule |  |  |  |
+| secrets\|DELETE\|/secrets/access/rules/{param} | DELETE /secrets/access/rules/{rule_id} | deleteAccessRule (services/secrets/handler.go:684) | DeleteAccessRule | DeleteAccessRule |  |  | web/dashboard/src/lib/secrets.ts:253 |
+| secrets\|GET\|/v1/sys/health | GET /v1/sys/health | vaultSysHealth (services/secrets/handler.go:698) |  |  |  |  |  |
+| secrets\|GET\|/v1/sys/seal-status | GET /v1/sys/seal-status | vaultSealStatus (services/secrets/handler.go:708) |  |  |  |  |  |
+| secrets\|POST\|/v1/auth/token/lookup-self | POST /v1/auth/token/lookup-self | vaultTokenLookupSelf (services/secrets/handler.go:719) |  |  |  | pkg/auth.ClaimsFromContext |  |
+| secrets\|GET\|/v1/{param}/data/{param} | GET /v1/{mount}/data/{path...} | vaultKVRead (services/secrets/handler.go:780) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/data/{param} | POST /v1/{mount}/data/{path...} | vaultKVWrite (services/secrets/handler.go:814) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, GetSettings, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/data/{param} | DELETE /v1/{mount}/data/{path...} | vaultKVDelete (services/secrets/handler.go:888) | DeleteSecret | SoftDeleteSecret |  |  |  |
+| secrets\|GET\|/v1/{param}/metadata/{param} | GET /v1/{mount}/metadata/{path...} | vaultKV2Metadata (services/secrets/handler.go:901) |  |  |  |  |  |
+| secrets\|GET\|/v1/{param}/{param} | GET /v1/{mount}/{path...} | vaultKVRead (services/secrets/handler.go:780) | GetSecretValue | GetSecretWithValue |  | pkg/crypto.Zeroize |  |
+| secrets\|POST\|/v1/{param}/{param} | POST /v1/{mount}/{path...} | vaultKVWrite (services/secrets/handler.go:814) | GetSecretByName, CreateSecret, RestoreSecret, UpdateSecret | GetSecretByName, CreateSecret, GetSecret, RestoreSecret, GetSettings, UpdateSecret |  | pkg/crypto.Zeroize |  |
+| secrets\|DELETE\|/v1/{param}/{param} | DELETE /v1/{mount}/{path...} | vaultKVDelete (services/secrets/handler.go:888) | DeleteSecret | SoftDeleteSecret |  |  |  |
 | signing\|GET\|/signing/settings | GET /signing/settings | handleGetSettings (services/signing/handler.go:88) | GetSettings |  |  |  | web/dashboard/src/lib/signing.ts:84 |
 | signing\|PUT\|/signing/settings | PUT /signing/settings | handlePutSettings (services/signing/handler.go:99) | UpdateSettings | UpsertSettings |  |  | web/dashboard/src/lib/signing.ts:89 |
 | signing\|GET\|/signing/summary | GET /signing/summary | handleGetSummary (services/signing/handler.go:115) | GetSummary | ListProfiles, ListRecords |  |  | web/dashboard/src/lib/signing.ts:97 |

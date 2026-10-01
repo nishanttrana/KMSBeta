@@ -8,7 +8,7 @@ import {
 import { B, Btn, Modal, Sel, Txt } from "../../legacyPrimitives";
 import { errMsg } from "../../runtimeUtils";
 import { C } from "../../theme";
-import { RuleRow } from "./Access";
+import { RuleRow, type GroupNames } from "./Access";
 import { TypeBadge } from "./Charts";
 import { defaultFormatForType, expiryBucket, fmtDate, ttlLabel } from "./meta";
 
@@ -20,6 +20,7 @@ const changeColor = (action: string) =>
 type Props = {
   session: AuthSession;
   secret: SecretItem | null;
+  groups?: GroupNames | undefined;
   now: number;
   confirm: (opts: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
@@ -33,7 +34,7 @@ type Props = {
 // The secret's detail view, mounted per secret (key = its ID). Metadata,
 // access, versions and history load on open; a value is read only when asked
 // for, since every read is audited.
-export function SecretDetail({ session, secret, now, confirm, onClose, onChanged, onRotate, onDelete, onDownload, onToast }: Props) {
+export function SecretDetail({ session, secret, groups, now, confirm, onClose, onChanged, onRotate, onDelete, onDownload, onToast }: Props) {
   const [format, setFormat] = useState(() => (secret ? defaultFormatForType(secret) : "raw"));
   const [shown, setShown] = useState<SecretValueResponse | null>(null);
   const [visible, setVisible] = useState(false);
@@ -124,10 +125,10 @@ export function SecretDetail({ session, secret, now, confirm, onClose, onChanged
       {access && <div style={section}>
         <div style={{ ...head, flexWrap: "wrap" }}>
           <UserCheck size={13} /> Access
-          <span style={{ fontWeight: 400, color: C.muted, marginRight: "auto" }}>{access.rules.length ? `${access.rules.length} rule${access.rules.length === 1 ? "" : "s"} on this path` : "no rule: open to the secrets permission"}</span>
+          <span style={{ fontWeight: 400, color: C.muted, marginRight: "auto" }}>{access.rules.length ? `${access.rules.length} rule${access.rules.length === 1 ? "" : "s"} on this path` : access.default_deny ? "no rule: denied by default" : "no rule: open to the secrets permission"}</span>
           {ACCESS_CAPABILITIES.map((c) => <B key={c} c={can(c) ? "green" : "red"}>{can(c) ? c : `no ${c}`}</B>)}
         </div>
-        {access.rules.map((r) => <RuleRow key={r.id} rule={r} />)}
+        {access.rules.map((r) => <RuleRow key={r.id} rule={r} groups={groups} />)}
       </div>}
 
       {/* ── Value: read on request ── */}

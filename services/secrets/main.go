@@ -53,7 +53,11 @@ func main() {
 	go keyring.Watch(rt.Ctx, 15*time.Minute)
 
 	svc := NewService(NewSQLStore(rt.DB), keyring.Current())
-	if err := rt.Serve(NewHandler(svc, audit, rt.Logger, keyring)); err != nil {
+	h := NewHandler(svc, audit, rt.Logger, keyring)
+	// Group subjects in access rules are keycore's access groups.
+	h.groups = newKeycoreGroups(envOr("KEYCORE_URL", "https://keycore:8010"))
+	go h.runRetention(rt.Ctx, time.Hour)
+	if err := rt.Serve(h); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}
 }
