@@ -49,6 +49,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
 	{Type: "secret_exposed", Label: "Exposed secret discovered (code or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
 	{Type: "secret_access_rule_changed", Label: "Secret access rule or vault setting changed", Group: "Access", Subjects: []string{"audit.secrets.access_rule_created", "audit.secrets.access_rule_deleted", "audit.secrets.settings_updated", "audit.secrets.version_cap_set", "audit.secrets.version_cap_deleted"}, SuccessOnly: true},
+	{Type: "secret_access_rule_stale", Label: "Secret access rule names a subject that no longer exists", Group: "Access", Subjects: []string{"audit.secrets.access_rule_subject_missing"}},
 	{Type: "secret_destroyed", Label: "Secret destroyed", Group: "Access", Subjects: []string{"audit.secrets.destroyed", "audit.secrets.retention_purged"}, SuccessOnly: true},
 	{Type: "key_created", Label: "Key created", Group: "Key lifecycle", Subjects: []string{"audit.key.create"}, SuccessOnly: true},
 	{Type: "key_rotated", Label: "Key rotated", Group: "Key lifecycle", Subjects: []string{"audit.key.rotate"}, SuccessOnly: true},

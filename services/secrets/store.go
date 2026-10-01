@@ -47,6 +47,9 @@ type Store interface {
 	GetSettings(ctx context.Context, tenantID string) (VaultSettings, error)
 	PutSettings(ctx context.Context, settings VaultSettings) error
 	RetentionTenants(ctx context.Context) ([]VaultSettings, error)
+	PruneVersions(ctx context.Context, tenantID string, secretID string, keep int, actor string) (int, error)
+	RuleTenants(ctx context.Context) ([]string, error)
+	SetSubjectMissing(ctx context.Context, tenantID string, ruleID string, missing bool) error
 	ListVersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error)
 	PutVersionCap(ctx context.Context, c VersionCap) error
 	DeleteVersionCap(ctx context.Context, tenantID string, capID string) (VersionCap, error)
@@ -549,6 +552,60 @@ func (s *SQLStore) RetentionTenants(ctx context.Context) ([]VaultSettings, error
 	return out, rows.Err()
 }
 
+// PruneVersions removes the versions of a secret older than its newest keep
+// and returns how many went. The current version always stays.
+func (s *SQLStore) PruneVersions(ctx context.Context, tenantID string, secretID string, keep int, actor string) (int, error) {
+	if keep <= 0 {
+		return 0, nil
+	}
+	tx, err := s.begin(ctx, tenantID)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	res, err := tx.ExecContext(ctx, `
+DELETE FROM secret_values WHERE tenant_id = $1 AND secret_id = $2
+  AND version <= (SELECT current_version FROM secrets WHERE tenant_id = $1 AND id = $2) - $3
+`, tenantID, secretID, keep)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return 0, nil
+	}
+	logChange(ctx, tx, tenantID, secretID, "versions_pruned", actor, fmt.Sprintf("%d version(s) removed by the cap of %d", n, keep))
+	return int(n), tx.Commit()
+}
+
+// RuleTenants lists the tenants that have access rules.
+func (s *SQLStore) RuleTenants(ctx context.Context) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT DISTINCT tenant_id FROM secret_access_rules`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []string
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// SetSubjectMissing records that a rule's subject was found gone, or back.
+func (s *SQLStore) SetSubjectMissing(ctx context.Context, tenantID string, ruleID string, missing bool) error {
+	stamp := "NULL"
+	if missing {
+		stamp = "CURRENT_TIMESTAMP"
+	}
+	_, err := s.db.SQL().ExecContext(ctx, `UPDATE secret_access_rules SET subject_missing_since = `+stamp+` WHERE tenant_id = $1 AND id = $2`, tenantID, ruleID)
+	return err
+}
+
 func (s *SQLStore) ListVersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `SELECT id, tenant_id, path, max_versions, updated_by, updated_at FROM secret_version_caps WHERE tenant_id = $1 ORDER BY path`, tenantID)
 	if err != nil {
@@ -601,7 +658,7 @@ func (s *SQLStore) DeleteVersionCap(ctx context.Context, tenantID string, capID 
 
 func (s *SQLStore) ListAccessRules(ctx context.Context, tenantID string) ([]AccessRule, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, path, subject_type, subject_id, capabilities, effect, created_by, created_at
+SELECT id, tenant_id, path, subject_type, subject_id, capabilities, effect, created_by, created_at, subject_missing_since
 FROM secret_access_rules WHERE tenant_id = $1 ORDER BY path, created_at, id
 `, tenantID)
 	if err != nil {
@@ -612,8 +669,13 @@ FROM secret_access_rules WHERE tenant_id = $1 ORDER BY path, created_at, id
 	for rows.Next() {
 		var r AccessRule
 		var caps string
-		if err := rows.Scan(&r.ID, &r.TenantID, &r.Path, &r.SubjectType, &r.SubjectID, &caps, &r.Effect, &r.CreatedBy, &r.CreatedAt); err != nil {
+		var since sql.NullTime
+		if err := rows.Scan(&r.ID, &r.TenantID, &r.Path, &r.SubjectType, &r.SubjectID, &caps, &r.Effect, &r.CreatedBy, &r.CreatedAt, &since); err != nil {
 			return nil, err
+		}
+		if since.Valid {
+			ts := since.Time.UTC()
+			r.SubjectMissingSince = &ts
 		}
 		r.Capabilities = strings.Split(caps, ",")
 		out = append(out, r)

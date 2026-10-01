@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -99,6 +100,7 @@ func (h *Handler) routes() {
 	r.Handle("DELETE /secrets/version-caps/{cap_id}", warn(route.Spec{Action: "version_cap_deleted", Permission: permAccessManage, Resource: "secret_version_cap", TargetParam: "cap_id"}), h.deleteVersionCap)
 	r.Handle("GET /secrets/access/rules", route.Spec{Action: "access_rules_listed", Permission: permAccessRead, Resource: "secret_access_rule"}, h.listAccessRules)
 	r.Handle("POST /secrets/access/rules", warn(route.Spec{Action: "access_rule_created", Permission: permAccessManage, Resource: "secret_access_rule"}), h.createAccessRule)
+	r.Handle("GET /secrets/access/rules/{rule_id}/impact", route.Spec{Action: "access_rule_impact_read", Permission: permAccessRead, Resource: "secret_access_rule", TargetParam: "rule_id"}, h.accessRuleImpact)
 	r.Handle("DELETE /secrets/access/rules/{rule_id}", warn(route.Spec{Action: "access_rule_deleted", Permission: permAccessManage, Resource: "secret_access_rule", TargetParam: "rule_id"}), h.deleteAccessRule)
 
 	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset). The
@@ -663,6 +665,9 @@ func (h *Handler) putSettings(c *route.Call) {
 	c.Detail("max_versions", settings.MaxVersions)
 	c.Detail("deleted_retention_days", settings.DeletedRetentionDays)
 	c.Detail("previous", map[string]interface{}{"default_deny": before.DefaultDeny, "max_versions": before.MaxVersions, "deleted_retention_days": before.DeletedRetentionDays})
+	if !h.applyCaps(c) {
+		return
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{"settings": settings})
 }
 
@@ -721,6 +726,9 @@ func (h *Handler) putVersionCap(c *route.Call) {
 		return
 	}
 	c.Target(out.ID)
+	if !h.applyCaps(c) {
+		return
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{"cap": out})
 }
 
@@ -732,7 +740,69 @@ func (h *Handler) deleteVersionCap(c *route.Call) {
 	}
 	c.Detail("path", out.Path)
 	c.Detail("max_versions", out.MaxVersions)
+	if !h.applyCaps(c) {
+		return
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
+}
+
+// applyCaps prunes the tenant's secrets to the caps in force after a cap or
+// setting change, and records what went. The change itself is already
+// stored; a failed prune is reported as such.
+func (h *Handler) applyCaps(c *route.Call) bool {
+	secrets, versions, err := h.svc.ApplyVersionCaps(c.R.Context(), c.Tenant, c.Actor())
+	c.Detail("secrets_pruned", secrets)
+	c.Detail("versions_pruned", versions)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "prune_failed", "the change is saved, but pruning to the new cap did not finish: "+err.Error())
+		return false
+	}
+	return true
+}
+
+// ruleImpact says what deleting a rule would open: the capabilities left
+// with no allow rule over its path, and how many existing secrets that
+// touches.
+func (h *Handler) ruleImpact(c *route.Call) (AccessRule, []string, int, bool) {
+	rules, err := h.svc.AccessRules(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
+		return AccessRule{}, nil, 0, false
+	}
+	settings, err := h.svc.Settings(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "settings_unavailable", err.Error())
+		return AccessRule{}, nil, 0, false
+	}
+	for _, r := range rules {
+		if r.ID != c.R.PathValue("rule_id") {
+			continue
+		}
+		opened := reopens(rules, settings.DefaultDeny, r)
+		affected := 0
+		if len(opened) > 0 {
+			stats, err := h.svc.GetStats(c.R.Context(), c.Tenant, func(s Secret) bool { return r.covers(s.Path) })
+			if err != nil {
+				c.Error(http.StatusInternalServerError, "stats_failed", err.Error())
+				return AccessRule{}, nil, 0, false
+			}
+			affected = stats.TotalSecrets
+		}
+		return r, opened, affected, true
+	}
+	fail(c, errNotFound, http.StatusNotFound, "not_found")
+	return AccessRule{}, nil, 0, false
+}
+
+func (h *Handler) accessRuleImpact(c *route.Call) {
+	_, opened, affected, ok := h.ruleImpact(c)
+	if !ok {
+		return
+	}
+	if opened == nil {
+		opened = []string{}
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"reopens": opened, "secrets_opened": affected})
 }
 
 func ruleDetails(c *route.Call, r AccessRule) {
@@ -790,7 +860,24 @@ func (h *Handler) createAccessRule(c *route.Call) {
 	c.JSON(http.StatusCreated, map[string]interface{}{"rule": rule})
 }
 
+// deleteAccessRule removes a rule. If that would leave a capability on its
+// path with no allow rule, opening it to everyone with the route permission,
+// the caller must say so (confirm_reopens=true): a path is never reopened as
+// a side effect.
 func (h *Handler) deleteAccessRule(c *route.Call) {
+	target, opened, affected, ok := h.ruleImpact(c)
+	if !ok {
+		return
+	}
+	if len(opened) > 0 {
+		c.Detail("reopens", strings.Join(opened, ","))
+		c.Detail("secrets_opened", affected)
+		if c.R.URL.Query().Get("confirm_reopens") != "true" {
+			ruleDetails(c, target)
+			c.Refuse(http.StatusConflict, "would_reopen_path", fmt.Sprintf("this is the last allow rule for %s on %s: deleting it opens %d secret(s) there to everyone with the secrets permission; repeat with confirm_reopens=true", strings.Join(opened, ", "), target.Path, affected))
+			return
+		}
+	}
 	rule, err := h.svc.DeleteAccessRule(c.R.Context(), c.Tenant, c.R.PathValue("rule_id"))
 	if err != nil {
 		fail(c, err, http.StatusInternalServerError, "delete_failed")

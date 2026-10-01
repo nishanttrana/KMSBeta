@@ -4,6 +4,34 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.32.0-beta] — 2026-10-01
+
+### Secrets: a lowered cap holds at once; a rule cannot reopen a path silently
+- **Changed: a version cap takes effect immediately.** Changing the
+  tenant's cap, or setting or removing a cap on a path, prunes every secret
+  (deleted ones included) to the cap that now applies, in that request. The
+  event carries `secrets_pruned` and `versions_pruned`, and each secret's
+  change history records it. The current version is never removed. The
+  dashboard asks before a change that removes versions.
+- **Changed: deleting the last allow rule over a path needs confirmation.**
+  It would open that path to everyone with the secrets permission, so the
+  service refuses it (`409 would_reopen_path`, naming the capabilities and
+  how many secrets open) unless the request says `confirm_reopens=true`.
+  `GET /secrets/access/rules/{id}/impact` reports the same before deleting.
+  A deny rule, a rule another allow rule still covers, and any rule under
+  deny by default delete as before.
+- **Added: stale rule subjects are raised, not left to be noticed.** An
+  hourly check on the primary looks up every rule's subject. The first time
+  one is found gone the rule is stamped (`subject_missing_since`) and
+  `audit.secrets.access_rule_subject_missing` is emitted, a new Playbooks
+  trigger (`secret_access_rule_stale`). The stamp clears if the subject
+  returns; an owner that cannot be asked changes nothing.
+- **Not done, on purpose:** a stale rule is never removed or disabled
+  automatically. A role with no current holders reads as gone, and removing
+  its rule would change who is allowed or denied the moment the role is
+  used again. The rule keeps restricting; a person removes it, seeing what
+  that opens.
+
 ## [7.31.0-beta] — 2026-10-01
 
 ### Secrets: version caps by path, and rule subjects that must exist

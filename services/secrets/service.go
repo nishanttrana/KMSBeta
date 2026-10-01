@@ -542,6 +542,44 @@ func (s *Service) VersionCapFor(ctx context.Context, tenantID, path string) (int
 	return maxVersions, from, nil
 }
 
+// ApplyVersionCaps prunes every secret of the tenant, deleted ones included,
+// to the cap that applies to it now. It runs when a cap or the tenant's
+// setting changes, so a lowered cap holds at once and not at each secret's
+// next write. It returns how many secrets and versions it pruned.
+func (s *Service) ApplyVersionCaps(ctx context.Context, tenantID, actor string) (int, int, error) {
+	settings, err := s.store.GetSettings(ctx, tenantID)
+	if err != nil {
+		return 0, 0, err
+	}
+	caps, err := s.store.ListVersionCaps(ctx, tenantID)
+	if err != nil {
+		return 0, 0, err
+	}
+	secrets, versions := 0, 0
+	for _, status := range []string{SecretStatusActive, SecretStatusDeleted} {
+		for from := 0; ; from += 500 {
+			items, err := s.store.ListSecrets(ctx, tenantID, "", status, 500, from)
+			if err != nil {
+				return secrets, versions, err
+			}
+			for _, item := range items {
+				keep, _ := capFor(caps, settings.MaxVersions, item.Path)
+				n, err := s.store.PruneVersions(ctx, tenantID, item.ID, keep, actorOrSystem(actor))
+				if err != nil {
+					return secrets, versions, err
+				}
+				if n > 0 {
+					secrets, versions = secrets+1, versions+n
+				}
+			}
+			if len(items) < 500 {
+				break
+			}
+		}
+	}
+	return secrets, versions, nil
+}
+
 func (s *Service) VersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error) {
 	return s.store.ListVersionCaps(ctx, strings.TrimSpace(tenantID))
 }

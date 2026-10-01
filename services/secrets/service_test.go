@@ -82,6 +82,7 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			effect TEXT NOT NULL DEFAULT 'allow',
 			created_by TEXT NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			subject_missing_since TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE secret_vault_settings (

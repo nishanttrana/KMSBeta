@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T16:33:31Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T16:41:15Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -633,12 +633,12 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 180 | - | button | void remove(t)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 211 | - | Btn | }>Upload files instead |  |
 | web/dashboard/src/components/v3/tabs/vault/Access.tsx | 40 | - | button | Delete rule | onDelete} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 106 | - | Btn | void save()}> |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 135 | - | Btn | void act("Version cap set.", async () => )}> Set cap |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 142 | - | button | void act("Version cap removed.", () => deleteVersionCap(session, c.id))} styl... |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 194 | - | Btn | setOpen(true)}> Add rule |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 234 | - | Btn | setOpen(false)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 235 | - | Btn | void save()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 110 | - | Btn | void save()}> |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 146 | - | Btn | void setCap()}> Set cap |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 153 | - | button | void act("Version cap removed.", () => deleteVersionCap(session, c.id))} styl... |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 215 | - | Btn | setOpen(true)}> Add rule |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 255 | - | Btn | setOpen(false)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/vault/Access.tsx | 256 | - | Btn | void save()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 142 | - | Btn | setVisible((v) => !v)}>{visible ? <> Hide : <> Show } |  |
 | web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 143 | - | Btn | void reveal()} disabled= title= >{busy ? "Reading..." : <> Reveal } |  |
 | web/dashboard/src/components/v3/tabs/vault/Detail.tsx | 144 | - | Btn | void navigator.clipboard.writeText(shown.value).then(() => onToast?.("Copied... |  |

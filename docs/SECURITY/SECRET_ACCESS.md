@@ -86,7 +86,7 @@ new and previous values; Playbooks trigger `secret_access_rule_changed`).
 | Setting | Effect |
 |---|---|
 | `default_deny` | a path no allow rule covers is refused for every capability. Uncovered secrets disappear from every caller's lists and counts until a rule covers them; rules can still be managed |
-| `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Lowering the cap prunes at each secret's next write, not at once |
+| `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Changing the cap prunes every secret at once |
 | `deleted_retention_days` (0 to 3650, 0: keep) | a deleted secret is destroyed this many days after its delete. The sweep runs hourly, on the primary only (a member never writes the replicated tables), and emits `audit.secrets.retention_purged` per secret (actor `system:retention`, with `deleted_by`, `deleted_at`, `retention_days`), or the same event with `result: failure` |
 
 ## Version caps by path
@@ -97,7 +97,10 @@ new and previous values; Playbooks trigger `secret_access_rule_changed`).
 `version_cap_set` / `version_cap_deleted` at warning). A cap's path has a
 rule's form. For a secret, the cap that applies is the one on its own path,
 else the one on the nearest folder above it, else the tenant's
-`max_versions`. 0 on a path keeps every version there.
+`max_versions`. 0 on a path keeps every version there. A change to a cap or
+to the tenant's `max_versions` prunes every secret, deleted ones included,
+to the cap that now applies, in the same request (`secrets_pruned`,
+`versions_pruned` in the event); the current version always stays.
 `GET /secrets/{id}/access` returns `max_versions` and `max_versions_from`.
 
 ## Subjects must exist
@@ -114,9 +117,28 @@ the secrets service's token (`directory.go`):
 Missing: `400 unknown_subject`. Owner unreachable: `503
 subject_check_unavailable`; the rule is not stored. Both are audited as
 refusals of `access_rule_created`. When rules are listed, each carries
-`subject_status` (`found`, `missing`, `unchecked`) and `subject_label`; a
-rule whose subject has gone is flagged, not removed, and the list event
-carries `subjects_missing`.
+`subject_status` (`found`, `missing`, `unchecked`) and `subject_label`, and
+the list event carries `subjects_missing`.
+
+**Subjects that disappear.** Hourly, on the primary only, every rule's
+subject is looked up (`checkRuleSubjects`). The first time one is found gone
+the rule gets `subject_missing_since` and
+`audit.secrets.access_rule_subject_missing` is emitted (actor
+`system:rule-check`; Playbooks trigger `secret_access_rule_stale`). The
+stamp clears if the subject returns. An owner that cannot be asked changes
+nothing. A stale rule is never removed or disabled automatically: it keeps
+restricting its path, and a role with no holders would otherwise lose its
+deny before its next holder arrives.
+
+## Deleting a rule
+
+Deleting the last allow rule for a capability over a path opens that path to
+everyone with the route permission. `GET /secrets/access/rules/{id}/impact`
+returns `reopens` (those capabilities) and `secrets_opened`. `DELETE` with a
+non-empty `reopens` is refused with `409 would_reopen_path` unless the
+request carries `confirm_reopens=true`; the event records `reopens` and
+`secrets_opened` either way. Nothing reopens for a deny rule, for a rule
+another allow rule's path still covers, or under deny by default.
 
 ## Vault mounts
 
@@ -144,5 +166,7 @@ A recoverable delete keeps the material, so an exposure-register entry
 ## Open
 
 - Group membership is cached for 30 seconds per user.
-- A rule whose subject disappears is flagged, not removed or disabled.
-- Lowering a version cap prunes at each secret's next write, not at once.
+- The stale-subject check runs hourly, so a rule can name a deleted subject
+  for up to an hour before it is raised (the list shows it live).
+- Pruning to a new cap runs inside the request; a tenant with very many
+  secrets waits for it.

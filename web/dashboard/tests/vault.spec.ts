@@ -56,6 +56,7 @@ async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<
     if (p.endsWith("/keycore/access/groups")) return route.fulfill(json({ items: GROUPS }));
     if (p.endsWith("/secrets/settings") && req.method() === "PUT") return route.fulfill(json({ settings: { ...SETTINGS, ...req.postDataJSON() } }));
     if (p.endsWith("/secrets/settings")) return route.fulfill(opts.settingsDown ? down : json({ settings: SETTINGS }));
+    if (p.endsWith("/impact")) return route.fulfill(json(p.includes("sar_1") ? { reopens: ["value", "write", "delete"], secrets_opened: 2 } : { reopens: [], secrets_opened: 0 }));
     if (p.endsWith("/secrets/access/rules") && req.method() === "POST") return route.fulfill(json({ rule: { ...RULES[0], id: "sar_new" } }, 201));
     if (p.endsWith("/secrets/access/rules")) return route.fulfill(opts.rulesDown ? down : json({ items: RULES }));
     if (p.endsWith("/access")) return route.fulfill(json({ path: "/stripe-live", rules: p.includes("sec_3") ? RULES.slice(0, 3) : [], max_versions: 3, max_versions_from: "/logs/*", caller: { read: true, value: !opts.noValue, write: true, delete: true } }));
@@ -166,7 +167,9 @@ test("a failed list shows the error instead of an empty vault", async ({ page })
 
 test("access rules: the restricted tile lists its secrets, and a rule is added and deleted", async ({ page }) => {
   const writes: Write[] = [];
-  await stub(page, {}, writes);
+  const urls: string[] = [];
+  page.on("request", (r) => { if (r.method() === "DELETE") urls.push(r.url()); });
+  const calls = await stub(page, {}, writes);
   await open(page);
   await expect(tile(page, "Access-restricted").locator(".vk-num")).toHaveText("2");
   await tile(page, "Access-restricted").click();
@@ -194,9 +197,19 @@ test("access rules: the restricted tile lists its secrets, and a rule is added a
     tenant_id: "root", path: "/payments/*", subject_type: "role", subject_id: "payments-ops", capabilities: ["read", "value", "write"], effect: "allow",
   });
 
+  // A rule whose removal opens nothing deletes with a plain confirmation.
   await page.getByTitle("Delete rule").nth(1).click();
+  await expect(page.getByText("No path is opened by this.")).toBeVisible();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect.poll(() => writes.some((w) => w.call === "DELETE /secrets/access/rules/sar_2")).toBe(true);
+  await expect.poll(() => calls.some((c) => c === "DELETE /secrets/access/rules/sar_2")).toBe(true);
+  // The last allow rule: the dialog says what opens, and only then is the
+  // delete sent, with the confirmation the service requires.
+  await page.getByTitle("Delete rule").first().click();
+  await expect(page.getByText(/last allow rule for value, write, delete on \/finance\/\*.*opens 2 secrets/)).toBeVisible();
+  expect(urls.some((u) => u.includes("sar_1") && u.includes("confirm_reopens"))).toBe(false);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-reopen.png` });
+  await page.getByRole("button", { name: "Delete and open" }).click();
+  await expect.poll(() => urls.some((u) => u.includes("/access/rules/sar_1?") && u.includes("confirm_reopens=true"))).toBe(true);
 });
 
 test("failed access rules read unavailable, not 'no rules'", async ({ page }) => {
@@ -273,6 +286,10 @@ test("vault settings: deny by default asks first and names the secrets it would 
   expect(writes.filter((w) => w.call === "PUT /secrets/settings")).toHaveLength(0); // nothing sent before the confirmation
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-default-deny.png` });
   await page.getByRole("button", { name: "Deny by default" }).click();
+  // Lowering the cap removes versions at once, so that is confirmed too.
+  await expect(page.getByText(/Versions beyond the newest 10 of every secret.*removed now/)).toBeVisible();
+  expect(writes.filter((w) => w.call === "PUT /secrets/settings")).toHaveLength(0);
+  await page.getByRole("button", { name: "Remove older versions" }).click();
   await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/settings")?.body).toEqual({ tenant_id: "root", default_deny: true, max_versions: 10, deleted_retention_days: 30 });
 });
 
@@ -327,6 +344,9 @@ test("version caps by path are listed, set and removed, and a secret shows the c
   await page.getByLabel("Version cap path").fill("/db/*");
   await page.getByLabel("Versions kept on this path").fill("10");
   await page.getByRole("button", { name: "Set cap" }).click();
+  await expect(page.getByText(/Versions beyond the newest 10 under \/db\/\* are removed now/)).toBeVisible();
+  expect(writes.filter((w) => w.call === "PUT /secrets/version-caps")).toHaveLength(0);
+  await page.getByRole("button", { name: "Set cap" }).last().click();
   await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/version-caps")?.body).toEqual({ tenant_id: "root", path: "/db/*", max_versions: 10 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-caps.png`, fullPage: true });
   await page.getByTitle("Remove cap").first().click();

@@ -259,7 +259,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
     {!loadError && view === "Access rules" && <VaultSettingsCard session={session} settings={settings} error={sideError.settings} uncovered={settings?.default_deny ? null : secrets.filter((s) => !s.restricted).length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
-    {!loadError && view === "Access rules" && <VersionCaps session={session} caps={caps} error={sideError.caps} onChanged={() => void loadAll()} onToast={onToast} />}
+    {!loadError && view === "Access rules" && <VersionCaps session={session} caps={caps} error={sideError.caps} confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
     {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} groups={groups} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
 

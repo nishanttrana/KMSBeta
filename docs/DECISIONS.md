@@ -7,6 +7,32 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secrets: stale rules are raised and removed by a person; caps apply at once (7.32.0-beta)
+
+**Decision.** A rule whose subject has gone is stamped and raised by an
+hourly check (audit event, Playbooks trigger), never removed or disabled by
+the system. Deleting any rule that is the last allow rule over its path is
+refused unless the request confirms the reopening. A cap change prunes every
+secret in the request that makes it.
+
+**Why.** Under "allow restricts", removing a rule can only widen access, so
+it must be a person's decision made with the consequence in front of them.
+"Gone" is also not permanent for roles. A cap that waits for the next write
+never reaches the secrets nobody writes.
+
+**Rejected.** Auto-removing stale rules: silently reopens a path, or lifts a
+deny on a role between holders. Auto-disabling them (keeping the path
+restricted): that is what a stale rule already does. A background prune
+after a cap change: the caller could not be told what was removed, and a
+member must not write. A time-limited grace period before pruning: a second
+state to explain for no safety gain, since the dashboard asks first.
+
+**Enforced by.** `TestReopenGuard`, `TestStaleSubjects` (member mode, once
+per rule, unreachable owner, never removes), `TestCapAppliesNow`, all also
+on Postgres; the browser test of the delete dialog.
+
+---
+
 ## 2026-10-01 — Secrets: version caps by path; a rule's subject is verified with its owner (7.31.0-beta)
 
 **Decision.** A version cap can be set on a path (a secret or a folder), in

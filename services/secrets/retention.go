@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
@@ -19,6 +20,7 @@ func (h *Handler) runRetention(ctx context.Context, interval time.Duration) {
 	defer tick.Stop()
 	for {
 		h.purgeExpired(ctx, time.Now().UTC())
+		h.checkRuleSubjects(ctx)
 		select {
 		case <-ctx.Done():
 			return
@@ -72,6 +74,63 @@ func (h *Handler) purgeExpired(ctx context.Context, now time.Time) int {
 		}
 	}
 	return purged
+}
+
+// checkRuleSubjects looks up the subject of every stored access rule and
+// records the ones that have gone: the rule is stamped, and the first time
+// it is found gone audit.secrets.access_rule_subject_missing is emitted (a
+// Playbooks trigger), so a rule that names nobody is raised, not left for
+// someone to notice. A rule is never removed here: a role with no holders
+// reads as gone, and deleting its rule would change who is allowed or
+// denied if the role is used again. A subject that could not be checked is
+// left as it was. Primary only. It returns how many it newly found gone.
+func (h *Handler) checkRuleSubjects(ctx context.Context) int {
+	if h.directory == nil || !clusterstate.RunsPrimaryJobs(ctx) {
+		return 0
+	}
+	tenants, err := h.svc.store.RuleTenants(ctx)
+	if err != nil {
+		h.logf("rule subject check: %v", err)
+		return 0
+	}
+	raised := 0
+	for _, tenant := range tenants {
+		rules, err := h.svc.store.ListAccessRules(ctx, tenant)
+		if err != nil {
+			h.logf("rule subject check, tenant %s: %v", tenant, err)
+			continue
+		}
+		subjects := make([]subject, 0, len(rules))
+		for _, r := range rules {
+			subjects = append(subjects, subject{r.SubjectType, r.SubjectID})
+		}
+		found, _ := h.directory.Lookup(ctx, tenant, subjects)
+		for _, r := range rules {
+			info, checked := found[subject{r.SubjectType, r.SubjectID}]
+			wasMissing := r.SubjectMissingSince != nil
+			if !checked || info.Exists == !wasMissing {
+				continue
+			}
+			if err := h.svc.store.SetSubjectMissing(ctx, tenant, r.ID, !info.Exists); err != nil {
+				h.logf("rule subject check, rule %s: %v", r.ID, err)
+				continue
+			}
+			if info.Exists || h.audit == nil {
+				continue
+			}
+			raised++
+			emitCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			_ = h.audit.Emit(emitCtx, "access_rule_subject_missing", pkgaudit.Event{
+				TenantID: tenant, ActorID: "system:rule-check", ActorType: "service", TargetType: "secret_access_rule", TargetID: r.ID, Result: "success",
+				Details: map[string]interface{}{
+					"path": r.Path, "subject": r.SubjectType + ":" + r.SubjectID, "effect": r.Effect,
+					"capabilities": strings.Join(r.Capabilities, ","), "severity": "warning",
+				},
+			})
+			cancel()
+		}
+	}
+	return raised
 }
 
 func (h *Handler) logf(format string, args ...interface{}) {

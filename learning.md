@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Deleting a restriction is a grant (7.32.0-beta)
+- With "an allow rule restricts", deleting the last allow rule over a path
+  widens access to everyone with the permission. It looked like cleanup and
+  was audited as a delete. A delete that grants needs the same care as a
+  grant: say what opens, require the caller to confirm it, record it.
+- "Missing" is not "never coming back". A role exists only while defined or
+  held; auto-removing rules for missing subjects would lift a deny on a
+  role between its last holder leaving and its next one arriving. Detect,
+  stamp, alert; leave the decision to a person.
+- A setting that "applies at the next write" is a setting that does not
+  apply to the secrets nobody writes, which are the old ones the cap was
+  meant for. Applying it in the request made the test for the old behaviour
+  fail (`TestVersionCap` expected two versions pruned at the rotate; one
+  goes at the settings change now), which is how the change was confirmed.
+
 ### A rule that names nobody is a lockout, not a no-op (7.31.0-beta)
 - **What was wrong:** an access rule's subject was free text. With "allow
   restricts", one mistyped role as the only allow rule on `/finance/*` made

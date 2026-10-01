@@ -235,6 +235,7 @@ export type AccessRule = {
   // service that owns it could not be asked.
   subject_status?: "found" | "missing" | "unchecked" | string;
   subject_label?: string;
+  subject_missing_since?: string;
 };
 
 // A version cap for one secret or one folder, overriding the tenant's.
@@ -274,8 +275,18 @@ export async function createAccessRule(session: AuthSession, input: AccessRuleIn
   return res.rule;
 }
 
-export async function deleteAccessRule(session: AuthSession, ruleId: string): Promise<void> {
-  await serviceRequest(session, "secrets", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}`, { method: "DELETE" });
+// What deleting a rule would open: the capabilities left with no allow rule
+// over its path, and how many existing secrets that touches.
+export type RuleImpact = { reopens: string[]; secrets_opened: number };
+
+export async function getAccessRuleImpact(session: AuthSession, ruleId: string): Promise<RuleImpact> {
+  return serviceRequest<RuleImpact>(session, "secrets", `/secrets/access/rules/${encodeURIComponent(ruleId)}/impact?tenant_id=${encodeURIComponent(session.tenantId)}`);
+}
+
+// The service refuses to delete the last allow rule over a path unless
+// confirmReopens is set: a path is never reopened as a side effect.
+export async function deleteAccessRule(session: AuthSession, ruleId: string, confirmReopens = false): Promise<void> {
+  await serviceRequest(session, "secrets", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}${confirmReopens ? "&confirm_reopens=true" : ""}`, { method: "DELETE" });
 }
 
 export async function getSecretAccess(session: AuthSession, secretId: string): Promise<SecretAccess> {

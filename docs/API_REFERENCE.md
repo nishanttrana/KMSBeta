@@ -1908,7 +1908,8 @@ this.
   `secret_exposed` (`audit.discovery.secret_exposed`, 7.18.0-beta),
   `secret_access_rule_changed` (`audit.secrets.access_rule_created`,
   `access_rule_deleted`, `settings_updated`, `version_cap_set`,
-  `version_cap_deleted`) and `secret_destroyed`
+  `version_cap_deleted`), `secret_access_rule_stale`
+  (`audit.secrets.access_rule_subject_missing`, 7.32.0-beta) and `secret_destroyed`
   (`audit.secrets.destroyed`, `retention_purged`),
   both success only (7.29.0-beta),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
@@ -3118,6 +3119,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `DELETE /secrets/version-caps/{cap_id}` | `secrets.access.manage` | `version_cap_deleted` (warning) |
 | `GET /secrets/access/rules` | `secrets.access.read` | `access_rules_listed` |
 | `POST /secrets/access/rules` | `secrets.access.manage` | `access_rule_created` (warning) |
+| `GET /secrets/access/rules/{rule_id}/impact` | `secrets.access.read` | `access_rule_impact_read` |
 | `DELETE /secrets/access/rules/{rule_id}` | `secrets.access.manage` | `access_rule_deleted` (warning) |
 | `POST /secrets/generate/ssh_key`, `/generate/keypair` | `secrets.write` | `generated` |
 | `GET /secrets/{id}/versions` | `secrets.read` | `versions_listed` |
@@ -3199,14 +3201,15 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 | `POST /svc/secrets/secrets/{id}/destroy` | | `status: destroyed`: the secret and every version, permanently |
 | `DELETE /svc/secrets/secrets/{id}/versions/{version}` | | `status: destroyed`; `409 version_is_current` |
 | `GET /svc/secrets/secrets/{id}/access` | | `path`, `rules[]` covering it, `caller`: `{read, value, write, delete}` |
-| `GET /svc/secrets/secrets/access/rules` | | `items[]`: `id`, `path`, `subject_type`, `subject_id`, `capabilities[]`, `effect`, `created_by`, `created_at`, `subject_status` (`found`, `missing`, `unchecked`), `subject_label` |
+| `GET /svc/secrets/secrets/access/rules` | | `items[]`: `id`, `path`, `subject_type`, `subject_id`, `capabilities[]`, `effect`, `created_by`, `created_at`, `subject_status` (`found`, `missing`, `unchecked`), `subject_label`, `subject_missing_since` |
 | `GET /svc/secrets/secrets/version-caps` | | `items[]`: `id`, `path`, `max_versions`, `updated_by`, `updated_at` |
-| `PUT /svc/secrets/secrets/version-caps` | `path` (a secret or `/folder/*`), `max_versions` (0 to 1000; 0 keeps every version on the path) | `cap`; replaces the cap already on that path; `400 invalid_version_cap` |
+| `PUT /svc/secrets/secrets/version-caps` | `path` (a secret or `/folder/*`), `max_versions` (0 to 1000; 0 keeps every version on the path) | `cap`; replaces the cap already on that path and prunes to it at once; `400 invalid_version_cap` |
 | `DELETE /svc/secrets/secrets/version-caps/{cap_id}` | | `status: deleted` |
 | `GET /svc/secrets/secrets/settings` | | `settings`: `default_deny`, `max_versions`, `deleted_retention_days`, `updated_by`, `updated_at` |
 | `PUT /svc/secrets/secrets/settings` | `default_deny`, `max_versions` (0 to 1000), `deleted_retention_days` (0 to 3650); all three are set | `settings`; `400 invalid_settings` |
 | `POST /svc/secrets/secrets/access/rules` | `path`, `subject_type` (`user`, `role`, `group`, `client`, `workload`), `subject_id`, `capabilities[]` (`read`, `value`, `write`, `delete`), `effect` (`allow` default, `deny`) | `201` `rule`; `400 invalid_access_rule`; `400 unknown_subject` if the subject does not exist in the tenant; `503 subject_check_unavailable` if that could not be checked (7.31.0-beta) |
-| `DELETE /svc/secrets/secrets/access/rules/{rule_id}` | | `status: deleted` |
+| `GET /svc/secrets/secrets/access/rules/{rule_id}/impact` | | `reopens[]` (capabilities deleting the rule would leave with no allow rule over its path), `secrets_opened` |
+| `DELETE /svc/secrets/secrets/access/rules/{rule_id}` | `confirm_reopens=true` when `reopens` is not empty | `status: deleted`; `409 would_reopen_path` without the confirmation (7.32.0-beta) |
 | `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `created_at` (no digest of the value, 7.27.0-beta) |
 | `GET /svc/secrets/secrets/{id}/audit` | | the secret's audit trail |
 | `GET /svc/secrets/secrets/stats` | | `stats`: `total_secrets`, `total_versions`, `expiring_within_30d`, `expired`, `by_type`; `500 stats_failed` if any count fails, never zeros |
@@ -3710,7 +3713,7 @@ Selected events with dedicated audit classification:
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.service_derive_refused`, enterprise control upserts carry `feature_status` / `feature_id`
-- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `restored`, `destroyed`, `rolled_back`, `version_destroyed`, `access_read`, `access_rules_listed`, `access_rule_created`, `access_rule_deleted`, `version_caps_listed`, `version_cap_set`, `version_cap_deleted` (7.31.0-beta; refusal reasons `unknown_subject`, `subject_check_unavailable`), `settings_read`, `settings_updated`, `retention_purged` (7.30.0-beta, emitted by the retention sweep, not a route) (7.29.0-beta; refusal reasons `no_access_rule`, `access_groups_unavailable`, `not_in_access_rule`, `access_rule_denied`, `secret_deleted`, `secret_not_deleted`, `version_conflict`, `version_is_current`, `already_current`, `name_held_by_deleted_secret`), `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
+- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `restored`, `destroyed`, `rolled_back`, `version_destroyed`, `access_read`, `access_rules_listed`, `access_rule_created`, `access_rule_deleted`, `access_rule_impact_read`, `access_rule_subject_missing` (7.32.0-beta, emitted by the hourly check, not a route; refusal reason `would_reopen_path`), `version_caps_listed`, `version_cap_set`, `version_cap_deleted` (7.31.0-beta; refusal reasons `unknown_subject`, `subject_check_unavailable`), `settings_read`, `settings_updated`, `retention_purged` (7.30.0-beta, emitted by the retention sweep, not a route) (7.29.0-beta; refusal reasons `no_access_rule`, `access_groups_unavailable`, `not_in_access_rule`, `access_rule_denied`, `secret_deleted`, `secret_not_deleted`, `version_conflict`, `version_is_current`, `already_current`, `name_held_by_deleted_secret`), `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
@@ -4620,6 +4623,7 @@ from the code; do not edit by hand.
 - `GET /svc/secrets/secrets/access/rules`
 - `POST /svc/secrets/secrets/access/rules`
 - `DELETE /svc/secrets/secrets/access/rules/{rule_id}`
+- `GET /svc/secrets/secrets/access/rules/{rule_id}/impact`
 - `POST /svc/secrets/secrets/generate/keypair`
 - `POST /svc/secrets/secrets/generate/ssh_key`
 - `GET /svc/secrets/secrets/settings`

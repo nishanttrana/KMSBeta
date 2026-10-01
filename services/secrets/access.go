@@ -108,6 +108,34 @@ type AccessRule struct {
 	// missing or unchecked (directory.go). SubjectLabel is its display name.
 	SubjectStatus string `json:"subject_status,omitempty"`
 	SubjectLabel  string `json:"subject_label,omitempty"`
+	// SubjectMissingSince is when the scheduled check first found the subject
+	// gone; nil while it exists.
+	SubjectMissingSince *time.Time `json:"subject_missing_since,omitempty"`
+}
+
+// reopens lists the capabilities that deleting rule would leave with no
+// allow rule over its path: what was limited to named callers there becomes
+// open to everyone holding the route permission. Nothing reopens for a deny
+// rule, or under default-deny.
+func reopens(rules []AccessRule, defaultDeny bool, rule AccessRule) []string {
+	if rule.Effect != effectAllow || defaultDeny {
+		return nil
+	}
+	var out []string
+	for _, capability := range rule.Capabilities {
+		held := false
+		for _, other := range rules {
+			if other.ID == rule.ID || other.Effect != effectAllow || !other.grants(capability) {
+				continue
+			}
+			folder, isFolder := strings.CutSuffix(other.Path, under)
+			held = held || other.Path == rule.Path || (isFolder && strings.HasPrefix(rule.Path, folder+"/"))
+		}
+		if !held {
+			out = append(out, capability)
+		}
+	}
+	return out
 }
 
 // VersionCap caps the stored versions of one secret or one folder,

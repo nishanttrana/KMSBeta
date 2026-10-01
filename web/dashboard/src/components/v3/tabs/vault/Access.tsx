@@ -2,7 +2,7 @@ import { Plus, Trash2, UserCheck, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../../lib/auth";
 import {
-  ACCESS_CAPABILITIES, ACCESS_SUBJECT_TYPES, createAccessRule, deleteAccessRule, deleteVersionCap, putVaultSettings, putVersionCap,
+  ACCESS_CAPABILITIES, ACCESS_SUBJECT_TYPES, createAccessRule, deleteAccessRule, deleteVersionCap, getAccessRuleImpact, putVaultSettings, putVersionCap,
   type AccessRule, type VaultSettings, type VersionCap,
 } from "../../../../lib/secrets";
 import { B, Btn, Chk, FG, Inp, Modal, Row2, Sel } from "../../legacyPrimitives";
@@ -33,7 +33,7 @@ export const RuleRow = ({ rule, groups, onDelete }: { rule: AccessRule; groups?:
       <code style={{ fontFamily: MONO, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={rule.path}>{rule.path}</code>
       <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={`${rule.subject_type}: ${rule.subject_id}`}>
         <span style={{ color: C.muted }}>{rule.subject_type} </span>{who}
-        {stale && <span title={`No ${rule.subject_type} ${rule.subject_id} exists any more; this rule names nobody`} style={{ color: C.redFg, fontWeight: 600 }}> · not found</span>}
+        {stale && <span title={`No ${rule.subject_type} ${rule.subject_id} exists any more; this rule names nobody${rule.subject_missing_since ? ` (found gone ${new Date(rule.subject_missing_since).toLocaleDateString()})` : ""}`} style={{ color: C.redFg, fontWeight: 600 }}> · not found</span>}
         {rule.subject_status === "unchecked" && <span title="The service that owns this subject could not be asked" style={{ color: C.amberFg }}> · unchecked</span>}
       </span>
       <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{rule.capabilities.map((c) => <B key={c} c={deny ? "red" : "accent"}>{c}</B>)}</span>
@@ -75,6 +75,10 @@ export function VaultSettingsCard({ session, settings, error, uncovered, confirm
       const ok = await confirm({ title: "Deny by default", message: `${uncovered} secret${uncovered === 1 ? " has" : "s have"} no allow rule. Under deny by default nobody can list, read or change ${uncovered === 1 ? "it" : "them"} until a rule covers ${uncovered === 1 ? "it" : "them"}. Rules can still be added.`, confirmLabel: "Deny by default", danger: true });
       if (!ok) return;
     }
+    if (next.max_versions > 0 && (settings.max_versions === 0 || next.max_versions < settings.max_versions)) {
+      const ok = await confirm({ title: "Lower the version cap", message: `Versions beyond the newest ${next.max_versions} of every secret without its own cap are removed now. They cannot be recovered.`, confirmLabel: "Remove older versions", danger: true });
+      if (!ok) return;
+    }
     setBusy(true);
     try { await putVaultSettings(session, next); onToast?.("Vault settings saved."); onChanged(); }
     catch (e) { onToast?.(`Settings refused: ${errMsg(e)}`); } finally { setBusy(false); }
@@ -112,13 +116,14 @@ type CapsProps = {
   session: AuthSession;
   caps: VersionCap[] | null;
   error: string;
+  confirm: (opts: Record<string, unknown>) => Promise<boolean>;
   onChanged: () => void;
   onToast?: ((m: string) => void) | undefined;
 };
 
 // Version caps for one secret or one folder. The most specific wins: a cap
 // on the secret, then the nearest folder above it, then the tenant's.
-export function VersionCaps({ session, caps, error, onChanged, onToast }: CapsProps) {
+export function VersionCaps({ session, caps, error, confirm, onChanged, onToast }: CapsProps) {
   const [path, setPath] = useState("");
   const [max, setMax] = useState("5");
   const [busy, setBusy] = useState(false);
@@ -126,13 +131,19 @@ export function VersionCaps({ session, caps, error, onChanged, onToast }: CapsPr
     setBusy(true);
     try { await fn(); onToast?.(done); onChanged(); } catch (e) { onToast?.(`Version cap refused: ${errMsg(e)}`); } finally { setBusy(false); }
   };
+  // A cap takes effect at once, so setting one removes versions now.
+  const setCap = async () => {
+    const keep = Math.trunc(Number(max) || 0);
+    if (keep > 0 && !(await confirm({ title: "Set version cap", message: `Versions beyond the newest ${keep} under ${path.trim()} are removed now. They cannot be recovered.`, confirmLabel: "Set cap", danger: true }))) return;
+    await act("Version cap set.", async () => { await putVersionCap(session, path.trim(), keep); setPath(""); });
+  };
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "12px 14px", marginBottom: 16 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: C.text, marginRight: "auto" }} title="A cap on a secret beats its folder's, which beats the tenant's">Versions kept, by path</span>
         <Inp w={220} mono placeholder="/logs/* or /logs/audit" aria-label="Version cap path" value={path} onChange={(e) => setPath(e.target.value)} />
         <Inp w={70} type="number" min="0" max="1000" aria-label="Versions kept on this path" value={max} onChange={(e) => setMax(e.target.value)} />
-        <Btn small disabled={busy || !path.trim()} onClick={() => void act("Version cap set.", async () => { await putVersionCap(session, path.trim(), Math.trunc(Number(max) || 0)); setPath(""); })}><Plus size={12} />Set cap</Btn>
+        <Btn small disabled={busy || !path.trim()} onClick={() => void setCap()}><Plus size={12} />Set cap</Btn>
       </div>
       {error ? <div style={{ fontSize: 11, color: C.redFg, marginTop: 8 }}>Version caps unavailable: {error}</div>
         : (caps || []).map((c) => (
@@ -178,10 +189,20 @@ export function AccessRules({ session, rules, groups, error, restricted, total, 
     } catch (e) { onToast?.(`Rule refused: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
+  // The service says what deleting the rule would open; the dialog repeats it
+  // and the delete then carries the confirmation the service requires.
   const remove = async (rule: AccessRule) => {
-    const ok = await confirm({ title: "Delete access rule", message: `Delete the ${rule.effect} rule on ${rule.path} for ${rule.subject_type} ${rule.subject_label || (rule.subject_type === "group" && groups?.[rule.subject_id]) || rule.subject_id}? If it was the only allow rule there, those secrets open to everyone with the secrets permission.`, confirmLabel: "Delete", danger: true });
-    if (!ok) return;
-    try { await deleteAccessRule(session, rule.id); onToast?.("Access rule deleted."); onChanged(); } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); }
+    const who = `${rule.subject_type} ${rule.subject_label || (rule.subject_type === "group" && groups?.[rule.subject_id]) || rule.subject_id}`;
+    try {
+      const impact = await getAccessRuleImpact(session, rule.id);
+      const opens = impact.reopens.length > 0;
+      const message = opens
+        ? `This is the last allow rule for ${impact.reopens.join(", ")} on ${rule.path}. Deleting it opens ${impact.secrets_opened} secret${impact.secrets_opened === 1 ? "" : "s"} there to everyone with the secrets permission.`
+        : `Delete the ${rule.effect} rule on ${rule.path} for ${who}? No path is opened by this.`;
+      if (!(await confirm({ title: opens ? "Delete rule and open the path" : "Delete access rule", message, confirmLabel: opens ? "Delete and open" : "Delete", danger: true }))) return;
+      await deleteAccessRule(session, rule.id, opens);
+      onToast?.("Access rule deleted."); onChanged();
+    } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); }
   };
 
   return (

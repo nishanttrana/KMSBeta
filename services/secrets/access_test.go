@@ -36,7 +36,7 @@ func TestAccessAndVersionsPostgres(t *testing.T) {
 	}
 	for name, run := range map[string]func(*testing.T, *Handler, *Service, *routetest.Recorder){
 		"access rules": runAccessRules, "paging": runListPaging, "soft delete": runSoftDelete, "versions": runVersions,
-		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention, "path caps": runPathCaps, "subjects": runSubjects,
+		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention, "path caps": runPathCaps, "subjects": runSubjects, "reopen guard": runReopenGuard, "cap applies now": runCapAppliesNow, "stale subjects": runStaleSubjects,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules, secret_vault_settings, secret_version_caps`); err != nil {
@@ -164,7 +164,7 @@ func TestAccessRuleValidation(t *testing.T) {
 	if code, _ := call(t, h, writer, "DELETE", "/secrets/access/rules/"+rule["id"].(string), ""); code != http.StatusForbidden {
 		t.Fatalf("kms.write deleted a rule: %d", code)
 	}
-	if code, _ := call(t, h, admin, "DELETE", "/secrets/access/rules/"+rule["id"].(string), ""); code != http.StatusOK {
+	if code, _ := call(t, h, admin, "DELETE", "/secrets/access/rules/"+rule["id"].(string)+"?confirm_reopens=true", ""); code != http.StatusOK {
 		t.Fatalf("delete rule: %d", code)
 	}
 	if ev := rec.Last(t); ev.Action != "access_rule_deleted" || ev.Event.Details["subject"] != "role:ops" {
@@ -674,8 +674,11 @@ func runVersionCap(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder
 	if code, _ := putSettings(t, h, admin, `{"max_versions":2}`); code != http.StatusOK {
 		t.Fatal("set cap")
 	}
+	if ev := rec.Last(t); ev.Event.Details["versions_pruned"] != 1 { // the cap holds at once: v1 goes now
+		t.Fatalf("settings event %v", ev.Event.Details)
+	}
 	rotate("four")
-	if ev := rec.Last(t); ev.Action != "rotated" || ev.Event.Details["versions_pruned"] != 2 {
+	if ev := rec.Last(t); ev.Action != "rotated" || ev.Event.Details["versions_pruned"] != 1 {
 		t.Fatalf("rotate event %v", ev.Event.Details)
 	}
 	_, out := call(t, h, admin, "GET", "/secrets/"+id+"/versions", "")
@@ -1040,5 +1043,189 @@ func TestPlatformDirectory(t *testing.T) {
 	}
 	if !strings.Contains(authBody, "/internal/subjects/check") || !strings.Contains(authBody, `"tenant_id":"t1"`) || strings.Contains(authBody, "grp_1") {
 		t.Fatalf("auth was sent %s", authBody)
+	}
+}
+
+func TestReopenGuard(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runReopenGuard(t, h, svc, rec)
+}
+func TestCapAppliesNow(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runCapAppliesNow(t, h, svc, rec)
+}
+func TestStaleSubjects(t *testing.T) {
+	h, svc, _, rec := newRecordedHandler(t)
+	runStaleSubjects(t, h, svc, rec)
+}
+
+// Deleting the last allow rule over a path would open it to everyone with
+// the permission; that needs an explicit confirmation and is audited.
+func runReopenGuard(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	bob := user("t1", "bob", "ops", "*")
+	id := mustCreate(t, h, admin, "ledger", "/finance")
+	mustCreate(t, h, admin, "budget", "/finance")
+	add := func(body string) string {
+		t.Helper()
+		code, out := call(t, h, admin, "POST", "/secrets/access/rules", body)
+		if code != http.StatusCreated {
+			t.Fatalf("rule: %d %v", code, out)
+		}
+		return out["rule"].(map[string]interface{})["id"].(string)
+	}
+	wide := add(`{"path":"/finance/*","subject_type":"user","subject_id":"u-t1","capabilities":["read","value"]}`)
+	narrow := add(`{"path":"/finance/ledger","subject_type":"user","subject_id":"u-t1","capabilities":["value"]}`)
+	deny := add(`{"path":"/finance/*","subject_type":"user","subject_id":"mallory","capabilities":["value"],"effect":"deny"}`)
+
+	// Covered by the folder rule, or a deny: nothing opens, no confirmation.
+	for _, safe := range []string{narrow, deny} {
+		if _, out := call(t, h, admin, "GET", "/secrets/access/rules/"+safe+"/impact", ""); len(out["reopens"].([]interface{})) != 0 {
+			t.Fatalf("impact of a covered rule: %v", out)
+		}
+		if code, _ := call(t, h, admin, "DELETE", "/secrets/access/rules/"+safe, ""); code != http.StatusOK {
+			t.Fatalf("delete of a covered rule: %d", code)
+		}
+	}
+	_, out := call(t, h, admin, "GET", "/secrets/access/rules/"+wide+"/impact", "")
+	if fmt.Sprint(out["reopens"]) != "[read value]" || out["secrets_opened"] != float64(2) {
+		t.Fatalf("impact: %v", out)
+	}
+	code, out := call(t, h, admin, "DELETE", "/secrets/access/rules/"+wide, "")
+	if code != http.StatusConflict {
+		t.Fatalf("last allow rule deleted without confirmation: %d %v", code, out)
+	}
+	refused(t, rec, "access_rule_deleted", "would_reopen_path")
+	if ev := rec.Last(t); ev.Event.Details["secrets_opened"] != 2 || ev.Event.Details["reopens"] != "read,value" {
+		t.Fatalf("refusal details %v", ev.Event.Details)
+	}
+	if code, _ := call(t, h, bob, "GET", "/secrets/"+id+"/value", ""); code != http.StatusForbidden {
+		t.Fatalf("the refused delete opened the path: %d", code)
+	}
+	// Under default-deny nothing opens, so no confirmation is needed; back to
+	// open, the confirmed delete goes through and records what it opened.
+	putSettings(t, h, admin, `{"default_deny":true}`)
+	if _, out := call(t, h, admin, "GET", "/secrets/access/rules/"+wide+"/impact", ""); len(out["reopens"].([]interface{})) != 0 {
+		t.Fatalf("impact under default-deny: %v", out)
+	}
+	putSettings(t, h, admin, `{"default_deny":false}`)
+	if code, _ := call(t, h, admin, "DELETE", "/secrets/access/rules/"+wide+"?confirm_reopens=true", ""); code != http.StatusOK {
+		t.Fatalf("confirmed delete: %d", code)
+	}
+	if ev := rec.Last(t); ev.Action != "access_rule_deleted" || ev.Event.Result != "success" || ev.Event.Details["secrets_opened"] != 2 {
+		t.Fatalf("delete event %+v", ev.Event.Details)
+	}
+	if code, _ := call(t, h, bob, "GET", "/secrets/"+id+"/value", ""); code != http.StatusOK {
+		t.Fatalf("after the confirmed delete: %d", code)
+	}
+}
+
+// Lowering a cap, on the tenant or a path, prunes at once.
+func runCapAppliesNow(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	make5 := func(name, folder string) string {
+		id := mustCreate(t, h, admin, name, folder)
+		for i := 0; i < 4; i++ {
+			call(t, h, admin, "POST", "/secrets/"+id+"/rotate", fmt.Sprintf(`{"value":"v%d"}`, i))
+		}
+		return id
+	}
+	count := func(id string) int {
+		_, out := call(t, h, admin, "GET", "/secrets/"+id+"/versions", "")
+		return len(out["versions"].([]interface{}))
+	}
+	a, b, gone := make5("a", "/logs"), make5("b", ""), make5("gone", "")
+	call(t, h, admin, "DELETE", "/secrets/"+gone, "")
+
+	if code, _ := putSettings(t, h, admin, `{"max_versions":3}`); code != http.StatusOK {
+		t.Fatal("settings")
+	}
+	if ev := rec.Last(t); ev.Event.Details["secrets_pruned"] != 3 || ev.Event.Details["versions_pruned"] != 6 {
+		t.Fatalf("settings event %v", ev.Event.Details)
+	}
+	if count(a) != 3 || count(b) != 3 || count(gone) != 3 {
+		t.Fatalf("tenant cap not applied at once: %d %d %d", count(a), count(b), count(gone))
+	}
+	if code, _ := call(t, h, admin, "PUT", "/secrets/version-caps", `{"path":"/logs/*","max_versions":1}`); code != http.StatusOK {
+		t.Fatal("path cap")
+	}
+	if ev := rec.Last(t); ev.Action != "version_cap_set" || ev.Event.Details["secrets_pruned"] != 1 || ev.Event.Details["versions_pruned"] != 2 {
+		t.Fatalf("cap event %v", ev.Event.Details)
+	}
+	if count(a) != 1 || count(b) != 3 {
+		t.Fatalf("path cap not applied at once: %d %d", count(a), count(b))
+	}
+	// The current value is never pruned.
+	if code, out := call(t, h, admin, "GET", "/secrets/"+a+"/value", ""); code != http.StatusOK || out["value"] != "v3" {
+		t.Fatalf("current value after prune: %d %v", code, out)
+	}
+	_, out := call(t, h, admin, "GET", "/secrets/"+a+"/audit", "")
+	if !strings.Contains(fmt.Sprint(out["entries"]), "versions_pruned") {
+		t.Fatalf("change history lacks the prune: %v", out)
+	}
+	// Raising a cap removes nothing.
+	putSettings(t, h, admin, `{"max_versions":0}`)
+	if ev := rec.Last(t); ev.Event.Details["versions_pruned"] != 0 || count(b) != 3 {
+		t.Fatalf("raising the cap pruned: %v", ev.Event.Details)
+	}
+}
+
+// The scheduled check stamps and raises a rule whose subject has gone, once,
+// clears it if the subject returns, leaves unchecked subjects alone, never
+// removes a rule, and does nothing on a cluster member.
+func runStaleSubjects(t *testing.T, h *Handler, svc *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	dir := &directory{}
+	h.directory = dir
+	call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/a/*","subject_type":"user","subject_id":"alice","capabilities":["value"]}`)
+	call(t, h, admin, "POST", "/secrets/access/rules", `{"path":"/b/*","subject_type":"role","subject_id":"ops","capabilities":["value"]}`)
+	ctx := context.Background()
+	if n := h.checkRuleSubjects(ctx); n != 0 {
+		t.Fatalf("raised %d with every subject present", n)
+	}
+	dir.gone = map[subject]bool{{"user", "alice"}: true}
+
+	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{NodeID: "n2", Role: clusterstate.RoleFollower, PrimaryURL: "https://primary:8443", ForwardCredential: "cred"}))
+	n := h.checkRuleSubjects(ctx)
+	clusterstate.SetDefault(nil)
+	if n != 0 {
+		t.Fatalf("a member raised %d", n)
+	}
+
+	rec.Reset()
+	if n := h.checkRuleSubjects(ctx); n != 1 {
+		t.Fatalf("raised %d, want 1", n)
+	}
+	ev := rec.Last(t)
+	if ev.Action != "access_rule_subject_missing" || ev.Event.Details["subject"] != "user:alice" || ev.Event.Details["path"] != "/a/*" {
+		t.Fatalf("event %+v", ev)
+	}
+	stamped := func() int {
+		rules, _ := svc.AccessRules(ctx, "t1")
+		n := 0
+		for _, r := range rules {
+			if r.SubjectMissingSince != nil {
+				n++
+			}
+		}
+		if len(rules) != 2 {
+			t.Fatalf("the check removed a rule: %d left", len(rules))
+		}
+		return n
+	}
+	if stamped() != 1 {
+		t.Fatalf("stamped %d rules", stamped())
+	}
+	if n := h.checkRuleSubjects(ctx); n != 0 {
+		t.Fatalf("raised again for the same rule: %d", n)
+	}
+	// Unreachable owner: nothing changes, nothing is raised.
+	dir.err = fmt.Errorf("auth unreachable")
+	if n := h.checkRuleSubjects(ctx); n != 0 || stamped() != 1 {
+		t.Fatalf("an unreachable owner changed state: raised %d stamped %d", n, stamped())
+	}
+	dir.err, dir.gone = nil, nil
+	if n := h.checkRuleSubjects(ctx); n != 0 || stamped() != 0 {
+		t.Fatalf("a returned subject stayed stamped: raised %d stamped %d", n, stamped())
 	}
 }
