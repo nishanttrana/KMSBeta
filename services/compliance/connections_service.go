@@ -28,6 +28,7 @@ import (
 var connectionUsers = map[string]string{
 	"kms-audit":      "stream",
 	"kms-governance": "approval_notice",
+	"kms-discovery":  "repository",
 }
 
 const (
@@ -43,7 +44,7 @@ func connectionCaller(c *route.Call) (string, bool) {
 			return use, true
 		}
 	}
-	c.Refuse(http.StatusForbidden, reasonConnectionCaller, "only the audit and governance services may open connections")
+	c.Refuse(http.StatusForbidden, reasonConnectionCaller, "only the audit, governance and discovery services may open connections")
 	return "", false
 }
 
@@ -55,6 +56,8 @@ func usable(use, typ string) bool {
 		return connectionByType[typ].Stream
 	case "approval_notice":
 		return typ == "slack" || typ == "teams"
+	case "repository":
+		return typ == "git"
 	}
 	return false
 }
@@ -176,8 +179,28 @@ type ConnectionUsage interface {
 // platformUsage asks the audit service and governance, as the compliance
 // service identity.
 type platformUsage struct {
-	auditURL, governanceURL string
-	http                    *http.Client
+	auditURL, governanceURL, discoveryURL string
+	http                                  *http.Client
+}
+
+// Repositories names discovery's repositories that read with the connection.
+func (p platformUsage) Repositories(ctx context.Context, tenantID, connID string) ([]string, error) {
+	var repos struct {
+		Items []struct {
+			URL          string `json:"url"`
+			ConnectionID string `json:"connection_id"`
+		} `json:"items"`
+	}
+	if _, err := callJSON(ctx, p.http, http.MethodGet, p.discoveryURL+"/discovery/repositories?tenant_id="+neturl.QueryEscape(tenantID), tenantID, "", nil, &repos); err != nil {
+		return nil, fmt.Errorf("discovery repositories: %w", err)
+	}
+	var users []string
+	for _, r := range repos.Items {
+		if r.ConnectionID == connID {
+			users = append(users, "repository "+r.URL)
+		}
+	}
+	return users, nil
 }
 
 func (p platformUsage) Users(ctx context.Context, tenantID, connID string) ([]string, error) {

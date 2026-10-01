@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,6 +39,17 @@ type Service struct {
 	// audit emits events playbooks can trigger on (secret_exposed); nil
 	// when NATS is unavailable.
 	audit route.Emitter
+
+	// conns opens a private repository's git connection (compliance) and
+	// authority re-checks who authorized a schedule (auth).
+	conns     ConnectionResolver
+	authority AuthorityChecker
+	// repoRoots trusts a test hosting server's certificate; nil in
+	// production (the system roots).
+	repoRoots *x509.CertPool
+	// primary reports whether this node runs scheduled scans
+	// (clusterstate.RunsPrimaryJobs).
+	primary func(context.Context) bool
 }
 
 func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events EventPublisher) *Service {
@@ -210,6 +222,8 @@ func (s *Service) scanSource(ctx context.Context, tenantID, scanID, source strin
 	case "code":
 		items, err := s.scanCode(ctx, tenantID, scanID)
 		return items, nil, err
+	case "git":
+		return s.scanGit(ctx, tenantID, scanID)
 	}
 	return nil, nil, fmt.Errorf("unknown source %q", source)
 }
@@ -443,7 +457,7 @@ func expiresWithin(a CryptoAsset, now time.Time, days int) bool {
 
 // scannedSources: sources a scan re-reads in full, so an asset the last
 // scan didn't observe is gone or failed to answer. Uploads are one-off.
-var scannedSources = []string{"network", "cloud", "certs", "code"}
+var scannedSources = allScanTypes
 
 func notSeen(a CryptoAsset, lastScan map[string]time.Time) bool {
 	started, ok := lastScan[a.Source]
@@ -489,7 +503,7 @@ func isPlatformAsset(a CryptoAsset) bool {
 // or unknown). Rows stored before 7.11.0-beta say "vulnerable" for both of
 // the first two; deriving means none of them shows that stale label.
 func assetClass(a CryptoAsset) string {
-	if (a.Source == "code" || a.Source == "upload") && secretKinds[a.AssetType] {
+	if (a.Source == "code" || a.Source == "upload" || a.Source == "git") && secretKinds[a.AssetType] {
 		return "exposed"
 	}
 	return classifyAlgorithm(a.Algorithm)
@@ -707,8 +721,19 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 	if st, err := os.Stat(s.root); strings.TrimSpace(s.root) != "" && err == nil && st.IsDir() {
 		code.Configured = true
 	}
+	repos, err := s.store.ListRepositories(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	private := 0
+	for _, r := range repos {
+		if r.ConnectionID != "" {
+			private++
+		}
+	}
+	git := SourceStatus{ID: "git", Configured: len(repos) > 0, Detail: map[string]interface{}{"repositories": len(repos), "private": private}}
 	upload := SourceStatus{ID: "upload", Configured: true, Detail: map[string]interface{}{"max_bytes": maxUploadBytes}}
-	out := []SourceStatus{network, cloud, certs, code, upload}
+	out := []SourceStatus{network, cloud, certs, git, code, upload}
 
 	scans, err := s.store.ListScans(ctx, tenantID, 100, 0)
 	if err != nil {
@@ -732,30 +757,27 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 	return out, nil
 }
 
+// allScanTypes are the sources a scan can read; uploads are scanned as they
+// arrive.
+var allScanTypes = []string{"network", "cloud", "certs", "code", "git"}
+
+// normalizeScanTypes returns the requested sources, or every source when
+// none, or "all", is named.
 func normalizeScanTypes(in []string) []string {
-	if len(in) == 0 {
-		return []string{"network", "cloud", "certs", "code"}
-	}
-	seen := map[string]struct{}{}
+	seen := map[string]bool{}
 	out := make([]string, 0, len(in))
 	for _, t := range in {
 		t = strings.ToLower(strings.TrimSpace(t))
-		switch t {
-		case "network", "cloud", "certs", "code", "all":
-		default:
-			continue
-		}
 		if t == "all" {
-			return []string{"network", "cloud", "certs", "code"}
+			return append([]string(nil), allScanTypes...)
 		}
-		if _, ok := seen[t]; ok {
-			continue
+		if containsString(allScanTypes, t) && !seen[t] {
+			seen[t] = true
+			out = append(out, t)
 		}
-		seen[t] = struct{}{}
-		out = append(out, t)
 	}
 	if len(out) == 0 {
-		return []string{"network", "cloud", "certs", "code"}
+		return append([]string(nil), allScanTypes...)
 	}
 	return out
 }

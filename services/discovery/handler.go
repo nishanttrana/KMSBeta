@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"strings"
 
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 // Handler serves discovery through the route kernel (7.9.0-beta). Until then
@@ -47,6 +49,16 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r.Handle("GET /discovery/sources", read("sources_read"), h.sources)
 	r.Handle("POST /discovery/upload", route.Spec{Action: "upload_scan", Permission: "discovery.write", Resource: "discovery_scan"}, h.upload)
 	r.Handle("DELETE /discovery/assets/{id}", route.Spec{Action: "asset_remove", Permission: "discovery.write", Resource: "crypto_asset", TargetParam: "id"}, h.removeAsset)
+	// 7.20.0-beta: git repositories and the scan schedule.
+	repo := func(action, target string) route.Spec {
+		return route.Spec{Action: action, Permission: "discovery.write", Resource: "discovery_repository", TargetParam: target}
+	}
+	r.Handle("GET /discovery/repositories", read("repositories_list"), h.listRepositories)
+	r.Handle("POST /discovery/repositories", repo("repository_add", ""), h.addRepository)
+	r.Handle("DELETE /discovery/repositories/{id}", repo("repository_remove", "id"), h.removeRepository)
+	r.Handle("POST /discovery/repositories/{id}/test", repo("repository_test", "id"), h.testRepository)
+	r.Handle("GET /discovery/schedule", read("schedule_read"), h.getSchedule)
+	r.Handle("PUT /discovery/schedule", route.Spec{Action: "schedule_update", Permission: schedulePermission, Resource: "discovery_schedule"}, h.putSchedule)
 	h.router = r
 	return h
 }
@@ -281,6 +293,130 @@ func (h *Handler) removeAsset(c *route.Call) {
 	c.Detail("asset_type", a.AssetType)
 	c.Detail("source", a.Source)
 	c.JSON(http.StatusOK, map[string]interface{}{"removed": a.ID})
+}
+
+func (h *Handler) listRepositories(c *route.Call) {
+	items, err := h.svc.ListRepositories(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+}
+
+// addRepository refuses, with its reason audited, a URL that isn't an https
+// repository address or carries a credential, a platform or reserved host,
+// a duplicate, the per-tenant limit, and a connection that isn't a git
+// connection for the repository's host.
+func (h *Handler) addRepository(c *route.Call) {
+	var req struct {
+		URL          string `json:"url"`
+		Ref          string `json:"ref"`
+		Provider     string `json:"provider"`
+		ConnectionID string `json:"connection_id"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	// A URL with a credential in it is refused; don't copy it to the audit.
+	if u, err := neturl.Parse(strings.TrimSpace(req.URL)); err == nil && u.User == nil {
+		c.Detail("url", req.URL)
+	}
+	c.Detail("ref", req.Ref)
+	c.Detail("connection_id", req.ConnectionID)
+	r, err := h.svc.AddRepository(c.R.Context(), c.Tenant, req.URL, req.Ref, req.Provider, req.ConnectionID, c.Actor())
+	switch {
+	case errors.Is(err, errInvalidRepo):
+		c.Refuse(http.StatusBadRequest, "invalid_repository", err.Error())
+	case errors.Is(err, errPlatformTarget):
+		c.Refuse(http.StatusBadRequest, "platform_target", err.Error())
+	case errors.Is(err, errRepoExists):
+		c.Refuse(http.StatusConflict, "repository_exists", err.Error())
+	case errors.Is(err, errRepoLimit):
+		c.Refuse(http.StatusConflict, "repository_limit", err.Error())
+	case errors.Is(err, errConnectionUnfit):
+		c.Refuse(http.StatusBadRequest, "connection_unfit", err.Error())
+	case errors.Is(err, errConnectionsUnset):
+		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
+	case err != nil && strings.HasPrefix(err.Error(), "connection "):
+		// Compliance could not open it (not found, sealed store down).
+		c.Error(http.StatusBadGateway, "connection_unavailable", err.Error())
+	case err != nil:
+		h.fail(c, err)
+	default:
+		c.Target(r.ID)
+		c.Detail("provider", r.Provider)
+		c.JSON(http.StatusCreated, map[string]interface{}{"repository": r})
+	}
+}
+
+func (h *Handler) removeRepository(c *route.Call) {
+	r, err := h.svc.RemoveRepository(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("url", r.URL)
+	c.JSON(http.StatusOK, map[string]interface{}{"removed": r.ID})
+}
+
+// testRepository reads the start of the repository's archive with its
+// connection. A repository that can't be read is a failure with the reason
+// (502 repository_unreachable), never a pass.
+func (h *Handler) testRepository(c *route.Call) {
+	r, res, err := h.svc.TestRepository(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("url", r.URL)
+	if err != nil {
+		c.Error(http.StatusBadGateway, "repository_unreachable", err.Error())
+		return
+	}
+	c.Detail("commit", res.commit)
+	c.JSON(http.StatusOK, map[string]interface{}{"ok": true, "commit": res.commit})
+}
+
+func (h *Handler) getSchedule(c *route.Call) {
+	sch, err := h.svc.GetSchedule(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"schedule": sch})
+}
+
+// putSchedule saves the schedule on the caller's authority. Only a signed-in
+// user can: the authority is re-checked with auth before every run, and a
+// service or API client has no user to re-check.
+func (h *Handler) putSchedule(c *route.Call) {
+	var req struct {
+		TenantID      string   `json:"tenant_id"` // verified by the kernel
+		Enabled       bool     `json:"enabled"`
+		IntervalHours int      `json:"interval_hours"`
+		Sources       []string `json:"sources"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Detail("enabled", req.Enabled)
+	c.Detail("interval_hours", req.IntervalHours)
+	c.Detail("sources", req.Sources)
+	if c.Claims == nil || strings.TrimSpace(c.Claims.UserID) == "" || tenantcheck.IsServicePrincipal(c.Claims) {
+		c.Refuse(http.StatusForbidden, "user_required", "a schedule is saved by a signed-in user, whose permission is re-checked before every run")
+		return
+	}
+	sch, err := h.svc.SaveSchedule(c.R.Context(), c.Tenant, req.Enabled, req.IntervalHours, req.Sources, c.Claims.UserID)
+	if errors.Is(err, errInvalidSchedule) {
+		c.Refuse(http.StatusBadRequest, "invalid_schedule", err.Error())
+		return
+	}
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"schedule": sch})
 }
 
 func (h *Handler) fail(c *route.Call, err error) {

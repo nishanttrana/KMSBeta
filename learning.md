@@ -5,6 +5,43 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Fake label fixed: every long hex string was an "exposed secret"
+- **What happened:** the code scan called any 32 or more hex characters a
+  `hex_secret` and classed it `exposed`. On one mounted config directory it
+  was tolerable. Pointed at a git repository it would have listed every
+  checksum, digest and commit ID as an exposed secret: a lock file alone
+  has thousands.
+- **How it slipped through:** the label came from a pattern, and the test
+  fed the pattern one string chosen to match. Nobody ran it over a real
+  tree, where most hex is not a secret.
+- **Rule:** a heuristic may only name what it has evidence for. A hex value
+  is listed as a secret only when the line assigns it to a name that says
+  so, and the test tree includes the look-alikes that must not match
+  (a lock file, a `sha256` field, a README). Lock files are skipped. A
+  heuristic finding never raises the incident event.
+
+### Go keeps Authorization across a redirect to the same host on another port
+- **What happened:** the repository scan follows the hosting API's redirect
+  to its download host. Go's client drops `Authorization` only when the
+  redirect leaves the original host name or its subdomains; the port is not
+  compared, and a custom header (GitLab's `PRIVATE-TOKEN`) is never dropped.
+- **How it was caught:** the redirect test used two servers on 127.0.0.1
+  with different ports, and the second one received the token.
+- **Rule:** when a credential rides on a request that may be redirected,
+  use `Authorization` only and delete it in `CheckRedirect` whenever
+  `req.URL.Host` differs from the first request's. Test with a redirect
+  between two servers and assert what the second one received.
+
+### A stand-in server proves what you send, not that the provider accepts it
+- **What happened:** the hosting API tests serve an archive at the path and
+  with the header the code builds, which only shows the code is consistent
+  with itself.
+- **Rule:** for a third-party API, add an opt-in live test
+  (`VECTA_TEST_LIVE_GIT=1`) against public endpoints and run it before
+  shipping. It was run for GitHub, GitLab, Bitbucket and Codeberg. Say in
+  the change what was verified live (public repositories) and what was not
+  (tokens against real private repositories).
+
 ### Fake fixed: posture's "baseline" was yesterday, its score was event volume, and most signals counted nothing
 - **What happened:** the owner asked how many events posture needs for a
   baseline. There was no baseline. Each signal was compared with the previous

@@ -4,6 +4,54 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.20.0-beta] — 2026-10-01
+
+### Crypto Discovery: scan git repositories (public or private) and scan on a schedule
+- **Added (git repositories):** add a repository by its https URL, with an
+  optional branch, tag or commit. The scan asks the hosting service for an
+  archive of that ref and reads it in memory: private keys, keystores and
+  access keys are listed as exposed secrets (location and fingerprint only),
+  certificates, public keys and SSH keys by the key they hold, each with the
+  repository, path, line and commit. GitHub, GitLab, Bitbucket and
+  Gitea/Forgejo/Codeberg are supported, including self-hosted GitLab,
+  Gitea and GitHub Enterprise. Up to 100 repositories a tenant.
+- **Added (private repositories):** a private repository reads with an
+  access token held in a sealed **Git connection** (Playbooks →
+  Connections, new type under Code hosting). Discovery stores no credential,
+  refuses a URL that carries one, and sends a token only to the host its
+  connection names, never along a redirect to another host. **Test** on a
+  repository reads the start of its archive and says whether the URL, the
+  ref and the token work together.
+- **Added (schedule):** scan every 6 or 12 hours, daily or weekly, for the
+  sources you choose. A schedule runs on the permission of the user who
+  saved it, which is checked with auth before every run. If that user is
+  disabled or loses `discovery.write`, the schedule pauses with the reason
+  until someone who holds the permission saves it again.
+- **Changed:** the code scan reads more file types (common source and
+  configuration extensions, `Dockerfile`, `.env.*`, `id_rsa`-style key
+  files) and skips lock files.
+- **Fixed:** a long hex string was listed as an "exposed secret" wherever it
+  appeared, so every checksum and commit ID in a tree counted as one. It is
+  now listed only when the line assigns it to a name that says it is a
+  secret (`API_TOKEN=…`, `"secret_key": "…"`).
+- **API:** `GET|POST /discovery/repositories`,
+  `DELETE /discovery/repositories/{id}`,
+  `POST /discovery/repositories/{id}/test`, `GET|PUT /discovery/schedule`;
+  scan source `git`. Compliance opens a `git` connection for discovery
+  only, refuses to delete one a repository still uses, and
+  `POST /auth/delegated/authority` also answers the discovery service.
+- **Audit:** `audit.discovery.repositories_list`, `repository_add`,
+  `repository_remove`, `repository_test`, `schedule_read`,
+  `schedule_update`, and `scheduled_scan` for every scheduled run or
+  refusal (`authority_revoked`, `authority_unknown`). New refusals:
+  `invalid_repository`, `repository_exists`, `repository_limit`,
+  `connection_unfit`, `invalid_schedule`, `user_required`.
+- **Limits:** the scan reads the files at the ref's latest commit, not
+  history, so a secret removed in a later commit is not found. A git
+  server on a private network can be scanned without a token only:
+  connections refuse private addresses. Bitbucket Server and Azure DevOps
+  are not supported.
+
 ## [7.19.0-beta] — 2026-10-01
 
 ### Posture: a real baseline, and no risk score until it exists

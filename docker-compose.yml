@@ -1035,6 +1035,7 @@ services:
       GOVERNANCE_URL: https://governance:8050
       REPORTING_URL: https://reporting:8140
       POSTURE_URL: https://posture:8220
+      DISCOVERY_URL: https://discovery:8100
       HTTP_PORT: "8110"
       GRPC_PORT: "18110"
     ports:
@@ -1167,6 +1168,9 @@ services:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
       CERTS_URL: https://certs:8030
+      # Git connections for private repositories (compliance) and the
+      # schedule's authority check (auth, in kms-common-env).
+      COMPLIANCE_URL: https://compliance:8110
       HTTP_PORT: "8100"
       GRPC_PORT: "18100"
     ports:

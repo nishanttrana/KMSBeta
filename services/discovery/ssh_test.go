@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -220,7 +221,11 @@ func FuzzUntrustedParsers(f *testing.F) {
 	} {
 		f.Add(seed)
 	}
+	svc := &Service{now: func() time.Time { return time.Now().UTC() }}
+	repo := Repository{TenantID: "t1", URL: "https://git.example.com/acme/app", Provider: "gitlab"}
 	f.Fuzz(func(t *testing.T, b []byte) {
+		_, _ = svc.scanArchive(repo, "s", bytes.NewReader(b), 0)
+		_, _ = normalizeRepository(string(b), string(b), "gitlab")
 		_, _ = parseKexInit(b)
 		_ = sshKeyName(b)
 		_ = openSSHPrivateKeyName(b)

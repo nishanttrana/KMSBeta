@@ -40,7 +40,7 @@ type ConnectionSpec struct {
 	// URLField is the endpoint; its host is shown, and it must be public https.
 	URLField string   `json:"url_field"`
 	Optional []string `json:"optional,omitempty"`
-	// Category groups types: notify, ticketing or siem.
+	// Category groups types: notify, ticketing, siem or source.
 	Category string `json:"category"`
 	// Secrets are credential fields (the form masks them). No field value
 	// is ever returned, secret or not.
@@ -53,6 +53,9 @@ const (
 	categoryNotify    = "notify"
 	categoryTicketing = "ticketing"
 	categorySIEM      = "siem"
+	// categorySource: code hosting. Discovery reads private repositories
+	// with a git connection's token (7.20.0-beta).
+	categorySource = "source"
 )
 
 var connectionTypes = func() []ConnectionSpec {
@@ -62,6 +65,10 @@ var connectionTypes = func() []ConnectionSpec {
 		{Type: "webhook", Label: "HTTPS webhook", Fields: []string{"url"}, URLField: "url", Optional: []string{"headers", "signing_secret"}, Category: categoryNotify, Secrets: []string{"headers", "signing_secret"}, Stream: true},
 		{Type: "jira", Label: "Jira", Fields: []string{"base_url"}, URLField: "base_url", Optional: []string{"api_token"}, Category: categoryTicketing, Secrets: []string{"api_token"}},
 		{Type: "servicenow", Label: "ServiceNow", Fields: []string{"instance_url"}, URLField: "instance_url", Optional: []string{"auth_token"}, Category: categoryTicketing, Secrets: []string{"auth_token"}},
+		// git_url is the hosting site (https://github.com); the token is
+		// sent only to that host. username is for hosts that take Basic
+		// authentication (a Bitbucket app password).
+		{Type: "git", Label: "Git hosting (repository access token)", Fields: []string{"git_url", "token"}, URLField: "git_url", Optional: []string{"username"}, Category: categorySource, Secrets: []string{"token"}},
 	}
 	for _, s := range siem.Specs {
 		out = append(out, ConnectionSpec{Type: s.Kind, Label: s.Label, Fields: s.Required, URLField: s.URLField, Optional: s.Optional,
@@ -384,6 +391,14 @@ func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 
 func (h *Handler) deleteConnection(c *route.Call) {
 	id := c.R.PathValue("id")
+	conn, err := h.svc.store.GetConnection(c.R.Context(), c.Tenant, id)
+	if errors.Is(err, errNotFound) {
+		c.Error(http.StatusNotFound, "not_found", "connection not found")
+		return
+	} else if err != nil {
+		c.Error(http.StatusInternalServerError, "internal_error", "read connection failed")
+		return
+	}
 	pbs, err := h.svc.store.ListPlaybooks(c.R.Context(), c.Tenant)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "internal_error", "list playbooks failed")
@@ -408,6 +423,18 @@ func (h *Handler) deleteConnection(c *route.Call) {
 			return
 		}
 		users = append(users, others...)
+	}
+	// A git connection's users are discovery's repositories. Discovery is
+	// asked only for that type, so a deployment without it can still
+	// delete every other connection.
+	if conn.Type == "git" && h.repoUsage != nil {
+		repos, err := h.repoUsage(c.R.Context(), c.Tenant, id)
+		if err != nil {
+			c.Detail("error", err.Error())
+			c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
+			return
+		}
+		users = append(users, repos...)
 	}
 	if len(users) > 0 {
 		c.Detail("used_by", users)
@@ -445,6 +472,12 @@ func (h *Handler) testConnection(c *route.Call) {
 		return
 	}
 	c.Detail("type", conn.Type)
+	if conn.Type == "git" {
+		// What a token can read depends on the repository, so the real
+		// test is discovery's: POST /discovery/repositories/{id}/test.
+		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test a Git connection on a repository that uses it: Crypto Discovery, Git repositories, Test")
+		return
+	}
 	if err := h.executor.testConnection(c.R.Context(), conn); err != nil {
 		c.Error(http.StatusBadGateway, "connection_test_failed", err.Error())
 		return

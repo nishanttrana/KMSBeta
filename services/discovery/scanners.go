@@ -412,19 +412,30 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 	return out, err
 }
 
-// codeScanFile: source, configuration and key or certificate files.
+// codeScanFile: source, configuration and key or certificate files. Lock
+// files are skipped: they hold other projects' checksums, not this one's
+// keys.
 func codeScanFile(name string) bool {
-	switch strings.ToLower(name) {
-	case "authorized_keys", "known_hosts":
+	name = strings.ToLower(name)
+	switch name {
+	case "authorized_keys", "known_hosts", "id_rsa", "id_ecdsa", "id_ed25519", "id_dsa", "dockerfile":
 		return true
+	case "package-lock.json", "go.sum", "pnpm-lock.yaml", "npm-shrinkwrap.json":
+		return false
 	}
-	switch ext := strings.ToLower(filepath.Ext(name)); ext {
-	case ".go", ".yaml", ".yml", ".json", ".env", ".txt", ".pem", ".key", ".crt", ".cer", ".der", ".csr", ".pub":
-		return true
-	default:
-		return keystoreExt[ext]
-	}
+	ext := filepath.Ext(name)
+	return ext != ".lock" && (codeScanExt[ext] || keystoreExt[ext] || strings.HasPrefix(name, ".env"))
 }
+
+var codeScanExt = func() map[string]bool {
+	m := map[string]bool{}
+	for _, e := range strings.Fields(`.go .yaml .yml .json .env .txt .pem .key .crt .cer .der .csr .pub
+		.js .ts .jsx .tsx .py .rb .java .kt .cs .php .rs .c .h .cpp .sh .ps1
+		.tf .tfvars .properties .conf .cfg .ini .toml .xml`) {
+		m[e] = true
+	}
+	return m
+}()
 
 func parseEndpoints(raw string) []string {
 	out := []string{}

@@ -22,8 +22,10 @@ function sourceLine(s: DiscoverySource): string {
       return s.configured ? `${plural(d.accounts, "account")} · ${(d.providers || []).join(", ")}` : "No accounts connected";
     case "certs":
       return plural(d.certificates || 0, "certificate");
+    case "git":
+      return s.configured ? `${plural(d.repositories, "repository", "repositories")}${d.private ? ` · ${d.private} private` : ""}` : "No repositories yet";
     case "code":
-      return s.configured ? "Repository mounted" : "Not mounted";
+      return s.configured ? "Source tree mounted" : "Not mounted";
     default:
       return "Keys, certificates, keystores";
   }
@@ -36,25 +38,27 @@ type CardsProps = {
   uploading: boolean;
   onScan: (types: string[]) => void;
   onTargets: () => void;
+  onRepositories: () => void;
   onCodeSetup: () => void;
   onPickFiles: () => void;
   onUpload: (files: File[]) => void;
   onNavigate?: (tab: string) => void;
 };
 
-export function SourceCards({ sources, assetCounts, running, uploading, onScan, onTargets, onCodeSetup, onPickFiles, onUpload, onNavigate }: CardsProps) {
+export function SourceCards({ sources, assetCounts, running, uploading, onScan, onTargets, onRepositories, onCodeSetup, onPickFiles, onUpload, onNavigate }: CardsProps) {
   const [dragging, setDragging] = useState(false);
   const action = (s: DiscoverySource) => {
     switch (s.id) {
       case "network": return { label: "Targets", run: onTargets };
       case "cloud": return { label: s.configured ? "Accounts" : "Connect", run: () => onNavigate?.("byok") };
       case "certs": return { label: "Open PKI", run: () => onNavigate?.("certificates") };
+      case "git": return { label: "Repos", run: onRepositories };
       case "code": return { label: s.configured ? "Details" : "Set up", run: onCodeSetup };
       default: return { label: uploading ? "Uploading..." : "Upload", run: onPickFiles };
     }
   };
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(176px, 1fr))", gap: 10 }}>
       {sources.map((s) => {
         const M = sourceMeta(s.id);
         const Icon = M.icon;
@@ -67,11 +71,11 @@ export function SourceCards({ sources, assetCounts, running, uploading, onScan, 
             onDragOver={isUpload ? (e) => { e.preventDefault(); setDragging(true); } : undefined}
             onDragLeave={isUpload ? () => setDragging(false) : undefined}
             onDrop={isUpload ? (e) => { e.preventDefault(); setDragging(false); onUpload(Array.from(e.dataTransfer.files)); } : undefined}
-            style={{ background: C.card, border: `1px ${dragging && isUpload ? "dashed" : "solid"} ${dragging && isUpload ? C.accentFg : C.border}`, borderRadius: "var(--radius-md)", padding: 14, display: "flex", flexDirection: "column", gap: 8, boxShadow: "var(--shadow-sm)", minWidth: 0 }}>
+            style={{ background: C.card, border: `1px ${dragging && isUpload ? "dashed" : "solid"} ${dragging && isUpload ? C.accentFg : C.border}`, borderRadius: "var(--radius-md)", padding: 12, display: "flex", flexDirection: "column", gap: 8, boxShadow: "var(--shadow-sm)", minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ width: 30, height: 30, borderRadius: 8, background: C.accentDim, color: C.accentFg, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={15} /></span>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text }}>{M.label}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{M.label}</div>
                 <div style={{ fontSize: 10.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={s.error || sourceLine(s)}>{sourceLine(s)}</div>
               </div>
               <span style={{ fontSize: 18, fontWeight: 650, color: C.text, fontVariantNumeric: "tabular-nums" }} title="assets in the inventory">{(assetCounts[s.id] || 0).toLocaleString()}</span>
@@ -193,8 +197,8 @@ export function CodeSetupModal({ open, onClose, configured, onUpload }: { open: 
     </div>
   );
   return (
-    <Modal open={open} onClose={onClose} title="Source code scanning">
-      {configured && <div style={{ fontSize: 11.5, color: C.greenFg, marginBottom: 12 }}>A repository is mounted. Scan it from the Source code card.</div>}
+    <Modal open={open} onClose={onClose} title="Mounted code">
+      {configured && <div style={{ fontSize: 11.5, color: C.greenFg, marginBottom: 12 }}>A source tree is mounted. Scan it from the Mounted code card.</div>}
       {step(1, "Mount the repository read-only into the discovery service")}
       {step(2, "Set WORKSPACE_ROOT to the mount path")}
       {step(3, "Restart discovery, then scan")}

@@ -109,7 +109,9 @@ func main() {
 
 	handler := NewHandler(svc, auditClient, logger, vault)
 	handler.SetExecutor(executor)
-	handler.usage = platformUsage{auditURL: strings.TrimRight(auditURL, "/"), governanceURL: urls.Governance, http: executor.platform}
+	usage := platformUsage{auditURL: strings.TrimRight(auditURL, "/"), governanceURL: urls.Governance,
+		discoveryURL: strings.TrimRight(envOr("DISCOVERY_URL", "https://discovery:8100"), "/"), http: executor.platform}
+	handler.usage, handler.repoUsage = usage, usage.Repositories
 
 	triggerListener := NewTriggerListener(store, executor, logger)
 	handler.triggers = triggerListener

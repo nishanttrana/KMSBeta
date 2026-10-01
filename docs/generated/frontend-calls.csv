@@ -245,6 +245,13 @@ discovery,discovery,DELETE,/discovery/targets/{param}?{param},/discovery/targets
 discovery,discovery,GET,/discovery/sources?{param},/discovery/sources,True,serviceRequest,web/dashboard/src/lib/discovery.ts,229,discovery|GET|/discovery/sources
 discovery,discovery,POST,/discovery/upload?{param},/discovery/upload,True,serviceRequest,web/dashboard/src/lib/discovery.ts,256,discovery|POST|/discovery/upload
 discovery,discovery,DELETE,/discovery/assets/{param}?{param},/discovery/assets/{param},True,serviceRequest,web/dashboard/src/lib/discovery.ts,266,discovery|DELETE|/discovery/assets/{param}
+discovery,discovery,GET,/discovery/repositories?{param},/discovery/repositories,True,serviceRequest,web/dashboard/src/lib/discovery.ts,289,discovery|GET|/discovery/repositories
+discovery,discovery,POST,/discovery/repositories?{param},/discovery/repositories,True,serviceRequest,web/dashboard/src/lib/discovery.ts,301,discovery|POST|/discovery/repositories
+discovery,discovery,DELETE,/discovery/repositories/{param}?{param},/discovery/repositories/{param},True,serviceRequest,web/dashboard/src/lib/discovery.ts,311,discovery|DELETE|/discovery/repositories/{param}
+discovery,discovery,POST,/discovery/repositories/{param}/test?{param},/discovery/repositories/{param}/test,True,serviceRequest,web/dashboard/src/lib/discovery.ts,322,discovery|POST|/discovery/repositories/{param}/test
+discovery,discovery,GET,/discovery/schedule?{param},/discovery/schedule,True,serviceRequest,web/dashboard/src/lib/discovery.ts,347,discovery|GET|/discovery/schedule
+discovery,discovery,PUT,/discovery/schedule?{param},/discovery/schedule,True,serviceRequest,web/dashboard/src/lib/discovery.ts,362,discovery|PUT|/discovery/schedule
+compliance,compliance,GET,/compliance/playbooks/connections?{param},/compliance/playbooks/connections,True,serviceRequest,web/dashboard/src/lib/discovery.ts,379,compliance|GET|/compliance/playbooks/connections
 compliance,compliance,GET,/compliance/risk/keys?{param}&limit={param},/compliance/risk/keys,True,serviceRequest,web/dashboard/src/lib/dri.ts,54,compliance|GET|/compliance/risk/keys
 compliance,compliance,GET,/compliance/risk/summary?{param},/compliance/risk/summary,True,serviceRequest,web/dashboard/src/lib/dri.ts,62,compliance|GET|/compliance/risk/summary
 compliance,compliance,GET,/compliance/risk/remediation?{param},/compliance/risk/remediation,True,serviceRequest,web/dashboard/src/lib/dri.ts,82,compliance|GET|/compliance/risk/remediation

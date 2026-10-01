@@ -101,8 +101,10 @@ var Replicated = map[string][]string{
 	},
 	"discovery": {
 		"discovery_assets",
+		"discovery_repositories",
 		"discovery_scans",
 		"discovery_scan_targets",
+		"discovery_schedules",
 		"lineage_events", // dropped by discovery migration 003; 002 still creates it
 	},
 	"ekm": {

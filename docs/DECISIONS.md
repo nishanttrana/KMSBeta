@@ -7,6 +7,55 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Discovery: git repositories through the hosting API; schedules on checked authority (7.20.0-beta)
+
+- **Decision (how a repository is read):** discovery asks the hosting
+  service's API for a tar.gz of one ref over HTTPS and scans the stream in
+  memory with the code scan's parser. It writes nothing to disk and runs no
+  git program.
+- **Why:** the only cryptography is this service's own TLS, so the feature
+  is the same in every FIPS mode, and every request goes through the scan's
+  dial guard after DNS resolution, redirects included.
+- **Rejected:** running the `git` program. Its TLS is the image's OpenSSL,
+  outside the certified module, and it resolves and connects by itself, so
+  the dial guard could not check the address it reaches. `go-git`: a large
+  dependency that brings its own SHA-1 and transport code. Speaking the git
+  smart protocol directly: a pack has no file paths without hashing every
+  object with SHA-1, which the module refuses in strict mode.
+- **Cost:** each hosting service has its own archive URL, so the provider
+  is detected for github.com, gitlab.com, bitbucket.org, codeberg.org and
+  gitea.com and stated for any other host. Bitbucket Server and Azure
+  DevOps are not covered. Only the ref's latest commit is read.
+- **Decision (credentials):** a private repository's token is a sealed
+  compliance connection of type `git` (docs/SECURITY/CONNECTIONS.md).
+  Compliance opens it for the `kms-discovery` identity only, for that type
+  only. Discovery checks that the connection's host is the repository's
+  host before every use and removes the token on a redirect to any other
+  host. A URL with a user name or token in it is refused and not copied to
+  the audit event.
+- **Decision (schedules):** one schedule per tenant, saved by a signed-in
+  user who holds `discovery.write`. Before every run discovery asks auth
+  whether that user is still active and still holds it
+  (docs/PLATFORM_CONTRACT.md). Lost authority pauses the schedule; an
+  unanswered check postpones the run 15 minutes without pausing. Schedules
+  run on the primary only.
+- **Rejected:** running a schedule as the service with no named authority
+  (it would lend discovery's reach, including sealed tokens, to anyone who
+  once could save one). Letting an API client save one: there is no user
+  for auth to re-check.
+- **Enforced by:** `TestGitScanReadsEachHostingAPI`,
+  `TestGitTokenStaysOnItsHost`, `TestGitScanReportsRefusals`,
+  `TestGitArchiveLimits`, `TestNormalizeRepository`,
+  `TestRepositoryRoutesAudited`, `TestRepositoryTestReadsTheArchive`,
+  `TestScheduleRoutesAudited`, `TestScheduleRunsOnCheckedAuthority`,
+  `TestScheduleSkippedOnClusterMember`, `TestScheduleDisabledAndBusy`,
+  `TestGitConnectionIsDiscoverysAlone`,
+  `TestAuthorityCheckForDiscoveryOnly`,
+  `TestTargetsAndAssetRemovalPostgres`, and the opt-in
+  `TestLivePublicRepositories`.
+
+---
+
 ## 2026-10-01 — Discovery: background scans, SSH and ranges, uploads, server-counted charts (7.18.0-beta)
 
 - **Decision (scans):** a scan runs in the background on the node that

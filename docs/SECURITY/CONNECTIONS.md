@@ -21,6 +21,7 @@ keep one.
 | notify | `slack`, `teams`, `webhook` (optional `signing_secret`, HMAC-SHA256 from `pkg/crypto`) | playbook actions, event streams; Slack/Teams also approval notices |
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
+| source | `git`: the hosting site (`git_url`), an access `token`, optional `username` for Basic authentication (7.20.0-beta) | discovery's git repository scans |
 
 ## Who can open one
 
@@ -35,6 +36,15 @@ keep one.
   types, notices take Slack or Teams. Every release is audited as
   `audit.compliance.connection_resolved`, naming the caller and never a
   field.
+- **Discovery** (git repository scans, 7.20.0-beta) holds a connection ID
+  per private repository and is admitted as `kms-discovery` for `git`
+  connections only; the audit service and governance can't open one. It
+  opens the connection for each scan, checks that the connection's host is
+  the repository's host, sends the token only there and removes it on a
+  redirect to another host. It keeps nothing after the scan. A git
+  connection is tested on a repository that uses it
+  (`POST /discovery/repositories/{id}/test`); the Connections test refuses
+  with `connection_test_elsewhere`.
 - The audit service keeps an opened connection in memory for 60 seconds and
   governance for one notice. Neither writes one to disk, a log or an error:
   delivery errors name the host, never the URL (a Slack or Teams URL is
@@ -55,6 +65,10 @@ keep one.
   retired by Microsoft on 14 September 2026 and is not used.
 
 ## Deleting
+
+A git connection in use by a discovery repository can't be deleted either:
+compliance asks discovery, and only for that type, so a deployment without
+discovery can still delete every other connection.
 
 A connection in use can't be deleted. Compliance checks its playbooks, asks
 the audit service for its event streams and, for the root tenant, asks
@@ -95,3 +109,6 @@ again after a restore:
 - Streams deliver one event per request. Batching (every `pkg/siem`
   destination accepts a batch) would cut request volume for busy tenants.
 - Sentinel supports the public Azure cloud only (the Entra host is fixed).
+- A git server on a private network can't have a connection, for the same
+  reason as a private SIEM. Discovery can still scan its repositories that
+  need no token.

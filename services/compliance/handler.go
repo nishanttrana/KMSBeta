@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -22,6 +23,8 @@ type Handler struct {
 	// usage finds a connection's users outside playbooks (audit streams,
 	// governance); nil in tests that don't exercise delete.
 	usage ConnectionUsage
+	// repoUsage names the discovery repositories that use a git connection.
+	repoUsage func(ctx context.Context, tenantID, connID string) ([]string, error)
 	// dispatch runs a playbook execution; tests run it inline.
 	dispatch func(func())
 }

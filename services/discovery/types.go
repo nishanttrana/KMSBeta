@@ -28,6 +28,14 @@ type Store interface {
 	DeleteAsset(ctx context.Context, tenantID string, id string) error
 	EachAsset(ctx context.Context, tenantID string, fn func(CryptoAsset) error) error
 
+	CreateRepository(ctx context.Context, repo Repository) error
+	ListRepositories(ctx context.Context, tenantID string) ([]Repository, error)
+	DeleteRepository(ctx context.Context, tenantID string, id string) error
+
+	GetSchedule(ctx context.Context, tenantID string) (Schedule, error)
+	PutSchedule(ctx context.Context, sch Schedule) error
+	DueSchedules(ctx context.Context, now time.Time) ([]Schedule, error)
+
 	CreateTarget(ctx context.Context, target ScanTarget) error
 	ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error)
 	DeleteTarget(ctx context.Context, tenantID string, id string) error
@@ -43,6 +51,35 @@ type ScanTarget struct {
 	Protocol  string    `json:"protocol"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// Repository is a git repository a tenant added for the "git" scan source.
+// URL is https://host/path with no credential; ConnectionID names the
+// sealed git connection for a private one.
+type Repository struct {
+	ID           string    `json:"id"`
+	TenantID     string    `json:"tenant_id"`
+	URL          string    `json:"url"`
+	Ref          string    `json:"ref"`
+	Provider     string    `json:"provider"`
+	ConnectionID string    `json:"connection_id"`
+	CreatedBy    string    `json:"created_by"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// Schedule runs a tenant's scan every IntervalHours on the authority of the
+// user who saved it.
+type Schedule struct {
+	TenantID      string    `json:"tenant_id"`
+	Enabled       bool      `json:"enabled"`
+	IntervalHours int       `json:"interval_hours"`
+	Sources       []string  `json:"sources"`
+	AuthorizedBy  string    `json:"authorized_by"`
+	NextRunAt     time.Time `json:"next_run_at"`
+	LastRunAt     time.Time `json:"last_run_at"`
+	LastScanID    string    `json:"last_scan_id"`
+	PausedReason  string    `json:"paused_reason"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type DiscoveryScan struct {

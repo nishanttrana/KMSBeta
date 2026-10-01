@@ -300,7 +300,7 @@ func TestSourcesReportSetupAndLastScan(t *testing.T) {
 	if c := src["certs"]; !c.Configured || c.Detail["certificates"] != float64(2) || c.LastScan != nil {
 		t.Fatalf("certs: %+v", c)
 	}
-	if src["code"].Configured || !src["upload"].Configured || len(src) != 5 {
+	if src["code"].Configured || src["git"].Configured || !src["upload"].Configured || len(src) != 6 {
 		t.Fatalf("code/upload: %+v", src)
 	}
 	scan, _ := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"certs", "code"}})

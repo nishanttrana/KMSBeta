@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-01T05:23:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T10:02:13Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `28`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `847` across `28` services
-- Backend routes on the `pkg/route` kernel: `419` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `533`
-- Frontend call sites with exact backend route match: `491`
+- Backend HTTP routes discovered: `853` across `28` services
+- Backend routes on the `pkg/route` kernel: `425` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `540`
+- Frontend call sites with exact backend route match: `498`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `736`
-- Backend request flows with handler/service/package summaries: `847`
+- Clickable controls with static `onClick` handlers: `746`
+- Backend request flows with handler/service/package summaries: `853`
 
 ## How To Use This For Launch
 
@@ -56,6 +56,7 @@ flowchart LR
   tab_crypto_agility --> svc_keycore
   tab_discovery["Crypto Discovery"]
   UI --> tab_discovery
+  tab_discovery --> svc_compliance
   tab_discovery --> svc_discovery
   tab_certs["Certificates / PKI"]
   UI --> tab_certs
@@ -141,7 +142,7 @@ flowchart LR
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (54 routes)"]
   svc_confidential["confidential (7 routes)"]
-  svc_discovery["discovery (14 routes)"]
+  svc_discovery["discovery (20 routes)"]
   svc_ekm["ekm (64 routes)"]
   svc_governance["governance (35 routes)"]
   svc_hyok["hyok (21 routes)"]
@@ -171,7 +172,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 96 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |
-| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | discovery | 12 |
+| Keys & lifecycle | Crypto Discovery | discovery | web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | compliance, discovery | 19 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 101 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -210,10 +211,10 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | certs | 69 | 52 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
-| compliance | 54 | 19 |
+| compliance | 54 | 20 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
-| discovery | 14 | 12 |
+| discovery | 20 | 18 |
 | ekm | 64 | 44 |
 | governance | 35 | 23 |
 | hsm-connector | 12 | 0 |
@@ -301,10 +302,10 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 108 |
 | audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 111 |
 | auth | DELETE | /auth/api-keys/{id} | h.deleteAPIKey | auth.api_key.write | services/auth/clients_admin.go | 30 |
-| auth | POST | /auth/delegated/authority | h.delegatedAuthority | authenticated | services/auth/delegated.go | 69 |
-| auth | POST | /auth/delegated/users/{id}/disable | h.delegatedDisableUser | authenticated | services/auth/delegated.go | 70 |
-| auth | POST | /auth/delegated/api-keys/{id}/revoke | h.delegatedRevokeAPIKey | authenticated | services/auth/delegated.go | 71 |
-| auth | POST | /auth/delegated/clients/{id}/revoke | h.delegatedRevokeClient | authenticated | services/auth/delegated.go | 72 |
+| auth | POST | /auth/delegated/authority | h.delegatedAuthority | authenticated | services/auth/delegated.go | 77 |
+| auth | POST | /auth/delegated/users/{id}/disable | h.delegatedDisableUser | authenticated | services/auth/delegated.go | 78 |
+| auth | POST | /auth/delegated/api-keys/{id}/revoke | h.delegatedRevokeAPIKey | authenticated | services/auth/delegated.go | 79 |
+| auth | POST | /auth/delegated/clients/{id}/revoke | h.delegatedRevokeClient | authenticated | services/auth/delegated.go | 80 |
 | auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 67 |
 | auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 68 |
 | auth | POST | /auth/client-token | h.handleClientToken |  | services/auth/handler.go | 69 |
@@ -376,20 +377,20 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | cluster-manager | POST | /cluster/sync/events | h.handlePublishSyncEvent |  | services/cluster-manager/handler.go | 53 |
 | cluster-manager | POST | /cluster/sync/ack | h.handleSyncAck |  | services/cluster-manager/handler.go | 55 |
 | cluster-manager | GET | /cluster/replication/status | h.handleReplicationStatus |  | services/cluster-manager/handler.go | 58 |
-| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 63 |
-| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 64 |
-| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 51 |
-| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 52 |
-| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 62 |
-| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 66 |
-| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 70 |
-| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 71 |
-| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 73 |
-| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 76 |
-| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 77 |
-| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 78 |
-| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 79 |
-| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 80 |
+| compliance | POST | /compliance/connections/{id}/resolve | h.resolveConnection | authenticated | services/compliance/connections_service.go | 66 |
+| compliance | POST | /compliance/connections/import | h.importConnection | authenticated | services/compliance/connections_service.go | 67 |
+| compliance | GET | /compliance/posture | h.handlePosture |  | services/compliance/handler.go | 54 |
+| compliance | GET | /compliance/posture/history | h.handlePostureHistory |  | services/compliance/handler.go | 55 |
+| compliance | GET | /compliance/templates/{id} | h.handleGetComplianceTemplate |  | services/compliance/handler.go | 65 |
+| compliance | GET | /compliance/frameworks/{id}/controls | h.handleFrameworkControls |  | services/compliance/handler.go | 69 |
+| compliance | GET | /compliance/keys/orphaned | h.handleOrphaned |  | services/compliance/handler.go | 73 |
+| compliance | GET | /compliance/keys/expired | h.handleExpired |  | services/compliance/handler.go | 74 |
+| compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations |  | services/compliance/handler.go | 76 |
+| compliance | GET | /compliance/cbom | h.handleCBOM |  | services/compliance/handler.go | 79 |
+| compliance | GET | /compliance/cbom/summary | h.handleCBOMSummary |  | services/compliance/handler.go | 80 |
+| compliance | GET | /compliance/cbom/export | h.handleCBOMExport |  | services/compliance/handler.go | 81 |
+| compliance | GET | /compliance/cbom/pqc-readiness | h.handleCBOMPQCReadiness |  | services/compliance/handler.go | 82 |
+| compliance | GET | /compliance/cbom/diff | h.handleCBOMDiff |  | services/compliance/handler.go | 83 |
 | compliance | GET | /compliance/playbooks/catalog | h.playbookCatalog | compliance.playbook.read | services/compliance/handler_playbooks.go | 135 |
 | compliance | GET | /compliance/playbooks/summary | h.playbookSummary | compliance.playbook.read | services/compliance/handler_playbooks.go | 136 |
 | compliance | GET | /compliance/playbooks | h.listPlaybooks | compliance.playbook.read | services/compliance/handler_playbooks.go | 137 |
@@ -404,10 +405,10 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/retry | h.retryRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 148 |
-| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 280 |
-| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 281 |
-| compliance | DELETE | /compliance/playbooks/connections/{id} | h.deleteConnection | compliance.playbook.delete | services/compliance/playbook_connections.go | 282 |
-| compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 283 |
+| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 287 |
+| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 288 |
+| compliance | DELETE | /compliance/playbooks/connections/{id} | h.deleteConnection | compliance.playbook.delete | services/compliance/playbook_connections.go | 289 |
+| compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 290 |
 | confidential | POST | /confidential/release | h.releaseKey | confidential.release | services/confidential/handler_release.go | 14 |
 
 Showing `120` of `348`. Full data is in `docs/generated/product-map.json`.

@@ -129,6 +129,30 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE discovery_repositories (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			url TEXT NOT NULL,
+			ref TEXT NOT NULL DEFAULT '',
+			provider TEXT NOT NULL,
+			connection_id TEXT NOT NULL DEFAULT '',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id),
+			UNIQUE (tenant_id, url, ref)
+		);`,
+		`CREATE TABLE discovery_schedules (
+			tenant_id TEXT PRIMARY KEY,
+			enabled BOOLEAN NOT NULL DEFAULT FALSE,
+			interval_hours INTEGER NOT NULL DEFAULT 24,
+			sources TEXT NOT NULL DEFAULT '',
+			authorized_by TEXT NOT NULL DEFAULT '',
+			next_run_at TIMESTAMP,
+			last_run_at TIMESTAMP,
+			last_scan_id TEXT NOT NULL DEFAULT '',
+			paused_reason TEXT NOT NULL DEFAULT '',
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
 		`CREATE TABLE discovery_scan_targets (
 			tenant_id TEXT NOT NULL,
 			id TEXT NOT NULL,

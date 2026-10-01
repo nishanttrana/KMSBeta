@@ -76,6 +76,36 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	if a, _ := svc.GetAsset(ctx, tenant, "a1"); a.Metadata["review_status"] != "accepted_risk" || a.Metadata["reviewed_by"] != "alice" {
 		t.Fatalf("review lost on Postgres: %+v", a.Metadata)
 	}
+	// Migration 006: repositories and the schedule.
+	if _, err := svc.AddRepository(ctx, tenant, "https://github.com/acme/app.git", "main", "", "", "w"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.AddRepository(ctx, tenant, "https://github.com/acme/app", "main", "", "", "w"); !errors.Is(err, errRepoExists) {
+		t.Fatalf("duplicate repository: %v", err)
+	}
+	if repos, err := store.ListRepositories(ctx, tenant); err != nil || len(repos) != 1 || repos[0].URL != "https://github.com/acme/app" || repos[0].Provider != "github" {
+		t.Fatalf("repositories %+v, %v", repos, err)
+	}
+	if _, err := svc.SaveSchedule(ctx, tenant, true, 6, []string{"certs", "git"}, "alice"); err != nil {
+		t.Fatal(err)
+	}
+	sch, err := svc.GetSchedule(ctx, tenant)
+	if err != nil || !sch.Enabled || sch.IntervalHours != 6 || strings.Join(sch.Sources, ",") != "certs,git" || sch.AuthorizedBy != "alice" || time.Until(sch.NextRunAt) < 5*time.Hour {
+		t.Fatalf("schedule %+v, %v", sch, err)
+	}
+	if due, err := store.DueSchedules(ctx, time.Now().UTC()); err != nil || containsTenant(due, tenant) {
+		t.Fatalf("due before its time: %+v, %v", due, err)
+	}
+	if due, err := store.DueSchedules(ctx, time.Now().UTC().Add(7*time.Hour)); err != nil || !containsTenant(due, tenant) {
+		t.Fatalf("not due after its interval: %+v, %v", due, err)
+	}
+	sch.PausedReason = "authority lost"
+	if err := store.PutSchedule(ctx, sch); err != nil {
+		t.Fatal(err)
+	}
+	if due, _ := store.DueSchedules(ctx, time.Now().UTC().Add(7*time.Hour)); containsTenant(due, tenant) {
+		t.Fatal("a paused schedule is due")
+	}
 	if _, err := svc.RemoveAsset(ctx, tenant, "a1"); err != nil {
 		t.Fatal(err)
 	}
@@ -85,4 +115,13 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	if err := store.DeleteAsset(ctx, tenant, "a1"); !errors.Is(err, errNotFound) {
 		t.Fatalf("second delete: %v", err)
 	}
+}
+
+func containsTenant(items []Schedule, tenant string) bool {
+	for _, s := range items {
+		if s.TenantID == tenant {
+			return true
+		}
+	}
+	return false
 }

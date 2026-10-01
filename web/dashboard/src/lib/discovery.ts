@@ -270,3 +270,116 @@ export async function removeDiscoveryAsset(session: AuthSession, id: string): Pr
     { method: "DELETE" }
   );
 }
+
+// A git repository the tenant added for the "git" scan source. The URL holds
+// no credential; a private repository names a sealed Git connection
+// (Playbooks, Connections).
+export type DiscoveryRepository = {
+  id: string;
+  tenant_id: string;
+  url: string;
+  ref: string;
+  provider: "github" | "gitlab" | "bitbucket" | "gitea";
+  connection_id: string;
+  created_by: string;
+  created_at: string;
+};
+
+export async function listDiscoveryRepositories(session: AuthSession): Promise<DiscoveryRepository[]> {
+  const res = await serviceRequest<{ items?: DiscoveryRepository[] }>(
+    session,
+    "discovery",
+    `/discovery/repositories?${tenantQuery(session)}`
+  );
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export async function addDiscoveryRepository(
+  session: AuthSession,
+  repo: { url: string; ref: string; provider: string; connection_id: string }
+): Promise<DiscoveryRepository> {
+  const res = await serviceRequest<{ repository?: DiscoveryRepository }>(
+    session,
+    "discovery",
+    `/discovery/repositories?${tenantQuery(session)}`,
+    { method: "POST", body: JSON.stringify(repo) }
+  );
+  return res?.repository ?? ({} as DiscoveryRepository);
+}
+
+export async function removeDiscoveryRepository(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(
+    session,
+    "discovery",
+    `/discovery/repositories/${encodeURIComponent(id)}?${tenantQuery(session)}`,
+    { method: "DELETE" }
+  );
+}
+
+// testDiscoveryRepository reads the start of the repository's archive with
+// its connection; it throws with the hosting service's reason when it can't.
+export async function testDiscoveryRepository(session: AuthSession, id: string): Promise<{ commit: string }> {
+  const res = await serviceRequest<{ commit?: string }>(
+    session,
+    "discovery",
+    `/discovery/repositories/${encodeURIComponent(id)}/test?${tenantQuery(session)}`,
+    { method: "POST", body: "{}" }
+  );
+  return { commit: String(res?.commit || "") };
+}
+
+// The tenant's scan schedule. authorized_by is the user who saved it; their
+// permission is re-checked before every run, and paused_reason says when it
+// no longer holds.
+export type DiscoverySchedule = {
+  tenant_id: string;
+  enabled: boolean;
+  interval_hours: number;
+  sources: string[];
+  authorized_by: string;
+  next_run_at?: string;
+  last_run_at?: string;
+  last_scan_id: string;
+  paused_reason: string;
+};
+
+export async function getDiscoverySchedule(session: AuthSession): Promise<DiscoverySchedule> {
+  const res = await serviceRequest<{ schedule?: DiscoverySchedule }>(
+    session,
+    "discovery",
+    `/discovery/schedule?${tenantQuery(session)}`
+  );
+  if (!res?.schedule) {
+    throw new Error("discovery returned no schedule");
+  }
+  return res.schedule;
+}
+
+export async function saveDiscoverySchedule(
+  session: AuthSession,
+  schedule: { enabled: boolean; interval_hours: number; sources: string[] }
+): Promise<DiscoverySchedule> {
+  const res = await serviceRequest<{ schedule?: DiscoverySchedule }>(
+    session,
+    "discovery",
+    `/discovery/schedule?${tenantQuery(session)}`,
+    { method: "PUT", body: JSON.stringify(schedule) }
+  );
+  if (!res?.schedule) {
+    throw new Error("discovery returned no schedule");
+  }
+  return res.schedule;
+}
+
+// Git connections (sealed in compliance) a private repository can use. Only
+// the name, ID and host come back, never a field value.
+export type GitConnection = { id: string; name: string; type: string; endpoint: string };
+
+export async function listGitConnections(session: AuthSession): Promise<GitConnection[]> {
+  const res = await serviceRequest<{ data?: GitConnection[] }>(
+    session,
+    "compliance",
+    `/compliance/playbooks/connections?${tenantQuery(session)}`
+  );
+  return (Array.isArray(res?.data) ? res.data : []).filter((c) => c.type === "git");
+}

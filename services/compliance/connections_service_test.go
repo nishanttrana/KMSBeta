@@ -250,3 +250,88 @@ func TestPlatformUsageFindsStreamsAndGovernance(t *testing.T) {
 		t.Fatalf("t1 users %v %v", users, err)
 	}
 }
+
+// A git connection holds a repository access token. Only discovery may open
+// one, discovery may open no other type, it is tested from the repository
+// that uses it, and it can't be deleted while a repository reads with it.
+func TestGitConnectionIsDiscoverysAlone(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	git := hs.conn(t, "git", map[string]string{"git_url": "https://1.1.1.1", "token": "ghp-secret"})
+	slack := hs.conn(t, "slack", map[string]string{"webhook_url": "https://1.1.1.1/x"})
+	resolve := func(id string, who *pkgauth.Claims) (int, string) {
+		w := hs.do(t, http.MethodPost, "/compliance/connections/"+id+"/resolve?tenant_id=t1", who, map[string]any{})
+		return w.Code, w.Body.String()
+	}
+	// Created through the API: the token is required, the host is shown,
+	// and no value comes back.
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": "gh", "type": "git", "fields": map[string]string{"git_url": "https://1.1.1.1"}}); w.Code != http.StatusBadRequest {
+		t.Fatalf("git connection without a token: %d %s", w.Code, w.Body.String())
+	}
+	w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": "gh", "type": "git", "fields": map[string]string{"git_url": "https://1.1.1.1", "token": "api-made-secret"}})
+	if w.Code != http.StatusCreated || !strings.Contains(w.Body.String(), `"endpoint":"1.1.1.1"`) || strings.Contains(w.Body.String(), "api-made-secret") {
+		t.Fatalf("create git connection: %d %s", w.Code, w.Body.String())
+	}
+	if code, body := resolve(git, svcClaims("kms-discovery")); code != http.StatusOK || !strings.Contains(body, `"token":"ghp-secret"`) {
+		t.Fatalf("discovery resolve: %d %s", code, body)
+	}
+	if ev := lastEvent(t, hs.rec, "connection_resolved"); ev.Event.Details["caller"] != "kms-discovery" || ev.Event.Details["use"] != "repository" {
+		t.Fatalf("resolve audit %+v", ev.Event.Details)
+	}
+	for _, who := range []string{"kms-audit", "kms-governance"} {
+		if code, body := resolve(git, svcClaims(who)); code != http.StatusConflict || strings.Contains(body, "ghp-secret") {
+			t.Fatalf("%s opened a git connection: %d %s", who, code, body)
+		}
+		wantRefused(t, lastEvent(t, hs.rec, "connection_resolved"), reasonConnectionUse)
+	}
+	if code, _ := resolve(slack, svcClaims("kms-discovery")); code != http.StatusConflict {
+		t.Fatalf("discovery opened a Slack connection: %d", code)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "connection_resolved"), reasonConnectionUse)
+
+	if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections/"+git+"/test", pbAdmin, map[string]any{}); w.Code != http.StatusConflict {
+		t.Fatalf("git connection test: %d %s", w.Code, w.Body.String())
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "connection_tested"), "connection_test_elsewhere")
+
+	hs.h.usage = fakeUsage{}
+	asked := ""
+	hs.h.repoUsage = func(_ context.Context, tenant, id string) ([]string, error) {
+		asked = tenant + "/" + id
+		return []string{"repository https://github.com/acme/app"}, nil
+	}
+	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+git, pbAdmin, nil); w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "github.com/acme/app") || asked != "t1/"+git {
+		t.Fatalf("delete in use by a repository: %d %s (asked %q)", w.Code, w.Body.String(), asked)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "connection_deleted"), "connection_in_use")
+	hs.h.repoUsage = func(context.Context, string, string) ([]string, error) {
+		return nil, errors.New("discovery unreachable")
+	}
+	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+git, pbAdmin, nil); w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("delete with repositories unknown: %d", w.Code)
+	}
+	wantRefused(t, lastEvent(t, hs.rec, "connection_deleted"), "connection_usage_unverified")
+	// Discovery is not asked about other types.
+	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+slack, pbAdmin, nil); w.Code != http.StatusOK {
+		t.Fatalf("delete a Slack connection with discovery down: %d %s", w.Code, w.Body.String())
+	}
+	hs.h.repoUsage = func(context.Context, string, string) ([]string, error) { return nil, nil }
+	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+git, pbAdmin, nil); w.Code != http.StatusOK {
+		t.Fatalf("delete unused git connection: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// platformUsage reads discovery's repositories as the compliance service.
+func TestPlatformUsageFindsRepositories(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/discovery/repositories" || r.URL.Query().Get("tenant_id") != "t1" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[{"url":"https://github.com/acme/app","connection_id":"c1"},{"url":"https://github.com/acme/public","connection_id":""}]}`))
+	}))
+	defer srv.Close()
+	users, err := platformUsage{discoveryURL: srv.URL, http: srv.Client()}.Repositories(context.Background(), "t1", "c1")
+	if err != nil || strings.Join(users, "|") != "repository https://github.com/acme/app" {
+		t.Fatalf("users %v %v", users, err)
+	}
+}

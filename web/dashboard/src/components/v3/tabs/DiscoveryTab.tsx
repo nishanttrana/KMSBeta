@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Atom, Clock3, KeyRound, Play, Radar, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Atom, CalendarClock, Clock3, KeyRound, Play, Radar, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Btn, Section, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
@@ -7,9 +7,11 @@ import { DrillHint, DrillPanel, clickable, usePagedDrill } from "../chartDrill";
 import {
   DISCOVERY_UPLOAD_MAX_BYTES,
   getDiscoveryScan,
+  getDiscoverySchedule,
   getDiscoverySources,
   getDiscoverySummary,
   listDiscoveryAssets,
+  listDiscoveryRepositories,
   listDiscoveryScans,
   listDiscoveryTargets,
   startDiscoveryScan,
@@ -17,18 +19,22 @@ import {
   type CryptoAsset,
   type DiscoveryScan,
   type AssetQuery,
+  type DiscoveryRepository,
+  type DiscoverySchedule,
   type DiscoverySource,
   type DiscoverySummary,
   type DiscoveryTarget,
 } from "../../../lib/discovery";
 import {
-  MONO, SCANNABLE, classDrill, expiringDrill, isStale, pct, pqcDrill, relTime, riskyDrill, sourceMeta, typeLabel, type AssetDrill,
+  MONO, SCANNABLE, absTime, classDrill, expiringDrill, isStale, pct, pqcDrill, relTime, riskyDrill, sourceMeta, typeLabel, type AssetDrill,
 } from "./discovery/meta";
 import { AlgorithmBars, ChartCard, ClassBars, SourceStack } from "./discovery/Charts";
 import { CodeSetupModal, SourceCards, TargetsModal } from "./discovery/Sources";
 import { ClassPill, Inventory, NO_FILTERS, type Filters } from "./discovery/Inventory";
 import { AssetDetail } from "./discovery/AssetDetail";
 import { RunningBanner, ScansView } from "./discovery/Scans";
+import { RepositoriesModal } from "./discovery/Repositories";
+import { ScheduleModal, scheduleLabel } from "./discovery/Schedule";
 
 
 export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
@@ -47,6 +53,11 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [detail, setDetail] = useState<CryptoAsset | null>(null);
   const [drill, setDrill] = useState<AssetDrill | null>(null);
+  const [repositories, setRepositories] = useState<DiscoveryRepository[]>([]);
+  const [reposError, setReposError] = useState("");
+  const [reposOpen, setReposOpen] = useState(false);
+  const [schedule, setSchedule] = useState<DiscoverySchedule | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [targetsOpen, setTargetsOpen] = useState(false);
   const [codeOpen, setCodeOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -55,12 +66,17 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const load = async () => {
     if (!session?.token) return;
     setLoading(true);
-    const [sm, sc, src, tg] = await Promise.allSettled([
+    const [sm, sc, src, tg, rp, sch] = await Promise.allSettled([
       getDiscoverySummary(session),
       listDiscoveryScans(session, 50),
       getDiscoverySources(session),
       listDiscoveryTargets(session),
+      listDiscoveryRepositories(session),
+      getDiscoverySchedule(session),
     ]);
+    setRepositories(rp.status === "fulfilled" ? rp.value : []);
+    setReposError(rp.status === "rejected" ? errMsg(rp.reason) : "");
+    setSchedule(sch.status === "fulfilled" ? sch.value : null);
     const failed = [sm, sc].find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
     setLoadError(failed ? errMsg(failed.reason) : "");
     const next = sm.status === "fulfilled" ? sm.value : null;
@@ -185,6 +201,10 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         title={<><Radar size={16} color={C.accentFg} />Crypto Discovery</>}
         actions={<>
           <Btn small onClick={() => void load()} disabled={loading}><RefreshCw size={12} />{loading ? "Refreshing" : "Refresh"}</Btn>
+          <Btn small onClick={() => setScheduleOpen(true)} title={schedule?.paused_reason || (schedule?.enabled ? `Next run ${absTime(schedule.next_run_at)}` : "Scan on a schedule")}
+            style={schedule?.paused_reason ? { borderColor: C.amberFg, color: C.amberFg } : schedule?.enabled ? { borderColor: C.accentFg, color: C.accentFg } : {}}>
+            <CalendarClock size={12} />{scheduleLabel(schedule)}
+          </Btn>
           <Btn small primary onClick={() => void runScan(scanAllTypes)} disabled={!!running || !scanAllTypes.length}
             title={scanAllTypes.length ? `Scan ${scanAllTypes.map((t) => sourceMeta(t).label).join(", ")}` : "Set up a source first"}>
             <Play size={12} />Scan all
@@ -212,7 +232,7 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
       ) : (
         <div style={{ marginBottom: 16 }}>
           <SourceCards sources={sources} assetCounts={summary?.source_distribution || {}} running={!!running} uploading={uploading}
-            onScan={(t) => void runScan(t)} onTargets={() => setTargetsOpen(true)} onCodeSetup={() => setCodeOpen(true)}
+            onScan={(t) => void runScan(t)} onTargets={() => setTargetsOpen(true)} onRepositories={() => setReposOpen(true)} onCodeSetup={() => setCodeOpen(true)}
             onPickFiles={pickUpload} onUpload={(f) => void upload(f)} onNavigate={onNavigate} />
         </div>
       )}
@@ -277,6 +297,10 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         }} />
       <TargetsModal open={targetsOpen} onClose={() => setTargetsOpen(false)} session={session} targets={targets} error={targetsError}
         operatorEndpoints={Number(network?.detail?.operator_endpoints || 0)} onChanged={() => void load()} onToast={onToast} />
+      <RepositoriesModal open={reposOpen} onClose={() => setReposOpen(false)} session={session} repositories={repositories} error={reposError}
+        onChanged={() => void load()} onToast={onToast} onNavigate={onNavigate} />
+      <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} session={session} schedule={schedule} sources={sources}
+        onSaved={setSchedule} onToast={onToast} />
       <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void upload(Array.from(e.target.files || [])); e.target.value = ""; }} />
       <CodeSetupModal open={codeOpen} onClose={() => setCodeOpen(false)} configured={!!sources.find((s) => s.id === "code")?.configured} onUpload={pickUpload} />
     </div>

@@ -68,8 +68,8 @@ func findMaterial(name string, raw []byte) []finding {
 		}
 		if m := reAKIA.FindString(text); m != "" {
 			out = append(out, finding{kind: "cloud_access_key", fingerprint: secretFingerprint([]byte(m)), line: line})
-		} else if m := reHexSecret.FindString(text); m != "" {
-			out = append(out, finding{kind: "hex_secret", fingerprint: secretFingerprint([]byte(m)), line: line})
+		} else if m := reHexSecret.FindStringSubmatch(text); m != nil {
+			out = append(out, finding{kind: "hex_secret", fingerprint: secretFingerprint([]byte(m[1])), line: line})
 		}
 	}
 	rest, sawPEM := raw, false

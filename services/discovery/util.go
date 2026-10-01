@@ -283,9 +283,13 @@ func assetDeterministicID(tenantID string, source string, assetType string, name
 }
 
 var (
-	reAKIA        = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
-	rePrivateKey  = regexp.MustCompile(`(?i)-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----`)
-	reHexSecret   = regexp.MustCompile(`\b[0-9a-fA-F]{32,}\b`)
+	reAKIA       = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
+	rePrivateKey = regexp.MustCompile(`(?i)-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----`)
+	// reHexSecret: a long hex value assigned to a name that says it is a
+	// secret (SECRET_KEY=..., "api_token": "..."). Before 7.20.0-beta any
+	// 32+ hex characters matched, which called every digest and commit ID
+	// in a repository an exposed secret.
+	reHexSecret   = regexp.MustCompile(`(?i)(?:secret|token|passw(?:or)?d|api[_-]?key|access[_-]?key|private[_-]?key|credential)[A-Za-z0-9_.-]*["']?\s*[:=]\s*["']?([0-9a-fA-F]{32,})\b`)
 	reTLSHostPort = regexp.MustCompile(`^[a-zA-Z0-9._\-]+:\d{2,5}$`)
 )
 

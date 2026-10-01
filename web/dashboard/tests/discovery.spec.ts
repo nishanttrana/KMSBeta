@@ -7,8 +7,8 @@ import { discoveryFixture as fx } from "./fixtures/discovery-fixture";
 
 const SHOTS = process.env.DISCOVERY_SHOTS_DIR || "";
 const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
-const running = { ...fx.scans[1], id: "scan_live", status: "running", stats: { sources_done: ["certs"], certs_assets: 2 } };
-const finished = { ...running, status: "completed", stats: { sources_done: ["network", "cloud", "certs"], network_assets: 6, cloud_assets: 1, certs_assets: 2, assets_discovered: 9 } };
+const running = { ...fx.scans[1], id: "scan_live", scan_type: "network,cloud,certs,git", status: "running", stats: { sources_done: ["certs"], certs_assets: 2 } };
+const finished = { ...running, status: "completed", stats: { sources_done: ["network", "cloud", "certs", "git"], network_assets: 6, cloud_assets: 1, certs_assets: 2, git_assets: 8, assets_discovered: 17 } };
 
 // The asset list as the service filters and pages it (FindAssets).
 function assetPage(url: URL) {
@@ -41,6 +41,13 @@ async function stub(page: Page, opts: { down?: boolean } = {}): Promise<Request[
     if (p.endsWith("/discovery/sources")) return route.fulfill(json({ items: fx.sources }));
     if (p.endsWith("/discovery/targets") && req.method() === "POST") return route.fulfill(json({ target: { id: "target_new", host: "10.0.4.0/24", port: 22, protocol: "ssh" } }, 201));
     if (p.endsWith("/discovery/targets")) return route.fulfill(json({ items: fx.targets }));
+    if (p.endsWith("/discovery/repositories") && req.method() === "POST") return route.fulfill(json({ repository: { ...fx.repositories[0], id: "repo_new" } }, 201));
+    if (p.endsWith("/discovery/repositories")) return route.fulfill(json({ items: fx.repositories }));
+    if (p.endsWith("/discovery/repositories/repo_app/test")) return route.fulfill(json({ ok: true, commit: "0123456789abcdef0123456789abcdef01234567" }));
+    if (p.endsWith("/discovery/repositories/repo_docs/test")) return route.fulfill(json({ error: { code: "repository_unreachable", message: "repository or ref not found; a private repository needs a Git connection" } }, 502));
+    if (p.endsWith("/discovery/schedule") && req.method() === "PUT") return route.fulfill(json({ schedule: { ...fx.schedule, ...req.postDataJSON(), next_run_at: fx.schedule.next_run_at } }));
+    if (p.endsWith("/discovery/schedule")) return route.fulfill(json({ schedule: fx.schedule }));
+    if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: [{ id: "pbconn_git1", name: "GitLab read token", type: "git", endpoint: "gitlab.example.com" }, { id: "pbconn_slack", name: "SOC channel", type: "slack", endpoint: "hooks.slack.com" }] }));
     if (p.endsWith("/discovery/scan")) return route.fulfill(json({ scan: running }, 202));
     if (p.endsWith("/discovery/scans/scan_live")) return route.fulfill(json({ scan: ++polls > 1 ? finished : running }));
     if (p.endsWith("/discovery/upload")) return route.fulfill(json({ scan: fx.scans[0], assets: fx.assets.filter((a) => a.source === "upload") }));
@@ -67,7 +74,7 @@ const qv = fx.summary.classification_counts.quantum_vulnerable;
 test("sources, charts and drill-downs show the scanned inventory", async ({ page }) => {
   await stub(page);
   await open(page);
-  for (const name of ["Network", "Cloud KMS", "KMS certificates", "Source code", "File upload"]) {
+  for (const name of ["Network", "Cloud KMS", "Certificates", "Git repositories", "Mounted code", "File upload"]) {
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   }
   await expect(page.getByText("Not mounted")).toBeVisible();
@@ -112,9 +119,9 @@ test("a scan runs in the background and reports when it settles", async ({ page 
   await page.getByRole("button", { name: "Scan all" }).click();
   await expect(page.getByText("Scanning", { exact: true })).toBeVisible();
   // Only configured sources are scanned.
-  expect(writes[0]!.postDataJSON().scan_types).toEqual(["network", "cloud", "certs"]);
+  expect(writes[0]!.postDataJSON().scan_types).toEqual(["network", "cloud", "certs", "git"]);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery-running.png` });
-  await expect(page.getByText(/Scan completed: 9 assets/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Scan completed: 17 assets/)).toBeVisible({ timeout: 10_000 });
 });
 
 test("an uploaded file is sent for inventory", async ({ page }) => {
@@ -134,4 +141,47 @@ test("a discovery outage shows unavailable, never an empty inventory", async ({ 
   await open(page);
   await expect(page.getByText(/Discovery unavailable/)).toBeVisible();
   await expect(page.getByText("No assets yet")).toHaveCount(0);
+});
+
+test("a private repository is added with a Git connection and tested", async ({ page }) => {
+  const writes = await stub(page);
+  await open(page);
+  await page.getByRole("button", { name: "Repos", exact: true }).click();
+  // The private one shows which connection reads it; no token is on the page.
+  await expect(page.getByText("gitlab.example.com/acme/app @ main")).toBeVisible();
+  await expect(page.getByText("GitLab read token", { exact: true })).toBeVisible();
+
+  const tests = page.getByRole("button", { name: "Test", exact: true });
+  await tests.nth(0).click();
+  await expect(page.getByText(/Readable · commit 0123456789/)).toBeVisible();
+  await tests.nth(1).click();
+  await expect(page.getByText(/Not readable: .*private repository needs a Git connection/)).toBeVisible();
+
+  await page.getByPlaceholder("https://github.com/acme/app").fill("https://gitlab.example.com/acme/billing");
+  await page.getByPlaceholder("branch (default)").fill("release/2.4");
+  // Only git connections are offered, by name and host.
+  await page.getByRole("button", { name: /Public \(no token\)/ }).click();
+  await expect(page.getByText("SOC channel")).toHaveCount(0);
+  await page.getByText("GitLab read token · gitlab.example.com").last().click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery-repositories.png` });
+  await page.getByRole("button", { name: "Add" }).click();
+  await expect.poll(() => writes.filter((w) => w.method() === "POST" && w.url().includes("/discovery/repositories?")).length).toBe(1);
+  const add = writes.find((w) => w.method() === "POST" && w.url().includes("/discovery/repositories?"))!;
+  expect(add.postDataJSON()).toEqual({ url: "https://gitlab.example.com/acme/billing", ref: "release/2.4", provider: "", connection_id: "pbconn_git1" });
+});
+
+test("the scan schedule is saved with its sources", async ({ page }) => {
+  const writes = await stub(page);
+  await open(page);
+  // The header shows the saved schedule.
+  await page.getByRole("button", { name: "Daily" }).click();
+  await expect(page.getByText(/saved by admin/)).toBeVisible();
+  await page.getByRole("button", { name: "Weekly" }).click();
+  await page.getByRole("button", { name: "Cloud KMS" }).last().click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery-schedule.png` });
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0]!.method()).toBe("PUT");
+  expect(writes[0]!.postDataJSON()).toEqual({ enabled: true, interval_hours: 168, sources: ["network", "certs", "git"] });
+  await expect(page.getByRole("button", { name: "Weekly" })).toBeVisible();
 });

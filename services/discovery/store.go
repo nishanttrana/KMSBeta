@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -260,4 +261,126 @@ func scanCryptoAsset(scanner interface {
 	item.CreatedAt = parseTimeValue(createdRaw)
 	item.UpdatedAt = parseTimeValue(updatedRaw)
 	return item, nil
+}
+
+func (s *SQLStore) CreateRepository(ctx context.Context, r Repository) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO discovery_repositories (tenant_id, id, url, ref, provider, connection_id, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
+`, r.TenantID, r.ID, r.URL, r.Ref, r.Provider, r.ConnectionID, r.CreatedBy)
+	return err
+}
+
+func (s *SQLStore) ListRepositories(ctx context.Context, tenantID string) ([]Repository, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, url, ref, provider, connection_id, created_by, created_at
+FROM discovery_repositories
+WHERE tenant_id = $1
+ORDER BY url, ref
+`, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]Repository, 0)
+	for rows.Next() {
+		var (
+			r          Repository
+			createdRaw interface{}
+		)
+		if err := rows.Scan(&r.TenantID, &r.ID, &r.URL, &r.Ref, &r.Provider, &r.ConnectionID, &r.CreatedBy, &createdRaw); err != nil {
+			return nil, err
+		}
+		r.CreatedAt = parseTimeValue(createdRaw)
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteRepository(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM discovery_repositories WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+const scheduleColumns = `tenant_id, enabled, interval_hours, sources, authorized_by, next_run_at, last_run_at, last_scan_id, paused_reason, updated_at`
+
+func scanSchedule(scanner interface {
+	Scan(dest ...interface{}) error
+}) (Schedule, error) {
+	var (
+		sch                       Schedule
+		sources                   string
+		nextRaw, lastRaw, updated interface{}
+	)
+	if err := scanner.Scan(&sch.TenantID, &sch.Enabled, &sch.IntervalHours, &sources, &sch.AuthorizedBy, &nextRaw, &lastRaw, &sch.LastScanID, &sch.PausedReason, &updated); err != nil {
+		return Schedule{}, err
+	}
+	sch.Sources = []string{}
+	if sources != "" {
+		sch.Sources = strings.Split(sources, ",")
+	}
+	sch.NextRunAt, sch.LastRunAt, sch.UpdatedAt = parseTimeValue(nextRaw), parseTimeValue(lastRaw), parseTimeValue(updated)
+	return sch, nil
+}
+
+// GetSchedule returns errNotFound for a tenant that never saved one.
+func (s *SQLStore) GetSchedule(ctx context.Context, tenantID string) (Schedule, error) {
+	sch, err := scanSchedule(s.db.SQL().QueryRowContext(ctx, `SELECT `+scheduleColumns+` FROM discovery_schedules WHERE tenant_id = $1`, strings.TrimSpace(tenantID)))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Schedule{}, errNotFound
+	}
+	return sch, err
+}
+
+func (s *SQLStore) PutSchedule(ctx context.Context, sch Schedule) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO discovery_schedules (`+scheduleColumns+`)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id) DO UPDATE SET
+	enabled = excluded.enabled,
+	interval_hours = excluded.interval_hours,
+	sources = excluded.sources,
+	authorized_by = excluded.authorized_by,
+	next_run_at = excluded.next_run_at,
+	last_run_at = excluded.last_run_at,
+	last_scan_id = excluded.last_scan_id,
+	paused_reason = excluded.paused_reason,
+	updated_at = CURRENT_TIMESTAMP
+`, sch.TenantID, sch.Enabled, sch.IntervalHours, strings.Join(sch.Sources, ","), sch.AuthorizedBy, nullableTime(sch.NextRunAt), nullableTime(sch.LastRunAt), sch.LastScanID, sch.PausedReason)
+	return err
+}
+
+// DueSchedules lists, for every tenant, the enabled, unpaused schedules whose
+// next run has come.
+func (s *SQLStore) DueSchedules(ctx context.Context, now time.Time) ([]Schedule, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT `+scheduleColumns+`
+FROM discovery_schedules
+WHERE enabled = TRUE AND paused_reason = ''
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]Schedule, 0)
+	for rows.Next() {
+		sch, err := scanSchedule(rows)
+		if err != nil {
+			return nil, err
+		}
+		// Compared here, not in SQL: the two databases store and compare
+		// timestamps differently.
+		if !sch.NextRunAt.IsZero() && !sch.NextRunAt.After(now) {
+			out = append(out, sch)
+		}
+	}
+	return out, rows.Err()
 }

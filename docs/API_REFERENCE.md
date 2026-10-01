@@ -117,7 +117,7 @@ request is refused (`403` with `delegator_unknown`, `delegator_inactive` or
 
 | Route | Needs (of `on_behalf_of`) | Audit action | Also refused |
 |---|---|---|---|
-| `POST /svc/auth/auth/delegated/authority` (body `user_id`, `permissions[]`; returns `active`, `missing[]`) | none | `delegated_authority_checked` | none |
+| `POST /svc/auth/auth/delegated/authority` (body `user_id`, `permissions[]`; returns `active`, `missing[]`; callable by `kms-compliance` and, since 7.20.0-beta, `kms-discovery`) | none | `delegated_authority_checked` | none |
 | `POST /svc/auth/auth/delegated/users/{id}/disable` | `auth.user.write` | `delegated_user_disabled` | `self_target`, `last_administrator` (409) |
 | `POST /svc/auth/auth/delegated/api-keys/{id}/revoke` | `auth.api_key.write` | `delegated_api_key_revoked` | `service_identity_protected` (409) |
 | `POST /svc/auth/auth/delegated/clients/{id}/revoke` | `auth.client.write` | `delegated_client_revoked` | `service_identity_protected` (409) |
@@ -1826,7 +1826,7 @@ authority of a person:
 | `PUT /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.write` | `connection_updated` |
 | `DELETE /svc/compliance/compliance/playbooks/connections/{id}` | `compliance.playbook.delete` | `connection_deleted` |
 | `POST /svc/compliance/compliance/playbooks/connections/{id}/test` | `compliance.playbook.write` | `connection_tested` |
-| `POST /svc/compliance/compliance/connections/{id}/resolve` | `kms-audit` / `kms-governance` service identity | `connection_resolved` |
+| `POST /svc/compliance/compliance/connections/{id}/resolve` | `kms-audit` / `kms-governance` / `kms-discovery` service identity | `connection_resolved` |
 | `POST /svc/compliance/compliance/connections/import` | `kms-audit` / `kms-governance` service identity | `connection_imported` |
 | `GET /svc/compliance/mek/exposure` | `compliance.read` | `mek_exposure_listed` (pkg/mek) |
 
@@ -1963,7 +1963,7 @@ recorded in the exposure register: rotate those webhook URLs and tokens.
 
 | Route | Caller | Audit action |
 |---|---|---|
-| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`) | `connection_resolved` |
+| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta) | `connection_resolved` |
 | `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
@@ -3151,12 +3151,16 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 verified platform JWT and is on the route kernel: `discovery.read` for GETs,
 `discovery.write` for `POST /discovery/scan`, `POST /discovery/upload`,
 `PUT /discovery/assets/{id}/classify`, `DELETE /discovery/assets/{id}`,
-`POST /discovery/targets` and `DELETE /discovery/targets/{id}`. The tenant
+`POST /discovery/targets`, `DELETE /discovery/targets/{id}`,
+`POST /discovery/repositories`, `DELETE /discovery/repositories/{id}`,
+`POST /discovery/repositories/{id}/test` and `PUT /discovery/schedule`. The tenant
 comes from the token (a different `tenant_id` is refused as
 `tenant_mismatch`). Each request emits `audit.discovery.<action>`
 (`scan_start`, `scans_list`, `scan_read`, `assets_list`, `asset_read`,
 `asset_review`, `asset_remove`, `summary_read`, `sources_read`,
-`upload_scan`, `targets_list`, `target_add`, `target_remove`), refusals
+`upload_scan`, `targets_list`, `target_add`, `target_remove`,
+`repositories_list`, `repository_add`, `repository_remove`,
+`repository_test`, `schedule_read`, `schedule_update`), refusals
 included. `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
 `GET /discovery/data-inventory` and the `GET /discovery/posture` alias are
 removed (content inspection is out of the KMS's scope). The dashboard page is
@@ -3270,6 +3274,62 @@ fails as `refused <addr>` in `stats.errors` (in a range it is counted in
 certs source skips `cert_class: internal-mtls`, and assets earlier scans
 stored for platform services are hidden. Their certificates are in the
 PKI tab.
+
+**Git repositories (7.20.0-beta).** Scan source `git`. `GET
+/discovery/repositories` lists the tenant's repositories
+(`{"items": [{id, url, ref, provider, connection_id, created_by,
+created_at}]}`). `POST /discovery/repositories` with body
+`{"url": "https://github.com/acme/app", "ref": "main", "provider": "",
+"connection_id": ""}` adds one (`201 {"repository": {...}}`). `url` is the
+repository's https address, stored without `.git`; `ref` is a branch, tag or
+commit (empty: the default branch); `provider` is `github`, `gitlab`,
+`bitbucket` or `gitea`, detected for github.com, gitlab.com, bitbucket.org,
+codeberg.org and gitea.com and required for any other host;
+`connection_id` names a sealed `git` connection for a private repository.
+`DELETE /discovery/repositories/{id}` removes one. Refusals:
+`400 invalid_repository` (not an https repository URL, a user name or token
+in the URL, a reserved address, an unknown provider or a bad ref),
+`400 platform_target`, `409 repository_exists`, `409 repository_limit`
+(100 per tenant) and `400 connection_unfit` (the connection is not a `git`
+connection or is for another host). `502 connection_unavailable` means
+compliance could not open the connection.
+
+The scan requests the hosting API's tar.gz of the ref (GitHub
+`/repos/{owner}/{repo}/tarball/{ref}`, GitLab
+`/api/v4/projects/{path}/repository/archive.tar.gz`, Bitbucket
+`/{workspace}/{repo}/get/{ref}.tar.gz`, Gitea
+`/api/v1/repos/{owner}/{repo}/archive/{ref}.tar.gz`) over TLS 1.3 through
+the scan's dial guard, and reads it in memory with the code scan's parser:
+files of at most 2 MiB, at most 512 MiB and 50000 entries an archive,
+skipping `.git`, `node_modules`, `vendor`, `bin`, `dist` and lock files.
+Assets have `source: "git"`, `location` `host/owner/repo[@ref]/path:line`,
+and `metadata.repository`, `path`, `ref` and `commit`. The token is sent
+only to the connection's host and not along a redirect to another host.
+Only the ref's latest commit is read. `stats.git_repositories` and
+`stats.git_files` describe the scan; a repository that fails is named in
+`stats.errors.git` and the others are still scanned.
+
+`POST /discovery/repositories/{id}/test` reads the start of the archive
+with the repository's connection and returns `200 {"ok": true, "commit"}`,
+or `502 repository_unreachable` with the reason. It stores nothing.
+
+**Schedule (7.20.0-beta).** `GET /discovery/schedule` returns
+`{"schedule": {enabled, interval_hours, sources, authorized_by,
+next_run_at, last_run_at, last_scan_id, paused_reason}}` (a tenant that
+never saved one has `enabled: false`). `PUT /discovery/schedule` with body
+`{"enabled": true, "interval_hours": 24, "sources": ["network", "git"]}`
+saves it: `interval_hours` 1 to 720, `sources` from `network`, `cloud`,
+`certs`, `code`, `git`. The first run is one interval later. Only a
+signed-in user can save one (`403 user_required` for an API client or a
+service): the schedule runs as the discovery service on that user's
+authority, and before every run auth is asked whether they are still active
+and still hold `discovery.write`. If not, the schedule gets a
+`paused_reason` and stops until it is saved again; if auth can't be
+reached, the run is postponed 15 minutes. `400 invalid_schedule` refuses a
+bad interval or source. Each run or refusal emits
+`audit.discovery.scheduled_scan` (`result: refused`, `reason:
+authority_revoked` or `authority_unknown`), and the scan it starts has
+`trigger: "scheduled"`. Schedules run on the cluster primary.
 
 **Exposed secrets.** The first time a private key, keystore or access key
 is found, discovery emits `audit.discovery.secret_exposed` (target: the
@@ -3495,7 +3555,7 @@ Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
-| audit.discovery.* | Discovery scans, inventory reads, asset reviews and network targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta; `sources_read`, `upload_scan`, `asset_remove` 7.18.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified`; `secret_exposed` when a secret is first found (7.18.0-beta) |
+| audit.discovery.* | Discovery scans, inventory reads, asset reviews and network targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta; `sources_read`, `upload_scan`, `asset_remove` 7.18.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified`; `secret_exposed` when a secret is first found (7.18.0-beta); git repositories and the schedule (`repositories_list`, `repository_add`, `repository_remove`, `repository_test`, `schedule_read`, `schedule_update`) and `scheduled_scan` for each scheduled run or refusal (7.20.0-beta) |
 | audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
@@ -4032,9 +4092,15 @@ from the code; do not edit by hand.
 - `GET /svc/discovery/discovery/assets/{id}`
 - `PUT /svc/discovery/discovery/assets/{id}/classify`
 - `GET /svc/discovery/discovery/crypto/assets`
+- `GET /svc/discovery/discovery/repositories`
+- `POST /svc/discovery/discovery/repositories`
+- `DELETE /svc/discovery/discovery/repositories/{id}`
+- `POST /svc/discovery/discovery/repositories/{id}/test`
 - `POST /svc/discovery/discovery/scan`
 - `GET /svc/discovery/discovery/scans`
 - `GET /svc/discovery/discovery/scans/{id}`
+- `GET /svc/discovery/discovery/schedule`
+- `PUT /svc/discovery/discovery/schedule`
 - `GET /svc/discovery/discovery/sources`
 - `GET /svc/discovery/discovery/summary`
 - `GET /svc/discovery/discovery/targets`

@@ -88,7 +88,9 @@ operation the target service won't take from a service identity (users, API
 keys, clients) goes through auth's delegated routes, which re-check the
 person themselves. Playbooks are the reference: `ActionSpec.Permission`,
 `missingPermissions`, `authorized_by` and `checkAuthority` in
-`services/compliance` (2.4.0-beta, re-checks since 2.5.0-beta).
+`services/compliance` (2.4.0-beta, re-checks since 2.5.0-beta). Discovery's
+scan schedule follows the same rule (`services/discovery/schedule.go`,
+7.20.0-beta).
 
 Rules the conformance check enforces:
 

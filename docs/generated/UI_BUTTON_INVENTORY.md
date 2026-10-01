@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T05:23:18Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T10:02:13Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -247,8 +247,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 266 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 429 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 430 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 187 | discovery | Btn | void load()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 188 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 203 | discovery | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 204 | discovery | Btn | setScheduleOpen(true)} title={schedule?.paused_reason \|\| (schedule?.enabled ?... |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 208 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 698 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 699 | ekm | Btn | Deploy Agent | openDeploy |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 700 | ekm | Btn | Register Database | openDbRegister |
@@ -446,32 +447,32 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 97 | - | button | setTimeWindow(w)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 104 | - | button | Refresh | load} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/OpsMetricsPanel.tsx | 144 | - | button | setSection(s.id as any)} style={{ padding: "8px 16px", border: "none", backgr... |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 83 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 194 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 198 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 405 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 415 | playbooks | Btn | handleCancel(r)}> Cancel |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 416 | playbooks | Btn | handleRetry(r)}> Retry |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 458 | playbooks | Btn | setView(v)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 459 | playbooks | Btn | openEditor()}> New |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 460 | playbooks | Btn | }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 513 | playbooks | button | setDryRun(null)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 544 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 550 | playbooks | Btn | openEditor(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 551 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 552 | playbooks | Btn | handleRun(pb)}> Run |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 553 | playbooks | Btn | handleDelete(pb)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 595 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 609 | playbooks | Btn | setConnForm({ name: "", type: "slack", fields: })}> New connection |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 646 | playbooks | Btn | Save | saveConnection |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 646 | playbooks | Btn | setConnForm(null)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 662 | playbooks | Btn | testConnection(c)}>Test |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 663 | playbooks | Btn | setConnForm( )}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 664 | playbooks | Btn | deleteConnection(c)}> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 718 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 750 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
-| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 753 | playbooks | Btn | }>Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 85 | playbooks | button | (icon or dynamic label) | disabled ? undefined : onClick} style={{ ...base, ...styles[variant] |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 196 | playbooks | button | onChange(filters.filter((_: any, idx: number) => idx !== i))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 200 | playbooks | Btn | onChange([...filters, ])}> Add filter |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 407 | playbooks | button | setOpenRun(open ? "" : r.id)} style={ }>{open ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 417 | playbooks | Btn | handleCancel(r)}> Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 418 | playbooks | Btn | handleRetry(r)}> Retry |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 460 | playbooks | Btn | setView(v)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 461 | playbooks | Btn | openEditor()}> New |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 462 | playbooks | Btn | }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 515 | playbooks | button | setDryRun(null)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 546 | playbooks | button | handleToggle(pb)} style={ }>{pb.enabled ? : } |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 552 | playbooks | Btn | openEditor(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 553 | playbooks | Btn | handleDryRun(pb)}> Dry run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 554 | playbooks | Btn | handleRun(pb)}> Run |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 555 | playbooks | Btn | handleDelete(pb)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 597 | playbooks | button | { setRunFilter( ); setView("runs"); }} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 611 | playbooks | Btn | setConnForm({ name: "", type: "slack", fields: })}> New connection |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 648 | playbooks | Btn | Save | saveConnection |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 648 | playbooks | Btn | setConnForm(null)}>Cancel |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 664 | playbooks | Btn | testConnection(c)}>Test |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 665 | playbooks | Btn | setConnForm( )}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 666 | playbooks | Btn | deleteConnection(c)}> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 720 | playbooks | button | setForm((p: any) => ( ))} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 754 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
+| web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 755 | playbooks | Btn | }>Cancel |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 547 | posture | Btn | load(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 548 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1001 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
@@ -618,19 +619,28 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 151 | - | button | setStatus(s)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 159 | - | Btn | void save()} disabled= >Save |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 166 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 154 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 162 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 169 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Charts.tsx | 39 | - | button | (icon or dynamic label) | onClick} title={title |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 88 | - | button | set( )} title="Assets the last scan of their source didn't observe" style={{... |  |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 96 | - | button | setFilters(NO_FILTERS)} style={ }>Clear filters |  |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 154 | - | button | (icon or dynamic label) | onClick |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 87 | - | Btn | (icon or dynamic label) | a.run} disabled={isUpload && uploading |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 89 | - | Btn | onScan([s.id])} disabled= title={s.configured ? `Scan $ ` : "Set this source... |  |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 152 | - | button | pick(p)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 162 | - | Btn | void add()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 176 | - | button | void remove(t)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 207 | - | Btn | }>Upload files instead |  |
+| web/dashboard/src/components/v3/tabs/discovery/Repositories.tsx | 91 | - | Btn | void add()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Repositories.tsx | 95 | - | button | onNavigate?.("playbooks")} style={ }>New Git connection |  |
+| web/dashboard/src/components/v3/tabs/discovery/Repositories.tsx | 113 | - | Btn | void test(r)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Repositories.tsx | 114 | - | button | void remove(r)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Schedule.tsx | 69 | - | button | setEnabled(false)}>Off |  |
+| web/dashboard/src/components/v3/tabs/discovery/Schedule.tsx | 70 | - | button | setEnabled(true)}>On |  |
+| web/dashboard/src/components/v3/tabs/discovery/Schedule.tsx | 75 | - | button | setHours(h)}> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Schedule.tsx | 84 | - | button | setPicked(on ? picked.filter((p) => p !== id) : [...picked, id])}> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Schedule.tsx | 99 | - | Btn | void save()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 91 | - | Btn | (icon or dynamic label) | a.run} disabled={isUpload && uploading |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 93 | - | Btn | onScan([s.id])} disabled= title={s.configured ? `Scan $ ` : "Set this source... |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 156 | - | button | pick(p)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 166 | - | Btn | void add()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 180 | - | button | void remove(t)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 211 | - | Btn | }>Upload files instead |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 89 | - | Btn | { setAck( ); setReason(""); }}>Acknowledge |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 101 | - | Btn | setShowClosed((v) => !v)}>{showClosed ? "Hide closed" : `Show $ closed`} |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 111 | - | Btn | setAck(null)}>Cancel |  |
