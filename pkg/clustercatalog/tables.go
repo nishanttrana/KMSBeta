@@ -199,6 +199,7 @@ var Replicated = map[string][]string{
 		"posture_events_history",
 		"posture_findings",
 		"posture_risk_snapshots",
+		"posture_signal_daily",
 	},
 	"pqc": {
 		"pqc_migration_plans",

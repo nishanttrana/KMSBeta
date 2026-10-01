@@ -45,6 +45,7 @@ import { bucketUnit, clickable, clickedIndex, DEFAULT_WINDOW, DrillHint, DrillPa
 import {
   executePostureAction,
   getPostureDashboard,
+  getPostureBaseline,
   getPostureRisk,
   listPostureActions,
   getPostureRiskTrend,
@@ -226,6 +227,8 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [windowId, setWindowId] = useState<WindowId>(DEFAULT_WINDOW);
   const [trendBucket, setTrendBucket] = useState(0);
   const [findingsTruncated, setFindingsTruncated] = useState(false);
+  const [baseline, setBaseline] = useState<any>(null);
+  const [baselineErr, setBaselineErr] = useState("");
   const [snapshot, setSnapshot] = useState<any>(null);
 
   // ── Data loading ──────────────────────────────────────────────
@@ -237,6 +240,7 @@ export const PostureTab = ({ session, onToast }: any) => {
     }
     if (!silent) setLoading(true);
     try {
+      getPostureBaseline(session).then((b) => { setBaseline(b); setBaselineErr(""); }).catch((e) => { setBaseline(null); setBaselineErr(errMsg(e)); });
       const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, keyAccessSummaryOut, signingSummaryOut] = await Promise.all([
         getPostureDashboard(session),
         getPostureRisk(session),
@@ -445,7 +449,8 @@ export const PostureTab = ({ session, onToast }: any) => {
   }, [validationBadges]);
 
   const trendData = useMemo(() => {
-    const items = Array.isArray(history) ? [...history].reverse() : [];
+    // Only assessed snapshots have a score; the rest had no baseline.
+    const items = Array.isArray(history) ? history.filter((h: any) => h?.assessed).reverse() : [];
     return items.map((entry: any) => ({ name: shortTS(entry?.captured_at), risk: Math.max(0, Math.min(100, toNum(entry?.risk_24h))), entry }));
   }, [history]);
   const drillRows = useMemo(() => drill ? (Array.isArray(findings) ? findings : []).filter(drill.match) : [], [drill, findings]);
@@ -493,6 +498,10 @@ export const PostureTab = ({ session, onToast }: any) => {
     return [{ axis: "Predictive", value: pred }, { axis: "Preventive", value: prev }, { axis: "Corrective", value: corr }];
   }, [risk?.predictive_score, risk?.preventive_score, risk?.corrective_score]);
 
+  const assessed = Boolean(risk?.assessed);
+  const baselineDays = Number(baseline?.days ?? risk?.baseline_days ?? 0);
+  const requiredDays = Number(baseline?.required_days || 14);
+  const buildingText = baselineErr ? "Baseline unavailable" : `Baseline building: ${baselineDays} of ${requiredDays} days`;
   const risk24 = Math.max(0, Math.min(100, Number(risk?.risk_24h || 0)));
   const risk7d = Math.max(0, Math.min(100, Number(risk?.risk_7d || 0)));
   const pred = Math.max(0, Math.min(100, Number(risk?.predictive_score || 0)));
@@ -517,7 +526,9 @@ export const PostureTab = ({ session, onToast }: any) => {
   return <div style={{ display: "grid", gap: 14 }}>
     {/* Header Stats Row */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
-      <Stat l="Risk Score" v={`${risk24}/100`} s={`7d: ${risk7d}`} c={riskTone24} i={ShieldAlert} />
+      {assessed
+        ? <Stat l="Risk Score" v={`${risk24}/100`} s={`7d: ${risk7d}`} c={riskTone24} i={ShieldAlert} />
+        : <Stat l="Risk Score" v="Not assessed" s={buildingText} c="blue" i={ShieldAlert} />}
       <Stat l="Open Findings" v={Number(dashboard?.open_findings || 0)} s={`${findings.length} total`} c="amber" i={AlertTriangle} />
       <Stat l="Critical" v={Number(dashboard?.critical_findings || 0)} s={Number(dashboard?.critical_findings || 0) > 0 ? "Action needed" : "All clear"} c="red" i={Zap} />
       <Stat l="Pending Actions" v={pendingActionCount} s={`${actions.length} total`} c="blue" i={Clock} />
@@ -780,6 +791,38 @@ export const PostureTab = ({ session, onToast }: any) => {
         </div>
       </div>}
 
+      {/* Baseline: how much history each signal has against what it needs */}
+      <Card style={{ padding: "12px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Baseline</span>
+          {baselineErr ? <B c="red">Unavailable</B> : baseline ? (
+            <B c={baseline.stable ? "green" : baseline.ready ? "blue" : "amber"}>
+              {baseline.stable ? `Stable: ${baseline.days} days` : baseline.ready ? `Ready: ${baseline.days} of ${baseline.stable_days} days` : `Building: ${baseline.days} of ${baseline.required_days} days`}
+            </B>
+          ) : null}
+        </div>
+        {baselineErr ? <div style={{ fontSize: 10, color: C.red }}>{`Baseline unavailable: ${baselineErr}`}</div> : baseline ? <>
+          <div style={{ fontSize: 9, color: C.muted, marginBottom: 8, lineHeight: 1.5 }}>
+            Each signal is compared with this tenant's own complete days of audit history{baseline.from ? ` since ${fmtTS(baseline.from)}` : ""}. Nothing is judged before {baseline.required_days} days; a failure rate also needs {baseline.signals.find((x: any) => x.kind === "rate")?.required_baseline_events ?? 385} events of its own. A count is unusual when its chance under the baseline is below {baseline.spike_alpha} and it reaches the signal's floor.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1.6fr 1fr 1.2fr", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            <span>Signal</span><span>Baseline</span><span>Last 24h</span><span>Status</span>
+          </div>
+          {baseline.signals.map((sig: any) => (
+            <div key={sig.key} style={{ display: "grid", gridTemplateColumns: "2fr 1.6fr 1fr 1.2fr", gap: 8, padding: "5px 0", borderBottom: `1px solid ${C.border}`, fontSize: 10, alignItems: "center" }}>
+              <span style={{ color: C.text }}>{sig.label}</span>
+              <span style={{ color: C.dim }}>{sig.kind === "rate"
+                ? `${(Number(sig.baseline_failure_rate || 0) * 100).toFixed(1)}% over ${Number(sig.baseline_events || 0)} events`
+                : `${Number(sig.baseline_daily_mean || 0).toFixed(1)} a day`}</span>
+              <span style={{ color: C.dim }}>{sig.kind === "rate" ? `${sig.current_24h} of ${Number(sig.events_24h || 0)}` : sig.current_24h}</span>
+              <span>{sig.status === "building" ? <B c="amber">Building</B>
+                : sig.status === "needs_events" ? <B c="amber">{`Needs ${Math.max(0, Number(sig.required_baseline_events || 0) - Number(sig.baseline_events || 0))} more events`}</B>
+                : sig.unusual ? <B c="red">Unusual</B> : <B c="green">Normal</B>}</span>
+            </div>
+          ))}
+        </> : <div style={{ fontSize: 10, color: C.muted }}>Loading…</div>}
+      </Card>
+
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <DrillHint />
         <span style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>{`Charts cover findings detected and risk snapshots captured in: ${windowLabel(windowId)}.`}</span>
@@ -791,8 +834,9 @@ export const PostureTab = ({ session, onToast }: any) => {
         <Card style={{ padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}><ShieldAlert size={14} color={C.accent} /><span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Window</span></div>
-            <B c={riskTone24}>{`${risk24}/100`}</B>
+            {assessed ? <B c={riskTone24}>{`${risk24}/100`}</B> : <B c="blue">Not assessed</B>}
           </div>
+          {assessed ? <>
           <ResponsiveContainer width="100%" height={140}>
             <RadialBarChart cx="50%" cy="50%" innerRadius="40%" outerRadius="90%" startAngle={210} endAngle={-30} data={gaugeData} barSize={10} style={clickable} onClick={() => setSnapshot(risk)}>
               <RadialBar dataKey="value" cornerRadius={5} background={{ fill: C.border }} />
@@ -802,6 +846,17 @@ export const PostureTab = ({ session, onToast }: any) => {
             <div style={{ textAlign: "center" }}><div style={{ fontSize: 9, color: C.muted }}>24h</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor24 }}>{risk24}</div></div>
             <div style={{ textAlign: "center" }}><div style={{ fontSize: 9, color: C.muted }}>7d</div><div style={{ fontSize: 14, fontWeight: 700, color: riskColor7d }}>{risk7d}</div></div>
           </div>
+          </> : (
+            <div style={{ height: 180, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{buildingText}</div>
+              <div style={{ width: "70%", height: 8, borderRadius: 4, background: C.border, overflow: "hidden" }}>
+                <div style={{ width: `${Math.min(100, (baselineDays / requiredDays) * 100)}%`, height: "100%", background: C.accent }} />
+              </div>
+              <div style={{ fontSize: 9, color: C.muted, lineHeight: 1.5, maxWidth: 260 }}>
+                A risk score needs {requiredDays} complete days of this tenant's own activity to compare against. Findings based on facts (expired certificates, missed renewals, overdue remediation) are still raised.
+              </div>
+            </div>
+          )}
           <div style={{ fontSize: 9, color: C.muted, textAlign: "center", marginTop: 4 }}>Captured: {fmtTS(risk?.captured_at)}</div>
         </Card>
 

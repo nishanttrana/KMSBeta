@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-01T05:18:48Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T05:23:18Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `28`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `846` across `28` services
-- Backend routes on the `pkg/route` kernel: `418` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `532`
-- Frontend call sites with exact backend route match: `490`
+- Backend HTTP routes discovered: `847` across `28` services
+- Backend routes on the `pkg/route` kernel: `419` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `533`
+- Frontend call sites with exact backend route match: `491`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
 - Clickable controls with static `onClick` handlers: `736`
-- Backend request flows with handler/service/package summaries: `846`
+- Backend request flows with handler/service/package summaries: `847`
 
 ## How To Use This For Launch
 
@@ -147,7 +147,7 @@ flowchart LR
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
   svc_keycore["keycore (173 routes)"]
-  svc_posture["posture (12 routes)"]
+  svc_posture["posture (13 routes)"]
   svc_pqc["pqc (14 routes)"]
   svc_reporting["reporting (34 routes)"]
   svc_sbom["sbom (14 routes)"]
@@ -183,7 +183,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 10 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
-| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 95 |
+| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 96 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
@@ -222,7 +222,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | keycore | 173 | 118 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
-| posture | 12 | 9 |
+| posture | 13 | 10 |
 | pqc | 14 | 8 |
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |

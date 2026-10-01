@@ -1879,66 +1879,46 @@ curl http://localhost:8180/cbom/pqc-readiness \\
 const SectionApiPosture = () => (
   <div>
     <div style={S.h1}>API: Security Posture Management</div>
-    <P>Service: kms-posture | Port: 8220 (HTTP) / 18220 (gRPC) | Profile: posture_management</P>
+    <P>Service: kms-posture, reached at <IC>/svc/posture</IC>. Every route needs a verified token with <IC>posture.read</IC> or <IC>posture.write</IC> and acts on the token's tenant.</P>
 
-    <H2>What is Security Posture Management?</H2>
-    <P>Security Posture Management provides a holistic, real-time view of your KMS platform's security health. It continuously scans all integrated systems — BYOK cloud accounts, HYOK endpoints, EKM database agents, KMIP clients, BitLocker deployments, SDK wrappers — and produces a risk score with specific findings and remediation actions. Think of it as a security dashboard that tells you "here's what's strong, here's what's weak, and here's exactly how to fix it."</P>
+    <H2>What it does</H2>
+    <P>Posture reads the tenant's audit trail in full and turns it into findings and a risk score. It does not probe your systems: everything it knows comes from the audit events the KMS services emit. It has three engines. Predictive compares today with the tenant's own baseline. Preventive raises guardrail recommendations from today's volumes. Corrective tracks open and overdue findings and keycore's threat signals.</P>
 
-    <H2>How Posture Management Works</H2>
-    <P>The posture engine evaluates security across multiple domains:</P>
-    <H3>Risk Domains</H3>
-    <P>- BYOK Risk: Are cloud key bindings healthy? Are credentials rotated? Is sync current?</P>
-    <P>- HYOK Risk: Are HYOK endpoints accessible? Are DKE/Salesforce/Google integrations healthy?</P>
-    <P>- EKM Risk: Are database TDE agents reporting healthy? Are TDE keys rotated?</P>
-    <P>- KMIP Risk: Are KMIP client certificates expiring? Are interop targets verified?</P>
-    <P>- BitLocker Risk: Are Windows endpoints encrypted? Are recovery keys backed up?</P>
-    <P>- SDK Risk: Are field encryption wrappers registered and active? Are leases current?</P>
+    <H2>The baseline</H2>
+    <P>Posture judges a tenant against its own history, so it needs that history first. Until the tenant has 14 complete days of audit activity, the risk score is "Not assessed" and nothing is compared; the Posture tab shows "Baseline building: n of 14 days". The baseline covers up to 28 days. A deployment that already has that much audit history is assessed as soon as the first sync catches up.</P>
+    <P>An event count alone never qualifies a baseline: ten thousand events in one afternoon say nothing about a normal day. A failure rate (BYOK, HYOK, EKM, KMIP, BitLocker, SDK) also needs 385 events of its own before it is judged, and the tab shows how many more it needs.</P>
+    <P>A count such as failed logins is unusual when the chance of seeing that many, given the tenant's daily mean and day-to-day variation, is below 0.001 and the count reaches the signal's floor. A tenant with busy weekdays and quiet weekends is not flagged every Monday.</P>
+    <P>Findings that state a fact are raised from day one: expiring or expired certificates, missed renewal windows, emergency rotations, a failed KMIP validation, missing SDK receipts, a non-approved algorithm, overdue remediation, and key threat signals.</P>
 
-    <H3>Risk Scoring</H3>
-    <P>Each domain gets a score from 0 (critical) to 100 (excellent). The overall posture score is a weighted average. Scores update in real-time as findings are discovered or remediated. History tracking shows trends over time — are you improving or degrading?</P>
-
-    <H2>Use Cases</H2>
-    <P>- CISO dashboard: Get a single-pane-of-glass view of cryptographic security health across all systems</P>
-    <P>- Proactive risk management: Identify weak points (expiring certs, unhealthy agents, stale cloud bindings) before they become incidents</P>
-    <P>- Automated remediation: Execute fix actions directly from findings (e.g., "rotate this key", "renew this certificate", "resync this cloud binding")</P>
-    <P>- Audit preparation: Demonstrate to auditors that security posture is continuously monitored and tracked</P>
-    <P>- Incident response: When investigating a security event, quickly assess which systems might be affected</P>
-    <P>The enriched dashboard payload also supports two operator styles directly from the API: an executive read with score/trend/top drivers, and an operations read with findings, remediation groups, blast radius, validation badges, and scenario simulation.</P>
+    <H2>The risk score</H2>
+    <P>0 to 100, higher is worse. It is 45% predictive, 30% preventive and 25% corrective engine score, each built from that engine's findings. Activity volume is never part of it. The 7-day figure is the mean of the last seven days' assessed scores. A snapshot with <IC>assessed: false</IC> has no score: its zeros mean "not assessed", not "no risk".</P>
 
     <Collapse title="Posture Endpoints" defaultOpen>
       <EndpointTable rows={[
-        ["GET", "/posture/dashboard", "Get posture dashboard with risk drivers, remediation cockpit groups, blast radius hotspots, validation badges, scenario simulator, and SLA overview"],
-        ["GET", "/posture/health", "Get security health status for all integrated systems"],
-        ["GET", "/posture/risk", "Get risk metrics by domain (BYOK, HYOK, EKM, KMIP, BitLocker, SDK)"],
-        ["GET", "/posture/risk/history", "Risk score history over time for trend analysis"],
-        ["GET", "/posture/findings", "List security findings enriched with risk-driver explainers and blast-radius metadata"],
-        ["PUT", "/posture/findings/{id}/status", "Update finding status (open, in_progress, resolved, accepted)"],
-        ["GET", "/posture/actions", "List remediation actions grouped as approval-required or manual. Only escalation of an overdue finding is executable; approval-required actions run on a governance approval opened by the executor"],
-        ["POST", "/posture/actions/{id}/execute", "Execute a remediation action (e.g., rotate key, renew cert) once safety or approval requirements are met"],
-        ["POST", "/posture/scan", "Trigger a manual posture scan across all domains"],
+        ["GET", "/posture/dashboard", "Latest risk, recent findings, pending actions, risk drivers, blast radius, validation badges and SLA overview"],
+        ["GET", "/posture/baseline", "Baseline standing: days against the 14 required, and per signal its baseline, last 24 hours and status (building, needs events, ready)"],
+        ["GET", "/posture/risk", "Latest risk snapshot, with assessed and baseline_days"],
+        ["GET", "/posture/risk/history", "Risk snapshots; with trend=true and from/to, the latest snapshot per time bucket"],
+        ["GET", "/posture/findings", "List findings (filter by status, severity, engine, finding_type, from, to)"],
+        ["PUT", "/posture/findings/{id}/status", "Set a finding to open, acknowledged, resolved, suppressed or reopened"],
+        ["GET", "/posture/actions", "List remediation actions. Only escalation of an overdue finding is executable, on a governance approval the executor cannot give"],
+        ["POST", "/posture/actions/{id}/execute", "Run an escalation once its approval is granted: raises the finding's severity and restarts its SLA"],
+        ["POST", "/posture/scan", "Sync audit events and run the engines now"],
       ]} />
     </Collapse>
 
-    <H2>Example: Run a Posture Scan and Remediate</H2>
-    <Code>{`# Trigger a posture scan
-curl -X POST http://localhost:8220/posture/scan \\
-  -H "Authorization: Bearer $TOKEN"
+    <H2>Example: check the baseline and list open findings</H2>
+    <Code>{`# The token is read from the environment and passed on stdin, never on
+# the command line.
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -H @- \
+    "https://localhost/svc/posture/posture/baseline"
+# { "baseline": { "ready": false, "days": 5, "required_days": 14,
+#   "signals": [ { "key": "failed_auth", "status": "building", ... } ] } }
 
-# Get the overall dashboard
-curl http://localhost:8220/posture/dashboard \\
-  -H "Authorization: Bearer $TOKEN"
-# Returns: { "overall_score": 78, "domains": { "byok": 92, "hyok": 85, "ekm": 60, ... } }
-
-# List findings that need attention
-curl "http://localhost:8220/posture/findings?status=open&severity=high" \\
-  -H "Authorization: Bearer $TOKEN"
-# Returns: [{ "id": "f-123", "domain": "ekm", "severity": "high",
-#   "title": "EKM agent unhealthy: mssql-prod-01",
-#   "remediation": "Check agent connectivity and rotate TDE key" }]
-
-# Execute a remediation action
-curl -X POST http://localhost:8220/posture/actions/a-456/execute \\
-  -H "Authorization: Bearer $TOKEN"`}</Code>
+printf 'Authorization: Bearer %s\n' "$TOKEN" |
+  curl -sS --fail-with-body --cacert vecta-root-ca.pem -H @- \
+    "https://localhost/svc/posture/posture/findings?status=open&severity=high"`}</Code>
   </div>
 );
 

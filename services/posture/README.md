@@ -29,11 +29,15 @@ Every event is normalized to:
 ## Storage model
 
 - `posture_events_hot`: short-lived real-time window.
-- `posture_events_history`: trend/forecast history.
+- `posture_events_history`: every synced event; the signal summaries read it.
+- `posture_signal_daily`: one signal summary per tenant and complete UTC day,
+  the baseline (docs/SECURITY/POSTURE_BASELINE.md).
 - `posture_findings`: posture detections with `risk_score`, `recommended_action`, `auto_action_allowed`.
 - `posture_actions`: corrective runbook actions and execution state.
-- `posture_risk_snapshots`: risk over time (`24h`, `7d`, per-engine).
-- `posture_engine_state`: scan/sync cursor metadata.
+- `posture_risk_snapshots`: risk over time (`24h`, `7d`, per-engine), with
+  `assessed` false until the baseline has 14 days.
+- `posture_engine_state`: the audit sync cursor, where observation of the
+  tenant starts, and how far every event has been read.
 
 ## APIs
 

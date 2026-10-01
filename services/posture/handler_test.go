@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgdb "vecta-kms/pkg/db"
@@ -39,16 +41,18 @@ func newPostureHandler(t *testing.T, event EventPublisher) (*Handler, *SQLStore,
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	schema, err := os.ReadFile("migrations/001_initial.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, stmt := range strings.Split(string(schema), ";") {
-		if strings.TrimSpace(stmt) == "" {
-			continue
+	for _, file := range []string{"migrations/001_initial.sql", "migrations/005_baseline.sql"} {
+		schema, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
 		}
-		if _, err := conn.SQL().Exec(stmt); err != nil {
-			t.Fatalf("%v: %s", err, stmt)
+		for _, stmt := range strings.Split(string(schema), ";") {
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			if _, err := conn.SQL().Exec(stmt); err != nil {
+				t.Fatalf("%v: %s", err, stmt)
+			}
 		}
 	}
 	store := NewSQLStore(conn)
@@ -258,12 +262,30 @@ func (a auditTrail) ListEvents(context.Context, string, int) ([]map[string]inter
 	return a, nil
 }
 
+// ListEventsRange pages the trail oldest first, as the audit service does
+// with order=asc.
+func (a auditTrail) ListEventsRange(_ context.Context, _ string, from, to time.Time, offset, limit int) ([]map[string]interface{}, error) {
+	in := make([]map[string]interface{}, 0, len(a))
+	for _, e := range a {
+		ts := eventTimestamp(e)
+		if (!from.IsZero() && ts.Before(from)) || (!to.IsZero() && ts.After(to)) {
+			continue
+		}
+		in = append(in, e)
+	}
+	sort.SliceStable(in, func(i, j int) bool { return eventTimestamp(in[i]).Before(eventTimestamp(in[j])) })
+	if offset >= len(in) {
+		return nil, nil
+	}
+	return in[offset:min(len(in), offset+limit)], nil
+}
+
 // The scheduled engine run audits what it synced from the audit trail, under
 // the synced tenant; a run that syncs nothing emits nothing.
 func TestScheduledAuditSyncAudited(t *testing.T) {
 	_, store, _ := newPostureHandler(t, nil)
 	bus := &recordedPublish{}
-	svc := NewService(store, auditTrail{{"id": "e1", "action": "audit.key.delete", "service": "key", "result": "success", "tenant_id": "root"}}, bus)
+	svc := NewService(store, auditTrail{{"id": "e1", "action": "audit.key.delete", "service": "key", "result": "success", "tenant_id": "root", "timestamp": time.Now().UTC().Format(time.RFC3339Nano)}}, bus)
 	if err := svc.RunScanAllTenants(context.Background(), true); err != nil {
 		t.Fatal(err)
 	}

@@ -80,6 +80,7 @@ func (h *Handler) postureRoutes(r *route.Router) {
 	r.Handle("PUT /posture/findings/{id}/status", route.Spec{Action: "finding_status_updated", Permission: permWrite, Resource: "posture_finding", TargetParam: "id"}, oneTenant(h.handleUpdateFindingStatus))
 
 	r.Handle("GET /posture/risk", spec("risk_read", permRead, "posture_risk"), oneTenant(h.handleLatestRisk))
+	r.Handle("GET /posture/baseline", spec("baseline_read", permRead, "posture_risk"), oneTenant(h.handleBaseline))
 	r.Handle("GET /posture/risk/history", spec("risk_history_read", permRead, "posture_risk"), oneTenant(h.handleRiskHistory))
 
 	r.Handle("GET /posture/actions", spec("actions_listed", permRead, "posture_action"), oneTenant(h.handleListActions))
@@ -215,6 +216,17 @@ func (h *Handler) handleLatestRisk(c *route.Call) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"risk": item})
+}
+
+func (h *Handler) handleBaseline(c *route.Call) {
+	st, err := h.svc.BaselineStatus(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("ready", st.Ready)
+	c.Detail("days", st.Days)
+	c.JSON(http.StatusOK, map[string]interface{}{"baseline": st})
 }
 
 func (h *Handler) handleRiskHistory(c *route.Call) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -95,35 +96,149 @@ func (s *Service) IngestEvents(ctx context.Context, events []NormalizedEvent) (i
 	return s.store.IngestEvents(ctx, normalized)
 }
 
-func (s *Service) SyncFromAudit(ctx context.Context, tenantID string, limit int) (int, error) {
+// The audit sync reads every event, in order, from a cursor. A backlog
+// larger than one run continues on the next; nothing is skipped.
+const (
+	syncPageSize  = 1000             // the audit list's page cap
+	syncMaxPages  = 50               // per tenant per run
+	syncOverlap   = 10 * time.Minute // re-read window for events persisted late
+	finalizeGrace = time.Hour        // a day is final this long after it ends
+	dayLayout     = "2006-01-02"
+)
+
+// SyncFromAudit brings the tenant's audit events into posture from the sync
+// cursor forward and returns how many were new. The first run starts
+// StableBaselineDays back, or at the tenant's first event if that is later,
+// so the baseline is built from complete days. limit is unused: the sync is
+// bounded by pages, not by a sample size.
+func (s *Service) SyncFromAudit(ctx context.Context, tenantID string, _ int) (int, error) {
 	if strings.TrimSpace(tenantID) == "" {
 		return 0, newServiceError(400, "tenant_required", "tenant_id is required")
 	}
 	if s.audit == nil {
 		return 0, nil
 	}
-	if limit <= 0 || limit > 5000 {
-		limit = s.auditSyncLimit
-	}
-	rawEvents, err := s.audit.ListEvents(ctx, tenantID, limit)
+	now := nowUTC()
+	st, err := s.store.GetSyncState(ctx, tenantID)
 	if err != nil {
 		return 0, err
 	}
-	events := make([]NormalizedEvent, 0, len(rawEvents))
-	lastEventTS := time.Time{}
-	for _, raw := range rawEvents {
-		ev := s.auditToNormalized(tenantID, raw)
-		if ev.Timestamp.After(lastEventTS) {
-			lastEventTS = ev.Timestamp
+	if st.BaselineFrom.IsZero() {
+		window := now.Add(-StableBaselineDays * 24 * time.Hour).Truncate(24 * time.Hour)
+		older, err := s.audit.ListEventsRange(ctx, tenantID, time.Time{}, window, 0, 1)
+		if err != nil {
+			return 0, err
 		}
-		events = append(events, ev)
+		if len(older) > 0 {
+			st.BaselineFrom = window
+		} else {
+			first, err := s.audit.ListEventsRange(ctx, tenantID, window, time.Time{}, 0, 1)
+			if err != nil || len(first) == 0 {
+				return 0, err // nothing recorded yet: observation has not started
+			}
+			st.BaselineFrom = eventTimestamp(first[0]).UTC()
+		}
+		st.Cursor = st.BaselineFrom
 	}
-	inserted, err := s.IngestEvents(ctx, events)
-	if err != nil {
-		return 0, err
+	from := st.Cursor
+	if st.SyncedThrough.After(st.Cursor) { // caught up last run: re-read the overlap
+		from = st.Cursor.Add(-syncOverlap)
 	}
-	_ = s.store.UpdateEngineState(ctx, tenantID, nowUTC(), lastEventTS, time.Time{})
+	if from.Before(st.BaselineFrom) {
+		from = st.BaselineFrom
+	}
+	inserted, caughtUp := 0, false
+	for page := 0; page < syncMaxPages; page++ {
+		raw, err := s.audit.ListEventsRange(ctx, tenantID, from, time.Time{}, page*syncPageSize, syncPageSize)
+		if err != nil {
+			_ = s.store.SetSyncState(ctx, tenantID, st)
+			return inserted, err
+		}
+		events := make([]NormalizedEvent, 0, len(raw))
+		for _, item := range raw {
+			ev := s.auditToNormalized(tenantID, item)
+			if ev.Timestamp.After(st.Cursor) {
+				st.Cursor = ev.Timestamp.UTC()
+			}
+			events = append(events, ev)
+		}
+		n, err := s.IngestEvents(ctx, events)
+		if err != nil {
+			return inserted, err
+		}
+		inserted += n
+		if len(raw) < syncPageSize {
+			caughtUp = true
+			break
+		}
+	}
+	if caughtUp {
+		st.SyncedThrough = now
+	}
+	if err := s.store.SetSyncState(ctx, tenantID, st); err != nil {
+		return inserted, err
+	}
+	_ = s.store.UpdateEngineState(ctx, tenantID, now, st.Cursor, time.Time{})
 	return inserted, nil
+}
+
+// finalizeBaselineDays writes the signal summary of every complete UTC day
+// the sync has read in full and that has none yet, within the baseline
+// window. The tenant's first, partial day is not a baseline day.
+func (s *Service) finalizeBaselineDays(ctx context.Context, tenantID string, st SyncState, now time.Time) {
+	if st.BaselineFrom.IsZero() || st.SyncedThrough.IsZero() {
+		return
+	}
+	const day = 24 * time.Hour
+	first := st.BaselineFrom.UTC().Truncate(day)
+	if first.Before(st.BaselineFrom) {
+		first = first.Add(day)
+	}
+	if oldest := now.Truncate(day).Add(-StableBaselineDays * day); first.Before(oldest) {
+		first = oldest
+	}
+	have, err := s.store.ListSignalDays(ctx, tenantID, first.Format(dayLayout), now.Format(dayLayout))
+	if err != nil {
+		logger.Printf("baseline days list failed tenant=%s: %v", tenantID, err)
+		return
+	}
+	done := map[string]bool{}
+	for _, d := range have {
+		done[d.Day] = true
+	}
+	for d := first; !d.Add(day).Add(finalizeGrace).After(st.SyncedThrough); d = d.Add(day) {
+		if done[d.Format(dayLayout)] {
+			continue
+		}
+		summary, err := s.store.GetSignalSummary(ctx, tenantID, d, d.Add(day))
+		if err == nil {
+			err = s.store.UpsertSignalDay(ctx, tenantID, d.Format(dayLayout), summary)
+		}
+		if err != nil {
+			logger.Printf("baseline day %s failed tenant=%s: %v", d.Format(dayLayout), tenantID, err)
+			return
+		}
+	}
+}
+
+// loadBaseline returns the tenant's finalized days in the baseline window,
+// which ends yesterday: today is what gets judged. The scan (primary only)
+// finalizes newly complete days first; a read does not write.
+func (s *Service) loadBaseline(ctx context.Context, tenantID string, now time.Time, finalize bool) (Baseline, error) {
+	st, err := s.store.GetSyncState(ctx, tenantID)
+	if err != nil {
+		return Baseline{}, err
+	}
+	if finalize {
+		s.finalizeBaselineDays(ctx, tenantID, st, now)
+	}
+	const day = 24 * time.Hour
+	today := now.UTC().Truncate(day)
+	days, err := s.store.ListSignalDays(ctx, tenantID, today.Add(-StableBaselineDays*day).Format(dayLayout), today.Add(-day).Format(dayLayout))
+	if err != nil {
+		return Baseline{}, err
+	}
+	return Baseline{Days: days, From: st.BaselineFrom, SyncedThrough: st.SyncedThrough}, nil
 }
 
 func (s *Service) RunScanAllTenants(ctx context.Context, syncAudit bool) error {
@@ -197,15 +312,7 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 	if err != nil {
 		return RiskSnapshot{}, err
 	}
-	prev24, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-48*time.Hour), now.Add(-24*time.Hour))
-	if err != nil {
-		return RiskSnapshot{}, err
-	}
-	current7d, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-7*24*time.Hour), now)
-	if err != nil {
-		return RiskSnapshot{}, err
-	}
-	prev7d, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-14*24*time.Hour), now.Add(-7*24*time.Hour))
+	baseline, err := s.loadBaseline(ctx, tenantID, now, true)
 	if err != nil {
 		return RiskSnapshot{}, err
 	}
@@ -220,11 +327,11 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 	}
 	outCh := make(chan engineOut, 3)
 	go func() {
-		findings, score, signalData := s.predictiveEngine(tenantID, current24, prev24, current7d, prev7d)
+		findings, score, signalData := s.predictiveEngine(tenantID, current24, baseline)
 		outCh <- engineOut{name: "predictive", score: score, findings: findings, signalData: signalData}
 	}()
 	go func() {
-		findings, score, signalData := s.preventiveEngine(tenantID, current24, prev24)
+		findings, score, signalData := s.preventiveEngine(tenantID, current24, baseline)
 		outCh <- engineOut{name: "preventive", score: score, findings: findings, signalData: signalData}
 	}()
 	go func() {
@@ -292,18 +399,17 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 		}
 	}
 
-	risk24 := clampRisk((predictiveScore*45 + preventiveScore*30 + correctiveScore*25) / 100)
-	if risk24 == 0 {
-		risk24 = clampRisk(current24.TotalEvents / 200)
+	// The score is the engines' findings, weighted. It is given only once
+	// the baseline is ready; activity volume is never a risk. risk_7d is the
+	// mean of the assessed 24h scores over the last seven days.
+	assessed := baseline.Ready()
+	risk24, risk7 := 0, 0
+	if assessed {
+		risk24 = clampRisk((predictiveScore*45 + preventiveScore*30 + correctiveScore*25) / 100)
+		avg, n, _ := s.store.AvgAssessedRisk(ctx, tenantID, now.Add(-7*24*time.Hour))
+		risk7 = clampRisk(int(math.Round((avg*float64(n) + float64(risk24)) / float64(n+1))))
 	}
-	risk7 := clampRisk(
-		risk24 +
-			(current7d.TotalEvents-prev7d.TotalEvents)/50 +
-			current7d.ExpiryBacklogCount +
-			current7d.CertRenewalMissedCount*2 +
-			current7d.CertEmergencyRotations*3 +
-			current7d.CertMassRenewalRisks,
-	)
+	previous, prevErr := s.store.GetLatestRiskSnapshot(ctx, tenantID)
 
 	snap := RiskSnapshot{
 		ID:              newID("risk"),
@@ -313,7 +419,10 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 		PredictiveScore: predictiveScore,
 		PreventiveScore: preventiveScore,
 		CorrectiveScore: correctiveScore,
+		Assessed:        assessed,
+		BaselineDays:    len(baseline.Days),
 		TopSignals: mergeTopSignals(topSignals, map[string]interface{}{
+			"baseline":                    baselineStatus(baseline, current24),
 			"events_24h":                  current24.TotalEvents,
 			"failed_auth_24h":             current24.FailedAuthCount,
 			"failed_crypto_24h":           current24.FailedCryptoCount,
@@ -321,17 +430,14 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 			"key_deletes_24h":             current24.KeyDeleteCount,
 			"cert_deletes_24h":            current24.CertDeleteCount,
 			"hsm_latency_avg_ms_24h":      current24.HSMLatencyAvgMS,
-			"cluster_lag_avg_ms_24h":      current24.ClusterLagAvgMS,
-			"connector_flaps_24h":         current24.ConnectorAuthFlaps,
-			"replication_retry_24h":       current24.ReplicationRetry,
+			"connector_failures_24h":      current24.ConnectorFailures,
 			"expiry_backlog_24h":          current24.ExpiryBacklogCount,
 			"cert_renewal_missed_24h":     current24.CertRenewalMissedCount,
 			"cert_emergency_rotation_24h": current24.CertEmergencyRotations,
 			"cert_mass_renewal_risk_24h":  current24.CertMassRenewalRisks,
 			"non_approved_algo_24h":       current24.NonApprovedAlgoCount,
 			"tenant_mismatch_24h":         current24.TenantMismatchCount,
-			"quorum_bypass_24h":           current24.QuorumBypassCount,
-			"cluster_drift_24h":           current24.ClusterDriftCount,
+			"denied_approvals_24h":        current24.DeniedApprovalCount,
 			"byok_events_24h":             current24.BYOKEvents,
 			"byok_failures_24h":           current24.BYOKFailures,
 			"hyok_events_24h":             current24.HYOKEvents,
@@ -361,8 +467,17 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 		"predictive_score": snap.PredictiveScore,
 		"preventive_score": snap.PreventiveScore,
 		"corrective_score": snap.CorrectiveScore,
+		"assessed":         snap.Assessed,
+		"baseline_days":    snap.BaselineDays,
 		"captured_at":      snap.CapturedAt.Format(time.RFC3339),
 	})
+	if assessed && (prevErr != nil || !previous.Assessed) {
+		_ = s.publish(ctx, "audit.posture.baseline_ready", tenantID, map[string]interface{}{
+			"baseline_days": snap.BaselineDays,
+			"required_days": MinBaselineDays,
+			"baseline_from": baseline.From.Format(time.RFC3339),
+		})
+	}
 	return snap, nil
 }
 
@@ -410,7 +525,7 @@ func (s *Service) applyPreventiveEnforcement(ctx context.Context, tenantID strin
 	return nil
 }
 
-func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, prev24 SignalSummary, current7d SignalSummary, prev7d SignalSummary) ([]FindingCandidate, int, map[string]interface{}) {
+func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, baseline Baseline) ([]FindingCandidate, int, map[string]interface{}) {
 	findings := make([]FindingCandidate, 0, 10)
 	score := 0
 	signal := map[string]interface{}{
@@ -418,12 +533,11 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		"predictive_failed_crypto":           current24.FailedCryptoCount,
 		"predictive_policy_denies":           current24.PolicyDenyCount,
 		"predictive_hsm_latency_ms":          current24.HSMLatencyAvgMS,
-		"predictive_cluster_lag_ms":          current24.ClusterLagAvgMS,
 		"predictive_expiry_backlog":          current24.ExpiryBacklogCount,
 		"predictive_cert_renewal_missed":     current24.CertRenewalMissedCount,
 		"predictive_cert_emergency_rotation": current24.CertEmergencyRotations,
 		"predictive_cert_mass_renewal_risks": current24.CertMassRenewalRisks,
-		"predictive_connector_flaps":         current24.ConnectorAuthFlaps,
+		"predictive_connector_failures":      current24.ConnectorFailures,
 		"predictive_byok_failures":           current24.BYOKFailures,
 		"predictive_hyok_failures":           current24.HYOKFailures,
 		"predictive_ekm_failures":            current24.EKMFailures,
@@ -432,165 +546,131 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		"predictive_sdk_failures":            current24.SDKFailures,
 	}
 
-	if isSpike(current24.FailedAuthCount, prev24.FailedAuthCount, 25, 2.0) {
+	// Count signals: unusual against the tenant's own baseline (baseline.go).
+	// Nothing here fires before the baseline is ready.
+	against := func(t CountTest) string {
+		return fmt.Sprintf("%d in the last 24h against a baseline of %.1f a day over %d days (p=%.2g).", t.Current, t.Mean, t.Days, t.P)
+	}
+
+	if t := baseline.Count(current24.FailedAuthCount, 25, func(d SignalSummary) int { return d.FailedAuthCount }); t.Unusual {
 		risk := clampRisk(30 + current24.FailedAuthCount/2)
 		score += risk / 3
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "auth_failure_spike",
 			Title:             "Failed authentication spike detected",
-			Description:       fmt.Sprintf("Auth failures increased from %d to %d in the last 24h.", prev24.FailedAuthCount, current24.FailedAuthCount),
+			Description:       "Authentication failures: " + against(t),
 			Severity:          severityHigh,
 			RiskScore:         risk,
 			RecommendedAction: "Raise step-up authentication and tighten rate limits for high-risk actors.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "auth_failure_spike"),
-			Evidence: map[string]interface{}{
-				"current_24h": current24.FailedAuthCount,
-				"prev_24h":    prev24.FailedAuthCount,
-			},
+			Evidence:          map[string]interface{}{"baseline_test": t},
 		})
 	}
 
-	if isSpike(current24.FailedCryptoCount, prev24.FailedCryptoCount, 10, 1.8) {
+	if t := baseline.Count(current24.FailedCryptoCount, 10, func(d SignalSummary) int { return d.FailedCryptoCount }); t.Unusual {
 		risk := clampRisk(25 + current24.FailedCryptoCount)
 		score += risk / 3
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "crypto_failure_spike",
-			Title:             "Decrypt/unwrap failure spike detected",
-			Description:       "Local and remote crypto failures indicate possible key drift, policy mismatch, or tampering attempts.",
+			Title:             "Refused or failed key operations spike",
+			Description:       "Key operations the KMS refused or could not perform: " + against(t),
 			Severity:          severityHigh,
 			RiskScore:         risk,
-			RecommendedAction: "Check key state drift, connector integrity, and enforce fallback to centralized KMS path for affected operations.",
+			RecommendedAction: "Check key state, access policy changes and connector integrity for the callers being refused.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "crypto_failure_spike"),
-			Evidence: map[string]interface{}{
-				"current_24h": current24.FailedCryptoCount,
-				"prev_24h":    prev24.FailedCryptoCount,
-			},
+			Evidence:          map[string]interface{}{"baseline_test": t},
 		})
 	}
 
-	if isSpike(current24.PolicyDenyCount, prev24.PolicyDenyCount, 20, 1.7) {
+	if t := baseline.Count(current24.PolicyDenyCount, 20, func(d SignalSummary) int { return d.PolicyDenyCount }); t.Unusual {
 		risk := clampRisk(20 + current24.PolicyDenyCount/2)
 		score += risk / 4
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "policy_deny_jump",
-			Title:             "Policy deny rate is trending upward",
-			Description:       "Sudden deny growth predicts near-term service friction and policy misconfiguration.",
+			Title:             "Refused requests are well above normal",
+			Description:       "Requests refused across all services: " + against(t),
 			Severity:          severityWarning,
 			RiskScore:         risk,
-			RecommendedAction: "Pre-stage policy guardrail review and role alignment before deny volume causes outage.",
+			RecommendedAction: "Review recent policy and role changes, and the actors being refused, before the refusals disrupt a service.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "policy_deny_jump"),
-			Evidence: map[string]interface{}{
-				"current_24h": current24.PolicyDenyCount,
-				"prev_24h":    prev24.PolicyDenyCount,
-			},
+			Evidence:          map[string]interface{}{"baseline_test": t},
 		})
 	}
 
-	if current24.HSMLatencyAvgMS >= 250 && (current24.HSMLatencyAvgMS > prev24.HSMLatencyAvgMS*1.25 || prev24.HSMLatencyAvgMS == 0) {
+	// 250 ms is slow on its own terms. With a latency history, it must also
+	// be 25% above the tenant's normal, so a steadily slow HSM is not
+	// reported as "rising" every day.
+	if hsmNormal, hsmDays := baseline.Mean(func(d SignalSummary) float64 { return d.HSMLatencyAvgMS }); current24.HSMLatencyAvgMS >= 250 &&
+		(hsmDays == 0 || current24.HSMLatencyAvgMS > hsmNormal*1.25) {
 		risk := clampRisk(35 + int(current24.HSMLatencyAvgMS/20))
 		score += risk / 2
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "hsm_latency_rising",
 			Title:             "HSM latency degradation trend",
-			Description:       fmt.Sprintf("Average HSM latency is %.1f ms (previous %.1f ms).", current24.HSMLatencyAvgMS, prev24.HSMLatencyAvgMS),
+			Description:       fmt.Sprintf("Average HSM latency is %.1f ms (baseline %.1f ms over %d days with HSM activity).", current24.HSMLatencyAvgMS, hsmNormal, hsmDays),
 			Severity:          severityHigh,
 			RiskScore:         risk,
 			RecommendedAction: "Prepare HSM failover profile and reduce high-cost key operations before throughput collapse.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "hsm_latency_rising"),
 			Evidence: map[string]interface{}{
-				"hsm_latency_avg_ms_current": current24.HSMLatencyAvgMS,
-				"hsm_latency_avg_ms_prev":    prev24.HSMLatencyAvgMS,
+				"hsm_latency_avg_ms_current":  current24.HSMLatencyAvgMS,
+				"hsm_latency_avg_ms_baseline": hsmNormal,
+				"baseline_days_with_hsm":      hsmDays,
 			},
 		})
 	}
 
-	if current24.ClusterLagAvgMS >= 120 && current24.ReplicationRetry >= 5 {
-		risk := clampRisk(40 + current24.ReplicationRetry*2)
-		score += risk / 2
-		findings = append(findings, FindingCandidate{
-			Engine:            "predictive",
-			FindingType:       "cluster_sync_degradation",
-			Title:             "Cluster sync degradation leading signal",
-			Description:       "Replication retries and lag indicate near-term profile drift or follower staleness.",
-			Severity:          severityHigh,
-			RiskScore:         risk,
-			RecommendedAction: "Throttle write burst, validate mTLS link health, and prioritize sync queue reconciliation.",
-			AutoActionAllowed: false,
-			Fingerprint:       fingerprint(tenantID, "predictive", "cluster_sync_degradation"),
-			Evidence: map[string]interface{}{
-				"cluster_lag_avg_ms_24h": current24.ClusterLagAvgMS,
-				"replication_retry_24h":  current24.ReplicationRetry,
-			},
-		})
-	}
-
-	if isSpike(current24.ConnectorAuthFlaps, prev24.ConnectorAuthFlaps, 6, 1.5) {
-		risk := clampRisk(30 + current24.ConnectorAuthFlaps*3)
+	if t := baseline.Count(current24.ConnectorFailures, 6, func(d SignalSummary) int { return d.ConnectorFailures }); t.Unusual {
+		risk := clampRisk(30 + current24.ConnectorFailures*3)
 		score += risk / 3
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "connector_auth_flap",
-			Title:             "Connector authentication instability",
-			Description:       "Auth flaps across external connectors predict sync failure and stale key inventory.",
+			Title:             "Connector instability",
+			Description:       "Cloud sync failures, agent disconnects and refused KMIP clients: " + against(t),
 			Severity:          severityWarning,
 			RiskScore:         risk,
-			RecommendedAction: "Temporarily gate connector sync and rotate connector credentials in maintenance window.",
+			RecommendedAction: "Check the failing connectors' credentials and reachability; pause their sync until they authenticate again.",
 			AutoActionAllowed: true,
 			Fingerprint:       fingerprint(tenantID, "predictive", "connector_auth_flap"),
-			Evidence: map[string]interface{}{
-				"current_24h": current24.ConnectorAuthFlaps,
-				"prev_24h":    prev24.ConnectorAuthFlaps,
-			},
+			Evidence:          map[string]interface{}{"baseline_test": t},
 		})
 	}
 
-	domainFinding := func(domainID string, domainLabel string, currentEvents int, currentFailures int, previousEvents int, previousFailures int, recommendedAction string, extraEvidence map[string]interface{}) {
-		if currentFailures <= 0 {
+	// Rate signals: a domain's failure rate, unusual against the tenant's own
+	// pooled baseline rate. Not judged until the baseline holds MinRateEvents
+	// events for that domain.
+	domainFinding := func(domainID string, domainLabel string, t RateTest, recommendedAction string, extraEvidence map[string]interface{}) {
+		signal["rate_"+domainID] = t
+		if !t.Unusual {
 			return
 		}
-		failureRate := float64(currentFailures) / float64(max(1, currentEvents))
-		previousFailureRate := float64(previousFailures) / float64(max(1, previousEvents))
-		if currentFailures < 3 && failureRate < 0.15 {
-			return
-		}
-		if !(failureRate >= 0.12 || isSpike(currentFailures, previousFailures, 3, 1.4)) {
-			return
-		}
-
-		risk := clampRisk(28 + currentFailures*8 + int(failureRate*55))
+		risk := clampRisk(28 + t.Failures*8 + int(t.Rate*55))
 		severity := severityWarning
-		if failureRate >= 0.25 || currentFailures >= 10 {
+		if t.Rate >= 0.25 || t.Failures >= 10 {
 			severity = severityHigh
 		}
 		score += risk / 3
 
-		evidence := map[string]interface{}{
-			"domain":                    domainID,
-			"events_24h":                currentEvents,
-			"failures_24h":              currentFailures,
-			"failure_rate_24h":          failureRate,
-			"events_prev_24h":           previousEvents,
-			"failures_prev_24h":         previousFailures,
-			"failure_rate_prev_24h":     previousFailureRate,
-			"failure_rate_delta_points": (failureRate - previousFailureRate) * 100,
-		}
+		evidence := map[string]interface{}{"domain": domainID, "baseline_test": t}
 		for k, v := range extraEvidence {
 			evidence[k] = v
 		}
 
 		findings = append(findings, FindingCandidate{
-			Engine:            "predictive",
-			FindingType:       fmt.Sprintf("domain_%s_instability", domainID),
-			Title:             fmt.Sprintf("%s posture instability", domainLabel),
-			Description:       fmt.Sprintf("%s failures are elevated in the last 24h and can impact key operations and policy enforcement.", domainLabel),
+			Engine:      "predictive",
+			FindingType: fmt.Sprintf("domain_%s_instability", domainID),
+			Title:       fmt.Sprintf("%s posture instability", domainLabel),
+			Description: fmt.Sprintf("%s failure rate is %.1f%% (%d of %d) in the last 24h against a baseline of %.1f%% over %d events (p=%.2g).",
+				domainLabel, t.Rate*100, t.Failures, t.Events, t.BaselineRate*100, t.BaselineEvents, t.P),
 			Severity:          severity,
 			RiskScore:         risk,
 			RecommendedAction: recommendedAction,
@@ -600,73 +680,30 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	domainFinding(
-		"byok",
-		"BYOK",
-		current24.BYOKEvents,
-		current24.BYOKFailures,
-		prev24.BYOKEvents,
-		prev24.BYOKFailures,
+	domainFinding("byok", "BYOK",
+		baseline.Rate(current24.BYOKEvents, current24.BYOKFailures, func(d SignalSummary) int { return d.BYOKEvents }, func(d SignalSummary) int { return d.BYOKFailures }),
 		"Validate cloud connector auth/region config and pause sync for unstable connectors until auth succeeds.",
-		map[string]interface{}{"latency_avg_ms_24h": current24.BYOKLatencyAvgMS},
-	)
-	domainFinding(
-		"hyok",
-		"HYOK",
-		current24.HYOKEvents,
-		current24.HYOKFailures,
-		prev24.HYOKEvents,
-		prev24.HYOKFailures,
+		map[string]interface{}{"latency_avg_ms_24h": current24.BYOKLatencyAvgMS})
+	domainFinding("hyok", "HYOK",
+		baseline.Rate(current24.HYOKEvents, current24.HYOKFailures, func(d SignalSummary) int { return d.HYOKEvents }, func(d SignalSummary) int { return d.HYOKFailures }),
 		"Review HYOK endpoint trust chain, denied requests, and fallback policy before unwrap/wrap backlog increases.",
-		map[string]interface{}{"latency_avg_ms_24h": current24.HYOKLatencyAvgMS},
-	)
-	domainFinding(
-		"ekm",
-		"EKM",
-		current24.EKMEvents,
-		current24.EKMFailures,
-		prev24.EKMEvents,
-		prev24.EKMFailures,
+		map[string]interface{}{"latency_avg_ms_24h": current24.HYOKLatencyAvgMS})
+	domainFinding("ekm", "EKM",
+		baseline.Rate(current24.EKMEvents, current24.EKMFailures, func(d SignalSummary) int { return d.EKMEvents }, func(d SignalSummary) int { return d.EKMFailures }),
 		"Check EKM agent heartbeat/disconnect state and rotate affected TDE connector credentials.",
-		map[string]interface{}{"latency_avg_ms_24h": current24.EKMLatencyAvgMS},
-	)
-	domainFinding(
-		"kmip",
-		"KMIP",
-		current24.KMIPEvents,
-		current24.KMIPFailures,
-		prev24.KMIPEvents,
-		prev24.KMIPFailures,
+		map[string]interface{}{"latency_avg_ms_24h": current24.EKMLatencyAvgMS})
+	domainFinding("kmip", "KMIP",
+		baseline.Rate(current24.KMIPEvents, current24.KMIPFailures, func(d SignalSummary) int { return d.KMIPEvents }, func(d SignalSummary) int { return d.KMIPFailures }),
 		"Run KMIP interop validation and enforce mTLS profile alignment for client profiles with failures.",
-		map[string]interface{}{
-			"latency_avg_ms_24h":  current24.KMIPLatencyAvgMS,
-			"interop_failed_24h":  current24.KMIPInteropFailures,
-			"interop_failed_prev": prev24.KMIPInteropFailures,
-		},
-	)
-	domainFinding(
-		"bitlocker",
-		"BitLocker",
-		current24.BitLockerEvents,
-		current24.BitLockerFailures,
-		prev24.BitLockerEvents,
-		prev24.BitLockerFailures,
+		map[string]interface{}{"latency_avg_ms_24h": current24.KMIPLatencyAvgMS, "interop_failed_24h": current24.KMIPInteropFailures})
+	domainFinding("bitlocker", "BitLocker",
+		baseline.Rate(current24.BitLockerEvents, current24.BitLockerFailures, func(d SignalSummary) int { return d.BitLockerEvents }, func(d SignalSummary) int { return d.BitLockerFailures }),
 		"Reconcile BitLocker client heartbeat and job delivery state before protection posture degrades further.",
-		map[string]interface{}{"latency_avg_ms_24h": current24.BitLockerLatencyAvgMS},
-	)
-	domainFinding(
-		"sdk",
-		"SDK / Wrapper",
-		current24.SDKEvents,
-		current24.SDKFailures,
-		prev24.SDKEvents,
-		prev24.SDKFailures,
+		map[string]interface{}{"latency_avg_ms_24h": current24.BitLockerLatencyAvgMS})
+	domainFinding("sdk", "SDK / Wrapper",
+		baseline.Rate(current24.SDKEvents, current24.SDKFailures, func(d SignalSummary) int { return d.SDKEvents }, func(d SignalSummary) int { return d.SDKFailures }),
 		"Review wrapper lease/receipt pipeline and enforce remote fallback for SDK flows showing repeated failures.",
-		map[string]interface{}{
-			"latency_avg_ms_24h":  current24.SDKLatencyAvgMS,
-			"receipt_missing_24h": current24.SDKReceiptMissing,
-		},
-	)
+		map[string]interface{}{"latency_avg_ms_24h": current24.SDKLatencyAvgMS, "receipt_missing_24h": current24.SDKReceiptMissing})
 
 	if current24.KMIPInteropFailures > 0 {
 		risk := clampRisk(52 + current24.KMIPInteropFailures*9)
@@ -708,7 +745,10 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	if current24.ExpiryBacklogCount >= 20 || current7d.ExpiryBacklogCount > prev7d.ExpiryBacklogCount+10 {
+	// The week-over-week comparison needs both weeks in the baseline.
+	pickExpiry := func(d SignalSummary) int { return d.ExpiryBacklogCount }
+	expiry7d, expiryPrev7d := baseline.SumLast(0, 7, pickExpiry), baseline.SumLast(7, 7, pickExpiry)
+	if current24.ExpiryBacklogCount >= 20 || (baseline.Ready() && expiry7d > expiryPrev7d+10) {
 		risk := clampRisk(20 + current24.ExpiryBacklogCount*2)
 		score += risk / 4
 		findings = append(findings, FindingCandidate{
@@ -722,8 +762,9 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 			AutoActionAllowed: true,
 			Fingerprint:       fingerprint(tenantID, "predictive", "expiry_backlog_forecast"),
 			Evidence: map[string]interface{}{
-				"expiry_24h": current24.ExpiryBacklogCount,
-				"expiry_7d":  current7d.ExpiryBacklogCount,
+				"expiry_24h":     current24.ExpiryBacklogCount,
+				"expiry_7d":      expiry7d,
+				"expiry_prev_7d": expiryPrev7d,
 			},
 		})
 	}
@@ -743,7 +784,7 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_renewal_windows_missed"),
 			Evidence: map[string]interface{}{
 				"missed_windows_24h": current24.CertRenewalMissedCount,
-				"missed_windows_7d":  current7d.CertRenewalMissedCount,
+				"missed_windows_7d":  baseline.SumLast(0, 7, func(d SignalSummary) int { return d.CertRenewalMissedCount }),
 			},
 		})
 	}
@@ -763,7 +804,7 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_emergency_rotation_active"),
 			Evidence: map[string]interface{}{
 				"emergency_rotations_24h": current24.CertEmergencyRotations,
-				"emergency_rotations_7d":  current7d.CertEmergencyRotations,
+				"emergency_rotations_7d":  baseline.SumLast(0, 7, func(d SignalSummary) int { return d.CertEmergencyRotations }),
 			},
 		})
 	}
@@ -783,7 +824,7 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_mass_renewal_hotspot"),
 			Evidence: map[string]interface{}{
 				"mass_renewal_risks_24h": current24.CertMassRenewalRisks,
-				"mass_renewal_risks_7d":  current7d.CertMassRenewalRisks,
+				"mass_renewal_risks_7d":  baseline.SumLast(0, 7, func(d SignalSummary) int { return d.CertMassRenewalRisks }),
 			},
 		})
 	}
@@ -807,45 +848,42 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	if isSpike(current24.KeyDeleteCount+current24.CertDeleteCount, prev24.KeyDeleteCount+prev24.CertDeleteCount, 5, 2.0) {
+	if t := baseline.Count(current24.KeyDeleteCount+current24.CertDeleteCount, 5, func(d SignalSummary) int { return d.KeyDeleteCount + d.CertDeleteCount }); t.Unusual {
 		totalCurrent := current24.KeyDeleteCount + current24.CertDeleteCount
-		totalPrev := prev24.KeyDeleteCount + prev24.CertDeleteCount
 		risk := clampRisk(45 + totalCurrent*4)
 		score += risk / 2
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "deletion_velocity_anomaly",
 			Title:             "Key/certificate deletion velocity anomaly",
-			Description:       fmt.Sprintf("Deletion activity increased from %d to %d in the last 24h.", totalPrev, totalCurrent),
+			Description:       "Keys and certificates destroyed or deleted: " + against(t),
 			Severity:          severityCritical,
 			RiskScore:         risk,
 			RecommendedAction: "Force quorum on destructive operations and freeze non-essential delete endpoints.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "deletion_velocity_anomaly"),
 			Evidence: map[string]interface{}{
-				"deleted_keys_24h":   current24.KeyDeleteCount,
-				"deleted_certs_24h":  current24.CertDeleteCount,
-				"deleted_total_prev": totalPrev,
+				"deleted_keys_24h":  current24.KeyDeleteCount,
+				"deleted_certs_24h": current24.CertDeleteCount,
+				"baseline_test":     t,
 			},
 		})
 	}
 
-	if current24.QuorumBypassCount > 0 {
-		risk := clampRisk(60 + current24.QuorumBypassCount*8)
+	if t := baseline.Count(current24.DeniedApprovalCount, 3, func(d SignalSummary) int { return d.DeniedApprovalCount }); t.Unusual {
+		risk := clampRisk(60 + current24.DeniedApprovalCount*8)
 		score += risk / 2
 		findings = append(findings, FindingCandidate{
 			Engine:            "predictive",
 			FindingType:       "quorum_bypass_attempts",
-			Title:             "Quorum bypass attempts detected",
-			Description:       "Repeated denied votes or bypass attempts indicate control-plane abuse pressure.",
-			Severity:          severityCritical,
+			Title:             "Denied approvals are well above normal",
+			Description:       "Governance votes denied and quorums that failed: " + against(t),
+			Severity:          severityHigh,
 			RiskScore:         risk,
-			RecommendedAction: "Require AND-quorum with step-up auth and lock risky administrative flows pending review.",
+			RecommendedAction: "Review who is requesting the denied operations and why approvers are refusing them.",
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "predictive", "quorum_bypass_attempts"),
-			Evidence: map[string]interface{}{
-				"count_24h": current24.QuorumBypassCount,
-			},
+			Evidence:          map[string]interface{}{"baseline_test": t},
 		})
 	}
 
@@ -868,29 +906,10 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	if current24.ClusterDriftCount > 0 {
-		risk := clampRisk(50 + current24.ClusterDriftCount*5)
-		score += risk / 2
-		findings = append(findings, FindingCandidate{
-			Engine:            "predictive",
-			FindingType:       "cluster_state_drift",
-			Title:             "Cluster profile drift detected",
-			Description:       "Leader/follower profile drift threatens consistency guarantees for selected component sync.",
-			Severity:          severityHigh,
-			RiskScore:         risk,
-			RecommendedAction: "Run selective component drift reconciliation and validate sync envelope integrity.",
-			AutoActionAllowed: false,
-			Fingerprint:       fingerprint(tenantID, "predictive", "cluster_state_drift"),
-			Evidence: map[string]interface{}{
-				"count_24h": current24.ClusterDriftCount,
-			},
-		})
-	}
-
 	return findings, clampRisk(score), signal
 }
 
-func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, prev24 SignalSummary) ([]FindingCandidate, int, map[string]interface{}) {
+func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, baseline Baseline) ([]FindingCandidate, int, map[string]interface{}) {
 	findings := make([]FindingCandidate, 0, 8)
 	score := 0
 	totalDeletes := current24.KeyDeleteCount + current24.CertDeleteCount
@@ -932,21 +951,21 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	if current24.ConnectorAuthFlaps >= 8 {
-		risk := clampRisk(35 + current24.ConnectorAuthFlaps*3)
+	if current24.ConnectorFailures >= 8 {
+		risk := clampRisk(35 + current24.ConnectorFailures*3)
 		score += risk / 3
 		findings = append(findings, FindingCandidate{
 			Engine:            "preventive",
 			FindingType:       "disable_connector_sync_temporarily",
 			Title:             "Pre-block: pause unstable connector sync",
-			Description:       "Connector auth instability can create stale inventory and repeated failed jobs.",
+			Description:       "Repeated connector failures can leave stale inventory and failed jobs.",
 			Severity:          severityWarning,
 			RiskScore:         risk,
 			RecommendedAction: "Temporarily disable connector sync, rotate connector credentials, then resume.",
 			AutoActionAllowed: true,
 			Fingerprint:       fingerprint(tenantID, "preventive", "disable_connector_sync_temporarily"),
 			Evidence: map[string]interface{}{
-				"connector_flaps_24h": current24.ConnectorAuthFlaps,
+				"connector_failures_24h": current24.ConnectorFailures,
 			},
 		})
 	}
@@ -989,7 +1008,7 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
-	if isSpike(current24.PolicyDenyCount, prev24.PolicyDenyCount, 25, 1.6) {
+	if t := baseline.Count(current24.PolicyDenyCount, 25, func(d SignalSummary) int { return d.PolicyDenyCount }); t.Unusual {
 		risk := clampRisk(25 + current24.PolicyDenyCount/2)
 		score += risk / 4
 		findings = append(findings, FindingCandidate{
@@ -1003,8 +1022,8 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 			AutoActionAllowed: false,
 			Fingerprint:       fingerprint(tenantID, "preventive", "guardrail_policy_autocreate"),
 			Evidence: map[string]interface{}{
-				"policy_denies_24h":  current24.PolicyDenyCount,
-				"policy_denies_prev": prev24.PolicyDenyCount,
+				"policy_denies_24h": current24.PolicyDenyCount,
+				"baseline_test":     t,
 			},
 		})
 	}
@@ -1012,7 +1031,7 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 	return findings, clampRisk(score), map[string]interface{}{
 		"preventive_delete_volume_24h":       totalDeletes,
 		"preventive_failed_auth_24h":         current24.FailedAuthCount,
-		"preventive_connector_flaps":         current24.ConnectorAuthFlaps,
+		"preventive_connector_failures":      current24.ConnectorFailures,
 		"preventive_expiry_backlog":          current24.ExpiryBacklogCount,
 		"preventive_cert_mass_renewal_risks": current24.CertMassRenewalRisks,
 	}
@@ -1338,6 +1357,21 @@ func (s *Service) ListActions(ctx context.Context, tenantID string, q ActionQuer
 	events := s.fetchRecentAuditEvents(ctx, tenantID, max(250, min(1200, q.Limit*6)))
 	enrichedFindings := s.enrichFindings(findings, events, history)
 	return s.enrichActions(items, enrichedFindings, events), nil
+}
+
+// BaselineStatus reports how much history the tenant's baseline has against
+// what it needs, per signal.
+func (s *Service) BaselineStatus(ctx context.Context, tenantID string) (BaselineStatus, error) {
+	now := nowUTC()
+	baseline, err := s.loadBaseline(ctx, tenantID, now, false)
+	if err != nil {
+		return BaselineStatus{}, err
+	}
+	current24, err := s.store.GetSignalSummary(ctx, tenantID, now.Add(-24*time.Hour), now)
+	if err != nil {
+		return BaselineStatus{}, err
+	}
+	return baselineStatus(baseline, current24), nil
 }
 
 func (s *Service) LatestRisk(ctx context.Context, tenantID string) (RiskSnapshot, error) {
@@ -2203,11 +2237,22 @@ func (s *Service) auditToNormalized(tenantID string, raw map[string]interface{})
 	if fipsStrict, ok := details["fips_strict"]; ok && parseBool(fipsStrict) {
 		algo := strings.ToUpper(firstString(details["algorithm"], raw["algorithm"]))
 		if algo != "" && !isFIPSApprovedAlgorithm(algo) {
-			errorCode = "fips_non_approved_algorithm"
+			errorCode = codeNonApproved
+		}
+	}
+	// Conditions the signal catalogue reads from the event's details
+	// (signals.go): a kernel refusal's reason, and a failed KMIP validation.
+	if errorCode == "" && result == "refused" {
+		errorCode = firstString(details["reason"])
+	}
+	action := strings.ToLower(firstString(raw["action"]))
+	if action == interopActions[0] {
+		if verified, ok := details["verified"]; ok && !parseBool(verified) {
+			errorCode = codeInteropFailed
 		}
 	}
 	if eventTenant := strings.TrimSpace(firstString(raw["tenant_id"])); eventTenant != "" && eventTenant != strings.TrimSpace(tenantID) {
-		errorCode = "tenant_mismatch"
+		errorCode = codeTenantMismatch
 	}
 	return NormalizedEvent{
 		ID:         firstString(raw["id"]),
@@ -2243,16 +2288,6 @@ func isFIPSApprovedAlgorithm(algo string) bool {
 		}
 	}
 	return false
-}
-
-func isSpike(current int, previous int, absThreshold int, ratio float64) bool {
-	if current < absThreshold {
-		return false
-	}
-	if previous <= 0 {
-		return current >= absThreshold
-	}
-	return float64(current) >= float64(previous)*ratio
 }
 
 func mergeTopSignals(parts ...map[string]interface{}) map[string]interface{} {
@@ -2296,7 +2331,15 @@ func buildDomainMetrics(summary SignalSummary) map[string]interface{} {
 	return metrics
 }
 
-func aggregateGlobalRisk(snaps []RiskSnapshot) RiskSnapshot {
+// aggregateGlobalRisk averages the tenants whose risk is assessed. With none,
+// the cross-tenant snapshot is not assessed either.
+func aggregateGlobalRisk(all []RiskSnapshot) RiskSnapshot {
+	snaps := make([]RiskSnapshot, 0, len(all))
+	for _, s := range all {
+		if s.Assessed {
+			snaps = append(snaps, s)
+		}
+	}
 	if len(snaps) == 0 {
 		return RiskSnapshot{
 			ID:              newID("risk"),
@@ -2343,10 +2386,12 @@ func aggregateGlobalRisk(snaps []RiskSnapshot) RiskSnapshot {
 		PreventiveScore: clampRisk(sumPrev / n),
 		CorrectiveScore: clampRisk(sumCorr / n),
 		TopSignals: map[string]interface{}{
-			"tenant_count": n,
-			"top_tenants":  topTenants,
+			"tenant_count":             n,
+			"tenants_baseline_pending": len(all) - n,
+			"top_tenants":              topTenants,
 		},
 		CapturedAt: nowUTC(),
+		Assessed:   true,
 	}
 }
 

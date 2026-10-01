@@ -18,6 +18,9 @@ type EventPublisher interface {
 
 type AuditClient interface {
 	ListEvents(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	// ListEventsRange pages events with from <= timestamp <= to, oldest
+	// first, for the cursor sync. A zero bound is open.
+	ListEventsRange(ctx context.Context, tenantID string, from, to time.Time, offset, limit int) ([]map[string]interface{}, error)
 }
 
 // NormalizedEvent is the required unified posture schema across all service streams.
@@ -73,6 +76,17 @@ type RiskSnapshot struct {
 	CorrectiveScore int                    `json:"corrective_score"`
 	TopSignals      map[string]interface{} `json:"top_signals"`
 	CapturedAt      time.Time              `json:"captured_at"`
+	// Assessed is false until the baseline has MinBaselineDays: the risk
+	// fields are then 0 and mean "not assessed", not "no risk".
+	Assessed     bool `json:"assessed"`
+	BaselineDays int  `json:"baseline_days"`
+}
+
+// SyncState is how far the audit sync has read a tenant's events.
+type SyncState struct {
+	Cursor        time.Time // timestamp of the newest event read
+	BaselineFrom  time.Time // observation of the tenant starts here
+	SyncedThrough time.Time // every event up to here has been read
 }
 
 type RemediationAction struct {
@@ -132,18 +146,15 @@ type SignalSummary struct {
 	PolicyDenyCount        int
 	KeyDeleteCount         int
 	CertDeleteCount        int
-	QuorumBypassCount      int
+	DeniedApprovalCount    int
 	TenantMismatchCount    int
-	ClusterDriftCount      int
-	ConnectorAuthFlaps     int
-	ReplicationRetry       int
+	ConnectorFailures      int
 	ExpiryBacklogCount     int
 	CertRenewalMissedCount int
 	CertEmergencyRotations int
 	CertMassRenewalRisks   int
 	NonApprovedAlgoCount   int
 	HSMLatencyAvgMS        float64
-	ClusterLagAvgMS        float64
 	BYOKEvents             int
 	BYOKFailures           int
 	BYOKLatencyAvgMS       float64

@@ -51,7 +51,46 @@ export type PostureRiskSnapshot = {
   corrective_score: number;
   top_signals?: Record<string, unknown>;
   captured_at?: string;
+  // False until the baseline has enough history: the risk fields are then 0
+  // and mean "not assessed", not "no risk".
+  assessed?: boolean;
+  baseline_days?: number;
 };
+
+// One signal's standing against the baseline: "building" (not enough days),
+// "needs_events" (a rate with too few baseline events to judge) or "ready".
+export type PostureBaselineSignal = {
+  key: string;
+  label: string;
+  kind: "count" | "rate";
+  status: "building" | "needs_events" | "ready";
+  current_24h: number;
+  baseline_daily_mean: number;
+  floor?: number;
+  events_24h?: number;
+  baseline_events?: number;
+  required_baseline_events?: number;
+  baseline_failure_rate?: number;
+  unusual: boolean;
+  p_value: number;
+};
+
+export type PostureBaseline = {
+  ready: boolean;
+  stable: boolean;
+  days: number;
+  required_days: number;
+  stable_days: number;
+  from?: string;
+  synced_through?: string;
+  spike_alpha: number;
+  signals: PostureBaselineSignal[];
+};
+
+export async function getPostureBaseline(session: AuthSession): Promise<PostureBaseline> {
+  const out = await serviceRequest<{ baseline: PostureBaseline }>(session, "posture", `/posture/baseline?${tenantQuery(session)}`);
+  return out.baseline;
+}
 
 export type PostureAction = {
   id: string;

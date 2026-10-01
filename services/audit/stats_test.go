@@ -192,3 +192,33 @@ func TestActivityStatsRouteRefusalsAudited(t *testing.T) {
 	rec := &routetest.Recorder{}
 	routetest.RefusalsAudited(t, h.statsRouter(rec), rec)
 }
+
+// order=asc pages oldest first with a stable tiebreak, so a cursor reader
+// (posture's audit sync) sees every event exactly once.
+func TestQueryEventsAscending(t *testing.T) {
+	s := newAuditStore(t)
+	ctx := context.Background()
+	base := time.Now().UTC().Add(-time.Hour)
+	for i := 0; i < 5; i++ {
+		if _, err := s.PersistEvent(ctx, AuditEvent{TenantID: "t-asc", Timestamp: base.Add(time.Duration(i) * time.Minute), Service: "auth",
+			Action: "audit.auth.login", ActorID: "a" + strconv.Itoa(i), ActorType: "user", Result: "success"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var seen []string
+	for off := 0; ; off += 2 {
+		page, err := s.QueryEvents(ctx, "t-asc", EventQuery{From: base, Ascending: true, Limit: 2, Offset: off})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range page {
+			seen = append(seen, e.ActorID)
+		}
+		if len(page) < 2 {
+			break
+		}
+	}
+	if strings.Join(seen, ",") != "a0,a1,a2,a3,a4" {
+		t.Fatalf("ascending pages: %v", seen)
+	}
+}

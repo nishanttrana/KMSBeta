@@ -1016,6 +1016,47 @@ against the exported SBOM.
 `TestComplianceSBOMRoutesRemoved`, and the CLAUDE.md rule under "How we
 build".
 
+## 2026-10-01 — Posture needs 14 days of the tenant's own history before it scores or compares (7.19.0-beta)
+
+**Decision.** The owner asked how many events posture needs before it gives a
+baseline, and said 5, 10, 100 or 1000 cannot be accurate. An event count is
+the wrong measure. Posture now needs **14 complete days** (28 for a stable
+baseline) of the tenant's own audit history, and a rate signal needs **385
+events** of its kind. Until then the risk score is `assessed: false` and no
+comparison is made. After that, "unusual" is a significance test against the
+tenant's own daily mean and variance (p < 0.001 and a per-signal floor), not
+"twice yesterday". Full rules: docs/SECURITY/POSTURE_BASELINE.md.
+
+**Why days, not events.** A baseline has to capture normal variation,
+including the weekly cycle. Volume in one burst carries none of that; a
+quiet tenant's two weeks carry all of it.
+
+**What was wrong underneath.** The "baseline" was the previous 24 hours. A
+new install raised spike findings on day one. With no finding the score was
+`events / 200`. The sync took the newest 500 audit events a minute and
+dropped the rest. Most signal patterns matched no subject the platform
+emits, so failed logins, key destroys and expiries had always counted zero.
+
+**Rejected.**
+- A minimum event count (for example 1000) as the gate: fast tenants would
+  qualify in an hour with no notion of a normal day.
+- Same-weekday comparison: 14 to 28 days give two to four observations per
+  weekday, too few. The negative binomial absorbs the weekly swing instead.
+- Keeping `events / 200` as a "low" default: activity is not risk, and the
+  rule is "not assessed", never a guess.
+- Keeping the cluster drift and replication signals at zero: nothing emits
+  them, so they are removed.
+
+**Cost accepted.** Existing risk snapshots become unassessed and drop out of
+the trend chart; they had no baseline behind them. A deployment with at
+least 14 days of audit history is assessed again as soon as the first sync
+has caught up, because the baseline is built from the audit trail.
+
+**Enforced by** `TestCountNeedsMinBaselineDays`,
+`TestRateNeedsEnoughBaselineEvents`, `TestScanNotAssessedWhileBaselineBuilds`,
+`TestBusyHealthyTenantScoresZero`, `TestSignalSubjectsAreEmitted`,
+`TestSyncReadsEveryEventFromCursor`, and the Posture smoke test.
+
 ## 2026-09-30 — Analytics windows from a day to since uptime, counted by the server (7.17.0-beta)
 
 **Decision.** Every analytics view (Audit Log → Activity, Alert Center →

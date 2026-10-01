@@ -693,10 +693,11 @@ posture,POST,/posture/scan,/posture/scan,oneTenant(h.handleRunScan),kernel,postu
 posture,GET,/posture/findings,/posture/findings,oneTenant(h.handleListFindings),kernel,posture.read,findings_listed,posture_finding,services/posture/handler.go,79,posture|GET|/posture/findings
 posture,PUT,/posture/findings/{id}/status,/posture/findings/{param}/status,oneTenant(h.handleUpdateFindingStatus),kernel,posture.write,finding_status_updated,posture_finding,services/posture/handler.go,80,posture|PUT|/posture/findings/{param}/status
 posture,GET,/posture/risk,/posture/risk,oneTenant(h.handleLatestRisk),kernel,posture.read,risk_read,posture_risk,services/posture/handler.go,82,posture|GET|/posture/risk
-posture,GET,/posture/risk/history,/posture/risk/history,oneTenant(h.handleRiskHistory),kernel,posture.read,risk_history_read,posture_risk,services/posture/handler.go,83,posture|GET|/posture/risk/history
-posture,GET,/posture/actions,/posture/actions,oneTenant(h.handleListActions),kernel,posture.read,actions_listed,posture_action,services/posture/handler.go,85,posture|GET|/posture/actions
-posture,POST,/posture/actions/{id}/execute,/posture/actions/{param}/execute,oneTenant(h.handleExecuteAction),kernel,posture.action.execute,action_executed,posture_action,services/posture/handler.go,86,posture|POST|/posture/actions/{param}/execute
-posture,GET,/posture/dashboard,/posture/dashboard,oneTenant(h.handleDashboard),kernel,posture.read,dashboard_viewed,posture_risk,services/posture/handler.go,88,posture|GET|/posture/dashboard
+posture,GET,/posture/baseline,/posture/baseline,oneTenant(h.handleBaseline),kernel,posture.read,baseline_read,posture_risk,services/posture/handler.go,83,posture|GET|/posture/baseline
+posture,GET,/posture/risk/history,/posture/risk/history,oneTenant(h.handleRiskHistory),kernel,posture.read,risk_history_read,posture_risk,services/posture/handler.go,84,posture|GET|/posture/risk/history
+posture,GET,/posture/actions,/posture/actions,oneTenant(h.handleListActions),kernel,posture.read,actions_listed,posture_action,services/posture/handler.go,86,posture|GET|/posture/actions
+posture,POST,/posture/actions/{id}/execute,/posture/actions/{param}/execute,oneTenant(h.handleExecuteAction),kernel,posture.action.execute,action_executed,posture_action,services/posture/handler.go,87,posture|POST|/posture/actions/{param}/execute
+posture,GET,/posture/dashboard,/posture/dashboard,oneTenant(h.handleDashboard),kernel,posture.read,dashboard_viewed,posture_risk,services/posture/handler.go,89,posture|GET|/posture/dashboard
 pqc,GET,/pqc/inventory,/pqc/inventory,h.getInventory,kernel,pqc.read,inventory_read,pqc_inventory,services/pqc/handler.go,44,pqc|GET|/pqc/inventory
 pqc,POST,/pqc/scan,/pqc/scan,h.startScan,kernel,pqc.write,scan_requested,pqc_scan,services/pqc/handler.go,45,pqc|POST|/pqc/scan
 pqc,GET,/pqc/scans,/pqc/scans,h.listScans,kernel,pqc.read,scans_listed,pqc_scan,services/pqc/handler.go,46,pqc|GET|/pqc/scans

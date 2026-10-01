@@ -5,6 +5,34 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Fake fixed: posture's "baseline" was yesterday, its score was event volume, and most signals counted nothing
+- **What happened:** the owner asked how many events posture needs for a
+  baseline. There was no baseline. Each signal was compared with the previous
+  24 hours, so a new install raised "spike" findings on day one. With no
+  finding the risk score was `events / 200`, so a busy healthy tenant scored
+  as risky. The audit sync took the newest 500 events a minute and dropped
+  the rest. And the signal patterns (`auth.login_failed%`, `key.delete%`,
+  `cert.expiry%`, `result IN ('failure', ...)`) matched almost nothing the
+  platform emits: subjects carry an `audit.` prefix, key destruction is
+  `audit.key.destroyed`, and raw publishes have no result, which the audit
+  service defaults to `success`. Failed logins had always counted zero.
+- **How it slipped through:** every test fed the engine hand-made events
+  shaped to match the patterns (`auth.login_failed`, `result: failure`), so
+  the tests proved the patterns against themselves. Nothing compared a
+  pattern with a subject a service really publishes. A score always
+  appeared, so the page looked alive. My first version of the corrected
+  catalogue repeated the mistake: four of its subjects came from test files.
+  `TestSignalSubjectsAreEmitted` caught them.
+- **Rule:** a detection is only as real as its input. A signal's subjects
+  are checked against the non-test source of the services that emit them, by
+  a test. A comparison needs a stated minimum history (days covering the
+  weekly cycle, and events for a rate) and reports "not assessed" until it
+  has it. An event count alone is never the gate. A score never falls back
+  to activity volume. Details: docs/SECURITY/POSTURE_BASELINE.md.
+- **Trap:** `grep -h ... | grep -v _test` filters lines, not files. Once
+  `-h` drops the file names, nothing is left to filter on, and test fixtures
+  come back as "emitted subjects". Exclude test files with `--exclude`.
+
 ### A rescan erased every asset review
 - **What happened:** discovery stored an operator's review ("accepted risk",
   notes) in the asset's `status` and `metadata`, the same columns every scan

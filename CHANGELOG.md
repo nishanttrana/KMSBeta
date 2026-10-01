@@ -4,6 +4,51 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.19.0-beta] — 2026-10-01
+
+### Posture: a real baseline, and no risk score until it exists
+- **Changed:** posture gives **no risk score for a tenant until it has 14
+  complete days** of that tenant's own audit history (28 for a stable
+  baseline). Until then the score is "Not assessed" and the Posture tab shows
+  "Baseline building: n of 14 days" with each signal's standing. A failure
+  rate (BYOK, HYOK, EKM, KMIP, BitLocker, SDK) also needs 385 events of its
+  own before it is judged. See
+  [docs/SECURITY/POSTURE_BASELINE.md](docs/SECURITY/POSTURE_BASELINE.md).
+- **Changed:** "unusual" is now a significance test against the tenant's own
+  daily mean and variance (p < 0.001, plus a per-signal floor), replacing
+  "twice the previous 24 hours". A tenant with busy weekdays and quiet
+  weekends is no longer flagged every Monday, and a new install no longer
+  raises spike findings on day one.
+- **Fixed:** the risk score no longer rises with activity. With no finding it
+  was `events / 200`, and the 7-day score added the week's growth in events.
+  `risk_7d` is now the mean of the last seven days' assessed scores.
+- **Fixed:** posture now reads every audit event. The sync took the newest
+  500 a minute and dropped the rest; it now follows a cursor, and on first
+  run reads back 28 days so existing deployments get their baseline from the
+  audit trail they already have.
+- **Fixed:** signals count what the platform really emits. Failed logins, key
+  and certificate destruction, denied approvals, expiries and connector
+  failures had always read zero, because their patterns matched no real
+  audit subject. Refusals (`result: refused`) are now counted, and an
+  unmeasured duration no longer counts as zero latency.
+- **Removed:** the cluster drift, replication retry and cluster lag signals
+  and their two findings ("Cluster sync degradation", "Cluster profile
+  drift"). Nothing emits those events.
+- **Renamed:** "Quorum bypass attempts detected" is now "Denied approvals are
+  well above normal" and needs a baseline, since one denied vote is not a
+  bypass attempt. "Connector authentication instability" is "Connector
+  instability".
+- **Upgrade note:** risk snapshots taken before this version are marked not
+  assessed and leave the risk trend. A deployment with 14 or more days of
+  audit history is assessed again once the first sync catches up.
+- **API:** `GET /svc/posture/posture/baseline`; risk snapshots carry
+  `assessed` and `baseline_days`; `GET /svc/audit/audit/events` takes
+  `order=asc`.
+- **Audit:** `audit.posture.baseline_ready` (once, when a tenant's score
+  first becomes assessed) and `audit.posture.baseline_read`.
+- **Database:** posture migration 005 adds `posture_signal_daily`, sync
+  cursor columns and `assessed` / `baseline_days` on snapshots.
+
 ## [7.18.0-beta] — 2026-10-01
 
 ### Crypto Discovery: sources you can set up, charts that drill down, SSH, ranges and uploads

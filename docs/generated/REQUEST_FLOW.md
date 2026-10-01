@@ -1,15 +1,15 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-01T05:18:48Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T05:23:18Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
 ## Summary
 
-- Backend routes analyzed: `846`
-- Routes with exact frontend call sites: `498`
-- Routes whose handlers call `h.svc.*`: `505`
-- Routes with detected store calls: `605`
+- Backend routes analyzed: `847`
+- Routes with exact frontend call sites: `499`
+- Routes whose handlers call `h.svc.*`: `506`
+- Routes with detected store calls: `606`
 - Routes with detected internal `pkg/*` calls: `147`
 
 ## How To Trace One Frontend Click
@@ -25,12 +25,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | Route key | Route | Handler | Service methods | Store calls | Receiver/client calls | Internal package calls | Frontend call sites |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:180) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:123 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:211) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:128 |
-| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:229) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:145 |
-| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:247) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:202 |
-| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:265) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:218 |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:288) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:226 |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:302) |  |  |  |  | web/dashboard/src/lib/audit.ts:238 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:212) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:128 |
+| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:230) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:145 |
+| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:248) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:202 |
+| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:266) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:218 |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:289) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:226 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:303) |  |  |  |  | web/dashboard/src/lib/audit.ts:238 |
 | audit\|GET\|/ops-metrics/overview | GET /ops-metrics/overview | handleGetOpsOverview (services/audit/handler_ops_metrics.go:8) |  | GetOpsOverview |  |  | web/dashboard/src/lib/opsMetrics.ts:55 |
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
@@ -423,14 +423,15 @@ This file connects frontend requests to backend Go processing. It is static anal
 | kmip\|POST\|/kmip/interop/targets | POST /kmip/interop/targets | handleCreateInteropTarget (services/kmip/http_api.go:385) |  |  |  |  | web/dashboard/src/lib/kmip.ts:244 |
 | kmip\|DELETE\|/kmip/interop/targets/{param} | DELETE /kmip/interop/targets/{id} | handleDeleteInteropTarget (services/kmip/http_api.go:403) |  | GetInteropTarget, DeleteInteropTarget |  |  | web/dashboard/src/lib/kmip.ts:256 |
 | kmip\|POST\|/kmip/interop/targets/{param}/validate | POST /kmip/interop/targets/{id}/validate | handleValidateInteropTarget (services/kmip/http_api.go:440) |  | GetInteropTarget, UpdateInteropTargetValidation |  |  | web/dashboard/src/lib/kmip.ts:263 |
-| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:159) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
-| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:171) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:207 |
-| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:191) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:216 |
-| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:206) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
-| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:220) | RiskTrend, RiskHistory | ListRiskSnapshots |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/posture.ts:182, web/dashboard/src/lib/posture.ts:187 |
-| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:249) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:232 |
-| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:269) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:243 |
-| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:295) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
+| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:160) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:201 |
+| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:172) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:246 |
+| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:192) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:255 |
+| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:207) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:211 |
+| posture\|GET\|/posture/baseline | GET /posture/baseline | handleBaseline (services/posture/handler.go:221) | BaselineStatus | GetSignalSummary |  |  | web/dashboard/src/lib/posture.ts:91 |
+| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:232) | RiskTrend, RiskHistory | ListRiskSnapshots |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/posture.ts:221, web/dashboard/src/lib/posture.ts:226 |
+| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:261) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:271 |
+| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:281) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:282 |
+| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:307) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:197 |
 | pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.certs.EdgeMeasurement |  | web/dashboard/src/lib/pqc.ts:109 |
 | pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:124 |
 | pqc\|GET\|/pqc/readiness | GET /pqc/readiness | getReadiness (services/pqc/handler.go:102) | GetLatestReadiness | GetLatestReadinessScan |  |  | web/dashboard/src/lib/pqc.ts:119 |
@@ -529,14 +530,14 @@ This file connects frontend requests to backend Go processing. It is static anal
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | audit\|POST\|/audit/publish | POST /audit/publish | handlePublish (services/audit/handler.go:116) | PublishAudit, VerifyChain | QueryEvents, GetEvent | h.cluster.Publish, s.wal.Append, s.publisher.Publish | pkg/auth.ClaimsFromContext, pkg/tenantcheck.Enforce |  |
 | audit\|GET\|/audit/events | GET /audit/events | handleEvents (services/audit/handler.go:180) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:123 |
-| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:211) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:128 |
-| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:229) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:145 |
-| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:247) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:202 |
-| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:265) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:218 |
-| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:283) |  |  |  |  |  |
-| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:288) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:226 |
+| audit\|GET\|/audit/events/{param} | GET /audit/events/{id} | handleEvent (services/audit/handler.go:212) |  | GetEvent |  |  | web/dashboard/src/lib/audit.ts:128 |
+| audit\|GET\|/audit/timeline/{param} | GET /audit/timeline/{target_id} | handleTimeline (services/audit/handler.go:230) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:145 |
+| audit\|GET\|/audit/session/{param} | GET /audit/session/{session_id} | handleSession (services/audit/handler.go:248) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:202 |
+| audit\|GET\|/audit/correlation/{param} | GET /audit/correlation/{id} | handleCorrelation (services/audit/handler.go:266) |  | QueryEvents |  |  | web/dashboard/src/lib/audit.ts:218 |
+| audit\|POST\|/audit/search | POST /audit/search | handleSearch (services/audit/handler.go:284) |  |  |  |  |  |
+| audit\|GET\|/audit/chain/verify | GET /audit/chain/verify | handleChainVerify (services/audit/handler.go:289) | VerifyChain |  |  |  | web/dashboard/src/lib/audit.ts:226 |
 | audit\|GET\|/audit/stream | GET /audit/stream | handleStream (services/audit/stream.go:76) |  |  |  |  |  |
-| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:302) |  |  |  |  | web/dashboard/src/lib/audit.ts:238 |
+| audit\|GET\|/audit/config | GET /audit/config | handleAuditConfig (services/audit/handler.go:303) |  |  |  |  | web/dashboard/src/lib/audit.ts:238 |
 | audit\|POST\|/audit/cluster/signing-key/join-key | POST /audit/cluster/signing-key/join-key | handleClusterKeyJoinKey (services/audit/cluster.go:169) | auditCluster |  |  |  |  |
 | audit\|POST\|/audit/cluster/signing-key/export | POST /audit/cluster/signing-key/export | handleClusterKeyExport (services/audit/cluster.go:182) | signing, auditCluster |  |  | pkg/clusterkey.Seal |  |
 | audit\|POST\|/audit/cluster/signing-key/import | POST /audit/cluster/signing-key/import | handleClusterKeyImport (services/audit/cluster.go:212) | auditCluster, signing |  |  | pkg/clusterkey.WriteFileAtomic, pkg/crypto.Zeroize |  |
@@ -545,7 +546,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | audit\|GET\|/ops-metrics/latency | GET /ops-metrics/latency | handleGetLatencyPercentiles (services/audit/handler_ops_metrics.go:45) |  | GetLatencyPercentiles |  |  | web/dashboard/src/lib/opsMetrics.ts:60 |
 | audit\|GET\|/ops-metrics/by-service | GET /ops-metrics/by-service | handleGetServiceStats (services/audit/handler_ops_metrics.go:62) |  | GetServiceStats |  |  | web/dashboard/src/lib/opsMetrics.ts:65 |
 | audit\|GET\|/ops-metrics/errors | GET /ops-metrics/errors | handleGetErrorBreakdown (services/audit/handler_ops_metrics.go:79) |  | GetErrorBreakdown |  |  | web/dashboard/src/lib/opsMetrics.ts:70 |
-| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:317) |  |  |  |  |  |
+| audit\|GET\|/audit/fips/boundary | GET /audit/fips/boundary | handleFIPSBoundary (services/audit/handler.go:318) |  |  |  |  |  |
 | audit\|GET\|/audit/cbom/inventory | GET /audit/cbom/inventory | handleCBOMInventory (services/audit/handler_cbom.go:17) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/audit/cbom/diff | GET /audit/cbom/diff | handleCBOMDiff (services/audit/handler_cbom.go:51) |  | CBOMSamples |  | pkg/cbom.Tier, pkg/cbom.Build |  |
 | audit\|GET\|/metrics | GET /metrics | handlePrometheusMetrics (services/audit/handler_prometheus.go:14) |  | GetAllServiceStats |  |  |  |
@@ -1213,18 +1214,19 @@ This file connects frontend requests to backend Go processing. It is static anal
 | policy\|POST\|/policies/dry-run | POST /policies/dry-run | handleDryRunPolicy (services/policy/handler_lint.go:57) |  |  |  | pkg/tenantcheck.Enforce |  |
 | policy\|GET\|/policy/quota/{param} | GET /policy/quota/{tenant_id} | handleGetQuota (services/policy/handler_quota.go:15) |  |  |  | pkg/quota.Usage, pkg/tenantcheck.Enforce |  |
 | policy\|PUT\|/policy/quota/{param} | PUT /policy/quota/{tenant_id} | handleSetQuota (services/policy/handler_quota.go:51) |  |  |  | pkg/quota.SetBudget, pkg/tenantcheck.Enforce |  |
-| posture\|GET\|/posture/health | GET /posture/health | handleHealth (services/posture/handler.go:104) |  |  |  |  |  |
-| posture\|POST\|/posture/events | POST /posture/events | handleIngestEvent (services/posture/handler.go:108) |  |  |  |  |  |
-| posture\|POST\|/posture/events/batch | POST /posture/events/batch | handleIngestEventsBatch (services/posture/handler.go:117) | IngestEvents, SyncFromAudit, RunScanTenant, ListFindings, UpdateFindingStatus, LatestRisk, RiskTrend, RiskHistory, +3 more | IngestEvents, UpdateEngineState, ListFindings, ListRiskSnapshots, UpdateFindingStatus, GetLatestRiskSnapshot, ListActions, GetAction, +1 more | s.audit.ListEvents, s.mu.Lock, s.mu.Unlock | pkg/timebucket.Buckets, pkg/timebucket.Index |  |
-| posture\|POST\|/posture/ingest/audit | POST /posture/ingest/audit | handleIngestFromAudit (services/posture/handler.go:148) | SyncFromAudit | UpdateEngineState | s.audit.ListEvents |  |  |
-| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:159) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:162 |
-| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:171) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:207 |
-| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:191) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:216 |
-| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:206) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:172 |
-| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:220) | RiskTrend, RiskHistory | ListRiskSnapshots |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/posture.ts:182, web/dashboard/src/lib/posture.ts:187 |
-| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:249) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:232 |
-| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:269) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:243 |
-| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:295) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:158 |
+| posture\|GET\|/posture/health | GET /posture/health | handleHealth (services/posture/handler.go:105) |  |  |  |  |  |
+| posture\|POST\|/posture/events | POST /posture/events | handleIngestEvent (services/posture/handler.go:109) |  |  |  |  |  |
+| posture\|POST\|/posture/events/batch | POST /posture/events/batch | handleIngestEventsBatch (services/posture/handler.go:118) | IngestEvents, SyncFromAudit, RunScanTenant, ListFindings, UpdateFindingStatus, LatestRisk, BaselineStatus, RiskTrend, +4 more | IngestEvents, GetSyncState, SetSyncState, UpdateEngineState, ListFindings, ListRiskSnapshots, UpdateFindingStatus, GetLatestRiskSnapshot, +4 more | s.audit.ListEventsRange, s.mu.Lock, s.mu.Unlock | pkg/timebucket.Buckets, pkg/timebucket.Index |  |
+| posture\|POST\|/posture/ingest/audit | POST /posture/ingest/audit | handleIngestFromAudit (services/posture/handler.go:149) | SyncFromAudit | GetSyncState, SetSyncState, UpdateEngineState | s.audit.ListEventsRange |  |  |
+| posture\|POST\|/posture/scan | POST /posture/scan | handleRunScan (services/posture/handler.go:160) | RunScanTenant | UpdateEngineState | s.mu.Lock, s.mu.Unlock |  | web/dashboard/src/lib/posture.ts:201 |
+| posture\|GET\|/posture/findings | GET /posture/findings | handleListFindings (services/posture/handler.go:172) | ListFindings | ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:246 |
+| posture\|PUT\|/posture/findings/{param}/status | PUT /posture/findings/{id}/status | handleUpdateFindingStatus (services/posture/handler.go:192) | UpdateFindingStatus | UpdateFindingStatus |  |  | web/dashboard/src/lib/posture.ts:255 |
+| posture\|GET\|/posture/risk | GET /posture/risk | handleLatestRisk (services/posture/handler.go:207) | LatestRisk | GetLatestRiskSnapshot |  |  | web/dashboard/src/lib/posture.ts:211 |
+| posture\|GET\|/posture/baseline | GET /posture/baseline | handleBaseline (services/posture/handler.go:221) | BaselineStatus | GetSignalSummary |  |  | web/dashboard/src/lib/posture.ts:91 |
+| posture\|GET\|/posture/risk/history | GET /posture/risk/history | handleRiskHistory (services/posture/handler.go:232) | RiskTrend, RiskHistory | ListRiskSnapshots |  | pkg/timebucket.Buckets, pkg/timebucket.Index | web/dashboard/src/lib/posture.ts:221, web/dashboard/src/lib/posture.ts:226 |
+| posture\|GET\|/posture/actions | GET /posture/actions | handleListActions (services/posture/handler.go:261) | ListActions | ListActions, ListFindings, ListRiskSnapshots |  |  | web/dashboard/src/lib/posture.ts:271 |
+| posture\|POST\|/posture/actions/{param}/execute | POST /posture/actions/{id}/execute | handleExecuteAction (services/posture/handler.go:281) | ExecuteAction | GetAction, UpdateActionExecution |  |  | web/dashboard/src/lib/posture.ts:282 |
+| posture\|GET\|/posture/dashboard | GET /posture/dashboard | handleDashboard (services/posture/handler.go:307) | Dashboard | GetLatestRiskSnapshot, ListRiskSnapshots, ListFindings, ListActions |  |  | web/dashboard/src/lib/posture.ts:197 |
 | pqc\|GET\|/pqc/inventory | GET /pqc/inventory | getInventory (services/pqc/handler.go:62) | GetInventory |  | s.keycore.ListKeys, s.certs.ListCertificates, s.certs.EdgeMeasurement |  | web/dashboard/src/lib/pqc.ts:109 |
 | pqc\|POST\|/pqc/scan | POST /pqc/scan | startScan (services/pqc/handler.go:70) | StartReadinessScan | CreateReadinessScan, GetReadinessScan |  | pkg/cryptocatalog.Assess | web/dashboard/src/lib/pqc.ts:124 |
 | pqc\|GET\|/pqc/scans | GET /pqc/scans | listScans (services/pqc/handler.go:85) | ListReadinessScans | ListReadinessScans |  |  |  |

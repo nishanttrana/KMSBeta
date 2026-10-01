@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T05:18:48Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T05:23:18Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -472,15 +472,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 750 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 753 | playbooks | Btn | }>Cancel |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 536 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 537 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 946 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1199 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1200 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1201 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1202 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1293 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1295 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 547 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 548 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1001 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1254 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1255 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1256 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1257 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1348 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1350 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

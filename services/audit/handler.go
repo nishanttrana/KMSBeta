@@ -195,6 +195,7 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 		RiskMax:             atoi(r.URL.Query().Get("risk_max")),
 		Service:             strings.TrimSpace(r.URL.Query().Get("service")),
 		ExcludeHTTPRequests: r.URL.Query().Get("exclude_http_requests") == "true",
+		Ascending:           r.URL.Query().Get("order") == "asc",
 		Limit:               atoi(r.URL.Query().Get("limit")),
 		Offset:              atoi(r.URL.Query().Get("offset")),
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -39,6 +40,11 @@ type Store interface {
 	PurgeHotEventsBefore(ctx context.Context, before time.Time, limit int) (int64, error)
 	UpdateEngineState(ctx context.Context, tenantID string, lastAuditSyncAt time.Time, lastAuditEventTS time.Time, lastRunAt time.Time) error
 	GetEngineState(ctx context.Context, tenantID string) (time.Time, time.Time, time.Time, error)
+	GetSyncState(ctx context.Context, tenantID string) (SyncState, error)
+	SetSyncState(ctx context.Context, tenantID string, st SyncState) error
+	UpsertSignalDay(ctx context.Context, tenantID string, day string, summary SignalSummary) error
+	ListSignalDays(ctx context.Context, tenantID string, fromDay string, toDay string) ([]SignalDay, error)
+	AvgAssessedRisk(ctx context.Context, tenantID string, since time.Time) (float64, int, error)
 }
 
 type SQLStore struct {
@@ -187,230 +193,7 @@ func (s *SQLStore) GetSignalSummary(ctx context.Context, tenantID string, from t
 	if to.IsZero() {
 		to = nowUTC()
 	}
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT
-	COUNT(*) AS total_events,
-	COALESCE(SUM(CASE
-		WHEN (service = 'auth' AND result IN ('failure','failed','denied','error'))
-		  OR action LIKE 'auth.login_failed%'
-		THEN 1 ELSE 0 END), 0) AS failed_auth_count,
-	COALESCE(SUM(CASE
-		WHEN (action LIKE '%unwrap%' OR action LIKE '%decrypt%')
-		 AND result IN ('failure','failed','denied','error')
-		THEN 1 ELSE 0 END), 0) AS failed_crypto_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'policy.%deny%' OR result = 'denied'
-		THEN 1 ELSE 0 END), 0) AS policy_deny_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'key.delete%' OR action LIKE 'key.destroy%'
-		THEN 1 ELSE 0 END), 0) AS key_delete_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'cert.delete%' OR action LIKE 'cert.destroy%'
-		THEN 1 ELSE 0 END), 0) AS cert_delete_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'governance.quorum_bypass%' OR action LIKE 'governance.vote.denied%'
-		THEN 1 ELSE 0 END), 0) AS quorum_bypass_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE '%tenant_mismatch%' OR error_code = 'tenant_mismatch'
-		THEN 1 ELSE 0 END), 0) AS tenant_mismatch_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'cluster.drift%' OR error_code = 'cluster_state_drift'
-		THEN 1 ELSE 0 END), 0) AS cluster_drift_count,
-	COALESCE(SUM(CASE
-		WHEN service IN ('cloud','hyok','ekm','kmip')
-		 AND action LIKE '%auth%'
-		 AND result IN ('failure','failed','denied','error')
-		THEN 1 ELSE 0 END), 0) AS connector_auth_flaps,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'cluster.replication_retry%' OR action LIKE 'cluster.sync.retry%'
-		THEN 1 ELSE 0 END), 0) AS replication_retry,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'cert.expiry%' OR action LIKE 'key.expiry%' OR action LIKE '%expiry_warning%'
-		THEN 1 ELSE 0 END), 0) AS expiry_backlog_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'audit.cert.renewal_window_missed%' OR action LIKE 'cert.renewal_window_missed%'
-		THEN 1 ELSE 0 END), 0) AS cert_renewal_missed_count,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'audit.cert.emergency_rotation_started%' OR action LIKE 'cert.emergency_rotation_started%'
-		THEN 1 ELSE 0 END), 0) AS cert_emergency_rotations,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'audit.cert.mass_renewal_risk_detected%' OR action LIKE 'cert.mass_renewal_risk_detected%'
-		  OR action LIKE 'audit.cert.star_mass_rollout_risk_detected%' OR action LIKE 'cert.star_mass_rollout_risk_detected%'
-		THEN 1 ELSE 0 END), 0) AS cert_mass_renewal_risks,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'fips.non_approved%' OR error_code = 'fips_non_approved_algorithm'
-		THEN 1 ELSE 0 END), 0) AS non_approved_algo_count,
-	COALESCE(AVG(CASE
-		WHEN service = 'hsm' OR action LIKE 'hsm.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS hsm_latency_avg_ms,
-	COALESCE(AVG(CASE
-		WHEN service = 'cluster-manager' OR action LIKE 'cluster.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS cluster_lag_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN service IN ('cloud', 'byok', 'kms-cloud')
-		  OR action LIKE 'audit.cloud.%'
-		  OR action LIKE 'cloud.%'
-		  OR action LIKE 'byok.%'
-		THEN 1 ELSE 0 END), 0) AS byok_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			service IN ('cloud', 'byok', 'kms-cloud')
-			OR action LIKE 'audit.cloud.%'
-			OR action LIKE 'cloud.%'
-			OR action LIKE 'byok.%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%sync_failed%'
-			OR action LIKE '%auth_failed%'
-			OR action LIKE '%connector_failed%'
-			OR action LIKE '%request_denied%'
-		)
-		THEN 1 ELSE 0 END), 0) AS byok_failures,
-	COALESCE(AVG(CASE
-		WHEN service IN ('cloud', 'byok', 'kms-cloud')
-		  OR action LIKE 'audit.cloud.%'
-		  OR action LIKE 'cloud.%'
-		  OR action LIKE 'byok.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS byok_latency_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN service IN ('hyok', 'kms-hyok-proxy')
-		  OR action LIKE 'audit.hyok.%'
-		  OR action LIKE 'hyok.%'
-		THEN 1 ELSE 0 END), 0) AS hyok_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			service IN ('hyok', 'kms-hyok-proxy')
-			OR action LIKE 'audit.hyok.%'
-			OR action LIKE 'hyok.%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%request_denied%'
-			OR action LIKE '%failed%'
-		)
-		THEN 1 ELSE 0 END), 0) AS hyok_failures,
-	COALESCE(AVG(CASE
-		WHEN service IN ('hyok', 'kms-hyok-proxy')
-		  OR action LIKE 'audit.hyok.%'
-		  OR action LIKE 'hyok.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS hyok_latency_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN service IN ('ekm', 'kms-ekm')
-		  OR action LIKE 'audit.ekm.%'
-		  OR action LIKE 'ekm.%'
-		THEN 1 ELSE 0 END), 0) AS ekm_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			service IN ('ekm', 'kms-ekm')
-			OR action LIKE 'audit.ekm.%'
-			OR action LIKE 'ekm.%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%agent_disconnected%'
-			OR action LIKE '%_failed%'
-		)
-		THEN 1 ELSE 0 END), 0) AS ekm_failures,
-	COALESCE(AVG(CASE
-		WHEN service IN ('ekm', 'kms-ekm')
-		  OR action LIKE 'audit.ekm.%'
-		  OR action LIKE 'ekm.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS ekm_latency_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN service IN ('kmip', 'kms-kmip')
-		  OR action LIKE 'audit.kmip.%'
-		  OR action LIKE 'kmip.%'
-		THEN 1 ELSE 0 END), 0) AS kmip_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			service IN ('kmip', 'kms-kmip')
-			OR action LIKE 'audit.kmip.%'
-			OR action LIKE 'kmip.%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%interop_validation_failed%'
-			OR action LIKE '%request_denied%'
-			OR action LIKE '%_failed%'
-		)
-		THEN 1 ELSE 0 END), 0) AS kmip_failures,
-	COALESCE(SUM(CASE
-		WHEN action LIKE '%interop_validation_failed%' OR error_code = 'kmip_interop_failed'
-		THEN 1 ELSE 0 END), 0) AS kmip_interop_failures,
-	COALESCE(AVG(CASE
-		WHEN service IN ('kmip', 'kms-kmip')
-		  OR action LIKE 'audit.kmip.%'
-		  OR action LIKE 'kmip.%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS kmip_latency_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN action LIKE 'audit.ekm.bitlocker_%'
-		  OR action LIKE 'ekm.bitlocker_%'
-		  OR action LIKE '%bitlocker_%'
-		THEN 1 ELSE 0 END), 0) AS bitlocker_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			action LIKE 'audit.ekm.bitlocker_%'
-			OR action LIKE 'ekm.bitlocker_%'
-			OR action LIKE '%bitlocker_%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%_disconnected%'
-			OR action LIKE '%_failed%'
-		)
-		THEN 1 ELSE 0 END), 0) AS bitlocker_failures,
-	COALESCE(AVG(CASE
-		WHEN action LIKE 'audit.ekm.bitlocker_%'
-		  OR action LIKE 'ekm.bitlocker_%'
-		  OR action LIKE '%bitlocker_%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS bitlocker_latency_avg_ms,
-	COALESCE(SUM(CASE
-		WHEN service IN ('dataprotect', 'sdk', 'wrapper')
-		  OR action LIKE 'audit.dataprotect.field_encryption.%'
-		  OR action LIKE 'audit.dataprotect.field_protection.%'
-		  OR action LIKE 'audit.dataprotect.%sdk%'
-		  OR action LIKE 'audit.dataprotect.%wrapper%'
-		THEN 1 ELSE 0 END), 0) AS sdk_events,
-	COALESCE(SUM(CASE
-		WHEN (
-			service IN ('dataprotect', 'sdk', 'wrapper')
-			OR action LIKE 'audit.dataprotect.field_encryption.%'
-			OR action LIKE 'audit.dataprotect.field_protection.%'
-			OR action LIKE 'audit.dataprotect.%sdk%'
-			OR action LIKE 'audit.dataprotect.%wrapper%'
-		)
-		AND (
-			result IN ('failure','failed','denied','error')
-			OR action LIKE '%receipt_missing_detected%'
-			OR action LIKE '%lease_revoked%'
-			OR action LIKE '%request_denied%'
-			OR action LIKE '%_failed%'
-		)
-		THEN 1 ELSE 0 END), 0) AS sdk_failures,
-	COALESCE(SUM(CASE
-		WHEN action LIKE '%receipt_missing_detected%'
-		THEN 1 ELSE 0 END), 0) AS sdk_receipt_missing,
-	COALESCE(AVG(CASE
-		WHEN service IN ('dataprotect', 'sdk', 'wrapper')
-		  OR action LIKE 'audit.dataprotect.field_encryption.%'
-		  OR action LIKE 'audit.dataprotect.field_protection.%'
-		  OR action LIKE 'audit.dataprotect.%sdk%'
-		  OR action LIKE 'audit.dataprotect.%wrapper%'
-		THEN latency_ms
-		ELSE NULL END), 0) AS sdk_latency_avg_ms
-FROM posture_events_history
-WHERE tenant_id = $1
-  AND event_ts >= $2
-  AND event_ts <= $3
-`, tenantID, from.UTC(), to.UTC())
+	row := s.db.SQL().QueryRowContext(ctx, signalSummarySQL(), tenantID, from.UTC(), to.UTC())
 
 	out := SignalSummary{}
 	err := row.Scan(
@@ -420,18 +203,15 @@ WHERE tenant_id = $1
 		&out.PolicyDenyCount,
 		&out.KeyDeleteCount,
 		&out.CertDeleteCount,
-		&out.QuorumBypassCount,
+		&out.DeniedApprovalCount,
 		&out.TenantMismatchCount,
-		&out.ClusterDriftCount,
-		&out.ConnectorAuthFlaps,
-		&out.ReplicationRetry,
+		&out.ConnectorFailures,
 		&out.ExpiryBacklogCount,
 		&out.CertRenewalMissedCount,
 		&out.CertEmergencyRotations,
 		&out.CertMassRenewalRisks,
 		&out.NonApprovedAlgoCount,
 		&out.HSMLatencyAvgMS,
-		&out.ClusterLagAvgMS,
 		&out.BYOKEvents,
 		&out.BYOKFailures,
 		&out.BYOKLatencyAvgMS,
@@ -840,15 +620,15 @@ func (s *SQLStore) CreateRiskSnapshot(ctx context.Context, snap RiskSnapshot) er
 	}
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO posture_risk_snapshots (
-	tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-`, snap.TenantID, snap.ID, clampRisk(snap.Risk24h), clampRisk(snap.Risk7d), clampRisk(snap.PredictiveScore), clampRisk(snap.PreventiveScore), clampRisk(snap.CorrectiveScore), mustJSON(snap.TopSignals, "{}"), snap.CapturedAt.UTC())
+	tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at, assessed, baseline_days
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+`, snap.TenantID, snap.ID, clampRisk(snap.Risk24h), clampRisk(snap.Risk7d), clampRisk(snap.PredictiveScore), clampRisk(snap.PreventiveScore), clampRisk(snap.CorrectiveScore), mustJSON(snap.TopSignals, "{}"), snap.CapturedAt.UTC(), snap.Assessed, snap.BaselineDays)
 	return err
 }
 
 func (s *SQLStore) GetLatestRiskSnapshot(ctx context.Context, tenantID string) (RiskSnapshot, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at
+SELECT tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at, assessed, baseline_days
 FROM posture_risk_snapshots
 WHERE tenant_id = $1
 ORDER BY captured_at DESC
@@ -871,7 +651,7 @@ func (s *SQLStore) ListRiskSnapshots(ctx context.Context, tenantID string, q Ris
 		page, args = "", args[:3]
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at
+SELECT tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at, assessed, baseline_days
 FROM posture_risk_snapshots
 WHERE tenant_id = $1
   AND captured_at >= COALESCE($2, captured_at)
@@ -941,6 +721,75 @@ WHERE tenant_id = $1
 		return time.Time{}, time.Time{}, time.Time{}, err
 	}
 	return toTime(lastAuditSync), toTime(lastAuditEvent), toTime(lastRun), nil
+}
+
+func (s *SQLStore) GetSyncState(ctx context.Context, tenantID string) (SyncState, error) {
+	var cursor, from, through sql.NullTime
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT audit_cursor, baseline_from, synced_through FROM posture_engine_state WHERE tenant_id = $1
+`, tenantID).Scan(&cursor, &from, &through)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SyncState{}, nil
+	}
+	return SyncState{Cursor: toTime(cursor), BaselineFrom: toTime(from), SyncedThrough: toTime(through)}, err
+}
+
+func (s *SQLStore) SetSyncState(ctx context.Context, tenantID string, st SyncState) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO posture_engine_state (tenant_id, audit_cursor, baseline_from, synced_through)
+VALUES ($1,$2,$3,$4)
+ON CONFLICT (tenant_id) DO UPDATE
+SET audit_cursor = EXCLUDED.audit_cursor, baseline_from = EXCLUDED.baseline_from, synced_through = EXCLUDED.synced_through
+`, tenantID, nullableTime(st.Cursor), nullableTime(st.BaselineFrom), nullableTime(st.SyncedThrough))
+	return err
+}
+
+// UpsertSignalDay records a finalized day. Days are "2006-01-02" in UTC.
+func (s *SQLStore) UpsertSignalDay(ctx context.Context, tenantID string, day string, summary SignalSummary) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO posture_signal_daily (tenant_id, day, summary_json, computed_at)
+VALUES ($1,$2,$3,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, day) DO UPDATE SET summary_json = EXCLUDED.summary_json, computed_at = CURRENT_TIMESTAMP
+`, tenantID, day, mustJSON(summary, "{}"))
+	return err
+}
+
+// ListSignalDays returns the finalized days in [fromDay, toDay], oldest first.
+func (s *SQLStore) ListSignalDays(ctx context.Context, tenantID string, fromDay string, toDay string) ([]SignalDay, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT day, summary_json FROM posture_signal_daily
+WHERE tenant_id = $1 AND day >= $2 AND day <= $3
+ORDER BY day
+`, tenantID, fromDay, toDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []SignalDay{}
+	for rows.Next() {
+		var d SignalDay
+		var raw string
+		if err := rows.Scan(&d.Day, &raw); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(raw), &d.Summary); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+// AvgAssessedRisk is the mean risk_24h of the tenant's assessed snapshots
+// since the given time, and how many there were.
+func (s *SQLStore) AvgAssessedRisk(ctx context.Context, tenantID string, since time.Time) (float64, int, error) {
+	var avg sql.NullFloat64
+	var n int
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT AVG(risk_24h), COUNT(*) FROM posture_risk_snapshots
+WHERE tenant_id = $1 AND assessed = TRUE AND captured_at >= $2
+`, tenantID, since.UTC()).Scan(&avg, &n)
+	return avg.Float64, n, err
 }
 
 type scanner interface {
@@ -1025,6 +874,8 @@ func scanRiskSnapshot(row scanner) (RiskSnapshot, error) {
 		&out.CorrectiveScore,
 		&signalsRaw,
 		&out.CapturedAt,
+		&out.Assessed,
+		&out.BaselineDays,
 	)
 	if err != nil {
 		return RiskSnapshot{}, err

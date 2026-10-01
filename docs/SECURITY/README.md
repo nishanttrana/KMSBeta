@@ -62,6 +62,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   tamper-evident: hash chain, per-event HMAC under a key derived from the
   audit master key, and ECDSA-P384 signed checkpoints of each chain head;
   what each proves, how to verify outside the KMS, and what is still open.
+- [POSTURE_BASELINE.md](POSTURE_BASELINE.md): how posture judges "unusual"
+  against a tenant's own history, how many days and events it needs first,
+  and why the risk score is "not assessed" until then.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.

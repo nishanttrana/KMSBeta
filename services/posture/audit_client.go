@@ -29,15 +29,33 @@ func NewHTTPAuditClient(baseURL string, timeout time.Duration) *HTTPAuditClient 
 }
 
 func (c *HTTPAuditClient) ListEvents(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error) {
-	if strings.TrimSpace(c.baseURL) == "" {
-		return []map[string]interface{}{}, nil
-	}
-	if limit <= 0 || limit > 5000 {
+	if limit <= 0 || limit > 1000 {
 		limit = 1000
 	}
 	q := url.Values{}
-	q.Set("tenant_id", strings.TrimSpace(tenantID))
 	q.Set("limit", strconv.Itoa(limit))
+	return c.listEvents(ctx, tenantID, q)
+}
+
+func (c *HTTPAuditClient) ListEventsRange(ctx context.Context, tenantID string, from, to time.Time, offset, limit int) ([]map[string]interface{}, error) {
+	q := url.Values{}
+	q.Set("order", "asc")
+	q.Set("limit", strconv.Itoa(limit))
+	q.Set("offset", strconv.Itoa(max(0, offset)))
+	if !from.IsZero() {
+		q.Set("from", from.UTC().Format(time.RFC3339Nano))
+	}
+	if !to.IsZero() {
+		q.Set("to", to.UTC().Format(time.RFC3339Nano))
+	}
+	return c.listEvents(ctx, tenantID, q)
+}
+
+func (c *HTTPAuditClient) listEvents(ctx context.Context, tenantID string, q url.Values) ([]map[string]interface{}, error) {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return []map[string]interface{}{}, nil
+	}
+	q.Set("tenant_id", strings.TrimSpace(tenantID))
 	out, err := c.doJSON(ctx, "/audit/events?"+q.Encode())
 	if err != nil {
 		return nil, err

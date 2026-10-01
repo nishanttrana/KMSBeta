@@ -1436,7 +1436,9 @@ OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses
 `result`, `target_id`, `session_id`, `correlation_id`, `risk_min`,
 `risk_max` (inclusive; 7.17.0-beta), `service` (7.17.0-beta),
 `exclude_http_requests=true` (drops generic HTTP request records;
-7.17.0-beta), `from` and `to` (RFC 3339, inclusive), `limit`, `offset`.
+7.17.0-beta), `from` and `to` (RFC 3339, inclusive), `order=asc` (oldest
+first with a stable tiebreak, for readers that follow a cursor; default
+newest first; 7.19.0-beta), `limit` (at most 1000), `offset`.
 Response: `{"items": [AuditEvent, ...], "request_id": "..."}`.
 
 ```bash
@@ -2014,7 +2016,8 @@ actions as `kms-reporting`.
 |---|---|---|
 | `GET /posture/health` | any verified identity | `audit.posture.health_read` |
 | `GET /posture/dashboard` | `posture.read` | `audit.posture.dashboard_viewed` (`risk_24h`, `open_findings`, `critical_findings`, `risk_driver_count`, `blast_radius`, `action_count`) |
-| `GET /posture/risk` | `posture.read` | `audit.posture.risk_read` (`assessed: false` when the tenant was never scanned) |
+| `GET /posture/risk` | `posture.read` | `audit.posture.risk_read` (`assessed: false` when the tenant was never scanned). The snapshot carries `assessed` and `baseline_days`: until the baseline has 14 days, `assessed` is false and `risk_24h`/`risk_7d` are 0, meaning not assessed (7.19.0-beta) |
+| `GET /posture/baseline` | `posture.read` | `audit.posture.baseline_read` (`ready`, `days`). Returns `baseline`: `ready` (14 days), `stable` (28), `days`, `required_days`, `stable_days`, `from`, `synced_through`, `spike_alpha`, and per signal `key`, `label`, `kind` (`count`/`rate`), `status` (`building`, `needs_events`, `ready`), `current_24h`, `baseline_daily_mean`, `floor`, `events_24h`, `baseline_events`, `required_baseline_events`, `baseline_failure_rate`, `unusual`, `p_value` (7.19.0-beta, docs/SECURITY/POSTURE_BASELINE.md) |
 | `GET /posture/risk/history` | `posture.read` | `audit.posture.risk_history_read`. With `trend=true` and optional `from`/`to` (RFC 3339; no `from` is since the first snapshot), returns the latest snapshot in each `pkg/timebucket` bucket, newest first, and `bucket_seconds`; a malformed window is refused with `reason` `bad_window` (7.17.0-beta) |
 | `POST /posture/scan` | `posture.write` | `audit.posture.scan_run` (`sync_audit`, `risk_24h`) |
 | `POST /posture/events` | `posture.write` | `audit.posture.events_ingested` (`submitted`, `inserted`) |
@@ -4386,6 +4389,7 @@ from the code; do not edit by hand.
 
 - `GET /svc/posture/posture/actions`
 - `POST /svc/posture/posture/actions/{id}/execute`
+- `GET /svc/posture/posture/baseline`
 - `GET /svc/posture/posture/dashboard`
 - `POST /svc/posture/posture/events`
 - `POST /svc/posture/posture/events/batch`

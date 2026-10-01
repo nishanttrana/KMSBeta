@@ -10411,11 +10411,26 @@
       "service": "posture"
     },
     {
+      "action": "baseline_read",
+      "code_scope": "posture",
+      "file": "services/posture/handler.go",
+      "handler": "oneTenant(h.handleBaseline)",
+      "line": 83,
+      "match_key": "posture|GET|/posture/baseline",
+      "method": "GET",
+      "normalized_path": "/posture/baseline",
+      "path": "/posture/baseline",
+      "permission": "posture.read",
+      "registration": "kernel",
+      "resource": "posture_risk",
+      "service": "posture"
+    },
+    {
       "action": "risk_history_read",
       "code_scope": "posture",
       "file": "services/posture/handler.go",
       "handler": "oneTenant(h.handleRiskHistory)",
-      "line": 83,
+      "line": 84,
       "match_key": "posture|GET|/posture/risk/history",
       "method": "GET",
       "normalized_path": "/posture/risk/history",
@@ -10430,7 +10445,7 @@
       "code_scope": "posture",
       "file": "services/posture/handler.go",
       "handler": "oneTenant(h.handleListActions)",
-      "line": 85,
+      "line": 86,
       "match_key": "posture|GET|/posture/actions",
       "method": "GET",
       "normalized_path": "/posture/actions",
@@ -10445,7 +10460,7 @@
       "code_scope": "posture",
       "file": "services/posture/handler.go",
       "handler": "oneTenant(h.handleExecuteAction)",
-      "line": 86,
+      "line": 87,
       "match_key": "posture|POST|/posture/actions/{param}/execute",
       "method": "POST",
       "normalized_path": "/posture/actions/{param}/execute",
@@ -10460,7 +10475,7 @@
       "code_scope": "posture",
       "file": "services/posture/handler.go",
       "handler": "oneTenant(h.handleDashboard)",
-      "line": 88,
+      "line": 89,
       "match_key": "posture|GET|/posture/dashboard",
       "method": "GET",
       "normalized_path": "/posture/dashboard",
@@ -22357,7 +22372,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
-      "line": 536,
+      "line": 547,
       "tabs": [
         "posture"
       ],
@@ -22367,7 +22382,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "runScan} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 537,
+      "line": 548,
       "tabs": [
         "posture"
       ],
@@ -22377,7 +22392,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 946,
+      "line": 1001,
       "tabs": [
         "posture"
       ],
@@ -22387,7 +22402,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1199,
+      "line": 1254,
       "tabs": [
         "posture"
       ],
@@ -22397,7 +22412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1200,
+      "line": 1255,
       "tabs": [
         "posture"
       ],
@@ -22407,7 +22422,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1201,
+      "line": 1256,
       "tabs": [
         "posture"
       ],
@@ -22417,7 +22432,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1202,
+      "line": 1257,
       "tabs": [
         "posture"
       ],
@@ -22427,7 +22442,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1293,
+      "line": 1348,
       "tabs": [
         "posture"
       ],
@@ -22437,7 +22452,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1295,
+      "line": 1350,
       "tabs": [
         "posture"
       ],
@@ -30161,9 +30176,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"posture\", `/posture/baseline?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/posture.ts",
+      "line": 91,
+      "match_key": "posture|GET|/posture/baseline",
+      "method": "GET",
+      "normalized_path": "/posture/baseline",
+      "path": "/posture/baseline?{param}",
+      "service": "posture",
+      "service_key": "posture",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/dashboard?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 158,
+      "line": 197,
       "match_key": "posture|GET|/posture/dashboard",
       "method": "GET",
       "normalized_path": "/posture/dashboard",
@@ -30176,7 +30204,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/scan?${tenantQuery(session)}&sync_audit=${syncAudit ? \"true\" : \"false\"}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 162,
+      "line": 201,
       "match_key": "posture|POST|/posture/scan",
       "method": "POST",
       "normalized_path": "/posture/scan",
@@ -30189,7 +30217,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/risk?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 172,
+      "line": 211,
       "match_key": "posture|GET|/posture/risk",
       "method": "GET",
       "normalized_path": "/posture/risk",
@@ -30202,7 +30230,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 182,
+      "line": 221,
       "match_key": "posture|GET|/posture/risk/history",
       "method": "GET",
       "normalized_path": "/posture/risk/history",
@@ -30215,7 +30243,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 187,
+      "line": 226,
       "match_key": "posture|GET|/posture/risk/history",
       "method": "GET",
       "normalized_path": "/posture/risk/history",
@@ -30228,7 +30256,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 207,
+      "line": 246,
       "match_key": "posture|GET|/posture/findings",
       "method": "GET",
       "normalized_path": "/posture/findings",
@@ -30241,7 +30269,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 216,
+      "line": 255,
       "match_key": "posture|PUT|/posture/findings/{param}/status",
       "method": "PUT",
       "normalized_path": "/posture/findings/{param}/status",
@@ -30254,7 +30282,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 232,
+      "line": 271,
       "match_key": "posture|GET|/posture/actions",
       "method": "GET",
       "normalized_path": "/posture/actions",
@@ -30267,7 +30295,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 243,
+      "line": 282,
       "match_key": "posture|POST|/posture/actions/{param}/execute",
       "method": "POST",
       "normalized_path": "/posture/actions/{param}/execute",
@@ -31564,7 +31592,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T05:18:48Z",
+  "generated_at": "2026-10-01T05:23:18Z",
   "navigation": [
     {
       "group": "Overview",
@@ -31887,7 +31915,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 211,
+      "handler_line": 212,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31929,7 +31957,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 229,
+      "handler_line": 230,
       "handler_name": "handleTimeline",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31971,7 +31999,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 247,
+      "handler_line": 248,
       "handler_name": "handleSession",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -32013,7 +32041,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 265,
+      "handler_line": 266,
       "handler_name": "handleCorrelation",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -32042,7 +32070,7 @@
         "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 283,
+      "handler_line": 284,
       "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -32081,7 +32109,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 288,
+      "handler_line": 289,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -32160,7 +32188,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 302,
+      "handler_line": 303,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -32559,7 +32587,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 317,
+      "handler_line": 318,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -75685,7 +75713,7 @@
       "handler_file": "services/posture/handler.go",
       "handler_helper_calls": [],
       "handler_internal_package_calls": [],
-      "handler_line": 104,
+      "handler_line": 105,
       "handler_name": "handleHealth",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -75712,7 +75740,7 @@
         "ingest"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 108,
+      "handler_line": 109,
       "handler_name": "handleIngestEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -75758,6 +75786,8 @@
         "UpdateFindingStatus",
         "handleLatestRisk",
         "LatestRisk",
+        "handleBaseline",
+        "BaselineStatus",
         "handleRiskHistory",
         "RiskTrend",
         "RiskHistory",
@@ -75770,7 +75800,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 117,
+      "handler_line": 118,
       "handler_name": "handleIngestEventsBatch",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -75780,6 +75810,7 @@
         "ListFindings",
         "UpdateFindingStatus",
         "LatestRisk",
+        "BaselineStatus",
         "RiskTrend",
         "RiskHistory",
         "ListActions",
@@ -75802,11 +75833,14 @@
       "service_helper_calls": [
         "normalizeEvent",
         "newServiceError",
-        "ListEvents",
+        "nowUTC",
+        "GetSyncState",
+        "ListEventsRange",
+        "eventTimestamp",
+        "SetSyncState",
         "auditToNormalized",
         "IngestEvents",
         "UpdateEngineState",
-        "nowUTC",
         "SyncFromAudit",
         "runTenantScan",
         "ListRiskSnapshots",
@@ -75815,6 +75849,9 @@
         "min",
         "enrichFindings",
         "GetLatestRiskSnapshot",
+        "loadBaseline",
+        "GetSignalSummary",
+        "baselineStatus",
         "ListFindings",
         "enrichActions",
         "GetAction",
@@ -75825,9 +75862,7 @@
         "buildRiskDriverExplainer",
         "buildRemediationCockpit",
         "buildBlastRadiusHotspots",
-        "buildScenarioSimulator",
-        "buildValidationBadges",
-        "buildSLAOverview"
+        "buildScenarioSimulator"
       ],
       "service_internal_package_calls": [
         "pkg/timebucket.Buckets",
@@ -75841,7 +75876,7 @@
             "normalizeEvent"
           ],
           "internal_package_calls": [],
-          "line": 84,
+          "line": 85,
           "name": "IngestEvents",
           "receiver_calls": [],
           "store_calls": [
@@ -75855,19 +75890,24 @@
           "file": "services/posture/service.go",
           "helper_calls": [
             "newServiceError",
-            "ListEvents",
+            "nowUTC",
+            "GetSyncState",
+            "ListEventsRange",
+            "eventTimestamp",
+            "SetSyncState",
             "auditToNormalized",
             "IngestEvents",
-            "UpdateEngineState",
-            "nowUTC"
+            "UpdateEngineState"
           ],
           "internal_package_calls": [],
-          "line": 98,
+          "line": 114,
           "name": "SyncFromAudit",
           "receiver_calls": [
-            "s.audit.ListEvents"
+            "s.audit.ListEventsRange"
           ],
           "store_calls": [
+            "GetSyncState",
+            "SetSyncState",
             "UpdateEngineState"
           ]
         },
@@ -75884,7 +75924,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 170,
+          "line": 285,
           "name": "RunScanTenant",
           "receiver_calls": [
             "s.mu.Lock",
@@ -75905,7 +75945,7 @@
             "enrichFindings"
           ],
           "internal_package_calls": [],
-          "line": 1317,
+          "line": 1336,
           "name": "ListFindings",
           "receiver_calls": [],
           "store_calls": [
@@ -75918,7 +75958,7 @@
           "file": "services/posture/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1327,
+          "line": 1346,
           "name": "UpdateFindingStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -75932,11 +75972,28 @@
             "GetLatestRiskSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 1343,
+          "line": 1377,
           "name": "LatestRisk",
           "receiver_calls": [],
           "store_calls": [
             "GetLatestRiskSnapshot"
+          ]
+        },
+        {
+          "external_package_calls": [],
+          "file": "services/posture/service.go",
+          "helper_calls": [
+            "nowUTC",
+            "loadBaseline",
+            "GetSignalSummary",
+            "baselineStatus"
+          ],
+          "internal_package_calls": [],
+          "line": 1364,
+          "name": "BaselineStatus",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSignalSummary"
           ]
         },
         {
@@ -75951,7 +76008,7 @@
             "pkg/timebucket.Buckets",
             "pkg/timebucket.Index"
           ],
-          "line": 1354,
+          "line": 1388,
           "name": "RiskTrend",
           "receiver_calls": [],
           "store_calls": [
@@ -75965,7 +76022,7 @@
             "ListRiskSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 1347,
+          "line": 1381,
           "name": "RiskHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -75985,7 +76042,7 @@
             "enrichActions"
           ],
           "internal_package_calls": [],
-          "line": 1331,
+          "line": 1350,
           "name": "ListActions",
           "receiver_calls": [],
           "store_calls": [
@@ -76007,7 +76064,7 @@
             "UpdateActionExecution"
           ],
           "internal_package_calls": [],
-          "line": 1154,
+          "line": 1173,
           "name": "ExecuteAction",
           "receiver_calls": [],
           "store_calls": [
@@ -76038,7 +76095,7 @@
             "buildSLAOverview"
           ],
           "internal_package_calls": [],
-          "line": 1377,
+          "line": 1411,
           "name": "Dashboard",
           "receiver_calls": [],
           "store_calls": [
@@ -76050,17 +76107,20 @@
         }
       ],
       "service_receiver_calls": [
-        "s.audit.ListEvents",
+        "s.audit.ListEventsRange",
         "s.mu.Lock",
         "s.mu.Unlock"
       ],
       "service_store_calls": [
         "IngestEvents",
+        "GetSyncState",
+        "SetSyncState",
         "UpdateEngineState",
         "ListFindings",
         "ListRiskSnapshots",
         "UpdateFindingStatus",
         "GetLatestRiskSnapshot",
+        "GetSignalSummary",
         "ListActions",
         "GetAction",
         "UpdateActionExecution"
@@ -76077,7 +76137,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 148,
+      "handler_line": 149,
       "handler_name": "handleIngestFromAudit",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76095,11 +76155,14 @@
       ],
       "service_helper_calls": [
         "newServiceError",
-        "ListEvents",
+        "nowUTC",
+        "GetSyncState",
+        "ListEventsRange",
+        "eventTimestamp",
+        "SetSyncState",
         "auditToNormalized",
         "IngestEvents",
-        "UpdateEngineState",
-        "nowUTC"
+        "UpdateEngineState"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -76110,27 +76173,34 @@
           "file": "services/posture/service.go",
           "helper_calls": [
             "newServiceError",
-            "ListEvents",
+            "nowUTC",
+            "GetSyncState",
+            "ListEventsRange",
+            "eventTimestamp",
+            "SetSyncState",
             "auditToNormalized",
             "IngestEvents",
-            "UpdateEngineState",
-            "nowUTC"
+            "UpdateEngineState"
           ],
           "internal_package_calls": [],
-          "line": 98,
+          "line": 114,
           "name": "SyncFromAudit",
           "receiver_calls": [
-            "s.audit.ListEvents"
+            "s.audit.ListEventsRange"
           ],
           "store_calls": [
+            "GetSyncState",
+            "SetSyncState",
             "UpdateEngineState"
           ]
         }
       ],
       "service_receiver_calls": [
-        "s.audit.ListEvents"
+        "s.audit.ListEventsRange"
       ],
       "service_store_calls": [
+        "GetSyncState",
+        "SetSyncState",
         "UpdateEngineState"
       ]
     },
@@ -76139,7 +76209,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/scan?${tenantQuery(session)}&sync_audit=${syncAudit ? \"true\" : \"false\"}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 162,
+          "line": 201,
           "source": "serviceRequest"
         }
       ],
@@ -76152,7 +76222,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 159,
+      "handler_line": 160,
       "handler_name": "handleRunScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76190,7 +76260,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 170,
+          "line": 285,
           "name": "RunScanTenant",
           "receiver_calls": [
             "s.mu.Lock",
@@ -76214,7 +76284,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 207,
+          "line": 246,
           "source": "serviceRequest"
         }
       ],
@@ -76230,7 +76300,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 171,
+      "handler_line": 172,
       "handler_name": "handleListFindings",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76264,7 +76334,7 @@
             "enrichFindings"
           ],
           "internal_package_calls": [],
-          "line": 1317,
+          "line": 1336,
           "name": "ListFindings",
           "receiver_calls": [],
           "store_calls": [
@@ -76284,7 +76354,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 216,
+          "line": 255,
           "source": "serviceRequest"
         }
       ],
@@ -76298,7 +76368,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 191,
+      "handler_line": 192,
       "handler_name": "handleUpdateFindingStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76320,7 +76390,7 @@
           "file": "services/posture/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1327,
+          "line": 1346,
           "name": "UpdateFindingStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -76338,7 +76408,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/risk?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 172,
+          "line": 211,
           "source": "serviceRequest"
         }
       ],
@@ -76352,7 +76422,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 206,
+      "handler_line": 207,
       "handler_name": "handleLatestRisk",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76378,7 +76448,7 @@
             "GetLatestRiskSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 1343,
+          "line": 1377,
           "name": "LatestRisk",
           "receiver_calls": [],
           "store_calls": [
@@ -76394,15 +76464,77 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"posture\", `/posture/baseline?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/posture.ts",
+          "line": 91,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "oneTenant(h.handleBaseline)",
+      "handler_external_package_calls": [],
+      "handler_file": "services/posture/handler.go",
+      "handler_helper_calls": [
+        "BaselineStatus",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 221,
+      "handler_name": "handleBaseline",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "BaselineStatus"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/posture/baseline",
+      "path": "/posture/baseline",
+      "route_file": "services/posture/handler.go",
+      "route_line": 83,
+      "service": "posture",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "nowUTC",
+        "loadBaseline",
+        "GetSignalSummary",
+        "baselineStatus"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/posture/service.go",
+          "helper_calls": [
+            "nowUTC",
+            "loadBaseline",
+            "GetSignalSummary",
+            "baselineStatus"
+          ],
+          "internal_package_calls": [],
+          "line": 1364,
+          "name": "BaselineStatus",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSignalSummary"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "GetSignalSummary"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 182,
+          "line": 221,
           "source": "serviceRequest"
         },
         {
           "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 187,
+          "line": 226,
           "source": "serviceRequest"
         }
       ],
@@ -76417,7 +76549,7 @@
         "atoi"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 220,
+      "handler_line": 232,
       "handler_name": "handleRiskHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76429,7 +76561,7 @@
       "normalized_path": "/posture/risk/history",
       "path": "/posture/risk/history",
       "route_file": "services/posture/handler.go",
-      "route_line": 83,
+      "route_line": 84,
       "service": "posture",
       "service_external_package_calls": [
         "time.Now"
@@ -76454,7 +76586,7 @@
             "pkg/timebucket.Buckets",
             "pkg/timebucket.Index"
           ],
-          "line": 1354,
+          "line": 1388,
           "name": "RiskTrend",
           "receiver_calls": [],
           "store_calls": [
@@ -76468,7 +76600,7 @@
             "ListRiskSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 1347,
+          "line": 1381,
           "name": "RiskHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -76486,7 +76618,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 232,
+          "line": 271,
           "source": "serviceRequest"
         }
       ],
@@ -76501,7 +76633,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 249,
+      "handler_line": 261,
       "handler_name": "handleListActions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76512,7 +76644,7 @@
       "normalized_path": "/posture/actions",
       "path": "/posture/actions",
       "route_file": "services/posture/handler.go",
-      "route_line": 85,
+      "route_line": 86,
       "service": "posture",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -76539,7 +76671,7 @@
             "enrichActions"
           ],
           "internal_package_calls": [],
-          "line": 1331,
+          "line": 1350,
           "name": "ListActions",
           "receiver_calls": [],
           "store_calls": [
@@ -76561,7 +76693,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 243,
+          "line": 282,
           "source": "serviceRequest"
         }
       ],
@@ -76575,7 +76707,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 269,
+      "handler_line": 281,
       "handler_name": "handleExecuteAction",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76586,7 +76718,7 @@
       "normalized_path": "/posture/actions/{param}/execute",
       "path": "/posture/actions/{id}/execute",
       "route_file": "services/posture/handler.go",
-      "route_line": 86,
+      "route_line": 87,
       "service": "posture",
       "service_external_package_calls": [
         "errors.As",
@@ -76613,7 +76745,7 @@
             "UpdateActionExecution"
           ],
           "internal_package_calls": [],
-          "line": 1154,
+          "line": 1173,
           "name": "ExecuteAction",
           "receiver_calls": [],
           "store_calls": [
@@ -76633,7 +76765,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/dashboard?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 158,
+          "line": 197,
           "source": "serviceRequest"
         }
       ],
@@ -76645,7 +76777,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 295,
+      "handler_line": 307,
       "handler_name": "handleDashboard",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76656,7 +76788,7 @@
       "normalized_path": "/posture/dashboard",
       "path": "/posture/dashboard",
       "route_file": "services/posture/handler.go",
-      "route_line": 88,
+      "route_line": 89,
       "service": "posture",
       "service_external_package_calls": [
         "strings.ToLower",
@@ -76703,7 +76835,7 @@
             "buildSLAOverview"
           ],
           "internal_package_calls": [],
-          "line": 1377,
+          "line": 1411,
           "name": "Dashboard",
           "receiver_calls": [],
           "store_calls": [
@@ -84824,7 +84956,7 @@
       "keycore": 173,
       "kmip": 12,
       "policy": 12,
-      "posture": 12,
+      "posture": 13,
       "pqc": 14,
       "reconciler": 1,
       "reporting": 34,
@@ -84854,7 +84986,7 @@
       "keyaccess": 6,
       "keycore": 118,
       "kmip": 11,
-      "posture": 9,
+      "posture": 10,
       "pqc": 8,
       "reconciler": 1,
       "reporting": 24,
@@ -85043,17 +85175,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 846,
+    "backend_routes": 847,
     "backend_services": 28,
     "button_inventory": 736,
-    "frontend_call_sites": 532,
-    "matched_frontend_call_sites": 490,
+    "frontend_call_sites": 533,
+    "matched_frontend_call_sites": 491,
     "nav_items": 28,
-    "request_flows": 846,
-    "request_flows_with_frontend": 498,
+    "request_flows": 847,
+    "request_flows_with_frontend": 499,
     "request_flows_with_internal_package_calls": 147,
-    "request_flows_with_service_calls": 505,
-    "request_flows_with_store_calls": 605,
+    "request_flows_with_service_calls": 506,
+    "request_flows_with_store_calls": 606,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 42
@@ -85339,7 +85471,7 @@
       ]
     },
     {
-      "call_count": 95,
+      "call_count": 96,
       "component": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "group": "Security & compliance",
       "id": "posture",
@@ -86191,7 +86323,7 @@
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 211,
+        "handlerLine": 212,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86224,7 +86356,7 @@
         ],
         "handler": "handleTimeline",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 229,
+        "handlerLine": 230,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86257,7 +86389,7 @@
         ],
         "handler": "handleSession",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 247,
+        "handlerLine": 248,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86290,7 +86422,7 @@
         ],
         "handler": "handleCorrelation",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 265,
+        "handlerLine": 266,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86316,7 +86448,7 @@
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 283,
+        "handlerLine": 284,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -86346,7 +86478,7 @@
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 288,
+        "handlerLine": 289,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86404,7 +86536,7 @@
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 302,
+        "handlerLine": 303,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86665,7 +86797,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 317,
+        "handlerLine": 318,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110011,7 +110143,7 @@
         "frontendSites": [],
         "handler": "handleHealth",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 104,
+        "handlerLine": 105,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110034,7 +110166,7 @@
         "frontendSites": [],
         "handler": "handleIngestEvent",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 108,
+        "handlerLine": 109,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110052,7 +110184,7 @@
         ]
       },
       {
-        "complexity": 14,
+        "complexity": 17,
         "externalPackages": [
           "errors.Is",
           "errors.As",
@@ -110065,7 +110197,7 @@
         "frontendSites": [],
         "handler": "handleIngestEventsBatch",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 117,
+        "handlerLine": 118,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/timebucket.Buckets",
@@ -110075,7 +110207,7 @@
         "normalizedPath": "/posture/events/batch",
         "path": "/posture/events/batch",
         "receiverCalls": [
-          "s.audit.ListEvents",
+          "s.audit.ListEventsRange",
           "s.mu.Lock",
           "s.mu.Unlock"
         ],
@@ -110090,6 +110222,7 @@
           "ListFindings",
           "UpdateFindingStatus",
           "LatestRisk",
+          "BaselineStatus",
           "RiskTrend",
           "RiskHistory",
           "ListActions",
@@ -110098,11 +110231,14 @@
         ],
         "storeCalls": [
           "IngestEvents",
+          "GetSyncState",
+          "SetSyncState",
           "UpdateEngineState",
           "ListFindings",
           "ListRiskSnapshots",
           "UpdateFindingStatus",
           "GetLatestRiskSnapshot",
+          "GetSignalSummary",
           "ListActions",
           "GetAction",
           "UpdateActionExecution"
@@ -110112,21 +110248,21 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 4,
         "externalPackages": [
           "strings.TrimSpace"
         ],
         "frontendSites": [],
         "handler": "handleIngestFromAudit",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 148,
+        "handlerLine": 149,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/posture/ingest/audit",
         "path": "/posture/ingest/audit",
         "receiverCalls": [
-          "s.audit.ListEvents"
+          "s.audit.ListEventsRange"
         ],
         "risk": "medium",
         "routeKey": "posture|POST|/posture/ingest/audit",
@@ -110136,6 +110272,8 @@
           "SyncFromAudit"
         ],
         "storeCalls": [
+          "GetSyncState",
+          "SetSyncState",
           "UpdateEngineState"
         ],
         "uiLabels": [
@@ -110151,13 +110289,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/scan?${tenantQuery(session)}&sync_audit=${syncAudit ? \"true\" : \"false\"}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 162,
+            "line": 201,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRunScan",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 159,
+        "handlerLine": 160,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110190,13 +110328,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 207,
+            "line": 246,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListFindings",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 171,
+        "handlerLine": 172,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110227,13 +110365,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 216,
+            "line": 255,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUpdateFindingStatus",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 191,
+        "handlerLine": 192,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -110263,13 +110401,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/risk?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 172,
+            "line": 211,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleLatestRisk",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 206,
+        "handlerLine": 207,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110291,6 +110429,40 @@
         ]
       },
       {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"posture\", `/posture/baseline?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/posture.ts",
+            "line": 91,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "handleBaseline",
+        "handlerFile": "services/posture/handler.go",
+        "handlerLine": 221,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/posture/baseline",
+        "path": "/posture/baseline",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "posture|GET|/posture/baseline",
+        "sensitive": false,
+        "service": "posture",
+        "serviceCalls": [
+          "BaselineStatus"
+        ],
+        "storeCalls": [
+          "GetSignalSummary"
+        ],
+        "uiLabels": [
+          "Posture"
+        ]
+      },
+      {
         "complexity": 3,
         "externalPackages": [
           "time.Now"
@@ -110299,19 +110471,19 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 182,
+            "line": 221,
             "source": "serviceRequest"
           },
           {
             "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 187,
+            "line": 226,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRiskHistory",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 220,
+        "handlerLine": 232,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/timebucket.Buckets",
@@ -110345,13 +110517,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 232,
+            "line": 271,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListActions",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 249,
+        "handlerLine": 261,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110384,13 +110556,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 243,
+            "line": 282,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleExecuteAction",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 269,
+        "handlerLine": 281,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110422,13 +110594,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/dashboard?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 158,
+            "line": 197,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDashboard",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 295,
+        "handlerLine": 307,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -115267,7 +115439,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T05:18:48Z",
+    "generatedAt": "2026-10-01T05:23:18Z",
     "methods": [
       "DELETE",
       "GET",
@@ -115307,8 +115479,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 846,
-      "frontendBacked": 498,
+      "flows": 847,
+      "frontendBacked": 499,
       "highRisk": 332,
       "services": 28
     }

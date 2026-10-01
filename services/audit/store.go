@@ -101,10 +101,13 @@ type EventQuery struct {
 	// ExcludeHTTPRequests drops the generic HTTP request records, as the
 	// Activity statistics do.
 	ExcludeHTTPRequests bool
-	From                time.Time
-	To                  time.Time
-	Limit               int
-	Offset              int
+	// Ascending returns oldest first, so a reader can follow a cursor
+	// forward without gaps (posture's audit sync).
+	Ascending bool
+	From      time.Time
+	To        time.Time
+	Limit     int
+	Offset    int
 }
 
 func (s *SQLStore) PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
@@ -220,6 +223,10 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 	if len(likes) > 0 {
 		prefixClause += "  AND (" + strings.Join(likes, " OR ") + ")"
 	}
+	order := "DESC"
+	if q.Ascending {
+		order = "ASC"
+	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, sequence, chain_hash, previous_hash,
        COALESCE(hmac_sig,''), COALESCE(category_group,''),
@@ -240,7 +247,7 @@ WHERE tenant_id=$1
   AND timestamp >= COALESCE($9, timestamp)
   AND timestamp <= COALESCE($10, timestamp)
 `+prefixClause+`
-ORDER BY timestamp DESC
+ORDER BY timestamp `+order+`, id
 LIMIT $11 OFFSET $12
 `, args...)
 	if err != nil {

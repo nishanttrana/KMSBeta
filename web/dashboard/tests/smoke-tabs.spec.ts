@@ -224,3 +224,24 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   await expect(page.getByText("Mean Time to Detect")).toHaveCount(0);
   await expect(page.getByText("Threshold Signing / FROST Controls")).toHaveCount(0);
 });
+
+// Posture gives no risk score until the baseline has enough history
+// (7.19.0-beta): it says how far the baseline is, per signal, instead.
+test("posture shows baseline progress instead of a score while it builds", async ({ page }) => {
+  const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  await page.route("**/svc/posture/posture/risk?**", (r) => r.fulfill(json({ risk: { tenant_id: "root", risk_24h: 0, risk_7d: 0, assessed: false, baseline_days: 5 } })));
+  await page.route("**/svc/posture/posture/baseline?**", (r) => r.fulfill(json({ baseline: {
+    ready: false, stable: false, days: 5, required_days: 14, stable_days: 28, spike_alpha: 0.001,
+    signals: [
+      { key: "failed_auth", label: "Failed authentication", kind: "count", status: "building", current_24h: 500, baseline_daily_mean: 2, floor: 25, unusual: false, p_value: 1 },
+      { key: "kmip", label: "KMIP failure rate", kind: "rate", status: "building", current_24h: 0, events_24h: 0, baseline_events: 40, required_baseline_events: 385, baseline_daily_mean: 0, unusual: false, p_value: 1 },
+    ],
+  } })));
+  await page.getByText("Posture", { exact: true }).first().click();
+  await expect(page.getByText("Not assessed").first()).toBeVisible();
+  await expect(page.getByText("Baseline building: 5 of 14 days").first()).toBeVisible();
+  await expect(page.getByText("Building: 5 of 14 days", { exact: true })).toBeVisible();
+  await expect(page.getByText("Failed authentication", { exact: true })).toBeVisible();
+  await expect(page.getByText("0/100")).toHaveCount(0);
+  await assertNoRenderBoundary(page);
+});
