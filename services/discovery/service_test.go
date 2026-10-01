@@ -15,8 +15,14 @@ func TestServiceScanAndSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start scan: %v", err)
 	}
-	if scan.Status != "completed" {
+	if scan.Status != "running" {
+		t.Fatalf("scan should start in the background: %+v", scan)
+	}
+	if scan = finishScan(t, svc, scan); scan.Status != "completed" {
 		t.Fatalf("unexpected scan status: %+v", scan)
+	}
+	if done, _ := scan.Stats["sources_done"].([]interface{}); len(done) != 3 {
+		t.Fatalf("sources_done: %+v", scan.Stats)
 	}
 	if pub.Count("audit.discovery.scan_initiated") == 0 || pub.Count("audit.discovery.scan_completed") == 0 {
 		t.Fatalf("expected discovery scan audit events")
@@ -41,14 +47,14 @@ func TestServiceScanAndSummary(t *testing.T) {
 	if asset.Classification == "strong" {
 		relabel = "vulnerable"
 	}
-	if _, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Classification: relabel}); !errors.Is(err, errClassificationIsCatalogue) {
+	if _, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Classification: relabel}, "u"); !errors.Is(err, errClassificationIsCatalogue) {
 		t.Fatalf("relabel %s as %s: err=%v, want errClassificationIsCatalogue", asset.Classification, relabel, err)
 	}
-	updated, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Status: "reviewed", Notes: "owner confirmed"})
+	updated, err := svc.ClassifyAsset(ctx, tenantID, asset.ID, ClassifyRequest{Status: "reviewed", Notes: "owner confirmed"}, "u")
 	if err != nil {
 		t.Fatalf("classify asset: %v", err)
 	}
-	if updated.Classification != asset.Classification || updated.Status != "reviewed" {
+	if updated.Classification != asset.Classification || updated.Metadata["review_status"] != "reviewed" || updated.Status != asset.Status {
 		t.Fatalf("unexpected classified asset: %+v", updated)
 	}
 	if pub.Count("audit.discovery.asset_classified") == 0 {

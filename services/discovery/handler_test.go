@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandlerDiscoveryFlow(t *testing.T) {
-	h, _, _ := newDiscoveryHandler(t)
+	h, svc, _ := newDiscoveryHandler(t)
 	tenantID := "tenant-h1"
 
 	scanReq := httptest.NewRequest(http.MethodPost, "/discovery/scan", strings.NewReader(`{"tenant_id":"`+tenantID+`","scan_types":["network","cloud"],"trigger":"test"}`))
@@ -25,6 +25,7 @@ func TestHandlerDiscoveryFlow(t *testing.T) {
 	if scanID == "" {
 		t.Fatalf("missing scan id")
 	}
+	svc.scans.Wait()
 
 	listScansReq := httptest.NewRequest(http.MethodGet, "/discovery/scans?tenant_id="+tenantID, nil)
 	listScansRR := httptest.NewRecorder()

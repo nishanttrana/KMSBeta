@@ -997,6 +997,7 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.security.sustained_risk_detected":    {"services/audit/sustained_risk.go", `"audit.security.sustained_risk_detected"`},
 		"audit.key.compromise_detected":             {"services/keycore/enterprise_audit_service.go", `"audit.key.compromise_detected"`},
 		"audit.audit.chain_broken":                  {"services/audit/service.go", `s.publisher.Publish(ctx, evt.Action, payload)`},
+		"audit.discovery.secret_exposed":            {"services/discovery/service.go", `Emit(ctx, "secret_exposed"`},
 		"audit.key.create":                          {"services/keycore/keycore.go", `"audit.key.create"`},
 		"audit.key.rotate":                          {"services/keycore/keycore.go", `"audit.key.rotate"`},
 		"audit.key.destroyed":                       {"services/keycore/keycore.go", `"audit.key.destroyed"`},

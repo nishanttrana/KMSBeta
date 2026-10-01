@@ -64,9 +64,11 @@ func TestDiscoveryWritesNeedPermissionAndOwnTenant(t *testing.T) {
 func TestDiscoveryRelabelRefusedAndAudited(t *testing.T) {
 	svc, _, _ := newDiscoveryService(t)
 	ctx := context.Background()
-	if _, err := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"certs"}}); err != nil {
+	scan, err := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"certs"}})
+	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
+	finishScan(t, svc, scan)
 	assets, err := svc.ListAssets(ctx, "t1", 10, 0, "", "", "quantum_vulnerable")
 	if err != nil || len(assets) == 0 {
 		t.Fatalf("no quantum-vulnerable asset to relabel: %v", err)

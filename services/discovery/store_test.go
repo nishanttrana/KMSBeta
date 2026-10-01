@@ -43,11 +43,11 @@ func TestStoreScanAndAssetFlows(t *testing.T) {
 	if gotAsset.Classification != "weak" {
 		t.Fatalf("unexpected asset classification: %+v", gotAsset)
 	}
-	items, err := store.ListAssets(ctx, tenantID, 10, 0, "network", "", "")
-	if err != nil {
-		t.Fatalf("list assets: %v", err)
+	var items []CryptoAsset
+	if err := store.EachAsset(ctx, tenantID, func(a CryptoAsset) error { items = append(items, a); return nil }); err != nil {
+		t.Fatalf("each asset: %v", err)
 	}
-	if len(items) != 1 {
-		t.Fatalf("unexpected asset count: %d", len(items))
+	if len(items) != 1 || items[0].Source != "network" {
+		t.Fatalf("unexpected assets: %+v", items)
 	}
 }

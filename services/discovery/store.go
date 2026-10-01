@@ -132,61 +132,57 @@ WHERE tenant_id = $1 AND id = $2
 	return item, err
 }
 
-func (s *SQLStore) ListAssets(ctx context.Context, tenantID string, limit int, offset int, source string, assetType string, classification string) ([]CryptoAsset, error) {
-	if limit <= 0 || limit > 10000 {
-		limit = 1000
+func (s *SQLStore) DeleteAsset(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM discovery_assets WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
+	if err != nil {
+		return err
 	}
-	if offset < 0 {
-		offset = 0
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
 	}
+	return nil
+}
+
+// EachAsset streams every asset of a tenant, most recently updated first,
+// with no cap: counts and filtered lists read the whole inventory, never a
+// sample. fn must not use the store.
+func (s *SQLStore) EachAsset(ctx context.Context, tenantID string, fn func(CryptoAsset) error) error {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, scan_id, asset_type, name, location, source, algorithm, strength_bits, status, classification,
 	pqc_ready, qsl_score, metadata_json, first_seen, last_seen, created_at, updated_at
 FROM discovery_assets
 WHERE tenant_id = $1
-	AND ($2 = '' OR source = $2)
-	AND ($3 = '' OR asset_type = $3)
-	AND ($4 = '' OR classification = $4)
-ORDER BY updated_at DESC
-LIMIT $5 OFFSET $6
-`, strings.TrimSpace(tenantID), strings.ToLower(strings.TrimSpace(source)), strings.ToLower(strings.TrimSpace(assetType)), strings.ToLower(strings.TrimSpace(classification)), limit, offset)
+ORDER BY updated_at DESC, id
+`, strings.TrimSpace(tenantID))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close() //nolint:errcheck
-	out := make([]CryptoAsset, 0)
 	for rows.Next() {
 		item, err := scanCryptoAsset(rows)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		out = append(out, item)
+		if err := fn(item); err != nil {
+			return err
+		}
 	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) CountAssets(ctx context.Context, tenantID string) (int, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT COUNT(*) FROM discovery_assets WHERE tenant_id = $1
-`, strings.TrimSpace(tenantID))
-	var n int
-	if err := row.Scan(&n); err != nil {
-		return 0, err
-	}
-	return n, nil
+	return rows.Err()
 }
 
 func (s *SQLStore) CreateTarget(ctx context.Context, t ScanTarget) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO discovery_scan_targets (tenant_id, id, host, port, created_by, created_at)
-VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
-`, t.TenantID, t.ID, t.Host, t.Port, t.CreatedBy)
+INSERT INTO discovery_scan_targets (tenant_id, id, host, port, protocol, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP)
+`, t.TenantID, t.ID, t.Host, t.Port, t.proto(), t.CreatedBy)
 	return err
 }
 
 func (s *SQLStore) ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, host, port, created_by, created_at
+SELECT tenant_id, id, host, port, protocol, created_by, created_at
 FROM discovery_scan_targets
 WHERE tenant_id = $1
 ORDER BY host, port
@@ -201,7 +197,7 @@ ORDER BY host, port
 			t          ScanTarget
 			createdRaw interface{}
 		)
-		if err := rows.Scan(&t.TenantID, &t.ID, &t.Host, &t.Port, &t.CreatedBy, &createdRaw); err != nil {
+		if err := rows.Scan(&t.TenantID, &t.ID, &t.Host, &t.Port, &t.Protocol, &t.CreatedBy, &createdRaw); err != nil {
 			return nil, err
 		}
 		t.CreatedAt = parseTimeValue(createdRaw)

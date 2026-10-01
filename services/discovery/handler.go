@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -39,6 +43,10 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r.Handle("GET /discovery/targets", read("targets_list"), h.listTargets)
 	r.Handle("POST /discovery/targets", route.Spec{Action: "target_add", Permission: "discovery.write", Resource: "discovery_target"}, h.addTarget)
 	r.Handle("DELETE /discovery/targets/{id}", route.Spec{Action: "target_remove", Permission: "discovery.write", Resource: "discovery_target", TargetParam: "id"}, h.removeTarget)
+	// 7.18.0-beta: source status, file uploads, and removing a stale asset.
+	r.Handle("GET /discovery/sources", read("sources_read"), h.sources)
+	r.Handle("POST /discovery/upload", route.Spec{Action: "upload_scan", Permission: "discovery.write", Resource: "discovery_scan"}, h.upload)
+	r.Handle("DELETE /discovery/assets/{id}", route.Spec{Action: "asset_remove", Permission: "discovery.write", Resource: "crypto_asset", TargetParam: "id"}, h.removeAsset)
 	h.router = r
 	return h
 }
@@ -52,6 +60,11 @@ func (h *Handler) startScan(c *route.Call) {
 	}
 	req.TenantID = c.Tenant
 	item, err := h.svc.StartScan(c.R.Context(), req)
+	if errors.Is(err, errScanRunning) {
+		c.Detail("running_scan_id", item.ID)
+		c.Refuse(http.StatusConflict, "scan_running", err.Error())
+		return
+	}
 	if err != nil {
 		h.fail(c, err)
 		return
@@ -80,22 +93,29 @@ func (h *Handler) getScan(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"scan": item})
 }
 
+// listAssets pages the assets matching the query's filters; total is how
+// many match in the whole inventory, which is the number the summary shows
+// for the same filter.
 func (h *Handler) listAssets(c *route.Call) {
 	q := c.R.URL.Query()
-	items, err := h.svc.ListAssets(
-		c.R.Context(),
-		c.Tenant,
-		atoi(q.Get("limit")),
-		atoi(q.Get("offset")),
-		strings.ToLower(strings.TrimSpace(q.Get("source"))),
-		strings.ToLower(strings.TrimSpace(q.Get("asset_type"))),
-		strings.ToLower(strings.TrimSpace(q.Get("classification"))),
-	)
+	lower := func(k string) string { return strings.ToLower(strings.TrimSpace(q.Get(k))) }
+	f := AssetFilter{
+		Source: lower("source"), AssetType: lower("asset_type"), Query: q.Get("q"),
+		PQCReady: lower("pqc_ready") == "true", NotSeen: lower("not_seen") == "true", ExpiringDays: atoi(q.Get("expiring_days")),
+	}
+	if cls := lower("classification"); cls != "" {
+		f.Classes = strings.Split(cls, ",")
+	}
+	if q.Has("algorithm") {
+		alg := q.Get("algorithm")
+		f.Algorithm = &alg
+	}
+	items, total, err := h.svc.FindAssets(c.R.Context(), c.Tenant, atoi(q.Get("limit")), atoi(q.Get("offset")), f)
 	if err != nil {
 		h.fail(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items, "total": total})
 }
 
 func (h *Handler) getAsset(c *route.Call) {
@@ -107,15 +127,16 @@ func (h *Handler) getAsset(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"asset": item})
 }
 
-// reviewAsset records an operator's review (status, notes). The
-// classification is a catalogue fact about the algorithm and can't be
-// overridden here; a request that tries is refused.
+// reviewAsset records an operator's review (status, notes) in the asset's
+// metadata, where a rescan keeps it. The classification is a catalogue fact
+// about the algorithm and can't be overridden here; a request that tries is
+// refused.
 func (h *Handler) reviewAsset(c *route.Call) {
 	var req ClassifyRequest
 	if !c.Decode(&req) {
 		return
 	}
-	item, err := h.svc.ClassifyAsset(c.R.Context(), c.Tenant, c.R.PathValue("id"), req)
+	item, err := h.svc.ClassifyAsset(c.R.Context(), c.Tenant, c.R.PathValue("id"), req, c.Actor())
 	if errors.Is(err, errClassificationIsCatalogue) {
 		c.Refuse(http.StatusConflict, "classification_is_catalogue", err.Error())
 		return
@@ -124,7 +145,7 @@ func (h *Handler) reviewAsset(c *route.Call) {
 		h.fail(c, err)
 		return
 	}
-	c.Detail("status", item.Status)
+	c.Detail("review_status", item.Metadata["review_status"])
 	c.JSON(http.StatusOK, map[string]interface{}{"asset": item})
 }
 
@@ -146,20 +167,23 @@ func (h *Handler) listTargets(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-// addTarget refuses, with its reason audited, a host that isn't a DNS name
-// or IP, a reserved address (loopback, link-local, metadata), a KMS
-// platform host, a duplicate, and the per-tenant limit.
+// addTarget refuses, with its reason audited, a host that isn't a DNS name,
+// IP or range of at most 256 addresses, a reserved address (loopback,
+// link-local, metadata), a KMS platform host, a protocol other than tls or
+// ssh, a duplicate, and the per-tenant limit.
 func (h *Handler) addTarget(c *route.Call) {
 	var req struct {
-		Host string `json:"host"`
-		Port int    `json:"port"`
+		Host     string `json:"host"`
+		Port     int    `json:"port"`
+		Protocol string `json:"protocol"`
 	}
 	if !c.Decode(&req) {
 		return
 	}
 	c.Detail("host", req.Host)
 	c.Detail("port", req.Port)
-	t, err := h.svc.AddTarget(c.R.Context(), c.Tenant, req.Host, req.Port, c.Actor())
+	c.Detail("protocol", defaultString(req.Protocol, "tls"))
+	t, err := h.svc.AddTarget(c.R.Context(), c.Tenant, req.Host, req.Port, req.Protocol, c.Actor())
 	switch {
 	case errors.Is(err, errInvalidTarget):
 		c.Refuse(http.StatusBadRequest, "invalid_target", err.Error())
@@ -190,6 +214,73 @@ func (h *Handler) removeTarget(c *route.Call) {
 	c.Detail("host", t.Host)
 	c.Detail("port", t.Port)
 	c.JSON(http.StatusOK, map[string]interface{}{"removed": t.ID})
+}
+
+func (h *Handler) sources(c *route.Call) {
+	items, err := h.svc.Sources(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+}
+
+// maxUploadBody is the JSON body that carries a maxUploadBytes file.
+var maxUploadBody = int64(base64.StdEncoding.EncodedLen(maxUploadBytes) + 4096)
+
+// upload inventories one file sent as {"name", "content" (base64)}. The
+// file is parsed in memory and never stored or logged; only its name, size
+// and finding count go in the audit event. Refused: an empty or undecodable
+// file (invalid_upload) and one over 2 MiB (upload_too_large).
+func (h *Handler) upload(c *route.Call) {
+	body, err := io.ReadAll(io.LimitReader(c.R.Body, maxUploadBody+1))
+	if err != nil {
+		c.Error(http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	tooLarge := fmt.Sprintf("a file is at most %d MiB", maxUploadBytes>>20)
+	if int64(len(body)) > maxUploadBody {
+		c.Refuse(http.StatusRequestEntityTooLarge, "upload_too_large", tooLarge)
+		return
+	}
+	c.R.Body = io.NopCloser(bytes.NewReader(body))
+	var req struct {
+		Name    string `json:"name"`
+		Content string `json:"content"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Detail("file", uploadName(req.Name))
+	raw, err := base64.StdEncoding.DecodeString(req.Content)
+	switch {
+	case err != nil || len(raw) == 0:
+		c.Refuse(http.StatusBadRequest, "invalid_upload", "content must be the file's bytes, base64-encoded")
+		return
+	case len(raw) > maxUploadBytes:
+		c.Refuse(http.StatusRequestEntityTooLarge, "upload_too_large", tooLarge)
+		return
+	}
+	c.Detail("bytes", len(raw))
+	scan, assets, err := h.svc.ScanUpload(c.R.Context(), c.Tenant, req.Name, raw)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Target(scan.ID)
+	c.Detail("assets", len(assets))
+	c.JSON(http.StatusOK, map[string]interface{}{"scan": scan, "assets": assets})
+}
+
+func (h *Handler) removeAsset(c *route.Call) {
+	a, err := h.svc.RemoveAsset(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("asset_type", a.AssetType)
+	c.Detail("source", a.Source)
+	c.JSON(http.StatusOK, map[string]interface{}{"removed": a.ID})
 }
 
 func (h *Handler) fail(c *route.Call, err error) {

@@ -7,6 +7,60 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Discovery: background scans, SSH and ranges, uploads, server-counted charts (7.18.0-beta)
+
+- **Decision (scans):** a scan runs in the background on the node that
+  accepted `POST /discovery/scan` (the primary: cluster members forward
+  writes), one per tenant, with a 10-minute deadline. Sources run
+  concurrently and the scan row is updated as each finishes. A scan still
+  "running" past its deadline reads as `interrupted`; nothing rewrites it.
+- **Decision (SSH):** the probe reads the server's identification and
+  `SSH_MSG_KEXINIT`, which are sent in the clear, and then, per host key
+  type, starts one ECDH exchange (curve25519, or NIST P-256/P-384 for a
+  server in FIPS mode) to read the host key from the reply, as `ssh-keyscan`
+  does. Discovery computes no shared secret and verifies nothing: the
+  client value is random bytes (X25519) or a discarded `pkg/crypto` P-256 or
+  P-384 key. The endpoint asset's algorithm is the strongest key exchange
+  the server offers; the weak ones it also offers are listed beside it.
+- **Decision (ranges):** a range is at most 256 addresses and a tenant's
+  targets at most 4096. An address in a range that does not answer has no
+  service and is counted, not reported as an error. Reserved addresses are
+  refused when the range is added; platform addresses inside one are
+  refused at dial time, as for single hosts.
+- **Decision (uploads):** an uploaded file is parsed in memory and
+  discarded. Only what was found is stored, with a fingerprint for secrets.
+  The file name, size and finding count go in the audit event, never the
+  content. An upload is recorded as a scan of source `upload`.
+- **Decision (reviews):** a review lives in the asset's metadata. `status`
+  is what the scan observed.
+- **Decision (charts):** the service counts the whole inventory in one
+  pass and lists with the same predicate, with no cap. The dashboard's
+  charts show the summary's numbers, and a click pages
+  `GET /discovery/assets` with the filter that number was counted with.
+- **Why:** the page offered only TLS targets and gave no way to set up the
+  other sources. A tenant cannot mount a repository into the service, so
+  the code source needs an in-product alternative, which uploads provide.
+  SSH keys and algorithms are a large part of an estate's cryptography and
+  were not inventoried.
+- **Rejected:** importing `golang.org/x/crypto/ssh` into the service for
+  the probe. It would complete a handshake with non-module cryptography
+  for no gain: the facts needed are in the first cleartext packets.
+  Naming an unread RSA host key by a guessed size: it stays "not assessed".
+  Storing uploaded files for later rescans: they contain private keys.
+  Counting in the browser over a loaded list: a list with a cap is a
+  sample. A per-scan history chart: assets carry the ID of the last scan
+  that saw them, so an older scan's bar could not list what it counted.
+- **Enforced by:** `TestScanRunsInBackgroundOneAtATime`,
+  `TestAbandonedScanReadsInterrupted`, `TestSSHProbeReadsHostKeys` (a real
+  SSH server), `TestNetworkScanSSHTargetAndRange`,
+  `TestTargetRangesAndProtocol`,
+  `TestUploadInventoriesWithoutStoringSecrets`, `TestReviewSurvivesRescan`,
+  `TestSummaryCountsEqualFilteredLists`, `TestInventoryIsNeverASample`,
+  `TestTargetsAndAssetRemovalPostgres`, and the dashboard spec
+  `tests/discovery.spec.ts`.
+
+---
+
 ## 2026-09-30 — Remove user-minted API keys; REST client keys are the only API keys (7.16.0-beta)
 
 - **Decision:** `POST /auth/api-keys` is removed, and keys it left behind are

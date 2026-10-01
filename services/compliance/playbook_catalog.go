@@ -47,6 +47,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "sustained_risk_detected", Label: "Sustained high-risk activity on a target", Group: "Incident response", Subjects: []string{"audit.security.sustained_risk_detected"}},
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
+	{Type: "secret_exposed", Label: "Exposed secret discovered (code or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
 	{Type: "key_created", Label: "Key created", Group: "Key lifecycle", Subjects: []string{"audit.key.create"}, SuccessOnly: true},
 	{Type: "key_rotated", Label: "Key rotated", Group: "Key lifecycle", Subjects: []string{"audit.key.rotate"}, SuccessOnly: true},
 	{Type: "key_destroyed", Label: "Key destroyed", Group: "Key lifecycle", Subjects: []string{"audit.key.destroyed"}, SuccessOnly: true},

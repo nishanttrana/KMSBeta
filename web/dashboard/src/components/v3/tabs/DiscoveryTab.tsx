@@ -1,315 +1,284 @@
-import { useEffect, useMemo, useState } from "react";
-import { B, Btn, Card, Chk, Inp, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Atom, Clock3, KeyRound, Play, Radar, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Btn, Section, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
+import { DrillHint, DrillPanel, clickable, usePagedDrill } from "../chartDrill";
 import {
-  DISCOVERY_SCAN_TYPES,
-  addDiscoveryTarget,
-  listDiscoveryTargets,
-  removeDiscoveryTarget,
+  DISCOVERY_UPLOAD_MAX_BYTES,
+  getDiscoveryScan,
+  getDiscoverySources,
   getDiscoverySummary,
   listDiscoveryAssets,
   listDiscoveryScans,
-  reviewAsset,
+  listDiscoveryTargets,
   startDiscoveryScan,
+  uploadDiscoveryFile,
   type CryptoAsset,
   type DiscoveryScan,
+  type AssetQuery,
+  type DiscoverySource,
   type DiscoverySummary,
   type DiscoveryTarget,
 } from "../../../lib/discovery";
+import {
+  MONO, SCANNABLE, classDrill, expiringDrill, isStale, pct, pqcDrill, relTime, riskyDrill, sourceMeta, typeLabel, type AssetDrill,
+} from "./discovery/meta";
+import { AlgorithmBars, ChartCard, ClassBars, SourceStack } from "./discovery/Charts";
+import { CodeSetupModal, SourceCards, TargetsModal } from "./discovery/Sources";
+import { ClassPill, Inventory, NO_FILTERS, type Filters } from "./discovery/Inventory";
+import { AssetDetail } from "./discovery/AssetDetail";
+import { RunningBanner, ScansView } from "./discovery/Scans";
 
-// What each scan source reads, and what it needs to be configured.
-const SOURCE_HINT: Record<string, string> = {
-  network: "TLS handshakes with the targets below",
-  cloud: "live key inventory of connected cloud accounts",
-  certs: "certificates issued by this KMS",
-  code: "key and certificate fingerprints under WORKSPACE_ROOT",
-};
 
-const REVIEW_STATUSES = ["active", "reviewed", "accepted_risk", "remediated"];
-
-const CELL = { padding: "7px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid ${C.border}`, textAlign: "left" as const };
-const HEAD = { ...CELL, color: C.muted, fontWeight: 600 };
-
-// Classes from pkg/cryptocatalog, plus "exposed" for a secret found in code.
-// Quantum-vulnerable (ECDSA-P256, RSA-3072) is sound today; weak is not.
-const CLASS_LABEL: Record<string, string> = {
-  strong: "strong",
-  quantum_vulnerable: "quantum-vulnerable",
-  weak: "weak",
-  exposed: "exposed secret",
-  unknown: "not assessed",
-};
-
-function classTone(c: string) {
-  return c === "strong" ? "green" : c === "weak" || c === "exposed" ? "red" : "amber";
-}
-
-function fmtTS(v?: string) {
-  if (!v) return "-";
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) || d.getFullYear() < 2000 ? "-" : d.toLocaleString();
-}
-
-export const DiscoveryTab = ({ session, onToast }: any) => {
+export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const [view, setView] = useState("Inventory");
   const [summary, setSummary] = useState<DiscoverySummary | null>(null);
-  const [assets, setAssets] = useState<CryptoAsset[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
   const [scans, setScans] = useState<DiscoveryScan[]>([]);
-  const [loadError, setLoadError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [types, setTypes] = useState<string[]>([...DISCOVERY_SCAN_TYPES]);
-  const [source, setSource] = useState("");
-  const [classification, setClassification] = useState("");
-  const [search, setSearch] = useState("");
+  const [sources, setSources] = useState<DiscoverySource[]>([]);
   const [targets, setTargets] = useState<DiscoveryTarget[]>([]);
+  const [loadError, setLoadError] = useState("");
+  const [sourcesError, setSourcesError] = useState("");
   const [targetsError, setTargetsError] = useState("");
-  const [targetHost, setTargetHost] = useState("");
-  const [targetPort, setTargetPort] = useState("443");
-  const [addingTarget, setAddingTarget] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState<DiscoveryScan | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [detail, setDetail] = useState<CryptoAsset | null>(null);
+  const [drill, setDrill] = useState<AssetDrill | null>(null);
+  const [targetsOpen, setTargetsOpen] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const countsRef = useRef("");
 
   const load = async () => {
     if (!session?.token) return;
     setLoading(true);
-    try {
-      const [s, a, sc] = await Promise.all([
-        getDiscoverySummary(session),
-        listDiscoveryAssets(session, { limit: 500, source, classification }),
-        listDiscoveryScans(session, 20),
-      ]);
-      setSummary(s);
-      setAssets(a);
-      setScans(sc);
-      setLoadError("");
-    } catch (error) {
-      setSummary(null);
-      setLoadError(errMsg(error));
-    } finally {
-      setLoading(false);
+    const [sm, sc, src, tg] = await Promise.allSettled([
+      getDiscoverySummary(session),
+      listDiscoveryScans(session, 50),
+      getDiscoverySources(session),
+      listDiscoveryTargets(session),
+    ]);
+    const failed = [sm, sc].find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+    setLoadError(failed ? errMsg(failed.reason) : "");
+    const next = sm.status === "fulfilled" ? sm.value : null;
+    // An open drill-down carries the count it was opened with; when the
+    // counts change it is closed, never left showing the old number.
+    if (JSON.stringify(next) !== countsRef.current) setDrill(null);
+    countsRef.current = JSON.stringify(next);
+    setSummary(next);
+    setReloadKey((k) => k + 1);
+    if (sc.status === "fulfilled") {
+      setScans(sc.value);
+      const live = sc.value.find((x) => x.status === "running");
+      if (live) setRunning((cur) => cur ?? live);
     }
-  };
-
-  const loadTargets = async () => {
-    if (!session?.token) return;
-    try {
-      setTargets(await listDiscoveryTargets(session));
-      setTargetsError("");
-    } catch (error) {
-      setTargets([]);
-      setTargetsError(errMsg(error));
-    }
-  };
-
-  useEffect(() => {
-    void loadTargets();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: reload when the tenant changes; loadTargets is a per-render closure.
-  }, [session?.tenantId, session?.token]);
-
-  const addTarget = async () => {
-    const port = Number(targetPort);
-    if (!targetHost.trim() || !Number.isInteger(port)) return;
-    setAddingTarget(true);
-    try {
-      await addDiscoveryTarget(session, targetHost.trim(), port);
-      setTargetHost("");
-      await loadTargets();
-    } catch (error) {
-      onToast?.(`Add target failed: ${errMsg(error)}`);
-    } finally {
-      setAddingTarget(false);
-    }
-  };
-
-  const removeTarget = async (t: DiscoveryTarget) => {
-    try {
-      await removeDiscoveryTarget(session, t.id);
-      await loadTargets();
-    } catch (error) {
-      onToast?.(`Remove target failed: ${errMsg(error)}`);
-    }
+    setSources(src.status === "fulfilled" ? src.value : []);
+    setSourcesError(src.status === "rejected" ? errMsg(src.reason) : "");
+    setTargets(tg.status === "fulfilled" ? tg.value : []);
+    setTargetsError(tg.status === "rejected" ? errMsg(tg.reason) : "");
+    setLoading(false);
   };
 
   useEffect(() => {
     void load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: reload when the tenant or a server-side filter changes; load is a per-render closure.
-  }, [session?.tenantId, session?.token, source, classification]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: reload when the tenant changes; load is a per-render closure.
+  }, [session?.tenantId, session?.token]);
 
-  const runScan = async () => {
-    if (!types.length) return;
-    setScanning(true);
+  // Poll a running scan until it settles, then reload everything.
+  useEffect(() => {
+    if (!running?.id) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        const sc = await getDiscoveryScan(session, running.id);
+        if (stopped) return;
+        if (sc.status === "running") {
+          setRunning(sc);
+          timer = setTimeout(tick, 2000);
+          return;
+        }
+        setRunning(null);
+        const errs = Object.keys(((sc.stats as any)?.errors as Record<string, string>) || {});
+        const found = Number((sc.stats as any)?.assets_discovered ?? 0);
+        onToast?.(`Scan ${sc.status.replace(/_/g, " ")}: ${found} assets${errs.length ? ` · ${errs.map((e) => sourceMeta(e).label).join(", ")} had errors` : ""}`);
+        void load();
+      } catch (e) {
+        if (!stopped) {
+          setRunning(null);
+          onToast?.(`Scan status unavailable: ${errMsg(e)}`);
+        }
+      }
+    };
+    timer = setTimeout(tick, 1500);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: one poll loop per scan ID.
+  }, [running?.id]);
+
+  const configured = sources.filter((s) => SCANNABLE.includes(s.id) && s.configured).map((s) => s.id);
+  const scanAllTypes = sources.length ? configured : [...SCANNABLE];
+
+  const runScan = async (types: string[]) => {
+    if (!types.length || running) return;
     try {
       const scan = await startDiscoveryScan(session, types);
-      const errs = (scan?.stats as any)?.errors;
-      onToast?.(errs ? `Scan ${scan.status}: ${Object.keys(errs).join(", ")} not scanned` : `Scan ${scan.status || "started"}`);
-      setView("Scans");
-      await load();
-    } catch (error) {
-      onToast?.(`Discovery scan failed: ${errMsg(error)}`);
-    } finally {
-      setScanning(false);
+      setRunning(scan);
+      setScans((prev) => [scan, ...prev]);
+    } catch (e) {
+      onToast?.(`Scan not started: ${errMsg(e)}`);
+      void load();
     }
   };
 
-  const review = async (asset: CryptoAsset, status: string) => {
-    try {
-      const next = await reviewAsset(session, asset.id, status);
-      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, ...next } : a)));
-    } catch (error) {
-      onToast?.(`Review failed: ${errMsg(error)}`);
+  const upload = async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    let total = 0;
+    let exposed = 0;
+    const failed: string[] = [];
+    for (const f of files) {
+      if (f.size > DISCOVERY_UPLOAD_MAX_BYTES) {
+        failed.push(`${f.name} (over 2 MiB)`);
+        continue;
+      }
+      try {
+        const res = await uploadDiscoveryFile(session, f);
+        total += res.assets.length;
+        exposed += res.assets.filter((x) => x.classification === "exposed").length;
+      } catch (e) {
+        failed.push(`${f.name} (${errMsg(e)})`);
+      }
     }
+    setUploading(false);
+    const found = total ? `${total} assets found${exposed ? `, ${exposed} exposed secrets` : ""}` : "No keys, certificates or secrets found";
+    onToast?.(failed.length ? `${found}. Not scanned: ${failed.join("; ")}` : found);
+    if (total) setFilters({ ...NO_FILTERS, source: "upload" });
+    void load();
   };
 
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return assets;
-    return assets.filter((a) => [a.name, a.location, a.algorithm, a.asset_type, a.source].join(" ").toLowerCase().includes(q));
-  }, [assets, search]);
+  const pickUpload = () => fileRef.current?.click();
 
-  const counts = summary?.classification_counts || {};
-  const sources = Object.keys(summary?.source_distribution || {}).sort();
+  const total = summary?.total_assets ?? 0;
+  const network = sources.find((s) => s.id === "network");
+  const detailStale = useMemo(() => (detail ? isStale(detail, sources) : false), [detail, sources]);
+  const pickDrill = (d: AssetDrill) => setDrill((cur) => (cur?.key === d.key ? null : d));
+  // The drill-down pages the service with the filter the summary counted with.
+  const fetchDrill = useCallback(
+    (q: AssetQuery, offset: number, limit: number) => listDiscoveryAssets(session, q, offset, limit).then((r) => r.items),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: a new fetcher per tenant session, not per render.
+    [session?.tenantId, session?.token]);
+  const drilled = usePagedDrill<CryptoAsset, AssetQuery>(drill, fetchDrill);
+  const tile = (d: AssetDrill, node: ReactNode) => (
+    <div onClick={() => pickDrill(d)} title={`List ${d.label.toLowerCase()} assets`}
+      style={{ ...clickable, display: "flex", borderRadius: "var(--radius-md)", outline: drill?.key === d.key ? `2px solid ${C.accentFg}` : "none" }}>{node}</div>
+  );
 
   return (
     <div>
       <Section
-        title="Crypto Discovery"
-        actions={<Btn onClick={() => void load()}>{loading ? "Refreshing..." : "Refresh"}</Btn>}
+        title={<><Radar size={16} color={C.accentFg} />Crypto Discovery</>}
+        actions={<>
+          <Btn small onClick={() => void load()} disabled={loading}><RefreshCw size={12} />{loading ? "Refreshing" : "Refresh"}</Btn>
+          <Btn small primary onClick={() => void runScan(scanAllTypes)} disabled={!!running || !scanAllTypes.length}
+            title={scanAllTypes.length ? `Scan ${scanAllTypes.map((t) => sourceMeta(t).label).join(", ")}` : "Set up a source first"}>
+            <Play size={12} />Scan all
+          </Btn>
+        </>}
       />
 
+      {running && <RunningBanner scan={running} />}
+
       {loadError ? (
-        <Card style={{ marginBottom: 14, borderColor: C.red }}>
-          <div style={{ fontSize: 12, color: C.red }}>Discovery unavailable: {loadError}</div>
-        </Card>
+        <div style={{ marginBottom: 14, padding: "10px 14px", border: `1px solid ${C.redFg}`, borderRadius: "var(--radius-md)", fontSize: 12, color: C.redFg }}>Discovery unavailable: {loadError}</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
-          <Stat l="Assets" v={summary ? String(summary.total_assets) : "-"} s={`${sources.length} sources`} c="accent" />
-          <Stat l="Post-quantum" v={summary ? String(summary.pqc_ready_count) : "-"} s={summary ? `${summary.pqc_readiness_percent}% of assets` : ""} c="green" />
-          <Stat l="Weak or exposed" v={summary ? String((counts.weak || 0) + (counts.exposed || 0)) : "-"} s="weak algorithm, or a secret in code" c="red" />
-          <Stat l="Quantum-vulnerable" v={summary ? String(counts.quantum_vulnerable || 0) : "-"} s="sound today; broken by a quantum computer" c="amber" />
-          <Stat l="Not assessed" v={summary ? String(counts.unknown || 0) : "-"} s="algorithm not in the catalogue" c="amber" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 14 }}>
+          <Stat l="Assets" v={summary ? total.toLocaleString() : "-"} s={summary ? `${Object.keys(summary.source_distribution || {}).length} sources` : ""} c="accent" i={KeyRound} />
+          {summary && tile(pqcDrill(summary), <Stat l="Post-quantum" v={`${pct(summary.pqc_ready_count, total)}%`} s={`${summary.pqc_ready_count} of ${total}`} c="green" i={Atom} />)}
+          {summary && tile(riskyDrill(summary), <Stat l="Weak or exposed" v={String(riskyDrill(summary).count)} s={`${pct(riskyDrill(summary).count || 0, total)}% of assets`} c="red" i={ShieldAlert} />)}
+          {summary && tile(classDrill(summary, "quantum_vulnerable"), <Stat l="Quantum-vulnerable" v={String(classDrill(summary, "quantum_vulnerable").count)} s={`${pct(classDrill(summary, "quantum_vulnerable").count || 0, total)}% of assets`} c="amber" i={ShieldCheck} />)}
+          {summary && tile(expiringDrill(summary), <Stat l="Expiring or expired" v={String(summary.expiring_30d || 0)} s="certificates, next 30 days" c="orange" i={Clock3} />)}
         </div>
       )}
 
-      <Card style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 10 }}>Run a scan</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 10 }}>
-          {DISCOVERY_SCAN_TYPES.map((t) => (
-            <div key={t} title={SOURCE_HINT[t]}>
-              <Chk
-                label={`${t} — ${SOURCE_HINT[t]}`}
-                checked={types.includes(t)}
-                onChange={() => setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))}
-              />
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, margin: "4px 0 8px" }}>Sources</div>
+      {sourcesError ? (
+        <div style={{ fontSize: 11.5, color: C.redFg, marginBottom: 14 }}>Sources unavailable: {sourcesError}</div>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <SourceCards sources={sources} assetCounts={summary?.source_distribution || {}} running={!!running} uploading={uploading}
+            onScan={(t) => void runScan(t)} onTargets={() => setTargetsOpen(true)} onCodeSetup={() => setCodeOpen(true)}
+            onPickFiles={pickUpload} onUpload={(f) => void upload(f)} onNavigate={onNavigate} />
+        </div>
+      )}
+
+      {summary && total > 0 && (
+        <>
+          <DrillHint />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 10 }}>
+            <ChartCard title="By class" sub={`${total.toLocaleString()} assets`}>
+              <ClassBars summary={summary} active={drill?.key || ""} onDrill={pickDrill} />
+            </ChartCard>
+            <ChartCard title="Top algorithms">
+              <AlgorithmBars summary={summary} active={drill?.key || ""} onDrill={pickDrill} />
+            </ChartCard>
+            <ChartCard title="By source">
+              <SourceStack summary={summary} active={drill?.key || ""} onDrill={pickDrill} />
+            </ChartCard>
+          </div>
+        </>
+      )}
+      {drill && (
+        <DrillPanel label={drill.label} count={drill.count} onClear={() => setDrill(null)}
+          loaded={drilled.rows.length} loading={drilled.loading} error={drilled.error} onMore={drilled.done ? undefined : drilled.loadMore}>
+          {drilled.rows.map((a) => (
+            <div key={a.id} onClick={() => setDetail(a)}
+              style={{ ...clickable, display: "grid", gridTemplateColumns: "2.4fr 1.2fr 1.2fr 1fr 70px", gap: 10, alignItems: "center", padding: "7px 4px", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = C.cardHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              <span style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name || "-"}</div>
+                <div style={{ fontSize: 10, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{typeLabel(a.asset_type)} · <span style={{ fontFamily: MONO }}>{a.location}</span></div>
+              </span>
+              <span style={{ fontFamily: MONO, color: C.text }}>{a.algorithm || "-"}</span>
+              <ClassPill cls={a.classification} />
+              <span style={{ color: C.dim }}>{sourceMeta(a.source).label}</span>
+              <span style={{ color: C.muted, textAlign: "right" }}>{relTime(a.last_seen)}</span>
             </div>
           ))}
-        </div>
-        {types.includes("network") && (
-          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.text, marginBottom: 4 }}>TLS targets</div>
-            <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
-              The network scan completes a TLS handshake with each host and port and records the key exchange, protocol, cipher and certificate key. Private addresses are allowed. Loopback, link-local and metadata addresses and the KMS's own internal services are refused; their certificates are in the PKI tab. Endpoints in DISCOVERY_TLS_ENDPOINTS are scanned too.
-            </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <Inp mono placeholder="host or IP, e.g. api.example.com" value={targetHost} onChange={(e) => setTargetHost(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void addTarget(); }} />
-              <Inp mono w={90} placeholder="port" inputMode="numeric" value={targetPort} onChange={(e) => setTargetPort(e.target.value.replace(/[^0-9]/g, ""))} />
-              <Btn onClick={() => void addTarget()} disabled={addingTarget || !targetHost.trim() || !targetPort}>{addingTarget ? "Adding..." : "Add"}</Btn>
-            </div>
-            {targetsError ? (
-              <div style={{ fontSize: 11, color: C.red }}>Targets unavailable: {targetsError}</div>
-            ) : targets.length ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {targets.map((t) => (
-                  <span key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: C.text }}>
-                    {t.host.includes(":") ? `[${t.host}]` : t.host}:{t.port}
-                    <button type="button" aria-label={`Remove ${t.host}:${t.port}`} onClick={() => void removeTarget(t)}
-                      style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 12, padding: 0 }}>×</button>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: C.muted }}>No targets yet.</div>
-            )}
-          </div>
+        </DrillPanel>
+      )}
+      <div style={{ height: 16 }} />
+
+      {!loadError && <>
+        <Tabs tabs={["Inventory", "Scans"]} active={view} onChange={setView} />
+        {view === "Inventory" ? (
+          <Inventory session={session} sources={sources} filters={filters} setFilters={setFilters} onOpen={setDetail} reloadKey={reloadKey} />
+        ) : (
+          <ScansView scans={scans} />
         )}
-        <Btn primary onClick={() => void runScan()} disabled={scanning || !types.length}>{scanning ? "Scanning..." : "Start scan"}</Btn>
-      </Card>
+      </>}
 
-      <Tabs tabs={["Inventory", "Scans"]} active={view} onChange={setView} />
-
-      {view === "Inventory" && (
-        <Card>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <Inp placeholder="Search name, location, algorithm" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Sel value={source} onChange={(e) => setSource(e.target.value)}>
-              <option value="">All sources</option>
-              {sources.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Sel>
-            <Sel value={classification} onChange={(e) => setClassification(e.target.value)}>
-              <option value="">All classifications</option>
-              {Object.entries(CLASS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </Sel>
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>{["Name", "Type", "Source", "Location", "Algorithm", "Strength", "Classification", "Last seen", "Review"].map((h) => <th key={h} style={HEAD}>{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {visible.map((a) => (
-                  <tr key={a.id}>
-                    <td style={CELL}>{a.name}</td>
-                    <td style={CELL}>{a.asset_type}</td>
-                    <td style={CELL}>{a.source}</td>
-                    <td style={{ ...CELL, fontFamily: "'JetBrains Mono',monospace", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis" }}>{a.location || "-"}</td>
-                    <td style={CELL}>{a.algorithm}{a.pqc_ready ? <> <B c="green">PQC</B></> : null}</td>
-                    <td style={CELL}>{a.strength_bits > 0 ? `${a.strength_bits}-bit` : "not assessed"}</td>
-                    <td style={CELL}><B c={classTone(a.classification)}>{CLASS_LABEL[a.classification] ?? a.classification}</B></td>
-                    <td style={CELL}>{fmtTS(a.last_seen)}</td>
-                    <td style={CELL}>
-                      <Sel w={130} value={REVIEW_STATUSES.includes(a.status) ? a.status : "active"} onChange={(e) => void review(a, e.target.value)}>
-                        {REVIEW_STATUSES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
-                      </Sel>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!visible.length && !loadError && (
-              <div style={{ textAlign: "center", padding: "24px 0", color: C.muted, fontSize: 11 }}>No assets discovered yet. Run a scan above.</div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {view === "Scans" && (
-        <Card>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>{["Started", "Sources", "Status", "Assets", "Not scanned", "Trigger"].map((h) => <th key={h} style={HEAD}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {scans.map((s) => {
-                const stats: any = s.stats || {};
-                const errs: Record<string, string> = stats.errors || {};
-                return (
-                  <tr key={s.id}>
-                    <td style={CELL}>{fmtTS(s.started_at)}</td>
-                    <td style={CELL}>{s.scan_type}</td>
-                    <td style={CELL}><B c={s.status === "completed" ? "green" : s.status === "failed" ? "red" : "amber"}>{s.status}</B></td>
-                    <td style={CELL}>{String(stats.assets_discovered ?? "-")}</td>
-                    <td style={{ ...CELL, color: C.muted }}>{Object.entries(errs).map(([k, v]) => `${k}: ${v}`).join("; ") || "-"}</td>
-                    <td style={CELL}>{s.trigger}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {!scans.length && !loadError && (
-            <div style={{ textAlign: "center", padding: "24px 0", color: C.muted, fontSize: 11 }}>No scans yet.</div>
-          )}
-        </Card>
-      )}
+      <AssetDetail asset={detail} stale={detailStale} session={session} onClose={() => setDetail(null)} onToast={onToast}
+        onChanged={(next) => {
+          if (next) {
+            setDetail({ ...(detail as CryptoAsset), ...next });
+            setReloadKey((k) => k + 1);
+          } else {
+            // Removed: the counts changed, so the open drill-down is stale.
+            setDetail(null);
+            setDrill(null);
+            void load();
+          }
+        }} />
+      <TargetsModal open={targetsOpen} onClose={() => setTargetsOpen(false)} session={session} targets={targets} error={targetsError}
+        operatorEndpoints={Number(network?.detail?.operator_endpoints || 0)} onChanged={() => void load()} onToast={onToast} />
+      <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void upload(Array.from(e.target.files || [])); e.target.value = ""; }} />
+      <CodeSetupModal open={codeOpen} onClose={() => setCodeOpen(false)} configured={!!sources.find((s) => s.id === "code")?.configured} onUpload={pickUpload} />
     </div>
   );
 };

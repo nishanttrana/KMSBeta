@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -132,6 +134,7 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL,
 			host TEXT NOT NULL,
 			port INTEGER NOT NULL,
+			protocol TEXT NOT NULL DEFAULT 'tls',
 			created_by TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id),
@@ -146,16 +149,38 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 	return nil
 }
 
+// finishScan waits for background scans and returns the scan as stored.
+func finishScan(t *testing.T, svc *Service, scan DiscoveryScan) DiscoveryScan {
+	t.Helper()
+	svc.scans.Wait()
+	got, err := svc.GetScan(context.Background(), scan.TenantID, scan.ID)
+	if err != nil {
+		t.Fatalf("read scan %s: %v", scan.ID, err)
+	}
+	return got
+}
+
 // testCloud stands in for the cloud service's accounts and inventory API.
-type testCloud struct{ err error }
+// A non-nil block holds the inventory call until it is closed.
+type testCloud struct {
+	err   error
+	block chan struct{}
+}
 
 func (c *testCloud) ListAccounts(context.Context, string) ([]map[string]interface{}, error) {
 	return []map[string]interface{}{{"id": "acct-1", "provider": "aws"}}, nil
 }
 
 func (c *testCloud) Inventory(context.Context, string, string) ([]map[string]interface{}, error) {
+	if c.block != nil {
+		<-c.block
+	}
 	if c.err != nil {
 		return nil, c.err
 	}
 	return []map[string]interface{}{{"cloud_key_id": "k-1", "region": "us-east-1", "state": "enabled", "algorithm": "SYMMETRIC_DEFAULT"}}, nil
 }
+
+func netipMustPrefix(s string) netip.Prefix { return netip.MustParsePrefix(s) }
+
+func itoa(i int) string { return strconv.Itoa(i) }

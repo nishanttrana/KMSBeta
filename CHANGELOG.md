@@ -4,6 +4,62 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.18.0-beta] — 2026-10-01
+
+### Crypto Discovery: sources you can set up, charts that drill down, SSH, ranges and uploads
+- **Added (sources):** the page shows each source as a card with what it has
+  to read, its last scan and the action that sets it up: **Targets** for the
+  network scan, **Connect** (Cloud Keys) for cloud accounts, **Open PKI** for
+  certificates, **Set up** for source code (the mount it needs), and
+  **Upload**. `GET /discovery/sources` backs it.
+- **Added (uploads):** drop or pick a file (PEM bundle, DER certificate,
+  `authorized_keys` or `known_hosts`, key file, keystore; up to 2 MiB) and it
+  is inventoried: certificates, public keys and SSH keys by the key they
+  hold, and private keys, keystores and access keys as exposed secrets,
+  recorded by location and fingerprint. The file is parsed in memory and
+  never stored (`POST /discovery/upload`). The code scan reads the same
+  formats now.
+- **Added (network):** a target can be an **SSH** endpoint and its host an
+  **address range** of up to 256 addresses (`10.0.4.0/24`), up to 4096
+  addresses a tenant. The SSH scan records the key exchange, cipher and MAC
+  algorithms the server offers (weak ones flagged) and each host key with its
+  real size and fingerprint. Endpoints are probed 32 at a time.
+- **Added (charts):** assets by class, top algorithms and assets by source,
+  each split by class. Every bar, segment and headline tile lists the assets
+  it counts, and each entry opens its detail: what the scan recorded
+  (protocol, cipher suite, issuer, expiry, chain trust, fingerprint, offered
+  SSH algorithms), a review with notes, and **Remove from inventory**
+  (`DELETE /discovery/assets/{id}`).
+- **Changed:** a scan runs in the background. `POST /discovery/scan` returns
+  the running scan at once and `GET /discovery/scans/{id}` reports each
+  source as it finishes; the page shows the progress. A second scan for the
+  tenant while one runs is refused (`409 scan_running`). Before, the request
+  waited for every source and timed out on a slow cloud account.
+- **Changed:** the summary counts the whole inventory and
+  `GET /discovery/assets` filters and pages on the server with an exact
+  `total` (new filters: `q`, `algorithm`, `pqc_ready`, `expiring_days`,
+  `not_seen`, several classes). Both read the newest 10000 assets before.
+  The inventory can list the assets a source's last scan did not observe.
+- **Fixed:** a rescan no longer erases an asset's review. The review is kept
+  in `metadata.review_status` / `review_notes` (with who and when); `status`
+  is what the scan observed, so "reviewed" no longer reaches the CBOM as a
+  key status. Reviews stored before still read.
+- **Fixed:** a certificate without a CommonName is named by its first DNS
+  name, not left blank; certificates in one PEM chain get their own line
+  numbers; an OpenSSH private key is named by its public half.
+- **Audit and playbooks:** new `audit.discovery.sources_read`,
+  `upload_scan`, `asset_remove`; refusals `scan_running`, `invalid_upload`,
+  `upload_too_large`. A newly found private key, keystore or cloud access
+  key raises `audit.discovery.secret_exposed` once (high severity), and
+  playbooks can trigger on it (**Exposed secret discovered**).
+- **Hardened:** a malformed reply from a scanned server or a malformed
+  upload is that endpoint's or file's error and cannot stop the service;
+  what an SSH server can make the scan store is bounded.
+- **UI:** class colours are separable in light and dark themes, including
+  for colour-blind readers (weak and quantum-vulnerable were near-identical
+  before). The page explains itself with labels and tooltips instead of
+  paragraphs.
+
 ## [7.17.0-beta] — 2026-09-30
 
 ### Analytics windows: since uptime, last day, week, month, 6 months, year

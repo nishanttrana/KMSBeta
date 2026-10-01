@@ -67,3 +67,11 @@ func TestAuditEventCatalogClassification(t *testing.T) {
 		t.Fatalf("unexpected severity for workload.issuance_history_viewed: %s", sev)
 	}
 }
+
+// A secret discovery found in code or an upload is a high-severity event
+// although its result is "success" (the finding succeeded).
+func TestSecretExposedIsHighSeverity(t *testing.T) {
+	if sev := classifySeverity("audit.discovery.secret_exposed", "success"); sev != "HIGH" {
+		t.Fatalf("secret_exposed severity = %s", sev)
+	}
+}

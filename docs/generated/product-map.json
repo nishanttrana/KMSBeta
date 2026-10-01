@@ -5240,7 +5240,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.startScan",
-      "line": 29,
+      "line": 33,
       "match_key": "discovery|POST|/discovery/scan",
       "method": "POST",
       "normalized_path": "/discovery/scan",
@@ -5255,7 +5255,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.listScans",
-      "line": 30,
+      "line": 34,
       "match_key": "discovery|GET|/discovery/scans",
       "method": "GET",
       "normalized_path": "/discovery/scans",
@@ -5270,7 +5270,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.getScan",
-      "line": 31,
+      "line": 35,
       "match_key": "discovery|GET|/discovery/scans/{param}",
       "method": "GET",
       "normalized_path": "/discovery/scans/{param}",
@@ -5285,7 +5285,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.listAssets",
-      "line": 32,
+      "line": 36,
       "match_key": "discovery|GET|/discovery/assets",
       "method": "GET",
       "normalized_path": "/discovery/assets",
@@ -5300,7 +5300,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.listAssets",
-      "line": 34,
+      "line": 38,
       "match_key": "discovery|GET|/discovery/crypto/assets",
       "method": "GET",
       "normalized_path": "/discovery/crypto/assets",
@@ -5315,7 +5315,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.getAsset",
-      "line": 35,
+      "line": 39,
       "match_key": "discovery|GET|/discovery/assets/{param}",
       "method": "GET",
       "normalized_path": "/discovery/assets/{param}",
@@ -5330,7 +5330,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.reviewAsset",
-      "line": 36,
+      "line": 40,
       "match_key": "discovery|PUT|/discovery/assets/{param}/classify",
       "method": "PUT",
       "normalized_path": "/discovery/assets/{param}/classify",
@@ -5345,7 +5345,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.summary",
-      "line": 37,
+      "line": 41,
       "match_key": "discovery|GET|/discovery/summary",
       "method": "GET",
       "normalized_path": "/discovery/summary",
@@ -5360,7 +5360,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.listTargets",
-      "line": 39,
+      "line": 43,
       "match_key": "discovery|GET|/discovery/targets",
       "method": "GET",
       "normalized_path": "/discovery/targets",
@@ -5375,7 +5375,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.addTarget",
-      "line": 40,
+      "line": 44,
       "match_key": "discovery|POST|/discovery/targets",
       "method": "POST",
       "normalized_path": "/discovery/targets",
@@ -5390,7 +5390,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.removeTarget",
-      "line": 41,
+      "line": 45,
       "match_key": "discovery|DELETE|/discovery/targets/{param}",
       "method": "DELETE",
       "normalized_path": "/discovery/targets/{param}",
@@ -5398,6 +5398,51 @@
       "permission": "discovery.write",
       "registration": "kernel",
       "resource": "discovery_target",
+      "service": "discovery"
+    },
+    {
+      "action": "sources_read",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.sources",
+      "line": 47,
+      "match_key": "discovery|GET|/discovery/sources",
+      "method": "GET",
+      "normalized_path": "/discovery/sources",
+      "path": "/discovery/sources",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
+      "service": "discovery"
+    },
+    {
+      "action": "upload_scan",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.upload",
+      "line": 48,
+      "match_key": "discovery|POST|/discovery/upload",
+      "method": "POST",
+      "normalized_path": "/discovery/upload",
+      "path": "/discovery/upload",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "discovery_scan",
+      "service": "discovery"
+    },
+    {
+      "action": "asset_remove",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.removeAsset",
+      "line": 49,
+      "match_key": "discovery|DELETE|/discovery/assets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/assets/{param}",
+      "path": "/discovery/assets/{id}",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "crypto_asset",
       "service": "discovery"
     },
     {
@@ -14767,7 +14812,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.listAssets",
-      "line": 34,
+      "line": 38,
       "match_key": "discovery|GET|/discovery/crypto/assets",
       "method": "GET",
       "normalized_path": "/discovery/crypto/assets",
@@ -14782,7 +14827,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.getAsset",
-      "line": 35,
+      "line": 39,
       "match_key": "discovery|GET|/discovery/assets/{param}",
       "method": "GET",
       "normalized_path": "/discovery/assets/{param}",
@@ -20143,8 +20188,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
-      "label": "void load()}>",
-      "line": 176,
+      "label": "void load()} disabled= >",
+      "line": 187,
       "tabs": [
         "discovery"
       ],
@@ -20153,28 +20198,8 @@
     {
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
-      "label": "void addTarget()} disabled= >",
-      "line": 216,
-      "tabs": [
-        "discovery"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
-      "handler": "",
-      "label": "void removeTarget(t)} style={ }>\u00d7",
-      "line": 225,
-      "tabs": [
-        "discovery"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
-      "handler": "",
-      "label": "void runScan()} disabled= >",
-      "line": 235,
+      "label": "void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `...",
+      "line": 188,
       "tabs": [
         "discovery"
       ],
@@ -23627,6 +23652,110 @@
       "line": 73,
       "tabs": [],
       "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
+      "handler": "",
+      "label": "setStatus(s)} style={ }>",
+      "line": 151,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
+      "handler": "",
+      "label": "void save()} disabled= >Save",
+      "line": 159,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
+      "handler": "",
+      "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
+      "line": 166,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Charts.tsx",
+      "handler": "onClick} title={title",
+      "label": "(icon or dynamic label)",
+      "line": 39,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx",
+      "handler": "",
+      "label": "set( )} title=\"Assets the last scan of their source didn't observe\" style={{...",
+      "line": 88,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx",
+      "handler": "",
+      "label": "setFilters(NO_FILTERS)} style={ }>Clear filters",
+      "line": 96,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx",
+      "handler": "onClick",
+      "label": "(icon or dynamic label)",
+      "line": 154,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "a.run} disabled={isUpload && uploading",
+      "label": "(icon or dynamic label)",
+      "line": 87,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "",
+      "label": "onScan([s.id])} disabled= title={s.configured ? `Scan $ ` : \"Set this source...",
+      "line": 89,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "",
+      "label": "pick(p)} style={ }>",
+      "line": 152,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "",
+      "label": "void add()} disabled= >",
+      "line": 162,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "",
+      "label": "void remove(t)} style={ }>",
+      "line": 176,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
+      "handler": "",
+      "label": "}>Upload files instead",
+      "line": 207,
+      "tabs": [],
+      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/modules/admin/ExposurePanel.tsx",
@@ -27564,7 +27693,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 68,
+      "line": 69,
       "match_key": "discovery|POST|/discovery/scan",
       "method": "POST",
       "normalized_path": "/discovery/scan",
@@ -27577,7 +27706,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 88,
+      "line": 89,
       "match_key": "discovery|GET|/discovery/scans",
       "method": "GET",
       "normalized_path": "/discovery/scans",
@@ -27590,7 +27719,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 100,
+      "line": 101,
       "match_key": "discovery|GET|/discovery/scans/{param}",
       "method": "GET",
       "normalized_path": "/discovery/scans/{param}",
@@ -27603,7 +27732,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 123,
+      "line": 141,
       "match_key": "discovery|GET|/discovery/assets",
       "method": "GET",
       "normalized_path": "/discovery/assets",
@@ -27614,22 +27743,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
-      "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 139,
-      "match_key": "discovery|PUT|/discovery/assets/{param}/classify",
-      "method": "PUT",
-      "normalized_path": "/discovery/assets/{param}/classify",
-      "path": "/discovery/assets/{param}/classify?{param}",
-      "service": "discovery",
-      "service_key": "discovery",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 154,
+      "line": 164,
       "match_key": "discovery|GET|/discovery/summary",
       "method": "GET",
       "normalized_path": "/discovery/summary",
@@ -27640,9 +27756,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 183,
+      "match_key": "discovery|PUT|/discovery/assets/{param}/classify",
+      "method": "PUT",
+      "normalized_path": "/discovery/assets/{param}/classify",
+      "path": "/discovery/assets/{param}/classify?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 166,
+      "line": 196,
       "match_key": "discovery|GET|/discovery/targets",
       "method": "GET",
       "normalized_path": "/discovery/targets",
@@ -27655,7 +27784,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 179,
+      "line": 210,
       "match_key": "discovery|POST|/discovery/targets",
       "method": "POST",
       "normalized_path": "/discovery/targets",
@@ -27668,11 +27797,50 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/targets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 189,
+      "line": 220,
       "match_key": "discovery|DELETE|/discovery/targets/{param}",
       "method": "DELETE",
       "normalized_path": "/discovery/targets/{param}",
       "path": "/discovery/targets/{param}?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/sources?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 229,
+      "match_key": "discovery|GET|/discovery/sources",
+      "method": "GET",
+      "normalized_path": "/discovery/sources",
+      "path": "/discovery/sources?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/upload?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 256,
+      "match_key": "discovery|POST|/discovery/upload",
+      "method": "POST",
+      "normalized_path": "/discovery/upload",
+      "path": "/discovery/upload?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 266,
+      "match_key": "discovery|DELETE|/discovery/assets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/assets/{param}",
+      "path": "/discovery/assets/{param}?{param}",
       "service": "discovery",
       "service_key": "discovery",
       "source": "serviceRequest"
@@ -31396,7 +31564,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T04:45:55Z",
+  "generated_at": "2026-10-01T05:18:48Z",
   "navigation": [
     {
       "group": "Overview",
@@ -53635,19 +53803,22 @@
         {
           "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 68,
+          "line": 69,
           "source": "serviceRequest"
         }
       ],
       "handler": "h.startScan",
-      "handler_external_package_calls": [],
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
         "StartScan",
+        "Error",
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 48,
+      "handler_line": 56,
       "handler_name": "startScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -53658,9 +53829,11 @@
       "normalized_path": "/discovery/scan",
       "path": "/discovery/scan",
       "route_file": "services/discovery/handler.go",
-      "route_line": 29,
+      "route_line": 33,
       "service": "discovery",
       "service_external_package_calls": [
+        "context.WithTimeout",
+        "context.WithoutCancel",
         "strings.TrimSpace",
         "strings.Join"
       ],
@@ -53670,20 +53843,16 @@
         "newID",
         "defaultString",
         "CreateScan",
+        "release",
         "publishAudit",
-        "scanNetwork",
-        "scanCloud",
-        "scanCertificates",
-        "scanCode",
-        "Error",
-        "UpsertAsset",
-        "UpdateScan",
-        "GetScan"
+        "runScan"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
           "external_package_calls": [
+            "context.WithTimeout",
+            "context.WithoutCancel",
             "strings.TrimSpace",
             "strings.Join"
           ],
@@ -53694,34 +53863,32 @@
             "newID",
             "defaultString",
             "CreateScan",
+            "release",
             "publishAudit",
-            "scanNetwork",
-            "scanCloud",
-            "scanCertificates",
-            "scanCode",
-            "Error",
-            "UpsertAsset",
-            "UpdateScan",
-            "GetScan"
+            "runScan"
           ],
           "internal_package_calls": [],
-          "line": 43,
+          "line": 68,
           "name": "StartScan",
-          "receiver_calls": [],
+          "receiver_calls": [
+            "s.mu.Lock",
+            "s.mu.Unlock",
+            "s.scans.Add",
+            "s.scans.Done"
+          ],
           "store_calls": [
-            "CreateScan",
-            "UpsertAsset",
-            "UpdateScan",
-            "GetScan"
+            "CreateScan"
           ]
         }
       ],
-      "service_receiver_calls": [],
+      "service_receiver_calls": [
+        "s.mu.Lock",
+        "s.mu.Unlock",
+        "s.scans.Add",
+        "s.scans.Done"
+      ],
       "service_store_calls": [
-        "CreateScan",
-        "UpsertAsset",
-        "UpdateScan",
-        "GetScan"
+        "CreateScan"
       ]
     },
     {
@@ -53729,7 +53896,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 88,
+          "line": 89,
           "source": "serviceRequest"
         }
       ],
@@ -53742,7 +53909,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 65,
+      "handler_line": 78,
       "handler_name": "listScans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -53753,13 +53920,14 @@
       "normalized_path": "/discovery/scans",
       "path": "/discovery/scans",
       "route_file": "services/discovery/handler.go",
-      "route_line": 30,
+      "route_line": 34,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
-        "newServiceError"
+        "newServiceError",
+        "settle"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -53769,10 +53937,11 @@
           ],
           "file": "services/discovery/service.go",
           "helper_calls": [
-            "newServiceError"
+            "newServiceError",
+            "settle"
           ],
           "internal_package_calls": [],
-          "line": 141,
+          "line": 334,
           "name": "ListScans",
           "receiver_calls": [],
           "store_calls": [
@@ -53790,7 +53959,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 100,
+          "line": 101,
           "source": "serviceRequest"
         }
       ],
@@ -53802,7 +53971,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 74,
+      "handler_line": 87,
       "handler_name": "getScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -53813,13 +53982,14 @@
       "normalized_path": "/discovery/scans/{param}",
       "path": "/discovery/scans/{id}",
       "route_file": "services/discovery/handler.go",
-      "route_line": 31,
+      "route_line": 35,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
-        "newServiceError"
+        "newServiceError",
+        "settle"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -53829,10 +53999,11 @@
           ],
           "file": "services/discovery/service.go",
           "helper_calls": [
-            "newServiceError"
+            "newServiceError",
+            "settle"
           ],
           "internal_package_calls": [],
-          "line": 149,
+          "line": 346,
           "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
@@ -53850,43 +54021,43 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 123,
+          "line": 141,
           "source": "serviceRequest"
         }
       ],
       "handler": "h.listAssets",
       "handler_external_package_calls": [
         "strings.ToLower",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "strings.Split"
       ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "ListAssets",
         "atoi",
+        "FindAssets",
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 83,
+      "handler_line": 99,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
-        "ListAssets"
+        "FindAssets"
       ],
       "handler_store_calls": [],
       "method": "GET",
       "normalized_path": "/discovery/assets",
       "path": "/discovery/assets",
       "route_file": "services/discovery/handler.go",
-      "route_line": 32,
+      "route_line": 36,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "newServiceError",
-        "isPlatformAsset",
-        "assetClass",
-        "max"
+        "max",
+        "walkAssets"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -53897,59 +54068,54 @@
           "file": "services/discovery/service.go",
           "helper_calls": [
             "newServiceError",
-            "isPlatformAsset",
-            "assetClass",
-            "max"
+            "max",
+            "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 158,
-          "name": "ListAssets",
+          "line": 370,
+          "name": "FindAssets",
           "receiver_calls": [],
-          "store_calls": [
-            "ListAssets"
-          ]
+          "store_calls": []
         }
       ],
       "service_receiver_calls": [],
-      "service_store_calls": [
-        "ListAssets"
-      ]
+      "service_store_calls": []
     },
     {
       "frontend_call_sites": [],
       "handler": "h.listAssets",
       "handler_external_package_calls": [
         "strings.ToLower",
-        "strings.TrimSpace"
+        "strings.TrimSpace",
+        "strings.Split"
       ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
-        "ListAssets",
         "atoi",
+        "FindAssets",
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 83,
+      "handler_line": 99,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
-        "ListAssets"
+        "FindAssets"
       ],
       "handler_store_calls": [],
       "method": "GET",
       "normalized_path": "/discovery/crypto/assets",
       "path": "/discovery/crypto/assets",
       "route_file": "services/discovery/handler.go",
-      "route_line": 34,
+      "route_line": 38,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "newServiceError",
-        "isPlatformAsset",
-        "assetClass",
-        "max"
+        "max",
+        "walkAssets"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -53960,23 +54126,18 @@
           "file": "services/discovery/service.go",
           "helper_calls": [
             "newServiceError",
-            "isPlatformAsset",
-            "assetClass",
-            "max"
+            "max",
+            "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 158,
-          "name": "ListAssets",
+          "line": 370,
+          "name": "FindAssets",
           "receiver_calls": [],
-          "store_calls": [
-            "ListAssets"
-          ]
+          "store_calls": []
         }
       ],
       "service_receiver_calls": [],
-      "service_store_calls": [
-        "ListAssets"
-      ]
+      "service_store_calls": []
     },
     {
       "frontend_call_sites": [],
@@ -53988,7 +54149,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 101,
+      "handler_line": 121,
       "handler_name": "getAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -53999,7 +54160,7 @@
       "normalized_path": "/discovery/assets/{param}",
       "path": "/discovery/assets/{id}",
       "route_file": "services/discovery/handler.go",
-      "route_line": 35,
+      "route_line": 39,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -54007,7 +54168,8 @@
       "service_helper_calls": [
         "newServiceError",
         "isPlatformAsset",
-        "assetClass"
+        "assetClass",
+        "withReview"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -54019,10 +54181,11 @@
           "helper_calls": [
             "newServiceError",
             "isPlatformAsset",
-            "assetClass"
+            "assetClass",
+            "withReview"
           ],
           "internal_package_calls": [],
-          "line": 213,
+          "line": 508,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -54040,7 +54203,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 139,
+          "line": 183,
           "source": "serviceRequest"
         }
       ],
@@ -54055,7 +54218,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 113,
+      "handler_line": 134,
       "handler_name": "reviewAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54066,7 +54229,7 @@
       "normalized_path": "/discovery/assets/{param}/classify",
       "path": "/discovery/assets/{id}/classify",
       "route_file": "services/discovery/handler.go",
-      "route_line": 36,
+      "route_line": 40,
       "service": "discovery",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -54093,7 +54256,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 232,
+          "line": 554,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -54111,7 +54274,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 154,
+          "line": 164,
           "source": "serviceRequest"
         }
       ],
@@ -54123,7 +54286,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 131,
+      "handler_line": 152,
       "handler_name": "summary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54134,26 +54297,34 @@
       "normalized_path": "/discovery/summary",
       "path": "/discovery/summary",
       "route_file": "services/discovery/handler.go",
-      "route_line": 37,
+      "route_line": 41,
       "service": "discovery",
-      "service_external_package_calls": [],
+      "service_external_package_calls": [
+        "strings.TrimSpace"
+      ],
       "service_helper_calls": [
-        "ListAssets",
+        "newServiceError",
+        "walkAssets",
+        "expiresWithin",
         "round2",
         "pct"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [],
+          "external_package_calls": [
+            "strings.TrimSpace"
+          ],
           "file": "services/discovery/service.go",
           "helper_calls": [
-            "ListAssets",
+            "newServiceError",
+            "walkAssets",
+            "expiresWithin",
             "round2",
             "pct"
           ],
           "internal_package_calls": [],
-          "line": 267,
+          "line": 592,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -54167,7 +54338,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 166,
+          "line": 196,
           "source": "serviceRequest"
         }
       ],
@@ -54179,7 +54350,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 161,
       "handler_name": "listTargets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54190,7 +54361,7 @@
       "normalized_path": "/discovery/targets",
       "path": "/discovery/targets",
       "route_file": "services/discovery/handler.go",
-      "route_line": 39,
+      "route_line": 43,
       "service": "discovery",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -54201,7 +54372,7 @@
           "file": "services/discovery/targets.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 181,
+          "line": 240,
           "name": "ListTargets",
           "receiver_calls": [],
           "store_calls": [
@@ -54219,7 +54390,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 179,
+          "line": 210,
           "source": "serviceRequest"
         }
       ],
@@ -54229,12 +54400,13 @@
       ],
       "handler_file": "services/discovery/handler.go",
       "handler_helper_calls": [
+        "defaultString",
         "AddTarget",
         "Error",
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 152,
+      "handler_line": 174,
       "handler_name": "addTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54245,28 +54417,38 @@
       "normalized_path": "/discovery/targets",
       "path": "/discovery/targets",
       "route_file": "services/discovery/handler.go",
-      "route_line": 40,
+      "route_line": 44,
       "service": "discovery",
-      "service_external_package_calls": [],
+      "service_external_package_calls": [
+        "fmt.Errorf",
+        "strings.ToLower",
+        "strings.TrimSpace"
+      ],
       "service_helper_calls": [
         "normalizeTarget",
         "ListTargets",
         "newID",
+        "addresses",
         "CreateTarget"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
         {
-          "external_package_calls": [],
+          "external_package_calls": [
+            "fmt.Errorf",
+            "strings.ToLower",
+            "strings.TrimSpace"
+          ],
           "file": "services/discovery/targets.go",
           "helper_calls": [
             "normalizeTarget",
             "ListTargets",
             "newID",
+            "addresses",
             "CreateTarget"
           ],
           "internal_package_calls": [],
-          "line": 156,
+          "line": 206,
           "name": "AddTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -54286,7 +54468,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/targets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 189,
+          "line": 220,
           "source": "serviceRequest"
         }
       ],
@@ -54298,7 +54480,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 184,
+      "handler_line": 208,
       "handler_name": "removeTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54309,7 +54491,7 @@
       "normalized_path": "/discovery/targets/{param}",
       "path": "/discovery/targets/{id}",
       "route_file": "services/discovery/handler.go",
-      "route_line": 41,
+      "route_line": 45,
       "service": "discovery",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -54326,7 +54508,7 @@
             "DeleteTarget"
           ],
           "internal_package_calls": [],
-          "line": 185,
+          "line": 244,
           "name": "RemoveTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -54339,6 +54521,248 @@
       "service_store_calls": [
         "ListTargets",
         "DeleteTarget"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/sources?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 229,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.sources",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "Sources",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 219,
+      "handler_name": "sources",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "Sources"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/discovery/sources",
+      "path": "/discovery/sources",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 47,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "context.WithTimeout",
+        "net/netip.ParsePrefix",
+        "os.Getenv",
+        "os.Stat",
+        "sort.Strings",
+        "strings.ToLower",
+        "strings.EqualFold",
+        "strings.TrimSpace"
+      ],
+      "service_helper_calls": [
+        "ListTargets",
+        "parseEndpoints",
+        "proto",
+        "addresses",
+        "ListAccounts",
+        "Error",
+        "firstString",
+        "containsString",
+        "ListCertificates",
+        "ListScans",
+        "lastScans",
+        "extractInt"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "context.WithTimeout",
+            "net/netip.ParsePrefix",
+            "os.Getenv",
+            "os.Stat",
+            "sort.Strings",
+            "strings.ToLower",
+            "strings.EqualFold",
+            "strings.TrimSpace"
+          ],
+          "file": "services/discovery/service.go",
+          "helper_calls": [
+            "ListTargets",
+            "parseEndpoints",
+            "proto",
+            "addresses",
+            "ListAccounts",
+            "Error",
+            "firstString",
+            "containsString",
+            "ListCertificates",
+            "ListScans",
+            "lastScans",
+            "extractInt"
+          ],
+          "internal_package_calls": [],
+          "line": 637,
+          "name": "Sources",
+          "receiver_calls": [
+            "s.cloud.ListAccounts",
+            "s.certs.ListCertificates"
+          ],
+          "store_calls": [
+            "ListTargets",
+            "ListScans"
+          ]
+        }
+      ],
+      "service_receiver_calls": [
+        "s.cloud.ListAccounts",
+        "s.certs.ListCertificates"
+      ],
+      "service_store_calls": [
+        "ListTargets",
+        "ListScans"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/upload?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 256,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.upload",
+      "handler_external_package_calls": [
+        "bytes.NewReader",
+        "fmt.Sprintf",
+        "io.ReadAll",
+        "io.LimitReader",
+        "io.NopCloser"
+      ],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "Error",
+        "uploadName",
+        "ScanUpload",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 235,
+      "handler_name": "upload",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ScanUpload"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/discovery/upload",
+      "path": "/discovery/upload",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 48,
+      "service": "discovery",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "uploadName",
+        "newID",
+        "CreateScan",
+        "publishAudit",
+        "materialAssets",
+        "findMaterial",
+        "storeAssets",
+        "UpdateScan"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/service.go",
+          "helper_calls": [
+            "uploadName",
+            "newID",
+            "CreateScan",
+            "publishAudit",
+            "materialAssets",
+            "findMaterial",
+            "storeAssets",
+            "UpdateScan"
+          ],
+          "internal_package_calls": [],
+          "line": 291,
+          "name": "ScanUpload",
+          "receiver_calls": [],
+          "store_calls": [
+            "CreateScan",
+            "UpdateScan"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "CreateScan",
+        "UpdateScan"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 266,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.removeAsset",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "RemoveAsset",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 275,
+      "handler_name": "removeAsset",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "RemoveAsset"
+      ],
+      "handler_store_calls": [],
+      "method": "DELETE",
+      "normalized_path": "/discovery/assets/{param}",
+      "path": "/discovery/assets/{id}",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 49,
+      "service": "discovery",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "GetAsset",
+        "DeleteAsset"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/service.go",
+          "helper_calls": [
+            "GetAsset",
+            "DeleteAsset"
+          ],
+          "internal_package_calls": [],
+          "line": 500,
+          "name": "RemoveAsset",
+          "receiver_calls": [],
+          "store_calls": [
+            "DeleteAsset"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "DeleteAsset"
       ]
     },
     {
@@ -84391,7 +84815,7 @@
       "compliance": 54,
       "confidential": 7,
       "dataprotect": 50,
-      "discovery": 11,
+      "discovery": 14,
       "ekm": 64,
       "governance": 35,
       "hsm-connector": 12,
@@ -84423,7 +84847,7 @@
       "compliance": 19,
       "confidential": 6,
       "dataprotect": 29,
-      "discovery": 9,
+      "discovery": 12,
       "ekm": 44,
       "governance": 23,
       "hyok": 7,
@@ -84619,17 +85043,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 843,
+    "backend_routes": 846,
     "backend_services": 28,
-    "button_inventory": 725,
-    "frontend_call_sites": 529,
-    "matched_frontend_call_sites": 487,
+    "button_inventory": 736,
+    "frontend_call_sites": 532,
+    "matched_frontend_call_sites": 490,
     "nav_items": 28,
-    "request_flows": 843,
-    "request_flows_with_frontend": 495,
+    "request_flows": 846,
+    "request_flows_with_frontend": 498,
     "request_flows_with_internal_package_calls": 147,
-    "request_flows_with_service_calls": 502,
-    "request_flows_with_store_calls": 604,
+    "request_flows_with_service_calls": 505,
+    "request_flows_with_store_calls": 605,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 42
@@ -84755,7 +85179,7 @@
       ]
     },
     {
-      "call_count": 9,
+      "call_count": 12,
       "component": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "group": "Keys & lifecycle",
       "id": "discovery",
@@ -97925,8 +98349,11 @@
         ]
       },
       {
-        "complexity": 4,
+        "complexity": 5,
         "externalPackages": [
+          "errors.Is",
+          "context.WithTimeout",
+          "context.WithoutCancel",
           "strings.TrimSpace",
           "strings.Join"
         ],
@@ -97934,19 +98361,24 @@
           {
             "expression": "serviceRequest(\"discovery\", \"/discovery/scan\")",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 68,
+            "line": 69,
             "source": "serviceRequest"
           }
         ],
         "handler": "startScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 48,
+        "handlerLine": 56,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/discovery/scan",
         "path": "/discovery/scan",
-        "receiverCalls": [],
+        "receiverCalls": [
+          "s.mu.Lock",
+          "s.mu.Unlock",
+          "s.scans.Add",
+          "s.scans.Done"
+        ],
         "risk": "medium",
         "routeKey": "discovery|POST|/discovery/scan",
         "sensitive": false,
@@ -97955,10 +98387,7 @@
           "StartScan"
         ],
         "storeCalls": [
-          "CreateScan",
-          "UpsertAsset",
-          "UpdateScan",
-          "GetScan"
+          "CreateScan"
         ],
         "uiLabels": [
           "Crypto Discovery"
@@ -97973,13 +98402,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/scans?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 88,
+            "line": 89,
             "source": "serviceRequest"
           }
         ],
         "handler": "listScans",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 65,
+        "handlerLine": 78,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98009,13 +98438,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/scans/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 100,
+            "line": 101,
             "source": "serviceRequest"
           }
         ],
         "handler": "getScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 74,
+        "handlerLine": 87,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98037,22 +98466,23 @@
         ]
       },
       {
-        "complexity": 1,
+        "complexity": 0,
         "externalPackages": [
           "strings.ToLower",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "strings.Split"
         ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/assets?${params.toString()}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 123,
+            "line": 141,
             "source": "serviceRequest"
           }
         ],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 83,
+        "handlerLine": 99,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98064,25 +98494,24 @@
         "sensitive": false,
         "service": "discovery",
         "serviceCalls": [
-          "ListAssets"
+          "FindAssets"
         ],
-        "storeCalls": [
-          "ListAssets"
-        ],
+        "storeCalls": [],
         "uiLabels": [
           "Crypto Discovery"
         ]
       },
       {
-        "complexity": 1,
+        "complexity": 0,
         "externalPackages": [
           "strings.ToLower",
-          "strings.TrimSpace"
+          "strings.TrimSpace",
+          "strings.Split"
         ],
         "frontendSites": [],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 83,
+        "handlerLine": 99,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98094,11 +98523,9 @@
         "sensitive": false,
         "service": "discovery",
         "serviceCalls": [
-          "ListAssets"
+          "FindAssets"
         ],
-        "storeCalls": [
-          "ListAssets"
-        ],
+        "storeCalls": [],
         "uiLabels": [
           "API only"
         ]
@@ -98111,7 +98538,7 @@
         "frontendSites": [],
         "handler": "getAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 101,
+        "handlerLine": 121,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98143,13 +98570,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}/classify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 139,
+            "line": 183,
             "source": "serviceRequest"
           }
         ],
         "handler": "reviewAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 113,
+        "handlerLine": 134,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -98172,18 +98599,20 @@
       },
       {
         "complexity": 0,
-        "externalPackages": [],
+        "externalPackages": [
+          "strings.TrimSpace"
+        ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 154,
+            "line": 164,
             "source": "serviceRequest"
           }
         ],
         "handler": "summary",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 131,
+        "handlerLine": 152,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98209,13 +98638,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 166,
+            "line": 196,
             "source": "serviceRequest"
           }
         ],
         "handler": "listTargets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 140,
+        "handlerLine": 161,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98239,19 +98668,22 @@
       {
         "complexity": 2,
         "externalPackages": [
-          "errors.Is"
+          "errors.Is",
+          "fmt.Errorf",
+          "strings.ToLower",
+          "strings.TrimSpace"
         ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/targets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 179,
+            "line": 210,
             "source": "serviceRequest"
           }
         ],
         "handler": "addTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 152,
+        "handlerLine": 174,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -98280,13 +98712,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/targets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 189,
+            "line": 220,
             "source": "serviceRequest"
           }
         ],
         "handler": "removeTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 184,
+        "handlerLine": 208,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -98303,6 +98735,128 @@
         "storeCalls": [
           "ListTargets",
           "DeleteTarget"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 4,
+        "externalPackages": [
+          "context.WithTimeout",
+          "net/netip.ParsePrefix",
+          "os.Getenv",
+          "os.Stat",
+          "sort.Strings",
+          "strings.ToLower",
+          "strings.EqualFold",
+          "strings.TrimSpace"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/sources?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 229,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "sources",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 219,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/discovery/sources",
+        "path": "/discovery/sources",
+        "receiverCalls": [
+          "s.cloud.ListAccounts",
+          "s.certs.ListCertificates"
+        ],
+        "risk": "medium",
+        "routeKey": "discovery|GET|/discovery/sources",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "Sources"
+        ],
+        "storeCalls": [
+          "ListTargets",
+          "ListScans"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "bytes.NewReader",
+          "fmt.Sprintf",
+          "io.ReadAll",
+          "io.LimitReader",
+          "io.NopCloser"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/upload?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 256,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "upload",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 235,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/discovery/upload",
+        "path": "/discovery/upload",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "discovery|POST|/discovery/upload",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "ScanUpload"
+        ],
+        "storeCalls": [
+          "CreateScan",
+          "UpdateScan"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/assets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 266,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "removeAsset",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 275,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/discovery/assets/{param}",
+        "path": "/discovery/assets/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "discovery|DELETE|/discovery/assets/{param}",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "RemoveAsset"
+        ],
+        "storeCalls": [
+          "DeleteAsset"
         ],
         "uiLabels": [
           "Crypto Discovery"
@@ -114713,7 +115267,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T04:45:55Z",
+    "generatedAt": "2026-10-01T05:18:48Z",
     "methods": [
       "DELETE",
       "GET",
@@ -114753,9 +115307,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 843,
-      "frontendBacked": 495,
-      "highRisk": 331,
+      "flows": 846,
+      "frontendBacked": 498,
+      "highRisk": 332,
       "services": 28
     }
   }

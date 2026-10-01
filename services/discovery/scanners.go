@@ -1,21 +1,19 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	stdcrypto "crypto"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/fs"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -29,47 +27,149 @@ import (
 
 var errScanNotConfigured = errors.New("scan source not configured")
 
-// scanNetwork handshakes with each endpoint in DISCOVERY_TLS_ENDPOINTS
-// (operator configuration) and each target the tenant added
-// (POST /discovery/targets), and records the negotiated key exchange and the
-// leaf certificate's key. Every endpoint is dialled through s.targetGuard,
-// which refuses reserved addresses and the KMS platform's own after DNS
-// resolution (targets.go). The inventory is the customer's estate; the KMS's
-// internal certificates are in the PKI tab (7.13.0-beta).
+// scanNetwork probes each endpoint in DISCOVERY_TLS_ENDPOINTS (operator
+// configuration) and each target the tenant added (POST /discovery/targets):
+// a TLS handshake, or for an SSH target the server's offered algorithms and
+// host keys (ssh.go). A target can be an address range (7.18.0-beta), swept
+// with a shorter timeout; an address in a range that doesn't answer has no
+// service, which is not an error. Every endpoint is dialled through
+// s.targetGuard, which refuses reserved addresses and the KMS platform's own
+// after DNS resolution (targets.go). The inventory is the customer's estate;
+// the KMS's internal certificates are in the PKI tab (7.13.0-beta).
 func (s *Service) scanNetwork(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
-	targets := parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS"))
+	res, err := s.sweepNetwork(ctx, tenantID, scanID)
+	return res.assets, err
+}
+
+// netEndpoint is one host:port the network scan probes.
+type netEndpoint struct {
+	addr     string
+	protocol string // "tls" or "ssh"
+	sweep    bool   // from an address range
+}
+
+type netResult struct {
+	assets                     []CryptoAsset
+	probed, noService, skipped int
+}
+
+const (
+	probeTimeout = 8 * time.Second
+	sweepTimeout = 3 * time.Second
+	probeWorkers = 32
+)
+
+func (s *Service) networkEndpoints(ctx context.Context, tenantID string) ([]netEndpoint, error) {
+	var out []netEndpoint
 	seen := map[string]bool{}
-	for _, ep := range targets {
-		seen[ep] = true
+	add := func(e netEndpoint) {
+		if !seen[e.addr] {
+			seen[e.addr] = true
+			out = append(out, e)
+		}
 	}
-	tenantTargets, err := s.store.ListTargets(ctx, tenantID)
+	for _, ep := range parseEndpoints(os.Getenv("DISCOVERY_TLS_ENDPOINTS")) {
+		add(netEndpoint{addr: ep, protocol: "tls"})
+	}
+	targets, err := s.store.ListTargets(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("read scan targets: %w", err)
 	}
-	for _, t := range tenantTargets {
-		if ep := t.endpoint(); !seen[ep] {
-			seen[ep] = true
-			targets = append(targets, ep)
-		}
-	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("%w: add a TLS target (host and port) in Crypto Discovery, or set DISCOVERY_TLS_ENDPOINTS", errScanNotConfigured)
-	}
-	guard := s.targetGuard(ctx)
-	out := make([]CryptoAsset, 0, 2*len(targets))
-	var failed []string
-	for _, ep := range targets {
-		probe, err := probeTLS(ctx, ep, 8*time.Second, guard)
-		if err != nil {
-			failed = append(failed, ep+": "+err.Error())
+	for _, t := range targets {
+		if p, err := netip.ParsePrefix(t.Host); err == nil {
+			for _, a := range prefixHosts(p) {
+				add(netEndpoint{addr: netip.AddrPortFrom(a, uint16(t.Port)).String(), protocol: t.proto(), sweep: true})
+			}
 			continue
 		}
-		out = append(out, s.tlsAssets(tenantID, scanID, ep, probe)...)
-	}
-	if len(failed) > 0 {
-		return out, fmt.Errorf("%d of %d endpoints failed: %s", len(failed), len(targets), strings.Join(failed, "; "))
+		add(netEndpoint{addr: t.endpoint(), protocol: t.proto()})
 	}
 	return out, nil
+}
+
+func (s *Service) sweepNetwork(ctx context.Context, tenantID string, scanID string) (netResult, error) {
+	eps, err := s.networkEndpoints(ctx, tenantID)
+	if err != nil {
+		return netResult{}, err
+	}
+	if len(eps) == 0 {
+		return netResult{}, fmt.Errorf("%w: add a target (host, IP or range) in Crypto Discovery, or set DISCOVERY_TLS_ENDPOINTS", errScanNotConfigured)
+	}
+	guard := s.targetGuard(ctx)
+	var (
+		mu     sync.Mutex
+		wg     sync.WaitGroup
+		res    netResult
+		failed []string
+	)
+	jobs := make(chan netEndpoint)
+	for i := 0; i < min(probeWorkers, len(eps)); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ep := range jobs {
+				assets, err := s.probeEndpoint(ctx, tenantID, scanID, ep, guard)
+				mu.Lock()
+				res.probed++
+				switch {
+				case err == nil:
+					res.assets = append(res.assets, assets...)
+				case ep.sweep && (errors.Is(err, errPlatformTarget) || errors.Is(err, errReservedTarget)):
+					res.skipped++
+				case ep.sweep:
+					res.noService++
+				default:
+					failed = append(failed, ep.addr+": "+err.Error())
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+feed:
+	for _, ep := range eps {
+		select {
+		case jobs <- ep:
+		case <-ctx.Done():
+			break feed
+		}
+	}
+	close(jobs)
+	wg.Wait()
+	if res.probed < len(eps) {
+		failed = append(failed, fmt.Sprintf("%d endpoints not probed: %v", len(eps)-res.probed, ctx.Err()))
+	}
+	if len(failed) > 0 {
+		sort.Strings(failed)
+		return res, fmt.Errorf("%d of %d endpoints failed: %s", len(failed), len(eps), strings.Join(failed, "; "))
+	}
+	return res, nil
+}
+
+func (s *Service) probeEndpoint(ctx context.Context, tenantID, scanID string, ep netEndpoint, guard dialControl) (assets []CryptoAsset, err error) {
+	// Each probe runs on a worker goroutine and parses a remote server's
+	// bytes: a panic is that endpoint's error.
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Printf("scan %s: probe of %s panicked: %v", scanID, ep.addr, r)
+			assets, err = nil, errors.New("probe failed unexpectedly")
+		}
+	}()
+	timeout := probeTimeout
+	if ep.sweep {
+		timeout = sweepTimeout
+	}
+	if ep.protocol == "ssh" {
+		p, err := probeSSH(ctx, ep.addr, timeout, guard)
+		if err != nil {
+			return nil, err
+		}
+		return s.sshAssets(tenantID, scanID, ep.addr, p), nil
+	}
+	p, err := probeTLS(ctx, ep.addr, timeout, guard)
+	if err != nil {
+		return nil, err
+	}
+	return s.tlsAssets(tenantID, scanID, ep.addr, p), nil
 }
 
 type tlsProbe struct {
@@ -170,9 +270,14 @@ func (s *Service) tlsAssets(tenantID, scanID, ep string, p tlsProbe) []CryptoAss
 		FirstSeen: now, LastSeen: now,
 	}
 	alg := publicKeyName(p.leaf.PublicKey)
+	// Certificates without a CommonName are named by their first DNS name.
+	name := p.leaf.Subject.CommonName
+	if name == "" && len(p.leaf.DNSNames) > 0 {
+		name = p.leaf.DNSNames[0]
+	}
 	cert := CryptoAsset{
 		ID: assetDeterministicID(tenantID, "network", "tls_certificate", ep, ep, ""), TenantID: tenantID, ScanID: scanID,
-		AssetType: "tls_certificate", Name: p.leaf.Subject.CommonName, Location: ep, Source: "network",
+		AssetType: "tls_certificate", Name: defaultString(name, ep), Location: ep, Source: "network",
 		Algorithm: alg, StrengthBits: strengthBits(alg), Status: "active",
 		Classification: classifyAlgorithm(alg), PQCReady: pqcReady(alg), QSLScore: round2(algorithmQSL(alg)),
 		Metadata: map[string]interface{}{
@@ -261,9 +366,10 @@ func (s *Service) scanCertificates(ctx context.Context, tenantID string, scanID 
 	return out, nil
 }
 
-// scanCode walks the source tree mounted at WORKSPACE_ROOT for embedded
-// secrets and private keys. A finding records where it is and a fingerprint,
-// never the secret; a private key is named by the key it parses to.
+// scanCode walks the source tree mounted at WORKSPACE_ROOT for key material
+// (material.go): secrets and private keys, recorded by location and
+// fingerprint, never the secret; certificates and public keys by the key
+// they hold.
 func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([]CryptoAsset, error) {
 	root := strings.TrimSpace(s.root)
 	if root == "" {
@@ -285,95 +391,39 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			}
 			return nil
 		}
-		switch strings.ToLower(filepath.Ext(path)) {
-		case ".go", ".yaml", ".yml", ".json", ".env", ".txt", ".pem", ".key":
-		default:
+		if !codeScanFile(d.Name()) {
 			return nil
 		}
 		if count >= 2000 {
 			return fs.SkipAll
 		}
 		count++
+		if info, err := d.Info(); err != nil || info.Size() > maxUploadBytes {
+			return nil
+		}
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return nil
 		}
 		rel, _ := filepath.Rel(root, path)
-		for _, f := range findSecrets(raw) {
-			now := s.now()
-			out = append(out, CryptoAsset{
-				ID: assetDeterministicID(tenantID, "code", f.kind, rel, fmt.Sprint(f.line), f.fingerprint), TenantID: tenantID, ScanID: scanID,
-				AssetType: f.kind, Name: filepath.Base(rel), Location: fmt.Sprintf("%s:%d", rel, f.line), Source: "code",
-				Algorithm: f.algorithm, StrengthBits: strengthBits(f.algorithm), Status: "active", Classification: "exposed",
-				Metadata:  map[string]interface{}{"fingerprint_sha256_prefix": f.fingerprint, "line": f.line},
-				FirstSeen: now, LastSeen: now,
-			})
-		}
+		out = append(out, s.materialAssets(tenantID, scanID, "code", rel, findMaterial(rel, raw))...)
 		return nil
 	})
 	return out, err
 }
 
-type secretFinding struct {
-	kind, algorithm, fingerprint string
-	line                         int
-}
-
-func fingerprint(secret []byte) string {
-	sum := sha256.Sum256(secret)
-	return hex.EncodeToString(sum[:6])
-}
-
-func findSecrets(raw []byte) []secretFinding {
-	var out []secretFinding
-	line := 0
-	sc := bufio.NewScanner(strings.NewReader(string(raw)))
-	sc.Buffer(make([]byte, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line++
-		text := sc.Text()
-		if m := reAKIA.FindString(text); m != "" {
-			out = append(out, secretFinding{kind: "cloud_access_key", fingerprint: fingerprint([]byte(m)), line: line})
-		} else if m := reHexSecret.FindString(text); m != "" {
-			out = append(out, secretFinding{kind: "hex_secret", fingerprint: fingerprint([]byte(m)), line: line})
-		}
+// codeScanFile: source, configuration and key or certificate files.
+func codeScanFile(name string) bool {
+	switch strings.ToLower(name) {
+	case "authorized_keys", "known_hosts":
+		return true
 	}
-	rest := raw
-	for {
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block == nil {
-			break
-		}
-		if !strings.Contains(block.Type, "PRIVATE KEY") {
-			continue
-		}
-		out = append(out, secretFinding{kind: "private_key_material", algorithm: privateKeyName(block), fingerprint: fingerprint(block.Bytes), line: pemLine(raw, block)})
+	switch ext := strings.ToLower(filepath.Ext(name)); ext {
+	case ".go", ".yaml", ".yml", ".json", ".env", ".txt", ".pem", ".key", ".crt", ".cer", ".der", ".csr", ".pub":
+		return true
+	default:
+		return keystoreExt[ext]
 	}
-	return out
-}
-
-func privateKeyName(block *pem.Block) string {
-	if k, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
-		if s, ok := k.(interface{ Public() stdcrypto.PublicKey }); ok {
-			return publicKeyName(s.Public())
-		}
-	}
-	if k, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return publicKeyName(&k.PublicKey)
-	}
-	if k, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
-		return publicKeyName(&k.PublicKey)
-	}
-	return "UNKNOWN" // e.g. OpenSSH format: reported, not guessed
-}
-
-func pemLine(raw []byte, block *pem.Block) int {
-	idx := strings.Index(string(raw), "-----BEGIN "+block.Type)
-	if idx < 0 {
-		return 0
-	}
-	return strings.Count(string(raw[:idx]), "\n") + 1
 }
 
 func parseEndpoints(raw string) []string {

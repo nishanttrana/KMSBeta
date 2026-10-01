@@ -46,6 +46,10 @@
   --s-cyan:   #5cc6de;  --s-cyan-dim:   rgba(92,198,222,.10);
   --s-yellow: #e8d25c;  --s-yellow-dim: rgba(232,210,92,.10);
 
+  /* Crypto-asset class fills, checked with the dataviz palette validator
+     against this surface (CVD and normal-vision separation). */
+  --cls-exposed: #9370e3; --cls-weak: #c93b40; --cls-qv: #b08a12; --cls-strong: #2b9e8e; --cls-unknown: #5d6370;
+
   --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.20);
   --shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
@@ -95,6 +99,8 @@
   --s-pink:   #b8327a;  --s-pink-dim:   rgba(184,50,122,.08);
   --s-cyan:   #0e6f86;  --s-cyan-dim:   rgba(14,111,134,.08);
   --s-yellow: #8a6d00;  --s-yellow-dim: rgba(138,109,0,.09);
+
+  --cls-exposed: #7a4fd0; --cls-weak: #e5484d; --cls-qv: #e8a317; --cls-strong: #2f9e8f; --cls-unknown: #c3c7cf;
 
   --shadow-sm:  0 1px 2px rgba(22, 23, 27, 0.05);
   --shadow-md:  0 2px 8px rgba(22, 23, 27, 0.05), 0 1px 2px rgba(22, 23, 27, 0.04);

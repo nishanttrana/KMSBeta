@@ -159,6 +159,7 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		// see the action took place), exhaustion / breach signals are
 		// CRITICAL.
 		"audit.security.sustained_risk_detected":  {Severity: "HIGH"},
+		"audit.discovery.secret_exposed":          {Severity: "HIGH"},
 		"audit.policy.quota_exceeded":             {Severity: "MEDIUM"},
 		"audit.policy.crypto_floor_violation":     {Severity: "HIGH"},
 		"audit.key.anomaly_scan_completed":        {Severity: "MEDIUM"},

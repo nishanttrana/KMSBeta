@@ -27,13 +27,21 @@ import (
 // check covers DISCOVERY_TLS_ENDPOINTS too. A tenant can't use the scan to
 // probe keycore, Postgres, NATS or any other internal service, and the
 // inventory never lists them: their certificates are in the PKI tab.
+//
+// Since 7.18.0-beta a target can be an SSH endpoint (protocol "ssh") and its
+// host an address range in CIDR notation of at most 256 addresses. A range
+// containing a reserved address is refused; platform addresses inside one
+// are refused at dial time and counted as skipped.
 
-const maxTargetsPerTenant = 256
+const (
+	maxTargetsPerTenant   = 256
+	maxAddressesPerTenant = 4096
+)
 
 var (
 	errInvalidTarget  = errors.New("invalid target")
 	errTargetExists   = errors.New("target already added")
-	errTargetLimit    = fmt.Errorf("at most %d targets per tenant", maxTargetsPerTenant)
+	errTargetLimit    = fmt.Errorf("at most %d targets and %d addresses per tenant", maxTargetsPerTenant, maxAddressesPerTenant)
 	errReservedTarget = errors.New("address is loopback, link-local, multicast or unspecified")
 	errPlatformTarget = errors.New("address belongs to the KMS platform's internal services")
 
@@ -44,13 +52,28 @@ var (
 	reHostname = regexp.MustCompile(`^(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*\.?$`)
 )
 
-// normalizeTarget returns a lower-case host (an IP literal or a DNS name)
-// and a port in 1-65535, or errInvalidTarget.
+// normalizeTarget returns a lower-case host (an IP literal, a DNS name or
+// an address range) and checks the port is 1-65535, or errInvalidTarget.
 func normalizeTarget(host string, port int) (string, error) {
 	host = strings.ToLower(strings.TrimSpace(host))
 	host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
 	if port < 1 || port > 65535 {
 		return "", fmt.Errorf("%w: port must be 1-65535", errInvalidTarget)
+	}
+	if strings.Contains(host, "/") {
+		p, err := netip.ParsePrefix(host)
+		if err != nil || p.Addr().Is4In6() || p.Addr().Zone() != "" {
+			return "", fmt.Errorf("%w: a range is CIDR notation, such as 10.0.4.0/24", errInvalidTarget)
+		}
+		if p = p.Masked(); p.Addr().BitLen()-p.Bits() > 8 {
+			return "", fmt.Errorf("%w: a range is at most 256 addresses (/24, or /120 for IPv6)", errInvalidTarget)
+		}
+		for a := p.Addr(); p.Contains(a); a = a.Next() {
+			if reservedAddr(a) {
+				return "", fmt.Errorf("%w: %s: %v", errInvalidTarget, a, errReservedTarget)
+			}
+		}
+		return p.String(), nil
 	}
 	if addr, err := netip.ParseAddr(host); err == nil {
 		if reservedAddr(addr) {
@@ -153,24 +176,60 @@ func refuseReservedAddr(_, address string, _ syscall.RawConn) error {
 
 func (t ScanTarget) endpoint() string { return net.JoinHostPort(t.Host, strconv.Itoa(t.Port)) }
 
-func (s *Service) AddTarget(ctx context.Context, tenantID, host string, port int, actor string) (ScanTarget, error) {
+func (t ScanTarget) proto() string { return defaultString(t.Protocol, "tls") }
+
+// addresses is how many endpoints the target expands to.
+func (t ScanTarget) addresses() int {
+	if p, err := netip.ParsePrefix(t.Host); err == nil {
+		return len(prefixHosts(p))
+	}
+	return 1
+}
+
+// prefixHosts lists a range's addresses; an IPv4 range of four or more
+// leaves out its network and broadcast addresses.
+func prefixHosts(p netip.Prefix) []netip.Addr {
+	p = p.Masked()
+	if p.Addr().BitLen()-p.Bits() > 8 {
+		return nil
+	}
+	var out []netip.Addr
+	for a := p.Addr(); p.Contains(a); a = a.Next() {
+		out = append(out, a)
+	}
+	if p.Addr().Is4() && p.Bits() <= 30 {
+		out = out[1 : len(out)-1]
+	}
+	return out
+}
+
+func (s *Service) AddTarget(ctx context.Context, tenantID, host string, port int, protocol, actor string) (ScanTarget, error) {
 	host, err := normalizeTarget(host, port)
 	if err != nil {
 		return ScanTarget{}, err
+	}
+	switch protocol = strings.ToLower(strings.TrimSpace(protocol)); protocol {
+	case "":
+		protocol = "tls"
+	case "tls", "ssh":
+	default:
+		return ScanTarget{}, fmt.Errorf("%w: protocol must be tls or ssh", errInvalidTarget)
 	}
 	existing, err := s.store.ListTargets(ctx, tenantID)
 	if err != nil {
 		return ScanTarget{}, err
 	}
-	if len(existing) >= maxTargetsPerTenant {
-		return ScanTarget{}, errTargetLimit
-	}
-	for _, t := range existing {
-		if t.Host == host && t.Port == port {
+	t := ScanTarget{ID: newID("target"), TenantID: tenantID, Host: host, Port: port, Protocol: protocol, CreatedBy: actor}
+	addrs := t.addresses()
+	for _, e := range existing {
+		if e.Host == host && e.Port == port {
 			return ScanTarget{}, errTargetExists
 		}
+		addrs += e.addresses()
 	}
-	t := ScanTarget{ID: newID("target"), TenantID: tenantID, Host: host, Port: port, CreatedBy: actor}
+	if len(existing) >= maxTargetsPerTenant || addrs > maxAddressesPerTenant {
+		return ScanTarget{}, errTargetLimit
+	}
 	if err := s.store.CreateTarget(ctx, t); err != nil {
 		return ScanTarget{}, err
 	}

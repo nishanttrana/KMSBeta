@@ -39,6 +39,10 @@ func TestNetworkScanHandshakes(t *testing.T) {
 	if !strings.HasPrefix(cert.Algorithm, "RSA-") && !strings.HasPrefix(cert.Algorithm, "ECDSA-") {
 		t.Fatalf("certificate asset: %+v", cert)
 	}
+	// httptest's certificate has no CommonName; its first DNS name is used.
+	if cert.Name != "example.com" {
+		t.Fatalf("certificate named %q", cert.Name)
+	}
 	if cert.Metadata["chain_trusted"] != false {
 		t.Fatalf("httptest's self-signed chain reported trusted: %+v", cert.Metadata)
 	}
@@ -77,7 +81,7 @@ func TestScansNeverInventAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scan.Status != "failed" || scan.Stats["errors"] == nil {
+	if scan = finishScan(t, svc, scan); scan.Status != "failed" || scan.Stats["errors"] == nil {
 		t.Fatalf("scan with every source failing: %+v", scan)
 	}
 }

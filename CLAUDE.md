@@ -307,6 +307,17 @@ an approach, record it here or in the matching doc below.
   `chartDrill.tsx`), and the server counts the whole window, never a sample.
   Its buckets come from `pkg/timebucket`.
 
+- **Dashboard pages are visual first, with little text** (owner directive,
+  2026-10-01, on Crypto Discovery: "immature buggy and not esthetic", "bar
+  charts missing", "good UI, less text", "how to add other sources is
+  missing"). A page leads with numbers, cards and charts. Explanations go
+  in labels, tooltips or one short hint, not paragraphs. Everything a
+  feature depends on (a source, an integration, a mount) shows its state on
+  that page with the action that sets it up, or a link to its home. Chart
+  fills are their own theme tokens (`--cls-*` in `index.css`), checked for
+  separation in the light and dark themes. Look at the rendered page in
+  both themes before calling it done.
+
 ## Documentation is part of done
 
 Every change is documented in the same commit. Don't leave it for later, and

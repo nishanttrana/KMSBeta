@@ -1887,6 +1887,7 @@ this.
   `sustained_risk_detected` (`audit.security.sustained_risk_detected`),
   `key_compromised`,
   `audit_chain_broken` (`audit.audit.chain_broken`),
+  `secret_exposed` (`audit.discovery.secret_exposed`, 7.18.0-beta),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
   `key_hsm_refused`, `crypto_policy_refused`
@@ -3145,27 +3146,70 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 
 **Authentication, permissions and audit (7.9.0-beta).** Every route needs a
 verified platform JWT and is on the route kernel: `discovery.read` for GETs,
-`discovery.write` for `POST /discovery/scan`,
-`PUT /discovery/assets/{id}/classify`, `POST /discovery/targets` and
-`DELETE /discovery/targets/{id}`. The tenant comes from the token (a
-different `tenant_id` is refused as `tenant_mismatch`). Each request emits
-`audit.discovery.<action>` (`scan_start`, `scans_list`, `scan_read`,
-`assets_list`, `asset_read`, `asset_review`, `summary_read`,
-`targets_list`, `target_add`, `target_remove`), refusals included. `PUT .../classify` records a review (`status`, `notes`); a
-`classification` other than the catalogue's is refused with `409
-classification_is_catalogue`. The summary no longer returns `average_qsl` or
-`posture_score`, and `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
+`discovery.write` for `POST /discovery/scan`, `POST /discovery/upload`,
+`PUT /discovery/assets/{id}/classify`, `DELETE /discovery/assets/{id}`,
+`POST /discovery/targets` and `DELETE /discovery/targets/{id}`. The tenant
+comes from the token (a different `tenant_id` is refused as
+`tenant_mismatch`). Each request emits `audit.discovery.<action>`
+(`scan_start`, `scans_list`, `scan_read`, `assets_list`, `asset_read`,
+`asset_review`, `asset_remove`, `summary_read`, `sources_read`,
+`upload_scan`, `targets_list`, `target_add`, `target_remove`), refusals
+included. `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
 `GET /discovery/data-inventory` and the `GET /discovery/posture` alias are
 removed (content inspection is out of the KMS's scope). The dashboard page is
 Keys & lifecycle → Crypto Discovery.
 
-`POST /discovery/scan` (body `tenant_id`, `scan_types`: `network`, `cloud`,
-`certs`, `code`) records only what each source observed:
+**Scans (background since 7.18.0-beta).** `POST /discovery/scan` (body
+`scan_types`: `network`, `cloud`, `certs`, `code`; default all) returns
+`202 {"scan": {...}}` with `status: "running"` at once and reads the
+sources concurrently in the background, with a 10-minute deadline. Poll
+`GET /discovery/scans/{id}`: `stats.sources_done` lists the sources that
+have finished, `stats.<source>_assets` their counts, `stats.errors` each
+failed or unconfigured source, and `stats.assets_discovered` what was
+stored. The final `status` is `completed`, `completed_with_errors`, or
+`failed` if every source failed. A scan left running by a restart reads as
+`interrupted`. One scan runs per tenant: a second is refused with
+`409 scan_running` (the audit event carries `running_scan_id`). Each source
+records only what it observed:
 
-- `network`: a TLS handshake with each endpoint in `DISCOVERY_TLS_ENDPOINTS`
-  (operator config, no default) and each tenant target (below). It records
-  the negotiated key exchange, protocol, cipher, leaf key and
-  `chain_trusted`.
+- `network`: each endpoint in `DISCOVERY_TLS_ENDPOINTS` (operator config, no
+  default) and each tenant target (below), 32 at a time. A TLS target
+  records the negotiated key exchange, protocol, cipher, leaf key and
+  `chain_trusted`. An SSH target records the key exchange, cipher and MAC
+  algorithms the server offers (`metadata.weak_*_offered` lists the weak
+  ones) as an `ssh_endpoint` whose algorithm is the strongest key exchange
+  offered, and one `ssh_host_key` per host key with its size and
+  `SHA256:` fingerprint. `stats.network_endpoints`, `network_no_service`
+  (addresses in a range that did not answer) and `network_skipped`
+  (platform addresses in a range) describe the sweep.
+- `cloud`: each registered account's live KMS inventory via the cloud
+  service (`CLOUD_URL`, default `https://cloud:8080`).
+- `certs`: the certs service's certificates.
+- `code`: the tree mounted at `WORKSPACE_ROOT` (required). Private keys,
+  keystores, cloud access keys and long hex strings are recorded by
+  file:line and `fingerprint_sha256_prefix`, never the secret; certificates,
+  certificate requests, public keys and SSH public keys (`authorized_keys`,
+  `known_hosts`, `.pub`) by the key they hold.
+
+**Uploads (7.18.0-beta).** `POST /discovery/upload` with body
+`{"name": "bundle.pem", "content": "<base64>"}` inventories one file of at
+most 2 MiB with the code scan's parser and returns
+`200 {"scan": {...}, "assets": [...]}`. The file is parsed in memory and
+never stored or logged. It is recorded as a scan with `scan_type: "upload"`
+and its assets have `source: "upload"`. Refusals: `400 invalid_upload`
+(empty or not base64) and `413 upload_too_large`.
+
+**Assets.** `GET /discovery/assets` returns `{"items": [...], "total": n}`:
+one page (`limit`, default 1000, at most 10000; `offset`) of the assets that
+match, most recently updated first, and how many match in the whole
+inventory. Filters: `source`, `asset_type`, `classification` (one class or
+several separated by commas), `algorithm` (exact; an empty value selects
+assets with no algorithm), `pqc_ready=true`, `expiring_days=N` (a
+`not_after` that has passed or falls within N days), `not_seen=true` (not
+observed by its source's last scan) and `q` (text in the name, location,
+algorithm, type or source). `GET /discovery/assets/{id}` reads one and
+`DELETE /discovery/assets/{id}` removes one from the inventory (a later scan
+that observes it adds it back).
 
 Each asset's `strength_bits` is the classical security strength (RSA-2048 is
 112, ML-KEM-768 192; 0 when not assessed), and `classification`, `pqc_ready`
@@ -3173,35 +3217,62 @@ and `qsl_score` come from `pkg/cryptocatalog` (since 3.2.0-beta; before, the
 key or parameter size and a hand-kept score). `classification` is `weak`,
 `quantum_vulnerable` (sound today, broken by a quantum computer, for example
 ECDSA-P256), `strong`, `unknown` (not assessed), or `exposed` for a secret
-found by the code scan. It is derived from the algorithm on every read; before
-7.11.0-beta `weak` and `quantum_vulnerable` were one `vulnerable`. The
-summary's `classification_counts` has these keys.
-- `cloud`: each registered account's live KMS inventory via the cloud
-  service (`CLOUD_URL`, default `https://cloud:8080`).
-- `certs`: the certs service's certificates.
-- `code`: the tree mounted at `WORKSPACE_ROOT` (required). It records
-  file:line and `fingerprint_sha256_prefix`, never the secret.
+found in code or an upload. It is derived from the algorithm on every read; before
+7.11.0-beta `weak` and `quantum_vulnerable` were one `vulnerable`.
 
-**TLS targets (7.11.0-beta).** `GET /discovery/targets` lists the
-tenant's targets (`{"items": [{id, host, port, created_by, created_at}]}`).
-`POST /discovery/targets` with body `{"host": "api.example.com", "port": 443}`
-adds one (`201 {"target": {...}}`). `host` is a DNS name or IP address,
-without scheme or path, and is stored lower-case. `DELETE
-/discovery/targets/{id}` removes one. Refusals: `400 invalid_target` (bad
-host or port, or a loopback, link-local, metadata, multicast or unspecified
-address), `400 platform_target` (a bare KMS platform hostname such as
-`keycore` or `postgres`; 7.13.0-beta), `409 target_exists`, and
-`409 target_limit` (256 per tenant). Private addresses are allowed. The
-scan dials every endpoint, operator and tenant alike, through the same
-check after DNS resolution: a reserved address, or one that a platform
-host or discovery itself uses, fails as `refused <addr>` in
-`stats.errors`. The inventory never lists the KMS's own services. The
+**Reviews.** `PUT /discovery/assets/{id}/classify` records a review:
+`status` (`active`, `reviewed`, `accepted_risk` or `remediated`) and
+`notes`. Since 7.18.0-beta it is stored in the asset's `metadata`
+(`review_status`, `review_notes`, `reviewed_by`, `reviewed_at`) and a rescan
+keeps it; the asset's `status` is what the scan observed. A
+`classification` other than the catalogue's is refused with
+`409 classification_is_catalogue`.
+
+**Summary.** `GET /discovery/summary` counts the whole inventory:
+`total_assets`, `classification_counts`, `source_distribution`,
+`algorithm_distribution`, `pqc_ready_count`, `pqc_readiness_percent`, and
+(7.18.0-beta) `algorithm_classes` and `source_classification` (counts by
+class for each algorithm and source) and `expiring_30d`. Each number equals
+the `total` of `GET /discovery/assets` with the matching filter. It no
+longer returns `average_qsl` or `posture_score`.
+
+**Sources (7.18.0-beta).** `GET /discovery/sources` returns
+`{"items": [{id, configured, detail, error?, last_scan?}]}` for `network`
+(`detail`: `targets`, `hosts`, `ranges`, `ssh`, `addresses`,
+`operator_endpoints`), `cloud` (`accounts`, `providers`), `certs`
+(`certificates`), `code` (whether a readable tree is mounted; the path is
+not returned) and `upload`. `last_scan` is `{scan_id, started_at, at,
+assets, error?}` from the newest finished scan that read the source.
+`error` says the cloud or certs service could not be reached.
+
+**Network targets (7.11.0-beta; SSH and ranges 7.18.0-beta).**
+`GET /discovery/targets` lists the tenant's targets
+(`{"items": [{id, host, port, protocol, created_by, created_at}]}`).
+`POST /discovery/targets` with body
+`{"host": "api.example.com", "port": 443, "protocol": "tls"}` adds one
+(`201 {"target": {...}}`). `protocol` is `tls` (default) or `ssh`. `host`
+is a DNS name, an IP address or a range in CIDR notation of at most 256
+addresses (`10.0.4.0/24`, or `/120` for IPv6), without scheme or path, and
+is stored lower-case. `DELETE /discovery/targets/{id}` removes one.
+Refusals: `400 invalid_target` (bad host, port or protocol, a range that is
+too large, or a loopback, link-local, metadata, multicast or unspecified
+address, including any inside a range), `400 platform_target` (a bare KMS
+platform hostname such as `keycore` or `postgres`; 7.13.0-beta),
+`409 target_exists`, and `409 target_limit` (256 targets or 4096 addresses
+per tenant). Private addresses are allowed. The scan dials every endpoint,
+operator and tenant alike, through the same check after DNS resolution: a
+reserved address, or one that a platform host or discovery itself uses,
+fails as `refused <addr>` in `stats.errors` (in a range it is counted in
+`network_skipped`). The inventory never lists the KMS's own services. The
 certs source skips `cert_class: internal-mtls`, and assets earlier scans
 stored for platform services are hidden. Their certificates are in the
 PKI tab.
 
-An unconfigured or failed source is recorded in `stats.errors`. The scan
-status is then `completed_with_errors`, or `failed` if every source failed.
+**Exposed secrets.** The first time a private key, keystore or access key
+is found, discovery emits `audit.discovery.secret_exposed` (target: the
+asset; details: type, source, location and fingerprint prefix). Playbooks
+can trigger on it (`secret_exposed`). Finding the same secret again does
+not repeat the event.
 
 ---
 
@@ -3421,7 +3492,7 @@ Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
-| audit.discovery.* | Discovery scans, inventory reads, asset reviews and TLS targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified` |
+| audit.discovery.* | Discovery scans, inventory reads, asset reviews and network targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta; `sources_read`, `upload_scan`, `asset_remove` 7.18.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified`; `secret_exposed` when a secret is first found (7.18.0-beta) |
 | audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
@@ -3954,16 +4025,19 @@ from the code; do not edit by hand.
 ### discovery (`/svc/discovery/`)
 
 - `GET /svc/discovery/discovery/assets`
+- `DELETE /svc/discovery/discovery/assets/{id}`
 - `GET /svc/discovery/discovery/assets/{id}`
 - `PUT /svc/discovery/discovery/assets/{id}/classify`
 - `GET /svc/discovery/discovery/crypto/assets`
 - `POST /svc/discovery/discovery/scan`
 - `GET /svc/discovery/discovery/scans`
 - `GET /svc/discovery/discovery/scans/{id}`
+- `GET /svc/discovery/discovery/sources`
 - `GET /svc/discovery/discovery/summary`
 - `GET /svc/discovery/discovery/targets`
 - `POST /svc/discovery/discovery/targets`
 - `DELETE /svc/discovery/discovery/targets/{id}`
+- `POST /svc/discovery/discovery/upload`
 
 ### ekm (`/svc/ekm/`)
 

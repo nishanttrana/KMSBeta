@@ -25,20 +25,22 @@ type Store interface {
 
 	UpsertAsset(ctx context.Context, asset CryptoAsset) error
 	GetAsset(ctx context.Context, tenantID string, id string) (CryptoAsset, error)
-	ListAssets(ctx context.Context, tenantID string, limit int, offset int, source string, assetType string, classification string) ([]CryptoAsset, error)
-	CountAssets(ctx context.Context, tenantID string) (int, error)
+	DeleteAsset(ctx context.Context, tenantID string, id string) error
+	EachAsset(ctx context.Context, tenantID string, fn func(CryptoAsset) error) error
 
 	CreateTarget(ctx context.Context, target ScanTarget) error
 	ListTargets(ctx context.Context, tenantID string) ([]ScanTarget, error)
 	DeleteTarget(ctx context.Context, tenantID string, id string) error
 }
 
-// ScanTarget is a TLS endpoint a tenant added for the network scan.
+// ScanTarget is an endpoint a tenant added for the network scan. Host is a
+// DNS name, an IP address or a CIDR range; Protocol is "tls" or "ssh".
 type ScanTarget struct {
 	ID        string    `json:"id"`
 	TenantID  string    `json:"tenant_id"`
 	Host      string    `json:"host"`
 	Port      int       `json:"port"`
+	Protocol  string    `json:"protocol"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -84,6 +86,43 @@ type DiscoverySummary struct {
 	ClassificationCounts  map[string]int `json:"classification_counts"`
 	PQCReadyCount         int            `json:"pqc_ready_count"`
 	PQCReadinessPercent   float64        `json:"pqc_readiness_percent"`
+	// The breakdowns the dashboard charts (7.18.0-beta). Each count equals
+	// the total GET /discovery/assets returns for the same filter.
+	AlgorithmClasses     map[string]map[string]int `json:"algorithm_classes"`
+	SourceClassification map[string]map[string]int `json:"source_classification"`
+	// Expiring30: assets whose not_after has passed or falls within 30 days.
+	Expiring30 int `json:"expiring_30d"`
+}
+
+// AssetFilter selects assets. The summary counts with the same predicate
+// the list filters with, so a count and its list always agree.
+type AssetFilter struct {
+	Source, AssetType, Query string
+	Classes                  []string // any of these classes
+	Algorithm                *string  // exact match; "" is the assets with no algorithm
+	PQCReady                 bool
+	ExpiringDays             int  // not_after passed or within this many days
+	NotSeen                  bool // not observed by its source's last scan
+}
+
+// SourceStatus says whether a scan source has anything to read, and how its
+// last scan went (GET /discovery/sources).
+type SourceStatus struct {
+	ID         string                 `json:"id"`
+	Configured bool                   `json:"configured"`
+	Detail     map[string]interface{} `json:"detail"`
+	Error      string                 `json:"error,omitempty"`
+	LastScan   *SourceLastScan        `json:"last_scan,omitempty"`
+}
+
+type SourceLastScan struct {
+	ScanID string `json:"scan_id"`
+	// An asset of this source last seen before StartedAt wasn't observed by
+	// the last scan.
+	StartedAt time.Time `json:"started_at"`
+	At        time.Time `json:"at"`
+	Assets    int       `json:"assets"`
+	Error     string    `json:"error,omitempty"`
 }
 
 type ScanRequest struct {

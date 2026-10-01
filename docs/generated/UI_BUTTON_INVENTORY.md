@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T04:45:55Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T05:18:48Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -247,10 +247,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 266 | - | button | onNavigate?.(tabId)} style={{ display: "inline-flex", alignItems: "center", g... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 429 | - | Btn | void submitHomeApprovalVote(item, "approved")} disabled={approvalVoteBusy ===... |  |
 | web/dashboard/src/components/v3/tabs/DashboardTabView.tsx | 430 | - | Btn | void submitHomeApprovalVote(item, "denied")} disabled={approvalVoteBusy === `... |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 176 | discovery | Btn | void load()}> |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 216 | discovery | Btn | void addTarget()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 225 | discovery | button | void removeTarget(t)} style={ }>× |  |
-| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 235 | discovery | Btn | void runScan()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 187 | discovery | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx | 188 | discovery | Btn | void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `... |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 698 | ekm | Btn | setDbView(dbView==="cards"?"list":"cards")} style={ }>{dbView==="cards"? : } |  |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 699 | ekm | Btn | Deploy Agent | openDeploy |
 | web/dashboard/src/components/v3/tabs/EKMTab.tsx | 700 | ekm | Btn | Register Database | openDbRegister |
@@ -620,6 +618,19 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 151 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 159 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 166 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Charts.tsx | 39 | - | button | (icon or dynamic label) | onClick} title={title |
+| web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 88 | - | button | set( )} title="Assets the last scan of their source didn't observe" style={{... |  |
+| web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 96 | - | button | setFilters(NO_FILTERS)} style={ }>Clear filters |  |
+| web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 154 | - | button | (icon or dynamic label) | onClick |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 87 | - | Btn | (icon or dynamic label) | a.run} disabled={isUpload && uploading |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 89 | - | Btn | onScan([s.id])} disabled= title={s.configured ? `Scan $ ` : "Set this source... |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 152 | - | button | pick(p)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 162 | - | Btn | void add()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 176 | - | button | void remove(t)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Sources.tsx | 207 | - | Btn | }>Upload files instead |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 89 | - | Btn | { setAck( ); setReason(""); }}>Acknowledge |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 101 | - | Btn | setShowClosed((v) => !v)}>{showClosed ? "Hide closed" : `Show $ closed`} |  |
 | web/dashboard/src/modules/admin/ExposurePanel.tsx | 111 | - | Btn | setAck(null)}>Cancel |  |

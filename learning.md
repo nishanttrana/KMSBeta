@@ -3,6 +3,74 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-01
+
+### A rescan erased every asset review
+- **What happened:** discovery stored an operator's review ("accepted risk",
+  notes) in the asset's `status` and `metadata`, the same columns every scan
+  rewrites with what it observed. The next scan reset the review to
+  `active` and dropped the notes. The review value also flowed into the CBOM
+  as the key's status.
+- **How it slipped through:** the review test checked the row right after the
+  review and never scanned again. One column held two things: what the
+  scanner saw and what a person decided.
+- **Rule:** a person's decision and a machine's observation never share a
+  column. A test of anything a person records must run the job that
+  rewrites the record afterwards and read it back
+  (`TestReviewSurvivesRescan`).
+
+### A scan that answers in the request times out as soon as a source is slow
+- **What happened:** `POST /discovery/scan` returned `202 Accepted` but did
+  all the work before answering. The HTTP server's 60-second write timeout
+  and the 30-second cloud call meant one slow account failed the request
+  while the scan kept running, and an address range could not fit at all.
+- **How it slipped through:** every test used one loopback endpoint and
+  finished in milliseconds. The status code said "accepted" while the code
+  behaved as "done".
+- **Rule:** work whose duration depends on someone else's network runs in
+  the background with a deadline, records progress as it goes, and refuses
+  a second run instead of stacking them. A row left "running" by a restart
+  must read as interrupted, derived from its start time, never stay
+  "running" forever.
+
+### Counting in the browser is still a sample, even when the cap is 10000
+- **What happened:** the first version of the new discovery charts counted
+  in the browser over the assets it had loaded, and the service's own
+  summary read the newest 10000 rows. Both look exact until a tenant has
+  more assets than the cap; a /24 sweep, a few cloud accounts and a
+  certificate estate reach it.
+- **How it slipped through:** the rule (7.17.0-beta, above) was written for
+  time windows, and an inventory has no window, so it did not look like the
+  same case. It is: a list with a cap is a sample.
+- **Rule:** the service counts with one predicate and lists with the same
+  one (`AssetFilter.match`), streaming every row. A test puts more rows
+  than any old cap in the store and checks the count
+  (`TestInventoryIsNeverASample`), and another checks every chart number
+  against its list (`TestSummaryCountsEqualFilteredLists`).
+
+### Two status colours that pass in one theme can merge in the other
+- **What happened:** "weak" was orange and "quantum-vulnerable" amber. In
+  the light theme the two tokens are `#b8500f` and `#a86400`: a colour
+  difference of 5.4, below what full colour vision separates, and 0.7 for
+  red-green colour blindness. The first screenshot showed two legend
+  entries that looked the same.
+- **How it slipped through:** the tokens are tuned as text colours (dark
+  enough to read on white), which pushes neighbouring hues together. Nobody
+  looks at a legend in both themes.
+- **Rule:** chart fills are their own tokens (`--cls-*`), chosen per theme
+  and checked with a palette validator for colour-blind and normal-vision
+  separation. Text colours are not reused as fills. Look at the rendered
+  page in both themes before calling a chart done.
+
+### `pemLine` gave every certificate in a chain the first one's line
+- **What happened:** the code scan found a PEM block's line by searching the
+  file for its `BEGIN` marker from the top, so the second and third block of
+  the same type reported the first one's line, and their asset IDs (which
+  include the line) depended on it.
+- **How it slipped through:** the test file held one key.
+- **Rule:** locate a parsed item by the offset the parser was at, never by
+  searching again for text that can repeat (`TestFindMaterialFormats`).
+
 ## 2026-09-30
 
 ### A chart window longer than a page must be counted by the server
