@@ -4,6 +4,9 @@
 #   ./deploy-local.sh            build changed images and (re)start the stack
 #   ./deploy-local.sh --no-build restart using the images already built
 #
+# It deploys the latest origin/main: a checkout that is behind is
+# fast-forwarded first (DEPLOY_NO_PULL=1 deploys the checkout as it is).
+#
 # Safe to re-run: it never overwrites existing secrets in .env, keeps all
 # volumes (keys, certs, database), and only rebuilds what changed.
 # When it finishes the dashboard is at https://localhost
@@ -36,6 +39,27 @@ pick_bash() {
 }
 BASH4="$(pick_bash)" || die "Bash 4+ is required. Install it with: brew install bash"
 [[ -f "${ENV_FILE}" ]] || { cp .env.example "${ENV_FILE}"; warn "created .env from .env.example — review the secrets in it."; }
+
+# ── 0. Deploy the latest main ───────────────────────────────────────────
+# This script builds what is checked out. A checkout left behind origin/main
+# deployed 7.15.0 while main was at 7.21.0, and nothing said so. Fast-forward
+# when that loses nothing; otherwise name what is being deployed and why.
+if [[ "${DEPLOY_NO_PULL:-0}" != "1" ]] && git rev-parse --git-dir >/dev/null 2>&1; then
+  if git fetch --quiet origin main 2>/dev/null; then
+    behind="$(git rev-list --count HEAD..origin/main)"
+    if [[ "${behind}" -gt 0 ]]; then
+      latest="$(git show origin/main:VERSION 2>/dev/null | tr -d '[:space:]')"
+      if [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] && git merge --quiet --ff-only origin/main 2>/dev/null; then
+        say "updated the checkout to origin/main (${latest})"
+        # This file may have changed: run the new one.
+        DEPLOY_NO_PULL=1 exec "${BASH}" "${ROOT_DIR}/deploy-local.sh" "$@"
+      fi
+      warn "this checkout is ${behind} commit(s) behind origin/main (${latest}) and can't be fast-forwarded: it has local commits or uncommitted changes to files main also changed (git status). Deploying $(tr -d '[:space:]' < VERSION) from the checkout."
+    fi
+  else
+    warn "could not reach origin; deploying the checkout as it is ($(tr -d '[:space:]' < VERSION))."
+  fi
+fi
 
 mem_gb="$(docker info --format '{{.MemTotal}}' 2>/dev/null | awk '{printf "%d", $1/1024/1024/1024}')"
 if [[ -n "${mem_gb}" && "${mem_gb}" -lt 6 ]]; then
@@ -209,7 +233,7 @@ unhealthy="$(docker compose ps --format '{{.Service}} {{.Status}}' | grep -v '(h
 
 cat <<EOF
 
-  Vecta KMS is up.
+  Vecta KMS $(tr -d '[:space:]' < VERSION) is up (commit $(git rev-parse --short HEAD 2>/dev/null || echo unknown)$(git diff --quiet HEAD -- 2>/dev/null || echo ', with uncommitted changes')).
 
     Dashboard   https://localhost        (self-signed certificate — accept it once in the browser)
     KMIP        localhost:5696

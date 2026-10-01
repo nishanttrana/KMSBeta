@@ -615,6 +615,12 @@ compose_exec() {
   KMS_DOCKER_BIN="${DOCKER_BIN[*]}" "${BASH_BIN}" "${ROOT_DIR}/infra/scripts/compose-kms.sh" "$@"
 }
 
+# The shared volume helpers call `docker`; send them through the binary this
+# installer resolved (docker, docker.exe or sudo docker).
+docker() { command "${DOCKER_BIN[@]}" "$@"; }
+# shellcheck source=infra/scripts/compose-volumes.sh
+source "${ROOT_DIR}/infra/scripts/compose-volumes.sh"
+
 compose_service_metadata() {
   local config_output=""
   if ! config_output="$(compose_exec config 2>/dev/null)"; then
@@ -1887,10 +1893,10 @@ seed_cert_bootstrap_secret() {
     seed_bootstrap_secret="true"
   fi
 
-  # Created with Compose's labels so `compose up` adopts it. runtime-certs is
-  # left to Compose, which creates it as tmpfs (docker-compose.yml).
-  info "Preparing certificate bootstrap volume (${certs_volume}) ..."
-  "${DOCKER_BIN[@]}" volume create --label "com.docker.compose.project=${project_name}" --label "com.docker.compose.volume=certs-key-data" "${certs_volume}" >/dev/null
+  # The same layout start-kms.sh prepares (infra/scripts/compose-volumes.sh);
+  # runtime-certs is left to Compose, which creates it as tmpfs.
+  info "Preparing shared volumes (certs keys, trust, dashboard TLS, infra TLS, platform state) ..."
+  prepare_shared_volumes "${project_name}" || die "Unable to prepare the shared volumes."
 
   local prepared="false"
   local image

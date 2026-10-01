@@ -141,6 +141,46 @@ func (b edgeFiles) pending() string { return filepath.Join(b.base, b.name+"-pend
 // node, so it is never confused with one certs issued.
 func (b edgeFiles) marker() string { return filepath.Join(b.base, b.name+"-external.serial") }
 
+// issued lists, in this node's kept copy, the certificate certs last issued
+// for the listener ("-" while an external one is installed) and then any it
+// replaced that are not revoked yet.
+func (b edgeFiles) issued() string { return filepath.Join(b.base, b.name+".issued") }
+
+// recordIssued puts id first in the issued list.
+func (b edgeFiles) recordIssued(id string) error {
+	raw, _ := os.ReadFile(b.issued())
+	ids := []string{id}
+	for _, old := range strings.Fields(string(raw)) {
+		if old != id && old != "-" {
+			ids = append(ids, old)
+		}
+	}
+	return writeFileAtomically(b.issued(), []byte(strings.Join(ids, "\n")+"\n"), 0o600)
+}
+
+// revokeReplacedEdge revokes the certificates this node's listener no longer
+// serves. The runtime directory is tmpfs, so their keys are gone: nothing
+// can present them, and the inventory must not list them as active. One
+// that can't be revoked now stays listed and is tried on the next pass.
+func (s *Service) revokeReplacedEdge(ctx context.Context, tenantID string, kept edgeFiles) {
+	raw, err := os.ReadFile(kept.issued())
+	ids := strings.Fields(string(raw))
+	if err != nil || len(ids) < 2 {
+		return
+	}
+	left := ids[:1]
+	for _, id := range ids[1:] {
+		c, err := s.store.GetCertificate(ctx, tenantID, id)
+		if err == nil && strings.EqualFold(strings.TrimSpace(c.Status), CertStatusActive) {
+			err = s.RevokeCertificate(ctx, RevokeCertificateRequest{TenantID: tenantID, CertID: id, Reason: "superseded"})
+		}
+		if err != nil {
+			left = append(left, id)
+		}
+	}
+	_ = writeFileAtomically(kept.issued(), []byte(strings.Join(left, "\n")+"\n"), 0o600)
+}
+
 func (s *Service) edgeFiles(listener string) edgeFiles {
 	return filesFor(s.runtimeCfg.MaterializeDir, listener)
 }
@@ -281,8 +321,16 @@ func (s *Service) writeEdgeCert(ctx context.Context, tenantID string, ca CA, alg
 	if days <= 0 {
 		days = 90
 	}
-	_, err = s.writeRuntimeEndpointCert(ctx, tenantID, ca, filesFor(cfg.MaterializeDir, listener).dir(), algorithm, "tls-server", cn, sans, days, chain)
-	return err
+	issued, err := s.writeRuntimeEndpointCert(ctx, tenantID, ca, filesFor(cfg.MaterializeDir, listener).dir(), algorithm, "tls-server", cn, sans, days, chain)
+	if err != nil {
+		return err
+	}
+	kept := keptFor(cfg, listener)
+	if err := kept.recordIssued(issued.ID); err != nil {
+		return err
+	}
+	s.revokeReplacedEdge(ctx, tenantID, kept)
+	return nil
 }
 
 // applyEdgeCertificate makes this node's listener serve the chosen source,
@@ -305,6 +353,7 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 	leaf, _, _ := installedLeaf(dir)
 	due := force || leaf == nil || runtimeCertNeedsRenew(filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), renewBefore)
 	kept := keptFor(cfg, listener)
+	s.revokeReplacedEdge(ctx, tenantID, kept)
 	if choice.Source != edgeSourceExternal {
 		// Leaving the external source ends that certificate on this node.
 		kept.discardExternal()
@@ -538,6 +587,11 @@ func (s *Service) InstallEdgeCertificate(ctx context.Context, listener, certPEM,
 		}
 	}
 	_ = os.RemoveAll(kept.pending())
+	// The certificate certs had issued for this listener is replaced.
+	if err := kept.recordIssued("-"); err != nil {
+		return nil, err
+	}
+	s.revokeReplacedEdge(ctx, s.internalTenant(), kept)
 	return leaf, nil
 }
 

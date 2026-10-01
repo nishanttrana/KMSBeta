@@ -5,7 +5,8 @@
 # replaced by the tmpfs one docker-compose.yml declares; a volume in use is
 # refused and left intact; an interrupted adoption resumes; a copy that does
 # not match is rejected; an external edge certificate on the old runtime-certs
-# volume is kept. Cleans up afterwards.
+# volume is kept; a fresh install's volumes are laid out so a daemon's subpath
+# mount starts. Cleans up afterwards.
 # Usage: ./scripts/test-volume-repair.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -40,7 +41,20 @@ services:
     volumes:
       - certs-key-data:/data
       - runtime-certs:/runtime
+  # Mounts its own subdirectory of infra-tls, as Postgres, NATS, Valkey and
+  # Consul do in the real compose file.
+  daemon:
+    image: ${IMAGE}
+    profiles: ["daemon"]
+    command: ["stat", "-c", "%u:%g %a", "/tls"]
+    volumes:
+      - type: volume
+        source: infra-tls
+        target: /tls
+        volume:
+          subpath: postgres
 volumes:
+  infra-tls:
   certs-key-data:
   runtime-certs:
 ${tmpfs_opts}
@@ -118,5 +132,20 @@ kept="$(docker run --rm --network none -v "${P}_certs-key-data:/d:ro" "${IMAGE}"
 expected="$(printf '%s\n' ". 100:101 700" "./envoy 100:101 700" "./envoy-external.serial 100:101 600" "./envoy/tls.crt 100:101 600" \
   "./envoy/tls.key 100:101 600" "./kmip-pending 100:101 700" "./kmip-pending/tls.key 100:101 600" ext-key ext-crt 4d2 csr-key)"
 [[ "${kept}" == "${expected}" ]] || fail "external edge material was not kept as certs expects: ${kept}"
+
+# A fresh install (install.sh, start-kms.sh): without the layout a daemon's
+# subpath mount fails; prepare_shared_volumes makes it start, with the owners
+# each service runs as, and the volumes are ones Compose adopts.
+compose down >/dev/null 2>&1
+if compose --profile daemon run --rm daemon >/dev/null 2>&1; then fail "a subpath mount of an unprepared volume should not start"; fi
+compose --profile daemon down >/dev/null 2>&1
+prepare_shared_volumes "${P}"
+[[ "$(compose --profile daemon run --rm daemon 2>/dev/null | tr -d '\r')" == "100:101 700" ]] || fail "infra-tls/postgres is not mountable as 100:101 700 after prepare_shared_volumes"
+layout="$(docker run --rm --network none -v "${P}_certs-key-data:/data" -v "${P}_internal-trust:/trust" -v "${P}_dashboard-tls:/dash" \
+  -v "${P}_infra-tls:/infra" -v "${P}_platform-state:/state" "${IMAGE}" stat -c '%n %u:%g %a' /data /trust /dash /infra /infra/nats /infra/valkey /infra/consul /state | tr '\n' ';')"
+[[ "${layout}" == "/data 100:101 700;/trust 100:101 755;/dash 100:101 750;/infra 100:101 700;/infra/nats 100:101 700;/infra/valkey 100:101 700;/infra/consul 100:101 700;/state 10001:0 755;" ]] || fail "shared volume layout: ${layout}"
+for key in certs-key-data internal-trust dashboard-tls infra-tls platform-state; do
+  volume_is_labelled "${P}_${key}" || fail "${P}_${key} was created without Compose labels"
+done
 
 echo "PASS: volume repair"

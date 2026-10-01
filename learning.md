@@ -5,6 +5,37 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### A deploy script that builds "what is checked out" can ship an old release for days
+- **What happened:** the owner reported `deploy-local.sh` deploying 7.15.0
+  while main was at 7.21.0. Sessions had been committing from throwaway
+  worktrees and pushing; the checkout the deploy runs from was never moved,
+  and it also held stale pre-commit copies of files that had since been
+  pushed (they still said 7.15.0). The script read `VERSION` from that
+  checkout and reported nothing odd.
+- **Fix:** `deploy-local.sh` fetches and fast-forwards to `origin/main`,
+  re-executes itself, and when it can't it names the version it deploys and
+  why. The closing message prints version and commit.
+- **Rule:** a session that pushes from a worktree leaves the main checkout
+  behind. Before telling the owner a change is live, compare
+  `git rev-parse HEAD` in the deploy checkout with `origin/main`. Stale
+  uncommitted files there are checked against origin by hash and file time,
+  saved as a patch, then replaced; never left for the owner to trip on.
+
+### install.sh never got the volume layout start-kms.sh prepares
+- **What happened:** internal mTLS (1.9.0-beta) added the `infra-tls`
+  subdirectories and the `platform-state` owner to `start-kms.sh` only.
+  `install.sh` starts the stack with its own `compose up`, so a fresh
+  install failed at the first daemon with a subpath mount.
+  `scripts/test-volume-repair.sh` now reproduces that failure and the fix.
+- **How it slipped through:** two scripts each prepared volumes with their
+  own copy of the steps, and every test of the change ran through
+  `deploy-local.sh`, which uses `start-kms.sh`.
+- **Rule:** one function per bootstrap step, called by every path that
+  starts the stack (`prepare_shared_volumes` in
+  `infra/scripts/compose-volumes.sh`). `install.sh` resets all data, so it
+  can't be tried on a developer's stack: its steps need a test that runs
+  without it.
+
 ### A Compose volume option does nothing if a script creates the volume first
 - **What happened:** the owner pasted four `docker compose up` warnings:
   `volume "…_runtime-certs" already exists but was not created by Docker
@@ -42,24 +73,8 @@ Newest entries on top.
 - **Trap:** making a broken security property real can break what grew on
   top of the bug. Before enforcing tmpfs, list what writes to the volume
   and ask which of it can be regenerated.
-- **Open:** `install.sh` starts the stack with `compose up` directly and
-  does not create the `infra-tls` subdirectories or the `platform-state`
-  owner that `start-kms.sh` prepares. Not tested here; check a fresh
-  `install.sh` run.
-### Fake label fixed: every long hex string was an "exposed secret"
-- **What happened:** the code scan called any 32 or more hex characters a
-  `hex_secret` and classed it `exposed`. On one mounted config directory it
-  was tolerable. Pointed at a git repository it would have listed every
-  checksum, digest and commit ID as an exposed secret: a lock file alone
-  has thousands.
-- **How it slipped through:** the label came from a pattern, and the test
-  fed the pattern one string chosen to match. Nobody ran it over a real
-  tree, where most hex is not a secret.
-- **Rule:** a heuristic may only name what it has evidence for. A hex value
-  is listed as a secret only when the line assigns it to a name that says
-  so, and the test tree includes the look-alikes that must not match
-  (a lock file, a `sha256` field, a README). Lock files are skipped. A
-  heuristic finding never raises the incident event.
+- **Closed in 7.22.0-beta:** `install.sh` did not prepare the `infra-tls`
+  subdirectories or the `platform-state` owner (entry above).
 
 ### Go keeps Authorization across a redirect to the same host on another port
 - **What happened:** the repository scan follows the hosting API's redirect

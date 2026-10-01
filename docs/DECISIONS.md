@@ -30,14 +30,20 @@ rejected, and how it's enforced.
     rewrap on CRWK rotation it needs. In software root-key mode the CRWK
     passphrase is on the same volume, so wrapping adds little there.
 - **Consequences:** a full restart issues the runtime certificates again,
-  so their serials change and the old ones stay valid until they expire.
+  so their serials change. From 7.22.0-beta certs revokes each one it
+  replaces (it records the last issued certificate per listener beside the
+  kept copy); before that the old ones stayed active until they expired.
   Leaving the `external` source discards the kept certificate and key; an
   expired kept certificate is discarded at the next start.
 - **Enforced by:** `scripts/test-volume-repair.sh` (the mount is tmpfs, using
   the real compose declaration; an upgrade keeps external material and loses
   no persistent volume), conformance `compose-volumes`,
   `TestEdgeExternalCertificateSurvivesRestart` (restored and audited; a
-  mismatched, expired or discarded copy is not).
+  mismatched, expired or discarded copy is not),
+  `TestEdgeCertificateReplacedIsRevoked`.
+
+---
+
 ## 2026-10-01 — Discovery: git repositories through the hosting API; schedules on checked authority (7.20.0-beta)
 
 - **Decision (how a repository is read):** discovery asks the hosting

@@ -102,71 +102,32 @@ prepare_certs_volumes() {
     project_name="vecta-kms"
   fi
   local certs_volume="${project_name}_certs-key-data"
-  # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): the public trust bundle
-  # every service reads, and the dashboard's TLS files (certs writes both).
-  local trust_volume="${project_name}_internal-trust"
-  local dashboard_tls_volume="${project_name}_dashboard-tls"
-  # Server certificates for Postgres, NATS, Valkey and Consul; each daemon
-  # mounts only its own subdirectory, which must exist before it starts.
-  local infra_tls_volume="${project_name}_infra-tls"
-  # Platform FIPS mode, written by governance (uid 10001), read by every
-  # service before any cryptography (pkg/config).
-  local platform_state_volume="${project_name}_platform-state"
   local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"
-  local prepared=0 helper_image="" helper_out="" key
+  local helper_out=""
 
-  # runtime-certs is not made here: Compose creates it as tmpfs, already
-  # owned by the certs user (docker-compose.yml).
-  for key in certs-key-data internal-trust dashboard-tls infra-tls platform-state; do
-    volume_exists "${project_name}_${key}" || compose_volume_create "${project_name}" "${key}"
-  done
+  if ! prepare_shared_volumes "${project_name}"; then
+    echo "unable to prepare the shared volumes" >&2
+    return 1
+  fi
 
   # The CRWK passphrase is generated inside the volume and never crosses the
   # host (infra/scripts/crwk-passphrase.sh). An operator-supplied one is
   # passed by variable name only (CLAUDE.md rule 9).
-  for helper_image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
-    if helper_out="$(docker run --rm \
-      --volume "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
-      --volume "${certs_volume}:/data" \
-      --volume "${trust_volume}:/trust" \
-      --volume "${dashboard_tls_volume}:/dashboard-tls" \
-      --volume "${infra_tls_volume}:/infra-tls" \
-      --volume "${platform_state_volume}:/platform-state" \
-      --env "CERTS_CRWK_PASSPHRASE_FILE=${passphrase_path}" \
-      --env CERTS_CRWK_BOOTSTRAP_PASSPHRASE \
-      "${helper_image}" \
-      sh -lc '
-        set -eu
-        mkdir -p /data
-        chown -R 100:101 /data
-        chmod 700 /data
-        mkdir -p /trust /dashboard-tls
-        chown 100:101 /trust /dashboard-tls
-        chmod 755 /trust
-        chmod 750 /dashboard-tls
-        mkdir -p /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
-        chown -R 100:101 /infra-tls
-        chmod 700 /infra-tls /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
-        mkdir -p /platform-state
-        chown 10001 /platform-state
-        chmod 755 /platform-state
-        sh /crwk-passphrase.sh
-      ' 2>/dev/null)"; then
-      prepared=1
-      break
-    fi
-  done
+  if ! helper_out="$(docker run --rm --network none \
+    --volume "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
+    --volume "${certs_volume}:/data" \
+    --env "CERTS_CRWK_PASSPHRASE_FILE=${passphrase_path}" \
+    --env CERTS_CRWK_BOOTSTRAP_PASSPHRASE \
+    "$(helper_image)" sh /crwk-passphrase.sh 2>/dev/null)"; then
+    echo "unable to prepare the certs CRWK passphrase" >&2
+    return 1
+  fi
   case "${helper_out}" in
     *crwk-public-default-retired*)
       echo "the certs CRWK passphrase was the retired public default: a new one was generated; certs re-keys the CRWK and rewraps every CA signer on start (audit.certs.crwk_rotated, docs/SECURITY/SECRET_ROTATION.md)" ;;
     *crwk-passphrase-written*)
       echo "certs CRWK passphrase generated in the certs key volume" ;;
   esac
-
-  if [[ "${prepared}" -ne 1 ]]; then
-    echo "unable to prepare certificate bootstrap volumes" >&2
-    return 1
-  fi
   export_internal_pki_cache "${certs_volume}"
   # Last: the export above needs the running database.
   repair_volumes "${project_name}"

@@ -123,6 +123,9 @@ choice each):
   kept on the node's certs key volume (`/var/lib/vecta/certs/edge`,
   `CERTS_EDGE_EXTERNAL_DIR`; mode 0600, not wrapped) and copied into
   `runtime-certs` at start (`audit.certs.edge_tls_certificate_restored`).
+  A certificate certs issued for a listener is revoked (`superseded`,
+  `audit.cert.revoked`) once the listener no longer serves it: after a
+  restart, a change of source, or an external install (7.22.0-beta).
   Leaving the `external` source discards the kept certificate and key, and
   an expired one is discarded at the next start. Only Compose creates
   `runtime-certs`; `start-kms.sh` replaces one found on disk

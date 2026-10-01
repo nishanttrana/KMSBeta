@@ -320,6 +320,90 @@ func TestEdgeExternalCertificateSurvivesRestart(t *testing.T) {
 	notRestored("a certificate ended by leaving the external source")
 }
 
+// A certificate certs issued for a listener is revoked once the listener no
+// longer serves it: after a restart (tmpfs lost its key), a change of
+// source, or the install of an external certificate. The one being served
+// stays active.
+func TestEdgeCertificateReplacedIsRevoked(t *testing.T) {
+	f, cfg := edgeFixture(t)
+	ctx := context.Background()
+	current := func() string {
+		t.Helper()
+		raw, err := os.ReadFile(f.svc.edgeKept(listenerHTTPS).issued())
+		if err != nil || len(strings.Fields(string(raw))) != 1 {
+			t.Fatalf("issued list must hold exactly the served certificate: %q %v", raw, err)
+		}
+		return strings.Fields(string(raw))[0]
+	}
+	first := current()
+	if got := f.certStatus(t, first); got != CertStatusActive {
+		t.Fatalf("served certificate: %s", got)
+	}
+	// A pass that changes nothing revokes nothing.
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if current() != first || f.certStatus(t, first) != CertStatusActive {
+		t.Fatal("an unchanged pass must keep the served certificate active")
+	}
+	// Restart: the runtime directory is empty and a new one is issued.
+	if err := os.RemoveAll(cfg.MaterializeDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	second := current()
+	if second == first || f.certStatus(t, first) != CertStatusRevoked || f.certStatus(t, second) != CertStatusActive {
+		t.Fatalf("after a restart: first %s, second %s", f.certStatus(t, first), f.certStatus(t, second))
+	}
+	// A change of source.
+	ca, err := f.svc.CreateCA(ctx, CreateCARequest{TenantID: "root", Name: "corp-edge", CALevel: "root",
+		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=Corp Edge CA"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceCA, CAID: ca.ID}); err != nil {
+		t.Fatal(err)
+	}
+	third := current()
+	if f.certStatus(t, second) != CertStatusRevoked || f.certStatus(t, third) != CertStatusActive {
+		t.Fatalf("after a source change: second %s, third %s", f.certStatus(t, second), f.certStatus(t, third))
+	}
+	// External: a runtime-root certificate serves until one is installed,
+	// and the install replaces it.
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
+		t.Fatal(err)
+	}
+	fourth := current()
+	if f.certStatus(t, third) != CertStatusRevoked {
+		t.Fatalf("after choosing external: third %s", f.certStatus(t, third))
+	}
+	p, err := f.svc.CreateEdgeCSR(ctx, "", "kms.example.com", []string{"kms.example.com"}, "", "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ext, err := f.svc.CreateCA(ctx, CreateCARequest{TenantID: "customer", Name: "Customer Issuing CA", CALevel: "root",
+		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=Customer Issuing CA"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, _, err := f.svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "customer", CAID: ext.ID, CertType: "tls-server",
+		SubjectCN: "kms.example.com", SANs: []string{"kms.example.com"}, CSRPem: p.CSRPEM, ValidityDays: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := f.certStatus(t, fourth); got != CertStatusActive {
+		t.Fatalf("still served until the external certificate is installed: %s", got)
+	}
+	if _, err := f.svc.InstallEdgeCertificate(ctx, "", signed.CertPEM, ext.CertPEM); err != nil {
+		t.Fatal(err)
+	}
+	if current() != "-" || f.certStatus(t, fourth) != CertStatusRevoked {
+		t.Fatalf("after the external install: %q, fourth %s", current(), f.certStatus(t, fourth))
+	}
+}
+
 // Every edge certificate action and refusal is audited; the measurement is
 // readable by any verified caller (the pqc service's token), not anonymously.
 func TestEdgeCertificateRoutesAudited(t *testing.T) {

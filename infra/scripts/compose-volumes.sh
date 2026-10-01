@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Docker volume helpers for start-kms.sh (sourced, not run). repair_volumes
-# uses the caller's BASH_BIN, STOP_SCRIPT and DEPLOYMENT_FILE.
+# Docker volume helpers for start-kms.sh and install.sh (sourced, not run).
+# repair_volumes uses the caller's BASH_BIN, STOP_SCRIPT and DEPLOYMENT_FILE.
 # Tested by scripts/test-volume-repair.sh.
 
 # Compose adopts a volume only if it carries Compose's labels. Without them
@@ -35,6 +35,44 @@ helper_image() {
     docker image inspect "${image}" >/dev/null 2>&1 && break
   done
   printf '%s' "${image}"
+}
+
+# prepare_shared_volumes creates the volumes that must be laid out before the
+# first start, and gives each the owner, mode and subdirectories its users
+# expect. Every path that starts the stack calls it (start-kms.sh,
+# install.sh): until 7.22.0-beta install.sh did not, and a fresh install
+# stopped at Postgres, whose mount needs infra-tls/postgres to exist.
+#   certs-key-data  certs (100:101): sealed CRWK, passphrase, kept edge files
+#   internal-trust  written by certs, read by every service
+#   dashboard-tls   written by certs, read by the dashboard (group 101)
+#   infra-tls       one subdirectory per daemon; each mounts only its own
+#   platform-state  FIPS mode, written by governance (uid 10001)
+# runtime-certs is not made here: Compose creates it as tmpfs, already owned
+# by the certs user (docker-compose.yml).
+prepare_shared_volumes() {
+  local project="$1" key
+  for key in certs-key-data internal-trust dashboard-tls infra-tls platform-state; do
+    volume_exists "${project}_${key}" || compose_volume_create "${project}" "${key}"
+  done
+  docker run --rm --network none \
+    --volume "${project}_certs-key-data:/data" \
+    --volume "${project}_internal-trust:/trust" \
+    --volume "${project}_dashboard-tls:/dashboard-tls" \
+    --volume "${project}_infra-tls:/infra-tls" \
+    --volume "${project}_platform-state:/platform-state" \
+    "$(helper_image)" sh -c '
+      set -eu
+      chown -R 100:101 /data
+      chmod 700 /data
+      chown 100:101 /trust /dashboard-tls
+      chmod 755 /trust
+      chmod 750 /dashboard-tls
+      mkdir -p /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
+      chown -R 100:101 /infra-tls
+      chmod 700 /infra-tls /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
+      chown 10001 /platform-state
+      chmod 755 /platform-state
+    ' >/dev/null
 }
 
 # copy_volume copies one volume into another and fails unless the contents,

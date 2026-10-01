@@ -4,6 +4,28 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.22.0-beta] — 2026-10-01
+
+### Fresh installs start; deploy-local.sh deploys the latest main; replaced edge certificates are revoked
+- **Fixed:** a fresh `install.sh` run stopped at Postgres (and NATS, Valkey,
+  Consul): each mounts its own subdirectory of the `infra-tls` volume, and
+  `install.sh` never created them, nor the `platform-state` owner governance
+  needs. `install.sh` and `start-kms.sh` now lay the volumes out with the
+  same function (`prepare_shared_volumes`), so the two can't drift again.
+- **Fixed:** `deploy-local.sh` built whatever was checked out, so a checkout
+  left behind `origin/main` kept deploying an old release (7.15.0 while main
+  was 7.21.0) without saying so. It now fast-forwards the checkout to
+  `origin/main` first. When it can't (local commits, or uncommitted changes
+  to files main also changed) or can't reach origin, it says which version
+  it is deploying and why. `DEPLOY_NO_PULL=1` deploys the checkout as it is.
+  The closing message names the version and commit that are running.
+- **Fixed (security):** a certificate certs issued for the HTTPS edge or KMIP
+  listener is revoked (`superseded`) as soon as the listener stops serving
+  it: after a restart (its key was only in tmpfs), a change of source, or
+  the install of an external certificate. Until now each one stayed active
+  in the inventory until it expired. Certificates issued before this
+  version are not tracked and are not revoked by the upgrade.
+
 ## [7.21.0-beta] — 2026-10-01
 
 ### Runtime TLS keys are in memory as declared; Compose volume warnings gone
