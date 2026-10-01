@@ -508,14 +508,17 @@ secrets,secrets,GET,"{param}&format={param}{param}` : """"}","/{param}&format={p
 secrets,secrets,DELETE,"secretURL(session, secretId, `/versions/{param}`)","/secretURL(session, secretId, `/versions/{param}`)",True,serviceRequest,web/dashboard/src/lib/secrets.ts,199,"secrets|DELETE|/secretURL(session, secretId, `/versions/{param}`)"
 secrets,secrets,GET,/secrets/settings?tenant_id={param},/secrets/settings,True,serviceRequest,web/dashboard/src/lib/secrets.ts,216,secrets|GET|/secrets/settings
 secrets,secrets,PUT,/secrets/settings,/secrets/settings,False,serviceRequest,web/dashboard/src/lib/secrets.ts,221,secrets|PUT|/secrets/settings
-secrets,secrets,GET,/secrets/access/rules?tenant_id={param},/secrets/access/rules,True,serviceRequest,web/dashboard/src/lib/secrets.ts,243,secrets|GET|/secrets/access/rules
-secrets,secrets,GET,/secrets/access/rules,/secrets/access/rules,False,serviceRequest,web/dashboard/src/lib/secrets.ts,248,secrets|GET|/secrets/access/rules
-secrets,secrets,DELETE,/secrets/access/rules/{param}?tenant_id={param},/secrets/access/rules/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,253,secrets|DELETE|/secrets/access/rules/{param}
-secrets,secrets,GET,/secrets/stats?tenant_id={param},/secrets/stats,True,serviceRequest,web/dashboard/src/lib/secrets.ts,284,secrets|GET|/secrets/stats
-secrets,secrets,GET,/secrets/{param}/versions?tenant_id={param},/secrets/{param}/versions,True,serviceRequest,web/dashboard/src/lib/secrets.ts,289,secrets|GET|/secrets/{param}/versions
-secrets,secrets,GET,/secrets/{param}/audit?tenant_id={param}&limit={param},/secrets/{param}/audit,True,serviceRequest,web/dashboard/src/lib/secrets.ts,297,secrets|GET|/secrets/{param}/audit
-secrets,secrets,POST,/secrets/{param}/rotate?tenant_id={param},/secrets/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/secrets.ts,307,secrets|POST|/secrets/{param}/rotate
-secrets,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,False,serviceRequest,web/dashboard/src/lib/secrets.ts,328,secrets|POST|/secrets/generate/keypair
+secrets,secrets,GET,/secrets/version-caps?tenant_id={param},/secrets/version-caps,True,serviceRequest,web/dashboard/src/lib/secrets.ts,244,secrets|GET|/secrets/version-caps
+secrets,secrets,PUT,/secrets/version-caps,/secrets/version-caps,False,serviceRequest,web/dashboard/src/lib/secrets.ts,249,secrets|PUT|/secrets/version-caps
+secrets,secrets,DELETE,/secrets/version-caps/{param}?tenant_id={param},/secrets/version-caps/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,254,secrets|DELETE|/secrets/version-caps/{param}
+secrets,secrets,GET,/secrets/access/rules?tenant_id={param},/secrets/access/rules,True,serviceRequest,web/dashboard/src/lib/secrets.ts,268,secrets|GET|/secrets/access/rules
+secrets,secrets,GET,/secrets/access/rules,/secrets/access/rules,False,serviceRequest,web/dashboard/src/lib/secrets.ts,273,secrets|GET|/secrets/access/rules
+secrets,secrets,DELETE,/secrets/access/rules/{param}?tenant_id={param},/secrets/access/rules/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,278,secrets|DELETE|/secrets/access/rules/{param}
+secrets,secrets,GET,/secrets/stats?tenant_id={param},/secrets/stats,True,serviceRequest,web/dashboard/src/lib/secrets.ts,309,secrets|GET|/secrets/stats
+secrets,secrets,GET,/secrets/{param}/versions?tenant_id={param},/secrets/{param}/versions,True,serviceRequest,web/dashboard/src/lib/secrets.ts,314,secrets|GET|/secrets/{param}/versions
+secrets,secrets,GET,/secrets/{param}/audit?tenant_id={param}&limit={param},/secrets/{param}/audit,True,serviceRequest,web/dashboard/src/lib/secrets.ts,322,secrets|GET|/secrets/{param}/audit
+secrets,secrets,POST,/secrets/{param}/rotate?tenant_id={param},/secrets/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/secrets.ts,332,secrets|POST|/secrets/{param}/rotate
+secrets,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,False,serviceRequest,web/dashboard/src/lib/secrets.ts,353,secrets|POST|/secrets/generate/keypair
 signing,signing,GET,/signing/settings?tenant_id={param},/signing/settings,True,serviceRequest,web/dashboard/src/lib/signing.ts,84,signing|GET|/signing/settings
 signing,signing,PUT,/signing/settings,/signing/settings,False,serviceRequest,web/dashboard/src/lib/signing.ts,89,signing|PUT|/signing/settings
 signing,signing,GET,/signing/summary?tenant_id={param},/signing/summary,True,serviceRequest,web/dashboard/src/lib/signing.ts,97,signing|GET|/signing/summary

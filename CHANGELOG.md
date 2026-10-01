@@ -4,6 +4,35 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.31.0-beta] — 2026-10-01
+
+### Secrets: version caps by path, and rule subjects that must exist
+- **Added: a version cap for one secret or one folder.** A cap on a path
+  (`/logs/audit` or `/logs/*`) overrides the tenant's. The most specific
+  wins: the secret's own cap, then the nearest folder above it, then the
+  tenant's. A cap of 0 on a path keeps every version there even when the
+  tenant caps the rest. A secret's detail shows the cap that applies and
+  where it comes from.
+- **Changed: an access rule is stored only for a subject that exists.** The
+  user, role or client is checked with auth, the access group with keycore
+  and the workload with workload identity, under the secrets service's own
+  identity. A subject that does not exist is refused (`400
+  unknown_subject`); if the owner cannot be asked, the rule is refused
+  (`503 subject_check_unavailable`) rather than stored unverified. Until now
+  a mistyped role produced a rule that named nobody and, as the only allow
+  rule on a path, locked everyone out of it without saying why.
+- **Added:** listing rules marks each with `subject_status` (`found`,
+  `missing`, `unchecked`) and a display name, so a rule for a user who has
+  since been deleted is flagged on the page and counted in the audit event
+  (`subjects_missing`).
+- **Added (auth):** `POST /internal/subjects/check`, for the secrets service
+  identity only. It answers existence and a display name, nothing else about
+  the account.
+- **Dashboard:** "Versions kept, by path" in the Access rules view; "not
+  found" and "unchecked" markers on rules.
+- **Open:** a rule is not removed or disabled when its subject disappears;
+  it is flagged. Lowering a cap still prunes at each secret's next write.
+
 ## [7.30.0-beta] — 2026-10-01
 
 ### Secrets: the open items from 7.29.0 are closed

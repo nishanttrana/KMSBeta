@@ -26,6 +26,8 @@ type Handler struct {
 	logger  *log.Logger
 	// groups resolves group subjects in access rules; nil refuses them.
 	groups GroupResolver
+	// directory says whether a rule's subject exists; nil refuses new rules.
+	directory SubjectDirectory
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
@@ -92,6 +94,9 @@ func (h *Handler) routes() {
 	r.Handle("GET /secrets/stats", route.Spec{Action: "stats_read", Permission: permRead}, h.stats)
 	r.Handle("GET /secrets/settings", route.Spec{Action: "settings_read", Permission: permAccessRead, Resource: "secret_vault_settings"}, h.getSettings)
 	r.Handle("PUT /secrets/settings", warn(route.Spec{Action: "settings_updated", Permission: permAccessManage, Resource: "secret_vault_settings"}), h.putSettings)
+	r.Handle("GET /secrets/version-caps", route.Spec{Action: "version_caps_listed", Permission: permAccessRead, Resource: "secret_version_cap"}, h.listVersionCaps)
+	r.Handle("PUT /secrets/version-caps", warn(route.Spec{Action: "version_cap_set", Permission: permAccessManage, Resource: "secret_version_cap"}), h.putVersionCap)
+	r.Handle("DELETE /secrets/version-caps/{cap_id}", warn(route.Spec{Action: "version_cap_deleted", Permission: permAccessManage, Resource: "secret_version_cap", TargetParam: "cap_id"}), h.deleteVersionCap)
 	r.Handle("GET /secrets/access/rules", route.Spec{Action: "access_rules_listed", Permission: permAccessRead, Resource: "secret_access_rule"}, h.listAccessRules)
 	r.Handle("POST /secrets/access/rules", warn(route.Spec{Action: "access_rule_created", Permission: permAccessManage, Resource: "secret_access_rule"}), h.createAccessRule)
 	r.Handle("DELETE /secrets/access/rules/{rule_id}", warn(route.Spec{Action: "access_rule_deleted", Permission: permAccessManage, Resource: "secret_access_rule", TargetParam: "rule_id"}), h.deleteAccessRule)
@@ -597,7 +602,16 @@ func (h *Handler) secretAccess(c *route.Call) {
 	for _, capability := range capabilities {
 		can[capability] = p.decide(secret.Path, capability) == ""
 	}
-	c.JSON(http.StatusOK, map[string]interface{}{"path": secret.Path, "rules": covering, "caller": can, "default_deny": p.defaultDeny})
+	maxVersions, from, err := h.svc.VersionCapFor(c.R.Context(), c.Tenant, secret.Path)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "settings_unavailable", err.Error())
+		return
+	}
+	h.annotate(c, covering)
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"path": secret.Path, "rules": covering, "caller": can, "default_deny": p.defaultDeny,
+		"max_versions": maxVersions, "max_versions_from": from,
+	})
 }
 
 func (h *Handler) listAccessRules(c *route.Call) {
@@ -607,6 +621,9 @@ func (h *Handler) listAccessRules(c *route.Call) {
 		return
 	}
 	c.Detail("count", len(rules))
+	if missing := h.annotate(c, rules); missing > 0 {
+		c.Detail("subjects_missing", missing)
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{"items": rules})
 }
 
@@ -649,6 +666,75 @@ func (h *Handler) putSettings(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"settings": settings})
 }
 
+// annotate marks each rule with whether its subject still exists where it
+// is defined, and returns how many do not. A subject whose owner could not
+// be asked is "unchecked", never "found".
+func (h *Handler) annotate(c *route.Call, rules []AccessRule) int {
+	found := map[subject]subjectInfo{}
+	if h.directory != nil && len(rules) > 0 {
+		subjects := make([]subject, 0, len(rules))
+		for _, r := range rules {
+			subjects = append(subjects, subject{r.SubjectType, r.SubjectID})
+		}
+		found, _ = h.directory.Lookup(c.R.Context(), c.Tenant, subjects)
+	}
+	missing := 0
+	for i, r := range rules {
+		info, checked := found[subject{r.SubjectType, r.SubjectID}]
+		switch {
+		case !checked:
+			rules[i].SubjectStatus = subjectUnchecked
+		case info.Exists:
+			rules[i].SubjectStatus, rules[i].SubjectLabel = subjectFound, info.Label
+		default:
+			rules[i].SubjectStatus = subjectMissing
+			missing++
+		}
+	}
+	return missing
+}
+
+func (h *Handler) listVersionCaps(c *route.Call) {
+	caps, err := h.svc.VersionCaps(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "version_caps_unavailable", err.Error())
+		return
+	}
+	c.Detail("count", len(caps))
+	c.JSON(http.StatusOK, map[string]interface{}{"items": caps})
+}
+
+func (h *Handler) putVersionCap(c *route.Call) {
+	var req struct {
+		TenantID    string `json:"tenant_id"`
+		Path        string `json:"path"`
+		MaxVersions int    `json:"max_versions"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Detail("path", strings.TrimSpace(req.Path))
+	c.Detail("max_versions", req.MaxVersions)
+	out, err := h.svc.PutVersionCap(c.R.Context(), VersionCap{TenantID: c.Tenant, Path: req.Path, MaxVersions: req.MaxVersions, UpdatedBy: c.Actor()})
+	if err != nil {
+		c.Error(http.StatusBadRequest, "invalid_version_cap", err.Error())
+		return
+	}
+	c.Target(out.ID)
+	c.JSON(http.StatusOK, map[string]interface{}{"cap": out})
+}
+
+func (h *Handler) deleteVersionCap(c *route.Call) {
+	out, err := h.svc.DeleteVersionCap(c.R.Context(), c.Tenant, c.R.PathValue("cap_id"))
+	if err != nil {
+		fail(c, err, http.StatusInternalServerError, "delete_failed")
+		return
+	}
+	c.Detail("path", out.Path)
+	c.Detail("max_versions", out.MaxVersions)
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
+}
+
 func ruleDetails(c *route.Call, r AccessRule) {
 	c.Detail("path", r.Path)
 	c.Detail("subject", r.SubjectType+":"+r.SubjectID)
@@ -668,7 +754,7 @@ func (h *Handler) createAccessRule(c *route.Call) {
 	if !c.Decode(&req) {
 		return
 	}
-	rule, err := h.svc.CreateAccessRule(c.R.Context(), AccessRule{
+	draft, err := normalizeRule(AccessRule{
 		TenantID: c.Tenant, Path: req.Path, SubjectType: req.SubjectType, SubjectID: req.SubjectID,
 		Capabilities: req.Capabilities, Effect: req.Effect, CreatedBy: c.Actor(),
 	})
@@ -676,6 +762,29 @@ func (h *Handler) createAccessRule(c *route.Call) {
 		c.Error(http.StatusBadRequest, "invalid_access_rule", err.Error())
 		return
 	}
+	// The subject must exist where it is defined. If that cannot be checked,
+	// the rule is refused rather than stored unverified.
+	who := subject{draft.SubjectType, draft.SubjectID}
+	c.Detail("subject", who.Type+":"+who.ID)
+	var known map[subject]subjectInfo
+	if h.directory != nil {
+		known, _ = h.directory.Lookup(c.R.Context(), c.Tenant, []subject{who})
+	}
+	info, checked := known[who]
+	if !checked {
+		c.Refuse(http.StatusServiceUnavailable, "subject_check_unavailable", "could not check that "+who.Type+" "+who.ID+" exists; the rule was not stored")
+		return
+	}
+	if !info.Exists {
+		c.Refuse(http.StatusBadRequest, "unknown_subject", "no "+who.Type+" "+who.ID+" in this tenant")
+		return
+	}
+	rule, err := h.svc.CreateAccessRule(c.R.Context(), draft)
+	if err != nil {
+		c.Error(http.StatusBadRequest, "invalid_access_rule", err.Error())
+		return
+	}
+	rule.SubjectStatus, rule.SubjectLabel = subjectFound, info.Label
 	c.Target(rule.ID)
 	ruleDetails(c, rule)
 	c.JSON(http.StatusCreated, map[string]interface{}{"rule": rule})

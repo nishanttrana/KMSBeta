@@ -1,7 +1,10 @@
 import { Plus, Trash2, UserCheck, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../../lib/auth";
-import { ACCESS_CAPABILITIES, ACCESS_SUBJECT_TYPES, createAccessRule, deleteAccessRule, putVaultSettings, type AccessRule, type VaultSettings } from "../../../../lib/secrets";
+import {
+  ACCESS_CAPABILITIES, ACCESS_SUBJECT_TYPES, createAccessRule, deleteAccessRule, deleteVersionCap, putVaultSettings, putVersionCap,
+  type AccessRule, type VaultSettings, type VersionCap,
+} from "../../../../lib/secrets";
 import { B, Btn, Chk, FG, Inp, Modal, Row2, Sel } from "../../legacyPrimitives";
 import { errMsg } from "../../runtimeUtils";
 import { C } from "../../theme";
@@ -21,7 +24,8 @@ export type GroupNames = Record<string, string>;
 
 export const RuleRow = ({ rule, groups, onDelete }: { rule: AccessRule; groups?: GroupNames | undefined; onDelete?: (() => void) | undefined }) => {
   const deny = rule.effect === "deny";
-  const who = rule.subject_type === "group" ? groups?.[rule.subject_id] || rule.subject_id : rule.subject_id;
+  const who = rule.subject_label || (rule.subject_type === "group" && groups?.[rule.subject_id]) || rule.subject_id;
+  const stale = rule.subject_status === "missing";
   const Icon = deny ? UserX : UserCheck;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "70px minmax(120px,1.4fr) minmax(120px,1.2fr) minmax(160px,1.6fr) 28px", gap: 10, alignItems: "center", padding: "8px 4px", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}>
@@ -29,6 +33,8 @@ export const RuleRow = ({ rule, groups, onDelete }: { rule: AccessRule; groups?:
       <code style={{ fontFamily: MONO, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={rule.path}>{rule.path}</code>
       <span style={{ color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={`${rule.subject_type}: ${rule.subject_id}`}>
         <span style={{ color: C.muted }}>{rule.subject_type} </span>{who}
+        {stale && <span title={`No ${rule.subject_type} ${rule.subject_id} exists any more; this rule names nobody`} style={{ color: C.redFg, fontWeight: 600 }}> · not found</span>}
+        {rule.subject_status === "unchecked" && <span title="The service that owns this subject could not be asked" style={{ color: C.amberFg }}> · unchecked</span>}
       </span>
       <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{rule.capabilities.map((c) => <B key={c} c={deny ? "red" : "accent"}>{c}</B>)}</span>
       {onDelete ? <button type="button" title="Delete rule" onClick={onDelete} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 }}><Trash2 size={13} /></button> : <span />}
@@ -102,6 +108,44 @@ export function VaultSettingsCard({ session, settings, error, uncovered, confirm
   );
 }
 
+type CapsProps = {
+  session: AuthSession;
+  caps: VersionCap[] | null;
+  error: string;
+  onChanged: () => void;
+  onToast?: ((m: string) => void) | undefined;
+};
+
+// Version caps for one secret or one folder. The most specific wins: a cap
+// on the secret, then the nearest folder above it, then the tenant's.
+export function VersionCaps({ session, caps, error, onChanged, onToast }: CapsProps) {
+  const [path, setPath] = useState("");
+  const [max, setMax] = useState("5");
+  const [busy, setBusy] = useState(false);
+  const act = async (done: string, fn: () => Promise<unknown>) => {
+    setBusy(true);
+    try { await fn(); onToast?.(done); onChanged(); } catch (e) { onToast?.(`Version cap refused: ${errMsg(e)}`); } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "12px 14px", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: C.text, marginRight: "auto" }} title="A cap on a secret beats its folder's, which beats the tenant's">Versions kept, by path</span>
+        <Inp w={220} mono placeholder="/logs/* or /logs/audit" aria-label="Version cap path" value={path} onChange={(e) => setPath(e.target.value)} />
+        <Inp w={70} type="number" min="0" max="1000" aria-label="Versions kept on this path" value={max} onChange={(e) => setMax(e.target.value)} />
+        <Btn small disabled={busy || !path.trim()} onClick={() => void act("Version cap set.", async () => { await putVersionCap(session, path.trim(), Math.trunc(Number(max) || 0)); setPath(""); })}><Plus size={12} />Set cap</Btn>
+      </div>
+      {error ? <div style={{ fontSize: 11, color: C.redFg, marginTop: 8 }}>Version caps unavailable: {error}</div>
+        : (caps || []).map((c) => (
+          <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr auto 28px", gap: 10, alignItems: "center", padding: "6px 2px", borderTop: `1px solid ${C.border}`, marginTop: 8, fontSize: 11 }}>
+            <code style={{ fontFamily: MONO, color: C.text }}>{c.path}</code>
+            <span style={{ color: C.dim }}>{c.max_versions > 0 ? `keeps ${c.max_versions}` : "keeps every version"}</span>
+            <button type="button" title="Remove cap" disabled={busy} onClick={() => void act("Version cap removed.", () => deleteVersionCap(session, c.id))} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 }}><Trash2 size={13} /></button>
+          </div>
+        ))}
+    </div>
+  );
+}
+
 type Props = {
   session: AuthSession;
   rules: AccessRule[] | null;
@@ -135,7 +179,7 @@ export function AccessRules({ session, rules, groups, error, restricted, total, 
   };
 
   const remove = async (rule: AccessRule) => {
-    const ok = await confirm({ title: "Delete access rule", message: `Delete the ${rule.effect} rule on ${rule.path} for ${rule.subject_type} ${(rule.subject_type === "group" && groups?.[rule.subject_id]) || rule.subject_id}? If it was the only allow rule there, those secrets open to everyone with the secrets permission.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirm({ title: "Delete access rule", message: `Delete the ${rule.effect} rule on ${rule.path} for ${rule.subject_type} ${rule.subject_label || (rule.subject_type === "group" && groups?.[rule.subject_id]) || rule.subject_id}? If it was the only allow rule there, those secrets open to everyone with the secrets permission.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
     try { await deleteAccessRule(session, rule.id); onToast?.("Access rule deleted."); onChanged(); } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); }
   };
@@ -145,6 +189,7 @@ export function AccessRules({ session, rules, groups, error, restricted, total, 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, color: C.muted }}>
           {rules ? `${rules.length} rule${rules.length === 1 ? "" : "s"} · ${restricted} of ${total} secrets restricted` : ""}
+          {rules && rules.some((r) => r.subject_status === "missing") ? <span style={{ color: C.redFg, fontWeight: 600 }}>{` · ${rules.filter((r) => r.subject_status === "missing").length} name a subject that no longer exists`}</span> : null}
         </span>
         <Btn small primary onClick={() => setOpen(true)}><Plus size={12} />Add rule</Btn>
       </div>

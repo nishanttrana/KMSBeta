@@ -226,6 +226,7 @@ var Replicated = map[string][]string{
 	"secrets": {
 		"secret_access_rules",
 		"secret_vault_settings",
+		"secret_version_caps",
 		"secret_values",
 		"secrets",
 		"secrets_mek_exposure",

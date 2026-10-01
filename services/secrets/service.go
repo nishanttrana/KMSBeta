@@ -236,11 +236,13 @@ func (s *Service) UpdateSecret(ctx context.Context, tenantID string, secretID st
 	}
 
 	if value != nil {
-		settings, err := s.store.GetSettings(ctx, tenantID)
+		current, err := s.store.GetSecret(ctx, tenantID, secretID)
 		if err != nil {
 			return Secret{}, err
 		}
-		req.maxVersions = settings.MaxVersions
+		if req.maxVersions, _, err = s.VersionCapFor(ctx, tenantID, current.Path); err != nil {
+			return Secret{}, err
+		}
 	}
 	updated, err := s.store.UpdateSecret(ctx, tenantID, secretID, req, expiresAt, value)
 	if err != nil {
@@ -288,12 +290,12 @@ func (s *Service) Rollback(ctx context.Context, tenantID string, secretID string
 	if err != nil {
 		return Secret{}, err
 	}
-	settings, err := s.store.GetSettings(ctx, tenantID)
+	maxVersions, _, err := s.VersionCapFor(ctx, tenantID, secret.Path)
 	if err != nil {
 		return Secret{}, err
 	}
 	return s.store.UpdateSecret(ctx, tenantID, secretID, UpdateSecretRequest{
-		maxVersions:     settings.MaxVersions,
+		maxVersions:     maxVersions,
 		UpdatedBy:       actorOrSystem(actor),
 		ExpectedVersion: expected,
 		changeAction:    "rolled_back",
@@ -523,6 +525,57 @@ func (s *Service) PutSettings(ctx context.Context, v VaultSettings) (VaultSettin
 		return VaultSettings{}, err
 	}
 	return s.store.GetSettings(ctx, v.TenantID)
+}
+
+// VersionCapFor is the version cap that applies to a path and where it
+// comes from: the path of a cap, or "tenant".
+func (s *Service) VersionCapFor(ctx context.Context, tenantID, path string) (int, string, error) {
+	settings, err := s.store.GetSettings(ctx, tenantID)
+	if err != nil {
+		return 0, "", err
+	}
+	caps, err := s.store.ListVersionCaps(ctx, tenantID)
+	if err != nil {
+		return 0, "", err
+	}
+	maxVersions, from := capFor(caps, settings.MaxVersions, path)
+	return maxVersions, from, nil
+}
+
+func (s *Service) VersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error) {
+	return s.store.ListVersionCaps(ctx, strings.TrimSpace(tenantID))
+}
+
+func (s *Service) PutVersionCap(ctx context.Context, c VersionCap) (VersionCap, error) {
+	c.Path = strings.TrimSpace(c.Path)
+	if err := validPath(c.Path); err != nil {
+		return VersionCap{}, err
+	}
+	if c.MaxVersions < 0 || c.MaxVersions > maxVersionCap {
+		return VersionCap{}, fmt.Errorf("max_versions must be 0 (keep every version) to %d", maxVersionCap)
+	}
+	existing, err := s.store.ListVersionCaps(ctx, c.TenantID)
+	if err != nil {
+		return VersionCap{}, err
+	}
+	if len(existing) >= maxRulesPerTenant {
+		return VersionCap{}, fmt.Errorf("a tenant may have at most %d version caps", maxRulesPerTenant)
+	}
+	c.ID = newID("svc")
+	if err := s.store.PutVersionCap(ctx, c); err != nil {
+		return VersionCap{}, err
+	}
+	caps, err := s.store.ListVersionCaps(ctx, c.TenantID)
+	for _, stored := range caps {
+		if stored.Path == c.Path {
+			return stored, err
+		}
+	}
+	return VersionCap{}, err
+}
+
+func (s *Service) DeleteVersionCap(ctx context.Context, tenantID, capID string) (VersionCap, error) {
+	return s.store.DeleteVersionCap(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(capID))
 }
 
 // Access rules.

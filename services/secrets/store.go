@@ -47,6 +47,9 @@ type Store interface {
 	GetSettings(ctx context.Context, tenantID string) (VaultSettings, error)
 	PutSettings(ctx context.Context, settings VaultSettings) error
 	RetentionTenants(ctx context.Context) ([]VaultSettings, error)
+	ListVersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error)
+	PutVersionCap(ctx context.Context, c VersionCap) error
+	DeleteVersionCap(ctx context.Context, tenantID string, capID string) (VersionCap, error)
 	ListAccessRules(ctx context.Context, tenantID string) ([]AccessRule, error)
 	CreateAccessRule(ctx context.Context, rule AccessRule) error
 	DeleteAccessRule(ctx context.Context, tenantID string, ruleID string) (AccessRule, error)
@@ -544,6 +547,56 @@ func (s *SQLStore) RetentionTenants(ctx context.Context) ([]VaultSettings, error
 		out = append(out, v)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) ListVersionCaps(ctx context.Context, tenantID string) ([]VersionCap, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT id, tenant_id, path, max_versions, updated_by, updated_at FROM secret_version_caps WHERE tenant_id = $1 ORDER BY path`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]VersionCap, 0)
+	for rows.Next() {
+		var c VersionCap
+		var at sql.NullTime
+		if err := rows.Scan(&c.ID, &c.TenantID, &c.Path, &c.MaxVersions, &c.UpdatedBy, &at); err != nil {
+			return nil, err
+		}
+		if at.Valid {
+			ts := at.Time.UTC()
+			c.UpdatedAt = &ts
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// PutVersionCap sets the cap for a path, replacing one already there.
+func (s *SQLStore) PutVersionCap(ctx context.Context, c VersionCap) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO secret_version_caps (id, tenant_id, path, max_versions, updated_by, updated_at)
+VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, path) DO UPDATE SET max_versions = excluded.max_versions, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP
+`, c.ID, c.TenantID, c.Path, c.MaxVersions, c.UpdatedBy)
+	return err
+}
+
+// DeleteVersionCap removes a cap and returns what it was, for the audit event.
+func (s *SQLStore) DeleteVersionCap(ctx context.Context, tenantID string, capID string) (VersionCap, error) {
+	caps, err := s.ListVersionCaps(ctx, tenantID)
+	if err != nil {
+		return VersionCap{}, err
+	}
+	for _, c := range caps {
+		if c.ID != capID {
+			continue
+		}
+		if _, err := s.db.SQL().ExecContext(ctx, `DELETE FROM secret_version_caps WHERE tenant_id = $1 AND id = $2`, tenantID, capID); err != nil {
+			return VersionCap{}, err
+		}
+		return c, nil
+	}
+	return VersionCap{}, errNotFound
 }
 
 func (s *SQLStore) ListAccessRules(ctx context.Context, tenantID string) ([]AccessRule, error) {

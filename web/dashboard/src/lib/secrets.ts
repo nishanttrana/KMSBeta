@@ -231,13 +231,38 @@ export type AccessRule = {
   effect: "allow" | "deny" | string;
   created_by: string;
   created_at: string;
+  // Whether the subject exists where it is defined; "unchecked" when the
+  // service that owns it could not be asked.
+  subject_status?: "found" | "missing" | "unchecked" | string;
+  subject_label?: string;
 };
+
+// A version cap for one secret or one folder, overriding the tenant's.
+export type VersionCap = { id: string; path: string; max_versions: number; updated_by?: string; updated_at?: string };
+
+export async function listVersionCaps(session: AuthSession): Promise<VersionCap[]> {
+  const res = await serviceRequest<{ items: VersionCap[] }>(session, "secrets", `/secrets/version-caps?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export async function putVersionCap(session: AuthSession, path: string, maxVersions: number): Promise<VersionCap> {
+  const res = await serviceRequest<{ cap: VersionCap }>(session, "secrets", "/secrets/version-caps", { method: "PUT", body: JSON.stringify({ tenant_id: session.tenantId, path, max_versions: maxVersions }) });
+  return res.cap;
+}
+
+export async function deleteVersionCap(session: AuthSession, capId: string): Promise<void> {
+  await serviceRequest(session, "secrets", `/secrets/version-caps/${encodeURIComponent(capId)}?tenant_id=${encodeURIComponent(session.tenantId)}`, { method: "DELETE" });
+}
 
 export type AccessRuleInput = Pick<AccessRule, "path" | "subject_type" | "subject_id" | "capabilities" | "effect">;
 
 // What the rules say about one secret: the rules covering its path, and what
 // the signed-in caller may do under them.
-export type SecretAccess = { path: string; rules: AccessRule[]; caller: Record<string, boolean>; default_deny?: boolean };
+export type SecretAccess = {
+  path: string; rules: AccessRule[]; caller: Record<string, boolean>; default_deny?: boolean;
+  // The version cap that applies (0: none) and its source: a cap's path, or "tenant".
+  max_versions?: number; max_versions_from?: string;
+};
 
 export async function listAccessRules(session: AuthSession): Promise<AccessRule[]> {
   const res = await serviceRequest<{ items: AccessRule[] }>(session, "secrets", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`);

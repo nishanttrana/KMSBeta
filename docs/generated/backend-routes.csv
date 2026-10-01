@@ -37,84 +37,85 @@ auth,POST,/auth/delegated/authority,/auth/delegated/authority,h.delegatedAuthori
 auth,POST,/auth/delegated/users/{id}/disable,/auth/delegated/users/{param}/disable,h.delegatedDisableUser,kernel,authenticated,delegated_user_disabled,user,services/auth/delegated.go,78,auth|POST|/auth/delegated/users/{param}/disable
 auth,POST,/auth/delegated/api-keys/{id}/revoke,/auth/delegated/api-keys/{param}/revoke,h.delegatedRevokeAPIKey,kernel,authenticated,delegated_api_key_revoked,api_key,services/auth/delegated.go,79,auth|POST|/auth/delegated/api-keys/{param}/revoke
 auth,POST,/auth/delegated/clients/{id}/revoke,/auth/delegated/clients/{param}/revoke,h.delegatedRevokeClient,kernel,authenticated,delegated_client_revoked,client,services/auth/delegated.go,80,auth|POST|/auth/delegated/clients/{param}/revoke
-auth,POST,/auth/register,/auth/register,h.handleRegister,mux,,,,services/auth/handler.go,66,auth|POST|/auth/register
-auth,GET,/auth/register/{id}/status,/auth/register/{param}/status,h.handleRegistrationStatus,mux,,,,services/auth/handler.go,67,auth|GET|/auth/register/{param}/status
-auth,POST,/auth/login,/auth/login,h.handleLogin,mux,,,,services/auth/handler.go,68,auth|POST|/auth/login
-auth,POST,/auth/client-token,/auth/client-token,h.handleClientToken,mux,,,,services/auth/handler.go,69,auth|POST|/auth/client-token
-auth,POST,/auth/cluster/mint,/auth/cluster/mint,h.handleClusterMint,mux,,,,services/auth/handler.go,70,auth|POST|/auth/cluster/mint
-auth,POST,/auth/workload-token,/auth/workload-token,h.handleIssueWorkloadToken,mux,,,,services/auth/handler.go,71,auth|POST|/auth/workload-token
-auth,GET,/auth/system-health,/auth/system-health,"h.withAuth(h.handleSystemHealth, ""auth.self.read"")",mux,,,,services/auth/handler.go,72,auth|GET|/auth/system-health
-auth,POST,/auth/system-health/restart,/auth/system-health/restart,"h.withAuth(h.handleRestartSystemService, ""auth.service.restart"")",mux,,,,services/auth/handler.go,73,auth|POST|/auth/system-health/restart
-auth,POST,/auth/refresh,/auth/refresh,"h.withAuth(h.handleRefresh, ""auth.token.refresh"")",mux,,,,services/auth/handler.go,74,auth|POST|/auth/refresh
-auth,POST,/auth/change-password,/auth/change-password,"h.withAuth(h.handleChangePassword, """")",mux,,,,services/auth/handler.go,75,auth|POST|/auth/change-password
-auth,POST,/auth/register/{id}/activate,/auth/register/{param}/activate,"h.withAuth(h.handleActivateRegistration, ""auth.client.activate"")",mux,,,,services/auth/handler.go,77,auth|POST|/auth/register/{param}/activate
-auth,POST,/auth/logout,/auth/logout,"h.withAuth(h.handleLogout, ""auth.session.logout"")",mux,,,,services/auth/handler.go,78,auth|POST|/auth/logout
-auth,GET,/auth/me,/auth/me,"h.withAuth(h.handleMe, ""auth.self.read"")",mux,,,,services/auth/handler.go,79,auth|GET|/auth/me
-auth,POST,/tenants,/tenants,"h.withAuth(h.handleCreateTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,81,auth|POST|/tenants
-auth,GET,/tenants,/tenants,"h.withAuth(h.handleListTenants, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,82,auth|GET|/tenants
-auth,GET,/tenants/{id},/tenants/{param},"h.withAuth(h.handleGetTenant, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,83,auth|GET|/tenants/{param}
-auth,GET,/tenants/{id}/delete-readiness,/tenants/{param}/delete-readiness,"h.withAuth(h.handleGetTenantDeleteReadiness, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,84,auth|GET|/tenants/{param}/delete-readiness
-auth,POST,/tenants/{id}/disable,/tenants/{param}/disable,"h.withAuth(h.handleDisableTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,85,auth|POST|/tenants/{param}/disable
-auth,PUT,/tenants/{id},/tenants/{param},"h.withAuth(h.handleUpdateTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,86,auth|PUT|/tenants/{param}
-auth,DELETE,/tenants/{id},/tenants/{param},"h.withAuth(h.handleDeleteTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,87,auth|DELETE|/tenants/{param}
-auth,POST,/tenants/{id}/roles,/tenants/{param}/roles,"h.withAuth(h.handleCreateTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,88,auth|POST|/tenants/{param}/roles
-auth,PUT,/tenants/{id}/roles/{name},/tenants/{param}/roles/{param},"h.withAuth(h.handleUpdateTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,89,auth|PUT|/tenants/{param}/roles/{param}
-auth,DELETE,/tenants/{id}/roles/{name},/tenants/{param}/roles/{param},"h.withAuth(h.handleDeleteTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,90,auth|DELETE|/tenants/{param}/roles/{param}
-auth,GET,/auth/users,/auth/users,"h.withAuth(h.handleListUsers, ""auth.user.read"")",mux,,,,services/auth/handler.go,92,auth|GET|/auth/users
-auth,POST,/auth/users,/auth/users,"h.withAuth(h.handleCreateUser, ""auth.user.write"")",mux,,,,services/auth/handler.go,93,auth|POST|/auth/users
-auth,GET,/auth/identity/providers,/auth/identity/providers,"h.withAuth(h.handleListIdentityProviderConfigs, ""auth.user.read"")",mux,,,,services/auth/handler.go,94,auth|GET|/auth/identity/providers
-auth,GET,/auth/identity/providers/{provider},/auth/identity/providers/{param},"h.withAuth(h.handleGetIdentityProviderConfig, ""auth.user.read"")",mux,,,,services/auth/handler.go,95,auth|GET|/auth/identity/providers/{param}
-auth,PUT,/auth/identity/providers/{provider},/auth/identity/providers/{param},"h.withAuth(h.handleUpsertIdentityProviderConfig, ""auth.user.write"")",mux,,,,services/auth/handler.go,96,auth|PUT|/auth/identity/providers/{param}
-auth,POST,/auth/identity/providers/{provider}/test,/auth/identity/providers/{param}/test,"h.withAuth(h.handleTestIdentityProviderConnection, ""auth.user.write"")",mux,,,,services/auth/handler.go,97,auth|POST|/auth/identity/providers/{param}/test
-auth,GET,/auth/identity/providers/{provider}/users,/auth/identity/providers/{param}/users,"h.withAuth(h.handleListIdentityProviderUsers, ""auth.user.read"")",mux,,,,services/auth/handler.go,98,auth|GET|/auth/identity/providers/{param}/users
-auth,GET,/auth/identity/providers/{provider}/groups,/auth/identity/providers/{param}/groups,"h.withAuth(h.handleListIdentityProviderGroups, ""auth.user.read"")",mux,,,,services/auth/handler.go,99,auth|GET|/auth/identity/providers/{param}/groups
-auth,GET,/auth/identity/providers/{provider}/groups/{id}/members,/auth/identity/providers/{param}/groups/{param}/members,"h.withAuth(h.handleListIdentityProviderGroupMembers, ""auth.user.read"")",mux,,,,services/auth/handler.go,100,auth|GET|/auth/identity/providers/{param}/groups/{param}/members
-auth,POST,/auth/identity/import/users,/auth/identity/import/users,"h.withAuth(h.handleImportIdentityUsers, ""auth.user.write"")",mux,,,,services/auth/handler.go,101,auth|POST|/auth/identity/import/users
-auth,PUT,/auth/users/{id}/role,/auth/users/{param}/role,"h.withAuth(h.handleUpdateUserRole, ""auth.user.write"")",mux,,,,services/auth/handler.go,102,auth|PUT|/auth/users/{param}/role
-auth,PUT,/auth/users/{id}/status,/auth/users/{param}/status,"h.withAuth(h.handleUpdateUserStatus, ""auth.user.write"")",mux,,,,services/auth/handler.go,103,auth|PUT|/auth/users/{param}/status
-auth,POST,/auth/users/{id}/reset-password,/auth/users/{param}/reset-password,"h.withAuth(h.handleResetUserPassword, ""auth.user.write"")",mux,,,,services/auth/handler.go,104,auth|POST|/auth/users/{param}/reset-password
-auth,GET,/auth/groups/roles,/auth/groups/roles,"h.withAuth(h.handleListGroupRoleBindings, ""auth.role.read"")",mux,,,,services/auth/handler.go,105,auth|GET|/auth/groups/roles
-auth,PUT,/auth/groups/{id}/role,/auth/groups/{param}/role,"h.withAuth(h.handleUpsertGroupRoleBinding, ""auth.role.write"")",mux,,,,services/auth/handler.go,106,auth|PUT|/auth/groups/{param}/role
-auth,DELETE,/auth/groups/{id}/role,/auth/groups/{param}/role,"h.withAuth(h.handleDeleteGroupRoleBinding, ""auth.role.write"")",mux,,,,services/auth/handler.go,107,auth|DELETE|/auth/groups/{param}/role
-auth,GET,/auth/scim/settings,/auth/scim/settings,"h.withAuth(h.handleGetSCIMSettings, ""auth.user.read"")",mux,,,,services/auth/handler.go,108,auth|GET|/auth/scim/settings
-auth,PUT,/auth/scim/settings,/auth/scim/settings,"h.withAuth(h.handleUpdateSCIMSettings, ""auth.user.write"")",mux,,,,services/auth/handler.go,109,auth|PUT|/auth/scim/settings
-auth,POST,/auth/scim/settings/rotate-token,/auth/scim/settings/rotate-token,"h.withAuth(h.handleRotateSCIMToken, ""auth.user.write"")",mux,,,,services/auth/handler.go,110,auth|POST|/auth/scim/settings/rotate-token
-auth,GET,/auth/scim/summary,/auth/scim/summary,"h.withAuth(h.handleGetSCIMSummary, ""auth.user.read"")",mux,,,,services/auth/handler.go,111,auth|GET|/auth/scim/summary
-auth,GET,/auth/scim/users,/auth/scim/users,"h.withAuth(h.handleListSCIMUsersAdmin, ""auth.user.read"")",mux,,,,services/auth/handler.go,112,auth|GET|/auth/scim/users
-auth,GET,/auth/scim/groups,/auth/scim/groups,"h.withAuth(h.handleListSCIMGroupsAdmin, ""auth.user.read"")",mux,,,,services/auth/handler.go,113,auth|GET|/auth/scim/groups
-auth,GET,/auth/password-policy,/auth/password-policy,"h.withAuth(h.handleGetPasswordPolicy, ""auth.user.read"")",mux,,,,services/auth/handler.go,114,auth|GET|/auth/password-policy
-auth,PUT,/auth/password-policy,/auth/password-policy,"h.withAuth(h.handleUpdatePasswordPolicy, ""auth.user.write"")",mux,,,,services/auth/handler.go,115,auth|PUT|/auth/password-policy
-auth,GET,/auth/security-policy,/auth/security-policy,"h.withAuth(h.handleGetSecurityPolicy, ""auth.user.read"")",mux,,,,services/auth/handler.go,116,auth|GET|/auth/security-policy
-auth,PUT,/auth/security-policy,/auth/security-policy,"h.withAuth(h.handleUpdateSecurityPolicy, ""auth.user.write"")",mux,,,,services/auth/handler.go,117,auth|PUT|/auth/security-policy
-auth,GET,/auth/cli/status,/auth/cli/status,"h.withAuth(h.handleCLIStatus, ""auth.user.read"")",mux,,,,services/auth/handler.go,118,auth|GET|/auth/cli/status
-auth,POST,/auth/cli/session,/auth/cli/session,"h.withAuth(h.handleCLISession, ""auth.user.read"")",mux,,,,services/auth/handler.go,119,auth|POST|/auth/cli/session
-auth,GET,/auth/cli/hsm/config,/auth/cli/hsm/config,"h.withAuth(h.handleGetCLIHSMConfig, ""auth.user.read"")",mux,,,,services/auth/handler.go,120,auth|GET|/auth/cli/hsm/config
-auth,PUT,/auth/cli/hsm/config,/auth/cli/hsm/config,"h.withAuth(h.handleUpdateCLIHSMConfig, ""auth.user.write"")",mux,,,,services/auth/handler.go,121,auth|PUT|/auth/cli/hsm/config
-auth,GET,/auth/cli/hsm/partitions,/auth/cli/hsm/partitions,"h.withAuth(h.handleCLIHSMPartitions, ""auth.user.read"")",mux,,,,services/auth/handler.go,122,auth|GET|/auth/cli/hsm/partitions
-auth,GET,/auth/sso/providers,/auth/sso/providers,h.handleListSSOProviders,mux,,,,services/auth/handler.go,125,auth|GET|/auth/sso/providers
-auth,GET,/auth/sso/{provider}/login,/auth/sso/{param}/login,h.handleSSOLogin,mux,,,,services/auth/handler.go,126,auth|GET|/auth/sso/{param}/login
-auth,POST,/auth/sso/{provider}/callback,/auth/sso/{param}/callback,h.handleSSOCallback,mux,,,,services/auth/handler.go,127,auth|POST|/auth/sso/{param}/callback
-auth,GET,/auth/sso/{provider}/callback,/auth/sso/{param}/callback,h.handleSSOCallback,mux,,,,services/auth/handler.go,128,auth|GET|/auth/sso/{param}/callback
-auth,GET,/auth/sso/saml/metadata,/auth/sso/saml/metadata,h.handleSAMLMetadata,mux,,,,services/auth/handler.go,129,auth|GET|/auth/sso/saml/metadata
-auth,GET,/auth/clients,/auth/clients,"h.withAuth(h.handleListClients, ""auth.client.read"")",mux,,,,services/auth/handler.go,131,auth|GET|/auth/clients
-auth,GET,/auth/clients/{id},/auth/clients/{param},"h.withAuth(h.handleGetClient, ""auth.client.read"")",mux,,,,services/auth/handler.go,132,auth|GET|/auth/clients/{param}
-auth,PUT,/auth/clients/{id},/auth/clients/{param},"h.withAuth(h.handleUpdateClient, ""auth.client.write"")",mux,,,,services/auth/handler.go,133,auth|PUT|/auth/clients/{param}
-auth,GET,/auth/rest-client-security/summary,/auth/rest-client-security/summary,"h.withAuth(h.handleRESTClientSecuritySummary, ""auth.client.read"")",mux,,,,services/auth/handler.go,134,auth|GET|/auth/rest-client-security/summary
-auth,GET,/scim/v2/ServiceProviderConfig,/scim/v2/ServiceProviderConfig,h.handleSCIMServiceProviderConfig,mux,,,,services/auth/handler.go,135,auth|GET|/scim/v2/ServiceProviderConfig
-auth,GET,/scim/v2/Schemas,/scim/v2/Schemas,h.handleSCIMSchemas,mux,,,,services/auth/handler.go,136,auth|GET|/scim/v2/Schemas
-auth,GET,/scim/v2/ResourceTypes,/scim/v2/ResourceTypes,h.handleSCIMResourceTypes,mux,,,,services/auth/handler.go,137,auth|GET|/scim/v2/ResourceTypes
-auth,GET,/scim/v2/Users,/scim/v2/Users,h.handleSCIMListUsers,mux,,,,services/auth/handler.go,138,auth|GET|/scim/v2/Users
-auth,POST,/scim/v2/Users,/scim/v2/Users,h.handleSCIMCreateUser,mux,,,,services/auth/handler.go,139,auth|POST|/scim/v2/Users
-auth,GET,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMGetUser,mux,,,,services/auth/handler.go,140,auth|GET|/scim/v2/Users/{param}
-auth,PUT,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMReplaceUser,mux,,,,services/auth/handler.go,141,auth|PUT|/scim/v2/Users/{param}
-auth,PATCH,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMPatchUser,mux,,,,services/auth/handler.go,142,auth|PATCH|/scim/v2/Users/{param}
-auth,DELETE,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMDeleteUser,mux,,,,services/auth/handler.go,143,auth|DELETE|/scim/v2/Users/{param}
-auth,GET,/scim/v2/Groups,/scim/v2/Groups,h.handleSCIMListGroups,mux,,,,services/auth/handler.go,144,auth|GET|/scim/v2/Groups
-auth,POST,/scim/v2/Groups,/scim/v2/Groups,h.handleSCIMCreateGroup,mux,,,,services/auth/handler.go,145,auth|POST|/scim/v2/Groups
-auth,GET,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMGetGroup,mux,,,,services/auth/handler.go,146,auth|GET|/scim/v2/Groups/{param}
-auth,PUT,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMReplaceGroup,mux,,,,services/auth/handler.go,147,auth|PUT|/scim/v2/Groups/{param}
-auth,PATCH,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMPatchGroup,mux,,,,services/auth/handler.go,148,auth|PATCH|/scim/v2/Groups/{param}
-auth,DELETE,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMDeleteGroup,mux,,,,services/auth/handler.go,149,auth|DELETE|/scim/v2/Groups/{param}
+auth,POST,/auth/register,/auth/register,h.handleRegister,mux,,,,services/auth/handler.go,67,auth|POST|/auth/register
+auth,GET,/auth/register/{id}/status,/auth/register/{param}/status,h.handleRegistrationStatus,mux,,,,services/auth/handler.go,68,auth|GET|/auth/register/{param}/status
+auth,POST,/auth/login,/auth/login,h.handleLogin,mux,,,,services/auth/handler.go,69,auth|POST|/auth/login
+auth,POST,/auth/client-token,/auth/client-token,h.handleClientToken,mux,,,,services/auth/handler.go,70,auth|POST|/auth/client-token
+auth,POST,/auth/cluster/mint,/auth/cluster/mint,h.handleClusterMint,mux,,,,services/auth/handler.go,71,auth|POST|/auth/cluster/mint
+auth,POST,/auth/workload-token,/auth/workload-token,h.handleIssueWorkloadToken,mux,,,,services/auth/handler.go,72,auth|POST|/auth/workload-token
+auth,GET,/auth/system-health,/auth/system-health,"h.withAuth(h.handleSystemHealth, ""auth.self.read"")",mux,,,,services/auth/handler.go,73,auth|GET|/auth/system-health
+auth,POST,/auth/system-health/restart,/auth/system-health/restart,"h.withAuth(h.handleRestartSystemService, ""auth.service.restart"")",mux,,,,services/auth/handler.go,74,auth|POST|/auth/system-health/restart
+auth,POST,/auth/refresh,/auth/refresh,"h.withAuth(h.handleRefresh, ""auth.token.refresh"")",mux,,,,services/auth/handler.go,75,auth|POST|/auth/refresh
+auth,POST,/auth/change-password,/auth/change-password,"h.withAuth(h.handleChangePassword, """")",mux,,,,services/auth/handler.go,76,auth|POST|/auth/change-password
+auth,POST,/auth/register/{id}/activate,/auth/register/{param}/activate,"h.withAuth(h.handleActivateRegistration, ""auth.client.activate"")",mux,,,,services/auth/handler.go,78,auth|POST|/auth/register/{param}/activate
+auth,POST,/auth/logout,/auth/logout,"h.withAuth(h.handleLogout, ""auth.session.logout"")",mux,,,,services/auth/handler.go,79,auth|POST|/auth/logout
+auth,GET,/auth/me,/auth/me,"h.withAuth(h.handleMe, ""auth.self.read"")",mux,,,,services/auth/handler.go,80,auth|GET|/auth/me
+auth,POST,/tenants,/tenants,"h.withAuth(h.handleCreateTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,82,auth|POST|/tenants
+auth,GET,/tenants,/tenants,"h.withAuth(h.handleListTenants, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,83,auth|GET|/tenants
+auth,GET,/tenants/{id},/tenants/{param},"h.withAuth(h.handleGetTenant, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,84,auth|GET|/tenants/{param}
+auth,GET,/tenants/{id}/delete-readiness,/tenants/{param}/delete-readiness,"h.withAuth(h.handleGetTenantDeleteReadiness, ""auth.tenant.read"", ""super-admin"")",mux,,,,services/auth/handler.go,85,auth|GET|/tenants/{param}/delete-readiness
+auth,POST,/tenants/{id}/disable,/tenants/{param}/disable,"h.withAuth(h.handleDisableTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,86,auth|POST|/tenants/{param}/disable
+auth,PUT,/tenants/{id},/tenants/{param},"h.withAuth(h.handleUpdateTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,87,auth|PUT|/tenants/{param}
+auth,DELETE,/tenants/{id},/tenants/{param},"h.withAuth(h.handleDeleteTenant, ""auth.tenant.write"", ""super-admin"")",mux,,,,services/auth/handler.go,88,auth|DELETE|/tenants/{param}
+auth,POST,/tenants/{id}/roles,/tenants/{param}/roles,"h.withAuth(h.handleCreateTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,89,auth|POST|/tenants/{param}/roles
+auth,PUT,/tenants/{id}/roles/{name},/tenants/{param}/roles/{param},"h.withAuth(h.handleUpdateTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,90,auth|PUT|/tenants/{param}/roles/{param}
+auth,DELETE,/tenants/{id}/roles/{name},/tenants/{param}/roles/{param},"h.withAuth(h.handleDeleteTenantRole, ""auth.role.write"", ""super-admin"")",mux,,,,services/auth/handler.go,91,auth|DELETE|/tenants/{param}/roles/{param}
+auth,GET,/auth/users,/auth/users,"h.withAuth(h.handleListUsers, ""auth.user.read"")",mux,,,,services/auth/handler.go,93,auth|GET|/auth/users
+auth,POST,/auth/users,/auth/users,"h.withAuth(h.handleCreateUser, ""auth.user.write"")",mux,,,,services/auth/handler.go,94,auth|POST|/auth/users
+auth,GET,/auth/identity/providers,/auth/identity/providers,"h.withAuth(h.handleListIdentityProviderConfigs, ""auth.user.read"")",mux,,,,services/auth/handler.go,95,auth|GET|/auth/identity/providers
+auth,GET,/auth/identity/providers/{provider},/auth/identity/providers/{param},"h.withAuth(h.handleGetIdentityProviderConfig, ""auth.user.read"")",mux,,,,services/auth/handler.go,96,auth|GET|/auth/identity/providers/{param}
+auth,PUT,/auth/identity/providers/{provider},/auth/identity/providers/{param},"h.withAuth(h.handleUpsertIdentityProviderConfig, ""auth.user.write"")",mux,,,,services/auth/handler.go,97,auth|PUT|/auth/identity/providers/{param}
+auth,POST,/auth/identity/providers/{provider}/test,/auth/identity/providers/{param}/test,"h.withAuth(h.handleTestIdentityProviderConnection, ""auth.user.write"")",mux,,,,services/auth/handler.go,98,auth|POST|/auth/identity/providers/{param}/test
+auth,GET,/auth/identity/providers/{provider}/users,/auth/identity/providers/{param}/users,"h.withAuth(h.handleListIdentityProviderUsers, ""auth.user.read"")",mux,,,,services/auth/handler.go,99,auth|GET|/auth/identity/providers/{param}/users
+auth,GET,/auth/identity/providers/{provider}/groups,/auth/identity/providers/{param}/groups,"h.withAuth(h.handleListIdentityProviderGroups, ""auth.user.read"")",mux,,,,services/auth/handler.go,100,auth|GET|/auth/identity/providers/{param}/groups
+auth,GET,/auth/identity/providers/{provider}/groups/{id}/members,/auth/identity/providers/{param}/groups/{param}/members,"h.withAuth(h.handleListIdentityProviderGroupMembers, ""auth.user.read"")",mux,,,,services/auth/handler.go,101,auth|GET|/auth/identity/providers/{param}/groups/{param}/members
+auth,POST,/auth/identity/import/users,/auth/identity/import/users,"h.withAuth(h.handleImportIdentityUsers, ""auth.user.write"")",mux,,,,services/auth/handler.go,102,auth|POST|/auth/identity/import/users
+auth,PUT,/auth/users/{id}/role,/auth/users/{param}/role,"h.withAuth(h.handleUpdateUserRole, ""auth.user.write"")",mux,,,,services/auth/handler.go,103,auth|PUT|/auth/users/{param}/role
+auth,PUT,/auth/users/{id}/status,/auth/users/{param}/status,"h.withAuth(h.handleUpdateUserStatus, ""auth.user.write"")",mux,,,,services/auth/handler.go,104,auth|PUT|/auth/users/{param}/status
+auth,POST,/auth/users/{id}/reset-password,/auth/users/{param}/reset-password,"h.withAuth(h.handleResetUserPassword, ""auth.user.write"")",mux,,,,services/auth/handler.go,105,auth|POST|/auth/users/{param}/reset-password
+auth,GET,/auth/groups/roles,/auth/groups/roles,"h.withAuth(h.handleListGroupRoleBindings, ""auth.role.read"")",mux,,,,services/auth/handler.go,106,auth|GET|/auth/groups/roles
+auth,PUT,/auth/groups/{id}/role,/auth/groups/{param}/role,"h.withAuth(h.handleUpsertGroupRoleBinding, ""auth.role.write"")",mux,,,,services/auth/handler.go,107,auth|PUT|/auth/groups/{param}/role
+auth,DELETE,/auth/groups/{id}/role,/auth/groups/{param}/role,"h.withAuth(h.handleDeleteGroupRoleBinding, ""auth.role.write"")",mux,,,,services/auth/handler.go,108,auth|DELETE|/auth/groups/{param}/role
+auth,GET,/auth/scim/settings,/auth/scim/settings,"h.withAuth(h.handleGetSCIMSettings, ""auth.user.read"")",mux,,,,services/auth/handler.go,109,auth|GET|/auth/scim/settings
+auth,PUT,/auth/scim/settings,/auth/scim/settings,"h.withAuth(h.handleUpdateSCIMSettings, ""auth.user.write"")",mux,,,,services/auth/handler.go,110,auth|PUT|/auth/scim/settings
+auth,POST,/auth/scim/settings/rotate-token,/auth/scim/settings/rotate-token,"h.withAuth(h.handleRotateSCIMToken, ""auth.user.write"")",mux,,,,services/auth/handler.go,111,auth|POST|/auth/scim/settings/rotate-token
+auth,GET,/auth/scim/summary,/auth/scim/summary,"h.withAuth(h.handleGetSCIMSummary, ""auth.user.read"")",mux,,,,services/auth/handler.go,112,auth|GET|/auth/scim/summary
+auth,GET,/auth/scim/users,/auth/scim/users,"h.withAuth(h.handleListSCIMUsersAdmin, ""auth.user.read"")",mux,,,,services/auth/handler.go,113,auth|GET|/auth/scim/users
+auth,GET,/auth/scim/groups,/auth/scim/groups,"h.withAuth(h.handleListSCIMGroupsAdmin, ""auth.user.read"")",mux,,,,services/auth/handler.go,114,auth|GET|/auth/scim/groups
+auth,GET,/auth/password-policy,/auth/password-policy,"h.withAuth(h.handleGetPasswordPolicy, ""auth.user.read"")",mux,,,,services/auth/handler.go,115,auth|GET|/auth/password-policy
+auth,PUT,/auth/password-policy,/auth/password-policy,"h.withAuth(h.handleUpdatePasswordPolicy, ""auth.user.write"")",mux,,,,services/auth/handler.go,116,auth|PUT|/auth/password-policy
+auth,GET,/auth/security-policy,/auth/security-policy,"h.withAuth(h.handleGetSecurityPolicy, ""auth.user.read"")",mux,,,,services/auth/handler.go,117,auth|GET|/auth/security-policy
+auth,PUT,/auth/security-policy,/auth/security-policy,"h.withAuth(h.handleUpdateSecurityPolicy, ""auth.user.write"")",mux,,,,services/auth/handler.go,118,auth|PUT|/auth/security-policy
+auth,GET,/auth/cli/status,/auth/cli/status,"h.withAuth(h.handleCLIStatus, ""auth.user.read"")",mux,,,,services/auth/handler.go,119,auth|GET|/auth/cli/status
+auth,POST,/auth/cli/session,/auth/cli/session,"h.withAuth(h.handleCLISession, ""auth.user.read"")",mux,,,,services/auth/handler.go,120,auth|POST|/auth/cli/session
+auth,GET,/auth/cli/hsm/config,/auth/cli/hsm/config,"h.withAuth(h.handleGetCLIHSMConfig, ""auth.user.read"")",mux,,,,services/auth/handler.go,121,auth|GET|/auth/cli/hsm/config
+auth,PUT,/auth/cli/hsm/config,/auth/cli/hsm/config,"h.withAuth(h.handleUpdateCLIHSMConfig, ""auth.user.write"")",mux,,,,services/auth/handler.go,122,auth|PUT|/auth/cli/hsm/config
+auth,GET,/auth/cli/hsm/partitions,/auth/cli/hsm/partitions,"h.withAuth(h.handleCLIHSMPartitions, ""auth.user.read"")",mux,,,,services/auth/handler.go,123,auth|GET|/auth/cli/hsm/partitions
+auth,GET,/auth/sso/providers,/auth/sso/providers,h.handleListSSOProviders,mux,,,,services/auth/handler.go,126,auth|GET|/auth/sso/providers
+auth,GET,/auth/sso/{provider}/login,/auth/sso/{param}/login,h.handleSSOLogin,mux,,,,services/auth/handler.go,127,auth|GET|/auth/sso/{param}/login
+auth,POST,/auth/sso/{provider}/callback,/auth/sso/{param}/callback,h.handleSSOCallback,mux,,,,services/auth/handler.go,128,auth|POST|/auth/sso/{param}/callback
+auth,GET,/auth/sso/{provider}/callback,/auth/sso/{param}/callback,h.handleSSOCallback,mux,,,,services/auth/handler.go,129,auth|GET|/auth/sso/{param}/callback
+auth,GET,/auth/sso/saml/metadata,/auth/sso/saml/metadata,h.handleSAMLMetadata,mux,,,,services/auth/handler.go,130,auth|GET|/auth/sso/saml/metadata
+auth,GET,/auth/clients,/auth/clients,"h.withAuth(h.handleListClients, ""auth.client.read"")",mux,,,,services/auth/handler.go,132,auth|GET|/auth/clients
+auth,GET,/auth/clients/{id},/auth/clients/{param},"h.withAuth(h.handleGetClient, ""auth.client.read"")",mux,,,,services/auth/handler.go,133,auth|GET|/auth/clients/{param}
+auth,PUT,/auth/clients/{id},/auth/clients/{param},"h.withAuth(h.handleUpdateClient, ""auth.client.write"")",mux,,,,services/auth/handler.go,134,auth|PUT|/auth/clients/{param}
+auth,GET,/auth/rest-client-security/summary,/auth/rest-client-security/summary,"h.withAuth(h.handleRESTClientSecuritySummary, ""auth.client.read"")",mux,,,,services/auth/handler.go,135,auth|GET|/auth/rest-client-security/summary
+auth,GET,/scim/v2/ServiceProviderConfig,/scim/v2/ServiceProviderConfig,h.handleSCIMServiceProviderConfig,mux,,,,services/auth/handler.go,136,auth|GET|/scim/v2/ServiceProviderConfig
+auth,GET,/scim/v2/Schemas,/scim/v2/Schemas,h.handleSCIMSchemas,mux,,,,services/auth/handler.go,137,auth|GET|/scim/v2/Schemas
+auth,GET,/scim/v2/ResourceTypes,/scim/v2/ResourceTypes,h.handleSCIMResourceTypes,mux,,,,services/auth/handler.go,138,auth|GET|/scim/v2/ResourceTypes
+auth,GET,/scim/v2/Users,/scim/v2/Users,h.handleSCIMListUsers,mux,,,,services/auth/handler.go,139,auth|GET|/scim/v2/Users
+auth,POST,/scim/v2/Users,/scim/v2/Users,h.handleSCIMCreateUser,mux,,,,services/auth/handler.go,140,auth|POST|/scim/v2/Users
+auth,GET,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMGetUser,mux,,,,services/auth/handler.go,141,auth|GET|/scim/v2/Users/{param}
+auth,PUT,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMReplaceUser,mux,,,,services/auth/handler.go,142,auth|PUT|/scim/v2/Users/{param}
+auth,PATCH,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMPatchUser,mux,,,,services/auth/handler.go,143,auth|PATCH|/scim/v2/Users/{param}
+auth,DELETE,/scim/v2/Users/{id},/scim/v2/Users/{param},h.handleSCIMDeleteUser,mux,,,,services/auth/handler.go,144,auth|DELETE|/scim/v2/Users/{param}
+auth,GET,/scim/v2/Groups,/scim/v2/Groups,h.handleSCIMListGroups,mux,,,,services/auth/handler.go,145,auth|GET|/scim/v2/Groups
+auth,POST,/scim/v2/Groups,/scim/v2/Groups,h.handleSCIMCreateGroup,mux,,,,services/auth/handler.go,146,auth|POST|/scim/v2/Groups
+auth,GET,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMGetGroup,mux,,,,services/auth/handler.go,147,auth|GET|/scim/v2/Groups/{param}
+auth,PUT,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMReplaceGroup,mux,,,,services/auth/handler.go,148,auth|PUT|/scim/v2/Groups/{param}
+auth,PATCH,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMPatchGroup,mux,,,,services/auth/handler.go,149,auth|PATCH|/scim/v2/Groups/{param}
+auth,DELETE,/scim/v2/Groups/{id},/scim/v2/Groups/{param},h.handleSCIMDeleteGroup,mux,,,,services/auth/handler.go,150,auth|DELETE|/scim/v2/Groups/{param}
+auth,POST,/internal/subjects/check,/internal/subjects/check,h.checkSubjects,kernel,authenticated,subjects_checked,tenant,services/auth/subjects.go,36,auth|POST|/internal/subjects/check
 auth,GET,/internal/tenant-ids,/internal/tenant-ids,h.listTenantIDs,kernel,authenticated,tenant_ids_listed,tenant,services/auth/tenant_ids.go,20,auth|GET|/internal/tenant-ids
 autokey,GET,/autokey/settings,/autokey/settings,h.handleGetSettings,mux,,,,services/autokey/handler.go,30,autokey|GET|/autokey/settings
 autokey,PUT,/autokey/settings,/autokey/settings,h.handlePutSettings,mux,,,,services/autokey/handler.go,31,autokey|PUT|/autokey/settings
@@ -768,38 +769,41 @@ sbom,GET,/cbom/pqc-readiness,/cbom/pqc-readiness,h.cbomPQCReadiness,kernel,sbom.
 sbom,GET,/cbom/diff,/cbom/diff,h.cbomDiff,kernel,sbom.read,cbom_diff_read,cbom,services/sbom/handler.go,67,sbom|GET|/cbom/diff
 sbom,GET,/cbom/{id}/export,/cbom/{param}/export,h.cbomExport,kernel,sbom.read,cbom_exported,cbom,services/sbom/handler.go,68,sbom|GET|/cbom/{param}/export
 sbom,GET,/cbom/{id},/cbom/{param},h.cbomByID,kernel,sbom.read,cbom_read,cbom,services/sbom/handler.go,69,sbom|GET|/cbom/{param}
-secrets,POST,/secrets,/secrets,h.createSecret,kernel,secrets.write,created,secret,services/secrets/handler.go,76,secrets|POST|/secrets
-secrets,GET,/secrets,/secrets,h.listSecrets,kernel,secrets.read,listed,secret,services/secrets/handler.go,77,secrets|GET|/secrets
-secrets,GET,/secrets/{id},/secrets/{param},h.getSecret,kernel,secrets.read,read,secret,services/secrets/handler.go,78,secrets|GET|/secrets/{param}
-secrets,GET,/secrets/{id}/value,/secrets/{param}/value,h.getSecretValue,kernel,,,,services/secrets/handler.go,79,secrets|GET|/secrets/{param}/value
-secrets,PUT,/secrets/{id},/secrets/{param},h.updateSecret,kernel,secrets.write,updated,secret,services/secrets/handler.go,80,secrets|PUT|/secrets/{param}
-secrets,DELETE,/secrets/{id},/secrets/{param},h.deleteSecret,kernel,,,,services/secrets/handler.go,81,secrets|DELETE|/secrets/{param}
-secrets,POST,/secrets/{id}/restore,/secrets/{param}/restore,h.restoreSecret,kernel,secrets.write,restored,secret,services/secrets/handler.go,82,secrets|POST|/secrets/{param}/restore
-secrets,POST,/secrets/{id}/destroy,/secrets/{param}/destroy,h.destroySecret,kernel,,,,services/secrets/handler.go,83,secrets|POST|/secrets/{param}/destroy
-secrets,POST,/secrets/generate/ssh_key,/secrets/generate/ssh_key,h.generateSSHKey,kernel,secrets.write,generated,secret,services/secrets/handler.go,84,secrets|POST|/secrets/generate/ssh_key
-secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,h.generateKeyPair,kernel,secrets.write,generated,secret,services/secrets/handler.go,85,secrets|POST|/secrets/generate/keypair
-secrets,GET,/secrets/{id}/versions,/secrets/{param}/versions,h.listVersions,kernel,secrets.read,versions_listed,secret,services/secrets/handler.go,86,secrets|GET|/secrets/{param}/versions
-secrets,DELETE,/secrets/{id}/versions/{version},/secrets/{param}/versions/{param},h.destroyVersion,kernel,,,,services/secrets/handler.go,87,secrets|DELETE|/secrets/{param}/versions/{param}
-secrets,GET,/secrets/{id}/audit,/secrets/{param}/audit,h.secretAuditLog,kernel,secrets.read,audit_log_read,secret,services/secrets/handler.go,88,secrets|GET|/secrets/{param}/audit
-secrets,POST,/secrets/{id}/rotate,/secrets/{param}/rotate,h.rotateSecret,kernel,secrets.write,rotated,secret,services/secrets/handler.go,89,secrets|POST|/secrets/{param}/rotate
-secrets,POST,/secrets/{id}/rollback,/secrets/{param}/rollback,h.rollbackSecret,kernel,,,,services/secrets/handler.go,90,secrets|POST|/secrets/{param}/rollback
-secrets,GET,/secrets/{id}/access,/secrets/{param}/access,h.secretAccess,kernel,secrets.read,access_read,secret,services/secrets/handler.go,91,secrets|GET|/secrets/{param}/access
-secrets,GET,/secrets/stats,/secrets/stats,h.stats,kernel,secrets.read,stats_read,,services/secrets/handler.go,92,secrets|GET|/secrets/stats
-secrets,GET,/secrets/settings,/secrets/settings,h.getSettings,kernel,secrets.access.read,settings_read,secret_vault_settings,services/secrets/handler.go,93,secrets|GET|/secrets/settings
-secrets,PUT,/secrets/settings,/secrets/settings,h.putSettings,kernel,,,,services/secrets/handler.go,94,secrets|PUT|/secrets/settings
-secrets,GET,/secrets/access/rules,/secrets/access/rules,h.listAccessRules,kernel,secrets.access.read,access_rules_listed,secret_access_rule,services/secrets/handler.go,95,secrets|GET|/secrets/access/rules
-secrets,POST,/secrets/access/rules,/secrets/access/rules,h.createAccessRule,kernel,,,,services/secrets/handler.go,96,secrets|POST|/secrets/access/rules
-secrets,DELETE,/secrets/access/rules/{rule_id},/secrets/access/rules/{param},h.deleteAccessRule,kernel,,,,services/secrets/handler.go,97,secrets|DELETE|/secrets/access/rules/{param}
-secrets,GET,/v1/sys/health,/v1/sys/health,h.vaultSysHealth,kernel,authenticated,vault_health_read,,services/secrets/handler.go,108,secrets|GET|/v1/sys/health
-secrets,GET,/v1/sys/seal-status,/v1/sys/seal-status,h.vaultSealStatus,kernel,authenticated,vault_seal_status_read,,services/secrets/handler.go,110,secrets|GET|/v1/sys/seal-status
-secrets,POST,/v1/auth/token/lookup-self,/v1/auth/token/lookup-self,h.vaultTokenLookupSelf,kernel,authenticated,vault_token_lookup,secret,services/secrets/handler.go,111,secrets|POST|/v1/auth/token/lookup-self
-secrets,GET,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVRead(true),kernel,secrets.value.read,vault_kv_read,secret,services/secrets/handler.go,112,secrets|GET|/v1/{param}/data/{param}
-secrets,POST,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVWrite(true),kernel,secrets.write,vault_kv_written,secret,services/secrets/handler.go,113,secrets|POST|/v1/{param}/data/{param}
-secrets,DELETE,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVDelete,kernel,secrets.delete,vault_kv_deleted,secret,services/secrets/handler.go,114,secrets|DELETE|/v1/{param}/data/{param}
-secrets,GET,/v1/{mount}/metadata/{path...},/v1/{param}/metadata/{param},h.vaultKV2Metadata,kernel,secrets.read,vault_metadata_read,secret,services/secrets/handler.go,115,secrets|GET|/v1/{param}/metadata/{param}
-secrets,GET,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVRead(false),kernel,secrets.value.read,vault_kv_read,secret,services/secrets/handler.go,116,secrets|GET|/v1/{param}/{param}
-secrets,POST,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVWrite(false),kernel,secrets.write,vault_kv_written,secret,services/secrets/handler.go,117,secrets|POST|/v1/{param}/{param}
-secrets,DELETE,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVDelete,kernel,secrets.delete,vault_kv_deleted,secret,services/secrets/handler.go,118,secrets|DELETE|/v1/{param}/{param}
+secrets,POST,/secrets,/secrets,h.createSecret,kernel,secrets.write,created,secret,services/secrets/handler.go,78,secrets|POST|/secrets
+secrets,GET,/secrets,/secrets,h.listSecrets,kernel,secrets.read,listed,secret,services/secrets/handler.go,79,secrets|GET|/secrets
+secrets,GET,/secrets/{id},/secrets/{param},h.getSecret,kernel,secrets.read,read,secret,services/secrets/handler.go,80,secrets|GET|/secrets/{param}
+secrets,GET,/secrets/{id}/value,/secrets/{param}/value,h.getSecretValue,kernel,,,,services/secrets/handler.go,81,secrets|GET|/secrets/{param}/value
+secrets,PUT,/secrets/{id},/secrets/{param},h.updateSecret,kernel,secrets.write,updated,secret,services/secrets/handler.go,82,secrets|PUT|/secrets/{param}
+secrets,DELETE,/secrets/{id},/secrets/{param},h.deleteSecret,kernel,,,,services/secrets/handler.go,83,secrets|DELETE|/secrets/{param}
+secrets,POST,/secrets/{id}/restore,/secrets/{param}/restore,h.restoreSecret,kernel,secrets.write,restored,secret,services/secrets/handler.go,84,secrets|POST|/secrets/{param}/restore
+secrets,POST,/secrets/{id}/destroy,/secrets/{param}/destroy,h.destroySecret,kernel,,,,services/secrets/handler.go,85,secrets|POST|/secrets/{param}/destroy
+secrets,POST,/secrets/generate/ssh_key,/secrets/generate/ssh_key,h.generateSSHKey,kernel,secrets.write,generated,secret,services/secrets/handler.go,86,secrets|POST|/secrets/generate/ssh_key
+secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,h.generateKeyPair,kernel,secrets.write,generated,secret,services/secrets/handler.go,87,secrets|POST|/secrets/generate/keypair
+secrets,GET,/secrets/{id}/versions,/secrets/{param}/versions,h.listVersions,kernel,secrets.read,versions_listed,secret,services/secrets/handler.go,88,secrets|GET|/secrets/{param}/versions
+secrets,DELETE,/secrets/{id}/versions/{version},/secrets/{param}/versions/{param},h.destroyVersion,kernel,,,,services/secrets/handler.go,89,secrets|DELETE|/secrets/{param}/versions/{param}
+secrets,GET,/secrets/{id}/audit,/secrets/{param}/audit,h.secretAuditLog,kernel,secrets.read,audit_log_read,secret,services/secrets/handler.go,90,secrets|GET|/secrets/{param}/audit
+secrets,POST,/secrets/{id}/rotate,/secrets/{param}/rotate,h.rotateSecret,kernel,secrets.write,rotated,secret,services/secrets/handler.go,91,secrets|POST|/secrets/{param}/rotate
+secrets,POST,/secrets/{id}/rollback,/secrets/{param}/rollback,h.rollbackSecret,kernel,,,,services/secrets/handler.go,92,secrets|POST|/secrets/{param}/rollback
+secrets,GET,/secrets/{id}/access,/secrets/{param}/access,h.secretAccess,kernel,secrets.read,access_read,secret,services/secrets/handler.go,93,secrets|GET|/secrets/{param}/access
+secrets,GET,/secrets/stats,/secrets/stats,h.stats,kernel,secrets.read,stats_read,,services/secrets/handler.go,94,secrets|GET|/secrets/stats
+secrets,GET,/secrets/settings,/secrets/settings,h.getSettings,kernel,secrets.access.read,settings_read,secret_vault_settings,services/secrets/handler.go,95,secrets|GET|/secrets/settings
+secrets,PUT,/secrets/settings,/secrets/settings,h.putSettings,kernel,,,,services/secrets/handler.go,96,secrets|PUT|/secrets/settings
+secrets,GET,/secrets/version-caps,/secrets/version-caps,h.listVersionCaps,kernel,secrets.access.read,version_caps_listed,secret_version_cap,services/secrets/handler.go,97,secrets|GET|/secrets/version-caps
+secrets,PUT,/secrets/version-caps,/secrets/version-caps,h.putVersionCap,kernel,,,,services/secrets/handler.go,98,secrets|PUT|/secrets/version-caps
+secrets,DELETE,/secrets/version-caps/{cap_id},/secrets/version-caps/{param},h.deleteVersionCap,kernel,,,,services/secrets/handler.go,99,secrets|DELETE|/secrets/version-caps/{param}
+secrets,GET,/secrets/access/rules,/secrets/access/rules,h.listAccessRules,kernel,secrets.access.read,access_rules_listed,secret_access_rule,services/secrets/handler.go,100,secrets|GET|/secrets/access/rules
+secrets,POST,/secrets/access/rules,/secrets/access/rules,h.createAccessRule,kernel,,,,services/secrets/handler.go,101,secrets|POST|/secrets/access/rules
+secrets,DELETE,/secrets/access/rules/{rule_id},/secrets/access/rules/{param},h.deleteAccessRule,kernel,,,,services/secrets/handler.go,102,secrets|DELETE|/secrets/access/rules/{param}
+secrets,GET,/v1/sys/health,/v1/sys/health,h.vaultSysHealth,kernel,authenticated,vault_health_read,,services/secrets/handler.go,113,secrets|GET|/v1/sys/health
+secrets,GET,/v1/sys/seal-status,/v1/sys/seal-status,h.vaultSealStatus,kernel,authenticated,vault_seal_status_read,,services/secrets/handler.go,115,secrets|GET|/v1/sys/seal-status
+secrets,POST,/v1/auth/token/lookup-self,/v1/auth/token/lookup-self,h.vaultTokenLookupSelf,kernel,authenticated,vault_token_lookup,secret,services/secrets/handler.go,116,secrets|POST|/v1/auth/token/lookup-self
+secrets,GET,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVRead(true),kernel,secrets.value.read,vault_kv_read,secret,services/secrets/handler.go,117,secrets|GET|/v1/{param}/data/{param}
+secrets,POST,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVWrite(true),kernel,secrets.write,vault_kv_written,secret,services/secrets/handler.go,118,secrets|POST|/v1/{param}/data/{param}
+secrets,DELETE,/v1/{mount}/data/{path...},/v1/{param}/data/{param},h.vaultKVDelete,kernel,secrets.delete,vault_kv_deleted,secret,services/secrets/handler.go,119,secrets|DELETE|/v1/{param}/data/{param}
+secrets,GET,/v1/{mount}/metadata/{path...},/v1/{param}/metadata/{param},h.vaultKV2Metadata,kernel,secrets.read,vault_metadata_read,secret,services/secrets/handler.go,120,secrets|GET|/v1/{param}/metadata/{param}
+secrets,GET,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVRead(false),kernel,secrets.value.read,vault_kv_read,secret,services/secrets/handler.go,121,secrets|GET|/v1/{param}/{param}
+secrets,POST,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVWrite(false),kernel,secrets.write,vault_kv_written,secret,services/secrets/handler.go,122,secrets|POST|/v1/{param}/{param}
+secrets,DELETE,/v1/{mount}/{path...},/v1/{param}/{param},h.vaultKVDelete,kernel,secrets.delete,vault_kv_deleted,secret,services/secrets/handler.go,123,secrets|DELETE|/v1/{param}/{param}
 signing,GET,/signing/settings,/signing/settings,h.handleGetSettings,mux,,,,services/signing/handler.go,30,signing|GET|/signing/settings
 signing,PUT,/signing/settings,/signing/settings,h.handlePutSettings,mux,,,,services/signing/handler.go,31,signing|PUT|/signing/settings
 signing,GET,/signing/summary,/signing/summary,h.handleGetSummary,mux,,,,services/signing/handler.go,32,signing|GET|/signing/summary

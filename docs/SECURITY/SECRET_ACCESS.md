@@ -89,6 +89,35 @@ new and previous values; Playbooks trigger `secret_access_rule_changed`).
 | `max_versions` (0 to 1000, 0: no cap) | when a write adds a version, versions older than the newest `max_versions` are removed in the same transaction. The event carries `versions_pruned`. Lowering the cap prunes at each secret's next write, not at once |
 | `deleted_retention_days` (0 to 3650, 0: keep) | a deleted secret is destroyed this many days after its delete. The sweep runs hourly, on the primary only (a member never writes the replicated tables), and emits `audit.secrets.retention_purged` per secret (actor `system:retention`, with `deleted_by`, `deleted_at`, `retention_days`), or the same event with `result: failure` |
 
+## Version caps by path
+
+`GET /secrets/version-caps` (`secrets.access.read`), `PUT
+/secrets/version-caps` `{path, max_versions}` and `DELETE
+/secrets/version-caps/{id}` (`secrets.access.manage`; audited
+`version_cap_set` / `version_cap_deleted` at warning). A cap's path has a
+rule's form. For a secret, the cap that applies is the one on its own path,
+else the one on the nearest folder above it, else the tenant's
+`max_versions`. 0 on a path keeps every version there.
+`GET /secrets/{id}/access` returns `max_versions` and `max_versions_from`.
+
+## Subjects must exist
+
+Before a rule is stored, its subject is looked up where it is defined, with
+the secrets service's token (`directory.go`):
+
+| Subject | Owner | Check |
+|---|---|---|
+| `user`, `role`, `client` | auth | `POST /internal/subjects/check` (secrets identity only). A role exists if the tenant defines it or a user holds it |
+| `group` | keycore | `GET /access/groups` |
+| `workload` | workload identity | `GET /workload-identity/registrations`, by SPIFFE ID |
+
+Missing: `400 unknown_subject`. Owner unreachable: `503
+subject_check_unavailable`; the rule is not stored. Both are audited as
+refusals of `access_rule_created`. When rules are listed, each carries
+`subject_status` (`found`, `missing`, `unchecked`) and `subject_label`; a
+rule whose subject has gone is flagged, not removed, and the list event
+carries `subjects_missing`.
+
 ## Vault mounts
 
 `/v1/{mount}/data/{path}` addresses the secret named `{path}` when the mount
@@ -115,5 +144,5 @@ A recoverable delete keeps the material, so an exposure-register entry
 ## Open
 
 - Group membership is cached for 30 seconds per user.
-- The version cap is per tenant, not per secret or path.
-- A rule's subject is not checked to exist (a role or user ID is free text).
+- A rule whose subject disappears is flagged, not removed or disabled.
+- Lowering a version cap prunes at each secret's next write, not at once.

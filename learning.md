@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### A rule that names nobody is a lockout, not a no-op (7.31.0-beta)
+- **What was wrong:** an access rule's subject was free text. With "allow
+  restricts", one mistyped role as the only allow rule on `/finance/*` made
+  the folder unreadable by everyone, and the refusal (`not_in_access_rule`)
+  gave no hint that the rule itself was the mistake.
+- **Fix shape:** validate identifiers against the service that owns them,
+  at write time, and fail closed when it cannot be asked. Re-check on read
+  and flag, because the subject can disappear later.
+- **Trap:** auth's existing list routes were unusable for this. `GET
+  /auth/clients` lists the *caller's* tenant, so a service token would have
+  listed the internal service tenant and reported every customer client as
+  missing. A purpose-built, caller-restricted endpoint that takes the tenant
+  explicitly was needed.
+- **Trap:** "unchecked" must never collapse into "found". The annotation
+  treats a subject absent from the lookup result as unchecked; a partial
+  outage (workload identity down) leaves the other owners' answers intact
+  (`TestPlatformDirectory`).
+- **Built-in roles are not rows.** `tenant-admin` is not in the tenant's
+  role table, so a role exists if the table has it or a user holds it.
+
 ### Secrets hardening follow-ups (7.30.0-beta)
 - **"Ignores a parameter" is a tenancy-shaped bug.** The Vault KV handlers
   recorded the mount in metadata and audit details and then looked the

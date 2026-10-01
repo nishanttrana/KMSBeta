@@ -36,15 +36,17 @@ func TestAccessAndVersionsPostgres(t *testing.T) {
 	}
 	for name, run := range map[string]func(*testing.T, *Handler, *Service, *routetest.Recorder){
 		"access rules": runAccessRules, "paging": runListPaging, "soft delete": runSoftDelete, "versions": runVersions,
-		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention,
+		"mounts": runMounts, "default deny": runDefaultDeny, "groups": runGroups, "version cap": runVersionCap, "retention": runRetention, "path caps": runPathCaps, "subjects": runSubjects,
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules, secret_vault_settings`); err != nil {
+			if _, err := conn.SQL().ExecContext(ctx, `TRUNCATE secrets, secret_values, secret_audit_log, secret_access_rules, secret_vault_settings, secret_version_caps`); err != nil {
 				t.Fatalf("reset: %v", err)
 			}
 			svc := NewService(NewSQLStore(conn), []byte("0123456789ABCDEF0123456789ABCDEF"))
 			rec := &routetest.Recorder{}
-			run(t, NewHandler(svc, rec, nil, nil), svc, rec)
+			h := NewHandler(svc, rec, nil, nil)
+			h.directory = &directory{}
+			run(t, h, svc, rec)
 		})
 	}
 }
@@ -838,4 +840,205 @@ func TestMigration005Postgres(t *testing.T) {
 	}
 	// Applying it again changes nothing.
 	file("migrations/005_settings_mount_drop_hash.sql")
+}
+
+// directory stands in for auth, keycore and workload identity: every subject
+// exists except those listed as gone, and it can be made unreachable.
+type directory struct {
+	gone map[subject]bool
+	err  error
+}
+
+func (d *directory) Lookup(_ context.Context, _ string, subjects []subject) (map[subject]subjectInfo, error) {
+	out := map[subject]subjectInfo{}
+	if d.err != nil {
+		return out, d.err
+	}
+	for _, s := range subjects {
+		out[s] = subjectInfo{Exists: !d.gone[s], Label: "name of " + s.ID}
+	}
+	return out, nil
+}
+
+func TestPathCaps(t *testing.T) { h, svc, _, rec := newRecordedHandler(t); runPathCaps(t, h, svc, rec) }
+func TestSubjects(t *testing.T) { h, svc, _, rec := newRecordedHandler(t); runSubjects(t, h, svc, rec) }
+
+func TestCapFor(t *testing.T) {
+	caps := []VersionCap{{Path: "/a/*", MaxVersions: 5}, {Path: "/a/b/*", MaxVersions: 3}, {Path: "/a/b/c", MaxVersions: 0}, {Path: "/z", MaxVersions: 9}}
+	for path, want := range map[string]string{
+		"/a/x": "5 /a/*", "/a/b/x": "3 /a/b/*", "/a/b/c": "0 /a/b/c", "/a/b/d/e": "3 /a/b/*", "/z": "9 /z", "/z/child": "7 tenant", "/other": "7 tenant",
+	} {
+		if n, from := capFor(caps, 7, path); fmt.Sprintf("%d %s", n, from) != want {
+			t.Errorf("capFor(%s) = %d %s, want %s", path, n, from, want)
+		}
+	}
+}
+
+// A cap on a secret beats a cap on its folder, which beats the tenant's.
+func runPathCaps(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	capped := func(body string) (int, map[string]interface{}) {
+		return call(t, h, admin, "PUT", "/secrets/version-caps", body)
+	}
+	for _, bad := range []string{`{"path":"logs/*","max_versions":2}`, `{"path":"/logs/*","max_versions":-1}`, `{"path":"/logs/*","max_versions":1001}`, `{"path":"/lo*gs","max_versions":2}`} {
+		if code, _ := capped(bad); code != http.StatusBadRequest {
+			t.Fatalf("%s accepted: %d", bad, code)
+		}
+	}
+	if code, _ := call(t, h, user("t1", "w", "ops", "kms.read", "kms.write"), "PUT", "/secrets/version-caps", `{"path":"/logs/*","max_versions":2}`); code != http.StatusForbidden {
+		t.Fatalf("kms.write set a cap: %d", code)
+	}
+	refused(t, rec, "version_cap_set", "permission_denied")
+
+	putSettings(t, h, admin, `{"max_versions":4}`)
+	if code, out := capped(`{"path":"/logs/*","max_versions":2}`); code != http.StatusOK || out["cap"].(map[string]interface{})["updated_by"] != "u-t1" {
+		t.Fatalf("folder cap: %d %v", code, out)
+	}
+	if ev := rec.Last(t); ev.Action != "version_cap_set" || ev.Event.Details["path"] != "/logs/*" || ev.Event.Details["max_versions"] != 2 {
+		t.Fatalf("event %+v", ev.Event.Details)
+	}
+	capped(`{"path":"/logs/audit","max_versions":0}`) // this one secret keeps everything
+	capped(`{"path":"/logs/*","max_versions":3}`)     // replaces the folder's cap, not a second row
+	_, out := call(t, h, admin, "GET", "/secrets/version-caps", "")
+	if items := out["items"].([]interface{}); len(items) != 2 {
+		t.Fatalf("caps: %v", items)
+	}
+
+	versions := func(name, folder string, writes int) (string, int) {
+		t.Helper()
+		id := mustCreate(t, h, admin, name, folder)
+		for i := 0; i < writes; i++ {
+			if code, out := call(t, h, admin, "POST", "/secrets/"+id+"/rotate", fmt.Sprintf(`{"value":"v%d"}`, i)); code != http.StatusOK {
+				t.Fatalf("rotate: %d %v", code, out)
+			}
+		}
+		_, out := call(t, h, admin, "GET", "/secrets/"+id+"/versions", "")
+		return id, len(out["versions"].([]interface{}))
+	}
+	app, n := versions("app", "/logs", 6)
+	if n != 3 {
+		t.Fatalf("folder cap of 3 kept %d", n)
+	}
+	if _, n := versions("audit", "/logs", 6); n != 7 {
+		t.Fatalf("a per-secret cap of 0 kept %d of 7", n)
+	}
+	if _, n := versions("plain", "", 6); n != 4 {
+		t.Fatalf("the tenant cap of 4 kept %d", n)
+	}
+	_, out = call(t, h, admin, "GET", "/secrets/"+app+"/access", "")
+	if out["max_versions"] != float64(3) || out["max_versions_from"] != "/logs/*" {
+		t.Fatalf("effective cap: %v", out)
+	}
+
+	// Deleting the folder cap returns the folder to the tenant's.
+	_, out = call(t, h, admin, "GET", "/secrets/version-caps", "")
+	var folderID string
+	for _, it := range out["items"].([]interface{}) {
+		if m := it.(map[string]interface{}); m["path"] == "/logs/*" {
+			folderID = m["id"].(string)
+		}
+	}
+	if code, _ := call(t, h, admin, "DELETE", "/secrets/version-caps/"+folderID, ""); code != http.StatusOK {
+		t.Fatalf("delete cap: %d", code)
+	}
+	if ev := rec.Last(t); ev.Action != "version_cap_deleted" || ev.Event.Details["path"] != "/logs/*" {
+		t.Fatalf("delete event %+v", ev)
+	}
+	_, out = call(t, h, admin, "GET", "/secrets/"+app+"/access", "")
+	if out["max_versions"] != float64(4) || out["max_versions_from"] != "tenant" {
+		t.Fatalf("after delete: %v", out)
+	}
+	if code, _ := call(t, h, admin, "DELETE", "/secrets/version-caps/"+folderID, ""); code != http.StatusNotFound {
+		t.Fatalf("second delete: %d", code)
+	}
+	putSettings(t, h, admin, `{"max_versions":0}`)
+}
+
+// A rule is stored only for a subject that exists, and a rule whose subject
+// has since gone is flagged when rules are listed.
+func runSubjects(t *testing.T, h *Handler, _ *Service, rec *routetest.Recorder) {
+	admin := tenantAdmin("t1")
+	dir := &directory{gone: map[subject]bool{{"user", "typo-user"}: true, {"group", "grp_deleted"}: true}}
+	h.directory = dir
+	rule := func(kind, id string) (int, map[string]interface{}) {
+		return call(t, h, admin, "POST", "/secrets/access/rules", fmt.Sprintf(`{"path":"/x/*","subject_type":%q,"subject_id":%q,"capabilities":["value"]}`, kind, id))
+	}
+	for _, s := range [][2]string{{"user", "typo-user"}, {"group", "grp_deleted"}} {
+		if code, _ := rule(s[0], s[1]); code != http.StatusBadRequest {
+			t.Fatalf("rule for a missing %s stored: %d", s[0], code)
+		}
+		refused(t, rec, "access_rule_created", "unknown_subject")
+	}
+	code, out := rule("user", "alice")
+	if code != http.StatusCreated || out["rule"].(map[string]interface{})["subject_label"] != "name of alice" {
+		t.Fatalf("existing user: %d %v", code, out)
+	}
+
+	// When the owner cannot be asked, nothing is stored.
+	dir.err = fmt.Errorf("auth unreachable")
+	if code, _ := rule("role", "ops"); code != http.StatusServiceUnavailable {
+		t.Fatalf("unchecked rule stored: %d", code)
+	}
+	refused(t, rec, "access_rule_created", "subject_check_unavailable")
+	h.directory = nil
+	if code, _ := rule("role", "ops"); code != http.StatusServiceUnavailable {
+		t.Fatalf("rule stored with no directory: %d", code)
+	}
+	_, out = call(t, h, admin, "GET", "/secrets/access/rules", "")
+	if items := out["items"].([]interface{}); len(items) != 1 || items[0].(map[string]interface{})["subject_status"] != subjectUnchecked {
+		t.Fatalf("an unreachable directory must read unchecked, never found: %v", out)
+	}
+
+	// The user is deleted later: the rule is flagged, and counted in the event.
+	dir.err, dir.gone = nil, map[subject]bool{{"user", "alice"}: true}
+	h.directory = dir
+	_, out = call(t, h, admin, "GET", "/secrets/access/rules", "")
+	if items := out["items"].([]interface{}); items[0].(map[string]interface{})["subject_status"] != subjectMissing {
+		t.Fatalf("stale rule not flagged: %v", out)
+	}
+	if ev := rec.Last(t); ev.Action != "access_rules_listed" || ev.Event.Details["subjects_missing"] != 1 {
+		t.Fatalf("list event %+v", ev.Event.Details)
+	}
+}
+
+// platformDirectory against servers answering in the shapes auth
+// (TestSubjectsCheck), keycore (GET /access/groups) and workload identity
+// (GET /workload-identity/registrations) return. A failing owner leaves its
+// subjects unchecked without hiding the others.
+func TestPlatformDirectory(t *testing.T) {
+	var authBody string
+	auth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw := new(strings.Builder)
+		_, _ = fmt.Fprint(raw, r.URL.Path, " ")
+		buf := make([]byte, 4096)
+		n, _ := r.Body.Read(buf)
+		authBody = raw.String() + string(buf[:n])
+		_, _ = w.Write([]byte(`{"subjects":[{"type":"user","id":"u1","exists":true,"label":"alice"},{"type":"role","id":"nope","exists":false}]}`))
+	}))
+	defer auth.Close()
+	keycore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/access/groups" || r.URL.Query().Get("tenant_id") != "t1" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[{"id":"grp_1","tenant_id":"t1","name":"Auditors","member_count":2}]}`))
+	}))
+	defer keycore.Close()
+	workload := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) }))
+	defer workload.Close()
+
+	ask := []subject{{"user", "u1"}, {"role", "nope"}, {"group", "grp_1"}, {"group", "grp_x"}, {"workload", "spiffe://t1/app"}}
+	got, err := newPlatformDirectory(auth.URL, keycore.URL, workload.URL).Lookup(context.Background(), "t1", ask)
+	if err == nil {
+		t.Fatal("the workload failure was swallowed")
+	}
+	want := map[subject]subjectInfo{
+		{"user", "u1"}: {true, "alice"}, {"role", "nope"}: {false, ""}, {"group", "grp_1"}: {true, "Auditors"}, {"group", "grp_x"}: {false, ""},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	if !strings.Contains(authBody, "/internal/subjects/check") || !strings.Contains(authBody, `"tenant_id":"t1"`) || strings.Contains(authBody, "grp_1") {
+		t.Fatalf("auth was sent %s", authBody)
+	}
 }

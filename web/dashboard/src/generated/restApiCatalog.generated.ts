@@ -13226,6 +13226,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-post-internal-subjects-check",
+    "group": "Identity & Access (auth)",
+    "title": "POST /internal/subjects/check",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/internal/subjects/check?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "POST /svc/auth/internal/subjects/check?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-post-scim-v2-groups",
     "group": "Identity & Access (auth)",
     "title": "POST /scim/v2/Groups",
@@ -21343,6 +21371,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-delete-secrets-version-caps-cap-id",
+    "group": "Secret Vault (secrets)",
+    "title": "DELETE /secrets/version-caps/{cap_id}",
+    "service": "secrets",
+    "method": "DELETE",
+    "pathTemplate": "/secrets/version-caps/{cap_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "DELETE /svc/secrets/secrets/version-caps/{cap_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-delete-v1-mount-path",
     "group": "Secret Vault (secrets)",
     "title": "DELETE /v1/{mount}/{path...}",
@@ -21632,6 +21688,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "GET /svc/secrets/secrets/stats?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-get-secrets-version-caps",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/version-caps",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/version-caps?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/version-caps?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -22136,6 +22220,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "PUT /svc/secrets/secrets/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-put-secrets-version-caps",
+    "group": "Secret Vault (secrets)",
+    "title": "PUT /secrets/version-caps",
+    "service": "secrets",
+    "method": "PUT",
+    "pathTemplate": "/secrets/version-caps?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "PUT /svc/secrets/secrets/version-caps?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

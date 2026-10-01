@@ -92,6 +92,16 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			updated_by TEXT NOT NULL DEFAULT '',
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE secret_version_caps (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			path TEXT NOT NULL,
+			max_versions INTEGER NOT NULL,
+			updated_by TEXT NOT NULL DEFAULT '',
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id),
+			UNIQUE (tenant_id, path)
+		);`,
 		`CREATE TABLE secret_audit_log (
 			id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL,

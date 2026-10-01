@@ -12,13 +12,14 @@ import {
   getVaultStats,
   listAccessRules,
   listAllSecrets,
+  listVersionCaps,
   rotateSecret
 } from "../../../lib/secrets";
 import { DrillHint, DrillPanel, clickable } from "../chartDrill";
 import { Btn, FG, Inp, Modal, Row2, Section, Sel, Tabs, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { AccessRules, VaultSettingsCard } from "./vault/Access";
+import { AccessRules, VaultSettingsCard, VersionCaps } from "./vault/Access";
 import { SecretRow, TypeBadge, VaultApiCard, VaultCharts, VaultTiles } from "./vault/Charts";
 import { SecretDetail } from "./vault/Detail";
 import {
@@ -52,7 +53,8 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const [rules, setRules] = useState(null);
   const [settings, setSettings] = useState(null);
   const [groups, setGroups] = useState(null); // access group names by ID
-  const [sideError, setSideError] = useState({ deleted: "", rules: "", settings: "" });
+  const [caps, setCaps] = useState(null); // version caps by path
+  const [sideError, setSideError] = useState({ deleted: "", rules: "", settings: "", caps: "" });
   const [view, setView] = useState("Secrets");
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState("");
@@ -88,14 +90,15 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const loadAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    const [items, vaultStats, gone, ruleList, vaultSettings, groupList] = await Promise.allSettled([
-      listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session), getVaultSettings(session), listKeyAccessGroups(session)]);
+    const [items, vaultStats, gone, ruleList, vaultSettings, groupList, capList] = await Promise.allSettled([
+      listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session), getVaultSettings(session), listKeyAccessGroups(session), listVersionCaps(session)]);
+    setCaps(capList.status === "fulfilled" ? capList.value : null);
     setSettings(vaultSettings.status === "fulfilled" ? vaultSettings.value : null);
     setGroups(groupList.status === "fulfilled" ? Object.fromEntries(groupList.value.map((g) => [g.id, g.name])) : null);
     setDeleted(gone.status === "fulfilled" ? gone.value : null);
     setRules(ruleList.status === "fulfilled" ? ruleList.value : null);
     const why = (r) => r.status === "rejected" ? errMsg(r.reason) : "";
-    setSideError({ deleted: why(gone), rules: why(ruleList), settings: why(vaultSettings) });
+    setSideError({ deleted: why(gone), rules: why(ruleList), settings: why(vaultSettings), caps: why(capList) });
     setAsOf(Date.now());
     if (items.status === "fulfilled") { setSecrets(items.value); setLoadError(""); }
     else { setSecrets([]); setLoadError(errMsg(items.reason)); }
@@ -256,6 +259,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
     {!loadError && view === "Access rules" && <VaultSettingsCard session={session} settings={settings} error={sideError.settings} uncovered={settings?.default_deny ? null : secrets.filter((s) => !s.restricted).length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
+    {!loadError && view === "Access rules" && <VersionCaps session={session} caps={caps} error={sideError.caps} onChanged={() => void loadAll()} onToast={onToast} />}
     {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} groups={groups} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
       confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
 

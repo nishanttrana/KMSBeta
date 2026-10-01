@@ -152,7 +152,9 @@ export function SecretDetail({ session, secret, groups, now, confirm, onClose, o
 
       <div style={{ ...section, display: "grid", gridTemplateColumns: "1.2fr 1.4fr", gap: 14 }}>
         <div>
-          <div style={head}><History size={13} /> Versions{versions ? ` (${versions.length})` : ""}</div>
+          <div style={head}><History size={13} /> Versions{versions ? ` (${versions.length})` : ""}
+            {access?.max_versions ? <span style={{ fontWeight: 400, color: C.muted }} title={access.max_versions_from === "tenant" ? "The tenant's version cap" : `Version cap on ${access.max_versions_from}`}>keeps {access.max_versions}</span> : null}
+          </div>
           <div style={{ maxHeight: 190, overflow: "auto" }}>
             {(versions || []).map((v) => {
               const current = v.version === secret.current_version;

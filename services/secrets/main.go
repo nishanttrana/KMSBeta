@@ -56,6 +56,7 @@ func main() {
 	h := NewHandler(svc, audit, rt.Logger, keyring)
 	// Group subjects in access rules are keycore's access groups.
 	h.groups = newKeycoreGroups(envOr("KEYCORE_URL", "https://keycore:8010"))
+	h.directory = newPlatformDirectory(envOr("AUTH_URL", "https://auth:8001"), envOr("KEYCORE_URL", "https://keycore:8010"), envOr("WORKLOAD_URL", "https://workload:8250"))
 	go h.runRetention(rt.Ctx, time.Hour)
 	if err := rt.Serve(h); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)

@@ -37,7 +37,9 @@ func newRecordedHandler(t *testing.T) (*Handler, *Service, *SQLStore, *routetest
 	t.Helper()
 	svc, store := newSecretsService(t)
 	rec := &routetest.Recorder{}
-	return NewHandler(svc, rec, nil, nil), svc, store, rec
+	h := NewHandler(svc, rec, nil, nil)
+	h.directory = &directory{}
+	return h, svc, store, rec
 }
 
 func serveAs(h *Handler, claims *pkgauth.Claims, req *http.Request) *httptest.ResponseRecorder {

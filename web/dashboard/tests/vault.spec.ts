@@ -30,8 +30,10 @@ const DELETED = [{ ...secret("sec_9", "old-vpn", "password", 2, 30), status: "de
 const RULES = [
   { id: "sar_1", path: "/finance/*", subject_type: "role", subject_id: "finance-admin", capabilities: ["read", "value", "write", "delete"], effect: "allow", created_by: "alice", created_at: at(-9) },
   { id: "sar_2", path: "/finance/prod/billing-db", subject_type: "user", subject_id: "contractor-7", capabilities: ["value"], effect: "deny", created_by: "alice", created_at: at(-3) },
-  { id: "sar_3", path: "/finance/*", subject_type: "group", subject_id: "grp_aud", capabilities: ["read"], effect: "allow", created_by: "alice", created_at: at(-2) },
+  { id: "sar_3", path: "/finance/*", subject_type: "group", subject_id: "grp_aud", capabilities: ["read"], effect: "allow", created_by: "alice", created_at: at(-2), subject_status: "found", subject_label: "Auditors" },
+  { id: "sar_4", path: "/ops/*", subject_type: "user", subject_id: "usr_left", capabilities: ["value"], effect: "allow", created_by: "alice", created_at: at(-40), subject_status: "missing" },
 ];
+const CAPS = [{ id: "svc_1", path: "/logs/*", max_versions: 3, updated_by: "alice" }, { id: "svc_2", path: "/logs/audit", max_versions: 0, updated_by: "alice" }];
 const GROUPS = [{ id: "grp_aud", tenant_id: "root", name: "Auditors", member_count: 3 }, { id: "grp_dba", tenant_id: "root", name: "Database admins", member_count: 2 }];
 const SETTINGS = { tenant_id: "root", default_deny: false, max_versions: 0, deleted_retention_days: 30, updated_by: "alice" };
 
@@ -48,12 +50,15 @@ async function stub(page: Page, opts: Opts = {}, writes: Write[] = []): Promise<
     const p = new URL(req.url()).pathname;
     if (p.includes("/svc/secrets/")) calls.push(`${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`);
     if (req.method() !== "GET" && p.includes("/svc/secrets/")) writes.push({ call: `${req.method()} ${p.replace(/^.*\/svc\/secrets/, "")}`, body: req.postDataJSON() });
+    if (p.endsWith("/secrets/version-caps") && req.method() === "PUT") return route.fulfill(json({ cap: { id: "svc_new", ...req.postDataJSON() } }));
+    if (p.endsWith("/secrets/version-caps")) return route.fulfill(json({ items: CAPS }));
+    if (p.includes("/secrets/version-caps/")) return route.fulfill(json({ status: "deleted" }));
     if (p.endsWith("/keycore/access/groups")) return route.fulfill(json({ items: GROUPS }));
     if (p.endsWith("/secrets/settings") && req.method() === "PUT") return route.fulfill(json({ settings: { ...SETTINGS, ...req.postDataJSON() } }));
     if (p.endsWith("/secrets/settings")) return route.fulfill(opts.settingsDown ? down : json({ settings: SETTINGS }));
     if (p.endsWith("/secrets/access/rules") && req.method() === "POST") return route.fulfill(json({ rule: { ...RULES[0], id: "sar_new" } }, 201));
     if (p.endsWith("/secrets/access/rules")) return route.fulfill(opts.rulesDown ? down : json({ items: RULES }));
-    if (p.endsWith("/access")) return route.fulfill(json({ path: "/stripe-live", rules: p.includes("sec_3") ? RULES : [], caller: { read: true, value: !opts.noValue, write: true, delete: true } }));
+    if (p.endsWith("/access")) return route.fulfill(json({ path: "/stripe-live", rules: p.includes("sec_3") ? RULES.slice(0, 3) : [], max_versions: 3, max_versions_from: "/logs/*", caller: { read: true, value: !opts.noValue, write: true, delete: true } }));
     if (p.endsWith("/rollback")) return route.fulfill(json({ secret: { ...SECRETS[0], current_version: 4 } }));
     if (p.endsWith("/svc/secrets/secrets") && new URL(req.url()).searchParams.get("deleted") === "true") return route.fulfill(json({ items: DELETED }));
     if (p.endsWith("/secrets/stats")) return route.fulfill(opts.statsDown ? down : json({ stats: { total_secrets: 6, total_versions: 12, expiring_within_30d: 2, expired: 1, by_type: {} } }));
@@ -168,7 +173,7 @@ test("access rules: the restricted tile lists its secrets, and a rule is added a
   await expect(page.getByText("Value limited by an access rule: 2 entries")).toBeVisible();
 
   await page.getByText("Access rules", { exact: true }).click();
-  await expect(page.getByText("3 rules · 2 of 6 secrets restricted")).toBeVisible();
+  await expect(page.getByText("4 rules · 2 of 6 secrets restricted")).toBeVisible();
   await expect(page.getByText("Auditors")).toBeVisible(); // a group rule is shown by the group's name
   await expect(page.getByText("finance-admin")).toBeVisible();
   await expect(page.getByText("contractor-7")).toBeVisible();
@@ -292,4 +297,38 @@ test("failed vault settings read unavailable", async ({ page }) => {
   await page.getByText("Access rules", { exact: true }).click();
   await expect(page.getByText(/Vault settings unavailable/)).toBeVisible();
   await expect(page.getByLabel("Versions kept per secret")).toHaveCount(0);
+});
+
+test("a rule whose subject no longer exists is flagged, and a refused subject is reported", async ({ page }) => {
+  await stub(page);
+  await page.route("**/svc/secrets/secrets/access/rules", (route) => route.request().method() === "POST"
+    ? route.fulfill(json({ error: { code: "unknown_subject", message: "no role fin-admin in this tenant" } }, 400)) : route.fallback());
+  await open(page);
+  await page.getByText("Access rules", { exact: true }).click();
+  await expect(page.getByText("1 name a subject that no longer exists")).toBeVisible();
+  await expect(page.getByText("· not found")).toHaveCount(1);
+  await page.getByRole("button", { name: "Add rule" }).first().click();
+  await page.getByPlaceholder("/finance/*").fill("/x/*");
+  await page.getByPlaceholder("finance-admin").fill("fin-admin");
+  await page.getByRole("button", { name: "Add rule" }).last().click();
+  await expect(page.getByText(/Rule refused: .*no role fin-admin in this tenant/)).toBeVisible();
+});
+
+test("version caps by path are listed, set and removed, and a secret shows the cap that applies", async ({ page }) => {
+  const writes: Write[] = [];
+  await stub(page, {}, writes);
+  await open(page);
+  await page.getByText("stripe-live").first().click();
+  await expect(page.getByText("keeps 3")).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
+
+  await page.getByText("Access rules", { exact: true }).click();
+  await expect(page.getByText("keeps every version")).toBeVisible(); // /logs/audit, cap 0
+  await page.getByLabel("Version cap path").fill("/db/*");
+  await page.getByLabel("Versions kept on this path").fill("10");
+  await page.getByRole("button", { name: "Set cap" }).click();
+  await expect.poll(() => writes.find((w) => w.call === "PUT /secrets/version-caps")?.body).toEqual({ tenant_id: "root", path: "/db/*", max_versions: 10 });
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/vault-caps.png`, fullPage: true });
+  await page.getByTitle("Remove cap").first().click();
+  await expect.poll(() => writes.some((w) => w.call === "DELETE /secrets/version-caps/svc_1")).toBe(true);
 });

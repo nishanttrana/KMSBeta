@@ -104,6 +104,64 @@ type AccessRule struct {
 	Effect       string    `json:"effect"`
 	CreatedBy    string    `json:"created_by"`
 	CreatedAt    time.Time `json:"created_at"`
+	// SubjectStatus is whether the subject exists where it is defined: found,
+	// missing or unchecked (directory.go). SubjectLabel is its display name.
+	SubjectStatus string `json:"subject_status,omitempty"`
+	SubjectLabel  string `json:"subject_label,omitempty"`
+}
+
+// VersionCap caps the stored versions of one secret or one folder,
+// overriding the tenant's cap. Path has an access rule's form.
+type VersionCap struct {
+	ID          string     `json:"id"`
+	TenantID    string     `json:"tenant_id"`
+	Path        string     `json:"path"`
+	MaxVersions int        `json:"max_versions"`
+	UpdatedBy   string     `json:"updated_by"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+}
+
+// validPath checks a rule or cap path: one secret (/team/db) or everything
+// under a folder (/team/*).
+func validPath(path string) error {
+	if !strings.HasPrefix(path, "/") || len(path) > 512 || strings.Contains(path, "//") {
+		return errors.New("path must start with / and name a secret (/team/db) or everything under a folder (/team/*)")
+	}
+	folder, isFolder := strings.CutSuffix(path, under)
+	if strings.Contains(folder, "*") || strings.HasSuffix(folder, "/") || (!isFolder && folder == "") {
+		return errors.New("* is only allowed as the last segment, as in /team/*, and a path must not end with /")
+	}
+	return nil
+}
+
+// covers reports whether a rule or cap path is this secret or a folder above it.
+func covers(pattern, path string) bool {
+	if folder, ok := strings.CutSuffix(pattern, under); ok {
+		return strings.HasPrefix(path, folder+"/")
+	}
+	return pattern == path
+}
+
+// capFor is the version cap that applies to a secret's path: a cap on the
+// secret itself, else the cap on the nearest folder above it, else the
+// tenant's. It returns the cap (0: none) and where it comes from.
+func capFor(caps []VersionCap, tenantCap int, path string) (int, string) {
+	best := -1
+	for i, c := range caps {
+		if !covers(c.Path, path) {
+			continue
+		}
+		if c.Path == path {
+			return c.MaxVersions, c.Path
+		}
+		if best < 0 || len(c.Path) > len(caps[best].Path) {
+			best = i
+		}
+	}
+	if best >= 0 {
+		return caps[best].MaxVersions, caps[best].Path
+	}
+	return tenantCap, "tenant"
 }
 
 // secretPath is where a secret sits: its "path" label (the folder), then its
@@ -131,12 +189,8 @@ func normalizeRule(r AccessRule) (AccessRule, error) {
 	if r.SubjectID == "" || len(r.SubjectID) > 256 {
 		return r, errors.New("subject_id is required")
 	}
-	if !strings.HasPrefix(r.Path, "/") || len(r.Path) > 512 || strings.Contains(r.Path, "//") {
-		return r, errors.New("path must start with / and name a secret (/team/db) or everything under a folder (/team/*)")
-	}
-	folder, isFolder := strings.CutSuffix(r.Path, under)
-	if strings.Contains(folder, "*") || strings.HasSuffix(folder, "/") || (!isFolder && folder == "") {
-		return r, errors.New("* is only allowed as the last segment, as in /team/*, and a path must not end with /")
+	if err := validPath(r.Path); err != nil {
+		return r, err
 	}
 	seen := map[string]bool{}
 	var caps []string
@@ -156,12 +210,7 @@ func normalizeRule(r AccessRule) (AccessRule, error) {
 }
 
 // covers reports whether the rule's path is this secret or a folder above it.
-func (r AccessRule) covers(path string) bool {
-	if folder, ok := strings.CutSuffix(r.Path, under); ok {
-		return strings.HasPrefix(path, folder+"/")
-	}
-	return r.Path == path
-}
+func (r AccessRule) covers(path string) bool { return covers(r.Path, path) }
 
 func (r AccessRule) grants(capability string) bool {
 	for _, c := range r.Capabilities {

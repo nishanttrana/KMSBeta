@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secrets: version caps by path; a rule's subject is verified with its owner (7.31.0-beta)
+
+**Decision.** A version cap can be set on a path (a secret or a folder), in
+the same path form as access rules; the most specific applies, the tenant's
+last. An access rule is stored only after the service that owns its subject
+confirms it exists (auth, keycore, workload identity), and refused if that
+service cannot be asked. Stored rules are re-checked when listed and
+flagged, not removed.
+
+**Why.** One path syntax for rules and caps means one thing to learn and one
+matcher to test. A free-text subject turned a typo into a silent lockout of
+a folder. Refusing on an unreachable owner keeps "every stored rule was
+verified" true. Auto-removing a rule when its subject disappears would
+silently reopen a path whose only allow rule it was.
+
+**Rejected.** A `max_versions` column on each secret plus a separate folder
+table: two mechanisms. Letting secrets read auth's tables: services own
+their data. Reusing `GET /auth/users` and `/auth/clients` with a service
+token: they scope to the caller's tenant, which for a service is the
+internal one. Storing unverifiable rules as "pending".
+
+**Enforced by.** `TestCapFor`, `TestPathCaps`, `TestSubjects`,
+`TestPlatformDirectory` (secrets, also on Postgres); `TestSubjectsCheck`,
+`TestSubjectsRoutesRefusalsAudited` (auth).
+
+---
+
 ## 2026-10-01 — Secrets: root mount, keycore groups, fail closed on unknown membership (7.30.0-beta)
 
 **Decision.** (1) The Vault mount is the first segment of a secret's name,
