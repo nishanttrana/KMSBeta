@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Cloud, Code2, FileBadge, GitBranch, Globe, Upload } from "lucide-react";
+import { Cloud, Code2, Database, FileBadge, GitBranch, Globe, Upload } from "lucide-react";
 import type { AssetQuery, CryptoAsset, DiscoverySource, DiscoverySummary } from "../../../../lib/discovery";
 import type { ServerDrill } from "../../chartDrill";
 
@@ -24,13 +24,14 @@ export const SOURCE_META: Record<string, { label: string; icon: LucideIcon }> = 
   cloud: { label: "Cloud KMS", icon: Cloud },
   certs: { label: "Certificates", icon: FileBadge },
   git: { label: "Git repositories", icon: GitBranch },
+  storage: { label: "Object storage", icon: Database },
   code: { label: "Mounted code", icon: Code2 },
   upload: { label: "File upload", icon: Upload },
 };
 export const sourceMeta = (s: string) => SOURCE_META[s] ?? { label: s, icon: Globe };
 
 // Sources a scan reads; uploads are scanned as they arrive.
-export const SCANNABLE = ["network", "cloud", "certs", "git", "code"];
+export const SCANNABLE = ["network", "cloud", "certs", "git", "storage", "code"];
 
 export const TYPE_LABEL: Record<string, string> = {
   tls_endpoint: "TLS endpoint",

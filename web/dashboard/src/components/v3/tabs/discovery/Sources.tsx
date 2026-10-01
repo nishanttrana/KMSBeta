@@ -24,6 +24,8 @@ function sourceLine(s: DiscoverySource): string {
       return plural(d.certificates || 0, "certificate");
     case "git":
       return s.configured ? `${plural(d.repositories, "repository", "repositories")}${d.private ? ` · ${d.private} private` : ""}` : "No repositories yet";
+    case "storage":
+      return s.configured ? `${plural(d.buckets, "bucket")}${d.private ? ` · ${d.private} private` : ""}` : "No buckets yet";
     case "code":
       return s.configured ? "Source tree mounted" : "Not mounted";
     default:
@@ -39,20 +41,23 @@ type CardsProps = {
   onScan: (types: string[]) => void;
   onTargets: () => void;
   onRepositories: () => void;
+  onBuckets: () => void;
   onCodeSetup: () => void;
   onPickFiles: () => void;
   onUpload: (files: File[]) => void;
   onNavigate?: (tab: string) => void;
 };
 
-export function SourceCards({ sources, assetCounts, running, uploading, onScan, onTargets, onRepositories, onCodeSetup, onPickFiles, onUpload, onNavigate }: CardsProps) {
+export function SourceCards({ sources, assetCounts, running, uploading, onScan, onTargets, onRepositories, onBuckets, onCodeSetup, onPickFiles, onUpload, onNavigate }: CardsProps) {
   const [dragging, setDragging] = useState(false);
   const action = (s: DiscoverySource) => {
     switch (s.id) {
       case "network": return { label: "Targets", run: onTargets };
-      case "cloud": return { label: s.configured ? "Accounts" : "Connect", run: () => onNavigate?.("byok") };
-      case "certs": return { label: "Open PKI", run: () => onNavigate?.("certificates") };
+      // Tab ids are the shell's NAV ids (tests/unit/navTargets.test.ts).
+      case "cloud": return { label: s.configured ? "Accounts" : "Connect", run: () => onNavigate?.("cloudctl") };
+      case "certs": return { label: "Open PKI", run: () => onNavigate?.("certs") };
       case "git": return { label: "Repos", run: onRepositories };
+      case "storage": return { label: "Buckets", run: onBuckets };
       case "code": return { label: s.configured ? "Details" : "Set up", run: onCodeSetup };
       default: return { label: uploading ? "Uploading..." : "Upload", run: onPickFiles };
     }
@@ -190,7 +195,7 @@ export function TargetsModal({ open, onClose, session, targets, error, operatorE
   );
 }
 
-export function CodeSetupModal({ open, onClose, configured, onUpload }: { open: boolean; onClose: () => void; configured: boolean; onUpload: () => void }) {
+export function CodeSetupModal({ open, onClose, configured }: { open: boolean; onClose: () => void; configured: boolean }) {
   const step = (n: number, text: string) => (
     <div style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 12, color: C.text, marginBottom: 8 }}>
       <span style={{ width: 18, height: 18, borderRadius: 9, background: C.accentDim, color: C.accentFg, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</span>{text}
@@ -207,8 +212,7 @@ export function CodeSetupModal({ open, onClose, configured, onUpload }: { open: 
     - /srv/repos:/workspace:ro
   environment:
     WORKSPACE_ROOT: /workspace`}</pre>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>Findings keep the file, line and a fingerprint, never the secret.</div>
-      <Btn onClick={() => { onClose(); onUpload(); }}>Upload files instead</Btn>
+      <div style={{ fontSize: 11, color: C.muted }}>Findings keep the file, line and a fingerprint, never the secret.</div>
     </Modal>
   );
 }

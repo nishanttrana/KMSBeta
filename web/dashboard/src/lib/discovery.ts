@@ -56,7 +56,7 @@ export type DiscoverySource = {
 };
 
 // Sources a scan can read (services/discovery normalizeScanTypes).
-export const DISCOVERY_SCAN_TYPES = ["network", "cloud", "certs", "code"] as const;
+export const DISCOVERY_SCAN_TYPES = ["network", "cloud", "certs", "code", "git", "storage"] as const;
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -371,15 +371,82 @@ export async function saveDiscoverySchedule(
   return res.schedule;
 }
 
-// Git connections (sealed in compliance) a private repository can use. Only
-// the name, ID and host come back, never a field value.
-export type GitConnection = { id: string; name: string; type: string; endpoint: string };
+// Source connections (sealed in compliance) a private repository (git) or
+// bucket (s3, azure_blob) can use. Only the name, ID and host come back,
+// never a field value.
+export type SourceConnection = { id: string; name: string; type: string; endpoint: string };
+export type GitConnection = SourceConnection;
 
-export async function listGitConnections(session: AuthSession): Promise<GitConnection[]> {
-  const res = await serviceRequest<{ data?: GitConnection[] }>(
+export async function listSourceConnections(session: AuthSession, types: string[]): Promise<SourceConnection[]> {
+  const res = await serviceRequest<{ data?: SourceConnection[] }>(
     session,
     "compliance",
     `/compliance/playbooks/connections?${tenantQuery(session)}`
   );
-  return (Array.isArray(res?.data) ? res.data : []).filter((c) => c.type === "git");
+  return (Array.isArray(res?.data) ? res.data : []).filter((c) => types.includes(c.type));
+}
+
+export const listGitConnections = (session: AuthSession) => listSourceConnections(session, ["git"]);
+
+// An object storage bucket the tenant added for the "storage" scan source:
+// provider "s3" (S3 or a service that speaks its API) or "azure" (a Blob
+// container). The endpoint holds no credential; a private bucket names a
+// sealed s3 or azure_blob connection (Playbooks, Connections).
+export type DiscoveryBucket = {
+  id: string;
+  tenant_id: string;
+  provider: "s3" | "azure";
+  endpoint: string;
+  bucket: string;
+  prefix: string;
+  region: string;
+  connection_id: string;
+  created_by: string;
+  created_at: string;
+};
+
+// The connection type a provider's private bucket reads with.
+export const BUCKET_CONNECTION_TYPE: Record<DiscoveryBucket["provider"], string> = { s3: "s3", azure: "azure_blob" };
+
+export async function listDiscoveryBuckets(session: AuthSession): Promise<DiscoveryBucket[]> {
+  const res = await serviceRequest<{ items?: DiscoveryBucket[] }>(
+    session,
+    "discovery",
+    `/discovery/buckets?${tenantQuery(session)}`
+  );
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export async function addDiscoveryBucket(
+  session: AuthSession,
+  bucket: { provider: string; endpoint: string; bucket: string; prefix: string; region: string; connection_id: string }
+): Promise<DiscoveryBucket> {
+  const res = await serviceRequest<{ bucket?: DiscoveryBucket }>(
+    session,
+    "discovery",
+    `/discovery/buckets?${tenantQuery(session)}`,
+    { method: "POST", body: JSON.stringify(bucket) }
+  );
+  return res?.bucket ?? ({} as DiscoveryBucket);
+}
+
+export async function removeDiscoveryBucket(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(
+    session,
+    "discovery",
+    `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`,
+    { method: "DELETE" }
+  );
+}
+
+// testDiscoveryBucket lists the bucket and reads one object with its
+// connection; it throws with the storage service's reason when it can't.
+export async function testDiscoveryBucket(session: AuthSession, id: string): Promise<{ objects_listed: number; objects_read: number }> {
+  const res = await serviceRequest<{ objects_listed?: number; objects_read?: number }>(
+    session,
+    "discovery",
+    `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`,
+    { method: "POST", body: "{}" }
+  );
+  return { objects_listed: Number(res?.objects_listed || 0), objects_read: Number(res?.objects_read || 0) };
 }

@@ -22,6 +22,7 @@ keep one.
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
 | source | `git`: the hosting site (`git_url`), an access `token`, optional `username` for Basic authentication (7.20.0-beta) | discovery's git repository scans |
+| source | `s3`: the storage service (`endpoint_url`), `access_key_id`, `secret_access_key` (at least 10 characters). `azure_blob`: the storage account (`account_url`) and a `sas_token` with read and list (7.34.0-beta) | discovery's object storage scans |
 
 ## Who can open one
 
@@ -45,6 +46,13 @@ keep one.
   connection is tested on a repository that uses it
   (`POST /discovery/repositories/{id}/test`); the Connections test refuses
   with `connection_test_elsewhere`.
+- **Discovery, object storage** (7.34.0-beta): the same rules for `s3` and
+  `azure_blob` connections, one per private bucket. The S3 key signs each
+  request (Signature V4, HMAC-SHA256 from `pkg/crypto`) to the connection's
+  host only; the secret itself is never sent. The SAS token is sent as the
+  request's query to the connection's host only. No redirect is followed,
+  and no error or audit event carries the URL. Tested on a bucket that uses
+  it (`POST /discovery/buckets/{id}/test`).
 - The audit service keeps an opened connection in memory for 60 seconds and
   governance for one notice. Neither writes one to disk, a log or an error:
   delivery errors name the host, never the URL (a Slack or Teams URL is
@@ -66,9 +74,10 @@ keep one.
 
 ## Deleting
 
-A git connection in use by a discovery repository can't be deleted either:
-compliance asks discovery, and only for that type, so a deployment without
-discovery can still delete every other connection.
+A source connection (`git`, `s3`, `azure_blob`) in use by a discovery
+repository or bucket can't be deleted either: compliance asks discovery, and
+only for those types, so a deployment without discovery can still delete
+every other connection.
 
 A connection in use can't be deleted. Compliance checks its playbooks, asks
 the audit service for its event streams and, for the root tenant, asks
@@ -111,4 +120,9 @@ again after a restore:
 - Sentinel supports the public Azure cloud only (the Entra host is fixed).
 - A git server on a private network can't have a connection, for the same
   reason as a private SIEM. Discovery can still scan its repositories that
-  need no token.
+  need no token. The same holds for a storage service on a private address
+  (an on-premises MinIO or Ceph): its public buckets can be scanned, its
+  private ones can't until the allowlist exists.
+- Object storage credentials are a static S3 access key or an Azure SAS
+  token. Azure account keys and Entra ID, Google's native API and temporary
+  (STS) credentials are not supported.

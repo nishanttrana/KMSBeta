@@ -32,6 +32,10 @@ type Store interface {
 	ListRepositories(ctx context.Context, tenantID string) ([]Repository, error)
 	DeleteRepository(ctx context.Context, tenantID string, id string) error
 
+	CreateBucket(ctx context.Context, bucket Bucket) error
+	ListBuckets(ctx context.Context, tenantID string) ([]Bucket, error)
+	DeleteBucket(ctx context.Context, tenantID string, id string) error
+
 	GetSchedule(ctx context.Context, tenantID string) (Schedule, error)
 	PutSchedule(ctx context.Context, sch Schedule) error
 	DueSchedules(ctx context.Context, now time.Time) ([]Schedule, error)
@@ -62,6 +66,24 @@ type Repository struct {
 	URL          string    `json:"url"`
 	Ref          string    `json:"ref"`
 	Provider     string    `json:"provider"`
+	ConnectionID string    `json:"connection_id"`
+	CreatedBy    string    `json:"created_by"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// Bucket is an object storage bucket (provider "s3": S3 or a service that
+// speaks its API) or Azure Blob container (provider "azure") a tenant added
+// for the "storage" scan source. Endpoint is https://host with no
+// credential; ConnectionID names the sealed s3 or azure_blob connection for
+// a private one.
+type Bucket struct {
+	ID           string    `json:"id"`
+	TenantID     string    `json:"tenant_id"`
+	Provider     string    `json:"provider"`
+	Endpoint     string    `json:"endpoint"`
+	Name         string    `json:"bucket"`
+	Prefix       string    `json:"prefix"`
+	Region       string    `json:"region"`
 	ConnectionID string    `json:"connection_id"`
 	CreatedBy    string    `json:"created_by"`
 	CreatedAt    time.Time `json:"created_at"`

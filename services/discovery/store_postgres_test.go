@@ -106,6 +106,36 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	if due, _ := store.DueSchedules(ctx, time.Now().UTC().Add(7*time.Hour)); containsTenant(due, tenant) {
 		t.Fatal("a paused schedule is due")
 	}
+	// Migration 007: buckets. The same bucket under another prefix is a
+	// different row; the same prefix is a duplicate.
+	in := BucketInput{Provider: "s3", Name: "acme-artifacts", Prefix: "releases/", Region: "eu-west-1"}
+	added, err := svc.AddBucket(ctx, tenant, in, "w")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.AddBucket(ctx, tenant, in, "w"); !errors.Is(err, errBucketExists) {
+		t.Fatalf("duplicate bucket: %v", err)
+	}
+	in.Prefix = ""
+	if _, err := svc.AddBucket(ctx, tenant, in, "w"); err != nil {
+		t.Fatalf("same bucket, no prefix: %v", err)
+	}
+	if _, err := svc.AddBucket(ctx, tenant, BucketInput{Provider: "azure", Endpoint: "https://acme.blob.core.windows.net", Name: "configs"}, "w"); err != nil {
+		t.Fatal(err)
+	}
+	bs, err := store.ListBuckets(ctx, tenant)
+	if err != nil || len(bs) != 3 || bs[0].Provider != "azure" || bs[2].Prefix != "releases/" || bs[2].Region != "eu-west-1" || bs[2].Endpoint != "https://s3.eu-west-1.amazonaws.com" || bs[2].CreatedAt.IsZero() {
+		t.Fatalf("buckets %+v, %v", bs, err)
+	}
+	if src, err := svc.Sources(ctx, tenant); err != nil || src[4].ID != "storage" || src[4].Detail["buckets"] != 3 {
+		t.Fatalf("storage source %+v, %v", src, err)
+	}
+	if _, err := svc.RemoveBucket(ctx, tenant, added.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DeleteBucket(ctx, tenant, added.ID); !errors.Is(err, errNotFound) {
+		t.Fatalf("second bucket delete: %v", err)
+	}
 	if _, err := svc.RemoveAsset(ctx, tenant, "a1"); err != nil {
 		t.Fatal(err)
 	}

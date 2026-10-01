@@ -7,6 +7,60 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Discovery: object storage through two wire APIs; the scanner stays deterministic and in-process (7.34.0-beta)
+
+- **Decision (how assets are found):** discovery finds cryptographic assets
+  with its own deterministic parser (`services/discovery/material.go`) and
+  protocol probes, inside the discovery service. More coverage means more
+  sources feeding that one parser (network, cloud KMS, certificates, git,
+  object storage, mounted code, uploads) and more formats in it.
+- **Rejected: an LLM in a separate container with internet access.** What
+  the scanner reads is the customer's source code, configuration and
+  private keys; sending it to an outside model exposes exactly the secrets
+  the scan exists to find (CLAUDE.md rule 9), and does not work in an
+  air-gapped deployment. A model's finding can't be reproduced or proven:
+  it can report a key that isn't there or miss one that is, and the
+  inventory is evidence (rules 7 and 8). It would also be a second network
+  path out of the platform and a component outside the FIPS boundary.
+- **Rejected: a separate scanning service.** The parser is one file shared
+  by four sources, with one audit path and one dial guard. A second service
+  would need its own credentials, mTLS identity, audit wiring and clustering
+  rules to do the same reads.
+- **Decision (how a bucket is read):** two wire APIs, spoken directly over
+  TLS 1.3 through the scan's dial guard: S3 ListObjectsV2 and GetObject with
+  Signature V4 (HMAC-SHA256 from `pkg/crypto`), path style, which reaches
+  AWS, MinIO, Ceph, R2 and Google Cloud Storage with HMAC keys; and Azure
+  Blob List Blobs and Get Blob with a SAS token. Objects are read in memory
+  with the same file rules as a repository.
+- **Rejected:** the AWS, Azure and Google storage SDKs. Three large
+  dependencies with their own HTTP clients, credential chains (environment,
+  instance metadata) and retry logic, none of which would go through the
+  dial guard, for four GET requests. The AWS SDK's signer is used only in
+  tests, as the reference `signV4` must agree with.
+- **Decision (credentials):** sealed compliance connections of type `s3` and
+  `azure_blob`, category `source`, opened for `kms-discovery` only, used
+  only against the host the connection names, with no redirect followed.
+  For Azure a SAS token (read and list, scoped and expiring) rather than
+  the account key, which grants everything.
+- **Cost:** Azure account keys and Entra ID, Google's native API and
+  temporary credentials are not supported. A storage service on a private
+  address can't have a connection, for the reason already recorded for git
+  and SIEM (docs/SECURITY/CONNECTIONS.md); its public buckets can still be
+  scanned. Only files the parser reads (by name, at most 2 MiB) are
+  downloaded, so key material under an unrecognised file name is missed.
+- **Enforced by:** `TestSignV4MatchesTheAWSSDK`,
+  `TestStorageScanReadsS3AndAzure`, `TestStoragePublicBucketSendsNoCredential`,
+  `TestStorageCredentialStaysOnItsHost`, `TestStorageScanReportsRefusals`,
+  `TestStorageLimitsAndUnreadableObjects`, `TestNormalizeBucket`,
+  `TestBucketRoutesAudited`, `TestBucketLimit`,
+  `TestStorageConnectionsAreDiscoverysAlone`,
+  `TestPlatformUsageFindsRepositoriesAndBuckets`, and the opt-in
+  `TestLiveObjectStorage` (run on 2026-10-01 against the Versity S3 gateway
+  and Azurite with credentials, and against public AWS S3 and Google Cloud
+  Storage buckets without).
+
+---
+
 ## 2026-10-01 — Secrets: subject changes are heard on the live audit subjects; pruning is a background job with a sweep behind it (7.33.0-beta)
 
 **Decision.** The secrets service subscribes to the audit subjects that can

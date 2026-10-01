@@ -224,6 +224,8 @@ func (s *Service) scanSource(ctx context.Context, tenantID, scanID, source strin
 		return items, nil, err
 	case "git":
 		return s.scanGit(ctx, tenantID, scanID)
+	case "storage":
+		return s.scanStorage(ctx, tenantID, scanID)
 	}
 	return nil, nil, fmt.Errorf("unknown source %q", source)
 }
@@ -496,14 +498,18 @@ func isPlatformAsset(a CryptoAsset) bool {
 	return false
 }
 
+// fileSources read files with the material parser (material.go).
+var fileSources = map[string]bool{"code": true, "upload": true, "git": true, "storage": true}
+
 // assetClass is an asset's classification, derived on every read: a secret
-// found in code or an upload is "exposed" whatever its algorithm; anything
+// found in a file (code, a repository, a bucket or an upload) is "exposed"
+// whatever its algorithm; anything
 // else (a certificate or public key found there too, since 7.18.0-beta) is
 // the catalogue's class for its algorithm (weak, quantum_vulnerable, strong
 // or unknown). Rows stored before 7.11.0-beta say "vulnerable" for both of
 // the first two; deriving means none of them shows that stale label.
 func assetClass(a CryptoAsset) string {
-	if (a.Source == "code" || a.Source == "upload" || a.Source == "git") && secretKinds[a.AssetType] {
+	if fileSources[a.Source] && secretKinds[a.AssetType] {
 		return "exposed"
 	}
 	return classifyAlgorithm(a.Algorithm)
@@ -732,8 +738,19 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 		}
 	}
 	git := SourceStatus{ID: "git", Configured: len(repos) > 0, Detail: map[string]interface{}{"repositories": len(repos), "private": private}}
+	buckets, err := s.store.ListBuckets(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	private = 0
+	for _, b := range buckets {
+		if b.ConnectionID != "" {
+			private++
+		}
+	}
+	storage := SourceStatus{ID: "storage", Configured: len(buckets) > 0, Detail: map[string]interface{}{"buckets": len(buckets), "private": private}}
 	upload := SourceStatus{ID: "upload", Configured: true, Detail: map[string]interface{}{"max_bytes": maxUploadBytes}}
-	out := []SourceStatus{network, cloud, certs, git, code, upload}
+	out := []SourceStatus{network, cloud, certs, git, storage, code, upload}
 
 	scans, err := s.store.ListScans(ctx, tenantID, 100, 0)
 	if err != nil {
@@ -759,7 +776,7 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 
 // allScanTypes are the sources a scan can read; uploads are scanned as they
 // arrive.
-var allScanTypes = []string{"network", "cloud", "certs", "code", "git"}
+var allScanTypes = []string{"network", "cloud", "certs", "code", "git", "storage"}
 
 // normalizeScanTypes returns the requested sources, or every source when
 // none, or "all", is named.

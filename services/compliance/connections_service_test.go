@@ -274,7 +274,7 @@ func TestGitConnectionIsDiscoverysAlone(t *testing.T) {
 	if code, body := resolve(git, svcClaims("kms-discovery")); code != http.StatusOK || !strings.Contains(body, `"token":"ghp-secret"`) {
 		t.Fatalf("discovery resolve: %d %s", code, body)
 	}
-	if ev := lastEvent(t, hs.rec, "connection_resolved"); ev.Event.Details["caller"] != "kms-discovery" || ev.Event.Details["use"] != "repository" {
+	if ev := lastEvent(t, hs.rec, "connection_resolved"); ev.Event.Details["caller"] != "kms-discovery" || ev.Event.Details["use"] != "scan_source" {
 		t.Fatalf("resolve audit %+v", ev.Event.Details)
 	}
 	for _, who := range []string{"kms-audit", "kms-governance"} {
@@ -295,7 +295,7 @@ func TestGitConnectionIsDiscoverysAlone(t *testing.T) {
 
 	hs.h.usage = fakeUsage{}
 	asked := ""
-	hs.h.repoUsage = func(_ context.Context, tenant, id string) ([]string, error) {
+	hs.h.sourceUsage = func(_ context.Context, tenant, id string) ([]string, error) {
 		asked = tenant + "/" + id
 		return []string{"repository https://github.com/acme/app"}, nil
 	}
@@ -303,7 +303,7 @@ func TestGitConnectionIsDiscoverysAlone(t *testing.T) {
 		t.Fatalf("delete in use by a repository: %d %s (asked %q)", w.Code, w.Body.String(), asked)
 	}
 	wantRefused(t, lastEvent(t, hs.rec, "connection_deleted"), "connection_in_use")
-	hs.h.repoUsage = func(context.Context, string, string) ([]string, error) {
+	hs.h.sourceUsage = func(context.Context, string, string) ([]string, error) {
 		return nil, errors.New("discovery unreachable")
 	}
 	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+git, pbAdmin, nil); w.Code != http.StatusServiceUnavailable {
@@ -314,24 +314,108 @@ func TestGitConnectionIsDiscoverysAlone(t *testing.T) {
 	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+slack, pbAdmin, nil); w.Code != http.StatusOK {
 		t.Fatalf("delete a Slack connection with discovery down: %d %s", w.Code, w.Body.String())
 	}
-	hs.h.repoUsage = func(context.Context, string, string) ([]string, error) { return nil, nil }
+	hs.h.sourceUsage = func(context.Context, string, string) ([]string, error) { return nil, nil }
 	if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+git, pbAdmin, nil); w.Code != http.StatusOK {
 		t.Fatalf("delete unused git connection: %d %s", w.Code, w.Body.String())
 	}
 }
 
-// platformUsage reads discovery's repositories as the compliance service.
-func TestPlatformUsageFindsRepositories(t *testing.T) {
+// platformUsage reads discovery's repositories and buckets as the
+// compliance service.
+func TestPlatformUsageFindsRepositoriesAndBuckets(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/discovery/repositories" || r.URL.Query().Get("tenant_id") != "t1" {
+		switch {
+		case r.URL.Query().Get("tenant_id") != "t1":
 			http.NotFound(w, r)
-			return
+		case r.URL.Path == "/discovery/repositories":
+			_, _ = w.Write([]byte(`{"items":[{"url":"https://github.com/acme/app","connection_id":"c1"},{"url":"https://github.com/acme/public","connection_id":""}]}`))
+		case r.URL.Path == "/discovery/buckets":
+			_, _ = w.Write([]byte(`{"items":[{"endpoint":"https://s3.eu-west-1.amazonaws.com","bucket":"acme-artifacts","connection_id":"c2"},{"endpoint":"https://acme.blob.core.windows.net","bucket":"public","connection_id":""}]}`))
+		default:
+			http.NotFound(w, r)
 		}
-		_, _ = w.Write([]byte(`{"items":[{"url":"https://github.com/acme/app","connection_id":"c1"},{"url":"https://github.com/acme/public","connection_id":""}]}`))
 	}))
 	defer srv.Close()
-	users, err := platformUsage{discoveryURL: srv.URL, http: srv.Client()}.Repositories(context.Background(), "t1", "c1")
-	if err != nil || strings.Join(users, "|") != "repository https://github.com/acme/app" {
-		t.Fatalf("users %v %v", users, err)
+	usage := platformUsage{discoveryURL: srv.URL, http: srv.Client()}
+	for id, want := range map[string]string{"c1": "repository https://github.com/acme/app", "c2": "bucket https://s3.eu-west-1.amazonaws.com/acme-artifacts", "c3": ""} {
+		users, err := usage.Sources(context.Background(), "t1", id)
+		if err != nil || strings.Join(users, "|") != want {
+			t.Fatalf("%s: users %v %v, want %q", id, users, err, want)
+		}
+	}
+	if _, err := usage.Sources(context.Background(), "t2", "c1"); err == nil {
+		t.Fatal("usage that could not be read was reported as none")
+	}
+}
+
+// An s3 or azure_blob connection holds a bucket credential. Like a git
+// connection it is discovery's alone, is tested on a bucket that uses it,
+// and can't be deleted while a bucket reads with it. A secret key too short
+// to sign with and a SAS token that isn't one are refused.
+func TestStorageConnectionsAreDiscoverysAlone(t *testing.T) {
+	hs := newPlaybookHarness(t)
+	create := func(typ string, fields map[string]string) *httptest.ResponseRecorder {
+		return hs.do(t, http.MethodPost, "/compliance/playbooks/connections", pbAdmin, map[string]any{"name": typ, "type": typ, "fields": fields})
+	}
+	for name, w := range map[string]*httptest.ResponseRecorder{
+		"s3 without a secret key": create("s3", map[string]string{"endpoint_url": "https://1.1.1.1", "access_key_id": "AKIDEXAMPLE"}),
+		"s3 with a short secret":  create("s3", map[string]string{"endpoint_url": "https://1.1.1.1", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "tooshort"}),
+		"azure without a SAS":     create("azure_blob", map[string]string{"account_url": "https://1.1.1.1"}),
+		"azure with a bare key":   create("azure_blob", map[string]string{"account_url": "https://1.1.1.1", "sas_token": "bm90LWEtc2FzLXRva2Vu"}),
+		"s3 over http":            create("s3", map[string]string{"endpoint_url": "http://1.1.1.1", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "long-enough-secret"}),
+		"s3 on a platform host":   create("s3", map[string]string{"endpoint_url": "https://keycore:8010", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "long-enough-secret"}),
+	} {
+		if w.Code != http.StatusBadRequest || strings.Contains(w.Body.String(), "long-enough-secret") {
+			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())
+		}
+	}
+	ids := map[string]string{}
+	for typ, fields := range map[string]map[string]string{
+		"s3":         {"endpoint_url": "https://1.1.1.1", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "s3-secret-access-key"},
+		"azure_blob": {"account_url": "https://1.1.1.1", "sas_token": "?sv=2022-11-02&sp=rl&sig=c2FzLXNpZ25hdHVyZQ%3D%3D"},
+	} {
+		w := create(typ, fields)
+		var out struct{ Data Connection }
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		if w.Code != http.StatusCreated || out.Data.Endpoint != "1.1.1.1" || strings.Contains(w.Body.String(), "s3-secret-access-key") || strings.Contains(w.Body.String(), "c2FzLXNpZ25hdHVyZQ") {
+			t.Fatalf("create %s: %d %s", typ, w.Code, w.Body.String())
+		}
+		ids[typ] = out.Data.ID
+	}
+	resolve := func(id string, who *pkgauth.Claims) (int, string) {
+		w := hs.do(t, http.MethodPost, "/compliance/connections/"+id+"/resolve?tenant_id=t1", who, map[string]any{})
+		return w.Code, w.Body.String()
+	}
+	for typ, secret := range map[string]string{"s3": `"secret_access_key":"s3-secret-access-key"`, "azure_blob": `sig=c2FzLXNpZ25hdHVyZQ%3D%3D`} {
+		id := ids[typ]
+		if code, body := resolve(id, svcClaims("kms-discovery")); code != http.StatusOK || !strings.Contains(body, secret) {
+			t.Fatalf("discovery resolve %s: %d %s", typ, code, body)
+		}
+		if ev := lastEvent(t, hs.rec, "connection_resolved"); ev.Event.Details["caller"] != "kms-discovery" || ev.Event.Details["use"] != "scan_source" || ev.Event.Details["type"] != typ {
+			t.Fatalf("resolve audit %+v", ev.Event.Details)
+		}
+		for _, who := range []string{"kms-audit", "kms-governance"} {
+			if code, body := resolve(id, svcClaims(who)); code != http.StatusConflict || strings.Contains(body, "c2FzLXNpZ25hdHVyZQ") || strings.Contains(body, "s3-secret-access-key") {
+				t.Fatalf("%s opened a %s connection: %d %s", who, typ, code, body)
+			}
+			wantRefused(t, lastEvent(t, hs.rec, "connection_resolved"), reasonConnectionUse)
+		}
+		if w := hs.do(t, http.MethodPost, "/compliance/playbooks/connections/"+id+"/test", pbAdmin, map[string]any{}); w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "Object storage") {
+			t.Fatalf("%s connection test: %d %s", typ, w.Code, w.Body.String())
+		}
+		wantRefused(t, lastEvent(t, hs.rec, "connection_tested"), "connection_test_elsewhere")
+
+		hs.h.usage = fakeUsage{}
+		hs.h.sourceUsage = func(context.Context, string, string) ([]string, error) {
+			return []string{"bucket https://1.1.1.1/acme-artifacts"}, nil
+		}
+		if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+id, pbAdmin, nil); w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "acme-artifacts") {
+			t.Fatalf("delete %s in use by a bucket: %d %s", typ, w.Code, w.Body.String())
+		}
+		wantRefused(t, lastEvent(t, hs.rec, "connection_deleted"), "connection_in_use")
+		hs.h.sourceUsage = func(context.Context, string, string) ([]string, error) { return nil, nil }
+		if w := hs.do(t, http.MethodDelete, "/compliance/playbooks/connections/"+id, pbAdmin, nil); w.Code != http.StatusOK {
+			t.Fatalf("delete unused %s connection: %d %s", typ, w.Code, w.Body.String())
+		}
 	}
 }

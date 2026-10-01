@@ -2,7 +2,8 @@
 // real SSH server (golang.org/x/crypto/ssh), an HTTPS server serving a git
 // archive at GitLab's API path, the cloud and certs test clients and an
 // uploaded PEM bundle: StartScan, ScanUpload, SaveSchedule, ListAssets,
-// ListScans, Sources, ListTargets, ListRepositories and Summary. Loopback
+// ListScans, Sources, ListTargets, ListRepositories and Summary. The
+// "storage" source is as Sources reports it with no bucket added. Loopback
 // addresses were replaced with customer-looking ones (the service refuses
 // loopback in production).
 export const discoveryFixture = {
@@ -727,6 +728,14 @@ export const discoveryFixture = {
         "started_at": "2026-10-01T09:54:08.780867Z",
         "at": "2026-10-01T09:54:11.786394Z",
         "assets": 8
+      }
+    },
+    {
+      "id": "storage",
+      "configured": false,
+      "detail": {
+        "buckets": 0,
+        "private": 0
       }
     },
     {

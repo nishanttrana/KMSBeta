@@ -28,7 +28,7 @@ import (
 var connectionUsers = map[string]string{
 	"kms-audit":      "stream",
 	"kms-governance": "approval_notice",
-	"kms-discovery":  "repository",
+	"kms-discovery":  "scan_source",
 }
 
 const (
@@ -56,8 +56,8 @@ func usable(use, typ string) bool {
 		return connectionByType[typ].Stream
 	case "approval_notice":
 		return typ == "slack" || typ == "teams"
-	case "repository":
-		return typ == "git"
+	case "scan_source":
+		return connectionByType[typ].Category == categorySource
 	}
 	return false
 }
@@ -183,21 +183,30 @@ type platformUsage struct {
 	http                                  *http.Client
 }
 
-// Repositories names discovery's repositories that read with the connection.
-func (p platformUsage) Repositories(ctx context.Context, tenantID, connID string) ([]string, error) {
-	var repos struct {
-		Items []struct {
-			URL          string `json:"url"`
-			ConnectionID string `json:"connection_id"`
-		} `json:"items"`
-	}
-	if _, err := callJSON(ctx, p.http, http.MethodGet, p.discoveryURL+"/discovery/repositories?tenant_id="+neturl.QueryEscape(tenantID), tenantID, "", nil, &repos); err != nil {
-		return nil, fmt.Errorf("discovery repositories: %w", err)
-	}
+// Sources names discovery's repositories and buckets that read with the
+// connection.
+func (p platformUsage) Sources(ctx context.Context, tenantID, connID string) ([]string, error) {
 	var users []string
-	for _, r := range repos.Items {
-		if r.ConnectionID == connID {
-			users = append(users, "repository "+r.URL)
+	for _, kind := range []string{"repositories", "buckets"} {
+		var list struct {
+			Items []struct {
+				URL          string `json:"url"`      // a repository
+				Endpoint     string `json:"endpoint"` // a bucket
+				Bucket       string `json:"bucket"`
+				ConnectionID string `json:"connection_id"`
+			} `json:"items"`
+		}
+		if _, err := callJSON(ctx, p.http, http.MethodGet, p.discoveryURL+"/discovery/"+kind+"?tenant_id="+neturl.QueryEscape(tenantID), tenantID, "", nil, &list); err != nil {
+			return nil, fmt.Errorf("discovery %s: %w", kind, err)
+		}
+		for _, it := range list.Items {
+			switch {
+			case it.ConnectionID != connID:
+			case kind == "buckets":
+				users = append(users, "bucket "+it.Endpoint+"/"+it.Bucket)
+			default:
+				users = append(users, "repository "+it.URL)
+			}
 		}
 	}
 	return users, nil

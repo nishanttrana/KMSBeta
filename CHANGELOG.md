@@ -4,6 +4,55 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.34.0-beta] — 2026-10-01
+
+### Crypto Discovery: object storage as a scan source; source links fixed
+- **Added: object storage buckets are a scan source (`storage`).** A tenant
+  adds a bucket in Crypto Discovery → Object storage → Buckets: Amazon S3,
+  any service that speaks the S3 API (MinIO, Ceph, Cloudflare R2), Google
+  Cloud Storage (through its S3-compatible endpoint with HMAC keys), or an
+  Azure Blob container. The scan lists the objects under an optional prefix
+  over TLS 1.3 and reads each source, configuration, key or certificate file
+  in memory with the same parser as the git, mounted-code and upload
+  sources: certificates and public keys by the key they hold, private keys,
+  keystores and access keys as exposed secrets recorded by location and
+  fingerprint, never the secret. Nothing is written to disk. New routes:
+  `GET/POST /discovery/buckets`, `DELETE /discovery/buckets/{id}` and
+  `POST /discovery/buckets/{id}/test` (lists the bucket and reads one
+  object; a bucket that can't be read fails with the storage service's error
+  code). The source can be scanned by itself, with Scan all, and on the
+  schedule.
+- **Added: two sealed connection types, `s3` and `azure_blob`** (Playbooks →
+  Connections → Scan sources). `s3` holds the endpoint, access key ID and
+  secret access key; `azure_blob` holds the account address and a SAS token
+  with read and list. Compliance opens them for the discovery service only.
+  Discovery uses a credential only against the host its connection names,
+  follows no redirect, and stores none. A connection in use by a bucket
+  can't be deleted. A public bucket needs no connection.
+- **Limits, stated:** objects of at most 2 MiB; 100,000 objects and 512 MiB
+  read per bucket (a larger one fails with what was found so far: narrow it
+  with a prefix); 100 buckets per tenant. Object versions, archives inside a
+  bucket and archive storage classes are not read. Not supported: Azure
+  account keys and Entra ID, Google's native (OAuth) API, temporary (STS)
+  credentials, and a connection for a storage service on a private address
+  (the outbound guard refuses private addresses for every connection; a
+  public bucket there can still be scanned).
+- **Fixed: "Connect" / "Accounts" on the Cloud KMS source and "Open PKI" on
+  the Certificates source opened the Command Center.** They named tab ids
+  the dashboard doesn't have (`byok`, `certificates`), and the shell falls
+  back to its first tab for an unknown id. They now open Cloud Key Control
+  and Certificates / PKI. A unit test checks every such link against the
+  shell's tab list.
+- **Removed: "Upload files instead" in the Mounted code dialog.** It was a
+  second button for the File upload source next to it.
+- **Changed:** the audit detail `use` on
+  `audit.compliance.connection_resolved` for discovery is now `scan_source`
+  (was `repository`), since it covers buckets too.
+- **Decision recorded:** asset discovery stays a deterministic scanner
+  inside the discovery service. An internet-connected LLM is not used: the
+  files it would read are the customer's source and secrets
+  (docs/DECISIONS.md).
+
 ## [7.33.0-beta] — 2026-10-01
 
 ### Secrets: stale rules raised in seconds; cap pruning runs in the background

@@ -3665,7 +3665,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handlePosture",
-      "line": 54,
+      "line": 55,
       "match_key": "compliance|GET|/compliance/posture",
       "method": "GET",
       "normalized_path": "/compliance/posture",
@@ -3680,7 +3680,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handlePostureHistory",
-      "line": 55,
+      "line": 56,
       "match_key": "compliance|GET|/compliance/posture/history",
       "method": "GET",
       "normalized_path": "/compliance/posture/history",
@@ -3695,7 +3695,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handlePostureBreakdown",
-      "line": 56,
+      "line": 57,
       "match_key": "compliance|GET|/compliance/posture/breakdown",
       "method": "GET",
       "normalized_path": "/compliance/posture/breakdown",
@@ -3710,7 +3710,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAssessment",
-      "line": 57,
+      "line": 58,
       "match_key": "compliance|GET|/compliance/assessment",
       "method": "GET",
       "normalized_path": "/compliance/assessment",
@@ -3725,7 +3725,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAssessmentDelta",
-      "line": 58,
+      "line": 59,
       "match_key": "compliance|GET|/compliance/assessment/delta",
       "method": "GET",
       "normalized_path": "/compliance/assessment/delta",
@@ -3740,7 +3740,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleRunAssessment",
-      "line": 59,
+      "line": 60,
       "match_key": "compliance|POST|/compliance/assessment/run",
       "method": "POST",
       "normalized_path": "/compliance/assessment/run",
@@ -3755,7 +3755,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAssessmentHistory",
-      "line": 60,
+      "line": 61,
       "match_key": "compliance|GET|/compliance/assessment/history",
       "method": "GET",
       "normalized_path": "/compliance/assessment/history",
@@ -3770,7 +3770,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAssessmentSchedule",
-      "line": 61,
+      "line": 62,
       "match_key": "compliance|GET|/compliance/assessment/schedule",
       "method": "GET",
       "normalized_path": "/compliance/assessment/schedule",
@@ -3785,7 +3785,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleUpsertAssessmentSchedule",
-      "line": 62,
+      "line": 63,
       "match_key": "compliance|PUT|/compliance/assessment/schedule",
       "method": "PUT",
       "normalized_path": "/compliance/assessment/schedule",
@@ -3800,7 +3800,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleListComplianceTemplates",
-      "line": 63,
+      "line": 64,
       "match_key": "compliance|GET|/compliance/templates",
       "method": "GET",
       "normalized_path": "/compliance/templates",
@@ -3815,7 +3815,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleUpsertComplianceTemplate",
-      "line": 64,
+      "line": 65,
       "match_key": "compliance|POST|/compliance/templates",
       "method": "POST",
       "normalized_path": "/compliance/templates",
@@ -3830,7 +3830,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetComplianceTemplate",
-      "line": 65,
+      "line": 66,
       "match_key": "compliance|GET|/compliance/templates/{param}",
       "method": "GET",
       "normalized_path": "/compliance/templates/{param}",
@@ -3845,7 +3845,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleDeleteComplianceTemplate",
-      "line": 66,
+      "line": 67,
       "match_key": "compliance|DELETE|/compliance/templates/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/templates/{param}",
@@ -3860,7 +3860,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleFrameworks",
-      "line": 68,
+      "line": 69,
       "match_key": "compliance|GET|/compliance/frameworks",
       "method": "GET",
       "normalized_path": "/compliance/frameworks",
@@ -3875,7 +3875,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleFrameworkControls",
-      "line": 69,
+      "line": 70,
       "match_key": "compliance|GET|/compliance/frameworks/{param}/controls",
       "method": "GET",
       "normalized_path": "/compliance/frameworks/{param}/controls",
@@ -3890,7 +3890,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleFrameworkGaps",
-      "line": 70,
+      "line": 71,
       "match_key": "compliance|GET|/compliance/frameworks/{param}/gaps",
       "method": "GET",
       "normalized_path": "/compliance/frameworks/{param}/gaps",
@@ -3905,7 +3905,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleKeyHygiene",
-      "line": 72,
+      "line": 73,
       "match_key": "compliance|GET|/compliance/keys/hygiene",
       "method": "GET",
       "normalized_path": "/compliance/keys/hygiene",
@@ -3920,7 +3920,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleOrphaned",
-      "line": 73,
+      "line": 74,
       "match_key": "compliance|GET|/compliance/keys/orphaned",
       "method": "GET",
       "normalized_path": "/compliance/keys/orphaned",
@@ -3935,7 +3935,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleExpired",
-      "line": 74,
+      "line": 75,
       "match_key": "compliance|GET|/compliance/keys/expired",
       "method": "GET",
       "normalized_path": "/compliance/keys/expired",
@@ -3950,7 +3950,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAuditCorrelations",
-      "line": 76,
+      "line": 77,
       "match_key": "compliance|GET|/compliance/audit/correlations",
       "method": "GET",
       "normalized_path": "/compliance/audit/correlations",
@@ -3965,7 +3965,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAuditAnomalies",
-      "line": 77,
+      "line": 78,
       "match_key": "compliance|GET|/compliance/audit/anomalies",
       "method": "GET",
       "normalized_path": "/compliance/audit/anomalies",
@@ -3980,7 +3980,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 79,
+      "line": 80,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -3995,7 +3995,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 80,
+      "line": 81,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -4010,7 +4010,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 81,
+      "line": 82,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -4025,7 +4025,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 82,
+      "line": 83,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -4040,7 +4040,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 83,
+      "line": 84,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -4055,7 +4055,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleEvidenceExport",
-      "line": 86,
+      "line": 87,
       "match_key": "compliance|GET|/compliance/evidence/export",
       "method": "GET",
       "normalized_path": "/compliance/evidence/export",
@@ -4070,7 +4070,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetKeyRiskRanking",
-      "line": 89,
+      "line": 90,
       "match_key": "compliance|GET|/compliance/risk/keys",
       "method": "GET",
       "normalized_path": "/compliance/risk/keys",
@@ -4085,7 +4085,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetDataRiskSummary",
-      "line": 90,
+      "line": 91,
       "match_key": "compliance|GET|/compliance/risk/summary",
       "method": "GET",
       "normalized_path": "/compliance/risk/summary",
@@ -4100,7 +4100,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetRiskRemediation",
-      "line": 91,
+      "line": 92,
       "match_key": "compliance|GET|/compliance/risk/remediation",
       "method": "GET",
       "normalized_path": "/compliance/risk/remediation",
@@ -4325,7 +4325,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.listConnections",
-      "line": 286,
+      "line": 308,
       "match_key": "compliance|GET|/compliance/playbooks/connections",
       "method": "GET",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4340,7 +4340,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 287,
+      "line": 309,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -4355,7 +4355,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 288,
+      "line": 310,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4370,7 +4370,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 289,
+      "line": 311,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -4385,7 +4385,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 290,
+      "line": 312,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -5521,11 +5521,71 @@
       "service": "discovery"
     },
     {
+      "action": "buckets_list",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.listBuckets",
+      "line": 64,
+      "match_key": "discovery|GET|/discovery/buckets",
+      "method": "GET",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets",
+      "permission": "discovery.read",
+      "registration": "kernel",
+      "resource": "discovery",
+      "service": "discovery"
+    },
+    {
+      "action": "bucket_add",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.addBucket",
+      "line": 65,
+      "match_key": "discovery|POST|/discovery/buckets",
+      "method": "POST",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "discovery_bucket",
+      "service": "discovery"
+    },
+    {
+      "action": "bucket_remove",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.removeBucket",
+      "line": 66,
+      "match_key": "discovery|DELETE|/discovery/buckets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/buckets/{param}",
+      "path": "/discovery/buckets/{id}",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "discovery_bucket",
+      "service": "discovery"
+    },
+    {
+      "action": "bucket_test",
+      "code_scope": "discovery",
+      "file": "services/discovery/handler.go",
+      "handler": "h.testBucket",
+      "line": 67,
+      "match_key": "discovery|POST|/discovery/buckets/{param}/test",
+      "method": "POST",
+      "normalized_path": "/discovery/buckets/{param}/test",
+      "path": "/discovery/buckets/{id}/test",
+      "permission": "discovery.write",
+      "registration": "kernel",
+      "resource": "discovery_bucket",
+      "service": "discovery"
+    },
+    {
       "action": "schedule_read",
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.getSchedule",
-      "line": 60,
+      "line": 68,
       "match_key": "discovery|GET|/discovery/schedule",
       "method": "GET",
       "normalized_path": "/discovery/schedule",
@@ -5540,7 +5600,7 @@
       "code_scope": "discovery",
       "file": "services/discovery/handler.go",
       "handler": "h.putSchedule",
-      "line": 61,
+      "line": 69,
       "match_key": "discovery|PUT|/discovery/schedule",
       "method": "PUT",
       "normalized_path": "/discovery/schedule",
@@ -14407,7 +14467,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handlePosture",
-      "line": 54,
+      "line": 55,
       "match_key": "compliance|GET|/compliance/posture",
       "method": "GET",
       "normalized_path": "/compliance/posture",
@@ -14422,7 +14482,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handlePostureHistory",
-      "line": 55,
+      "line": 56,
       "match_key": "compliance|GET|/compliance/posture/history",
       "method": "GET",
       "normalized_path": "/compliance/posture/history",
@@ -14437,7 +14497,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleGetComplianceTemplate",
-      "line": 65,
+      "line": 66,
       "match_key": "compliance|GET|/compliance/templates/{param}",
       "method": "GET",
       "normalized_path": "/compliance/templates/{param}",
@@ -14452,7 +14512,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleFrameworkControls",
-      "line": 69,
+      "line": 70,
       "match_key": "compliance|GET|/compliance/frameworks/{param}/controls",
       "method": "GET",
       "normalized_path": "/compliance/frameworks/{param}/controls",
@@ -14467,7 +14527,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleOrphaned",
-      "line": 73,
+      "line": 74,
       "match_key": "compliance|GET|/compliance/keys/orphaned",
       "method": "GET",
       "normalized_path": "/compliance/keys/orphaned",
@@ -14482,7 +14542,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleExpired",
-      "line": 74,
+      "line": 75,
       "match_key": "compliance|GET|/compliance/keys/expired",
       "method": "GET",
       "normalized_path": "/compliance/keys/expired",
@@ -14497,7 +14557,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleAuditCorrelations",
-      "line": 76,
+      "line": 77,
       "match_key": "compliance|GET|/compliance/audit/correlations",
       "method": "GET",
       "normalized_path": "/compliance/audit/correlations",
@@ -14512,7 +14572,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOM",
-      "line": 79,
+      "line": 80,
       "match_key": "compliance|GET|/compliance/cbom",
       "method": "GET",
       "normalized_path": "/compliance/cbom",
@@ -14527,7 +14587,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMSummary",
-      "line": 80,
+      "line": 81,
       "match_key": "compliance|GET|/compliance/cbom/summary",
       "method": "GET",
       "normalized_path": "/compliance/cbom/summary",
@@ -14542,7 +14602,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMExport",
-      "line": 81,
+      "line": 82,
       "match_key": "compliance|GET|/compliance/cbom/export",
       "method": "GET",
       "normalized_path": "/compliance/cbom/export",
@@ -14557,7 +14617,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMPQCReadiness",
-      "line": 82,
+      "line": 83,
       "match_key": "compliance|GET|/compliance/cbom/pqc-readiness",
       "method": "GET",
       "normalized_path": "/compliance/cbom/pqc-readiness",
@@ -14572,7 +14632,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 83,
+      "line": 84,
       "match_key": "compliance|GET|/compliance/cbom/diff",
       "method": "GET",
       "normalized_path": "/compliance/cbom/diff",
@@ -14797,7 +14857,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.createConnection",
-      "line": 287,
+      "line": 309,
       "match_key": "compliance|POST|/compliance/playbooks/connections",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections",
@@ -14812,7 +14872,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.updateConnection",
-      "line": 288,
+      "line": 310,
       "match_key": "compliance|PUT|/compliance/playbooks/connections/{param}",
       "method": "PUT",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -14827,7 +14887,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.deleteConnection",
-      "line": 289,
+      "line": 311,
       "match_key": "compliance|DELETE|/compliance/playbooks/connections/{param}",
       "method": "DELETE",
       "normalized_path": "/compliance/playbooks/connections/{param}",
@@ -14842,7 +14902,7 @@
       "code_scope": "compliance",
       "file": "services/compliance/playbook_connections.go",
       "handler": "h.testConnection",
-      "line": 290,
+      "line": 312,
       "match_key": "compliance|POST|/compliance/playbooks/connections/{param}/test",
       "method": "POST",
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
@@ -20684,7 +20744,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 203,
+      "line": 212,
       "tabs": [
         "discovery"
       ],
@@ -20694,7 +20754,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
       "label": "setScheduleOpen(true)} title={schedule?.paused_reason || (schedule?.enabled ?...",
-      "line": 204,
+      "line": 213,
       "tabs": [
         "discovery"
       ],
@@ -20704,7 +20764,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "handler": "",
       "label": "void runScan(scanAllTypes)} disabled= title={scanAllTypes.length ? `Scan $ `...",
-      "line": 208,
+      "line": 217,
       "tabs": [
         "discovery"
       ],
@@ -24087,6 +24147,38 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
+      "handler": "",
+      "label": "void add()} disabled= >",
+      "line": 116,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
+      "handler": "",
+      "label": "onNavigate?.(\"playbooks\")} style={ }>New storage connection",
+      "line": 120,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
+      "handler": "",
+      "label": "void test(b)} disabled= >",
+      "line": 138,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
+      "handler": "",
+      "label": "void remove(b)} style={ }>",
+      "line": 139,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/discovery/Charts.tsx",
       "handler": "onClick} title={title",
       "label": "(icon or dynamic label)",
@@ -24194,7 +24286,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
       "handler": "a.run} disabled={isUpload && uploading",
       "label": "(icon or dynamic label)",
-      "line": 91,
+      "line": 96,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24202,7 +24294,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
       "handler": "",
       "label": "onScan([s.id])} disabled= title={s.configured ? `Scan $ ` : \"Set this source...",
-      "line": 93,
+      "line": 98,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24210,7 +24302,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
       "handler": "",
       "label": "pick(p)} style={ }>",
-      "line": 156,
+      "line": 161,
       "tabs": [],
       "tag": "button"
     },
@@ -24218,7 +24310,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
       "handler": "",
       "label": "void add()} disabled= >",
-      "line": 166,
+      "line": 171,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24226,17 +24318,9 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
       "handler": "",
       "label": "void remove(t)} style={ }>",
-      "line": 180,
+      "line": 185,
       "tabs": [],
       "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/discovery/Sources.tsx",
-      "handler": "",
-      "label": "}>Upload files instead",
-      "line": 211,
-      "tabs": [],
-      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/vault/Access.tsx",
@@ -28560,13 +28644,65 @@
       "dynamic": true,
       "expression": "serviceRequest(\"compliance\", `/compliance/playbooks/connections?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 379,
+      "line": 381,
       "match_key": "compliance|GET|/compliance/playbooks/connections",
       "method": "GET",
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections?{param}",
       "service": "compliance",
       "service_key": "compliance",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 412,
+      "match_key": "discovery|GET|/discovery/buckets",
+      "method": "GET",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 424,
+      "match_key": "discovery|POST|/discovery/buckets",
+      "method": "POST",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 434,
+      "match_key": "discovery|DELETE|/discovery/buckets/{param}",
+      "method": "DELETE",
+      "normalized_path": "/discovery/buckets/{param}",
+      "path": "/discovery/buckets/{param}?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/discovery.ts",
+      "line": 445,
+      "match_key": "discovery|POST|/discovery/buckets/{param}/test",
+      "method": "POST",
+      "normalized_path": "/discovery/buckets/{param}/test",
+      "path": "/discovery/buckets/{param}/test?{param}",
+      "service": "discovery",
+      "service_key": "discovery",
       "source": "serviceRequest"
     },
     {
@@ -32444,7 +32580,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T17:02:39Z",
+  "generated_at": "2026-10-01T17:48:09Z",
   "navigation": [
     {
       "group": "Overview",
@@ -47861,7 +47997,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 96,
+      "handler_line": 97,
       "handler_name": "handlePosture",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47872,7 +48008,7 @@
       "normalized_path": "/compliance/posture",
       "path": "/compliance/posture",
       "route_file": "services/compliance/handler.go",
-      "route_line": 54,
+      "route_line": 55,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -47922,7 +48058,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 111,
+      "handler_line": 112,
       "handler_name": "handlePostureHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -47933,7 +48069,7 @@
       "normalized_path": "/compliance/posture/history",
       "path": "/compliance/posture/history",
       "route_file": "services/compliance/handler.go",
-      "route_line": 55,
+      "route_line": 56,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -47989,7 +48125,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 126,
+      "handler_line": 127,
       "handler_name": "handlePostureBreakdown",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48000,7 +48136,7 @@
       "normalized_path": "/compliance/posture/breakdown",
       "path": "/compliance/posture/breakdown",
       "route_file": "services/compliance/handler.go",
-      "route_line": 56,
+      "route_line": 57,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -48042,7 +48178,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 141,
       "handler_name": "handleAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48053,7 +48189,7 @@
       "normalized_path": "/compliance/assessment",
       "path": "/compliance/assessment",
       "route_file": "services/compliance/handler.go",
-      "route_line": 57,
+      "route_line": 58,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -48113,7 +48249,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 155,
+      "handler_line": 156,
       "handler_name": "handleAssessmentDelta",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48124,7 +48260,7 @@
       "normalized_path": "/compliance/assessment/delta",
       "path": "/compliance/assessment/delta",
       "route_file": "services/compliance/handler.go",
-      "route_line": 58,
+      "route_line": 59,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -48196,7 +48332,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 170,
+      "handler_line": 171,
       "handler_name": "handleRunAssessment",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48207,7 +48343,7 @@
       "normalized_path": "/compliance/assessment/run",
       "path": "/compliance/assessment/run",
       "route_file": "services/compliance/handler.go",
-      "route_line": 59,
+      "route_line": 60,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -48294,7 +48430,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 200,
+      "handler_line": 201,
       "handler_name": "handleAssessmentHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48305,7 +48441,7 @@
       "normalized_path": "/compliance/assessment/history",
       "path": "/compliance/assessment/history",
       "route_file": "services/compliance/handler.go",
-      "route_line": 60,
+      "route_line": 61,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48359,7 +48495,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 277,
+      "handler_line": 278,
       "handler_name": "handleAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48370,7 +48506,7 @@
       "normalized_path": "/compliance/assessment/schedule",
       "path": "/compliance/assessment/schedule",
       "route_file": "services/compliance/handler.go",
-      "route_line": 61,
+      "route_line": 62,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48429,7 +48565,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 291,
+      "handler_line": 292,
       "handler_name": "handleUpsertAssessmentSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48440,7 +48576,7 @@
       "normalized_path": "/compliance/assessment/schedule",
       "path": "/compliance/assessment/schedule",
       "route_file": "services/compliance/handler.go",
-      "route_line": 62,
+      "route_line": 63,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -48504,7 +48640,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 216,
+      "handler_line": 217,
       "handler_name": "handleListComplianceTemplates",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48515,7 +48651,7 @@
       "normalized_path": "/compliance/templates",
       "path": "/compliance/templates",
       "route_file": "services/compliance/handler.go",
-      "route_line": 63,
+      "route_line": 64,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48572,7 +48708,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 244,
+      "handler_line": 245,
       "handler_name": "handleUpsertComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48583,7 +48719,7 @@
       "normalized_path": "/compliance/templates",
       "path": "/compliance/templates",
       "route_file": "services/compliance/handler.go",
-      "route_line": 64,
+      "route_line": 65,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -48640,7 +48776,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 230,
+      "handler_line": 231,
       "handler_name": "handleGetComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48651,7 +48787,7 @@
       "normalized_path": "/compliance/templates/{param}",
       "path": "/compliance/templates/{id}",
       "route_file": "services/compliance/handler.go",
-      "route_line": 65,
+      "route_line": 66,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48709,7 +48845,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 264,
+      "handler_line": 265,
       "handler_name": "handleDeleteComplianceTemplate",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48720,7 +48856,7 @@
       "normalized_path": "/compliance/templates/{param}",
       "path": "/compliance/templates/{id}",
       "route_file": "services/compliance/handler.go",
-      "route_line": 66,
+      "route_line": 67,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48774,7 +48910,7 @@
         "ListFrameworks"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 319,
+      "handler_line": 320,
       "handler_name": "handleFrameworks",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48785,7 +48921,7 @@
       "normalized_path": "/compliance/frameworks",
       "path": "/compliance/frameworks",
       "route_file": "services/compliance/handler.go",
-      "route_line": 68,
+      "route_line": 69,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -48823,7 +48959,7 @@
         "normalizeFrameworkID"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 324,
+      "handler_line": 325,
       "handler_name": "handleFrameworkControls",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48834,7 +48970,7 @@
       "normalized_path": "/compliance/frameworks/{param}/controls",
       "path": "/compliance/frameworks/{id}/controls",
       "route_file": "services/compliance/handler.go",
-      "route_line": 69,
+      "route_line": 70,
       "service": "compliance",
       "service_external_package_calls": [
         "errors.Is",
@@ -48894,7 +49030,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 344,
+      "handler_line": 345,
       "handler_name": "handleFrameworkGaps",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48905,7 +49041,7 @@
       "normalized_path": "/compliance/frameworks/{param}/gaps",
       "path": "/compliance/frameworks/{id}/gaps",
       "route_file": "services/compliance/handler.go",
-      "route_line": 70,
+      "route_line": 71,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -48963,7 +49099,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 358,
+      "handler_line": 359,
       "handler_name": "handleKeyHygiene",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -48974,7 +49110,7 @@
       "normalized_path": "/compliance/keys/hygiene",
       "path": "/compliance/keys/hygiene",
       "route_file": "services/compliance/handler.go",
-      "route_line": 72,
+      "route_line": 73,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -49015,7 +49151,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 372,
+      "handler_line": 373,
       "handler_name": "handleOrphaned",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49026,7 +49162,7 @@
       "normalized_path": "/compliance/keys/orphaned",
       "path": "/compliance/keys/orphaned",
       "route_file": "services/compliance/handler.go",
-      "route_line": 73,
+      "route_line": 74,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49059,7 +49195,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 386,
+      "handler_line": 387,
       "handler_name": "handleExpired",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49070,7 +49206,7 @@
       "normalized_path": "/compliance/keys/expired",
       "path": "/compliance/keys/expired",
       "route_file": "services/compliance/handler.go",
-      "route_line": 74,
+      "route_line": 75,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49104,7 +49240,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 400,
+      "handler_line": 401,
       "handler_name": "handleAuditCorrelations",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49115,7 +49251,7 @@
       "normalized_path": "/compliance/audit/correlations",
       "path": "/compliance/audit/correlations",
       "route_file": "services/compliance/handler.go",
-      "route_line": 76,
+      "route_line": 77,
       "service": "compliance",
       "service_external_package_calls": [
         "sort.Slice"
@@ -49169,7 +49305,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 415,
+      "handler_line": 416,
       "handler_name": "handleAuditAnomalies",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49180,7 +49316,7 @@
       "normalized_path": "/compliance/audit/anomalies",
       "path": "/compliance/audit/anomalies",
       "route_file": "services/compliance/handler.go",
-      "route_line": 77,
+      "route_line": 78,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.ToLower",
@@ -49233,7 +49369,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 429,
+      "handler_line": 430,
       "handler_name": "handleCBOM",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49244,7 +49380,7 @@
       "normalized_path": "/compliance/cbom",
       "path": "/compliance/cbom",
       "route_file": "services/compliance/handler.go",
-      "route_line": 79,
+      "route_line": 80,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49301,7 +49437,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 443,
+      "handler_line": 444,
       "handler_name": "handleCBOMSummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49312,7 +49448,7 @@
       "normalized_path": "/compliance/cbom/summary",
       "path": "/compliance/cbom/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 80,
+      "route_line": 81,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49348,7 +49484,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 457,
+      "handler_line": 458,
       "handler_name": "handleCBOMExport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49359,7 +49495,7 @@
       "normalized_path": "/compliance/cbom/export",
       "path": "/compliance/cbom/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 81,
+      "route_line": 82,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace"
@@ -49416,7 +49552,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 479,
+      "handler_line": 480,
       "handler_name": "handleCBOMPQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49427,7 +49563,7 @@
       "normalized_path": "/compliance/cbom/pqc-readiness",
       "path": "/compliance/cbom/pqc-readiness",
       "route_file": "services/compliance/handler.go",
-      "route_line": 82,
+      "route_line": 83,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49463,7 +49599,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 493,
+      "handler_line": 494,
       "handler_name": "handleCBOMDiff",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -49474,7 +49610,7 @@
       "normalized_path": "/compliance/cbom/diff",
       "path": "/compliance/cbom/diff",
       "route_file": "services/compliance/handler.go",
-      "route_line": 83,
+      "route_line": 84,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49546,7 +49682,7 @@
       "normalized_path": "/compliance/evidence/export",
       "path": "/compliance/evidence/export",
       "route_file": "services/compliance/handler.go",
-      "route_line": 86,
+      "route_line": 87,
       "service": "compliance",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -49746,7 +49882,7 @@
       "normalized_path": "/compliance/risk/keys",
       "path": "/compliance/risk/keys",
       "route_file": "services/compliance/handler.go",
-      "route_line": 89,
+      "route_line": 90,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49801,7 +49937,7 @@
       "normalized_path": "/compliance/risk/summary",
       "path": "/compliance/risk/summary",
       "route_file": "services/compliance/handler.go",
-      "route_line": 90,
+      "route_line": 91,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -49845,7 +49981,7 @@
       "normalized_path": "/compliance/risk/remediation",
       "path": "/compliance/risk/remediation",
       "route_file": "services/compliance/handler.go",
-      "route_line": 91,
+      "route_line": 92,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -50362,7 +50498,7 @@
         {
           "expression": "serviceRequest(\"compliance\", `/compliance/playbooks/connections?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 379,
+          "line": 381,
           "source": "serviceRequest"
         },
         {
@@ -50380,7 +50516,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 293,
+      "handler_line": 315,
       "handler_name": "listConnections",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -50391,7 +50527,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 286,
+      "route_line": 308,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -50414,7 +50550,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 302,
+      "handler_line": 324,
       "handler_name": "createConnection",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -50425,7 +50561,7 @@
       "normalized_path": "/compliance/playbooks/connections",
       "path": "/compliance/playbooks/connections",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 287,
+      "route_line": 309,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -50451,7 +50587,7 @@
         "current"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 323,
+      "handler_line": 345,
       "handler_name": "updateConnection",
       "handler_receiver_calls": [
         "h.connVault.Open",
@@ -50466,7 +50602,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 288,
+      "route_line": 310,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -50515,7 +50651,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 392,
+      "handler_line": 414,
       "handler_name": "deleteConnection",
       "handler_receiver_calls": [
         "h.usage.Users",
@@ -50535,7 +50671,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}",
       "path": "/compliance/playbooks/connections/{id}",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 289,
+      "route_line": 311,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -50579,7 +50715,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 461,
+      "handler_line": 483,
       "handler_name": "testConnection",
       "handler_receiver_calls": [
         "h.executor.testConnection"
@@ -50595,7 +50731,7 @@
       "normalized_path": "/compliance/playbooks/connections/{param}/test",
       "path": "/compliance/playbooks/connections/{id}/test",
       "route_file": "services/compliance/playbook_connections.go",
-      "route_line": 290,
+      "route_line": 312,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -54763,7 +54899,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 68,
+      "handler_line": 76,
       "handler_name": "startScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54854,7 +54990,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 90,
+      "handler_line": 98,
       "handler_name": "listScans",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54886,7 +55022,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 348,
+          "line": 350,
           "name": "ListScans",
           "receiver_calls": [],
           "store_calls": [
@@ -54916,7 +55052,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 99,
+      "handler_line": 107,
       "handler_name": "getScan",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -54948,7 +55084,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 360,
+          "line": 362,
           "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
@@ -54983,7 +55119,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 111,
+      "handler_line": 119,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55017,7 +55153,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 384,
+          "line": 386,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -55041,7 +55177,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 111,
+      "handler_line": 119,
       "handler_name": "listAssets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55075,7 +55211,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 384,
+          "line": 386,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -55094,7 +55230,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 133,
+      "handler_line": 141,
       "handler_name": "getAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55130,7 +55266,7 @@
             "withReview"
           ],
           "internal_package_calls": [],
-          "line": 522,
+          "line": 528,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55163,7 +55299,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 146,
+      "handler_line": 154,
       "handler_name": "reviewAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55201,7 +55337,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 568,
+          "line": 574,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55231,7 +55367,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 164,
+      "handler_line": 172,
       "handler_name": "summary",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55269,7 +55405,7 @@
             "pct"
           ],
           "internal_package_calls": [],
-          "line": 606,
+          "line": 612,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -55295,7 +55431,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 173,
+      "handler_line": 181,
       "handler_name": "listTargets",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55351,7 +55487,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 186,
+      "handler_line": 194,
       "handler_name": "addTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55425,7 +55561,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 220,
+      "handler_line": 228,
       "handler_name": "removeTarget",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55485,7 +55621,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 231,
+      "handler_line": 239,
       "handler_name": "sources",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55519,6 +55655,7 @@
         "containsString",
         "ListCertificates",
         "ListRepositories",
+        "ListBuckets",
         "ListScans",
         "lastScans",
         "extractInt"
@@ -55548,12 +55685,13 @@
             "containsString",
             "ListCertificates",
             "ListRepositories",
+            "ListBuckets",
             "ListScans",
             "lastScans",
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 651,
+          "line": 657,
           "name": "Sources",
           "receiver_calls": [
             "s.cloud.ListAccounts",
@@ -55562,6 +55700,7 @@
           "store_calls": [
             "ListTargets",
             "ListRepositories",
+            "ListBuckets",
             "ListScans"
           ]
         }
@@ -55573,6 +55712,7 @@
       "service_store_calls": [
         "ListTargets",
         "ListRepositories",
+        "ListBuckets",
         "ListScans"
       ]
     },
@@ -55601,7 +55741,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 247,
+      "handler_line": 255,
       "handler_name": "upload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55641,7 +55781,7 @@
             "UpdateScan"
           ],
           "internal_package_calls": [],
-          "line": 305,
+          "line": 307,
           "name": "ScanUpload",
           "receiver_calls": [],
           "store_calls": [
@@ -55673,7 +55813,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 287,
+      "handler_line": 295,
       "handler_name": "removeAsset",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55701,7 +55841,7 @@
             "DeleteAsset"
           ],
           "internal_package_calls": [],
-          "line": 514,
+          "line": 520,
           "name": "RemoveAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55731,7 +55871,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 298,
+      "handler_line": 306,
       "handler_name": "listRepositories",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -55778,7 +55918,6 @@
       "handler": "h.addRepository",
       "handler_external_package_calls": [
         "errors.Is",
-        "errors.As",
         "net/url.Parse",
         "strings.TrimSpace",
         "strings.HasPrefix"
@@ -55792,29 +55931,21 @@
         "RemoveRepository",
         "testRepository",
         "TestRepository",
-        "getSchedule",
-        "GetSchedule",
-        "putSchedule",
-        "SaveSchedule",
-        "httpStatusForErr",
-        "Public",
-        "Routed"
+        "listBuckets",
+        "ListBuckets",
+        "addBucket",
+        "AddBucket"
       ],
-      "handler_internal_package_calls": [
-        "pkg/tenantcheck.IsServicePrincipal"
-      ],
-      "handler_line": 311,
+      "handler_internal_package_calls": [],
+      "handler_line": 319,
       "handler_name": "addRepository",
-      "handler_receiver_calls": [
-        "h.router.Public",
-        "h.router.Routed"
-      ],
+      "handler_receiver_calls": [],
       "handler_service_calls": [
         "AddRepository",
         "RemoveRepository",
         "TestRepository",
-        "GetSchedule",
-        "SaveSchedule"
+        "ListBuckets",
+        "AddBucket"
       ],
       "handler_store_calls": [],
       "method": "POST",
@@ -55824,11 +55955,7 @@
       "route_line": 57,
       "service": "discovery",
       "service_external_package_calls": [
-        "strings.TrimSpace",
-        "errors.Is",
-        "fmt.Errorf",
-        "strings.ToLower",
-        "time.Duration"
+        "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "normalizeRepository",
@@ -55840,9 +55967,16 @@
         "DeleteRepository",
         "scanRepository",
         "repoClient",
-        "containsString",
-        "GetSchedule",
-        "PutSchedule"
+        "normalizeBucket",
+        "ListBuckets",
+        "bucketCredential",
+        "CreateBucket",
+        "bucket",
+        "RemoveBucket",
+        "DeleteBucket",
+        "TestBucket",
+        "scanBucket",
+        "storageClient"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -55897,39 +56031,43 @@
           "store_calls": []
         },
         {
-          "external_package_calls": [
-            "errors.Is"
-          ],
-          "file": "services/discovery/schedule.go",
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 36,
-          "name": "GetSchedule",
+          "line": 586,
+          "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
-            "GetSchedule"
+            "ListBuckets"
           ]
         },
         {
           "external_package_calls": [
-            "fmt.Errorf",
-            "strings.ToLower",
-            "strings.TrimSpace",
-            "time.Duration"
+            "strings.TrimSpace"
           ],
-          "file": "services/discovery/schedule.go",
+          "file": "services/discovery/storage.go",
           "helper_calls": [
-            "containsString",
-            "GetSchedule",
-            "PutSchedule"
+            "normalizeBucket",
+            "newID",
+            "ListBuckets",
+            "bucketCredential",
+            "CreateBucket",
+            "bucket",
+            "RemoveBucket",
+            "DeleteBucket",
+            "TestBucket",
+            "scanBucket",
+            "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 46,
-          "name": "SaveSchedule",
+          "line": 556,
+          "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
-            "GetSchedule",
-            "PutSchedule"
+            "ListBuckets",
+            "CreateBucket",
+            "DeleteBucket"
           ]
         }
       ],
@@ -55938,8 +56076,9 @@
         "ListRepositories",
         "CreateRepository",
         "DeleteRepository",
-        "GetSchedule",
-        "PutSchedule"
+        "ListBuckets",
+        "CreateBucket",
+        "DeleteBucket"
       ]
     },
     {
@@ -55959,7 +56098,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 353,
+      "handler_line": 361,
       "handler_name": "removeRepository",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56020,7 +56159,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 366,
+      "handler_line": 374,
       "handler_name": "testRepository",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56062,6 +56201,355 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 412,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listBuckets",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "ListBuckets",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 389,
+      "handler_name": "listBuckets",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ListBuckets"
+      ],
+      "handler_store_calls": [],
+      "method": "GET",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 64,
+      "service": "discovery",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [],
+          "internal_package_calls": [],
+          "line": 586,
+          "name": "ListBuckets",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListBuckets"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListBuckets"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 424,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.addBucket",
+      "handler_external_package_calls": [
+        "errors.Is",
+        "errors.As",
+        "net/url.Parse",
+        "strings.TrimSpace",
+        "strings.HasPrefix"
+      ],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "AddBucket",
+        "Error",
+        "fail",
+        "removeBucket",
+        "RemoveBucket",
+        "testBucket",
+        "TestBucket",
+        "getSchedule",
+        "GetSchedule",
+        "putSchedule",
+        "SaveSchedule",
+        "httpStatusForErr"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 403,
+      "handler_name": "addBucket",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "AddBucket",
+        "RemoveBucket",
+        "TestBucket",
+        "GetSchedule",
+        "SaveSchedule"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/discovery/buckets",
+      "path": "/discovery/buckets",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 65,
+      "service": "discovery",
+      "service_external_package_calls": [
+        "strings.TrimSpace",
+        "errors.Is",
+        "fmt.Errorf",
+        "strings.ToLower",
+        "time.Duration"
+      ],
+      "service_helper_calls": [
+        "normalizeBucket",
+        "newID",
+        "ListBuckets",
+        "bucketCredential",
+        "CreateBucket",
+        "bucket",
+        "RemoveBucket",
+        "DeleteBucket",
+        "TestBucket",
+        "scanBucket",
+        "storageClient",
+        "containsString",
+        "GetSchedule",
+        "PutSchedule"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "strings.TrimSpace"
+          ],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [
+            "normalizeBucket",
+            "newID",
+            "ListBuckets",
+            "bucketCredential",
+            "CreateBucket",
+            "bucket",
+            "RemoveBucket",
+            "DeleteBucket",
+            "TestBucket",
+            "scanBucket",
+            "storageClient"
+          ],
+          "internal_package_calls": [],
+          "line": 556,
+          "name": "AddBucket",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListBuckets",
+            "CreateBucket",
+            "DeleteBucket"
+          ]
+        },
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [
+            "bucket",
+            "DeleteBucket"
+          ],
+          "internal_package_calls": [],
+          "line": 603,
+          "name": "RemoveBucket",
+          "receiver_calls": [],
+          "store_calls": [
+            "DeleteBucket"
+          ]
+        },
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [
+            "bucket",
+            "scanBucket",
+            "storageClient"
+          ],
+          "internal_package_calls": [],
+          "line": 613,
+          "name": "TestBucket",
+          "receiver_calls": [],
+          "store_calls": []
+        },
+        {
+          "external_package_calls": [
+            "errors.Is"
+          ],
+          "file": "services/discovery/schedule.go",
+          "helper_calls": [],
+          "internal_package_calls": [],
+          "line": 36,
+          "name": "GetSchedule",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSchedule"
+          ]
+        },
+        {
+          "external_package_calls": [
+            "fmt.Errorf",
+            "strings.ToLower",
+            "strings.TrimSpace",
+            "time.Duration"
+          ],
+          "file": "services/discovery/schedule.go",
+          "helper_calls": [
+            "containsString",
+            "GetSchedule",
+            "PutSchedule"
+          ],
+          "internal_package_calls": [],
+          "line": 46,
+          "name": "SaveSchedule",
+          "receiver_calls": [],
+          "store_calls": [
+            "GetSchedule",
+            "PutSchedule"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "ListBuckets",
+        "CreateBucket",
+        "DeleteBucket",
+        "GetSchedule",
+        "PutSchedule"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 434,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.removeBucket",
+      "handler_external_package_calls": [],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "RemoveBucket",
+        "fail"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 442,
+      "handler_name": "removeBucket",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "RemoveBucket"
+      ],
+      "handler_store_calls": [],
+      "method": "DELETE",
+      "normalized_path": "/discovery/buckets/{param}",
+      "path": "/discovery/buckets/{id}",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 66,
+      "service": "discovery",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "bucket",
+        "DeleteBucket"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [
+            "bucket",
+            "DeleteBucket"
+          ],
+          "internal_package_calls": [],
+          "line": 603,
+          "name": "RemoveBucket",
+          "receiver_calls": [],
+          "store_calls": [
+            "DeleteBucket"
+          ]
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": [
+        "DeleteBucket"
+      ]
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/discovery.ts",
+          "line": 445,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.testBucket",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "services/discovery/handler.go",
+      "handler_helper_calls": [
+        "TestBucket",
+        "fail",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 456,
+      "handler_name": "testBucket",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "TestBucket"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
+      "normalized_path": "/discovery/buckets/{param}/test",
+      "path": "/discovery/buckets/{id}/test",
+      "route_file": "services/discovery/handler.go",
+      "route_line": 67,
+      "service": "discovery",
+      "service_external_package_calls": [],
+      "service_helper_calls": [
+        "bucket",
+        "scanBucket",
+        "storageClient"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [],
+          "file": "services/discovery/storage.go",
+          "helper_calls": [
+            "bucket",
+            "scanBucket",
+            "storageClient"
+          ],
+          "internal_package_calls": [],
+          "line": 613,
+          "name": "TestBucket",
+          "receiver_calls": [],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"discovery\", `/discovery/schedule?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
           "line": 347,
@@ -56076,7 +56564,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 381,
+      "handler_line": 473,
       "handler_name": "getSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56087,7 +56575,7 @@
       "normalized_path": "/discovery/schedule",
       "path": "/discovery/schedule",
       "route_file": "services/discovery/handler.go",
-      "route_line": 60,
+      "route_line": 68,
       "service": "discovery",
       "service_external_package_calls": [
         "errors.Is"
@@ -56138,7 +56626,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 393,
+      "handler_line": 485,
       "handler_name": "putSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56149,7 +56637,7 @@
       "normalized_path": "/discovery/schedule",
       "path": "/discovery/schedule",
       "route_file": "services/discovery/handler.go",
-      "route_line": 61,
+      "route_line": 69,
       "service": "discovery",
       "service_external_package_calls": [
         "fmt.Errorf",
@@ -87277,7 +87765,7 @@
       "compliance": 54,
       "confidential": 7,
       "dataprotect": 50,
-      "discovery": 20,
+      "discovery": 24,
       "ekm": 64,
       "governance": 35,
       "hsm-connector": 12,
@@ -87309,7 +87797,7 @@
       "compliance": 20,
       "confidential": 6,
       "dataprotect": 29,
-      "discovery": 18,
+      "discovery": 22,
       "ekm": 44,
       "governance": 23,
       "hyok": 7,
@@ -87505,17 +87993,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 870,
+    "backend_routes": 874,
     "backend_services": 28,
-    "button_inventory": 756,
-    "frontend_call_sites": 551,
-    "matched_frontend_call_sites": 507,
+    "button_inventory": 759,
+    "frontend_call_sites": 555,
+    "matched_frontend_call_sites": 511,
     "nav_items": 27,
-    "request_flows": 870,
-    "request_flows_with_frontend": 513,
+    "request_flows": 874,
+    "request_flows_with_frontend": 517,
     "request_flows_with_internal_package_calls": 153,
-    "request_flows_with_service_calls": 523,
-    "request_flows_with_store_calls": 624,
+    "request_flows_with_service_calls": 527,
+    "request_flows_with_store_calls": 627,
     "subpane_groups": 8,
     "tab_components": 34,
     "unmatched_frontend_call_sites": 44
@@ -87630,7 +88118,7 @@
       ]
     },
     {
-      "call_count": 19,
+      "call_count": 23,
       "component": "web/dashboard/src/components/v3/tabs/DiscoveryTab.tsx",
       "group": "Keys & lifecycle",
       "id": "discovery",
@@ -97360,7 +97848,7 @@
         "frontendSites": [],
         "handler": "handlePosture",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 96,
+        "handlerLine": 97,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97389,7 +97877,7 @@
         "frontendSites": [],
         "handler": "handlePostureHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 111,
+        "handlerLine": 112,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97423,7 +97911,7 @@
         ],
         "handler": "handlePostureBreakdown",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 126,
+        "handlerLine": 127,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97459,7 +97947,7 @@
         ],
         "handler": "handleAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 140,
+        "handlerLine": 141,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97497,7 +97985,7 @@
         ],
         "handler": "handleAssessmentDelta",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 155,
+        "handlerLine": 156,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97535,7 +98023,7 @@
         ],
         "handler": "handleRunAssessment",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 170,
+        "handlerLine": 171,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97573,7 +98061,7 @@
         ],
         "handler": "handleAssessmentHistory",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 200,
+        "handlerLine": 201,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97610,7 +98098,7 @@
         ],
         "handler": "handleAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 277,
+        "handlerLine": 278,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97648,7 +98136,7 @@
         ],
         "handler": "handleUpsertAssessmentSchedule",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 291,
+        "handlerLine": 292,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -97686,7 +98174,7 @@
         ],
         "handler": "handleListComplianceTemplates",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 216,
+        "handlerLine": 217,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97724,7 +98212,7 @@
         ],
         "handler": "handleUpsertComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 244,
+        "handlerLine": 245,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97755,7 +98243,7 @@
         "frontendSites": [],
         "handler": "handleGetComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 230,
+        "handlerLine": 231,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97791,7 +98279,7 @@
         ],
         "handler": "handleDeleteComplianceTemplate",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 264,
+        "handlerLine": 265,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -97826,7 +98314,7 @@
         ],
         "handler": "handleFrameworks",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 319,
+        "handlerLine": 320,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97855,7 +98343,7 @@
         "frontendSites": [],
         "handler": "handleFrameworkControls",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 324,
+        "handlerLine": 325,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97891,7 +98379,7 @@
         ],
         "handler": "handleFrameworkGaps",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 344,
+        "handlerLine": 345,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97926,7 +98414,7 @@
         ],
         "handler": "handleKeyHygiene",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 358,
+        "handlerLine": 359,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97952,7 +98440,7 @@
         "frontendSites": [],
         "handler": "handleOrphaned",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 372,
+        "handlerLine": 373,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -97977,7 +98465,7 @@
         "frontendSites": [],
         "handler": "handleExpired",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 386,
+        "handlerLine": 387,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98004,7 +98492,7 @@
         "frontendSites": [],
         "handler": "handleAuditCorrelations",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 400,
+        "handlerLine": 401,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98040,7 +98528,7 @@
         ],
         "handler": "handleAuditAnomalies",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 415,
+        "handlerLine": 416,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98068,7 +98556,7 @@
         "frontendSites": [],
         "handler": "handleCBOM",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 429,
+        "handlerLine": 430,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98095,7 +98583,7 @@
         "frontendSites": [],
         "handler": "handleCBOMSummary",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 443,
+        "handlerLine": 444,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98123,7 +98611,7 @@
         "frontendSites": [],
         "handler": "handleCBOMExport",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 457,
+        "handlerLine": 458,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98150,7 +98638,7 @@
         "frontendSites": [],
         "handler": "handleCBOMPQCReadiness",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 479,
+        "handlerLine": 480,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98177,7 +98665,7 @@
         "frontendSites": [],
         "handler": "handleCBOMDiff",
         "handlerFile": "services/compliance/handler.go",
-        "handlerLine": 493,
+        "handlerLine": 494,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -98738,7 +99226,7 @@
           {
             "expression": "serviceRequest(\"compliance\", `/compliance/playbooks/connections?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 379,
+            "line": 381,
             "source": "serviceRequest"
           },
           {
@@ -98750,7 +99238,7 @@
         ],
         "handler": "listConnections",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 293,
+        "handlerLine": 315,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -98779,7 +99267,7 @@
         "frontendSites": [],
         "handler": "createConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 302,
+        "handlerLine": 324,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -98807,7 +99295,7 @@
         "frontendSites": [],
         "handler": "updateConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 323,
+        "handlerLine": 345,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -98843,7 +99331,7 @@
         "frontendSites": [],
         "handler": "deleteConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 392,
+        "handlerLine": 414,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -98885,7 +99373,7 @@
         "frontendSites": [],
         "handler": "testConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 461,
+        "handlerLine": 483,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -100886,7 +101374,7 @@
         ],
         "handler": "startScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 68,
+        "handlerLine": 76,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -100927,7 +101415,7 @@
         ],
         "handler": "listScans",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 90,
+        "handlerLine": 98,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -100963,7 +101451,7 @@
         ],
         "handler": "getScan",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 99,
+        "handlerLine": 107,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101001,7 +101489,7 @@
         ],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 111,
+        "handlerLine": 119,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101030,7 +101518,7 @@
         "frontendSites": [],
         "handler": "listAssets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 111,
+        "handlerLine": 119,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -101057,7 +101545,7 @@
         "frontendSites": [],
         "handler": "getAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 133,
+        "handlerLine": 141,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -101095,7 +101583,7 @@
         ],
         "handler": "reviewAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 146,
+        "handlerLine": 154,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -101131,7 +101619,7 @@
         ],
         "handler": "summary",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 164,
+        "handlerLine": 172,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101163,7 +101651,7 @@
         ],
         "handler": "listTargets",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 173,
+        "handlerLine": 181,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101202,7 +101690,7 @@
         ],
         "handler": "addTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 186,
+        "handlerLine": 194,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101237,7 +101725,7 @@
         ],
         "handler": "removeTarget",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 220,
+        "handlerLine": 228,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -101260,7 +101748,7 @@
         ]
       },
       {
-        "complexity": 5,
+        "complexity": 6,
         "externalPackages": [
           "context.WithTimeout",
           "net/netip.ParsePrefix",
@@ -101281,7 +101769,7 @@
         ],
         "handler": "sources",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 231,
+        "handlerLine": 239,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101301,6 +101789,7 @@
         "storeCalls": [
           "ListTargets",
           "ListRepositories",
+          "ListBuckets",
           "ListScans"
         ],
         "uiLabels": [
@@ -101326,7 +101815,7 @@
         ],
         "handler": "upload",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 247,
+        "handlerLine": 255,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101361,7 +101850,7 @@
         ],
         "handler": "removeAsset",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 287,
+        "handlerLine": 295,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -101395,7 +101884,7 @@
         ],
         "handler": "listRepositories",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 298,
+        "handlerLine": 306,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101417,16 +101906,12 @@
         ]
       },
       {
-        "complexity": 8,
+        "complexity": 6,
         "externalPackages": [
           "errors.Is",
-          "errors.As",
           "net/url.Parse",
           "strings.TrimSpace",
-          "strings.HasPrefix",
-          "fmt.Errorf",
-          "strings.ToLower",
-          "time.Duration"
+          "strings.HasPrefix"
         ],
         "frontendSites": [
           {
@@ -101438,18 +101923,13 @@
         ],
         "handler": "addRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 311,
+        "handlerLine": 319,
         "hasFrontend": true,
-        "internalPackages": [
-          "pkg/tenantcheck.IsServicePrincipal"
-        ],
+        "internalPackages": [],
         "method": "POST",
         "normalizedPath": "/discovery/repositories",
         "path": "/discovery/repositories",
-        "receiverCalls": [
-          "h.router.Public",
-          "h.router.Routed"
-        ],
+        "receiverCalls": [],
         "risk": "medium",
         "routeKey": "discovery|POST|/discovery/repositories",
         "sensitive": false,
@@ -101458,15 +101938,16 @@
           "AddRepository",
           "RemoveRepository",
           "TestRepository",
-          "GetSchedule",
-          "SaveSchedule"
+          "ListBuckets",
+          "AddBucket"
         ],
         "storeCalls": [
           "ListRepositories",
           "CreateRepository",
           "DeleteRepository",
-          "GetSchedule",
-          "PutSchedule"
+          "ListBuckets",
+          "CreateBucket",
+          "DeleteBucket"
         ],
         "uiLabels": [
           "Crypto Discovery"
@@ -101485,7 +101966,7 @@
         ],
         "handler": "removeRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 353,
+        "handlerLine": 361,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -101521,7 +102002,7 @@
         ],
         "handler": "testRepository",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 366,
+        "handlerLine": 374,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -101534,6 +102015,161 @@
         "service": "discovery",
         "serviceCalls": [
           "TestRepository"
+        ],
+        "storeCalls": [],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 412,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listBuckets",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 389,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/discovery/buckets",
+        "path": "/discovery/buckets",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "discovery|GET|/discovery/buckets",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "ListBuckets"
+        ],
+        "storeCalls": [
+          "ListBuckets"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 6,
+        "externalPackages": [
+          "errors.Is",
+          "errors.As",
+          "net/url.Parse",
+          "strings.TrimSpace",
+          "strings.HasPrefix",
+          "fmt.Errorf",
+          "strings.ToLower",
+          "time.Duration"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 424,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "addBucket",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 403,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/tenantcheck.IsServicePrincipal"
+        ],
+        "method": "POST",
+        "normalizedPath": "/discovery/buckets",
+        "path": "/discovery/buckets",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "discovery|POST|/discovery/buckets",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "AddBucket",
+          "RemoveBucket",
+          "TestBucket",
+          "GetSchedule",
+          "SaveSchedule"
+        ],
+        "storeCalls": [
+          "ListBuckets",
+          "CreateBucket",
+          "DeleteBucket",
+          "GetSchedule",
+          "PutSchedule"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 434,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "removeBucket",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 442,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/discovery/buckets/{param}",
+        "path": "/discovery/buckets/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "discovery|DELETE|/discovery/buckets/{param}",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "RemoveBucket"
+        ],
+        "storeCalls": [
+          "DeleteBucket"
+        ],
+        "uiLabels": [
+          "Crypto Discovery"
+        ]
+      },
+      {
+        "complexity": 0,
+        "externalPackages": [
+          "errors.Is"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/discovery.ts",
+            "line": 445,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "testBucket",
+        "handlerFile": "services/discovery/handler.go",
+        "handlerLine": 456,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/discovery/buckets/{param}/test",
+        "path": "/discovery/buckets/{id}/test",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "discovery|POST|/discovery/buckets/{param}/test",
+        "sensitive": false,
+        "service": "discovery",
+        "serviceCalls": [
+          "TestBucket"
         ],
         "storeCalls": [],
         "uiLabels": [
@@ -101555,7 +102191,7 @@
         ],
         "handler": "getSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 381,
+        "handlerLine": 473,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -101595,7 +102231,7 @@
         ],
         "handler": "putSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 393,
+        "handlerLine": 485,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.IsServicePrincipal"
@@ -118591,7 +119227,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T17:02:39Z",
+    "generatedAt": "2026-10-01T17:48:09Z",
     "methods": [
       "DELETE",
       "GET",
@@ -118631,9 +119267,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 870,
-      "frontendBacked": 513,
-      "highRisk": 338,
+      "flows": 874,
+      "frontendBacked": 517,
+      "highRisk": 339,
       "services": 28
     }
   }

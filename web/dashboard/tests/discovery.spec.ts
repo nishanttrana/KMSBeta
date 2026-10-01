@@ -10,6 +10,12 @@ const json = (body: unknown, status = 200) => ({ status, contentType: "applicati
 const running = { ...fx.scans[1], id: "scan_live", scan_type: "network,cloud,certs,git", status: "running", stats: { sources_done: ["certs"], certs_assets: 2 } };
 const finished = { ...running, status: "completed", stats: { sources_done: ["network", "cloud", "certs", "git"], network_assets: 6, cloud_assets: 1, certs_assets: 2, git_assets: 8, assets_discovered: 17 } };
 
+// Buckets as GET /discovery/buckets returns them (services/discovery Bucket).
+const buckets = [
+  { id: "bucket_s3", tenant_id: "root", provider: "s3", endpoint: "https://s3.eu-west-1.amazonaws.com", bucket: "acme-artifacts", prefix: "releases/", region: "eu-west-1", connection_id: "pbconn_s3", created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
+  { id: "bucket_az", tenant_id: "root", provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "configs", prefix: "", region: "", connection_id: "pbconn_az", created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
+];
+
 // The asset list as the service filters and pages it (FindAssets).
 function assetPage(url: URL) {
   const q = url.searchParams;
@@ -45,9 +51,13 @@ async function stub(page: Page, opts: { down?: boolean } = {}): Promise<Request[
     if (p.endsWith("/discovery/repositories")) return route.fulfill(json({ items: fx.repositories }));
     if (p.endsWith("/discovery/repositories/repo_app/test")) return route.fulfill(json({ ok: true, commit: "0123456789abcdef0123456789abcdef01234567" }));
     if (p.endsWith("/discovery/repositories/repo_docs/test")) return route.fulfill(json({ error: { code: "repository_unreachable", message: "repository or ref not found; a private repository needs a Git connection" } }, 502));
+    if (p.endsWith("/discovery/buckets") && req.method() === "POST") return route.fulfill(json({ bucket: { ...buckets[0], id: "bucket_new" } }, 201));
+    if (p.endsWith("/discovery/buckets")) return route.fulfill(json({ items: buckets }));
+    if (p.endsWith("/discovery/buckets/bucket_s3/test")) return route.fulfill(json({ ok: true, objects_listed: 214, objects_read: 1 }));
+    if (p.endsWith("/discovery/buckets/bucket_az/test")) return route.fulfill(json({ error: { code: "bucket_unreachable", message: "access denied (AuthenticationFailed): check the connection's credential and that it may list and read this bucket" } }, 502));
     if (p.endsWith("/discovery/schedule") && req.method() === "PUT") return route.fulfill(json({ schedule: { ...fx.schedule, ...req.postDataJSON(), next_run_at: fx.schedule.next_run_at } }));
     if (p.endsWith("/discovery/schedule")) return route.fulfill(json({ schedule: fx.schedule }));
-    if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: [{ id: "pbconn_git1", name: "GitLab read token", type: "git", endpoint: "gitlab.example.com" }, { id: "pbconn_slack", name: "SOC channel", type: "slack", endpoint: "hooks.slack.com" }] }));
+    if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: [{ id: "pbconn_git1", name: "GitLab read token", type: "git", endpoint: "gitlab.example.com" }, { id: "pbconn_slack", name: "SOC channel", type: "slack", endpoint: "hooks.slack.com" }, { id: "pbconn_s3", name: "Artifacts read key", type: "s3", endpoint: "s3.eu-west-1.amazonaws.com" }, { id: "pbconn_az", name: "Configs SAS", type: "azure_blob", endpoint: "acme.blob.core.windows.net" }] }));
     if (p.endsWith("/discovery/scan")) return route.fulfill(json({ scan: running }, 202));
     if (p.endsWith("/discovery/scans/scan_live")) return route.fulfill(json({ scan: ++polls > 1 ? finished : running }));
     if (p.endsWith("/discovery/upload")) return route.fulfill(json({ scan: fx.scans[0], assets: fx.assets.filter((a) => a.source === "upload") }));
@@ -74,7 +84,7 @@ const qv = fx.summary.classification_counts.quantum_vulnerable;
 test("sources, charts and drill-downs show the scanned inventory", async ({ page }) => {
   await stub(page);
   await open(page);
-  for (const name of ["Network", "Cloud KMS", "Certificates", "Git repositories", "Mounted code", "File upload"]) {
+  for (const name of ["Network", "Cloud KMS", "Certificates", "Git repositories", "Object storage", "Mounted code", "File upload"]) {
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   }
   await expect(page.getByText("Not mounted")).toBeVisible();
@@ -184,4 +194,59 @@ test("the scan schedule is saved with its sources", async ({ page }) => {
   expect(writes[0]!.method()).toBe("PUT");
   expect(writes[0]!.postDataJSON()).toEqual({ enabled: true, interval_hours: 168, sources: ["network", "certs", "git"] });
   await expect(page.getByRole("button", { name: "Weekly" })).toBeVisible();
+});
+
+// Before 7.34.0-beta these two buttons named tab ids the shell doesn't have
+// ("byok", "certificates"), so the shell fell back to its first tab, the
+// Command Center.
+test("a source's link opens that source's own page", async ({ page }) => {
+  await stub(page);
+  await open(page);
+  await page.getByRole("button", { name: "Accounts", exact: true }).click();
+  await expect(page).toHaveURL(/#cloudctl$/);
+  await expect(page.getByText("Crypto Discovery", { exact: true }).first()).toBeVisible();
+  await page.getByText("Crypto Discovery", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Open PKI", exact: true }).click();
+  await expect(page).toHaveURL(/#certs$/);
+});
+
+test("mounted code shows how to mount it, without a second upload button", async ({ page }) => {
+  await stub(page);
+  await open(page);
+  await page.getByRole("button", { name: "Set up", exact: true }).click();
+  await expect(page.getByText("WORKSPACE_ROOT: /workspace", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Upload files instead/ })).toHaveCount(0);
+});
+
+test("a private bucket is added with a storage connection and tested", async ({ page }) => {
+  const writes = await stub(page);
+  await open(page);
+  await expect(page.getByText("No buckets yet")).toBeVisible();
+  await page.getByRole("button", { name: "Buckets", exact: true }).click();
+  // Each bucket shows which connection reads it; no credential is on the page.
+  await expect(page.getByText("s3.eu-west-1.amazonaws.com/acme-artifacts", { exact: false })).toBeVisible();
+  await expect(page.getByText("Artifacts read key", { exact: true })).toBeVisible();
+
+  const tests = page.getByRole("button", { name: "Test", exact: true });
+  await tests.nth(0).click();
+  await expect(page.getByText("Readable · 214 objects listed, 1 read")).toBeVisible();
+  await tests.nth(1).click();
+  await expect(page.getByText(/Not readable: access denied \(AuthenticationFailed\)/)).toBeVisible();
+
+  // Azure Blob: the account address and a container; only azure_blob
+  // connections are offered.
+  await page.getByRole("button", { name: "Amazon S3" }).click();
+  await page.getByText("Azure Blob Storage", { exact: true }).last().click();
+  await page.getByPlaceholder("https://account.blob.core.windows.net").fill("https://acme.blob.core.windows.net");
+  await page.getByPlaceholder("container").fill("backups");
+  await page.getByPlaceholder("prefix (optional)").fill("keys/");
+  await page.getByRole("button", { name: /Public \(no credential\)/ }).click();
+  await expect(page.getByText("Artifacts read key · s3.eu-west-1.amazonaws.com")).toHaveCount(0);
+  await expect(page.getByText("GitLab read token · gitlab.example.com")).toHaveCount(0);
+  await page.getByText("Configs SAS · acme.blob.core.windows.net").last().click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery-buckets.png` });
+  await page.getByRole("button", { name: "Add" }).click();
+  const added = () => writes.filter((w) => w.method() === "POST" && w.url().includes("/discovery/buckets?"));
+  await expect.poll(() => added().length).toBe(1);
+  expect(added()[0]!.postDataJSON()).toEqual({ provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "backups", prefix: "keys/", region: "", connection_id: "pbconn_az" });
 });

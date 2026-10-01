@@ -5,6 +5,44 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Discovery: object storage source, and two dead links (7.34.0-beta)
+- **A string tab id fails silently.** `onNavigate("byok")` compiled, and the
+  shell's "unknown tab → first tab" recovery turned a wrong id into a visit
+  to the Command Center with no error anywhere. `byok` is a sub-pane of
+  `cloudctl` and `certificates` is a module id in `config/tabs.ts`; both
+  look right. The smoke test never clicked those two buttons. Now
+  `tests/unit/navTargets.test.ts` checks every `onNavigate("…")` literal
+  against the shell's `NAV`, and the smoke test clicks both.
+- **A fallback button duplicates the thing it falls back to.** "Upload files
+  instead" in the Mounted code dialog was a second entry to the File upload
+  card beside it. A dependency's dialog shows how to set that dependency
+  up; alternatives already have their own card.
+- **Two wire APIs cover most object storage.** S3's ListObjectsV2 and
+  GetObject with Signature V4 reach AWS, MinIO, Ceph, R2 and Google Cloud
+  Storage (HMAC keys, region `auto`); Azure Blob needs only a SAS token in
+  the query. Both are a few GETs, so no cloud SDK was added.
+- **Signature V4 is all about escaping.** The signature covers the path and
+  query in one strict encoding (everything but unreserved characters
+  percent-encoded, a space as `%20`), and Go's default URL encoding leaves
+  `+`, `=`, `&`, `:` and others alone. The request URL is built in the
+  canonical encoding and parsed, so the bytes sent are the bytes signed.
+  `TestSignV4MatchesTheAWSSDK` compares each header with the AWS SDK's own
+  signer for names with spaces, `+`, `=`, `#`, `?` and non-ASCII letters.
+- **HMAC key floor.** In FIPS-only mode an HMAC key under 112 bits panics.
+  The V4 signing key is `"AWS4" + secret`, so a secret under 10 characters
+  is refused when the connection is saved and again before signing.
+- **A SAS token is in the URL, so the URL can't reach an error.** Transport
+  errors are unwrapped from `*url.Error` before they are reported, redirects
+  are not followed, and of a storage service's error body only its `<Code>`
+  is kept. Tests search every error and audit event for the token.
+- **MinIO's community images are gone** (both registries refuse the pull).
+  The live test ran against the Versity S3 gateway, which verifies
+  signatures, and Azurite; and unsigned against public buckets on AWS S3 and
+  Google Cloud Storage.
+- **zsh does not word-split `$var`.** `set -- $spec` put the whole string in
+  `$1`; the live test then parsed an endpoint with spaces in it. Pass each
+  value in its own variable.
+
 ### Event-driven check and background job in secrets (7.33.0-beta)
 - **A durable consumer shared by cluster nodes would have lost events.** With
   one durable name, each event goes to one node; when that node is a member

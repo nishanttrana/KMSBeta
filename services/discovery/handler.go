@@ -57,6 +57,14 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler 
 	r.Handle("POST /discovery/repositories", repo("repository_add", ""), h.addRepository)
 	r.Handle("DELETE /discovery/repositories/{id}", repo("repository_remove", "id"), h.removeRepository)
 	r.Handle("POST /discovery/repositories/{id}/test", repo("repository_test", "id"), h.testRepository)
+	// 7.34.0-beta: object storage buckets.
+	bucket := func(action, target string) route.Spec {
+		return route.Spec{Action: action, Permission: "discovery.write", Resource: "discovery_bucket", TargetParam: target}
+	}
+	r.Handle("GET /discovery/buckets", read("buckets_list"), h.listBuckets)
+	r.Handle("POST /discovery/buckets", bucket("bucket_add", ""), h.addBucket)
+	r.Handle("DELETE /discovery/buckets/{id}", bucket("bucket_remove", "id"), h.removeBucket)
+	r.Handle("POST /discovery/buckets/{id}/test", bucket("bucket_test", "id"), h.testBucket)
 	r.Handle("GET /discovery/schedule", read("schedule_read"), h.getSchedule)
 	r.Handle("PUT /discovery/schedule", route.Spec{Action: "schedule_update", Permission: schedulePermission, Resource: "discovery_schedule"}, h.putSchedule)
 	h.router = r
@@ -376,6 +384,90 @@ func (h *Handler) testRepository(c *route.Call) {
 	}
 	c.Detail("commit", res.commit)
 	c.JSON(http.StatusOK, map[string]interface{}{"ok": true, "commit": res.commit})
+}
+
+func (h *Handler) listBuckets(c *route.Call) {
+	items, err := h.svc.ListBuckets(c.R.Context(), c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
+}
+
+// addBucket refuses, with its reason audited, an endpoint that isn't an
+// https service address or carries a credential, a platform or reserved
+// host, a bad bucket name, prefix or region, a duplicate, the per-tenant
+// limit, and a connection that isn't of the provider's type for the
+// bucket's host.
+func (h *Handler) addBucket(c *route.Call) {
+	var req BucketInput
+	if !c.Decode(&req) {
+		return
+	}
+	// An endpoint with a credential in it is refused; don't copy it to the audit.
+	if u, err := neturl.Parse(strings.TrimSpace(req.Endpoint)); err == nil && u.User == nil && u.RawQuery == "" {
+		c.Detail("endpoint", req.Endpoint)
+	}
+	c.Detail("provider", req.Provider)
+	c.Detail("bucket", req.Name)
+	c.Detail("prefix", req.Prefix)
+	c.Detail("connection_id", req.ConnectionID)
+	b, err := h.svc.AddBucket(c.R.Context(), c.Tenant, req, c.Actor())
+	switch {
+	case errors.Is(err, errInvalidBucket):
+		c.Refuse(http.StatusBadRequest, "invalid_bucket", err.Error())
+	case errors.Is(err, errPlatformTarget):
+		c.Refuse(http.StatusBadRequest, "platform_target", err.Error())
+	case errors.Is(err, errBucketExists):
+		c.Refuse(http.StatusConflict, "bucket_exists", err.Error())
+	case errors.Is(err, errBucketLimit):
+		c.Refuse(http.StatusConflict, "bucket_limit", err.Error())
+	case errors.Is(err, errConnectionUnfit):
+		c.Refuse(http.StatusBadRequest, "connection_unfit", err.Error())
+	case errors.Is(err, errConnectionsUnset):
+		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
+	case err != nil && strings.HasPrefix(err.Error(), "connection "):
+		// Compliance could not open it (not found, sealed store down).
+		c.Error(http.StatusBadGateway, "connection_unavailable", err.Error())
+	case err != nil:
+		h.fail(c, err)
+	default:
+		c.Target(b.ID)
+		c.Detail("endpoint", b.Endpoint)
+		c.JSON(http.StatusCreated, map[string]interface{}{"bucket": b})
+	}
+}
+
+func (h *Handler) removeBucket(c *route.Call) {
+	b, err := h.svc.RemoveBucket(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("endpoint", b.Endpoint)
+	c.Detail("bucket", b.Name)
+	c.JSON(http.StatusOK, map[string]interface{}{"removed": b.ID})
+}
+
+// testBucket lists the bucket and reads one object with its connection. A
+// bucket that can't be read is a failure with the reason (502
+// bucket_unreachable), never a pass.
+func (h *Handler) testBucket(c *route.Call) {
+	b, res, err := h.svc.TestBucket(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("endpoint", b.Endpoint)
+	c.Detail("bucket", b.Name)
+	if err != nil {
+		c.Error(http.StatusBadGateway, "bucket_unreachable", err.Error())
+		return
+	}
+	c.Detail("objects_listed", res.objects)
+	c.Detail("objects_read", res.files)
+	c.JSON(http.StatusOK, map[string]interface{}{"ok": true, "objects_listed": res.objects, "objects_read": res.files})
 }
 
 func (h *Handler) getSchedule(c *route.Call) {

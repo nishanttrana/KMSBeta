@@ -310,6 +310,53 @@ DELETE FROM discovery_repositories WHERE tenant_id = $1 AND id = $2
 	return nil
 }
 
+func (s *SQLStore) CreateBucket(ctx context.Context, b Bucket) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO discovery_buckets (tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)
+`, b.TenantID, b.ID, b.Provider, b.Endpoint, b.Name, b.Prefix, b.Region, b.ConnectionID, b.CreatedBy)
+	return err
+}
+
+func (s *SQLStore) ListBuckets(ctx context.Context, tenantID string) ([]Bucket, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, created_by, created_at
+FROM discovery_buckets
+WHERE tenant_id = $1
+ORDER BY endpoint, bucket, prefix
+`, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]Bucket, 0)
+	for rows.Next() {
+		var (
+			b          Bucket
+			createdRaw interface{}
+		)
+		if err := rows.Scan(&b.TenantID, &b.ID, &b.Provider, &b.Endpoint, &b.Name, &b.Prefix, &b.Region, &b.ConnectionID, &b.CreatedBy, &createdRaw); err != nil {
+			return nil, err
+		}
+		b.CreatedAt = parseTimeValue(createdRaw)
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteBucket(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM discovery_buckets WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
 const scheduleColumns = `tenant_id, enabled, interval_hours, sources, authorized_by, next_run_at, last_run_at, last_scan_id, paused_reason, updated_at`
 
 func scanSchedule(scanner interface {

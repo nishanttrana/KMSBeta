@@ -1985,7 +1985,7 @@ recorded in the exposure register: rotate those webhook URLs and tokens.
 
 | Route | Caller | Audit action |
 |---|---|---|
-| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta) | `connection_resolved` |
+| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta; `s3`, `azure_blob`, 7.34.0-beta) | `connection_resolved` |
 | `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
@@ -3227,14 +3227,17 @@ verified platform JWT and is on the route kernel: `discovery.read` for GETs,
 `PUT /discovery/assets/{id}/classify`, `DELETE /discovery/assets/{id}`,
 `POST /discovery/targets`, `DELETE /discovery/targets/{id}`,
 `POST /discovery/repositories`, `DELETE /discovery/repositories/{id}`,
-`POST /discovery/repositories/{id}/test` and `PUT /discovery/schedule`. The tenant
+`POST /discovery/repositories/{id}/test`, `POST /discovery/buckets`,
+`DELETE /discovery/buckets/{id}`, `POST /discovery/buckets/{id}/test` and
+`PUT /discovery/schedule`. The tenant
 comes from the token (a different `tenant_id` is refused as
 `tenant_mismatch`). Each request emits `audit.discovery.<action>`
 (`scan_start`, `scans_list`, `scan_read`, `assets_list`, `asset_read`,
 `asset_review`, `asset_remove`, `summary_read`, `sources_read`,
 `upload_scan`, `targets_list`, `target_add`, `target_remove`,
 `repositories_list`, `repository_add`, `repository_remove`,
-`repository_test`, `schedule_read`, `schedule_update`), refusals
+`repository_test`, `buckets_list`, `bucket_add`, `bucket_remove`,
+`bucket_test`, `schedule_read`, `schedule_update`), refusals
 included. `POST /discovery/pii/scan`, `GET /discovery/pii/patterns`,
 `GET /discovery/data-inventory` and the `GET /discovery/posture` alias are
 removed (content inspection is out of the KMS's scope). The dashboard page is
@@ -3387,13 +3390,59 @@ Only the ref's latest commit is read. `stats.git_repositories` and
 with the repository's connection and returns `200 {"ok": true, "commit"}`,
 or `502 repository_unreachable` with the reason. It stores nothing.
 
+**Object storage (7.34.0-beta).** Scan source `storage`. `GET
+/discovery/buckets` lists the tenant's buckets (`{"items": [{id, provider,
+endpoint, bucket, prefix, region, connection_id, created_by,
+created_at}]}`). `POST /discovery/buckets` with body
+`{"provider": "s3", "endpoint": "", "bucket": "acme-artifacts", "prefix":
+"releases/", "region": "eu-west-1", "connection_id": ""}` adds one (`201
+{"bucket": {...}}`). `provider` is `s3` (Amazon S3 or a service that speaks
+its API: MinIO, Ceph, Cloudflare R2, or Google Cloud Storage at
+`https://storage.googleapis.com` with HMAC keys and region `auto`) or
+`azure` (a Blob container). `endpoint` is the service's https address with
+no path, query or credential; for `s3` it may be empty, which means
+`https://s3.{region}.amazonaws.com`. `region` (`s3` only) defaults to
+`us-east-1`. `connection_id` names a sealed `s3` or `azure_blob` connection
+for a private bucket. `DELETE /discovery/buckets/{id}` removes one.
+Refusals: `400 invalid_bucket` (an unknown provider, an endpoint that is
+not an https service address or carries a credential or query, a reserved
+address, or a bad bucket name, prefix or region), `400 platform_target`,
+`409 bucket_exists`, `409 bucket_limit` (100 per tenant) and
+`400 connection_unfit` (the connection is not of the provider's type, is
+for another host, or holds a credential that can't be used).
+`502 connection_unavailable` means compliance could not open the
+connection.
+
+The scan lists the bucket (S3 `ListObjectsV2`, path style, signed with
+Signature V4; Azure `List Blobs` with the SAS token) and downloads each
+object the code scan's parser reads, over TLS 1.3 through the scan's dial
+guard, following no redirect: objects of at most 2 MiB with a source,
+configuration, key or certificate file name, skipping `.git`,
+`node_modules`, `vendor`, `bin`, `dist` and lock files; at most 100,000
+objects listed and 512 MiB read per bucket (`the bucket has more objects or
+bytes than the scan limit`, with what was found so far). Assets have
+`source: "storage"`, `location` `host/bucket/key:line`, and
+`metadata.endpoint`, `bucket`, `key` and `provider`. A credential is sent
+only to the connection's host. `stats.storage_buckets`,
+`stats.storage_objects` (listed) and `stats.storage_files` (read) describe
+the scan; a bucket that fails, or an object that can't be read, is named in
+`stats.errors.storage` and the others are still scanned. Of a storage
+service's error only its code is reported (`access denied
+(SignatureDoesNotMatch)`). Object versions, archives inside the bucket and
+archive storage classes are not read.
+
+`POST /discovery/buckets/{id}/test` lists the first page of the bucket and
+reads one object with the bucket's connection, and returns `200 {"ok":
+true, "objects_listed", "objects_read"}`, or `502 bucket_unreachable` with
+the reason. It stores nothing.
+
 **Schedule (7.20.0-beta).** `GET /discovery/schedule` returns
 `{"schedule": {enabled, interval_hours, sources, authorized_by,
 next_run_at, last_run_at, last_scan_id, paused_reason}}` (a tenant that
 never saved one has `enabled: false`). `PUT /discovery/schedule` with body
 `{"enabled": true, "interval_hours": 24, "sources": ["network", "git"]}`
 saves it: `interval_hours` 1 to 720, `sources` from `network`, `cloud`,
-`certs`, `code`, `git`. The first run is one interval later. Only a
+`certs`, `code`, `git`, `storage`. The first run is one interval later. Only a
 signed-in user can save one (`403 user_required` for an API client or a
 service): the schedule runs as the discovery service on that user's
 authority, and before every run auth is asked whether they are still active
@@ -3629,7 +3678,7 @@ Common prefixes:
 | audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
-| audit.discovery.* | Discovery scans, inventory reads, asset reviews and network targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta; `sources_read`, `upload_scan`, `asset_remove` 7.18.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified`; `secret_exposed` when a secret is first found (7.18.0-beta); git repositories and the schedule (`repositories_list`, `repository_add`, `repository_remove`, `repository_test`, `schedule_read`, `schedule_update`) and `scheduled_scan` for each scheduled run or refusal (7.20.0-beta) |
+| audit.discovery.* | Discovery scans, inventory reads, asset reviews and network targets (route kernel, 7.9.0-beta; `targets_list`, `target_add`, `target_remove` 7.11.0-beta; `sources_read`, `upload_scan`, `asset_remove` 7.18.0-beta); scan lifecycle events `scan_initiated`, `asset_found`, `scan_completed`, `asset_classified`; `secret_exposed` when a secret is first found (7.18.0-beta); git repositories and the schedule (`repositories_list`, `repository_add`, `repository_remove`, `repository_test`, `schedule_read`, `schedule_update`) and `scheduled_scan` for each scheduled run or refusal (7.20.0-beta); object storage buckets (`buckets_list`, `bucket_add`, `bucket_remove`, `bucket_test`, 7.34.0-beta) |
 | audit.policy.* | Crypto policy changes, evaluations and refusals |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture engine (reads, scans, event ingest, action execution, threat findings) |
@@ -4166,6 +4215,10 @@ from the code; do not edit by hand.
 - `DELETE /svc/discovery/discovery/assets/{id}`
 - `GET /svc/discovery/discovery/assets/{id}`
 - `PUT /svc/discovery/discovery/assets/{id}/classify`
+- `GET /svc/discovery/discovery/buckets`
+- `POST /svc/discovery/discovery/buckets`
+- `DELETE /svc/discovery/discovery/buckets/{id}`
+- `POST /svc/discovery/discovery/buckets/{id}/test`
 - `GET /svc/discovery/discovery/crypto/assets`
 - `GET /svc/discovery/discovery/repositories`
 - `POST /svc/discovery/discovery/repositories`

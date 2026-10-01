@@ -141,6 +141,20 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			PRIMARY KEY (tenant_id, id),
 			UNIQUE (tenant_id, url, ref)
 		);`,
+		`CREATE TABLE discovery_buckets (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			provider TEXT NOT NULL,
+			endpoint TEXT NOT NULL,
+			bucket TEXT NOT NULL,
+			prefix TEXT NOT NULL DEFAULT '',
+			region TEXT NOT NULL DEFAULT '',
+			connection_id TEXT NOT NULL DEFAULT '',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id),
+			UNIQUE (tenant_id, endpoint, bucket, prefix)
+		);`,
 		`CREATE TABLE discovery_schedules (
 			tenant_id TEXT PRIMARY KEY,
 			enabled BOOLEAN NOT NULL DEFAULT FALSE,

@@ -54,9 +54,9 @@ var (
 	errInvalidRepo      = errors.New("invalid repository")
 	errRepoExists       = errors.New("repository already added")
 	errRepoLimit        = fmt.Errorf("at most %d repositories per tenant", maxReposPerTenant)
-	errConnectionUnfit  = errors.New("connection can't be used for this repository")
+	errConnectionUnfit  = errors.New("connection can't be used for this source")
 	errRepoTooLarge     = errors.New("repository is larger than the scan limit")
-	errConnectionsUnset = errors.New("no connection client: private repositories are unavailable")
+	errConnectionsUnset = errors.New("no connection client: private repositories and buckets are unavailable")
 
 	// gitHosts: hosting services recognised by host name. Any other host
 	// states its provider.

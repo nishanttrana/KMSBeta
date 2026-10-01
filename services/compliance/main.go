@@ -111,7 +111,7 @@ func main() {
 	handler.SetExecutor(executor)
 	usage := platformUsage{auditURL: strings.TrimRight(auditURL, "/"), governanceURL: urls.Governance,
 		discoveryURL: strings.TrimRight(envOr("DISCOVERY_URL", "https://discovery:8100"), "/"), http: executor.platform}
-	handler.usage, handler.repoUsage = usage, usage.Repositories
+	handler.usage, handler.sourceUsage = usage, usage.Sources
 
 	triggerListener := NewTriggerListener(store, executor, logger)
 	handler.triggers = triggerListener

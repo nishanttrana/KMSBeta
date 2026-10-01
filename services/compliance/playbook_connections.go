@@ -53,8 +53,9 @@ const (
 	categoryNotify    = "notify"
 	categoryTicketing = "ticketing"
 	categorySIEM      = "siem"
-	// categorySource: code hosting. Discovery reads private repositories
-	// with a git connection's token (7.20.0-beta).
+	// categorySource: what discovery scans. It reads private repositories
+	// with a git connection's token (7.20.0-beta) and private buckets with
+	// an s3 or azure_blob connection's credential (7.34.0-beta).
 	categorySource = "source"
 )
 
@@ -69,6 +70,13 @@ var connectionTypes = func() []ConnectionSpec {
 		// sent only to that host. username is for hosts that take Basic
 		// authentication (a Bitbucket app password).
 		{Type: "git", Label: "Git hosting (repository access token)", Fields: []string{"git_url", "token"}, URLField: "git_url", Optional: []string{"username"}, Category: categorySource, Secrets: []string{"token"}},
+		// endpoint_url is the storage service (https://s3.eu-west-1.amazonaws.com,
+		// a MinIO or Ceph address, https://storage.googleapis.com with HMAC
+		// keys). The key signs requests to that host only.
+		{Type: "s3", Label: "S3 object storage (access key)", Fields: []string{"endpoint_url", "access_key_id", "secret_access_key"}, URLField: "endpoint_url", Category: categorySource, Secrets: []string{"secret_access_key"}},
+		// account_url is the storage account (https://account.blob.core.windows.net);
+		// sas_token is a shared access signature with read and list.
+		{Type: "azure_blob", Label: "Azure Blob Storage (SAS token)", Fields: []string{"account_url", "sas_token"}, URLField: "account_url", Category: categorySource, Secrets: []string{"sas_token"}},
 	}
 	for _, s := range siem.Specs {
 		out = append(out, ConnectionSpec{Type: s.Kind, Label: s.Label, Fields: s.Required, URLField: s.URLField, Optional: s.Optional,
@@ -93,6 +101,9 @@ func connectionFits(want, typ string) bool {
 
 // minSigningSecret: HMAC keys under 112 bits are not approved (SP 800-131A).
 const minSigningSecret = 16
+
+// minS3SecretKey: with the 4-byte "AWS4" prefix the signing key is 112 bits.
+const minS3SecretKey = 10
 
 // Connection is a stored connection. Fields hold plaintext only in memory.
 type Connection struct {
@@ -239,6 +250,17 @@ func validateConnection(c Connection) error {
 	}
 	if s := c.Fields["signing_secret"]; s != "" && len(s) < minSigningSecret {
 		return errors.New("signing_secret must be at least 16 characters (HMAC keys under 112 bits are not approved)")
+	}
+	// An S3 request is signed with HMAC-SHA256 under "AWS4" + the secret
+	// key: under 10 characters the key is below 112 bits, which is not
+	// approved.
+	if s, ok := c.Fields["secret_access_key"]; ok && len(strings.TrimSpace(s)) < minS3SecretKey {
+		return fmt.Errorf("secret_access_key must be at least %d characters (HMAC keys under 112 bits are not approved)", minS3SecretKey)
+	}
+	if s, ok := c.Fields["sas_token"]; ok {
+		if q, err := neturl.ParseQuery(strings.TrimPrefix(strings.TrimSpace(s), "?")); err != nil || q.Get("sig") == "" {
+			return errors.New("sas_token must be the shared access signature's query string (sv=...&sig=...)")
+		}
 	}
 	if spec.Category == categorySIEM {
 		// Build it: the destination checks its own fields (https, DCR and
@@ -424,11 +446,11 @@ func (h *Handler) deleteConnection(c *route.Call) {
 		}
 		users = append(users, others...)
 	}
-	// A git connection's users are discovery's repositories. Discovery is
-	// asked only for that type, so a deployment without it can still
-	// delete every other connection.
-	if conn.Type == "git" && h.repoUsage != nil {
-		repos, err := h.repoUsage(c.R.Context(), c.Tenant, id)
+	// A source connection's users are discovery's repositories and
+	// buckets. Discovery is asked only for those types, so a deployment
+	// without it can still delete every other connection.
+	if connectionByType[conn.Type].Category == categorySource && h.sourceUsage != nil {
+		repos, err := h.sourceUsage(c.R.Context(), c.Tenant, id)
 		if err != nil {
 			c.Detail("error", err.Error())
 			c.Refuse(http.StatusServiceUnavailable, "connection_usage_unverified", "can't confirm the connection is unused: "+err.Error())
@@ -472,10 +494,15 @@ func (h *Handler) testConnection(c *route.Call) {
 		return
 	}
 	c.Detail("type", conn.Type)
-	if conn.Type == "git" {
-		// What a token can read depends on the repository, so the real
-		// test is discovery's: POST /discovery/repositories/{id}/test.
-		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test a Git connection on a repository that uses it: Crypto Discovery, Git repositories, Test")
+	if connectionByType[conn.Type].Category == categorySource {
+		// What a credential can read depends on the repository or bucket,
+		// so the real test is discovery's: POST
+		// /discovery/repositories/{id}/test or /discovery/buckets/{id}/test.
+		where := "a bucket that uses it: Crypto Discovery, Object storage, Test"
+		if conn.Type == "git" {
+			where = "a repository that uses it: Crypto Discovery, Git repositories, Test"
+		}
+		c.Refuse(http.StatusConflict, "connection_test_elsewhere", "test this connection on "+where)
 		return
 	}
 	if err := h.executor.testConnection(c.R.Context(), conn); err != nil {

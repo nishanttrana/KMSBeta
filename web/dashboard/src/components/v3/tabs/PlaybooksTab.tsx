@@ -17,9 +17,9 @@ const FIELD_HINTS: Record<string, string> = {
   azure_tenant_id: "Entra directory (tenant) ID", client_id: "app registration client ID", address: "siem.example.com:6514",
   ca_pem: "-----BEGIN CERTIFICATE----- (the collector's CA, if not publicly trusted)", server_name: "name on the collector's certificate",
   git_url: "https://github.com (the hosting site; the token is sent only there)", token: "access token with read access to the repositories",
-  username: "only for Basic authentication (a Bitbucket app password)",
+  username: "only for Basic authentication (a Bitbucket app password)", endpoint_url: "https://s3.eu-west-1.amazonaws.com (or a MinIO, Ceph, R2 or storage.googleapis.com address)", access_key_id: "access key ID (for Google Cloud Storage: an HMAC key)", secret_access_key: "signs requests to that endpoint only", account_url: "https://<account>.blob.core.windows.net", sas_token: "sv=…&sp=rl&sig=… (read and list)",
 };
-const CATEGORY_LABELS: Record<string, string> = { notify: "Notifications", ticketing: "Ticketing", siem: "SIEM", source: "Code hosting" };
+const CATEGORY_LABELS: Record<string, string> = { notify: "Notifications", ticketing: "Ticketing", siem: "SIEM", source: "Scan sources" };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -658,7 +658,7 @@ export function PlaybooksTab({ session }: { session: any }) {
                     {exposed[c.id] && <span title={`Stored in plaintext before 2.5.0-beta; exposed since ${new Date(exposed[c.id].exposed_since).toLocaleString()}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: C.red, border: `1px solid ${C.red}`, borderRadius: 4, padding: "0 4px" }}>ROTATE</span>}
                     <div style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono', monospace" }}>{c.id}</div></TD>
                   <TD>{connType(c.type)?.label || c.type}</TD>
-                  <TD>{c.type === "git" ? "repository scans (Crypto Discovery)" : ["playbooks", connType(c.type)?.stream ? "event streams" : "", ["slack", "teams"].includes(c.type) ? "approval notices" : ""].filter(Boolean).join(", ")}</TD>
+                  <TD>{c.type === "git" ? "repository scans (Crypto Discovery)" : ["s3", "azure_blob"].includes(c.type) ? "bucket scans (Crypto Discovery)" : ["playbooks", connType(c.type)?.stream ? "event streams" : "", ["slack", "teams"].includes(c.type) ? "approval notices" : ""].filter(Boolean).join(", ")}</TD>
                   <TD mono>{c.endpoint}</TD><TD>{(c.fields_set || []).join(", ")}</TD><TD>{fmtAgo(c.updated_at)}</TD>
                   <TD><div style={{ display: "flex", gap: 6 }}>
                     <Btn variant="ghost" small onClick={() => testConnection(c)}>Test</Btn>

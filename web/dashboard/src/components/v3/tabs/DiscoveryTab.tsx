@@ -11,6 +11,7 @@ import {
   getDiscoverySources,
   getDiscoverySummary,
   listDiscoveryAssets,
+  listDiscoveryBuckets,
   listDiscoveryRepositories,
   listDiscoveryScans,
   listDiscoveryTargets,
@@ -19,6 +20,7 @@ import {
   type CryptoAsset,
   type DiscoveryScan,
   type AssetQuery,
+  type DiscoveryBucket,
   type DiscoveryRepository,
   type DiscoverySchedule,
   type DiscoverySource,
@@ -34,6 +36,7 @@ import { ClassPill, Inventory, NO_FILTERS, type Filters } from "./discovery/Inve
 import { AssetDetail } from "./discovery/AssetDetail";
 import { RunningBanner, ScansView } from "./discovery/Scans";
 import { RepositoriesModal } from "./discovery/Repositories";
+import { BucketsModal } from "./discovery/Buckets";
 import { ScheduleModal, scheduleLabel } from "./discovery/Schedule";
 
 
@@ -56,6 +59,9 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const [repositories, setRepositories] = useState<DiscoveryRepository[]>([]);
   const [reposError, setReposError] = useState("");
   const [reposOpen, setReposOpen] = useState(false);
+  const [buckets, setBuckets] = useState<DiscoveryBucket[]>([]);
+  const [bucketsError, setBucketsError] = useState("");
+  const [bucketsOpen, setBucketsOpen] = useState(false);
   const [schedule, setSchedule] = useState<DiscoverySchedule | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [targetsOpen, setTargetsOpen] = useState(false);
@@ -66,14 +72,17 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
   const load = async () => {
     if (!session?.token) return;
     setLoading(true);
-    const [sm, sc, src, tg, rp, sch] = await Promise.allSettled([
+    const [sm, sc, src, tg, rp, sch, bk] = await Promise.allSettled([
       getDiscoverySummary(session),
       listDiscoveryScans(session, 50),
       getDiscoverySources(session),
       listDiscoveryTargets(session),
       listDiscoveryRepositories(session),
       getDiscoverySchedule(session),
+      listDiscoveryBuckets(session),
     ]);
+    setBuckets(bk.status === "fulfilled" ? bk.value : []);
+    setBucketsError(bk.status === "rejected" ? errMsg(bk.reason) : "");
     setRepositories(rp.status === "fulfilled" ? rp.value : []);
     setReposError(rp.status === "rejected" ? errMsg(rp.reason) : "");
     setSchedule(sch.status === "fulfilled" ? sch.value : null);
@@ -232,7 +241,7 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
       ) : (
         <div style={{ marginBottom: 16 }}>
           <SourceCards sources={sources} assetCounts={summary?.source_distribution || {}} running={!!running} uploading={uploading}
-            onScan={(t) => void runScan(t)} onTargets={() => setTargetsOpen(true)} onRepositories={() => setReposOpen(true)} onCodeSetup={() => setCodeOpen(true)}
+            onScan={(t) => void runScan(t)} onTargets={() => setTargetsOpen(true)} onRepositories={() => setReposOpen(true)} onBuckets={() => setBucketsOpen(true)} onCodeSetup={() => setCodeOpen(true)}
             onPickFiles={pickUpload} onUpload={(f) => void upload(f)} onNavigate={onNavigate} />
         </div>
       )}
@@ -299,10 +308,12 @@ export const DiscoveryTab = ({ session, onToast, onNavigate }: any) => {
         operatorEndpoints={Number(network?.detail?.operator_endpoints || 0)} onChanged={() => void load()} onToast={onToast} />
       <RepositoriesModal open={reposOpen} onClose={() => setReposOpen(false)} session={session} repositories={repositories} error={reposError}
         onChanged={() => void load()} onToast={onToast} onNavigate={onNavigate} />
+      <BucketsModal open={bucketsOpen} onClose={() => setBucketsOpen(false)} session={session} buckets={buckets} error={bucketsError}
+        onChanged={() => void load()} onToast={onToast} onNavigate={onNavigate} />
       <ScheduleModal open={scheduleOpen} onClose={() => setScheduleOpen(false)} session={session} schedule={schedule} sources={sources}
         onSaved={setSchedule} onToast={onToast} />
       <input ref={fileRef} type="file" multiple hidden onChange={(e) => { void upload(Array.from(e.target.files || [])); e.target.value = ""; }} />
-      <CodeSetupModal open={codeOpen} onClose={() => setCodeOpen(false)} configured={!!sources.find((s) => s.id === "code")?.configured} onUpload={pickUpload} />
+      <CodeSetupModal open={codeOpen} onClose={() => setCodeOpen(false)} configured={!!sources.find((s) => s.id === "code")?.configured} />
     </div>
   );
 };
