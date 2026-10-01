@@ -14,10 +14,12 @@ import {
   listGovernanceRequests,
   voteGovernanceRequest
 } from "../../../lib/governance";
-import { usePromptDialog } from "../legacyPrimitives";
+import { Tabs, usePromptDialog } from "../legacyPrimitives";
 import { errMsg, isFipsModeEnabled } from "../runtimeUtils";
 import { C } from "../theme";
 import { DashboardTabView } from "./DashboardTabView";
+import { KeyInventoryPanel } from "./KeyInventoryPanel";
+import { OpsMetricsPanel } from "./OpsMetricsPanel";
 
 type DashboardTabProps = {
   fipsMode: string;
@@ -26,8 +28,12 @@ type DashboardTabProps = {
   pinnedTabs?: string[];
   onTogglePin?: (tabId: string) => void;
   onNavigate?: (tabId: string) => void;
+  // Key inventory and Operation metrics need the key_analytics feature.
+  keyAnalyticsEnabled?: boolean;
 };
-export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate}: DashboardTabProps)=>{
+const VIEWS=["Status","Key inventory","Operation metrics"];
+export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate,keyAnalyticsEnabled=true}: DashboardTabProps)=>{
+  const [view,setView]=useState("Status");
   const [modal,setModal]=useState<string|null>(null);
   const [homeLoading,setHomeLoading]=useState(false);
   const [approvalVoteBusy,setApprovalVoteBusy]=useState("");
@@ -494,7 +500,15 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     : {};
   const networkStatus=(Number(clusterSummary?.down_nodes||0)>0)?"degraded":"ok";
 
-  return <DashboardTabView
+  if(keyAnalyticsEnabled&&view!=="Status"){
+    return <div>
+      <Tabs tabs={VIEWS} active={view} onChange={setView}/>
+      {view==="Key inventory"?<KeyInventoryPanel session={session}/>:<OpsMetricsPanel session={session}/>}
+    </div>;
+  }
+  return <div>
+    {keyAnalyticsEnabled&&<Tabs tabs={VIEWS} active={view} onChange={setView}/>}
+    <DashboardTabView
     homeSummary={homeSummary}
     homeLoading={homeLoading}
     approvalVoteBusy={approvalVoteBusy}
@@ -515,5 +529,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     pinnedTabs={pinnedTabs||[]}
     onNavigate={onNavigate}
     onUnpinTab={onTogglePin}
-  />;
+    />
+  </div>;
 };

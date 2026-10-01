@@ -40,7 +40,7 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   sbom: "sbom_cbom",
   // Crypto discovery
   discovery: "crypto_discovery",
-  // Enterprise Advanced Features
+  // Not a tab: gates Key inventory and Operation metrics in Overview > Operations
   key_analytics: "key_analytics",
 };
 

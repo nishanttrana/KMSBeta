@@ -98,7 +98,6 @@ const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeT
 const DiscoveryTab = lazy(() => import("./v3/tabs/DiscoveryTab").then(m => ({ default: m.DiscoveryTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 // Enterprise Advanced Features
-const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
 
 type Props = {
   session: AuthSession;
@@ -197,7 +196,6 @@ const TABS: Record<string, any> = {
   confidential: ConfidentialComputeTab,
   discovery: DiscoveryTab,
   // Enterprise Advanced Features
-  key_analytics: KeyAnalyticsTab,
 };
 
 const TITLES: Record<string, string> = {
@@ -235,8 +233,6 @@ const TITLES: Record<string, string> = {
   workload: "Workload Identity",
   confidential: "Confidential Compute",
   discovery: "Crypto Discovery",
-  // Enterprise Advanced Features
-  key_analytics: "Analytics",
 };
 
 const NAV = [
@@ -245,7 +241,6 @@ const NAV = [
     { id: "recommendations", icon: Lightbulb, label: "Recommendations" },
     { id: "ops", icon: LayoutDashboard, label: "Operations" },
     { id: "workbench", icon: LayoutGrid, label: "Workbench" },
-    { id: "key_analytics", icon: BarChart3, label: "Analytics" },
   ]},
   { g: "Keys & lifecycle", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
@@ -336,8 +331,8 @@ const SUB_PANES: Record<string, any[]> = {
 
 // Tabs merged into another; a saved or linked id opens the new home.
 // Platform > Health went to Administration > Health (1.38.0-beta),
-// Operations Metrics to Analytics > Operations (2.1.0-beta).
-const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "key_analytics", devsecops: "docs" };
+// Operations Metrics and Analytics to Overview > Operations (7.24.0-beta).
+const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "ops", key_analytics: "ops", devsecops: "docs" };
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;
@@ -1189,6 +1184,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   onToast={setToast}
                   onLogout={onLogout}
                   fipsMode={fipsMode}
+                  keyAnalyticsEnabled={canSeeTab("key_analytics", enabledFeatures || new Set<FeatureKey>(), session)}
                   onFipsModeChange={setFipsMode}
                   onUnreadSync={setReportedUnread}
                   subView={activeSubPaneSelection}

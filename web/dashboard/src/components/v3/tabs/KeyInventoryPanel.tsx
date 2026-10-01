@@ -3,7 +3,6 @@ import { apiFetch } from "../../../lib/apiFetch";
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
-import { OpsMetricsPanel } from "./OpsMetricsPanel";
 
 const base = "/svc/keycore";
 const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
@@ -17,8 +16,9 @@ const Btn = ({ onClick, children, small, variant = "default" }: any) => {
 };
 const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
 
-export function KeyAnalyticsTab({ session }: any) {
-  const [view, setView] = useState<"keys" | "ops">("keys");
+// Key inventory section of Overview → Operations: key counts, algorithm
+// mix and rotation summary from keycore's enterprise summary.
+export function KeyInventoryPanel({ session }: any) {
   const [analytics, setAnalytics] = useState<any>({});
   const [keyStats, setKeyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,29 +54,11 @@ export function KeyAnalyticsTab({ session }: any) {
   const algColor = (a: string) => a?.includes("RSA") ? C.accent : a?.includes("EC") ? C.green : C.amber;
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <BarChart3 size={20} style={{ color: C.accent }} />
-          <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Analytics</span>
-        </div>
-        {view === "keys" && <div style={{ display: "flex", gap: 8 }}>
-          <Btn onClick={handleExport} variant="ghost" small><Download size={12} /> Export JSON</Btn>
-          <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
-        </div>}
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
+        <Btn onClick={handleExport} variant="ghost" small><Download size={12} /> Export JSON</Btn>
+        <Btn onClick={load} small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
       </div>
-
-      <div style={{ display: "flex", gap: 2, marginBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-        {([["keys", "Key inventory"], ["ops", "Operations"]] as const).map(([id, label]) => (
-          <button key={id} onClick={() => setView(id)} style={{
-            padding: "8px 16px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12,
-            fontWeight: view === id ? 700 : 400, color: view === id ? C.accent : C.muted,
-            borderBottom: view === id ? `2px solid ${C.accent}` : "2px solid transparent", marginBottom: -1,
-          }}>{label}</button>
-        ))}
-      </div>
-
-      {view === "ops" ? <OpsMetricsPanel session={session} /> : <>
 
       {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
@@ -128,7 +110,6 @@ export function KeyAnalyticsTab({ session }: any) {
           ))}
         </Card>
       </div>
-      </>}
     </div>
   );
 }

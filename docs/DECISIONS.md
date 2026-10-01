@@ -7,6 +7,23 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Overview → Analytics merged into Overview → Operations (7.24.0-beta)
+
+- **Decision:** key and operations trends live in Overview → Operations, as
+  the tabs Key inventory and Operation metrics beside Status (the
+  operations dashboard). Overview has no Analytics entry. This amends the
+  2026-09-30 and 2026-09-28 "one home" entries below only in where that home
+  is.
+- **Why:** owner, 2026-10-01. After audit and alert charts moved out
+  (7.15.0-beta), Analytics held two views about the same thing the
+  Operations dashboard shows, under a second menu entry.
+- **Rejected:** stacking all three on one scrolling page. The dashboard
+  polls every 30 seconds and the metrics have their own window picker; tabs
+  keep each view's controls beside its data.
+- **Enforced by:** `tests/smoke-tabs.spec.ts` ("analytics, alerts and audit
+  each have a single home"): no Analytics entry in the menu, and Operations
+  has the three tabs. `RETIRED_TABS` sends old links to Operations.
+
 ## 2026-10-01 — runtime-certs is real tmpfs; an external edge certificate is kept on the certs key volume (7.21.0-beta)
 
 - **Decision:** `runtime-certs` is tmpfs on every install, created only by

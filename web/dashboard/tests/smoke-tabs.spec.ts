@@ -212,11 +212,17 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   await expect(page.getByText(/^(Key export refused|Policy read)$/)).toHaveCount(1);
   await assertNoRenderBoundary(page);
 
-  await nav("Analytics");
-  await expect(page.getByRole("button", { name: "Key inventory", exact: true })).toHaveCount(1);
-  for (const t of ["Audit activity", "Alerts"]) {
-    await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(0);
+  // Analytics is no longer an Overview tab; its two views live in Operations.
+  await nav("Operations");
+  await expect(page.getByText("Analytics", { exact: true })).toHaveCount(0);
+  for (const t of ["Status", "Key inventory", "Operation metrics"]) {
+    await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
   }
+  await page.getByRole("button", { name: "Operation metrics", exact: true }).click();
+  await expect(page.getByText("Operations Breakdown")).toBeVisible();
+  await page.getByRole("button", { name: "Key inventory", exact: true }).click();
+  await expect(page.getByText("By Algorithm")).toBeVisible();
+  await assertNoRenderBoundary(page);
 
   await nav("Compliance");
   await expect(page.getByRole("button", { name: "Reports", exact: true })).toHaveCount(1);

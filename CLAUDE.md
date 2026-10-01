@@ -286,10 +286,12 @@ an approach, record it here or in the matching doc below.
 - **One home per view** (owner, 2026-09-28: Analytics under both Audit Log
   and Overview, Alerts under both Audit Log and Alert Center, and a
   Compliance page that "is not accurate"; amended 2026-09-30: charts live
-  with their data). Charts sit in a tab beside the entries they count:
+  with their data; amended 2026-10-01: Overview → Analytics merged into
+  Overview → Operations). Charts sit in a tab beside the entries they count:
   audit charts in Audit Log → Activity, alert charts and triage in Alert
   Center → Analytics / Alerts, posture charts in Posture, and key and
-  operations trends in Overview → Analytics. The audit record stays in the
+  operations trends in Overview → Operations (Key inventory, Operation
+  metrics). The audit record stays in the
   Audit Log, and Compliance shows only assessed compliance. Don't copy a view
   into another tab; link to its home. A failed or missing source shows
   "unavailable" or "not assessed", never 0 or 100 (docs/DECISIONS.md).

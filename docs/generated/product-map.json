@@ -18111,7 +18111,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 706,
+      "line": 701,
       "tabs": [],
       "tag": "button"
     },
@@ -18119,7 +18119,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 866,
+      "line": 861,
       "tabs": [],
       "tag": "button"
     },
@@ -18127,7 +18127,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 917,
+      "line": 912,
       "tabs": [],
       "tag": "button"
     },
@@ -18135,7 +18135,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 940,
+      "line": 935,
       "tabs": [],
       "tag": "button"
     },
@@ -18143,7 +18143,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 990,
+      "line": 985,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18151,7 +18151,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1027,
+      "line": 1022,
       "tabs": [],
       "tag": "button"
     },
@@ -18159,7 +18159,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1062,
+      "line": 1057,
       "tabs": [],
       "tag": "button"
     },
@@ -21527,46 +21527,6 @@
       "tag": "Btn"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
-      "handler": "onClick} style={{ display: \"inline-flex\", alignItems: \"center\", gap: 5, padding: small ? \"4px 10px\" : \"6px 14px\", bor...",
-      "label": "(icon or dynamic label)",
-      "line": 16,
-      "tabs": [
-        "key_analytics"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
-      "handler": "handleExport",
-      "label": "Export JSON",
-      "line": 64,
-      "tabs": [
-        "key_analytics"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
-      "handler": "load",
-      "label": "(icon or dynamic label)",
-      "line": 65,
-      "tabs": [
-        "key_analytics"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
-      "handler": "",
-      "label": "setView(id)} style={{ padding: \"8px 16px\", border: \"none\", background: \"trans...",
-      "line": 71,
-      "tabs": [
-        "key_analytics"
-      ],
-      "tag": "button"
-    },
-    {
       "file": "web/dashboard/src/components/v3/tabs/KeyDerivationPanel.tsx",
       "handler": "",
       "label": "void load()}>Refresh",
@@ -21595,6 +21555,30 @@
       "handler": "",
       "label": "void run(k.key_id, \"abort\", () => kdfTransition(session, k.key_id, \"abort\"))}...",
       "line": 83,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
+      "handler": "onClick} style={{ display: \"inline-flex\", alignItems: \"center\", gap: 5, padding: small ? \"4px 10px\" : \"6px 14px\", bor...",
+      "label": "(icon or dynamic label)",
+      "line": 15,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
+      "handler": "handleExport",
+      "label": "Export JSON",
+      "line": 59,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/KeyInventoryPanel.tsx",
+      "handler": "load",
+      "label": "(icon or dynamic label)",
+      "line": 60,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31855,7 +31839,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T11:00:33Z",
+  "generated_at": "2026-10-01T11:12:40Z",
   "navigation": [
     {
       "group": "Overview",
@@ -31876,11 +31860,6 @@
       "group": "Overview",
       "id": "workbench",
       "label": "Workbench"
-    },
-    {
-      "group": "Overview",
-      "id": "key_analytics",
-      "label": "Analytics"
     },
     {
       "group": "Keys & lifecycle",
@@ -85955,17 +85934,17 @@
   "summary": {
     "backend_routes": 853,
     "backend_services": 28,
-    "button_inventory": 746,
+    "button_inventory": 745,
     "frontend_call_sites": 540,
     "matched_frontend_call_sites": 498,
-    "nav_items": 28,
+    "nav_items": 27,
     "request_flows": 853,
     "request_flows_with_frontend": 505,
     "request_flows_with_internal_package_calls": 150,
     "request_flows_with_service_calls": 512,
     "request_flows_with_store_calls": 611,
     "subpane_groups": 8,
-    "tab_components": 35,
+    "tab_components": 34,
     "unmatched_frontend_call_sites": 42
   },
   "tabs": [
@@ -86036,17 +86015,6 @@
       "label": "Workbench",
       "services": [],
       "support_files": []
-    },
-    {
-      "call_count": 0,
-      "component": "web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx",
-      "group": "Overview",
-      "id": "key_analytics",
-      "label": "Analytics",
-      "services": [],
-      "support_files": [
-        "web/dashboard/src/lib/apiFetch.ts"
-      ]
     },
     {
       "call_count": 96,
@@ -116473,7 +116441,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T11:00:33Z",
+    "generatedAt": "2026-10-01T11:12:40Z",
     "methods": [
       "DELETE",
       "GET",

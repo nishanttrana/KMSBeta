@@ -2499,7 +2499,7 @@ const SectionUIMonitoring = () => (
     <P>- Find orphaned keys (keys with no usage) that represent security risk</P>
     <P>- Schedule automated assessments (daily, weekly, monthly)</P>
     <P>- Reports tab: generate compliance reports now or on a schedule, and download them</P>
-    <P>The cryptographic asset inventory lives in SBOM / CBOM; alert and audit trends live in Overview → Analytics.</P>
+    <P>The cryptographic asset inventory lives in SBOM / CBOM; audit trends live in Audit Log → Activity, alert trends in Alert Center → Analytics, and key and operation trends in Overview → Operations.</P>
 
     <H2>SBOM / CBOM Sub-Pane</H2>
     <P>The SBOM/CBOM sub-pane provides software and cryptographic inventory.</P>

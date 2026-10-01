@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### The Playwright smoke test runs the last build, not the source
+- **What happened:** after merging Overview → Analytics into Operations
+  (7.24.0-beta), the updated smoke test failed with the Analytics menu entry
+  still on the page. `playwright.config.ts` serves `vite preview`, which is
+  whatever is in `dist/`. The test was checking the previous build.
+- **Trap:** the reverse case is silent: a test that still passes against a
+  stale `dist/` says nothing about the change. Run `npm run build` before
+  `npm run test:smoke`. The build also rewrites
+  `src/generated/restApiCatalog.generated.ts` when routes have been added
+  since it was last committed; that drift is not part of a UI change.
+- **Open:** the Operations Status view shows figures that are written in the
+  component, not measured: the disk encryption card (`34.2 / 120 GB`,
+  `Integrity passed | Recovery: 3-of-5`) and a `vecta-kms-01` node when the
+  cluster call returns none (`DashboardTabView.tsx`). Rule 8 forbids both;
+  reported to the owner, not changed in this commit.
+
 ### The external edge certificate, run on the live stack: what it showed
 - **What was run:** root admin chose `external` for the HTTPS listener,
   requested a CSR, a throwaway CA outside the KMS signed it, it was

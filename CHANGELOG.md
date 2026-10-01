@@ -4,6 +4,17 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.24.0-beta] — 2026-10-01
+
+### Overview → Analytics is merged into Overview → Operations
+- **Changed:** the **Analytics** entry is gone from the Overview menu. Its
+  two views are now tabs of **Operations**: **Status** (the operations
+  dashboard as before), **Key inventory** and **Operation metrics**. Nothing
+  was removed from either view. A saved or bookmarked link to Analytics
+  (`#key_analytics`, `#ops_metrics`) opens Operations.
+- The two moved tabs still need the `key_analytics` feature; without it
+  Operations shows the dashboard alone.
+
 ## [7.23.0-beta] — 2026-10-01
 
 ### The edge certificate already being served is tracked for revocation

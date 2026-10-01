@@ -35,7 +35,7 @@ function le(n: number | null | undefined): string { return n == null ? "> 1000ms
 const CELL: React.CSSProperties = { padding: "8px 12px", color: C.dim, fontSize: 12, verticalAlign: "middle" };
 const TH: React.CSSProperties = { padding: "7px 12px", fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "left" };
 
-// Operations section of the Analytics tab: key-operation throughput,
+// Operation metrics section of Overview → Operations: key-operation throughput,
 // latency and errors, built by the audit service from keycore's
 // audit.key.<op> events.
 export function OpsMetricsPanel({ session }: { session: any }) {

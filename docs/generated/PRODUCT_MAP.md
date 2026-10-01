@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-10-01T11:00:33Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T11:12:40Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `28`
-- Tab/component mappings: `35`
+- Dashboard navigation items: `27`
+- Tab/component mappings: `34`
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `853` across `28` services
 - Backend routes on the `pkg/route` kernel: `425` (permission and audit action in `backend-routes.csv`)
 - Frontend API call sites discovered: `540`
 - Frontend call sites with exact backend route match: `498`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `746`
+- Clickable controls with static `onClick` handlers: `745`
 - Backend request flows with handler/service/package summaries: `853`
 
 ## How To Use This For Launch
@@ -168,7 +168,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 198 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
-| Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 96 |
 | Keys & lifecycle | Rotation & Scheduling | rotation | web/dashboard/src/components/v3/tabs/RotationSchedulingTab.tsx | - | 0 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 12 |

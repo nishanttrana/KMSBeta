@@ -177,7 +177,7 @@ entirely. So:
 - **Operations metrics:** `ops_metrics_hourly` is node-local, with a `node`
   column. The primary counts members' metered operations when its audit relay
   passes their replicated events, in the cursor's transaction, so its
-  Analytics > Operations view is cluster-wide. A member forwards those reads
+  Overview > Operations > Operation metrics view is cluster-wide. A member forwards those reads
   to the primary (`clusterroute.ForwardReads`, 2.3.0-beta), so every node
   shows the cluster.
 
