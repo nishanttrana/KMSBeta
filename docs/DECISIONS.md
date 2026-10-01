@@ -40,7 +40,9 @@ rejected, and how it's enforced.
   no persistent volume), conformance `compose-volumes`,
   `TestEdgeExternalCertificateSurvivesRestart` (restored and audited; a
   mismatched, expired or discarded copy is not),
-  `TestEdgeCertificateReplacedIsRevoked`.
+  `TestEdgeCertificateReplacedIsRevoked`,
+  `TestExternalEdgeCertificateSurvivesRestartOnRealEnvoy` (real Envoy on a
+  real tmpfs volume: removed, restored, served again).
 
 ---
 

@@ -128,7 +128,7 @@ jobs:
       - name: Edge key exchange through a real Envoy (hot restart, measured by handshake)
         env:
           VECTA_TEST_ENVOY_IMAGE: envoyproxy/envoy:v1.39.1
-        run: go test -count=1 -run 'TestEdgeProfileAppliedByRealEnvoy' ./services/certs
+        run: go test -count=1 -run 'RealEnvoy' ./services/certs
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke

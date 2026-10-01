@@ -100,3 +100,7 @@ services/secrets/secrets
 services/signing/signing
 services/watchdog/watchdog
 services/workload/workload
+
+# Local tool state and session outputs
+.vexp/
+Claude outputs/

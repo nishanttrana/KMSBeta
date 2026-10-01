@@ -1270,8 +1270,8 @@ probe saw exactly that certificate served).
 - **`POST /certs/edge-tls/csr`** (`edge_tls_csr_created`, runs on the node
   that receives it):
   - **Body:** `{"listener": "https|kmip", "subject_cn": "...", "sans": [...], "key_algorithm": "..."}`.
-  - Generates this node's key (kept on the node's runtime certificate
-    volume) and returns `csr.csr_pem`. A new CSR replaces the pending key.
+  - Generates this node's key (kept on the node's certs key volume, so a
+    restart doesn't lose it) and returns `csr.csr_pem`. A new CSR replaces the pending key.
   - **Refusals:** `source_not_external`, `invalid_request`,
     `invalid_key_algorithm`.
 - **`POST /certs/edge-tls/certificate/install`**

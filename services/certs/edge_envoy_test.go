@@ -198,3 +198,119 @@ func TestEdgeProfileAppliedByRealEnvoy(t *testing.T) {
 		}
 	}
 }
+
+// A full restart on the real edge: runtime-certs is a tmpfs volume declared
+// as in docker-compose.yml, so removing Envoy empties it. Certs restores the
+// installed external certificate from the node's kept copy and the new Envoy
+// serves that certificate, measured by handshake.
+func TestExternalEdgeCertificateSurvivesRestartOnRealEnvoy(t *testing.T) {
+	image := strings.TrimSpace(os.Getenv("VECTA_TEST_ENVOY_IMAGE"))
+	if image == "" {
+		t.Skip("set VECTA_TEST_ENVOY_IMAGE to an Envoy image (docker required)")
+	}
+	repo, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, cfg := edgeFixture(t)
+	ctx := context.Background()
+	root, sub, err := f.svc.EnsureInternalPKI(ctx, "root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteTrustBundle(f.trust, root, sub); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.SetEdgeKX(ctx, svctls.KXClassical, "test", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	docker := func(args ...string) string {
+		t.Helper()
+		out, err := exec.Command("docker", args...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("docker %s: %v\n%s", args[0], err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	name := "vecta-edge-restart-" + strings.ToLower(newID("e")[2:10])
+	vol := name + "-certs"
+	docker("volume", "create", "--opt", "type=tmpfs", "--opt", "device=tmpfs", "--opt", "o=size=32m,mode=0700,uid=100,gid=101", vol)
+	t.Cleanup(func() {
+		_ = exec.Command("docker", "rm", "-f", name).Run()
+		_ = exec.Command("docker", "volume", "rm", "-f", vol).Run()
+	})
+	// Envoy first: it holds the tmpfs mount and waits for its files, as in
+	// compose. Then what certs materialized is written into the volume.
+	start := func() {
+		t.Helper()
+		docker("run", "-d", "--name", name, "-p", "127.0.0.1::443",
+			"-e", "EDGE_POLICY_INTERVAL_S=1",
+			"-v", filepath.Join(repo, "infra/envoy/envoy.yaml")+":/etc/envoy/envoy.yaml:ro",
+			"-v", filepath.Join(repo, "infra/envoy/entry.sh")+":/etc/envoy/entry.sh:ro",
+			"-v", filepath.Join(repo, "infra/envoy/sds")+":/etc/envoy/sds:ro",
+			"-v", vol+":/run/vecta/runtime-certs:ro",
+			"-v", f.trust+":/run/vecta/trust:ro",
+			"--entrypoint", "/bin/sh", image, "/etc/envoy/entry.sh")
+		if fs := docker("exec", name, "sh", "-c", "grep ' /run/vecta/runtime-certs ' /proc/mounts | cut -d' ' -f3; ls /run/vecta/runtime-certs | wc -l"); strings.Join(strings.Fields(fs), " ") != "tmpfs 0" {
+			t.Fatalf("runtime-certs must be an empty tmpfs when Envoy starts: %q", fs)
+		}
+		docker("run", "--rm", "-v", cfg.MaterializeDir+":/src:ro", "-v", vol+":/dst", "--entrypoint", "/bin/sh", image, "-ec",
+			`cd /src && find . -type f | while read f; do mkdir -p "/dst/$(dirname "$f")"; cp "$f" "/dst/$f.tmp"; mv "/dst/$f.tmp" "/dst/$f"; done`)
+		port := docker("port", name, "443/tcp")
+		port = port[strings.LastIndex(port, ":")+1:]
+		t.Setenv("CERTS_EDGE_PROBE_TARGETS", "envoy=localhost:"+strings.Split(port, "\n")[0])
+	}
+	served := func(issuer string) {
+		t.Helper()
+		for deadline := time.Now().Add(90 * time.Second); ; time.Sleep(time.Second) {
+			_ = f.svc.ProbeEdge(ctx)
+			v, err := f.svc.EdgeInventory(ctx)
+			if err == nil && v.Certificate.Served && v.Certificate.Installed != nil && v.Certificate.Installed.Issuer == issuer {
+				return
+			}
+			if time.Now().After(deadline) {
+				out, _ := exec.Command("docker", "logs", name).CombinedOutput()
+				t.Fatalf("Envoy never served a certificate from %s: %+v\n%s", issuer, v.Certificate, out)
+			}
+		}
+	}
+
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
+		t.Fatal(err)
+	}
+	csr, err := f.svc.CreateEdgeCSR(ctx, "", "localhost", []string{"localhost"}, "", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ext, err := f.svc.CreateCA(ctx, CreateCARequest{TenantID: "customer", Name: "Customer Issuing CA", CALevel: "root",
+		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=Customer Issuing CA"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, _, err := f.svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "customer", CAID: ext.ID, CertType: "tls-server",
+		SubjectCN: "localhost", SANs: []string{"localhost"}, CSRPem: csr.CSRPEM, ValidityDays: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, err := f.svc.InstallEdgeCertificate(ctx, "", signed.CertPEM, ext.CertPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	start()
+	served("CN=Customer Issuing CA")
+
+	// Full restart: Envoy is removed (the tmpfs goes with it), certs starts
+	// with an empty runtime directory.
+	docker("rm", "-f", name)
+	if err := os.RemoveAll(cfg.MaterializeDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	start()
+	served("CN=Customer Issuing CA")
+	if v, _ := f.svc.EdgeInventory(ctx); v.Certificate.Installed.Serial != leaf.SerialNumber.Text(16) {
+		t.Fatalf("the same certificate must be served after the restart: %s, want %s", v.Certificate.Installed.Serial, leaf.SerialNumber.Text(16))
+	}
+}
