@@ -9,9 +9,8 @@ reflects it:
   `X-Vecta-Feature-Status-Id: <id>`. keycore control records carry
   `feature_status` and `feature_id`.
 - **Dashboard:** `web/dashboard/src/lib/featureStatus.ts` mirrors the catalogue.
-  `make conformance` (rule `preview-catalogue`) fails if the two differ. The
-  Docs tab has a Preview Features page, and preview screens show a Preview
-  banner with their actions disabled.
+  `make conformance` (rule `preview-catalogue`) fails if the two differ. Preview
+  screens show a Preview banner with their actions disabled.
 - **Docs:** this page, [RECOMMENDED_FEATURES.md](RECOMMENDED_FEATURES.md).
 
 | ID | Feature | What does not happen |

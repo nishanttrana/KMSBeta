@@ -4,6 +4,18 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.35.0-beta] — 2026-10-01
+
+### Documentation tab removed from the dashboard
+- **Removed: Platform → Documentation.** The tab was a static page compiled
+  into the dashboard and had gone stale against the product. Detailed
+  documentation will be published on a separate website. The tab, its page
+  (`modules/admin/DocsTab.tsx`) and the unused Administration `docs`
+  sub-view are deleted. It had no backend: no route, service, table or
+  audit event existed for it, so nothing server-side changes. A saved or
+  linked `#docs` (or the older `#devsecops`) opens the Command Center.
+  REST API (Workbench) and the OpenAPI explorer are unchanged.
+
 ## [7.34.0-beta] — 2026-10-01
 
 ### Crypto Discovery: object storage as a scan source; source links fixed

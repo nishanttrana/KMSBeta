@@ -1,13 +1,13 @@
 # Generated Product Map
 
-Generated at `2026-10-01T17:48:09Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T17:59:56Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `27`
-- Tab/component mappings: `34`
+- Dashboard navigation items: `26`
+- Tab/component mappings: `33`
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `874` across `28` services
 - Backend routes on the `pkg/route` kernel: `446` (permission and audit action in `backend-routes.csv`)
@@ -191,7 +191,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
 | Platform | Administration | admin | web/dashboard/src/components/v3/tabs/AdminTab.tsx | - | 0 |
-| Platform | Documentation | docs | web/dashboard/src/components/v3/tabs/DocsViewTab.tsx | - | 0 |
 | UNLISTED | byok | byok | web/dashboard/src/components/v3/tabs/BYOKTab.tsx | cloud | 10 |
 | UNLISTED | crypto | crypto | web/dashboard/src/components/v3/tabs/CryptoTab.tsx | keycore | 49 |
 | UNLISTED | dataenc | dataenc | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |

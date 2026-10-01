@@ -89,7 +89,6 @@ const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ 
 const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
 const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
-const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
@@ -187,7 +186,6 @@ const TABS: Record<string, any> = {
   sbom: SBOMTab,
   pkcs11: ClientSDKTab,
   admin: AdminTab,
-  docs: DocsViewTab,
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   backup: BackupTab,
@@ -225,7 +223,6 @@ const TITLES: Record<string, string> = {
   sbom: "SBOM / CBOM",
   pkcs11: "Java SDK",
   admin: "Administration",
-  docs: "Documentation",
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   backup: "Backup & Restore",
@@ -273,7 +270,6 @@ const NAV = [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
     { id: "admin", icon: Settings, label: "Administration" },
-    { id: "docs", icon: FileText, label: "Documentation" },
   ]},
 ];
 
@@ -332,7 +328,8 @@ const SUB_PANES: Record<string, any[]> = {
 // Tabs merged into another; a saved or linked id opens the new home.
 // Platform > Health went to Administration > Health (1.38.0-beta),
 // Operations Metrics and Analytics to Overview > Operations (7.24.0-beta).
-const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "ops", key_analytics: "ops", devsecops: "docs" };
+// Documentation was removed (7.35.0-beta); its ids open the Command Center.
+const RETIRED_TABS: Record<string, string> = { health: "admin", ops_metrics: "ops", key_analytics: "ops", docs: "home", devsecops: "home" };
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, unreadAlerts, onLogout, markAlertsRead } = props;

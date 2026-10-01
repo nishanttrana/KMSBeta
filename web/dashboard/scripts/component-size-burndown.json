@@ -24,7 +24,6 @@
   "src/components/v3/tabs/SBOMTab.tsx": 755,
   "src/components/v3/tabs/TokenizeTab.tsx": 2577,
   "src/components/v3/tabs/WorkloadIdentityTab.tsx": 600,
-  "src/modules/admin/DocsTab.tsx": 3345,
   "src/modules/admin/SystemAdminTab.tsx": 2301,
   "src/modules/admin/TenantAdminTab.tsx": 963
 }

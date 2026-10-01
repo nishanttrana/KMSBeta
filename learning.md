@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Documentation tab removed (7.35.0-beta)
+- **Hand-written docs inside the bundle go stale by construction.**
+  `DocsTab.tsx` was 3,344 lines of endpoint and env-var tables typed into
+  JSX under `@ts-nocheck`, with nothing tying them to the routes or the
+  config they described (its footer said "Generated from platform source";
+  it was not). Nothing failed when a route changed, so it drifted. What
+  the product shows about itself must be generated from the source (the
+  REST catalogue, the OpenAPI spec) or live elsewhere.
+- **Removing a tab id needs a `RETIRED_TABS` entry.** `devsecops` already
+  redirected to `docs`; both now point at `home`, otherwise a saved hash
+  relies on the silent unknown-tab fallback.
+
 ### Discovery: object storage source, and two dead links (7.34.0-beta)
 - **A string tab id fails silently.** `onNavigate("byok")` compiled, and the
   shell's "unknown tab → first tab" recovery turned a wrong id into a visit

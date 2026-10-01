@@ -18561,7 +18561,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 701,
+      "line": 698,
       "tabs": [],
       "tag": "button"
     },
@@ -18569,7 +18569,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 861,
+      "line": 858,
       "tabs": [],
       "tag": "button"
     },
@@ -18577,7 +18577,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 912,
+      "line": 909,
       "tabs": [],
       "tag": "button"
     },
@@ -18585,7 +18585,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 935,
+      "line": 932,
       "tabs": [],
       "tag": "button"
     },
@@ -18593,7 +18593,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 985,
+      "line": 982,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18601,7 +18601,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1022,
+      "line": 1019,
       "tabs": [],
       "tag": "button"
     },
@@ -18609,7 +18609,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1057,
+      "line": 1054,
       "tabs": [],
       "tag": "button"
     },
@@ -32580,7 +32580,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T17:48:09Z",
+  "generated_at": "2026-10-01T17:59:56Z",
   "navigation": [
     {
       "group": "Overview",
@@ -32711,11 +32711,6 @@
       "group": "Platform",
       "id": "admin",
       "label": "Administration"
-    },
-    {
-      "group": "Platform",
-      "id": "docs",
-      "label": "Documentation"
     }
   ],
   "request_flows": [
@@ -87998,14 +87993,14 @@
     "button_inventory": 759,
     "frontend_call_sites": 555,
     "matched_frontend_call_sites": 511,
-    "nav_items": 27,
+    "nav_items": 26,
     "request_flows": 874,
     "request_flows_with_frontend": 517,
     "request_flows_with_internal_package_calls": 153,
     "request_flows_with_service_calls": 527,
     "request_flows_with_store_calls": 627,
     "subpane_groups": 8,
-    "tab_components": 34,
+    "tab_components": 33,
     "unmatched_frontend_call_sites": 44
   },
   "tabs": [
@@ -88381,17 +88376,6 @@
       "support_files": [
         "web/dashboard/src/modules/admin/AdminTab.tsx",
         "web/dashboard/src/modules/admin/types.ts"
-      ]
-    },
-    {
-      "call_count": 0,
-      "component": "web/dashboard/src/components/v3/tabs/DocsViewTab.tsx",
-      "group": "Platform",
-      "id": "docs",
-      "label": "Documentation",
-      "services": [],
-      "support_files": [
-        "web/dashboard/src/modules/admin/DocsTab.tsx"
       ]
     },
     {
@@ -119227,7 +119211,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T17:48:09Z",
+    "generatedAt": "2026-10-01T17:59:56Z",
     "methods": [
       "DELETE",
       "GET",

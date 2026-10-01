@@ -208,5 +208,5 @@ docker compose config -q
 ## Notes
 
 - Generated dashboard bundles under `web/dashboard/dist/` are ignored; rebuild them with `npm run build` instead of committing them.
-- Newer feature surfaces are documented first in markdown under `docs/`, then reflected in the dashboard docs tab and generated REST catalog.
+- Newer feature surfaces are documented first in markdown under `docs/`, then reflected in the generated REST catalog. The dashboard carries no documentation tab; product documentation is published separately.
 - When in doubt, prefer the component guide for behavior and the REST additions file for route-level detail.
