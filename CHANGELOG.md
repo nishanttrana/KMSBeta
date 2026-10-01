@@ -4,6 +4,49 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.27.0-beta] — 2026-10-01
+
+### Secret Vault: charts with drill-down, and nothing on the page that the service does not do
+- **Added:** the Secret Vault leads with five tiles (secrets, versions
+  stored, expiring in 30 days, expired, never rotated) and three bar charts
+  (by type, expiry, last changed). Every tile and bar is clickable and lists
+  exactly the secrets it counts; each entry opens the secret. The charts
+  count every secret of the tenant, paged in full, not the first 500.
+- **Removed (fake):** the "OpenBao Compatibility" panel. It listed endpoints
+  the service never had (`secret/delete`, `secret/undelete`, `sys/mounts`,
+  `sys/policies/acl`), seven "event hooks" (`secret.accessed`,
+  `folder.policy_changed`, ...) that nothing fires, and claimed plugin
+  backends, a transit engine and an "Administration → Event Hooks" page. It
+  is replaced by the list of Vault KV routes the service registers.
+- **Removed (fake):** "+ Folder" (it created nothing), "Lease-based access
+  (must renew TTL)" (no renewal exists) and "Delivery Format" (stored, never
+  used) on the store form. A secret's folder is now a field on that form,
+  saved as its `path` label. Folders are no longer guessed from dots in a
+  name.
+- **Fixed:** vault statistics that cannot be counted return an error. The
+  service used to ignore each failed count and answer 0, and the page showed
+  0 versions and 0 expiring. A failed call now reads "unavailable" with the
+  error, and a failed list no longer looks like an empty vault.
+- **Fixed:** opening a secret no longer reads its value. The value is read
+  (and audited as `value_read`) only on Reveal or Download; a refused read
+  (an expired secret) shows its reason instead of "(loading...)".
+- **Security:** `GET /secrets/{id}/versions` no longer returns `value_hash`,
+  an unsalted SHA-256 of the value. Anyone with `secrets.read` (no value
+  permission) could test password guesses against it offline. **API change:**
+  the field is gone from the response.
+- **Fixed (Vault API):** a KV write answered `{"created": true}` for every
+  write, updates included. It now returns the version it produced
+  (`version`, `created_time`). `lookup-self` no longer invents a `default`
+  policy, a token path or a creation time of "now"; it reports the verified
+  token's own permissions, issue time and expiry.
+- **Fixed:** a secret's change history recorded every delete as done by
+  `system`; it records the caller.
+- **Docs:** the API reference no longer describes rollback or path-based
+  policy for secrets; neither exists.
+- **Open:** `secret_values.value_hash` is still written to the database
+  (the column is `NOT NULL`); dropping it needs a migration. The Vault KV routes ignore
+  the mount: `/v1/a/x` and `/v1/b/x` are the same secret.
+
 ## [7.26.0-beta] — 2026-10-01
 
 ### Overview → Operations → Status shows only measured values

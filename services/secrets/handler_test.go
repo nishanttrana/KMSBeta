@@ -271,3 +271,108 @@ func TestVaultKV1BodyTenantIsData(t *testing.T) {
 		t.Fatalf("kv1 read: %d %s", rr.Code, rr.Body)
 	}
 }
+
+// A KV write answers with the version it produced, and a second write to the
+// same path is version 2, not another "created".
+func TestVaultKVWriteReportsRealVersion(t *testing.T) {
+	h, _, _, rec := newRecordedHandler(t)
+	write := func(body string) map[string]interface{} {
+		t.Helper()
+		rr := serveAs(h, tenantAdmin("mine"), httptest.NewRequest(http.MethodPost, "/v1/secret/data/app/db", strings.NewReader(body)))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("kv2 write: %d %s", rr.Code, rr.Body)
+		}
+		var out struct {
+			Data map[string]interface{} `json:"data"`
+		}
+		if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.Data
+	}
+	if d := write(`{"data":{"p":"one"}}`); d["version"] != float64(1) || d["created"] != nil {
+		t.Fatalf("first write: %+v", d)
+	}
+	if ev := rec.Last(t); ev.Action != "vault_kv_written" || ev.Event.Details["created"] != true {
+		t.Fatalf("first write event %+v", ev)
+	}
+	if d := write(`{"data":{"p":"two"}}`); d["version"] != float64(2) {
+		t.Fatalf("second write: %+v", d)
+	}
+	if ev := rec.Last(t); ev.Event.Details["created"] != false {
+		t.Fatalf("second write event %+v", ev)
+	}
+}
+
+// lookup-self reports the token's own permissions, never an invented policy.
+func TestVaultTokenLookupSelfReportsTokenOnly(t *testing.T) {
+	h, _, _ := newSecretsHandler(t)
+	claims := &pkgauth.Claims{UserID: "u1", TenantID: "t1", Permissions: []string{"secrets.read"}}
+	rr := serveAs(h, claims, httptest.NewRequest(http.MethodPost, "/v1/auth/token/lookup-self", nil))
+	body := rr.Body.String()
+	if rr.Code != http.StatusOK || !strings.Contains(body, `"policies":["secrets.read"]`) {
+		t.Fatalf("lookup-self: %d %s", rr.Code, body)
+	}
+	for _, invented := range []string{`"default"`, "auth/token/create", "orphan", "creation_time"} {
+		if strings.Contains(body, invented) {
+			t.Fatalf("lookup-self invents %s: %s", invented, body)
+		}
+	}
+}
+
+// The version list carries no digest of the value.
+func TestVersionsCarryNoValueHash(t *testing.T) {
+	h, svc, _ := newSecretsHandler(t)
+	sec, err := svc.CreateSecret(context.Background(), CreateSecretRequest{TenantID: "t1", Name: "pw", SecretType: "password", Value: "hunter2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := serveAs(h, tenantAdmin("t1"), httptest.NewRequest(http.MethodGet, "/secrets/"+sec.ID+"/versions", nil))
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"version":1`) || strings.Contains(rr.Body.String(), "hash") {
+		t.Fatalf("versions: %d %s", rr.Code, rr.Body)
+	}
+}
+
+// Stats that cannot be counted are an error, not an empty vault.
+func TestStatsFailureIsNotZero(t *testing.T) {
+	h, svc, store := newSecretsHandler(t)
+	if _, err := svc.CreateSecret(context.Background(), CreateSecretRequest{TenantID: "t1", Name: "a", SecretType: "token", Value: "v", LeaseTTLSeconds: 3600}); err != nil {
+		t.Fatal(err)
+	}
+	stats, err := svc.GetStats(context.Background(), "t1")
+	if err != nil || stats.TotalSecrets != 1 || stats.TotalVersions != 1 || stats.ExpiringWithin != 1 || stats.Expired != 0 || stats.ByType["token"] != 1 {
+		t.Fatalf("stats %+v err %v", stats, err)
+	}
+	if _, err := store.db.SQL().Exec(`DROP TABLE secret_values`); err != nil {
+		t.Fatal(err)
+	}
+	rr := serveAs(h, tenantAdmin("t1"), httptest.NewRequest(http.MethodGet, "/secrets/stats", nil))
+	if rr.Code != http.StatusInternalServerError || strings.Contains(rr.Body.String(), "total_secrets") {
+		t.Fatalf("stats with a broken store: %d %s", rr.Code, rr.Body)
+	}
+}
+
+// The secret's change history names who deleted it, not "system".
+func TestDeleteRecordsTheCaller(t *testing.T) {
+	h, svc, _ := newSecretsHandler(t)
+	sec, err := svc.CreateSecret(context.Background(), CreateSecretRequest{TenantID: "t1", Name: "gone", SecretType: "token", Value: "v", CreatedBy: "u-t1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rr := serveAs(h, tenantAdmin("t1"), httptest.NewRequest(http.MethodDelete, "/secrets/"+sec.ID, nil)); rr.Code != http.StatusOK {
+		t.Fatalf("delete: %d %s", rr.Code, rr.Body)
+	}
+	log, err := svc.GetSecretAuditLog(context.Background(), "t1", sec.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deletedBy string
+	for _, e := range log {
+		if e.Action == "deleted" {
+			deletedBy = e.Actor
+		}
+	}
+	if deletedBy != "u-t1" {
+		t.Fatalf("deleted by %q, log %+v", deletedBy, log)
+	}
+}

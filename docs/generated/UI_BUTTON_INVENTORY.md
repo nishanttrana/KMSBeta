@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T11:20:23Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T11:25:49Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -553,31 +553,30 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2563 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2564 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
 | web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2565 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 435 | vault | Btn | (icon or dynamic label) | handleRefresh} disabled={refreshing \|\| busy |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 441 | vault | button | setCategory(cat.id)} style={{ height: 32, padding: "0 12px", borderRadius: 8,... |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 449 | vault | Btn | setModal("create")} style={ }> Store Secret |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 452 | vault | Btn | } style={ }> Generate |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 507 | vault | Btn | } style={ }>+ Folder |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 560 | vault | Btn | setFolderModalOpen(false)}>Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 561 | vault | Btn | { const folderName = newFolderName.trim().replace(/[^a-zA-Z0-9._/-]/g, "-").r... |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 608 | vault | Btn | } disabled= > Download |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 609 | vault | Btn | } disabled= > Delete |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 628 | vault | Btn | setModal("create")}> Store Your First Secret |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 629 | vault | Btn | }> Generate Key Pair |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 722 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 723 | vault | Btn | void submitCreate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 737 | vault | Btn | copyToClipboard(generatedPublicKey, onToast)}> Copy Public Key |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 740 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 741 | vault | Btn | void submitGenerate()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 790 | vault | button | setShowValue(!showValue)} style={ }> {showValue ? <> Hide : <> Reveal } |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 793 | vault | button | copyToClipboard(retrievedValue, onToast)} style={ }> Copy |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 800 | vault | Btn | void fetchFormat()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 801 | vault | Btn | void downloadSecret(selectedSecret)} disabled= > Download |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 842 | vault | Btn | }> Rotate Value |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 845 | vault | Btn | void removeSecret(selectedSecret)} disabled= > Delete |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 846 | vault | Btn | setModal(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 861 | vault | Btn | setModal(null)} disabled= >Cancel |  |
-| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 862 | vault | Btn | void submitRotate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 244 | vault | Btn | void loadAll()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 245 | vault | Btn | Generate key pair | openGenerate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 246 | vault | Btn | Store secret | openCreate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 265 | vault | button | setCategory(cat.id)} style= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 295 | vault | button | setCurrentPath(path)} title= style={{ display: "inline-flex", alignItems: "ce... |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 325 | vault | button | } style={ }> |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 326 | vault | button | } style={ }> |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 333 | vault | Btn | setShown((n) => n + PAGE)}>Show more ( left) |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 341 | vault | Btn | Store a secret | openCreate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 342 | vault | Btn | Generate key pair | openGenerate |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 383 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 384 | vault | Btn | void submitCreate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 398 | vault | Btn | copyToClipboard(generatedPublicKey, onToast)}> Copy Public Key |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 401 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 402 | vault | Btn | void submitGenerate()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 438 | vault | Btn | setShowValue((v) => !v)}>{showValue ? <> Hide : <> Show } |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 439 | vault | Btn | void revealValue()} disabled= title="Reads the value; the read is audited">{b... |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 440 | vault | Btn | copyToClipboard(retrieved.value, onToast)}> Copy |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 441 | vault | Btn | void downloadSecret(selectedSecret)} disabled= > Download |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 476 | vault | Btn | }> Rotate value |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 478 | vault | Btn | void removeSecret(selectedSecret)} disabled= > Delete |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 479 | vault | Btn | setModal(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 491 | vault | Btn | setModal(null)} disabled= >Cancel |  |
+| web/dashboard/src/components/v3/tabs/VaultTab.tsx | 492 | vault | Btn | void submitRotate()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 130 | - | button | (icon or dynamic label) | onClose} style={{ background: "none", border: "none", color: C.dim, cursor: "pointer", padding: 4 |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 164 | - | button | Add | addCustom} disabled={!custom.trim() |
 | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | 169 | - | button | toggleEvent(e)} style={ }> |  |

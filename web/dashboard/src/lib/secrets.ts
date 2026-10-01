@@ -83,6 +83,18 @@ export async function listSecrets(
   return Array.isArray(res?.items) ? res.items : [];
 }
 
+// Every secret of the tenant, paged in full: the vault's charts count this
+// list, so it is never a sample.
+export async function listAllSecrets(session: AuthSession): Promise<SecretItem[]> {
+  const PAGE = 500;
+  const all: SecretItem[] = [];
+  for (;;) {
+    const page = await listSecrets(session, { limit: PAGE, offset: all.length, noCache: true });
+    all.push(...page);
+    if (page.length < PAGE) return all;
+  }
+}
+
 export async function createSecret(session: AuthSession, input: CreateSecretInput): Promise<SecretItem> {
   const payload = await serviceRequest<SecretResponse>(session, "secrets", "/secrets", {
     method: "POST",
@@ -152,7 +164,6 @@ export async function getSecretValue(
 
 export type SecretVersionInfo = {
   version: number;
-  value_hash: string;
   created_at: string;
 };
 

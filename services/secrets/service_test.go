@@ -71,6 +71,16 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, secret_id, version)
 		);`,
+		`CREATE TABLE secret_audit_log (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			secret_id TEXT NOT NULL,
+			action TEXT NOT NULL,
+			actor TEXT NOT NULL DEFAULT 'system',
+			detail TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
+		);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {

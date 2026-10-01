@@ -200,13 +200,16 @@ func (s *Service) UpdateSecret(ctx context.Context, tenantID string, secretID st
 	return updated, nil
 }
 
-func (s *Service) DeleteSecret(ctx context.Context, tenantID string, secretID string) error {
+func (s *Service) DeleteSecret(ctx context.Context, tenantID string, secretID string, actor string) error {
 	tenantID = strings.TrimSpace(tenantID)
 	secretID = strings.TrimSpace(secretID)
 	if tenantID == "" || secretID == "" {
 		return errors.New("tenant_id and secret_id are required")
 	}
-	if err := s.store.DeleteSecret(ctx, tenantID, secretID); err != nil {
+	if actor == "" {
+		actor = "system"
+	}
+	if err := s.store.DeleteSecret(ctx, tenantID, secretID, actor); err != nil {
 		return err
 	}
 	return nil

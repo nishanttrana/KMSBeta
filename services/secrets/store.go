@@ -28,10 +28,9 @@ type Store interface {
 	GetSecretByName(ctx context.Context, tenantID string, name string) (Secret, error)
 	GetSecretWithValue(ctx context.Context, tenantID string, secretID string) (Secret, EncryptedSecretValue, error)
 	UpdateSecret(ctx context.Context, tenantID string, secretID string, req UpdateSecretRequest, expiresAt *time.Time, value *EncryptedSecretValue) (Secret, error)
-	DeleteSecret(ctx context.Context, tenantID string, secretID string) error
+	DeleteSecret(ctx context.Context, tenantID string, secretID string, actor string) error
 	ListVersions(ctx context.Context, tenantID string, secretID string) ([]SecretVersionInfo, error)
 	GetSecretAuditLog(ctx context.Context, tenantID string, secretID string, limit int) ([]SecretAuditEntry, error)
-	WriteAuditEntry(ctx context.Context, entry SecretAuditEntry) error
 	GetStats(ctx context.Context, tenantID string) (VaultStats, error)
 }
 
@@ -85,7 +84,7 @@ SELECT id, tenant_id, name, secret_type, description, labels, metadata, status, 
 	   expires_at, current_version, created_by, created_at, updated_at
 FROM secrets
 WHERE tenant_id = $1 AND secret_type = $2
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id
 LIMIT $3 OFFSET $4
 `, tenantID, secretType, limit, offset)
 		if err != nil {
@@ -99,7 +98,7 @@ SELECT id, tenant_id, name, secret_type, description, labels, metadata, status, 
 	   expires_at, current_version, created_by, created_at, updated_at
 FROM secrets
 WHERE tenant_id = $1
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id
 LIMIT $2 OFFSET $3
 `, tenantID, limit, offset)
 	if err != nil {
@@ -260,7 +259,7 @@ WHERE tenant_id = $8 AND id = $9
 	return s.GetSecret(ctx, tenantID, secretID)
 }
 
-func (s *SQLStore) DeleteSecret(ctx context.Context, tenantID string, secretID string) error {
+func (s *SQLStore) DeleteSecret(ctx context.Context, tenantID string, secretID string, actor string) error {
 	tx, err := s.db.SQL().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -277,8 +276,8 @@ func (s *SQLStore) DeleteSecret(ctx context.Context, tenantID string, secretID s
 	if affected == 0 {
 		return errNotFound
 	}
-	_, _ = tx.ExecContext(ctx, `INSERT INTO secret_audit_log (id, tenant_id, secret_id, action, actor, detail, created_at) VALUES ($1,$2,$3,'deleted','system','Secret permanently deleted',CURRENT_TIMESTAMP)`,
-		newAuditID(), tenantID, secretID)
+	_, _ = tx.ExecContext(ctx, `INSERT INTO secret_audit_log (id, tenant_id, secret_id, action, actor, detail, created_at) VALUES ($1,$2,$3,'deleted',$4,'Secret permanently deleted',CURRENT_TIMESTAMP)`,
+		newAuditID(), tenantID, secretID, actor)
 	return tx.Commit()
 }
 
@@ -331,7 +330,7 @@ func scanSecret(scanner interface {
 
 func (s *SQLStore) ListVersions(ctx context.Context, tenantID string, secretID string) ([]SecretVersionInfo, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT version, value_hash, created_at
+SELECT version, created_at
 FROM secret_values
 WHERE tenant_id = $1 AND secret_id = $2
 ORDER BY version DESC
@@ -343,11 +342,9 @@ ORDER BY version DESC
 	out := make([]SecretVersionInfo, 0)
 	for rows.Next() {
 		var v SecretVersionInfo
-		var hashBytes []byte
-		if err := rows.Scan(&v.Version, &hashBytes, &v.CreatedAt); err != nil {
+		if err := rows.Scan(&v.Version, &v.CreatedAt); err != nil {
 			return nil, err
 		}
-		v.ValueHash = fmt.Sprintf("%x", hashBytes)
 		out = append(out, v)
 	}
 	return out, rows.Err()
@@ -361,7 +358,7 @@ func (s *SQLStore) GetSecretAuditLog(ctx context.Context, tenantID string, secre
 SELECT id, secret_id, action, actor, detail, created_at
 FROM secret_audit_log
 WHERE tenant_id = $1 AND secret_id = $2
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id
 LIMIT $3
 `, tenantID, secretID, limit)
 	if err != nil {
@@ -379,41 +376,40 @@ LIMIT $3
 	return out, rows.Err()
 }
 
-func (s *SQLStore) WriteAuditEntry(ctx context.Context, entry SecretAuditEntry) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO secret_audit_log (id, tenant_id, secret_id, action, actor, detail, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-`, entry.ID, "default", entry.SecretID, entry.Action, entry.Actor, entry.Detail)
-	return err
-}
-
+// GetStats counts the tenant's secrets. A failed count is an error, never a
+// zero: the dashboard shows "unavailable" rather than an empty vault.
 func (s *SQLStore) GetStats(ctx context.Context, tenantID string) (VaultStats, error) {
-	var stats VaultStats
-	row := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1`, tenantID)
-	_ = row.Scan(&stats.TotalSecrets)
-
-	row = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM secret_values WHERE tenant_id = $1`, tenantID)
-	_ = row.Scan(&stats.TotalVersions)
-
-	row = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1 AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP`, tenantID)
-	_ = row.Scan(&stats.Expired)
-
-	row = s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1 AND expires_at IS NOT NULL AND expires_at > CURRENT_TIMESTAMP AND expires_at < CURRENT_TIMESTAMP + INTERVAL '30 days'`, tenantID)
-	_ = row.Scan(&stats.ExpiringWithin)
-
-	stats.ByType = make(map[string]int)
-	rows, err := s.db.SQL().QueryContext(ctx, `SELECT secret_type, COUNT(*) FROM secrets WHERE tenant_id = $1 GROUP BY secret_type`, tenantID)
-	if err == nil {
-		defer rows.Close() //nolint:errcheck
-		for rows.Next() {
-			var t string
-			var c int
-			if rows.Scan(&t, &c) == nil {
-				stats.ByType[t] = c
-			}
+	stats := VaultStats{ByType: map[string]int{}}
+	now := time.Now().UTC()
+	counts := []struct {
+		dest  *int
+		query string
+		args  []interface{}
+	}{
+		{&stats.TotalSecrets, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1`, []interface{}{tenantID}},
+		{&stats.TotalVersions, `SELECT COUNT(*) FROM secret_values WHERE tenant_id = $1`, []interface{}{tenantID}},
+		{&stats.Expired, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1 AND expires_at IS NOT NULL AND expires_at <= $2`, []interface{}{tenantID, now}},
+		{&stats.ExpiringWithin, `SELECT COUNT(*) FROM secrets WHERE tenant_id = $1 AND expires_at IS NOT NULL AND expires_at > $2 AND expires_at <= $3`, []interface{}{tenantID, now, now.Add(30 * 24 * time.Hour)}},
+	}
+	for _, c := range counts {
+		if err := s.db.SQL().QueryRowContext(ctx, c.query, c.args...).Scan(c.dest); err != nil {
+			return VaultStats{}, err
 		}
 	}
-	return stats, nil
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT secret_type, COUNT(*) FROM secrets WHERE tenant_id = $1 GROUP BY secret_type`, tenantID)
+	if err != nil {
+		return VaultStats{}, err
+	}
+	defer rows.Close() //nolint:errcheck
+	for rows.Next() {
+		var t string
+		var c int
+		if err := rows.Scan(&t, &c); err != nil {
+			return VaultStats{}, err
+		}
+		stats.ByType[t] = c
+	}
+	return stats, rows.Err()
 }
 
 func nullableTime(ts *time.Time) interface{} {

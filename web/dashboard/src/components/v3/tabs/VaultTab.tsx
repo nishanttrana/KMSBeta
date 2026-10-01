@@ -1,9 +1,8 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Clock, Copy, Download, Eye, EyeOff, FileText, Folder, History, KeyRound,
-  Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, Shield,
-  ShieldAlert, Trash2
+  Clock, Copy, Download, Eye, EyeOff, Folder, History, KeyRound,
+  Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, ShieldAlert, Trash2
 } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
 import {
@@ -13,223 +12,95 @@ import {
   getSecretAuditLog,
   getSecretValue,
   getVaultStats,
-  listSecrets,
+  listAllSecrets,
   listSecretVersions,
   rotateSecret
 } from "../../../lib/secrets";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Stat, Txt, usePromptDialog } from "../legacyPrimitives";
+import { DrillHint, DrillPanel, clickable } from "../chartDrill";
+import { B, Btn, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
+import { SecretRow, TypeBadge, VaultApiCard, VaultCharts, VaultTiles } from "./vault/Charts";
+import {
+  CATEGORIES, GENERATE_TYPE_OPTIONS, SUPPORTED_TYPES, defaultFormatForType, expiryBucket, fmtAgo, fmtDate,
+  getBadge, matchesCategory, safeFileName, secretPath, ttlLabel, ttlToSeconds
+} from "./vault/meta";
 
-/* ── helpers ── */
-function safeFileName(input, fallback = "secret") {
-  return String(input || "").trim().replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^_+|_+$/g, "") || fallback;
-}
-function fmtDate(v) {
-  if (!v) return "—";
-  try { const d = new Date(v); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); } catch { return "—"; }
-}
-function fmtDateShort(v) {
-  if (!v) return "—";
-  try { return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return "—"; }
-}
-function fmtAgo(v) {
-  if (!v) return "";
-  try {
-    const ms = Date.now() - new Date(v).getTime();
-    if (ms < 60000) return "just now";
-    if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
-    if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;
-    return `${Math.floor(ms / 86400000)}d ago`;
-  } catch { return ""; }
-}
+const MONO = "'JetBrains Mono',ui-monospace,monospace";
+const PAGE = 60;
+
 function copyToClipboard(text, onToast) {
   navigator.clipboard.writeText(text).then(() => onToast?.("Copied to clipboard.")).catch(() => onToast?.("Copy failed."));
 }
 
-/* ── constants ── */
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "credentials", label: "Credentials" },
-  { id: "ssh", label: "SSH" },
-  { id: "pgp", label: "PGP" },
-  { id: "x509", label: "X.509 / TLS" },
-  { id: "tokens", label: "Tokens / API" },
-  { id: "keys", label: "Key Material" },
-  { id: "other", label: "Other" }
-];
-
-const GENERATE_TYPE_OPTIONS = [
-  { value: "ed25519", label: "Ed25519 (SSH - recommended)" },
-  { value: "rsa-4096", label: "RSA-4096 (SSH)" },
-  { value: "ecdsa-p384", label: "ECDSA-P384 (SSH)" },
-  { value: "pgp-rsa-4096", label: "PGP / GPG (RSA-4096)" },
-  { value: "age-x25519", label: "age (X25519)" },
-  { value: "wireguard-curve25519", label: "WireGuard (Curve25519)" }
-];
-
-const SUPPORTED_TYPES = [
-  "api_key", "password", "database_credentials", "token", "oauth_client_secret",
-  "ssh_private_key", "ssh_public_key", "pgp_private_key", "pgp_public_key", "ppk",
-  "x509_certificate", "pkcs12", "jwk", "kerberos_keytab", "wireguard_private_key",
-  "wireguard_public_key", "age_key", "tls_private_key", "tls_certificate", "binary_blob",
-  "bitlocker_keys"
-];
-
-const TYPE_BADGE_MAP = {
-  api_key: { t: "API Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
-  password: { t: "Password", bg: C.pinkDim, fg: C.pink, icon: Lock },
-  database_credentials: { t: "DB Credentials", bg: C.redDim, fg: C.red, icon: Lock },
-  token: { t: "Token", bg: C.yellowDim, fg: C.yellow, icon: Shield },
-  oauth_client_secret: { t: "OAuth", bg: C.orangeDim, fg: C.orange, icon: Shield },
-  ssh_private_key: { t: "SSH Key", bg: C.tealDim, fg: C.teal, icon: KeyRound },
-  ssh_public_key: { t: "SSH Public", bg: C.tealDim, fg: C.teal, icon: KeyRound },
-  pgp_private_key: { t: "PGP Key", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
-  pgp_public_key: { t: "PGP Public", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
-  ppk: { t: "PPK", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
-  x509_certificate: { t: "X.509 Cert", bg: C.blueDim, fg: C.blue, icon: FileText },
-  tls_certificate: { t: "TLS Cert", bg: C.blueDim, fg: C.blue, icon: FileText },
-  tls_private_key: { t: "TLS Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
-  pkcs12: { t: "PKCS#12", bg: C.yellowDim, fg: C.yellow, icon: FileText },
-  jwk: { t: "JWK", bg: C.greenDim, fg: C.green, icon: KeyRound },
-  kerberos_keytab: { t: "Kerberos", bg: C.cyanDim, fg: C.cyan, icon: Shield },
-  wireguard_private_key: { t: "WireGuard", bg: C.blueDim, fg: C.blue, icon: KeyRound },
-  wireguard_public_key: { t: "WireGuard Pub", bg: C.blueDim, fg: C.blue, icon: KeyRound },
-  age_key: { t: "age Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
-  bitlocker_keys: { t: "BitLocker", bg: C.yellowDim, fg: C.yellow, icon: Lock },
-  binary_blob: { t: "Binary", bg: C.blueDim, fg: C.blue, icon: FileText }
-};
-
-function getBadge(type) {
-  return TYPE_BADGE_MAP[String(type || "").toLowerCase()] || { t: type || "secret", bg: C.blueDim, fg: C.blue, icon: Shield };
-}
-
-function matchesCategory(secret, cat) {
-  if (cat === "all") return true;
-  const t = String(secret?.secret_type || "").toLowerCase();
-  if (cat === "credentials") return ["password", "database_credentials", "oauth_client_secret"].includes(t);
-  if (cat === "ssh") return t.includes("ssh_") || t === "ppk";
-  if (cat === "pgp") return t.includes("pgp_");
-  if (cat === "x509") return ["x509_certificate", "tls_certificate", "tls_private_key", "pkcs12"].includes(t);
-  if (cat === "tokens") return ["api_key", "token", "oauth_client_secret"].includes(t);
-  if (cat === "keys") return ["jwk", "wireguard_private_key", "wireguard_public_key", "age_key", "kerberos_keytab", "bitlocker_keys"].includes(t);
-  if (cat === "other") return t === "binary_blob";
-  return true;
-}
-
-function ttlLabel(s) {
-  const ttl = Number(s?.lease_ttl_seconds || 0);
-  if (ttl <= 0) return "No expiry";
-  if (ttl >= 86400) return `${Math.round(ttl / 86400)}d`;
-  if (ttl >= 3600) return `${Math.round(ttl / 3600)}h`;
-  if (ttl >= 60) return `${Math.round(ttl / 60)}m`;
-  return `${ttl}s`;
-}
-
-function expiryStatus(s) {
-  if (!s?.expires_at) return null;
-  const ms = new Date(s.expires_at).getTime() - Date.now();
-  if (ms <= 0) return { label: "Expired", color: C.red };
-  if (ms < 7 * 86400000) return { label: "Expiring soon", color: C.amber };
+function expiryStatus(s, now) {
+  const b = expiryBucket(s, now);
+  if (b === "expired") return { label: "Expired", color: C.redFg };
+  if (b === "7d") return { label: "Expiring soon", color: C.amberFg };
   return null;
 }
 
-function defaultFormatForType(secret) {
-  const t = String(secret?.secret_type || "");
-  if (t === "ssh_private_key") return "pem";
-  if (t.includes("pgp_")) return "armored";
-  if (t === "ppk") return "raw";
-  if (t === "jwk") return "jwk";
-  if (t === "pkcs12") return "extract";
-  return "raw";
-}
-
-function ttlToSeconds(mode, custom) {
-  if (mode === "none") return 0;
-  if (mode === "1h") return 3600;
-  if (mode === "24h") return 86400;
-  if (mode === "7d") return 604800;
-  if (mode === "30d") return 2592000;
-  if (mode === "90d") return 7776000;
-  if (mode === "365d") return 31536000;
-  if (mode === "custom") return Math.max(0, Math.trunc(Number(custom || 0)));
-  return 0;
-}
+const changeColor = (action) => action === "created" ? C.greenFg : action === "rotated" ? C.amberFg : action === "deleted" ? C.redFg : C.blueFg;
 
 /* ── MAIN COMPONENT ── */
-export const VaultTab = ({ session, onToast }: { session: AuthSession | null; onToast?: (m: string) => void }) => {
+export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void }) => {
   const [modal, setModal] = useState(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [secrets, setSecrets] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState("");
+  // One "now" for the charts, the tiles and their drill-downs.
+  const [asOf, setAsOf] = useState(() => Date.now());
+  const [drill, setDrill] = useState(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
-
-  // Folder hierarchy (OpenBao-compatible path structure)
   const [currentPath, setCurrentPath] = useState("/");
-  const [folderModalOpen, setFolderModalOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
+  const [shown, setShown] = useState(PAGE);
 
   // Create form
   const [createName, setCreateName] = useState("");
   const [createType, setCreateType] = useState("api_key");
   const [createValue, setCreateValue] = useState("");
   const [createDesc, setCreateDesc] = useState("");
+  const [createFolder, setCreateFolder] = useState("");
   const [createTTLMode, setCreateTTLMode] = useState("none");
   const [createTTLCustom, setCreateTTLCustom] = useState("");
-  const [createLeaseBased, setCreateLeaseBased] = useState(false);
-  const [createDeliveryFormat, setCreateDeliveryFormat] = useState("raw");
 
   // Generate form
   const [generateType, setGenerateType] = useState("ed25519");
   const [generateName, setGenerateName] = useState("");
   const [generatedPublicKey, setGeneratedPublicKey] = useState("");
 
-  // Retrieve/detail
+  // Detail: the value is read only when asked for (each read is audited).
   const [selectedSecret, setSelectedSecret] = useState(null);
   const [valueFormat, setValueFormat] = useState("raw");
-  const [retrievedValue, setRetrievedValue] = useState("");
-  const [retrievedType, setRetrievedType] = useState("");
+  const [retrieved, setRetrieved] = useState(null);
+  const [valueError, setValueError] = useState("");
   const [showValue, setShowValue] = useState(false);
-
-  // Version history
-  const [versions, setVersions] = useState([]);
-
-  // Audit log
-  const [auditEntries, setAuditEntries] = useState([]);
-
-  // Rotate
+  const [versions, setVersions] = useState(null);
+  const [changes, setChanges] = useState(null);
+  const [historyError, setHistoryError] = useState("");
   const [rotateValue, setRotateValue] = useState("");
 
   const promptDialog = usePromptDialog();
 
   /* ── data loading ── */
-  const loadAll = useCallback(async (force = false) => {
+  const loadAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    try {
-      const [items, vaultStats] = await Promise.all([
-        listSecrets(session, { limit: 500, offset: 0, noCache: force }),
-        getVaultStats(session).catch(() => null)
-      ]);
-      setSecrets(Array.isArray(items) ? items : []);
-      if (vaultStats) setStats(vaultStats);
-    } catch (e) {
-      onToast?.(`Secrets load failed: ${errMsg(e)}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [session, onToast]);
+    const [items, vaultStats] = await Promise.allSettled([listAllSecrets(session), getVaultStats(session)]);
+    setAsOf(Date.now());
+    if (items.status === "fulfilled") { setSecrets(items.value); setLoadError(""); }
+    else { setSecrets([]); setLoadError(errMsg(items.reason)); }
+    if (vaultStats.status === "fulfilled") { setStats(vaultStats.value); setStatsError(""); }
+    else { setStats(null); setStatsError(errMsg(vaultStats.reason)); }
+    setLoading(false);
+  }, [session]);
 
-  useEffect(() => { void loadAll(false); }, [loadAll]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try { await loadAll(true); onToast?.("Vault refreshed."); } finally { setRefreshing(false); }
-  };
+  useEffect(() => { void loadAll(); }, [loadAll]);
 
   /* ── filtering & sorting ── */
   const filtered = useMemo(() => {
@@ -239,92 +110,60 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
       if (!q) return true;
       return [s.name, s.id, s.secret_type, s.description, s.created_by].some((v) => String(v || "").toLowerCase().includes(q));
     });
+    const time = (v) => new Date(v || 0).getTime();
     if (sortBy === "name") items.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     else if (sortBy === "type") items.sort((a, b) => String(a.secret_type || "").localeCompare(String(b.secret_type || "")));
-    else if (sortBy === "created") items.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    else items.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+    else if (sortBy === "created") items.sort((a, b) => time(b.created_at) - time(a.created_at));
+    else items.sort((a, b) => time(b.updated_at) - time(a.updated_at));
     return items;
   }, [secrets, search, category, sortBy]);
 
-  /* ── folder hierarchy (OpenBao-compatible path structure) ── */
-  const getSecretPath = (s: any): string => {
-    const labels = s?.labels || s?.metadata || {};
-    const path = String(labels?.path || labels?.folder || "").trim();
-    if (path && path !== "/") return path.startsWith("/") ? path : `/${path}`;
-    // Derive path from secret name convention: "dept/project/name" or "dept.project.name"
-    const name = String(s?.name || "");
-    const parts = name.includes("/") ? name.split("/") : name.includes(".") && name.split(".").length > 2 ? name.split(".") : null;
-    if (parts && parts.length >= 2) return `/${parts.slice(0, -1).join("/")}`;
-    return "/";
-  };
-
-  const folderTree = useMemo(() => {
-    const folders = new Map<string, { secrets: any[], subfolders: Set<string> }>();
-    // Always ensure root exists
-    folders.set("/", { secrets: [], subfolders: new Set() });
-
+  /* ── folders: the secrets' own path labels and path-style names ── */
+  const folders = useMemo(() => {
+    const direct = new Map(); // path -> secrets directly in it
+    const children = new Map(); // path -> child paths
     filtered.forEach((s) => {
-      const path = getSecretPath(s);
-      if (!folders.has(path)) folders.set(path, { secrets: [], subfolders: new Set() });
-      folders.get(path)!.secrets.push(s);
-
-      // Register parent folders
+      const path = secretPath(s);
+      direct.set(path, [...(direct.get(path) || []), s]);
       const parts = path.split("/").filter(Boolean);
-      for (let i = 0; i < parts.length; i++) {
-        const parentPath = i === 0 ? "/" : `/${parts.slice(0, i).join("/")}`;
-        const childPath = `/${parts.slice(0, i + 1).join("/")}`;
-        if (!folders.has(parentPath)) folders.set(parentPath, { secrets: [], subfolders: new Set() });
-        folders.get(parentPath)!.subfolders.add(childPath);
-      }
+      parts.forEach((_, i) => {
+        const parent = i === 0 ? "/" : `/${parts.slice(0, i).join("/")}`;
+        children.set(parent, (children.get(parent) || new Set()).add(`/${parts.slice(0, i + 1).join("/")}`));
+      });
     });
-    return folders;
+    return { direct, children };
   }, [filtered]);
 
-  const currentFolderData = useMemo(() => {
-    const data = folderTree.get(currentPath);
-    if (!data) return { secrets: filtered, subfolders: [] };
-    return { secrets: data.secrets, subfolders: Array.from(data.subfolders).sort() };
-  }, [folderTree, currentPath, filtered]);
+  const inPath = (path) => path === "/" ? filtered : filtered.filter((s) => { const p = secretPath(s); return p === path || p.startsWith(`${path}/`); });
+  const subfolders = Array.from(folders.children.get(currentPath) || []).sort();
+  const listed = currentPath === "/" ? filtered : (folders.direct.get(currentPath) || []);
+  const crumbs = currentPath.split("/").filter(Boolean);
+  const drilled = useMemo(() => drill ? secrets.filter(drill.match) : [], [drill, secrets]);
 
-  const breadcrumbs = useMemo(() => {
-    const parts = currentPath.split("/").filter(Boolean);
-    const crumbs = [{ label: "root", path: "/" }];
-    parts.forEach((part, i) => {
-      crumbs.push({ label: part, path: `/${parts.slice(0, i + 1).join("/")}` });
-    });
-    return crumbs;
-  }, [currentPath]);
-
-  const countSecretsInPath = (path: string): number => {
-    let count = 0;
-    folderTree.forEach((data, key) => {
-      if (key === path || key.startsWith(path === "/" ? "/" : `${path}/`)) {
-        count += data.secrets.length;
-      }
-    });
-    return path === "/" ? filtered.length : count;
-  };
+  useEffect(() => { setShown(PAGE); }, [search, category, sortBy, currentPath]);
 
   /* ── actions ── */
+  const openCreate = () => { setCreateFolder(currentPath === "/" ? "" : currentPath.slice(1)); setModal("create"); };
+  const openGenerate = () => { setGeneratedPublicKey(""); setGenerateName(""); setModal("generate"); };
+
   const submitCreate = async () => {
     if (!session) return;
-    if (!createName.trim() || !createType.trim() || !createValue) {
-      onToast?.("Secret name, type, and value are required."); return;
-    }
+    if (!createName.trim() || !createValue) { onToast?.("Secret name and value are required."); return; }
+    const folder = createFolder.trim().replace(/[^a-zA-Z0-9._/-]/g, "-").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
     setBusy(true);
     try {
       await createSecret(session, {
         name: createName.trim(),
-        secret_type: createType.trim().toLowerCase().replace(/\s+/g, "_"),
+        secret_type: createType,
         value: createValue,
         description: createDesc.trim(),
-        labels: { delivery_format: createDeliveryFormat, path: currentPath === "/" ? "/" : currentPath },
+        labels: folder ? { path: `/${folder}` } : {},
         lease_ttl_seconds: ttlToSeconds(createTTLMode, createTTLCustom),
-        metadata: { source: "dashboard", lease_based: createLeaseBased, path: currentPath }
+        metadata: { source: "dashboard" }
       });
-      onToast?.("Secret stored securely.");
-      setModal(null); setCreateName(""); setCreateValue(""); setCreateDesc(""); setCreateType("api_key"); setCreateTTLMode("none"); setCreateTTLCustom(""); setCreateLeaseBased(false); setCreateDeliveryFormat("raw");
-      await loadAll(true);
+      onToast?.("Secret stored.");
+      setModal(null); setCreateName(""); setCreateValue(""); setCreateDesc(""); setCreateType("api_key"); setCreateTTLMode("none"); setCreateTTLCustom("");
+      await loadAll();
     } catch (e) { onToast?.(`Store failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
@@ -335,37 +174,29 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
       const out = await generateKeyPairSecret(session, { name: generateName.trim(), key_type: generateType, labels: { source: "dashboard", key_type: generateType }, lease_ttl_seconds: 0 });
       setGeneratedPublicKey(String(out.public_key || ""));
       onToast?.(`${String(out.key_type || generateType)} key pair generated. Private key stored in vault.`);
-      await loadAll(true);
+      await loadAll();
     } catch (e) { onToast?.(`Generate failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
   const openDetail = async (secret) => {
     if (!session) return;
     setSelectedSecret(secret);
-    const format = defaultFormatForType(secret);
-    setValueFormat(format); setRetrievedValue(""); setRetrievedType(""); setShowValue(false);
-    setVersions([]); setAuditEntries([]);
+    setValueFormat(defaultFormatForType(secret)); setRetrieved(null); setValueError(""); setShowValue(false);
+    setVersions(null); setChanges(null); setHistoryError("");
     setModal("detail");
-    setBusy(true);
     try {
-      const [val, vers, audit] = await Promise.all([
-        getSecretValue(session, secret.id, format).catch(() => ({ value: "", content_type: "" })),
-        listSecretVersions(session, secret.id).catch(() => []),
-        getSecretAuditLog(session, secret.id).catch(() => [])
-      ]);
-      setRetrievedValue(String(val.value || "")); setRetrievedType(String(val.content_type || ""));
-      setVersions(vers); setAuditEntries(audit);
-    } catch (e) { onToast?.(`Read failed: ${errMsg(e)}`); } finally { setBusy(false); }
+      const [vers, log] = await Promise.all([listSecretVersions(session, secret.id), getSecretAuditLog(session, secret.id)]);
+      setVersions(vers); setChanges(log);
+    } catch (e) { setHistoryError(errMsg(e)); }
   };
 
-  const fetchFormat = async () => {
+  const revealValue = async () => {
     if (!session || !selectedSecret) return;
-    setBusy(true);
+    setBusy(true); setValueError("");
     try {
-      const out = await getSecretValue(session, selectedSecret.id, valueFormat);
-      setRetrievedValue(String(out.value || "")); setRetrievedType(String(out.content_type || ""));
-      onToast?.(`Fetched in ${valueFormat} format.`);
-    } catch (e) { onToast?.(`Format fetch failed: ${errMsg(e)}`); } finally { setBusy(false); }
+      setRetrieved(await getSecretValue(session, selectedSecret.id, valueFormat));
+      setShowValue(true);
+    } catch (e) { setRetrieved(null); setValueError(errMsg(e)); } finally { setBusy(false); }
   };
 
   const downloadSecret = async (secret) => {
@@ -374,25 +205,23 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
     try {
       const format = defaultFormatForType(secret);
       const out = await getSecretValue(session, secret.id, format);
-      const base = safeFileName(String(secret?.name || secret?.id || "secret"));
-      const extMap = { pem: "pem", openssh: "pub", ppk: "ppk", armored: "asc", jwk: "json", extract: "json", raw: "txt" };
-      const fn = `${base}.${extMap[format] || "txt"}`;
-      const blob = new Blob([String(out.value || "")], { type: String(out.content_type || "text/plain") });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      const ext = { pem: "pem", armored: "asc", jwk: "json", extract: "json" }[format] || "txt";
+      const url = URL.createObjectURL(new Blob([String(out.value || "")], { type: String(out.content_type || "text/plain") }));
+      const a = document.createElement("a"); a.href = url; a.download = `${safeFileName(secret.name || secret.id)}.${ext}`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
       onToast?.(`Downloaded ${secret.name}.`);
     } catch (e) { onToast?.(`Download failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
   const removeSecret = async (secret) => {
     if (!session) return;
-    const ok = await promptDialog.confirm({ title: "Delete Secret", message: `Permanently delete "${secret.name}"? This cannot be undone.`, confirmLabel: "Delete", danger: true });
+    const ok = await promptDialog.confirm({ title: "Delete Secret", message: `Permanently delete "${secret.name}" and all its versions? This cannot be undone.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
     setBusy(true);
     try {
       await deleteVaultSecret(session, secret.id);
       onToast?.("Secret deleted."); setModal(null);
-      await loadAll(true);
+      await loadAll();
     } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
@@ -403,299 +232,140 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
       const updated = await rotateSecret(session, selectedSecret.id, rotateValue);
       onToast?.(`Secret rotated to version ${updated.current_version}.`);
       setModal(null); setRotateValue("");
-      await loadAll(true);
+      await loadAll();
     } catch (e) { onToast?.(`Rotation failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  /* ── stats ── */
-  const totalSecrets = stats?.total_secrets ?? secrets.length;
-  const totalVersions = stats?.total_versions ?? 0;
-  const expiringSoon = stats?.expiring_within_30d ?? 0;
-  const expired = stats?.expired ?? 0;
-  const typeBreakdown = stats?.by_type || {};
+  const pickDrill = (d) => setDrill((cur) => cur?.key === d.key ? null : d);
+  const chip = (on) => ({ height: 30, padding: "0 12px", borderRadius: 8, border: `1px solid ${on ? C.accentFg : C.border}`, background: on ? C.accentDim : "transparent", color: on ? C.accentFg : C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 });
 
   return <div>
-    {/* ── KPI Stats ── */}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 18 }}>
-      <Stat l="Total Secrets" v={totalSecrets} s={`${Object.keys(typeBreakdown).length} types`} c="accent" i={Lock} />
-      <Stat l="Versions" v={totalVersions} s="Total stored" c="blue" i={History} />
-      <Stat l="Expiring (30d)" v={expiringSoon} s={expired > 0 ? `${expired} already expired` : "None expired"} c={expiringSoon > 0 ? "amber" : "green"} i={Clock} />
-      <div style={{ flex: 1, background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Envelope Encryption</span>
-          <Shield size={14} strokeWidth={2} color={C.dim} />
-        </div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.green, letterSpacing: -0.5, marginTop: 6 }}>AES-256-GCM</div>
-        <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>Always on: MEK-wrapped DEK per secret, every value encrypted at rest</div>
-      </div>
-    </div>
+    <Section title={<><Lock size={16} color={C.accentFg} />Secret Vault</>} actions={<>
+      <Btn small onClick={() => void loadAll()} disabled={loading || busy}><RefreshCcw size={12} />{loading ? "Refreshing" : "Refresh"}</Btn>
+      <Btn small onClick={openGenerate}><KeyRound size={12} />Generate key pair</Btn>
+      <Btn small primary onClick={openCreate}><Plus size={12} />Store secret</Btn>
+    </>} />
 
-    {/* ── Toolbar ── */}
-    <Section title="Secret Vault" actions={<>
-      <Btn small onClick={handleRefresh} disabled={refreshing || busy}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><RefreshCcw size={11} />{refreshing ? "Refreshing..." : "Refresh"}</span>
-      </Btn>
-    </>}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {CATEGORIES.map((cat) => <button key={cat.id} onClick={() => setCategory(cat.id)} style={{
-            height: 32, padding: "0 12px", borderRadius: 8,
-            border: `1px solid ${category === cat.id ? C.accent : C.border}`,
-            background: category === cat.id ? C.accentDim : "transparent",
-            color: category === cat.id ? C.accent : C.muted, fontSize: 10, cursor: "pointer", fontWeight: 600
-          }}>{cat.label}</button>)}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Btn primary onClick={() => setModal("create")} style={{ height: 34, padding: "0 18px", borderRadius: 8, fontWeight: 700 }}>
-            <Plus size={12} /> Store Secret
-          </Btn>
-          <Btn onClick={() => { setGeneratedPublicKey(""); setGenerateName(""); setModal("generate"); }} style={{ height: 34, padding: "0 14px", borderRadius: 8 }}>
-            <KeyRound size={12} /> Generate
-          </Btn>
-        </div>
-      </div>
+    {loadError
+      ? <div style={{ marginBottom: 14, padding: "10px 14px", border: `1px solid ${C.redFg}`, borderRadius: "var(--radius-md)", fontSize: 12, color: C.redFg }}>Secret vault unavailable: {loadError}</div>
+      : <VaultTiles secrets={secrets} now={asOf} active={drill?.key || ""} onDrill={pickDrill} stats={stats} statsError={statsError} />}
 
-      {/* ── Search + Sort ── */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
+    {secrets.length > 0 && <>
+      <DrillHint />
+      <VaultCharts secrets={secrets} now={asOf} active={drill?.key || ""} onDrill={pickDrill} />
+    </>}
+    {drill && <DrillPanel label={drill.label} count={drilled.length} onClear={() => setDrill(null)}>
+      {drilled.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => void openDetail(s)} />)}
+    </DrillPanel>}
+    <div style={{ height: 16 }} />
+
+    {/* ── Inventory ── */}
+    {!loadError && <>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {CATEGORIES.map((cat) => <button key={cat.id} type="button" onClick={() => setCategory(cat.id)} style={chip(category === cat.id)}>{cat.label}</button>)}
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 400 }}>
           <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted }} />
-          <Inp placeholder="Search secrets..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 30, height: 34 }} />
+          <Inp placeholder="Search name, type, owner" value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 30, height: 34 }} />
         </div>
-        <Sel value={sortBy} onChange={(e) => setSortBy(e.target.value)} w={150} style={{ height: 34 }}>
-          <option value="updated">Recently Updated</option>
-          <option value="created">Recently Created</option>
+        <Sel value={sortBy} onChange={(e) => setSortBy(e.target.value)} w={160} style={{ height: 34 }}>
+          <option value="updated">Recently changed</option>
+          <option value="created">Recently created</option>
           <option value="name">Name A-Z</option>
-          <option value="type">By Type</option>
+          <option value="type">By type</option>
         </Sel>
-        <div style={{ fontSize: 10, color: C.muted }}>{filtered.length} secret{filtered.length !== 1 ? "s" : ""}</div>
+        <span style={{ fontSize: 11, color: C.muted }}>{filtered.length} of {secrets.length}</span>
       </div>
 
-      {/* ── Type Distribution Bar ── */}
-      {Object.keys(typeBreakdown).length > 0 && totalSecrets > 0 && <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", background: C.border }}>
-          {Object.entries(typeBreakdown).map(([t, c]) => {
-            const badge = getBadge(t);
-            return <div key={t} style={{ width: `${(c / totalSecrets) * 100}%`, background: badge.fg, minWidth: 2 }} title={`${badge.t}: ${c}`} />;
-          })}
-        </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
-          {Object.entries(typeBreakdown).map(([t, c]) => {
-            const badge = getBadge(t);
-            return <span key={t} style={{ fontSize: 9, color: C.muted, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: badge.fg, display: "inline-block" }} />
-              {badge.t} ({c})
-            </span>;
-          })}
-        </div>
+      {/* Folders */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8, flexWrap: "wrap", fontSize: 11 }}>
+        <Folder size={12} color={C.muted} />
+        <span onClick={() => setCurrentPath("/")} style={{ ...clickable, color: currentPath === "/" ? C.accentFg : C.text, fontWeight: currentPath === "/" ? 700 : 400 }}>all</span>
+        {crumbs.map((part, i) => {
+          const path = `/${crumbs.slice(0, i + 1).join("/")}`;
+          return <span key={path} style={{ display: "inline-flex", gap: 4 }}>
+            <span style={{ color: C.muted }}>/</span>
+            <span onClick={() => setCurrentPath(path)} style={{ ...clickable, color: path === currentPath ? C.accentFg : C.text, fontWeight: path === currentPath ? 700 : 400 }}>{part}</span>
+          </span>;
+        })}
+      </div>
+      {subfolders.length > 0 && <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {subfolders.map((path) => (
+          <button key={path} type="button" onClick={() => setCurrentPath(path)} title={path}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "7px 12px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, cursor: "pointer", color: C.text, fontSize: 11, fontWeight: 600 }}>
+            <Folder size={13} color={C.accentFg} />{path.split("/").pop()}
+            <span style={{ color: C.muted, fontWeight: 400 }}>{inPath(path).length}</span>
+          </button>
+        ))}
       </div>}
 
-      {/* ── Folder Hierarchy (OpenBao-compatible) ── */}
-      <div style={{ marginBottom: 14 }}>
-        {/* Breadcrumb Navigation */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 4 }}>Path:</span>
-          {breadcrumbs.map((crumb, i) => (
-            <span key={crumb.path} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              {i > 0 && <span style={{ color: C.muted, fontSize: 10 }}>/</span>}
-              <span
-                onClick={() => setCurrentPath(crumb.path)}
-                style={{ fontSize: 10, color: crumb.path === currentPath ? C.accent : C.text, cursor: "pointer", fontWeight: crumb.path === currentPath ? 700 : 400, padding: "2px 4px", borderRadius: 4, background: crumb.path === currentPath ? C.accentDim : "transparent" }}
-              >{crumb.label}</span>
-            </span>
-          ))}
-          <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            <Btn small onClick={() => { setNewFolderName(""); setFolderModalOpen(true); }} style={{ height: 24, fontSize: 9 }}>+ Folder</Btn>
-          </span>
-        </div>
-
-        {/* Subfolder Cards */}
-        {currentFolderData.subfolders.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 8, marginBottom: 10 }}>
-            {currentFolderData.subfolders.map((folderPath) => {
-              const folderName = folderPath.split("/").filter(Boolean).pop() || folderPath;
-              const secretCount = countSecretsInPath(folderPath);
-              return (
-                <div
-                  key={folderPath}
-                  onClick={() => setCurrentPath(folderPath)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, cursor: "pointer", transition: "border-color .15s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; }}
-                >
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Folder size={14} color={C.accent} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{folderName}</div>
-                    <div style={{ fontSize: 9, color: C.dim }}>{secretCount} secret{secretCount !== 1 ? "s" : ""}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Path info */}
-        <div style={{ fontSize: 9, color: C.dim, marginBottom: 4 }}>
-          {currentPath === "/" ? `${filtered.length} secrets total across all paths` : `${currentFolderData.secrets.length} secrets in ${currentPath}`}
-          {currentPath !== "/" && <span onClick={() => setCurrentPath("/")} style={{ color: C.accent, cursor: "pointer", marginLeft: 8 }}>Show all</span>}
-        </div>
-      </div>
-
-      {/* Create Folder Modal */}
-      {folderModalOpen && <Modal open={folderModalOpen} title="Create Folder" onClose={() => setFolderModalOpen(false)}>
-        <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>
-          Create a folder path for organizing secrets by department, project, or environment. Compatible with OpenBao/Vault path-based access policies.
-        </div>
-        <FG label="Folder Name" hint="e.g. engineering, production, finance/accounts">
-          <Inp value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="department-name" />
-        </FG>
-        <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
-          Full path: <code style={{ color: C.accent }}>{currentPath === "/" ? "/" : currentPath + "/"}{newFolderName || "<name>"}</code>
-        </div>
-        <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 6, background: `${C.blue}12`, border: `1px solid ${C.blue}33`, fontSize: 10, color: C.dim }}>
-          <b style={{ color: C.blue }}>OpenBao compatible:</b> Folder paths map to Vault/OpenBao secret engine paths. Use <code style={{ color: C.accent }}>secret/data/{"{path}"}</code> for KV v2 access. Hooks and policies apply at each path level.
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-          <Btn onClick={() => setFolderModalOpen(false)}>Cancel</Btn>
-          <Btn primary onClick={() => {
-            const folderName = newFolderName.trim().replace(/[^a-zA-Z0-9._/-]/g, "-").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
-            if (!folderName) { onToast?.("Folder name is required."); return; }
-            const newPath = currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
-            setCurrentPath(newPath);
-            setFolderModalOpen(false);
-            onToast?.(`Navigated to ${newPath}. Store secrets here to populate the folder.`);
-          }} disabled={!newFolderName.trim()}>Create & Navigate</Btn>
-        </div>
-      </Modal>}
-
-      {/* ── Secret Cards Grid ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 10 }}>
-        {(currentPath === "/" ? filtered : currentFolderData.secrets).map((s) => {
+        {listed.slice(0, shown).map((s) => {
           const badge = getBadge(s.secret_type);
-          const BadgeIcon = badge.icon;
-          const exp = expiryStatus(s);
-          return <div key={s.id} onClick={() => void openDetail(s)} style={{
-            background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px",
-            cursor: "pointer", transition: "border-color .15s, box-shadow .15s",
-            borderLeft: `3px solid ${badge.fg}`,
-          }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = badge.fg; e.currentTarget.style.boxShadow = `0 0 0 1px ${badge.fg}22`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.borderLeftColor = badge.fg; e.currentTarget.style.boxShadow = "none"; }}
-          >
+          const exp = expiryStatus(s, asOf);
+          return <div key={s.id} onClick={() => void openDetail(s)} className="vecta-stat-card" style={{
+            background: C.card, border: `1px solid ${C.border}`, borderLeft: `3px solid ${badge.fg}`, borderRadius: "var(--radius-md)", padding: "12px 14px", cursor: "pointer", boxShadow: "var(--shadow-sm)", minWidth: 0
+          }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                {s.description && <div style={{ fontSize: 10, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</div>}
+                <div style={{ fontSize: 13, fontWeight: 650, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                {s.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</div>}
               </div>
-              <span style={{ background: badge.bg, color: badge.fg, borderRadius: 6, padding: "3px 8px", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <BadgeIcon size={10} /> {badge.t}
-              </span>
+              <TypeBadge type={s.secret_type} />
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, color: C.muted }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: C.muted }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={9} /> {ttlLabel(s)}</span>
-                <span style={{ color: C.dim }}>v{s.current_version}</span>
-                {exp && <span style={{ color: exp.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                  <ShieldAlert size={9} /> {exp.label}
-                </span>}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={10} /> {ttlLabel(s)}</span>
+                <span>v{s.current_version}</span>
+                {exp && <span style={{ color: exp.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}><ShieldAlert size={10} /> {exp.label}</span>}
               </div>
-              <span>{fmtAgo(s.updated_at)}</span>
-            </div>
-
-            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-              <Btn small onClick={(e) => { e.stopPropagation(); void downloadSecret(s); }} disabled={busy}><Download size={10} /> Download</Btn>
-              <Btn small danger onClick={(e) => { e.stopPropagation(); void removeSecret(s); }} disabled={busy}><Trash2 size={10} /> Delete</Btn>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span>{fmtAgo(s.updated_at)}</span>
+                <button type="button" title="Download (audited value read)" disabled={busy} onClick={(e) => { e.stopPropagation(); void downloadSecret(s); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 2 }}><Download size={13} /></button>
+                <button type="button" title="Delete" disabled={busy} onClick={(e) => { e.stopPropagation(); void removeSecret(s); }} style={{ background: "none", border: "none", color: C.redFg, cursor: "pointer", padding: 2 }}><Trash2 size={13} /></button>
+              </div>
             </div>
           </div>;
         })}
       </div>
+      {listed.length > shown && <div style={{ textAlign: "center", marginTop: 12 }}>
+        <Btn small onClick={() => setShown((n) => n + PAGE)}>Show more ({listed.length - shown} left)</Btn>
+      </div>}
 
-      {/* ── Empty State ── */}
-      {!filtered.length && <div style={{ textAlign: "center", padding: "40px 20px" }}>
+      {!listed.length && <div style={{ textAlign: "center", padding: "36px 20px" }}>
         {loading ? <div style={{ fontSize: 12, color: C.muted }}>Loading secrets...</div> : <>
-          <Lock size={40} strokeWidth={1} color={C.muted} style={{ marginBottom: 12 }} />
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.dim, marginBottom: 6 }}>
-            {secrets.length === 0 ? "No secrets stored yet" : "No secrets match your filter"}
-          </div>
-          <div style={{ fontSize: 10, color: C.muted, maxWidth: 360, margin: "0 auto", lineHeight: 1.6 }}>
-            {secrets.length === 0
-              ? `Store API keys, database credentials, SSH keys, certificates, tokens, and other sensitive material. All values are envelope-encrypted at rest with AES-256-GCM.`
-              : "Try adjusting your search or category filter."}
-          </div>
-          {secrets.length === 0 && <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
-            <Btn primary onClick={() => setModal("create")}><Plus size={12} /> Store Your First Secret</Btn>
-            <Btn onClick={() => { setGeneratedPublicKey(""); setGenerateName(""); setModal("generate"); }}><KeyRound size={12} /> Generate Key Pair</Btn>
+          <Lock size={36} strokeWidth={1} color={C.muted} style={{ marginBottom: 10 }} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.dim, marginBottom: 12 }}>{secrets.length === 0 ? "No secrets stored yet" : "No secrets match"}</div>
+          {secrets.length === 0 && <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+            <Btn primary onClick={openCreate}><Plus size={12} /> Store a secret</Btn>
+            <Btn onClick={openGenerate}><KeyRound size={12} /> Generate key pair</Btn>
           </div>}
         </>}
       </div>}
-    </Section>
+    </>}
 
-    {/* ── OpenBao Compatibility & Hooks ── */}
-    <Section title="OpenBao Compatibility">
-      <Card style={{ padding: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>API Compatibility</div>
-            <div style={{ display: "grid", gap: 4, fontSize: 10, color: C.dim }}>
-              {[
-                { api: "secret/data/{path}", desc: "KV v2 read/write — maps to vault paths" },
-                { api: "secret/metadata/{path}", desc: "KV v2 metadata — version history" },
-                { api: "secret/delete/{path}", desc: "Soft delete secret versions" },
-                { api: "secret/undelete/{path}", desc: "Restore soft-deleted versions" },
-                { api: "sys/mounts/secret", desc: "Mount configuration" },
-                { api: "sys/policies/acl/{name}", desc: "Path-based ACL policies" },
-              ].map((item) => (
-                <div key={item.api} style={{ display: "flex", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
-                  <code style={{ color: C.accent, fontSize: 9, fontFamily: "'JetBrains Mono',monospace", minWidth: 200 }}>{item.api}</code>
-                  <span>{item.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Event Hooks</div>
-            <div style={{ display: "grid", gap: 4, fontSize: 10, color: C.dim }}>
-              {[
-                { hook: "secret.created", desc: "Fires when a new secret is stored at any path" },
-                { hook: "secret.updated", desc: "Fires when secret value is modified" },
-                { hook: "secret.rotated", desc: "Fires on version rotation — triggers downstream sync" },
-                { hook: "secret.deleted", desc: "Fires on soft or hard delete" },
-                { hook: "secret.accessed", desc: "Fires on read — for audit and access tracking" },
-                { hook: "secret.expired", desc: "Fires when TTL/lease expires — auto-cleanup trigger" },
-                { hook: "folder.policy_changed", desc: "Fires when path ACL policy is modified" },
-              ].map((item) => (
-                <div key={item.hook} style={{ display: "flex", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
-                  <code style={{ color: C.green, fontSize: 9, fontFamily: "'JetBrains Mono',monospace", minWidth: 180 }}>{item.hook}</code>
-                  <span>{item.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 6, background: `${C.purple}12`, border: `1px solid ${C.purple}33`, fontSize: 10, color: C.dim }}>
-          <b style={{ color: C.purple }}>OpenBao extensions:</b> Custom plugin backends, transit engine for encryption-as-a-service, and identity/entity aliases are supported through the hooks system. Configure webhooks in Administration → Event Hooks.
-        </div>
-      </Card>
-    </Section>
+    <VaultApiCard onNavigate={onNavigate} />
 
     {/* ══════════════ STORE SECRET MODAL ══════════════ */}
     <Modal open={modal === "create"} onClose={() => setModal(null)} title="Store New Secret" wide>
       <Row2>
-        <FG label="Name" required hint="Unique identifier for this secret"><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e) => setCreateName(e.target.value)} /></FG>
+        <FG label="Name" required hint="Unique in this tenant"><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e) => setCreateName(e.target.value)} /></FG>
         <FG label="Type" required>
           <Sel value={createType} onChange={(e) => setCreateType(e.target.value)}>
             {SUPPORTED_TYPES.map((t) => <option key={t} value={t}>{getBadge(t).t}</option>)}
           </Sel>
         </FG>
       </Row2>
-      <FG label="Description" hint="Optional context for this secret"><Inp placeholder="Stripe production API key for billing service" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} /></FG>
-      <FG label="Secret Value" required hint="Envelope-encrypted at rest with AES-256-GCM. Never stored plaintext.">
+      <Row2>
+        <FG label="Folder" hint="Optional, for example engineering/prod"><Inp placeholder="(none)" value={createFolder} onChange={(e) => setCreateFolder(e.target.value)} /></FG>
+        <FG label="Description"><Inp placeholder="What this secret is for" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} /></FG>
+      </Row2>
+      <FG label="Secret Value" required hint="Encrypted with AES-256-GCM under its own data key before it is stored">
         <Txt placeholder="Paste API key, PEM block, JSON, password..." rows={6} value={createValue} onChange={(e) => setCreateValue(e.target.value)} />
       </FG>
       <Row2>
-        <FG label="TTL / Expiration">
+        <FG label="Expires after" hint="Value reads are refused once expired">
           <Sel value={createTTLMode} onChange={(e) => setCreateTTLMode(e.target.value)}>
             <option value="none">No expiry</option>
             <option value="1h">1 hour</option>
@@ -707,20 +377,11 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
             <option value="custom">Custom (seconds)</option>
           </Sel>
         </FG>
-        <FG label="Delivery Format">
-          <Sel value={createDeliveryFormat} onChange={(e) => setCreateDeliveryFormat(e.target.value)}>
-            <option value="raw">As stored (raw)</option>
-            <option value="pem">PEM</option>
-            <option value="jwk">JWK</option>
-            <option value="armored">Armored</option>
-          </Sel>
-        </FG>
+        {createTTLMode === "custom" ? <FG label="Seconds"><Inp type="number" min="0" value={createTTLCustom} onChange={(e) => setCreateTTLCustom(e.target.value)} /></FG> : <div />}
       </Row2>
-      {createTTLMode === "custom" && <FG label="Custom TTL (seconds)"><Inp type="number" min="0" value={createTTLCustom} onChange={(e) => setCreateTTLCustom(e.target.value)} /></FG>}
-      <Chk label="Lease-based access (must renew TTL before expiry)" checked={createLeaseBased} onChange={() => setCreateLeaseBased((v) => !v)} />
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
         <Btn onClick={() => setModal(null)} disabled={busy}>Cancel</Btn>
-        <Btn primary onClick={() => void submitCreate()} disabled={busy}>{busy ? "Encrypting..." : "Store Secret"}</Btn>
+        <Btn primary onClick={() => void submitCreate()} disabled={busy}>{busy ? "Storing..." : "Store Secret"}</Btn>
       </div>
     </Modal>
 
@@ -731,7 +392,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
           {GENERATE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Sel>
       </FG>
-      <FG label="Name" required hint="Private key stored in vault, public key displayed for copy"><Inp placeholder="deploy-key-production" value={generateName} onChange={(e) => setGenerateName(e.target.value)} /></FG>
+      <FG label="Name" required hint="The private key is stored in the vault; the public key is shown here"><Inp placeholder="deploy-key-production" value={generateName} onChange={(e) => setGenerateName(e.target.value)} /></FG>
       {generatedPublicKey && <FG label="Generated Public Key">
         <Txt rows={4} value={generatedPublicKey} readOnly />
         <div style={{ marginTop: 6 }}><Btn small onClick={() => copyToClipboard(generatedPublicKey, onToast)}><Copy size={10} /> Copy Public Key</Btn></div>
@@ -745,102 +406,74 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
     {/* ══════════════ SECRET DETAIL MODAL ══════════════ */}
     <Modal open={modal === "detail"} onClose={() => setModal(null)} title={selectedSecret ? `Secret: ${selectedSecret.name}` : "Secret Detail"} wide>
       {selectedSecret && <>
-        {/* ── Metadata ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
-          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Type</div>
-            <div style={{ fontSize: 12, color: getBadge(selectedSecret.secret_type).fg, fontWeight: 600 }}>{getBadge(selectedSecret.secret_type).t}</div>
-          </div>
-          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Version</div>
-            <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>v{selectedSecret.current_version}</div>
-          </div>
-          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>TTL</div>
-            <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{ttlLabel(selectedSecret)}</div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+          {[
+            ["Type", <TypeBadge key="t" type={selectedSecret.secret_type} />],
+            ["Version", `v${selectedSecret.current_version}`],
+            ["Lease", ttlLabel(selectedSecret)],
+            ["Expires", selectedSecret.expires_at ? <span key="e" style={{ color: expiryStatus(selectedSecret, asOf)?.color || C.text }}>{fmtDate(selectedSecret.expires_at)}</span> : "Never"],
+          ].map(([label, value]) => (
+            <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px" }}>
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{label}</div>
+              <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{value}</div>
+            </div>
+          ))}
         </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16, fontSize: 10, color: C.dim }}>
-          <div><span style={{ color: C.muted }}>Created: </span>{fmtDate(selectedSecret.created_at)}</div>
-          <div><span style={{ color: C.muted }}>Updated: </span>{fmtDate(selectedSecret.updated_at)}</div>
-          <div><span style={{ color: C.muted }}>Created by: </span>{selectedSecret.created_by || "—"}</div>
-          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 9 }}>{selectedSecret.id}</span></div>
-          {selectedSecret.expires_at && <div><span style={{ color: C.muted }}>Expires: </span><span style={{ color: expiryStatus(selectedSecret)?.color || C.text }}>{fmtDate(selectedSecret.expires_at)}</span></div>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14, fontSize: 11, color: C.dim }}>
+          <div><span style={{ color: C.muted }}>Created: </span>{fmtDate(selectedSecret.created_at)} by {selectedSecret.created_by || "-"}</div>
+          <div><span style={{ color: C.muted }}>Changed: </span>{fmtDate(selectedSecret.updated_at)}</div>
+          <div><span style={{ color: C.muted }}>Folder: </span>{secretPath(selectedSecret)}</div>
+          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: MONO, fontSize: 10 }}>{selectedSecret.id}</span></div>
           {selectedSecret.description && <div style={{ gridColumn: "1/3" }}><span style={{ color: C.muted }}>Description: </span>{selectedSecret.description}</div>}
         </div>
 
-        {/* ── Retrieve Value ── */}
+        {/* ── Value: read on request ── */}
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><Eye size={13} /> Secret Value</div>
-          <Row2>
-            <FG label="Output Format">
-              <Sel value={valueFormat} onChange={(e) => setValueFormat(e.target.value)}>
-                <option value="raw">raw</option><option value="pem">pem</option><option value="openssh">openssh</option>
-                <option value="extract">extract</option><option value="jwk">jwk</option>
-                <option value="armored">armored</option>
-              </Sel>
-            </FG>
-            <FG label="Content Type"><Inp value={retrievedType} readOnly /></FG>
-          </Row2>
-          <FG label="Value">
-            <div style={{ position: "relative" }}>
-              <Txt rows={6} value={showValue ? retrievedValue : (retrievedValue ? "••••••••••••••••••••••••••••" : "(loading...)")} readOnly />
-              <div style={{ position: "absolute", top: 6, right: 8, display: "flex", gap: 4 }}>
-                <button onClick={() => setShowValue(!showValue)} style={{ background: "rgba(0,0,0,.3)", border: "none", color: C.muted, cursor: "pointer", padding: "3px 6px", borderRadius: 4, fontSize: 9, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                  {showValue ? <><EyeOff size={10} /> Hide</> : <><Eye size={10} /> Reveal</>}
-                </button>
-                {showValue && <button onClick={() => copyToClipboard(retrievedValue, onToast)} style={{ background: "rgba(0,0,0,.3)", border: "none", color: C.muted, cursor: "pointer", padding: "3px 6px", borderRadius: 4, fontSize: 9, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                  <Copy size={10} /> Copy
-                </button>}
-              </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "inline-flex", alignItems: "center", gap: 6, marginRight: "auto" }}><Eye size={13} /> Value</span>
+            <Sel w={120} value={valueFormat} onChange={(e) => { setValueFormat(e.target.value); setRetrieved(null); setShowValue(false); setValueError(""); }}>
+              {["raw", "pem", "openssh", "armored", "jwk", "extract"].map((f) => <option key={f} value={f}>{f}</option>)}
+            </Sel>
+            {retrieved
+              ? <Btn small onClick={() => setShowValue((v) => !v)}>{showValue ? <><EyeOff size={11} /> Hide</> : <><Eye size={11} /> Show</>}</Btn>
+              : <Btn small primary onClick={() => void revealValue()} disabled={busy} title="Reads the value; the read is audited">{busy ? "Reading..." : <><Eye size={11} /> Reveal</>}</Btn>}
+            {retrieved && showValue && <Btn small onClick={() => copyToClipboard(retrieved.value, onToast)}><Copy size={11} /> Copy</Btn>}
+            <Btn small onClick={() => void downloadSecret(selectedSecret)} disabled={busy}><Download size={11} /> Download</Btn>
+          </div>
+          {valueError
+            ? <div style={{ fontSize: 11, color: C.redFg }}>Value unavailable: {valueError}</div>
+            : <Txt rows={retrieved && showValue ? 6 : 2} readOnly value={retrieved ? (showValue ? retrieved.value : "••••••••••••••••") : ""} placeholder="Not read. Reveal reads the value and records it in the audit log." />}
+          {retrieved && <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{retrieved.format} · {retrieved.content_type}</div>}
+        </div>
+
+        {historyError && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 14 }}>History unavailable: {historyError}</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 14, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><History size={13} /> Versions{versions ? ` (${versions.length})` : ""}</div>
+            <div style={{ maxHeight: 170, overflow: "auto" }}>
+              {(versions || []).map((v) => {
+                const current = v.version === selectedSecret.current_version;
+                return <div key={v.version} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", fontSize: 11, borderRadius: 6, marginBottom: 4, border: `1px solid ${current ? C.accentFg : C.border}` }}>
+                  <span style={{ fontWeight: 600, color: C.text }}>v{v.version} {current && <B c="accent">current</B>}</span>
+                  <span style={{ color: C.muted }}>{fmtDate(v.created_at)}</span>
+                </div>;
+              })}
             </div>
-          </FG>
-          <div style={{ display: "flex", gap: 6 }}>
-            <Btn small primary onClick={() => void fetchFormat()} disabled={busy}>{busy ? "Fetching..." : "Fetch Format"}</Btn>
-            <Btn small onClick={() => void downloadSecret(selectedSecret)} disabled={busy}><Download size={10} /> Download</Btn>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><ScrollText size={13} /> Changes{changes ? ` (${changes.length})` : ""}</div>
+            <div style={{ maxHeight: 170, overflow: "auto" }}>
+              {(changes || []).map((e) => <div key={e.id} style={{ display: "grid", gridTemplateColumns: "60px 1fr auto", gap: 8, padding: "5px 8px", fontSize: 11, borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ color: changeColor(e.action), fontWeight: 600 }}>{e.action}</span>
+                <span style={{ color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.detail}>{e.actor}</span>
+                <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{fmtDate(e.created_at)}</span>
+              </div>)}
+            </div>
           </div>
         </div>
 
-        {/* ── Version History ── */}
-        {versions.length > 0 && <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><History size={13} /> Version History</div>
-          <div style={{ maxHeight: 160, overflow: "auto" }}>
-            {versions.map((v) => <div key={v.version} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", fontSize: 10,
-              borderRadius: 6, marginBottom: 4,
-              background: v.version === selectedSecret.current_version ? C.accentDim : "transparent",
-              border: `1px solid ${v.version === selectedSecret.current_version ? C.accent : C.border}`
-            }}>
-              <span style={{ fontWeight: 600, color: v.version === selectedSecret.current_version ? C.accent : C.text }}>
-                v{v.version} {v.version === selectedSecret.current_version && <B c="accent">current</B>}
-              </span>
-              <span style={{ color: C.muted, fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 9 }}>
-                SHA256: {String(v.value_hash || "").substring(0, 16)}...
-              </span>
-              <span style={{ color: C.muted }}>{fmtDate(v.created_at)}</span>
-            </div>)}
-          </div>
-        </div>}
-
-        {/* ── Audit Log ── */}
-        {auditEntries.length > 0 && <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><ScrollText size={13} /> Audit Log</div>
-          <div style={{ maxHeight: 180, overflow: "auto" }}>
-            {auditEntries.map((e) => <div key={e.id} style={{ display: "flex", gap: 10, padding: "6px 10px", fontSize: 10, borderRadius: 6, marginBottom: 3, background: C.card, border: `1px solid ${C.border}` }}>
-              <span style={{ color: actionColor(e.action), fontWeight: 600, minWidth: 60 }}>{e.action}</span>
-              <span style={{ color: C.dim, flex: 1 }}>{e.detail}</span>
-              <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{e.actor}</span>
-              <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{fmtDate(e.created_at)}</span>
-            </div>)}
-          </div>
-        </div>}
-
-        {/* ── Actions ── */}
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", gap: 8, justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn onClick={() => { setRotateValue(""); setModal("rotate"); }}><RotateCcw size={12} /> Rotate Value</Btn>
-          </div>
+          <Btn onClick={() => { setRotateValue(""); setModal("rotate"); }}><RotateCcw size={12} /> Rotate value</Btn>
           <div style={{ display: "flex", gap: 8 }}>
             <Btn danger onClick={() => void removeSecret(selectedSecret)} disabled={busy}><Trash2 size={12} /> Delete</Btn>
             <Btn onClick={() => setModal(null)}>Close</Btn>
@@ -851,10 +484,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
 
     {/* ══════════════ ROTATE SECRET MODAL ══════════════ */}
     <Modal open={modal === "rotate"} onClose={() => setModal(null)} title={`Rotate Secret: ${selectedSecret?.name || ""}`}>
-      <div style={{ fontSize: 10, color: C.dim, marginBottom: 12, lineHeight: 1.5 }}>
-        Rotating a secret creates a new encrypted version while preserving all previous versions. Current version: <strong style={{ color: C.accent }}>v{selectedSecret?.current_version}</strong>
-      </div>
-      <FG label="New Secret Value" required hint="Will be encrypted and stored as the next version">
+      <FG label="New Secret Value" required hint={`Stored as v${Number(selectedSecret?.current_version || 0) + 1}. Earlier versions are kept.`}>
         <Txt placeholder="Paste new value..." rows={6} value={rotateValue} onChange={(e) => setRotateValue(e.target.value)} />
       </FG>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
@@ -866,11 +496,3 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
     {promptDialog.ui}
   </div>;
 };
-
-function actionColor(action) {
-  if (action === "created") return C.green;
-  if (action === "rotated") return C.amber;
-  if (action === "deleted") return C.red;
-  if (action === "updated") return C.blue;
-  return C.accent;
-}

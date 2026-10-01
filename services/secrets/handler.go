@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
 )
@@ -200,7 +201,7 @@ func (h *Handler) updateSecret(c *route.Call) {
 }
 
 func (h *Handler) deleteSecret(c *route.Call) {
-	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, c.R.PathValue("id")); err != nil {
+	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor()); err != nil {
 		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
@@ -322,21 +323,30 @@ func (h *Handler) vaultSealStatus(c *route.Call) {
 	})
 }
 
+// vaultTokenLookupSelf reports what the verified token says. Vecta has no
+// Vault policies or token accessors, so none are invented: policies carries
+// the token's own permissions, and the times are the token's.
 func (h *Handler) vaultTokenLookupSelf(c *route.Call) {
-	c.JSON(http.StatusOK, map[string]interface{}{
-		"data": map[string]interface{}{
-			"id":            c.Actor(),
-			"display_name":  "token",
-			"policies":      []string{"default"},
-			"meta":          map[string]interface{}{"tenant_id": c.Tenant},
-			"path":          "auth/token/create",
-			"orphan":        true,
-			"renewable":     false,
-			"ttl":           0,
-			"creation_time": time.Now().UTC().Unix(),
-			"expire_time":   nil,
-		},
-	})
+	data := map[string]interface{}{
+		"id":           c.Actor(),
+		"display_name": c.Actor(),
+		"policies":     []string{},
+		"meta":         map[string]interface{}{"tenant_id": c.Tenant},
+		"renewable":    false,
+	}
+	if claims, ok := pkgauth.ClaimsFromContext(c.R.Context()); ok && claims != nil {
+		if claims.Permissions != nil {
+			data["policies"] = claims.Permissions
+		}
+		if claims.IssuedAt != nil {
+			data["creation_time"] = claims.IssuedAt.Unix()
+		}
+		if claims.ExpiresAt != nil {
+			data["expire_time"] = claims.ExpiresAt.UTC().Format(time.RFC3339)
+			data["ttl"] = max(0, int64(time.Until(claims.ExpiresAt.Time).Seconds()))
+		}
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": data})
 }
 
 // vaultPath returns the KV path, recording it as the audit target.
@@ -404,6 +414,7 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 		value := encodeVaultDataValue(data)
 		author := actorOr(c, "vault-client")
 		secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
+		var written Secret
 		switch {
 		case errors.Is(err, errNotFound):
 			created, createErr := h.svc.CreateSecret(c.R.Context(), CreateSecretRequest{
@@ -419,6 +430,7 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 				c.Error(http.StatusBadRequest, "create_failed", createErr.Error())
 				return
 			}
+			written = created
 			c.Target(created.ID)
 			c.Detail("created", true)
 		case err != nil:
@@ -427,13 +439,20 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 		default:
 			c.Target(secret.ID)
 			c.Detail("created", false)
-			if _, err := h.svc.UpdateSecret(c.R.Context(), c.Tenant, secret.ID, UpdateSecretRequest{Value: ptrString(value), UpdatedBy: author}); err != nil {
+			if written, err = h.svc.UpdateSecret(c.R.Context(), c.Tenant, secret.ID, UpdateSecretRequest{Value: ptrString(value), UpdatedBy: author}); err != nil {
 				c.Error(http.StatusBadRequest, "update_failed", err.Error())
 				return
 			}
 			h.remediate(c, secret.ID, "rotated")
 		}
-		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{"created": true}})
+		c.Detail("current_version", written.CurrentVersion)
+		// The version this write produced, as KV v2 reports it.
+		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{
+			"created_time":  written.UpdatedAt.UTC().Format(time.RFC3339),
+			"deletion_time": "",
+			"destroyed":     false,
+			"version":       written.CurrentVersion,
+		}})
 	}
 }
 
@@ -448,7 +467,7 @@ func (h *Handler) vaultKVDelete(c *route.Call) {
 		return
 	}
 	c.Target(secret.ID)
-	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, secret.ID); err != nil {
+	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, secret.ID, c.Actor()); err != nil {
 		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}

@@ -5,6 +5,36 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Fake removed: the Secret Vault's OpenBao panel, folders and form options (7.27.0-beta)
+- **What was fake:** a panel listing Vault endpoints the service never
+  registered (`sys/policies/acl`, `secret/undelete`, `sys/mounts`) and seven
+  event hooks nothing emits, with a pointer to an "Event Hooks" admin page
+  that does not exist. A "+ Folder" dialog whose "Create & Navigate" only
+  changed a React state. A "lease-based access" checkbox and a "delivery
+  format" select that were stored as metadata and read by nothing. In the
+  service: KV writes always answered `created: true`, `lookup-self` returned
+  `policies: ["default"]` and `creation_time: now`, deletes were logged as
+  `system`, and `GetStats` discarded every scan error (`_ = row.Scan`) so a
+  broken table read as 0.
+- **How it slipped through:** all of it is prose, JSX literals and response
+  maps, none of it a `mock*` function, so `real-capability` passes. The
+  panel copied a competitor's feature list as if it were ours. The form
+  options looked real because the request did carry them; nobody followed
+  the field to a reader. The Vault responses were written to satisfy a
+  client's parser, not to say what happened.
+- **How to catch the next one:** for each control, find the code that reads
+  what it writes; a field with a writer and no reader is decoration. For
+  each endpoint a page names, grep the router. For a compatibility response,
+  every field must come from a variable, not a literal. `_ = row.Scan` on a
+  count is a zero waiting to be shown as a fact.
+- **Also found:** the version list returned an unsalted SHA-256 of each
+  value to callers who may not read values. A digest shown "for integrity"
+  is a guessing oracle for a password. Removed from the API; the stored
+  column is still open.
+- **Trap:** opening the detail dialog fetched the value up front, so every
+  click on a card was audited as a `value_read` warning. A page must not
+  read a secret to show its metadata.
+
 ### Fake removed: placeholder cards on the Operations Status view (7.26.0-beta)
 - **What was fake:** a Disk Encryption card (cipher, `34.2 / 120 GB`,
   "Integrity passed | Recovery: 3-of-5"), a Network card ("TLS 1.3 mTLS ·

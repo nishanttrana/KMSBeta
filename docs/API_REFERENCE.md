@@ -3053,7 +3053,9 @@ Audit (member): `audit.<service>.cluster_write_forwarded` and
 
 ## Service 25: Secrets (`/svc/secrets/`)
 
-Hierarchical secret vault with versioning, rollback, and path-based policy.
+Secret vault: typed secrets, envelope-encrypted, versioned, with expiry and a
+Vault / OpenBao KV-compatible subset. There is no rollback to an earlier
+version and no path-based policy; access is by the permissions below.
 
 ### Master key and exposure register
 
@@ -3113,6 +3115,12 @@ A Vault KV v1 write body is the secret's data, so a `tenant_id` key inside it
 is stored, not treated as a tenant. `created_by` / `updated_by` are
 set to the verified caller.
 
+Vault responses carry only what is true here (7.27.0-beta). A KV write
+returns `data.version` and `data.created_time` of the version it produced.
+`lookup-self` returns the verified token's `id`, its permissions as
+`policies`, `creation_time` / `expire_time` / `ttl` from the token, and
+`meta.tenant_id`; there are no Vault policies, accessors or renewals.
+
 ---
 
 ### Secrets by ID
@@ -3142,9 +3150,9 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 | `PUT /svc/secrets/secrets/{id}` | any of `name`, `description`, `labels`, `metadata`, `lease_ttl_seconds`, `value` (a new value makes a new version) | `secret` |
 | `POST /svc/secrets/secrets/{id}/rotate` | `value` | `secret` |
 | `DELETE /svc/secrets/secrets/{id}` | | `status: deleted` |
-| `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `value_hash`, `created_at` |
+| `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `created_at` (no digest of the value, 7.27.0-beta) |
 | `GET /svc/secrets/secrets/{id}/audit` | | the secret's audit trail |
-| `GET /svc/secrets/secrets/stats` | | counts |
+| `GET /svc/secrets/secrets/stats` | | `stats`: `total_secrets`, `total_versions`, `expiring_within_30d`, `expired`, `by_type`; `500 stats_failed` if any count fails, never zeros |
 | `POST /svc/secrets/secrets/generate/ssh_key`, `/generate/keypair` | key parameters | `201` `secret` (generated server side) |
 
 ---

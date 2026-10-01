@@ -34,7 +34,7 @@ type BarRowProps = {
   onClick?: () => void;
 };
 
-function BarRow({ label, value, max, bar, active, dim, title, mono, onClick }: BarRowProps) {
+export function BarRow({ label, value, max, bar, active, dim, title, mono, onClick }: BarRowProps) {
   return (
     <button type="button" onClick={onClick} title={title}
       style={{ display: "grid", gridTemplateColumns: "minmax(96px, 40%) 1fr 40px", alignItems: "center", gap: 10, width: "100%", background: active ? C.accentDim : "transparent", border: "none", borderRadius: 6, padding: "4px 6px", cursor: "pointer", opacity: dim ? 0.45 : 1, textAlign: "left", transition: "opacity .15s, background .15s" }}>
@@ -45,7 +45,7 @@ function BarRow({ label, value, max, bar, active, dim, title, mono, onClick }: B
   );
 }
 
-const solid = (color: string) => <span style={{ flex: 1, background: color, borderRadius: "0 4px 4px 0" }} />;
+export const solid = (color: string) => <span style={{ flex: 1, background: color, borderRadius: "0 4px 4px 0" }} />;
 
 type ChartProps = { summary: DiscoverySummary; active: string; onDrill: (d: AssetDrill) => void };
 

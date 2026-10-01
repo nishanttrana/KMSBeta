@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secret Vault charts count the full list; a value is read only on request (7.27.0-beta)
+
+**Decision.** The vault page pages every secret of the tenant and computes
+its tiles, charts and drill-downs from those rows with shared bucket
+functions and one "now" (`tabs/vault/meta.ts`). Opening a secret reads its
+metadata, versions and change history; the value is read only on Reveal or
+Download. The version list carries no digest of the value. The page lists
+only the Vault routes the router registers.
+
+**Why.** The earlier page drew its type bar from `/secrets/stats` and its
+cards from the first 500 secrets, so the two could disagree, and stats
+answered 0 on any failure. Reading the value on open made every click a
+`value_read` warning in the audit log, which buries the reads that matter.
+An unsalted SHA-256 of a password is a guessing oracle for anyone who can
+list versions.
+
+**Rejected.** Server aggregates with a paged drill-down, as Discovery does:
+right once vaults hold tens of thousands of secrets, but it needs filter
+parameters on `GET /secrets` (expiry and change windows) that do not exist
+yet; the list is metadata only and pages at 500. Activity charts on this
+page: audit charts live in Audit Log → Activity (one home per view), so the
+page links there. Keeping the OpenBao panel as a "preview": the endpoints
+are not stored configuration, they are absent.
+
+**Enforced by.** `web/dashboard/tests/vault.spec.ts` (bar count equals list
+length, no `/value` call before Reveal, "unavailable" on failure, removed
+strings absent); `TestStatsFailureIsNotZero`, `TestVersionsCarryNoValueHash`,
+`TestVaultKVWriteReportsRealVersion`, `TestVaultTokenLookupSelfReportsTokenOnly`,
+`TestDeleteRecordsTheCaller` in `services/secrets`.
+
+---
+
 ## 2026-10-01 — The component size gate is a ratchet (7.25.0-beta)
 
 **Decision.** `check:component-size` keeps the 500-line limit for every new

@@ -103,9 +103,10 @@ type SecretValueResponse struct {
 	ContentType string `json:"content_type"`
 }
 
+// SecretVersionInfo carries no digest of the value: an unsalted hash of a
+// password lets anyone who can list versions test guesses offline.
 type SecretVersionInfo struct {
 	Version   int       `json:"version"`
-	ValueHash string    `json:"value_hash"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
