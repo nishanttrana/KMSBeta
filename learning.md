@@ -5,6 +5,23 @@ Newest entries on top.
 
 ## 2026-09-30
 
+### A chart window longer than a page must be counted by the server
+- **What happened:** the owner asked for analytics windows from a day to a
+  year and since uptime. The Activity charts paged the newest 2000 audit
+  events into the browser and counted those, and the alert statistics read
+  the newest 5000 alerts. At a week that is fine; at a year it charts a
+  sample and labels it the total.
+- **How it slipped through:** with short windows the sample was the whole
+  window, so the numbers looked right in every test and demo. The
+  "window has more" badge existed but nothing forced a real count.
+- **Rule:** a chart's numbers come from the service that owns the data,
+  counted over the whole window in SQL or a streaming scan. The browser
+  never aggregates a sample. When something must stay bounded (MTTD's
+  per-alert audit lookup), the response says how much it measured, and the
+  UI shows it. Time buckets for the whole window use portable SQL: one
+  `SUM(CASE WHEN ts >= start_k ...)` column per bucket, with differences
+  giving each count. `date_trunc` and `strftime` are dialect-specific.
+
 ### Fake fixed: client key rotation returned a key that never worked, and audited success
 - **What happened:** `RotateClientAPIKey` updated
   `auth_client_registrations.api_key_hash`, but `/auth/client-token`

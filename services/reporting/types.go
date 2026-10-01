@@ -188,8 +188,14 @@ type AlertQuery struct {
 	Action     string
 	TargetType string
 	TargetID   string
-	From       time.Time
-	To         time.Time
-	Limit      int
-	Offset     int
+	// Drill-down filters for the Alert Center charts (stats.go).
+	ActorID  string
+	SourceIP string
+	Service  string
+	Resolved bool // resolved_at is set (the alerts MTTR measures)
+	Linked   bool // links an audit event (the alerts MTTD measures)
+	From     time.Time
+	To       time.Time
+	Limit    int
+	Offset   int
 }

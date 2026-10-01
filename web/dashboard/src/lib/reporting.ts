@@ -36,6 +36,10 @@ type AlertStatsResponse = {
     by_severity?: Record<string, number>;
     by_status?: Record<string, number>;
     daily_trend?: Record<string, number>;
+    from?: string;
+    to?: string;
+    bucket_seconds?: number;
+    series?: Array<{ start: string; count: number }>;
     generated_at?: string;
   };
 };
@@ -46,6 +50,8 @@ type MTTRResponse = {
 
 type MTTDResponse = {
   mttd_minutes?: Record<string, number>;
+  measured?: number;
+  truncated?: boolean;
 };
 
 type ChannelsResponse = {
@@ -141,14 +147,35 @@ function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
 }
 
+// Filters of GET /alerts. The drill-down ones (actor_id, source_ip, service,
+// resolved, linked, from/to) select exactly the alerts a chart segment counts.
+export type AlertListQuery = {
+  status?: string;
+  severity?: string;
+  actor_id?: string;
+  source_ip?: string;
+  service?: string;
+  resolved?: boolean;
+  linked?: boolean;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+};
+
+// A chart window: RFC 3339 bounds; no from means since the first alert.
+export type StatsWindow = { from?: string; to?: string };
+
+const windowQuery = (session: AuthSession, w?: StatsWindow) => {
+  const q = new URLSearchParams(tenantQuery(session));
+  if (w?.from) q.set("from", w.from);
+  if (w?.to) q.set("to", w.to);
+  return q.toString();
+};
+
 export async function listReportingAlerts(
   session: AuthSession,
-  options?: {
-    status?: string;
-    severity?: string;
-    limit?: number;
-    offset?: number;
-  }
+  options?: AlertListQuery
 ): Promise<ReportingAlert[]> {
   const q = new URLSearchParams();
   q.set("tenant_id", session.tenantId);
@@ -160,22 +187,13 @@ export async function listReportingAlerts(
   if (String(options?.severity || "").trim()) {
     q.set("severity", String(options?.severity || "").trim().toLowerCase());
   }
+  for (const k of ["actor_id", "source_ip", "service", "from", "to"] as const) {
+    if (String(options?.[k] || "").trim()) q.set(k, String(options?.[k]).trim());
+  }
+  if (options?.resolved) q.set("resolved", "true");
+  if (options?.linked) q.set("linked", "true");
   const out = await serviceRequest<AlertsResponse>(session, "reporting", `/alerts?${q.toString()}`);
   return Array.isArray(out?.items) ? out.items : [];
-}
-
-// The newest alerts the reporting statistics count (the service reads up to
-// 5000, alertScanLimit). A chart's drill-down filters this same set, so its
-// list matches the number on the bar.
-export const ALERT_STATS_SCAN = 5000;
-
-export async function listReportingAlertsForStats(session: AuthSession): Promise<ReportingAlert[]> {
-  const out: ReportingAlert[] = [];
-  for (;;) {
-    const page = await listReportingAlerts(session, { limit: 500, offset: out.length });
-    out.push(...page);
-    if (page.length < 500 || out.length >= ALERT_STATS_SCAN) return out.slice(0, ALERT_STATS_SCAN);
-  }
 }
 
 export async function getUnreadAlertCounts(
@@ -189,26 +207,40 @@ export async function getUnreadAlertCounts(
 }
 
 export async function getReportingAlertStats(
-  session: AuthSession
-): Promise<{ total: number; by_severity: Record<string, number>; by_status: Record<string, number>; daily_trend: Record<string, number> }> {
-  const out = await serviceRequest<AlertStatsResponse>(session, "reporting", `/alerts/stats?${tenantQuery(session)}`);
+  session: AuthSession,
+  window?: StatsWindow
+): Promise<{
+  total: number; by_severity: Record<string, number>; by_status: Record<string, number>; daily_trend: Record<string, number>;
+  from: string; to: string; bucket_seconds: number; series: Array<{ start: string; count: number }>;
+}> {
+  const out = await serviceRequest<AlertStatsResponse>(session, "reporting", `/alerts/stats?${windowQuery(session, window)}`);
   const stats = out?.stats || {};
   return {
     total: Math.max(0, Number(stats.total || 0)),
     by_severity: stats.by_severity && typeof stats.by_severity === "object" ? stats.by_severity : {},
     by_status: stats.by_status && typeof stats.by_status === "object" ? stats.by_status : {},
-    daily_trend: stats.daily_trend && typeof stats.daily_trend === "object" ? stats.daily_trend : {}
+    daily_trend: stats.daily_trend && typeof stats.daily_trend === "object" ? stats.daily_trend : {},
+    from: String(stats.from || ""),
+    to: String(stats.to || ""),
+    bucket_seconds: Number(stats.bucket_seconds || 0),
+    series: Array.isArray(stats.series) ? stats.series : []
   };
 }
 
-export async function getReportingMTTR(session: AuthSession): Promise<Record<string, number>> {
-  const out = await serviceRequest<MTTRResponse>(session, "reporting", `/alerts/stats/mttr?${tenantQuery(session)}`);
+export async function getReportingMTTR(session: AuthSession, window?: StatsWindow): Promise<Record<string, number>> {
+  const out = await serviceRequest<MTTRResponse>(session, "reporting", `/alerts/stats/mttr?${windowQuery(session, window)}`);
   return out?.mttr_minutes && typeof out.mttr_minutes === "object" ? out.mttr_minutes : {};
 }
 
-export async function getReportingMTTD(session: AuthSession): Promise<Record<string, number>> {
-  const out = await serviceRequest<MTTDResponse>(session, "reporting", `/alerts/stats/mttd?${tenantQuery(session)}`);
-  return out?.mttd_minutes && typeof out.mttd_minutes === "object" ? out.mttd_minutes : {};
+// MTTD looks up each alert's audit event, so it measures at most the newest
+// 5000 alerts in the window; truncated says the window held more.
+export async function getReportingMTTD(session: AuthSession, window?: StatsWindow): Promise<{ minutes: Record<string, number>; measured: number; truncated: boolean }> {
+  const out = await serviceRequest<MTTDResponse>(session, "reporting", `/alerts/stats/mttd?${windowQuery(session, window)}`);
+  return {
+    minutes: out?.mttd_minutes && typeof out.mttd_minutes === "object" ? out.mttd_minutes : {},
+    measured: Number(out?.measured || 0),
+    truncated: Boolean(out?.truncated)
+  };
 }
 
 export async function listReportingChannels(
@@ -329,11 +361,11 @@ export type TopSourcesResponse = {
   top_services?: Array<{ key: string; count: number }>;
 };
 
-export async function getReportingTopSources(session: AuthSession): Promise<TopSourcesResponse> {
+export async function getReportingTopSources(session: AuthSession, window?: StatsWindow): Promise<TopSourcesResponse> {
   const out = await serviceRequest<TopSourcesResponse>(
     session,
     "reporting",
-    `/alerts/stats/top-sources?${tenantQuery(session)}`
+    `/alerts/stats/top-sources?${windowQuery(session, window)}`
   );
   return {
     top_actors: Array.isArray(out?.top_actors) ? out.top_actors : [],

@@ -18,6 +18,7 @@ var errNotFound = errors.New("not found")
 type Store interface {
 	PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error)
 	QueryEvents(ctx context.Context, tenantID string, q EventQuery) ([]AuditEvent, error)
+	AuditStats(ctx context.Context, tenantID string, from, to time.Time) (AuditStats, error)
 	GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error)
 	VerifyChain(ctx context.Context, tenantID string) (bool, []map[string]interface{}, error)
 	VerifyTarget(ctx context.Context, tenantID, targetID string, limit int) (TargetIntegrity, error)
@@ -93,10 +94,17 @@ type EventQuery struct {
 	SessionID      string
 	CorrelationID  string
 	RiskMin        int
-	From           time.Time
-	To             time.Time
-	Limit          int
-	Offset         int
+	// RiskMax is an inclusive upper bound; 0 means none (bucket ceilings
+	// start at 20).
+	RiskMax int
+	Service string
+	// ExcludeHTTPRequests drops the generic HTTP request records, as the
+	// Activity statistics do.
+	ExcludeHTTPRequests bool
+	From                time.Time
+	To                  time.Time
+	Limit               int
+	Offset              int
 }
 
 func (s *SQLStore) PersistEvent(ctx context.Context, event AuditEvent) (AuditEvent, error) {
@@ -189,6 +197,17 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 	}
 	args := []interface{}{tenantID, q.Action, q.ActorID, q.Result, q.TargetID, q.SessionID, q.CorrelationID, q.RiskMin, nullableTime(q.From), nullableTime(q.To), q.Limit, q.Offset}
 	prefixClause := ""
+	if q.RiskMax > 0 && q.RiskMax < 100 {
+		args = append(args, q.RiskMax)
+		prefixClause += fmt.Sprintf("  AND COALESCE(risk_score,0) <= $%d\n", len(args))
+	}
+	if q.Service != "" {
+		args = append(args, q.Service)
+		prefixClause += fmt.Sprintf("  AND service = $%d\n", len(args))
+	}
+	if q.ExcludeHTTPRequests {
+		prefixClause += "  AND " + notHTTPRequest + "\n"
+	}
 	var likes []string
 	for _, p := range q.ActionPrefixes {
 		p = strings.TrimSpace(p)
@@ -199,7 +218,7 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 		likes = append(likes, fmt.Sprintf(`action LIKE $%d ESCAPE '\'`, len(args)))
 	}
 	if len(likes) > 0 {
-		prefixClause = "  AND (" + strings.Join(likes, " OR ") + ")"
+		prefixClause += "  AND (" + strings.Join(likes, " OR ") + ")"
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, sequence, chain_hash, previous_hash,

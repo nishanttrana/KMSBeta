@@ -14,6 +14,7 @@ import (
 	"time"
 	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/timebucket"
 
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/pdfutil"
@@ -906,8 +907,8 @@ func (s *Service) renderEvidencePack(ctx context.Context, job ReportJob, alerts 
 		postureFindings, _ = s.posture.ListFindings(ctx, job.TenantID, 250)
 		postureActions, _ = s.posture.ListActions(ctx, job.TenantID, 250)
 	}
-	mttr, _ := s.MTTRStats(ctx, job.TenantID)
-	mttd, _, _ := s.computeMTTDStats(ctx, job.TenantID)
+	mttr, _ := s.MTTRStats(ctx, job.TenantID, AlertWindow{})
+	mttd, _, _, _ := s.computeMTTDStats(ctx, job.TenantID, AlertWindow{})
 	payload := map[string]interface{}{
 		"job_id":           job.ID,
 		"template_id":      job.TemplateID,
@@ -1196,60 +1197,97 @@ func nextRunTime(now time.Time, schedule string) time.Time {
 	}
 }
 
-// alertScanLimit is how many of the newest alerts the statistics read, and
-// the most the store returns in one query. The HTTP list caps its own page at
-// alertPageLimit; the dashboard pages through up to this many to drill into a
-// chart, so a chart and its drill-down count the same alerts.
+// alertScanLimit caps one alert query and the alerts whose detection time
+// MTTD looks up in the audit service (one lookup each). Counts, MTTR and top
+// sources scan the whole window (ScanAlerts). The HTTP list caps its own page
+// at alertPageLimit.
 const (
 	alertScanLimit = 5000
 	alertPageLimit = 500
 )
 
-func (s *Service) AlertStats(ctx context.Context, tenantID string) (map[string]interface{}, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
-	if err != nil {
-		return nil, err
-	}
+// AlertWindow bounds the statistics by created_at. A zero From means since
+// the first alert ("since uptime"); a zero To means now.
+type AlertWindow struct {
+	From time.Time
+	To   time.Time
+}
+
+func (w AlertWindow) query() AlertQuery { return AlertQuery{From: w.From, To: w.To} }
+
+func (s *Service) AlertStats(ctx context.Context, tenantID string, w AlertWindow) (map[string]interface{}, error) {
 	bySeverity := map[string]int{severityCritical: 0, severityHigh: 0, severityWarning: 0, severityInfo: 0}
 	byStatus := map[string]int{}
 	byAction := map[string]int{}
 	dayTrend := map[string]int{}
-	for _, it := range items {
+	var created []time.Time
+	err := s.store.ScanAlerts(ctx, tenantID, w.query(), func(it Alert) error {
 		bySeverity[normalizeSeverity(it.Severity)]++
 		byStatus[it.Status]++
 		byAction[it.AuditAction]++
-		day := it.CreatedAt.UTC().Format("2006-01-02")
-		dayTrend[day]++
-	}
-	return map[string]interface{}{
-		"total":        len(items),
-		"by_severity":  bySeverity,
-		"by_status":    byStatus,
-		"top_actions":  topKV(byAction, 10),
-		"daily_trend":  dayTrend,
-		"generated_at": time.Now().UTC(),
-	}, nil
-}
-
-func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]float64, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
+		dayTrend[it.CreatedAt.UTC().Format("2006-01-02")]++
+		created = append(created, it.CreatedAt.UTC())
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
+	to := w.To
+	if to.IsZero() {
+		to = time.Now().UTC()
+	}
+	from := w.From
+	if from.IsZero() {
+		from = to
+		if n := len(created); n > 0 && created[n-1].Before(to) {
+			from = created[n-1] // newest first: the last is the oldest
+		}
+	}
+	starts, width := timebucket.Buckets(from, to)
+	counts := make([]int, len(starts))
+	for _, t := range created {
+		if i := timebucket.Index(starts, width, t); i >= 0 {
+			counts[i]++
+		}
+	}
+	series := make([]map[string]interface{}, len(starts))
+	for i, st := range starts {
+		series[i] = map[string]interface{}{"start": st, "count": counts[i]}
+	}
+	return map[string]interface{}{
+		"total":          len(created),
+		"by_severity":    bySeverity,
+		"by_status":      byStatus,
+		"top_actions":    topKV(byAction, 10),
+		"daily_trend":    dayTrend,
+		"from":           from.UTC(),
+		"to":             to.UTC(),
+		"bucket_seconds": int64(width / time.Second),
+		"series":         series,
+		"generated_at":   time.Now().UTC(),
+	}, nil
+}
+
+func (s *Service) MTTRStats(ctx context.Context, tenantID string, w AlertWindow) (map[string]float64, error) {
 	type agg struct {
 		sum float64
 		n   int
 	}
 	acc := map[string]agg{}
-	for _, it := range items {
+	q := w.query()
+	q.Resolved = true
+	err := s.store.ScanAlerts(ctx, tenantID, q, func(it Alert) error {
 		if !it.ResolvedAt.IsZero() && !it.CreatedAt.IsZero() {
-			d := it.ResolvedAt.Sub(it.CreatedAt).Minutes()
 			sev := normalizeSeverity(it.Severity)
 			cur := acc[sev]
-			cur.sum += d
+			cur.sum += it.ResolvedAt.Sub(it.CreatedAt).Minutes()
 			cur.n++
 			acc[sev] = cur
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	out := map[string]float64{}
 	for sev, a := range acc {
@@ -1260,10 +1298,20 @@ func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]fl
 	return out, nil
 }
 
-func (s *Service) computeMTTDStats(ctx context.Context, tenantID string) (map[string]float64, int, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
+// computeMTTDStats measures the newest alertScanLimit alerts in the window
+// that link an audit event, and returns how many it measured and whether the
+// window held more.
+func (s *Service) computeMTTDStats(ctx context.Context, tenantID string, w AlertWindow) (map[string]float64, int, bool, error) {
+	q := w.query()
+	q.Linked = true
+	q.Limit = alertScanLimit + 1
+	items, err := s.store.ListAlerts(ctx, tenantID, q)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, false, err
+	}
+	truncated := len(items) > alertScanLimit
+	if truncated {
+		items = items[:alertScanLimit]
 	}
 	type agg struct {
 		sum float64
@@ -1294,24 +1342,20 @@ func (s *Service) computeMTTDStats(ctx context.Context, tenantID string) (map[st
 			out[sev] = a.sum / float64(a.n)
 		}
 	}
-	return out, len(items), nil
+	return out, len(items), truncated, nil
 }
 
-// MTTDStats returns mean time to detect per severity and how many alerts
-// it was computed over.
-func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, int, error) {
-	return s.computeMTTDStats(ctx, tenantID)
+// MTTDStats returns mean time to detect per severity, how many alerts it
+// measured, and whether the window held more than alertScanLimit.
+func (s *Service) MTTDStats(ctx context.Context, tenantID string, w AlertWindow) (map[string]float64, int, bool, error) {
+	return s.computeMTTDStats(ctx, tenantID, w)
 }
 
-func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]interface{}, error) {
-	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: alertScanLimit})
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) TopSources(ctx context.Context, tenantID string, w AlertWindow) (map[string]interface{}, error) {
 	actors := map[string]int{}
 	ips := map[string]int{}
 	services := map[string]int{}
-	for _, it := range items {
+	err := s.store.ScanAlerts(ctx, tenantID, w.query(), func(it Alert) error {
 		if it.ActorID != "" {
 			actors[it.ActorID]++
 		}
@@ -1321,6 +1365,10 @@ func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]i
 		if it.Service != "" {
 			services[it.Service]++
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return map[string]interface{}{
 		"actors":   topKV(actors, 10),

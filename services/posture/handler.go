@@ -218,6 +218,22 @@ func (h *Handler) handleLatestRisk(c *route.Call) {
 }
 
 func (h *Handler) handleRiskHistory(c *route.Call) {
+	qs := c.R.URL.Query()
+	if qs.Get("trend") == "true" {
+		from, to := parseTimeString(qs.Get("from")), parseTimeString(qs.Get("to"))
+		if (qs.Get("from") != "" && from.IsZero()) || (qs.Get("to") != "" && to.IsZero()) {
+			c.Refuse(http.StatusBadRequest, "bad_window", "from and to must be RFC 3339 times")
+			return
+		}
+		items, w, err := h.svc.RiskTrend(c.R.Context(), c.Tenant, from, to)
+		if err != nil {
+			h.fail(c, err)
+			return
+		}
+		c.Detail("count", len(items))
+		c.JSON(http.StatusOK, map[string]interface{}{"items": items, "bucket_seconds": int64(w.Seconds())})
+		return
+	}
 	items, err := h.svc.RiskHistory(c.R.Context(), c.Tenant, RiskQuery{
 		Limit:  atoi(c.R.URL.Query().Get("limit"), 200, 1, 1000),
 		Offset: atoi(c.R.URL.Query().Get("offset"), 0, 0, 100000),

@@ -133,29 +133,74 @@ test("major tabs render without runtime boundary failures", async ({ page }) => 
 
 // Each kind of view has one home (2.12.0-beta): the record and its charts in
 // the Audit Log, alert triage and alert charts in the Alert Center (7.15.0-beta).
-// Every chart drills into the entries it counts.
+// Charts cover a chosen window, from a day to a year or since uptime, and every
+// chart drills into the entries it counts (7.16.0-beta). The mocks answer from
+// the query the dashboard sends, so the window and filters must reach the
+// server for the assertions to pass.
 test("analytics, alerts and audit each have a single home", async ({ page }) => {
   const nav = (label: string) => page.getByText(label, { exact: true }).first().click();
   const now = new Date().toISOString();
   const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-  await page.route("**/svc/audit/audit/events?**", (r) => r.fulfill(json({ items: [
+  const events = [
     { id: "ev-denied", timestamp: now, service: "kms-keycore", action: "audit.key.decrypt", actor_id: "mallory", target_id: "key-1", result: "denied", risk_score: 70 },
     { id: "ev-ok", timestamp: now, service: "kms-auth", action: "audit.auth.login", actor_id: "alice", target_id: "alice", result: "success", risk_score: 5 },
-  ] })));
-  await page.route("**/svc/reporting/alerts?**", (r) => r.fulfill(json({ items: [
+  ];
+  const alerts = [
     { id: "al-crit", severity: "critical", status: "new", title: "Key export refused", service: "keycore", created_at: now, audit_action: "audit.key.export" },
     { id: "al-info", severity: "info", status: "new", title: "Policy read", service: "policy", created_at: now, audit_action: "audit.policy.read" },
-  ] })));
-  await page.route("**/svc/reporting/alerts/stats?**", (r) => r.fulfill(json({ stats: { total: 2, by_severity: { critical: 1, info: 1 }, by_status: { new: 2 }, daily_trend: {} } })));
+  ];
+  const statsFrom: string[] = [];
+  await page.route("**/svc/audit/audit/activity/stats?**", (r) => {
+    const from = new URL(r.request().url()).searchParams.get("from") || "";
+    statsFrom.push(from);
+    return r.fulfill(json({ stats: {
+      from: from || now, to: now, bucket_seconds: 3600, total: 2, actors: 2, services: 2,
+      by_result: [{ key: "denied", count: 1 }, { key: "success", count: 1 }],
+      top_services: [{ key: "kms-keycore", count: 1 }, { key: "kms-auth", count: 1 }],
+      top_actors: [{ key: "mallory", count: 1 }, { key: "alice", count: 1 }],
+      risk_buckets: [{ key: "0-20", count: 1 }, { key: "21-40", count: 0 }, { key: "41-60", count: 0 }, { key: "61-80", count: 1 }, { key: "81-100", count: 0 }],
+      series: [{ start: now, count: 2 }],
+    } }));
+  });
+  await page.route("**/svc/audit/audit/events?**", (r) => {
+    const q = new URL(r.request().url()).searchParams;
+    const actor = q.get("actor_id");
+    return r.fulfill(json({ items: q.get("exclude_http_requests") === "true" && q.get("from") ? events.filter((e) => !actor || e.actor_id === actor) : events }));
+  });
+  await page.route("**/svc/reporting/alerts?**", (r) => {
+    const sev = new URL(r.request().url()).searchParams.get("severity");
+    return r.fulfill(json({ items: alerts.filter((a) => !sev || a.severity === sev) }));
+  });
+  await page.route("**/svc/reporting/alerts/stats?**", (r) => r.fulfill(json({ stats: {
+    total: 2, by_severity: { critical: 1, info: 1 }, by_status: { new: 2 }, daily_trend: {},
+    from: now, to: now, bucket_seconds: 3600, series: [{ start: now, count: 2 }],
+  } })));
 
   await nav("Audit Log");
   for (const t of ["Events", "Activity", "Forensics", "Checkpoints"]) {
     await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
   }
   await page.getByRole("button", { name: "Activity", exact: true }).click();
-  await expect(page.getByText("Events analysed")).toBeVisible();
+  await expect(page.getByText("Not successful")).toBeVisible();
+  const pickWindow = async (current: string, next: string) => {
+    await page.getByText(current, { exact: true }).first().click();
+    await page.getByRole("option", { name: next, exact: true }).click();
+  };
+  await page.getByText("Last week", { exact: true }).first().click();
+  for (const w of ["Since uptime", "Last day", "Last week", "Last month", "Last 6 months", "Last year"]) {
+    await expect(page.getByRole("option", { name: w, exact: true })).toHaveCount(1);
+  }
+  await page.keyboard.press("Escape");
+  await pickWindow("Last week", "Last year");
+  await expect.poll(() => statsFrom.length).toBeGreaterThan(1);
+  const yearFrom = Date.parse(statsFrom[statsFrom.length - 1] ?? "");
+  expect(Math.abs(Date.now() - yearFrom - 365 * 86400_000)).toBeLessThan(3600_000);
+  await pickWindow("Last year", "Since uptime");
+  await expect.poll(() => statsFrom[statsFrom.length - 1]).toBe("");
+
   await page.getByText("mallory", { exact: true }).first().click();
   await expect(page.getByText("Actor: mallory: 1 entry")).toBeVisible();
+  await expect(page.getByText("audit.key.decrypt")).toBeVisible();
   await expect(page.getByText("audit.auth.login")).toHaveCount(0);
   await assertNoRenderBoundary(page);
 
@@ -164,6 +209,7 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   // A donut slice's bounding-box centre is the hole, so click the slice itself.
   await page.locator(".recharts-pie-sector path").first().dispatchEvent("click");
   await expect(page.getByText(/^Severity: (critical|info): 1 entry$/)).toBeVisible();
+  await expect(page.getByText(/^(Key export refused|Policy read)$/)).toHaveCount(1);
   await assertNoRenderBoundary(page);
 
   await nav("Analytics");

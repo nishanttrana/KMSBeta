@@ -173,6 +173,16 @@ export async function getPostureRisk(session: AuthSession): Promise<PostureRiskS
   return out?.risk || ({ tenant_id: session.tenantId } as PostureRiskSnapshot);
 }
 
+// The risk-trend chart over a window: the latest snapshot in each bucket,
+// newest first. No from means since the first snapshot.
+export async function getPostureRiskTrend(session: AuthSession, from?: string): Promise<{ items: PostureRiskSnapshot[]; bucket_seconds: number }> {
+  const q = new URLSearchParams(tenantQuery(session));
+  q.set("trend", "true");
+  if (from) q.set("from", from);
+  const out = await serviceRequest<{ items?: PostureRiskSnapshot[]; bucket_seconds?: number }>(session, "posture", `/posture/risk/history?${q.toString()}`);
+  return { items: Array.isArray(out?.items) ? out.items : [], bucket_seconds: Number(out?.bucket_seconds || 0) };
+}
+
 export async function listPostureRiskHistory(session: AuthSession, limit = 50): Promise<PostureRiskSnapshot[]> {
   const out = await serviceRequest<{ items?: PostureRiskSnapshot[] }>(
     session,
@@ -184,13 +194,14 @@ export async function listPostureRiskHistory(session: AuthSession, limit = 50): 
 
 export async function listPostureFindings(
   session: AuthSession,
-  opts: { status?: string; severity?: string; engine?: string; limit?: number; offset?: number } = {}
+  opts: { status?: string; severity?: string; engine?: string; from?: string; limit?: number; offset?: number } = {}
 ): Promise<PostureFinding[]> {
   const params = new URLSearchParams();
   params.set("tenant_id", session.tenantId);
   if (String(opts.status || "").trim()) params.set("status", String(opts.status).trim());
   if (String(opts.severity || "").trim()) params.set("severity", String(opts.severity).trim());
   if (String(opts.engine || "").trim()) params.set("engine", String(opts.engine).trim());
+  if (String(opts.from || "").trim()) params.set("from", String(opts.from).trim());
   params.set("limit", String(Math.max(1, Math.trunc(opts.limit || 100))));
   params.set("offset", String(Math.max(0, Math.trunc(opts.offset || 0))));
   const out = await serviceRequest<{ items?: PostureFinding[] }>(session, "posture", `/posture/findings?${params.toString()}`);

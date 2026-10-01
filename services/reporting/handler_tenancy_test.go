@@ -210,3 +210,25 @@ func waitForJob(t *testing.T, svc *Service, tenant, id string) {
 	}
 	t.Fatalf("report job %s did not complete", id)
 }
+
+// A malformed chart window is refused on every statistics route, and each
+// refusal is audited with its reason; a valid window is audited as read.
+func TestAlertStatsWindowRefusedAndAudited(t *testing.T) {
+	h, _, rec := newAuditedReportingHandler(t)
+	claims := &pkgauth.Claims{UserID: "analyst", TenantID: "t1", Permissions: []string{permRead}}
+	for _, p := range []string{"/alerts/stats", "/alerts/stats/mttr", "/alerts/stats/mttd", "/alerts/stats/top-sources"} {
+		if rr := serve(h, claims, http.MethodGet, p+"?tenant_id=t1&from=last-week", ""); rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s: status %d", p, rr.Code)
+		}
+		if ev := rec.Last(t); ev.Event.Result != "refused" || ev.Event.Details["reason"] != "bad_window" {
+			t.Fatalf("%s: refusal audited as %+v", p, ev)
+		}
+	}
+	from := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
+	if rr := serve(h, claims, http.MethodGet, "/alerts/stats?tenant_id=t1&from="+from, ""); rr.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rr.Code, rr.Body.String())
+	}
+	if ev := rec.Last(t); ev.Action != "alert_stats_read" || ev.Event.Result != "success" {
+		t.Fatalf("audited %+v", ev)
+	}
+}

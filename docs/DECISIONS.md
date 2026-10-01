@@ -962,6 +962,44 @@ against the exported SBOM.
 `TestComplianceSBOMRoutesRemoved`, and the CLAUDE.md rule under "How we
 build".
 
+## 2026-09-30 — Analytics windows from a day to since uptime, counted by the server (7.17.0-beta)
+
+**Decision.** Every analytics view (Audit Log → Activity, Alert Center →
+Analytics, Posture) offers the same windows: since uptime, last day, week,
+month, 6 months and year. The server counts the whole window. The audit
+service has `GET /audit/activity/stats` (SQL `GROUP BY` and `SUM(CASE ...)`, portable
+across Postgres and SQLite). Reporting streams every alert in the window
+(`ScanAlerts`, no cap). Posture returns the latest risk snapshot per bucket.
+Buckets come from `pkg/timebucket`, one rule for every service. A drill-down
+asks the server for the same filters it counted with, paged 100 at a time.
+"Since uptime" means no lower bound: everything recorded since the platform
+started.
+
+**Why.** The owner asked for windows up to a year and since uptime. The old
+Activity panel paged the newest 2000 events in the browser, and alert
+statistics read the newest 5000 alerts. Over a year either one would have
+charted a sample and called it the total.
+
+The route is `/audit/activity/stats`, not `/audit/stats`: that path was the
+removed audit alert store's, which returned alert counts under a name that
+promised event statistics (2.16.0-beta). `TestAuditAlertStoreRemoved` keeps
+it unserved.
+
+**Rejected.** Raising the browser sample limit: a year of audit events can
+be millions of rows. Grouping time buckets with `date_trunc`/`strftime`:
+dialect-specific. Cumulative `SUM(CASE WHEN timestamp >= start)` columns give
+each bucket by subtraction in one portable query.
+
+**Still bounded.** MTTD looks up each alert's audit event, so it measures the
+newest 5000 linked alerts in a window and says when the window had more.
+Posture charts findings detected in the window, paged in full up to 5000, and
+says when it had more.
+
+**Enforced by** `TestAuditStatsWindows`, `TestAlertStatsWindows` and
+`TestRiskTrendWindows` (each also on Postgres): every chart count equals its
+drill-down's list. Also `pkg/timebucket` tests and the smoke test, which
+checks that "Last year" sends a 365-day window and "Since uptime" sends none.
+
 ## 2026-09-30 — Charts live beside their entries and drill into them (7.15.0-beta)
 
 **Decision.** Audit charts moved from Overview → Analytics to Audit Log →

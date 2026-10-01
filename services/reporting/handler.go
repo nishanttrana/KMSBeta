@@ -145,6 +145,11 @@ func (h *Handler) alerts(c *route.Call) {
 		Action:     strings.TrimSpace(qs.Get("action")),
 		TargetType: strings.TrimSpace(qs.Get("target_type")),
 		TargetID:   strings.TrimSpace(qs.Get("target_id")),
+		ActorID:    strings.TrimSpace(qs.Get("actor_id")),
+		SourceIP:   strings.TrimSpace(qs.Get("source_ip")),
+		Service:    strings.TrimSpace(qs.Get("service")),
+		Resolved:   qs.Get("resolved") == "true",
+		Linked:     qs.Get("linked") == "true",
 		Limit:      min(atoi(qs.Get("limit")), alertPageLimit),
 		Offset:     atoi(qs.Get("offset")),
 		From:       parseTimeString(qs.Get("from")),
@@ -612,17 +617,38 @@ func (h *Handler) listErrorTelemetry(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
+// statsWindow reads the optional from/to (RFC 3339) of the chart window.
+// Both absent means since the first alert.
+func statsWindow(c *route.Call) (AlertWindow, bool) {
+	qs := c.R.URL.Query()
+	w := AlertWindow{From: parseTimeString(qs.Get("from")), To: parseTimeString(qs.Get("to"))}
+	if (qs.Get("from") != "" && w.From.IsZero()) || (qs.Get("to") != "" && w.To.IsZero()) {
+		c.Refuse(http.StatusBadRequest, "bad_window", "from and to must be RFC 3339 times")
+		return w, false
+	}
+	return w, true
+}
+
 func (h *Handler) alertStats(c *route.Call) {
-	out, err := h.svc.AlertStats(c.R.Context(), c.Tenant)
+	w, ok := statsWindow(c)
+	if !ok {
+		return
+	}
+	out, err := h.svc.AlertStats(c.R.Context(), c.Tenant, w)
 	if err != nil {
 		h.serviceError(c, err)
 		return
 	}
+	c.Detail("total", out["total"])
 	c.JSON(http.StatusOK, map[string]interface{}{"stats": out})
 }
 
 func (h *Handler) mttrStats(c *route.Call) {
-	out, err := h.svc.MTTRStats(c.R.Context(), c.Tenant)
+	w, ok := statsWindow(c)
+	if !ok {
+		return
+	}
+	out, err := h.svc.MTTRStats(c.R.Context(), c.Tenant, w)
 	if err != nil {
 		h.serviceError(c, err)
 		return
@@ -631,18 +657,26 @@ func (h *Handler) mttrStats(c *route.Call) {
 }
 
 func (h *Handler) mttdStats(c *route.Call) {
-	out, alertCount, err := h.svc.MTTDStats(c.R.Context(), c.Tenant)
+	w, ok := statsWindow(c)
+	if !ok {
+		return
+	}
+	out, alertCount, truncated, err := h.svc.MTTDStats(c.R.Context(), c.Tenant, w)
 	if err != nil {
 		h.serviceError(c, err)
 		return
 	}
 	c.Detail("alert_count", alertCount)
 	c.Detail("bucket_count", len(out))
-	c.JSON(http.StatusOK, map[string]interface{}{"mttd_minutes": out})
+	c.JSON(http.StatusOK, map[string]interface{}{"mttd_minutes": out, "measured": alertCount, "truncated": truncated})
 }
 
 func (h *Handler) topSources(c *route.Call) {
-	out, err := h.svc.TopSources(c.R.Context(), c.Tenant)
+	w, ok := statsWindow(c)
+	if !ok {
+		return
+	}
+	out, err := h.svc.TopSources(c.R.Context(), c.Tenant, w)
 	if err != nil {
 		h.serviceError(c, err)
 		return

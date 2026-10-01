@@ -820,7 +820,7 @@ const SectionApiAudit = () => (
         ["GET", "/audit/events/{id}", "Get specific event details"],
         ["GET", "/audit/timeline/{target_id}", "Get event timeline for a resource"],
         ["POST", "/audit/search", "Advanced event search"],
-        ["GET", "/audit/stats", "Get audit statistics"],
+        ["GET", "/audit/activity/stats", "Audit activity counts over a window (Activity charts)"],
       ]} />
     </Collapse>
     <Collapse title="Integrity Verification">
@@ -2489,10 +2489,10 @@ const SectionUIMonitoring = () => (
     <P>- Bulk acknowledge alerts to clear the queue after review</P>
     <P>- Escalate an alert's severity to critical</P>
     <P>- See open, critical, today's and resolved counts, MTTR and enabled notification channels</P>
-    <P>The Analytics tab beside Alerts charts severity mix, daily volume, MTTD/MTTR and top sources. Click any slice, bar or row to list the alerts it counts and triage them there. The Alert Center is the only place alerts are triaged.</P>
+    <P>The Analytics tab beside Alerts charts severity mix, volume over time, MTTD/MTTR and top sources, over a window from the last day to a year or since uptime. Click any slice, bar or row to list the alerts it counts and triage them there. The Alert Center is the only place alerts are triaged.</P>
 
     <H2>Audit Log Sub-Pane</H2>
-    <P>Every operation in the KMS is recorded in an append-only, hash-chained, HMAC-signed audit trail covered by signed checkpoints. The Audit Log has four tabs: Events, Activity, Forensics and Checkpoints. Activity charts results, services, risk, volume and actors. Click any slice, bar, point or actor to list the events it counts, then open one for its detail.</P>
+    <P>Every operation in the KMS is recorded in an append-only, hash-chained, HMAC-signed audit trail covered by signed checkpoints. The Audit Log has four tabs: Events, Activity, Forensics and Checkpoints. Activity charts results, services, risk, volume and actors over a window you choose: since uptime, or the last day, week, month, 6 months or year. Click any slice, bar, point or actor to list the events it counts, then open one for its detail.</P>
     <H3>Events Tab:</H3>
     <P>Search and filter audit events by service (keycore, auth, secrets, certs, etc.), result (success, failure, denied), severity, time range, and user. Each event shows who did what, when, from where, and the result. Export events as CSV or CEF for SIEM integration.</P>
     <H3>Forensics Tab:</H3>

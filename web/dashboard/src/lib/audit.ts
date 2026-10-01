@@ -45,11 +45,43 @@ export type AuditEventQuery = {
   session_id?: string;
   correlation_id?: string;
   risk_min?: number;
+  // Inclusive ceiling; with risk_min selects one Activity risk bucket.
+  risk_max?: number;
+  service?: string;
+  // Drop generic HTTP request records, as the Activity statistics do.
+  exclude_http_requests?: boolean;
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
 };
+
+export type KeyCount = { key: string; count: number };
+
+// GET /audit/activity/stats: counts over the whole window, computed by the audit
+// service (services/audit/activity/stats.go).
+export type AuditStats = {
+  from: string;
+  to: string;
+  bucket_seconds: number;
+  total: number;
+  by_result: KeyCount[];
+  top_services: KeyCount[];
+  top_actors: KeyCount[];
+  actors: number;
+  services: number;
+  risk_buckets: KeyCount[];
+  series: Array<{ start: string; count: number }>;
+};
+
+export async function getAuditStats(session: AuthSession, window: { from?: string; to?: string }): Promise<AuditStats> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (window.from) q.set("from", window.from);
+  if (window.to) q.set("to", window.to);
+  const out = await serviceRequest<{ stats: AuditStats }>(session, "audit", `/audit/activity/stats?${q.toString()}`);
+  return out.stats;
+}
 
 export type ChainVerifyResult = {
   ok: boolean;
@@ -81,6 +113,9 @@ export async function listAuditEvents(
   if (String(query?.session_id || "").trim()) q.set("session_id", String(query!.session_id).trim());
   if (String(query?.correlation_id || "").trim()) q.set("correlation_id", String(query!.correlation_id).trim());
   if (query?.risk_min && query.risk_min > 0) q.set("risk_min", String(Math.trunc(query.risk_min)));
+  if (query?.risk_max && query.risk_max > 0) q.set("risk_max", String(Math.trunc(query.risk_max)));
+  if (String(query?.service || "").trim()) q.set("service", String(query!.service).trim());
+  if (query?.exclude_http_requests) q.set("exclude_http_requests", "true");
   if (String(query?.from || "").trim()) q.set("from", String(query!.from).trim());
   if (String(query?.to || "").trim()) q.set("to", String(query!.to).trim());
   q.set("limit", String(Math.max(1, Math.min(500, Math.trunc(Number(query?.limit || 200))))));

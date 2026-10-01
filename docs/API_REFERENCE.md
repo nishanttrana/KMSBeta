@@ -1433,15 +1433,37 @@ integrity fields `chain_hash`, `previous_hash`, `hmac_sig`, `hmac_key_id`.
 Query: `tenant_id`, `action` (exact), `action_prefix` (repeatable, up to 5,
 OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses
 `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`), `actor_id`,
-`result`, `target_id`, `session_id`, `correlation_id`, `risk_min`, `from`
-and `to` (RFC 3339), `limit`, `offset`. Response:
-`{"items": [AuditEvent, ...], "request_id": "..."}`.
+`result`, `target_id`, `session_id`, `correlation_id`, `risk_min`,
+`risk_max` (inclusive; 7.17.0-beta), `service` (7.17.0-beta),
+`exclude_http_requests=true` (drops generic HTTP request records;
+7.17.0-beta), `from` and `to` (RFC 3339, inclusive), `limit`, `offset`.
+Response: `{"items": [AuditEvent, ...], "request_id": "..."}`.
 
 ```bash
 printf 'Authorization: Bearer %s\n' "$TOKEN" |
   curl -sS --fail-with-body --cacert vecta-root-ca.pem -H @- \
     "https://localhost/svc/audit/audit/events?tenant_id=root&action_prefix=audit.key.&result=refused&from=2026-09-01T00:00:00Z&limit=50"
 ```
+
+---
+
+### GET /svc/audit/audit/activity/stats
+
+Permission `audit.events.read`; kernel event `audit.audit.activity_stats_read`
+(details `from`, `to`, `total`); a malformed window is refused with `reason`
+`bad_window` (7.17.0-beta). The Audit Log → Activity charts. Query `from`
+and `to` (RFC 3339); without `from`, the window starts at the tenant's first
+event ("since uptime"). Counts are computed in SQL over the whole window,
+never a sample, and exclude generic HTTP request records. Response
+`{"stats": {...}}`: `from`, `to`, `bucket_seconds` (`pkg/timebucket`: an
+hour for a day, 6 hours for a week, a day for a month, a week up to a year,
+then whole days for at most 60 points), `total`, `by_result`,
+`top_services` and `top_actors` (top ten `{key, count}`), `actors`,
+`services` (distinct), `risk_buckets` (`0-20` … `81-100`), `series`
+(`{start, count}` per bucket). Each count equals the number of events
+`GET /audit/events` returns for the same window with `exclude_http_requests`
+and the matching `result`, `service`, `actor_id`, `risk_min`/`risk_max`, or
+the bucket's `from`/`to` (`TestAuditStatsWindows`, on SQLite and Postgres).
 
 ---
 
@@ -1992,7 +2014,7 @@ actions as `kms-reporting`.
 | `GET /posture/health` | any verified identity | `audit.posture.health_read` |
 | `GET /posture/dashboard` | `posture.read` | `audit.posture.dashboard_viewed` (`risk_24h`, `open_findings`, `critical_findings`, `risk_driver_count`, `blast_radius`, `action_count`) |
 | `GET /posture/risk` | `posture.read` | `audit.posture.risk_read` (`assessed: false` when the tenant was never scanned) |
-| `GET /posture/risk/history` | `posture.read` | `audit.posture.risk_history_read` |
+| `GET /posture/risk/history` | `posture.read` | `audit.posture.risk_history_read`. With `trend=true` and optional `from`/`to` (RFC 3339; no `from` is since the first snapshot), returns the latest snapshot in each `pkg/timebucket` bucket, newest first, and `bucket_seconds`; a malformed window is refused with `reason` `bad_window` (7.17.0-beta) |
 | `POST /posture/scan` | `posture.write` | `audit.posture.scan_run` (`sync_audit`, `risk_24h`) |
 | `POST /posture/events` | `posture.write` | `audit.posture.events_ingested` (`submitted`, `inserted`) |
 | `POST /posture/events/batch` | `posture.write` | `audit.posture.events_ingested` (`batch: true`) |
@@ -2126,8 +2148,12 @@ query parameter and `X-Actor-ID` header are ignored).
 
 ### GET /svc/reporting/alerts
 
-Query: `severity`, `status`, `action`, `target_type`, `target_id`, `from`,
-`to` (RFC 3339), `limit` (default 100, at most 500 per page), `offset`.
+Query: `severity` (`info` also matches unknown severities, as the statistics
+count them), `status`, `action`, `target_type`, `target_id`, `actor_id`,
+`source_ip`, `service`, `resolved=true` (resolved alerts, which MTTR
+measures), `linked=true` (alerts that link an audit event, which MTTD
+measures), `from`, `to` (RFC 3339, inclusive), `limit` (default 100, at most
+500 per page), `offset`. The filters after `target_id` are 7.17.0-beta.
 Response: `{"items": Alert[]}`, newest first.
 
 Alert: `id`, `audit_event_id`, `audit_action`, `severity`, `category`,
@@ -2146,31 +2172,37 @@ Alert: `id`, `audit_event_id`, `audit_action`, `severity`, `category`,
 
 ---
 
+All four statistics take a window: `from` and `to` (RFC 3339; without
+`from`, since the first alert). A malformed window is refused with `reason`
+`bad_window`. Before 7.17.0-beta they had no window and read the newest 5000
+alerts; before 7.15.0-beta the store cut them to the newest 100.
+
 ### GET /svc/reporting/alerts/stats
 
-Counts over the newest 5000 alerts (7.15.0-beta; before that the store
-silently cut every statistic to the newest 100). Response:
-`{"stats": {"total", "by_severity", "by_status", "top_actions", "daily_trend" (UTC date → count), "generated_at"}}`.
+Counts every alert created in the window. Response:
+`{"stats": {"total", "by_severity", "by_status", "top_actions", "daily_trend" (UTC date → count), "from", "to", "bucket_seconds", "series" ([{start, count}], pkg/timebucket), "generated_at"}}`.
 
 ---
 
 ### GET /svc/reporting/alerts/stats/mttd
 
-Mean minutes from the linked audit event to the alert, by severity, over the
-same 5000 alerts. Response: `{"mttd_minutes": {"critical": 4.2, ...}}`
+Mean minutes from the linked audit event to the alert, by severity. It looks
+up each alert's audit event, so it measures the newest 5000 alerts in the
+window that link one. Response:
+`{"mttd_minutes": {"critical": 4.2, ...}, "measured": n, "truncated": bool}`.
 
 ---
 
 ### GET /svc/reporting/alerts/stats/mttr
 
-Mean minutes from creation to resolution, by severity, over resolved alerts
-among the same 5000. Response: `{"mttr_minutes": {...}}`
+Mean minutes from creation to resolution, by severity, over every resolved
+alert in the window. Response: `{"mttr_minutes": {...}}`
 
 ---
 
 ### GET /svc/reporting/alerts/stats/top-sources
 
-Top ten actors, source IPs and services among the same 5000 alerts. Response: `{"top_actors": [{"key", "count"}], "top_ips": [...], "top_services": [...]}`
+Top ten actors, source IPs and services among every alert in the window. Response: `{"top_actors": [{"key", "count"}], "top_ips": [...], "top_services": [...]}`
 
 ---
 
@@ -3438,6 +3470,7 @@ Selected events with dedicated audit classification:
 - `audit.key.data_key_generated` (refusals: `reason` = `ops_limit_reached`, `policy_denied`, `fips_mode_violation`, access and HSM refusals, `permission_denied`): envelope-encryption DEK generation
 - `audit.key.rotation_policies_listed`, `audit.key.rotation_policy_created`, `audit.key.rotation_policy_updated`, `audit.key.rotation_policy_deleted`, `audit.key.rotation_policy_triggered`, `audit.key.rotation_runs_listed`, `audit.key.rotation_upcoming_listed` (kernel events; refusals `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`), `audit.key.rotation_policy_run` (scheduled run; `result: failure` when any key failed): key rotation policies
 - `audit.audit.checkpoints_listed` (kernel event for `GET /audit/checkpoints`; details `checkpoints`, `failed`), `audit.audit.checkpoint_signed` (a signed chain head: `chain_node`, `sequence`, `chain_hash`, `signed_at`, `key_id`, `algorithm`, `signature`), `audit.audit.checkpoint_key_created` (root; `target_id` key ID, `public_key_pem`), `audit.audit.checkpoint_refused` (`reason` `key_generation_failed`/`signing_failed`), `audit.audit.event_hmac_key_installed` (root; HMAC key derived from the audit master key; `mek_version`, `unavailable_mek_versions`).
+- `audit.audit.activity_stats_read` (kernel event for `GET /audit/activity/stats`, 7.17.0-beta; details `from`, `to`, `total`; refusals `result: refused`, `reason` `bad_window` or the kernel's).
 - `audit.audit.target_integrity_verified` (kernel event for `GET /audit/targets/{target_id}/integrity`; details `verdict`, `events_checked`, `failed`), `audit.audit.chain_broken` (critical; `scope: target` with `target_id` and per-event `breaks`, or the whole tenant chain; `break_count`). Published on the `AUDIT` stream (recorded by ingest, directly if the publish fails), so playbooks can trigger on it: audit trail integrity
 - `audit.key.key_consumers_read` (kernel event for `GET /keys/{id}/consumers`; detail `consumers`): a key's callers and rotate/delete impact
 - `audit.key.public_key_read` (kernel event for `GET /keys/{id}/public-key`; details `algorithm`, `version`; refusals `not_asymmetric`, `key_deleted`, `spki_unavailable` and the kernel's own): an asymmetric key's public key read (6.18.0-beta)
@@ -3542,6 +3575,7 @@ from the code; do not edit by hand.
 
 ### audit (`/svc/audit/`)
 
+- `GET /svc/audit/audit/activity/stats`
 - `GET /svc/audit/audit/cbom/diff`
 - `GET /svc/audit/audit/cbom/inventory`
 - `GET /svc/audit/audit/chain/verify`

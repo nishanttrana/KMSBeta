@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.17.0-beta] — 2026-09-30
+
+### Analytics windows: since uptime, last day, week, month, 6 months, year
+- **Added:** a window picker on Audit Log → Activity, Alert Center →
+  Analytics and Posture: since uptime, last day, last week, last month, last
+  6 months, last year. Charts bucket by hour, 6 hours, day or week to fit
+  the window (`pkg/timebucket`).
+- **Changed:** the services count the whole window. Audit activity was
+  counted in the browser over the newest 2000 events and is now
+  `GET /svc/audit/audit/activity/stats`. The alert statistics read the newest 5000
+  alerts and now count every alert in the window. The Posture risk trend
+  showed the newest 60 snapshots and now shows the latest snapshot per bucket
+  across the window. Posture charts read findings detected in the window
+  (they read the newest 300).
+- **Changed:** drill-downs ask the server for the same filters it counted
+  with, 100 entries at a time with **Load more**. New list filters:
+  `/audit/events` `service`, `risk_max`, `exclude_http_requests`; `/alerts`
+  `actor_id`, `source_ip`, `service`, `resolved`, `linked`.
+- **Still bounded:** mean time to detect measures the newest 5000 alerts that
+  link an audit event in the window, and says so when the window has more.
+  Posture charts at most 5000 findings per window and says so.
+- **Audit:** new `audit.audit.activity_stats_read`. A malformed window is
+  refused with `reason: bad_window` on the audit, reporting and posture
+  statistics routes, and the refusal is audited.
+- **Performance:** audit migration 014 adds an index on
+  `audit_events(tenant_id, timestamp DESC)` on every partition.
+
 ## [7.16.0-beta] — 2026-09-30
 
 ### REST client key rotation works; client credentials managed in the dashboard

@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AuthSession } from "../../../lib/auth";
-import { listAuditEvents, type AuditEvent } from "../../../lib/audit";
-import { B, Btn, Card, Row2, Row3, Sel, Stat } from "../legacyPrimitives";
+import { getAuditStats, listAuditEvents, type AuditEvent, type AuditEventQuery, type AuditStats } from "../../../lib/audit";
+import { B, Btn, Card, Row2, Row3, Stat } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
-import { clickable, clickedIndex, DrillHint, DrillPanel, type Drill } from "../chartDrill";
+import {
+  bucketBounds, bucketLabel, bucketUnit, clickable, clickedIndex, DEFAULT_WINDOW, DrillHint, DrillPanel,
+  usePagedDrill, windowFrom, WindowSelect, type ServerDrill, type WindowId
+} from "../chartDrill";
 import { C } from "../theme";
 
-// Activity sub-tab of the Audit Log. The audit service has no aggregate
-// endpoint, so this pages through the newest events in the window (up to
-// MAX_EVENTS) and says how many it analysed rather than calling the sample a
-// total. Clicking any chart segment lists exactly the events it counts; a row
-// opens the Audit Log's event detail.
-const PAGE = 500;
-const MAX_EVENTS = 2000;
-
-const WINDOWS: Record<string, number> = { "24h": 24, "7d": 24 * 7, "30d": 24 * 30 };
+// Activity sub-tab of the Audit Log. The audit service counts the whole
+// window (GET /audit/activity/stats), from a day to a year or since uptime. Clicking a
+// chart segment lists exactly the events it counts, through the event list
+// with the same filters; a row opens the Audit Log's event detail.
 const RESULT_COLORS: Record<string, string> = { success: C.green, failure: C.red, denied: C.amber, refused: C.amber };
-const RISK_BUCKETS = ["0-20", "21-40", "41-60", "61-80", "81-100"];
 const RISK_COLORS: string[] = [C.green, C.green, C.amber, C.orange, C.red];
 
 const title: React.CSSProperties = { fontSize: 10, fontWeight: 600, color: C.dim, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.6 };
@@ -25,98 +22,66 @@ const axisTick = { fill: C.muted, fontSize: 9 };
 const TH: React.CSSProperties = { fontSize: 9, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, padding: "5px 6px", textAlign: "left", borderBottom: `1px solid ${C.border}` };
 const TD: React.CSSProperties = { fontSize: 10, color: C.dim, padding: "5px 6px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" };
 
-const serviceOf = (e: AuditEvent) => String(e.service || "").replace(/^kms-/, "");
-const resultOf = (e: AuditEvent) => String(e.result || "").toLowerCase();
-const riskBucket = (e: AuditEvent) => { const s = Math.max(0, Math.min(100, Number(e.risk_score || 0))); return Math.min(4, Math.floor(Math.max(0, s - 1) / 20)); };
-const timeKey = (e: AuditEvent, byHour: boolean) => {
-  const dt = new Date(String(e.timestamp || ""));
-  if (Number.isNaN(dt.getTime())) return "";
-  const iso = dt.toISOString();
-  return byHour ? iso.slice(0, 13) : iso.slice(0, 10);
-};
-
-function countBy(events: AuditEvent[], key: (e: AuditEvent) => string, top = 0) {
-  const counts: Record<string, number> = {};
-  events.forEach((e) => { const k = key(e); if (k) counts[k] = (counts[k] || 0) + 1; });
-  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
-  return top ? rows.slice(0, top) : rows;
-}
+const shortService = (s: string) => String(s || "").replace(/^kms-/, "");
+const resultTone = (r: string) => r === "success" ? "green" : r === "failure" ? "red" : "amber";
 
 export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSession; onOpenEvent: (e: AuditEvent) => void }) {
-  const [windowKey, setWindowKey] = useState("24h");
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [truncated, setTruncated] = useState(false);
+  const [windowId, setWindowId] = useState<WindowId>(DEFAULT_WINDOW);
+  const [stats, setStats] = useState<AuditStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [drill, setDrill] = useState<Drill<AuditEvent> | null>(null);
+  const [drill, setDrill] = useState<ServerDrill<AuditEventQuery> | null>(null);
 
   const load = useCallback(async () => {
     if (!session?.token) return;
     setLoading(true); setErr(""); setDrill(null);
     try {
-      const from = new Date(Date.now() - (WINDOWS[windowKey] ?? 24) * 3600 * 1000).toISOString();
-      const out: AuditEvent[] = [];
-      let full = true;
-      while (out.length < MAX_EVENTS && full) {
-        const page = await listAuditEvents(session, { from, limit: PAGE, offset: out.length });
-        out.push(...page);
-        full = page.length === PAGE;
-      }
-      setEvents(out.filter((e) => !String(e.action || "").toLowerCase().includes(".http_request")));
-      setTruncated(full);
+      setStats(await getAuditStats(session, { from: windowFrom(windowId) }));
     } catch (e) {
-      setEvents([]); setTruncated(false); setErr(errMsg(e));
+      setStats(null); setErr(errMsg(e));
     } finally { setLoading(false); }
-  }, [session, windowKey]);
+  }, [session, windowId]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const byResult = useMemo(() => countBy(events, resultOf), [events]);
-  const byService = useMemo(() => countBy(events, serviceOf, 10), [events]);
-  const topActors = useMemo(() => countBy(events, (e) => e.actor_id, 10), [events]);
-  const risk = useMemo(() => {
-    const buckets = [0, 0, 0, 0, 0];
-    events.forEach((e) => { const b = riskBucket(e); buckets[b] = (buckets[b] ?? 0) + 1; });
-    return RISK_BUCKETS.map((range, i) => ({ range, count: buckets[i] }));
-  }, [events]);
-  const volume = useMemo(() => {
-    const byHour = windowKey === "24h";
-    const counts: Record<string, number> = {};
-    events.forEach((e) => { const k = timeKey(e, byHour); if (k) counts[k] = (counts[k] || 0) + 1; });
-    return Object.keys(counts).sort().map((k) => ({ key: k, time: byHour ? `${k.slice(5, 10)} ${k.slice(11)}:00` : k.slice(5), count: counts[k] }));
-  }, [events, windowKey]);
+  const fetchPage = useCallback((q: AuditEventQuery, offset: number, limit: number) =>
+    listAuditEvents(session, { ...q, exclude_http_requests: true, offset, limit }), [session]);
+  const paged = usePagedDrill(drill, fetchPage);
 
-  const drillRows = useMemo(() => drill ? events.filter(drill.match) : [], [drill, events]);
-  const pickVolume = (state: { activeIndex?: unknown } | null) => {
-    const point = volume[clickedIndex(state)];
-    if (!point) return;
-    const byHour = windowKey === "24h";
-    setDrill({ label: `Events at ${point.time} UTC`, match: (e) => timeKey(e, byHour) === point.key });
+  const win = useMemo(() => ({ from: stats?.from || "", to: stats?.to || "" }), [stats]);
+  // An empty key (no actor or service recorded) has no list filter, so it
+  // would list the whole window: it is not clickable.
+  const open = (label: string, count: number, query: AuditEventQuery) => {
+    if (Object.values(query).some((v) => v === "")) return;
+    setDrill({ label, count, query: { ...win, ...query } });
   };
 
-  const failures = byResult.filter((r) => r.name !== "success").reduce((s, r) => s + r.value, 0);
+  const byResult = stats?.by_result ?? [];
+  const series = useMemo(() => (stats?.series ?? []).map((p) => ({ ...p, time: bucketLabel(p.start, stats?.bucket_seconds || 3600) })), [stats]);
+  const failures = byResult.filter((r) => r.key !== "success").reduce((s, r) => s + r.count, 0);
+  const pickSeries = (state: { activeIndex?: unknown } | null) => {
+    const p = series[clickedIndex(state)];
+    if (!p || !stats) return;
+    open(`Events in the ${bucketUnit(stats.bucket_seconds)} from ${p.time} UTC`, p.count, bucketBounds(p.start, stats.bucket_seconds, stats.from, stats.to));
+  };
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <Sel w={110} value={windowKey} onChange={(e) => setWindowKey(e.target.value)}>
-          <option value="24h">Last 24h</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-        </Sel>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+        <WindowSelect value={windowId} onChange={setWindowId} />
         <Btn small onClick={() => void load()} disabled={loading}>{loading ? "Loading…" : "Refresh"}</Btn>
-        {truncated && <B c="amber">{`Newest ${events.length} events analysed — window has more`}</B>}
+        {stats && <span style={{ fontSize: 10, color: C.muted }}>{`${new Date(stats.from).toLocaleString()} to ${new Date(stats.to).toLocaleString()}`}</span>}
       </div>
 
       {err ? (
         <Card><div style={{ fontSize: 11, color: C.red }}>{`Audit analytics unavailable: ${err}`}</div></Card>
-      ) : <>
+      ) : !stats ? null : <>
         <DrillHint />
         <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-          <Stat l="Events analysed" v={events.length} c="accent" />
+          <Stat l="Events" v={stats.total} c="accent" />
           <Stat l="Not successful" v={failures} c={failures ? "amber" : "green"} />
-          <Stat l="Services" v={byService.length} c="blue" />
-          <Stat l="Actors" v={countBy(events, (e) => e.actor_id).length} c="blue" />
+          <Stat l="Services" v={stats.services} c="blue" />
+          <Stat l="Actors" v={stats.actors} c="blue" />
         </div>
 
         <Row3>
@@ -124,9 +89,9 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
             <div style={title}>Events by result</div>
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
-                <Pie data={byResult} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" nameKey="name" paddingAngle={3} strokeWidth={0}
-                  onClick={(d) => { const name = String(d?.payload?.name || ""); setDrill({ label: `Result: ${name}`, match: (e) => resultOf(e) === name }); }}>
-                  {byResult.map((r) => <Cell key={r.name} fill={RESULT_COLORS[r.name] || C.dim} style={clickable} />)}
+                <Pie data={byResult} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="count" nameKey="key" paddingAngle={3} strokeWidth={0}
+                  onClick={(d) => { const r = d?.payload as { key: string; count: number }; open(`Result: ${r.key}`, r.count, { result: r.key }); }}>
+                  {byResult.map((r) => <Cell key={r.key} fill={RESULT_COLORS[r.key] || C.dim} style={clickable} />)}
                 </Pie>
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 9, color: C.dim }} />
@@ -136,25 +101,29 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
           <Card>
             <div style={title}>Top services</div>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={byService} layout="vertical" margin={{ left: 40, right: 10 }}>
-                <XAxis type="number" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} />
+              <BarChart data={stats.top_services.map((s) => ({ ...s, name: shortService(s.key) }))} layout="vertical" margin={{ left: 40, right: 10 }}>
+                <XAxis type="number" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 9 }} axisLine={false} tickLine={false} width={60} />
                 <Tooltip />
-                <Bar dataKey="value" name="Events" fill={C.blue} radius={[0, 4, 4, 0]} barSize={12} style={clickable}
-                  onClick={(d) => { const name = String(d?.payload?.name || ""); setDrill({ label: `Service: ${name}`, match: (e) => serviceOf(e) === name }); }} />
+                <Bar dataKey="count" name="Events" fill={C.blue} radius={[0, 4, 4, 0]} barSize={12} style={clickable}
+                  onClick={(d) => { const s = d?.payload as { key: string; count: number }; open(`Service: ${shortService(s.key)}`, s.count, { service: s.key }); }} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
           <Card>
             <div style={title}>Risk score distribution</div>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={risk}>
-                <XAxis dataKey="range" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} />
+              <BarChart data={stats.risk_buckets}>
+                <XAxis dataKey="key" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} />
                 <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
                 <Bar dataKey="count" name="Events" radius={[4, 4, 0, 0]} barSize={24} style={clickable}
-                  onClick={(_, i) => setDrill({ label: `Risk score ${RISK_BUCKETS[i]}`, match: (e) => riskBucket(e) === i })}>
-                  {risk.map((_, i) => <Cell key={i} fill={RISK_COLORS[i] || C.dim} />)}
+                  onClick={(d) => {
+                    const r = d?.payload as { key: string; count: number };
+                    const [lo = 0, hi = 100] = r.key.split("-").map(Number);
+                    open(`Risk score ${r.key}`, r.count, { risk_min: lo, risk_max: hi });
+                  }}>
+                  {stats.risk_buckets.map((_, i) => <Cell key={i} fill={RISK_COLORS[i] || C.dim} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -164,11 +133,11 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
         <div style={{ height: 10 }} />
         <Row2>
           <Card>
-            <div style={title}>{`Event volume (UTC, per ${windowKey === "24h" ? "hour" : "day"})`}</div>
-            {volume.length === 0 ? <div style={{ fontSize: 10, color: C.muted, padding: 20, textAlign: "center" }}>No events in this window.</div> : (
+            <div style={title}>{`Event volume (UTC, per ${bucketUnit(stats.bucket_seconds)})`}</div>
+            {stats.total === 0 ? <div style={{ fontSize: 10, color: C.muted, padding: 20, textAlign: "center" }}>No events in this window.</div> : (
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={volume} margin={{ top: 5, right: 10, left: 0, bottom: 0 }} onClick={pickVolume} style={clickable}>
-                  <XAxis dataKey="time" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} />
+                <AreaChart data={series} margin={{ top: 5, right: 10, left: 0, bottom: 0 }} onClick={pickSeries} style={clickable}>
+                  <XAxis dataKey="time" tick={axisTick} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
                   <YAxis tick={axisTick} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip />
                   <Area type="monotone" dataKey="count" name="Events" stroke={C.accent} strokeWidth={2} fill={C.accentDim} />
@@ -178,31 +147,32 @@ export function AuditAnalyticsPanel({ session, onOpenEvent }: { session: AuthSes
           </Card>
           <Card>
             <div style={title}>Top actors</div>
-            {topActors.length === 0 ? <div style={{ fontSize: 10, color: C.muted }}>No actor data.</div> : topActors.map((a) => (
-              <div key={a.name} onClick={() => setDrill({ label: `Actor: ${a.name}`, match: (e) => e.actor_id === a.name })}
+            {stats.top_actors.length === 0 ? <div style={{ fontSize: 10, color: C.muted }}>No actor data.</div> : stats.top_actors.map((a) => (
+              <div key={a.key} onClick={() => open(`Actor: ${a.key}`, a.count, { actor_id: a.key })}
                 style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${C.border}`, fontSize: 10, ...clickable }}>
-                <span style={{ color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "75%" }}>{a.name}</span>
-                <span style={{ color: C.text, fontWeight: 600 }}>{a.value}</span>
+                <span style={{ color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "75%" }}>{a.key || "-"}</span>
+                <span style={{ color: C.text, fontWeight: 600 }}>{a.count}</span>
               </div>
             ))}
           </Card>
         </Row2>
 
         {drill && (
-          <DrillPanel label={drill.label} count={drillRows.length} onClear={() => setDrill(null)}>
+          <DrillPanel label={drill.label} count={drill.count} onClear={() => setDrill(null)}
+            loaded={paged.rows.length} loading={paged.loading} error={paged.error} onMore={paged.done ? undefined : paged.loadMore}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>{["Time", "Service", "Action", "Actor", "Target", "Result", "Risk"].map((h) => <th key={h} style={TH}>{h}</th>)}</tr></thead>
               <tbody>
-                {drillRows.map((e) => (
+                {paged.rows.map((e) => (
                   <tr key={e.id} onClick={() => onOpenEvent(e)} style={clickable}
                     onMouseEnter={(ev) => { ev.currentTarget.style.background = C.cardHover; }}
                     onMouseLeave={(ev) => { ev.currentTarget.style.background = ""; }}>
                     <td style={TD}>{new Date(String(e.timestamp || "")).toLocaleString()}</td>
-                    <td style={TD}><B c="blue">{serviceOf(e)}</B></td>
+                    <td style={TD}><B c="blue">{shortService(e.service)}</B></td>
                     <td style={{ ...TD, color: C.text }} title={e.action}>{e.action}</td>
                     <td style={TD}>{e.actor_id || "-"}</td>
                     <td style={TD}>{e.target_id || "-"}</td>
-                    <td style={TD}><B c={resultOf(e) === "success" ? "green" : resultOf(e) === "failure" ? "red" : "amber"}>{e.result}</B></td>
+                    <td style={TD}><B c={resultTone(String(e.result || "").toLowerCase())}>{e.result}</B></td>
                     <td style={TD}>{e.risk_score ?? 0}</td>
                   </tr>
                 ))}

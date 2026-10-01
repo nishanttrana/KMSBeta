@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-30T16:20:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T04:45:55Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `28`
 - Tab/component mappings: `35`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `842` across `28` services
-- Backend routes on the `pkg/route` kernel: `414` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `527`
-- Frontend call sites with exact backend route match: `485`
+- Backend HTTP routes discovered: `843` across `28` services
+- Backend routes on the `pkg/route` kernel: `415` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `529`
+- Frontend call sites with exact backend route match: `487`
 - Frontend call sites needing review or dynamic/runtime confirmation: `42`
-- Clickable controls with static `onClick` handlers: `724`
-- Backend request flows with handler/service/package summaries: `842`
+- Clickable controls with static `onClick` handlers: `725`
+- Backend request flows with handler/service/package summaries: `843`
 
 ## How To Use This For Launch
 
@@ -131,7 +131,7 @@ flowchart LR
   tab_restapi --> svc_auth_edge
   tab_restapi --> svc_certs
   tab_restapi --> svc_secrets
-  svc_audit["audit (33 routes)"]
+  svc_audit["audit (34 routes)"]
   svc_auth["auth (86 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
@@ -165,7 +165,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 197 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 198 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
 | Keys & lifecycle | Key Management | keys | web/dashboard/src/components/v3/tabs/KeysTab.tsx | auth, keycore | 96 |
@@ -180,10 +180,10 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | HSM | hsm | web/dashboard/src/components/v3/tabs/HSMTab.tsx | auth | 47 |
 | Data & integrations | Workload Identity | workload | web/dashboard/src/components/v3/tabs/WorkloadIdentityTab.tsx | workload | 13 |
 | Data & integrations | Confidential Compute | confidential | web/dashboard/src/components/v3/tabs/ConfidentialComputeTab.tsx | confidential | 6 |
-| Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 9 |
+| Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 10 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 27 |
 | Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | compliance, governance | 24 |
-| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 94 |
+| Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 95 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | compliance, pqc, reporting | 46 |
 | Security & compliance | SBOM / CBOM | sbom | web/dashboard/src/components/v3/tabs/SBOMTab.tsx | sbom | 12 |
 | Security & compliance | Playbooks | playbooks | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | - | 0 |
@@ -203,7 +203,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
-| audit | 33 | 20 |
+| audit | 34 | 21 |
 | auth | 86 | 47 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
@@ -222,7 +222,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | keycore | 173 | 118 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
-| posture | 12 | 8 |
+| posture | 12 | 9 |
 | pqc | 14 | 8 |
 | reconciler | 1 | 1 |
 | reporting | 34 | 24 |
@@ -277,8 +277,8 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /compliance/regulatory | trackedFetch | web/dashboard/src/lib/regulatory.ts | 6 |
 | keycore | GET | /compliance/dashboard | trackedFetch | web/dashboard/src/lib/regulatory.ts | 12 |
 | keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
-| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 279 |
-| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 318 |
+| reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
+| reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 
 Showing `42` of `42`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
@@ -292,14 +292,14 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | audit | POST | /audit/publish | h.handlePublish |  | services/audit/handler.go | 72 |
 | audit | POST | /audit/search | h.handleSearch |  | services/audit/handler.go | 78 |
 | audit | GET | /audit/stream | h.handleStream |  | services/audit/handler.go | 80 |
-| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 87 |
-| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 88 |
-| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 89 |
-| audit | GET | /ops-metrics/timeseries | h.handleGetOpsTimeSeries |  | services/audit/handler.go | 96 |
-| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 102 |
-| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 105 |
-| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 106 |
-| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 109 |
+| audit | POST | /audit/cluster/signing-key/join-key | h.handleClusterKeyJoinKey |  | services/audit/handler.go | 89 |
+| audit | POST | /audit/cluster/signing-key/export | h.handleClusterKeyExport |  | services/audit/handler.go | 90 |
+| audit | POST | /audit/cluster/signing-key/import | h.handleClusterKeyImport |  | services/audit/handler.go | 91 |
+| audit | GET | /ops-metrics/timeseries | h.handleGetOpsTimeSeries |  | services/audit/handler.go | 98 |
+| audit | GET | /audit/fips/boundary | h.handleFIPSBoundary |  | services/audit/handler.go | 104 |
+| audit | GET | /audit/cbom/inventory | h.handleCBOMInventory |  | services/audit/handler.go | 107 |
+| audit | GET | /audit/cbom/diff | h.handleCBOMDiff |  | services/audit/handler.go | 108 |
+| audit | GET | /metrics | h.handlePrometheusMetrics |  | services/audit/handler.go | 111 |
 | auth | DELETE | /auth/api-keys/{id} | h.deleteAPIKey | auth.api_key.write | services/auth/clients_admin.go | 30 |
 | auth | POST | /auth/delegated/authority | h.delegatedAuthority | authenticated | services/auth/delegated.go | 69 |
 | auth | POST | /auth/delegated/users/{id}/disable | h.delegatedDisableUser | authenticated | services/auth/delegated.go | 70 |

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 	"vecta-kms/pkg/clusterstate"
+	"vecta-kms/pkg/timebucket"
 )
 
 type Service struct {
@@ -1345,6 +1346,32 @@ func (s *Service) LatestRisk(ctx context.Context, tenantID string) (RiskSnapshot
 
 func (s *Service) RiskHistory(ctx context.Context, tenantID string, q RiskQuery) ([]RiskSnapshot, error) {
 	return s.store.ListRiskSnapshots(ctx, tenantID, q)
+}
+
+// RiskTrend is the Posture risk-trend chart over a window: the latest
+// snapshot in each timebucket bucket, newest first, and the bucket width. A
+// zero from starts at the first snapshot ("since uptime").
+func (s *Service) RiskTrend(ctx context.Context, tenantID string, from, to time.Time) ([]RiskSnapshot, time.Duration, error) {
+	if to.IsZero() {
+		to = time.Now().UTC()
+	}
+	all, err := s.store.ListRiskSnapshots(ctx, tenantID, RiskQuery{From: from, To: to, Unbounded: true})
+	if err != nil || len(all) == 0 {
+		return []RiskSnapshot{}, 0, err
+	}
+	if from.IsZero() {
+		from = all[len(all)-1].CapturedAt
+	}
+	starts, w := timebucket.Buckets(from, to)
+	out := make([]RiskSnapshot, 0, len(starts))
+	last := -1
+	for _, snap := range all { // newest first: the first seen in a bucket is its latest
+		if i := timebucket.Index(starts, w, snap.CapturedAt.UTC()); i >= 0 && i != last {
+			out = append(out, snap)
+			last = i
+		}
+	}
+	return out, w, nil
 }
 
 func (s *Service) Dashboard(ctx context.Context, tenantID string) (PostureDashboard, error) {

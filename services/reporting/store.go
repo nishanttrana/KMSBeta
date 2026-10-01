@@ -19,6 +19,7 @@ type Store interface {
 	UpdateAlertDedup(ctx context.Context, tenantID string, id string, addCount int, channels []string, channelStatus map[string]string) error
 	GetAlert(ctx context.Context, tenantID string, id string) (Alert, error)
 	GetAlertByAuditEventID(ctx context.Context, tenantID string, auditEventID string) (Alert, error)
+	ScanAlerts(ctx context.Context, tenantID string, q AlertQuery, fn func(Alert) error) error
 	FindRecentDedupAlert(ctx context.Context, tenantID string, action string, targetID string, window time.Duration) (Alert, error)
 	ListAlerts(ctx context.Context, tenantID string, q AlertQuery) ([]Alert, error)
 	UpdateAlertStatus(ctx context.Context, tenantID string, id string, status string, actor string, note string) error
@@ -186,6 +187,35 @@ func (s *SQLStore) ListAlerts(ctx context.Context, tenantID string, q AlertQuery
 		q.Limit = 100
 	}
 	q.Limit = min(q.Limit, alertScanLimit)
+	out := make([]Alert, 0)
+	err := s.queryAlerts(ctx, tenantID, q, true, func(a Alert) error { out = append(out, a); return nil })
+	return out, err
+}
+
+// ScanAlerts streams every alert matching q, newest first, with no limit.
+// The statistics use it so a window of a year is counted in full.
+func (s *SQLStore) ScanAlerts(ctx context.Context, tenantID string, q AlertQuery, fn func(Alert) error) error {
+	return s.queryAlerts(ctx, tenantID, q, false, fn)
+}
+
+func (s *SQLStore) queryAlerts(ctx context.Context, tenantID string, q AlertQuery, paged bool, fn func(Alert) error) error {
+	sev := strings.ToLower(strings.TrimSpace(q.Severity))
+	args := []interface{}{tenantID, sev, strings.ToLower(q.Status), q.Action, q.TargetType, q.TargetID, nullableTime(q.From), nullableTime(q.To),
+		q.ActorID, q.SourceIP, q.Service}
+	extra := ""
+	if q.Resolved {
+		extra += "  AND resolved_at IS NOT NULL\n"
+	}
+	if q.Linked {
+		extra += "  AND audit_event_id <> ''\n"
+	}
+	page := ""
+	if paged {
+		args = append(args, q.Limit, max(0, q.Offset))
+		page = "LIMIT $12 OFFSET $13"
+	}
+	// Severity "info" also matches unknown values, as normalizeSeverity
+	// counts them.
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, audit_event_id, audit_action, severity, category, title, description,
 	   service, actor_id, actor_type, target_type, target_id, source_ip, status,
@@ -194,29 +224,32 @@ SELECT tenant_id, id, audit_event_id, audit_action, severity, category, title, d
 	   channels_sent_json, channel_status_json, created_at, updated_at
 FROM reporting_alerts
 WHERE tenant_id = $1
-  AND ($2 = '' OR severity = $2)
+  AND ($2 = '' OR severity = $2 OR ($2 = 'info' AND LOWER(severity) NOT IN ('critical','high','warning')))
   AND ($3 = '' OR status = $3)
   AND ($4 = '' OR audit_action = $4)
   AND ($5 = '' OR target_type = $5)
   AND ($6 = '' OR target_id = $6)
   AND created_at >= COALESCE($7, created_at)
   AND created_at <= COALESCE($8, created_at)
-ORDER BY created_at DESC
-LIMIT $9 OFFSET $10
-`, tenantID, strings.ToLower(q.Severity), strings.ToLower(q.Status), q.Action, q.TargetType, q.TargetID, nullableTime(q.From), nullableTime(q.To), q.Limit, max(0, q.Offset))
+  AND ($9 = '' OR actor_id = $9)
+  AND ($10 = '' OR source_ip = $10)
+  AND ($11 = '' OR service = $11)
+`+extra+`ORDER BY created_at DESC
+`+page, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close() //nolint:errcheck
-	out := make([]Alert, 0)
 	for rows.Next() {
 		item, err := scanAlert(rows)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		out = append(out, item)
+		if err := fn(item); err != nil {
+			return err
+		}
 	}
-	return out, rows.Err()
+	return rows.Err()
 }
 
 func (s *SQLStore) UpdateAlertStatus(ctx context.Context, tenantID string, id string, status string, actor string, note string) error {

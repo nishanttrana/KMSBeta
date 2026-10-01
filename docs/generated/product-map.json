@@ -155,7 +155,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 87,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -170,7 +170,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 88,
+      "line": 90,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -185,7 +185,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 89,
+      "line": 91,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -200,7 +200,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsOverview",
-      "line": 95,
+      "line": 97,
       "match_key": "audit|GET|/ops-metrics/overview",
       "method": "GET",
       "normalized_path": "/ops-metrics/overview",
@@ -215,7 +215,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 96,
+      "line": 98,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -230,7 +230,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetLatencyPercentiles",
-      "line": 97,
+      "line": 99,
       "match_key": "audit|GET|/ops-metrics/latency",
       "method": "GET",
       "normalized_path": "/ops-metrics/latency",
@@ -245,7 +245,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetServiceStats",
-      "line": 98,
+      "line": 100,
       "match_key": "audit|GET|/ops-metrics/by-service",
       "method": "GET",
       "normalized_path": "/ops-metrics/by-service",
@@ -260,7 +260,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetErrorBreakdown",
-      "line": 99,
+      "line": 101,
       "match_key": "audit|GET|/ops-metrics/errors",
       "method": "GET",
       "normalized_path": "/ops-metrics/errors",
@@ -275,7 +275,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 102,
+      "line": 104,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -290,7 +290,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 105,
+      "line": 107,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -305,7 +305,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 106,
+      "line": 108,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -320,7 +320,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 109,
+      "line": 111,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -418,6 +418,21 @@
       "permission": "audit.webhook.read",
       "registration": "kernel",
       "resource": "webhook",
+      "service": "audit"
+    },
+    {
+      "action": "activity_stats_read",
+      "code_scope": "audit",
+      "file": "services/audit/stats.go",
+      "handler": "h.activityStats",
+      "line": 147,
+      "match_key": "audit|GET|/audit/activity/stats",
+      "method": "GET",
+      "normalized_path": "/audit/activity/stats",
+      "path": "/audit/activity/stats",
+      "permission": "audit.events.read",
+      "registration": "kernel",
+      "resource": "audit_trail",
       "service": "audit"
     },
     {
@@ -12682,7 +12697,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyJoinKey",
-      "line": 87,
+      "line": 89,
       "match_key": "audit|POST|/audit/cluster/signing-key/join-key",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/join-key",
@@ -12697,7 +12712,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyExport",
-      "line": 88,
+      "line": 90,
       "match_key": "audit|POST|/audit/cluster/signing-key/export",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/export",
@@ -12712,7 +12727,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleClusterKeyImport",
-      "line": 89,
+      "line": 91,
       "match_key": "audit|POST|/audit/cluster/signing-key/import",
       "method": "POST",
       "normalized_path": "/audit/cluster/signing-key/import",
@@ -12727,7 +12742,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleGetOpsTimeSeries",
-      "line": 96,
+      "line": 98,
       "match_key": "audit|GET|/ops-metrics/timeseries",
       "method": "GET",
       "normalized_path": "/ops-metrics/timeseries",
@@ -12742,7 +12757,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleFIPSBoundary",
-      "line": 102,
+      "line": 104,
       "match_key": "audit|GET|/audit/fips/boundary",
       "method": "GET",
       "normalized_path": "/audit/fips/boundary",
@@ -12757,7 +12772,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMInventory",
-      "line": 105,
+      "line": 107,
       "match_key": "audit|GET|/audit/cbom/inventory",
       "method": "GET",
       "normalized_path": "/audit/cbom/inventory",
@@ -12772,7 +12787,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handleCBOMDiff",
-      "line": 106,
+      "line": 108,
       "match_key": "audit|GET|/audit/cbom/diff",
       "method": "GET",
       "normalized_path": "/audit/cbom/diff",
@@ -12787,7 +12802,7 @@
       "code_scope": "audit",
       "file": "services/audit/handler.go",
       "handler": "h.handlePrometheusMetrics",
-      "line": 109,
+      "line": 111,
       "match_key": "audit|GET|/metrics",
       "method": "GET",
       "normalized_path": "/metrics",
@@ -18010,7 +18025,15 @@
       "file": "web/dashboard/src/components/v3/chartDrill.tsx",
       "handler": "onClear",
       "label": "Clear",
-      "line": 29,
+      "line": 133,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/chartDrill.tsx",
+      "handler": "onMore} disabled={loading",
+      "label": "(icon or dynamic label)",
+      "line": 141,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18074,7 +18097,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()}>Retry",
-      "line": 97,
+      "line": 99,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18082,7 +18105,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 104,
+      "line": 107,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18216,7 +18239,7 @@
       "file": "web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx",
       "handler": "",
       "label": "void load()} disabled= >",
-      "line": 107,
+      "line": 72,
       "tabs": [],
       "tag": "Btn"
     },
@@ -22309,7 +22332,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "load(false)} disabled= >",
-      "line": 516,
+      "line": 536,
       "tabs": [
         "posture"
       ],
@@ -22319,7 +22342,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "runScan} disabled={running",
       "label": "(icon or dynamic label)",
-      "line": 517,
+      "line": 537,
       "tabs": [
         "posture"
       ],
@@ -22329,7 +22352,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setFindingEngine(\"\")} style={ }>Clear engine filter",
-      "line": 922,
+      "line": 946,
       "tabs": [
         "posture"
       ],
@@ -22339,7 +22362,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"acknowledged\")} disabled= >Acknowledge",
-      "line": 1175,
+      "line": 1199,
       "tabs": [
         "posture"
       ],
@@ -22349,7 +22372,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"resolved\")} disabled= >Resolve",
-      "line": 1176,
+      "line": 1200,
       "tabs": [
         "posture"
       ],
@@ -22359,7 +22382,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "patchFinding(selectedFinding, \"reopened\")}>Reopen",
-      "line": 1177,
+      "line": 1201,
       "tabs": [
         "posture"
       ],
@@ -22369,7 +22392,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedFinding(null)}>Close",
-      "line": 1178,
+      "line": 1202,
       "tabs": [
         "posture"
       ],
@@ -22379,7 +22402,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "executeAction(selectedAction)}> Execute",
-      "line": 1269,
+      "line": 1293,
       "tabs": [
         "posture"
       ],
@@ -22389,7 +22412,7 @@
       "file": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "handler": "",
       "label": "setSelectedAction(null)}>Close",
-      "line": 1271,
+      "line": 1295,
       "tabs": [
         "posture"
       ],
@@ -24497,9 +24520,22 @@
   "frontend_calls": [
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
+      "file": "web/dashboard/src/lib/audit.ts",
+      "line": 82,
+      "match_key": "audit|GET|/audit/activity/stats",
+      "method": "GET",
+      "normalized_path": "/audit/activity/stats",
+      "path": "/audit/activity/stats?{param}",
+      "service": "audit",
+      "service_key": "audit",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 88,
+      "line": 123,
       "match_key": "audit|GET|/audit/events",
       "method": "GET",
       "normalized_path": "/audit/events",
@@ -24512,7 +24548,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 93,
+      "line": 128,
       "match_key": "audit|GET|/audit/events/{param}",
       "method": "GET",
       "normalized_path": "/audit/events/{param}",
@@ -24525,7 +24561,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 110,
+      "line": 145,
       "match_key": "audit|GET|/audit/timeline/{param}",
       "method": "GET",
       "normalized_path": "/audit/timeline/{param}",
@@ -24538,7 +24574,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 151,
+      "line": 186,
       "match_key": "audit|GET|/audit/targets/{param}/integrity",
       "method": "GET",
       "normalized_path": "/audit/targets/{param}/integrity",
@@ -24551,7 +24587,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 167,
+      "line": 202,
       "match_key": "audit|GET|/audit/session/{param}",
       "method": "GET",
       "normalized_path": "/audit/session/{param}",
@@ -24564,7 +24600,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 183,
+      "line": 218,
       "match_key": "audit|GET|/audit/correlation/{param}",
       "method": "GET",
       "normalized_path": "/audit/correlation/{param}",
@@ -24577,7 +24613,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 191,
+      "line": 226,
       "match_key": "audit|GET|/audit/chain/verify",
       "method": "GET",
       "normalized_path": "/audit/chain/verify",
@@ -24590,7 +24626,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 203,
+      "line": 238,
       "match_key": "audit|GET|/audit/config",
       "method": "GET",
       "normalized_path": "/audit/config",
@@ -24603,7 +24639,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
       "file": "web/dashboard/src/lib/audit.ts",
-      "line": 233,
+      "line": 268,
       "match_key": "audit|GET|/audit/checkpoints",
       "method": "GET",
       "normalized_path": "/audit/checkpoints",
@@ -29996,9 +30032,22 @@
     },
     {
       "dynamic": true,
+      "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
+      "file": "web/dashboard/src/lib/posture.ts",
+      "line": 182,
+      "match_key": "posture|GET|/posture/risk/history",
+      "method": "GET",
+      "normalized_path": "/posture/risk/history",
+      "path": "/posture/risk/history?{param}",
+      "service": "posture",
+      "service_key": "posture",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 177,
+      "line": 187,
       "match_key": "posture|GET|/posture/risk/history",
       "method": "GET",
       "normalized_path": "/posture/risk/history",
@@ -30011,7 +30060,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 196,
+      "line": 207,
       "match_key": "posture|GET|/posture/findings",
       "method": "GET",
       "normalized_path": "/posture/findings",
@@ -30024,7 +30073,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 205,
+      "line": 216,
       "match_key": "posture|PUT|/posture/findings/{param}/status",
       "method": "PUT",
       "normalized_path": "/posture/findings/{param}/status",
@@ -30037,7 +30086,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 221,
+      "line": 232,
       "match_key": "posture|GET|/posture/actions",
       "method": "GET",
       "normalized_path": "/posture/actions",
@@ -30050,7 +30099,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/posture.ts",
-      "line": 232,
+      "line": 243,
       "match_key": "posture|POST|/posture/actions/{param}/execute",
       "method": "POST",
       "normalized_path": "/posture/actions/{param}/execute",
@@ -30206,7 +30255,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 163,
+      "line": 195,
       "match_key": "reporting|GET|/alerts",
       "method": "GET",
       "normalized_path": "/alerts",
@@ -30219,7 +30268,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 185,
+      "line": 203,
       "match_key": "reporting|GET|/alerts/unread",
       "method": "GET",
       "normalized_path": "/alerts/unread",
@@ -30230,9 +30279,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
+      "expression": "serviceRequest(\"reporting\", `/alerts/stats?${windowQuery(session, window)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 194,
+      "line": 216,
       "match_key": "reporting|GET|/alerts/stats",
       "method": "GET",
       "normalized_path": "/alerts/stats",
@@ -30243,9 +30292,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
+      "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${windowQuery(session, window)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 205,
+      "line": 231,
       "match_key": "reporting|GET|/alerts/stats/mttr",
       "method": "GET",
       "normalized_path": "/alerts/stats/mttr",
@@ -30256,9 +30305,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
+      "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${windowQuery(session, window)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 210,
+      "line": 238,
       "match_key": "reporting|GET|/alerts/stats/mttd",
       "method": "GET",
       "normalized_path": "/alerts/stats/mttd",
@@ -30271,7 +30320,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 217,
+      "line": 249,
       "match_key": "reporting|GET|/alerts/channels",
       "method": "GET",
       "normalized_path": "/alerts/channels",
@@ -30284,7 +30333,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 222,
+      "line": 254,
       "match_key": "reporting|GET|/alerts/rules",
       "method": "GET",
       "normalized_path": "/alerts/rules",
@@ -30297,7 +30346,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 246,
+      "line": 278,
       "match_key": "reporting|POST|/alerts/rules/test",
       "method": "POST",
       "normalized_path": "/alerts/rules/test",
@@ -30310,7 +30359,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 254,
+      "line": 286,
       "match_key": "reporting|POST|/alerts/rules",
       "method": "POST",
       "normalized_path": "/alerts/rules",
@@ -30323,7 +30372,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 265,
+      "line": 297,
       "match_key": "reporting|PUT|/alerts/rules/{param}",
       "method": "PUT",
       "normalized_path": "/alerts/rules/{param}",
@@ -30336,7 +30385,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 272,
+      "line": 304,
       "match_key": "reporting|DELETE|/alerts/rules/{param}",
       "method": "DELETE",
       "normalized_path": "/alerts/rules/{param}",
@@ -30349,7 +30398,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 279,
+      "line": 311,
       "match_key": "reporting|PUT|/alerts/{param}/acknowledge",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/acknowledge",
@@ -30362,7 +30411,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 305,
+      "line": 337,
       "match_key": "reporting|POST|/alerts/bulk/acknowledge",
       "method": "POST",
       "normalized_path": "/alerts/bulk/acknowledge",
@@ -30375,7 +30424,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/escalate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 318,
+      "line": 350,
       "match_key": "reporting|PUT|/alerts/{param}/escalate",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/escalate",
@@ -30386,9 +30435,9 @@
     },
     {
       "dynamic": true,
-      "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
+      "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${windowQuery(session, window)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 333,
+      "line": 365,
       "match_key": "reporting|GET|/alerts/stats/top-sources",
       "method": "GET",
       "normalized_path": "/alerts/stats/top-sources",
@@ -30401,7 +30450,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 346,
+      "line": 378,
       "match_key": "reporting|GET|/reports/templates",
       "method": "GET",
       "normalized_path": "/reports/templates",
@@ -30414,7 +30463,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 359,
+      "line": 391,
       "match_key": "reporting|POST|/reports/generate",
       "method": "POST",
       "normalized_path": "/reports/generate",
@@ -30427,7 +30476,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 374,
+      "line": 406,
       "match_key": "reporting|GET|/reports/jobs/{param}",
       "method": "GET",
       "normalized_path": "/reports/jobs/{param}",
@@ -30440,7 +30489,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 386,
+      "line": 418,
       "match_key": "reporting|GET|/reports/jobs",
       "method": "GET",
       "normalized_path": "/reports/jobs",
@@ -30453,7 +30502,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 404,
+      "line": 436,
       "match_key": "reporting|GET|/reports/jobs/{param}/download",
       "method": "GET",
       "normalized_path": "/reports/jobs/{param}/download",
@@ -30466,7 +30515,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 420,
+      "line": 452,
       "match_key": "reporting|DELETE|/reports/jobs/{param}",
       "method": "DELETE",
       "normalized_path": "/reports/jobs/{param}",
@@ -30479,7 +30528,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 426,
+      "line": 458,
       "match_key": "reporting|GET|/reports/scheduled",
       "method": "GET",
       "normalized_path": "/reports/scheduled",
@@ -30492,7 +30541,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 440,
+      "line": 472,
       "match_key": "reporting|POST|/reports/scheduled",
       "method": "POST",
       "normalized_path": "/reports/scheduled",
@@ -31347,7 +31396,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-30T16:20:20Z",
+  "generated_at": "2026-10-01T04:45:55Z",
   "navigation": [
     {
       "group": "Overview",
@@ -31535,7 +31584,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/tenantcheck.Enforce"
       ],
-      "handler_line": 114,
+      "handler_line": 116,
       "handler_name": "handlePublish",
       "handler_receiver_calls": [
         "h.cluster.Publish"
@@ -31607,7 +31656,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 88,
+          "line": 123,
           "source": "serviceRequest"
         }
       ],
@@ -31627,7 +31676,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 178,
+      "handler_line": 180,
       "handler_name": "handleEvents",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31652,7 +31701,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 93,
+          "line": 128,
           "source": "serviceRequest"
         }
       ],
@@ -31670,7 +31719,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 206,
+      "handler_line": 211,
       "handler_name": "handleEvent",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31695,7 +31744,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 110,
+          "line": 145,
           "source": "serviceRequest"
         }
       ],
@@ -31712,7 +31761,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 224,
+      "handler_line": 229,
       "handler_name": "handleTimeline",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31737,7 +31786,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 167,
+          "line": 202,
           "source": "serviceRequest"
         }
       ],
@@ -31754,7 +31803,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 242,
+      "handler_line": 247,
       "handler_name": "handleSession",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31779,7 +31828,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 183,
+          "line": 218,
           "source": "serviceRequest"
         }
       ],
@@ -31796,7 +31845,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 260,
+      "handler_line": 265,
       "handler_name": "handleCorrelation",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31825,7 +31874,7 @@
         "handleEvents"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 278,
+      "handler_line": 283,
       "handler_name": "handleSearch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31848,7 +31897,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 191,
+          "line": 226,
           "source": "serviceRequest"
         }
       ],
@@ -31864,7 +31913,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 283,
+      "handler_line": 288,
       "handler_name": "handleChainVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -31929,7 +31978,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 203,
+          "line": 238,
           "source": "serviceRequest"
         }
       ],
@@ -31943,7 +31992,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 297,
+      "handler_line": 302,
       "handler_name": "handleAuditConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -31986,7 +32035,7 @@
       "normalized_path": "/audit/cluster/signing-key/join-key",
       "path": "/audit/cluster/signing-key/join-key",
       "route_file": "services/audit/handler.go",
-      "route_line": 87,
+      "route_line": 89,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32040,7 +32089,7 @@
       "normalized_path": "/audit/cluster/signing-key/export",
       "path": "/audit/cluster/signing-key/export",
       "route_file": "services/audit/handler.go",
-      "route_line": 88,
+      "route_line": 90,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32103,7 +32152,7 @@
       "normalized_path": "/audit/cluster/signing-key/import",
       "path": "/audit/cluster/signing-key/import",
       "route_file": "services/audit/handler.go",
-      "route_line": 89,
+      "route_line": 91,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32165,7 +32214,7 @@
       "normalized_path": "/ops-metrics/overview",
       "path": "/ops-metrics/overview",
       "route_file": "services/audit/handler.go",
-      "route_line": 95,
+      "route_line": 97,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32199,7 +32248,7 @@
       "normalized_path": "/ops-metrics/timeseries",
       "path": "/ops-metrics/timeseries",
       "route_file": "services/audit/handler.go",
-      "route_line": 96,
+      "route_line": 98,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32240,7 +32289,7 @@
       "normalized_path": "/ops-metrics/latency",
       "path": "/ops-metrics/latency",
       "route_file": "services/audit/handler.go",
-      "route_line": 97,
+      "route_line": 99,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32281,7 +32330,7 @@
       "normalized_path": "/ops-metrics/by-service",
       "path": "/ops-metrics/by-service",
       "route_file": "services/audit/handler.go",
-      "route_line": 98,
+      "route_line": 100,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32322,7 +32371,7 @@
       "normalized_path": "/ops-metrics/errors",
       "path": "/ops-metrics/errors",
       "route_file": "services/audit/handler.go",
-      "route_line": 99,
+      "route_line": 101,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32342,7 +32391,7 @@
         "signing"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 312,
+      "handler_line": 317,
       "handler_name": "handleFIPSBoundary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -32351,7 +32400,7 @@
       "normalized_path": "/audit/fips/boundary",
       "path": "/audit/fips/boundary",
       "route_file": "services/audit/handler.go",
-      "route_line": 102,
+      "route_line": 104,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32390,7 +32439,7 @@
       "normalized_path": "/audit/cbom/inventory",
       "path": "/audit/cbom/inventory",
       "route_file": "services/audit/handler.go",
-      "route_line": 105,
+      "route_line": 107,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32429,7 +32478,7 @@
       "normalized_path": "/audit/cbom/diff",
       "path": "/audit/cbom/diff",
       "route_file": "services/audit/handler.go",
-      "route_line": 106,
+      "route_line": 108,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32462,7 +32511,7 @@
       "normalized_path": "/metrics",
       "path": "/metrics",
       "route_file": "services/audit/handler.go",
-      "route_line": 109,
+      "route_line": 111,
       "service": "audit",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -32725,9 +32774,47 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
+          "file": "web/dashboard/src/lib/audit.ts",
+          "line": 82,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.activityStats",
+      "handler_external_package_calls": [],
+      "handler_file": "services/audit/stats.go",
+      "handler_helper_calls": [
+        "parseTS",
+        "AuditStats",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 153,
+      "handler_name": "activityStats",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "AuditStats"
+      ],
+      "method": "GET",
+      "normalized_path": "/audit/activity/stats",
+      "path": "/audit/activity/stats",
+      "route_file": "services/audit/stats.go",
+      "route_line": 147,
+      "service": "audit",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
           "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 151,
+          "line": 186,
           "source": "serviceRequest"
         }
       ],
@@ -32786,7 +32873,7 @@
         {
           "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
           "file": "web/dashboard/src/lib/audit.ts",
-          "line": 233,
+          "line": 268,
           "source": "serviceRequest"
         }
       ],
@@ -75248,6 +75335,7 @@
         "handleLatestRisk",
         "LatestRisk",
         "handleRiskHistory",
+        "RiskTrend",
         "RiskHistory",
         "handleListActions",
         "ListActions",
@@ -75268,6 +75356,7 @@
         "ListFindings",
         "UpdateFindingStatus",
         "LatestRisk",
+        "RiskTrend",
         "RiskHistory",
         "ListActions",
         "ExecuteAction",
@@ -75282,6 +75371,7 @@
       "service": "posture",
       "service_external_package_calls": [
         "strings.TrimSpace",
+        "time.Now",
         "errors.As",
         "strings.ToLower"
       ],
@@ -75315,7 +75405,10 @@
         "buildValidationBadges",
         "buildSLAOverview"
       ],
-      "service_internal_package_calls": [],
+      "service_internal_package_calls": [
+        "pkg/timebucket.Buckets",
+        "pkg/timebucket.Index"
+      ],
       "service_method_details": [
         {
           "external_package_calls": [],
@@ -75324,7 +75417,7 @@
             "normalizeEvent"
           ],
           "internal_package_calls": [],
-          "line": 83,
+          "line": 84,
           "name": "IngestEvents",
           "receiver_calls": [],
           "store_calls": [
@@ -75345,7 +75438,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 97,
+          "line": 98,
           "name": "SyncFromAudit",
           "receiver_calls": [
             "s.audit.ListEvents"
@@ -75367,7 +75460,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 169,
+          "line": 170,
           "name": "RunScanTenant",
           "receiver_calls": [
             "s.mu.Lock",
@@ -75388,7 +75481,7 @@
             "enrichFindings"
           ],
           "internal_package_calls": [],
-          "line": 1316,
+          "line": 1317,
           "name": "ListFindings",
           "receiver_calls": [],
           "store_calls": [
@@ -75401,7 +75494,7 @@
           "file": "services/posture/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1326,
+          "line": 1327,
           "name": "UpdateFindingStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -75415,11 +75508,30 @@
             "GetLatestRiskSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 1342,
+          "line": 1343,
           "name": "LatestRisk",
           "receiver_calls": [],
           "store_calls": [
             "GetLatestRiskSnapshot"
+          ]
+        },
+        {
+          "external_package_calls": [
+            "time.Now"
+          ],
+          "file": "services/posture/service.go",
+          "helper_calls": [
+            "ListRiskSnapshots"
+          ],
+          "internal_package_calls": [
+            "pkg/timebucket.Buckets",
+            "pkg/timebucket.Index"
+          ],
+          "line": 1354,
+          "name": "RiskTrend",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListRiskSnapshots"
           ]
         },
         {
@@ -75429,7 +75541,7 @@
             "ListRiskSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 1346,
+          "line": 1347,
           "name": "RiskHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -75449,7 +75561,7 @@
             "enrichActions"
           ],
           "internal_package_calls": [],
-          "line": 1330,
+          "line": 1331,
           "name": "ListActions",
           "receiver_calls": [],
           "store_calls": [
@@ -75471,7 +75583,7 @@
             "UpdateActionExecution"
           ],
           "internal_package_calls": [],
-          "line": 1153,
+          "line": 1154,
           "name": "ExecuteAction",
           "receiver_calls": [],
           "store_calls": [
@@ -75502,7 +75614,7 @@
             "buildSLAOverview"
           ],
           "internal_package_calls": [],
-          "line": 1350,
+          "line": 1377,
           "name": "Dashboard",
           "receiver_calls": [],
           "store_calls": [
@@ -75581,7 +75693,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 97,
+          "line": 98,
           "name": "SyncFromAudit",
           "receiver_calls": [
             "s.audit.ListEvents"
@@ -75654,7 +75766,7 @@
             "nowUTC"
           ],
           "internal_package_calls": [],
-          "line": 169,
+          "line": 170,
           "name": "RunScanTenant",
           "receiver_calls": [
             "s.mu.Lock",
@@ -75678,7 +75790,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 196,
+          "line": 207,
           "source": "serviceRequest"
         }
       ],
@@ -75728,7 +75840,7 @@
             "enrichFindings"
           ],
           "internal_package_calls": [],
-          "line": 1316,
+          "line": 1317,
           "name": "ListFindings",
           "receiver_calls": [],
           "store_calls": [
@@ -75748,7 +75860,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 205,
+          "line": 216,
           "source": "serviceRequest"
         }
       ],
@@ -75784,7 +75896,7 @@
           "file": "services/posture/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1326,
+          "line": 1327,
           "name": "UpdateFindingStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -75842,7 +75954,7 @@
             "GetLatestRiskSnapshot"
           ],
           "internal_package_calls": [],
-          "line": 1342,
+          "line": 1343,
           "name": "LatestRisk",
           "receiver_calls": [],
           "store_calls": [
@@ -75858,9 +75970,15 @@
     {
       "frontend_call_sites": [
         {
+          "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
+          "file": "web/dashboard/src/lib/posture.ts",
+          "line": 182,
+          "source": "serviceRequest"
+        },
+        {
           "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 177,
+          "line": 187,
           "source": "serviceRequest"
         }
       ],
@@ -75868,15 +75986,18 @@
       "handler_external_package_calls": [],
       "handler_file": "services/posture/handler.go",
       "handler_helper_calls": [
+        "parseTimeString",
+        "RiskTrend",
+        "fail",
         "RiskHistory",
-        "atoi",
-        "fail"
+        "atoi"
       ],
       "handler_internal_package_calls": [],
       "handler_line": 220,
       "handler_name": "handleRiskHistory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
+        "RiskTrend",
         "RiskHistory"
       ],
       "handler_store_calls": [],
@@ -75886,12 +76007,36 @@
       "route_file": "services/posture/handler.go",
       "route_line": 83,
       "service": "posture",
-      "service_external_package_calls": [],
+      "service_external_package_calls": [
+        "time.Now"
+      ],
       "service_helper_calls": [
         "ListRiskSnapshots"
       ],
-      "service_internal_package_calls": [],
+      "service_internal_package_calls": [
+        "pkg/timebucket.Buckets",
+        "pkg/timebucket.Index"
+      ],
       "service_method_details": [
+        {
+          "external_package_calls": [
+            "time.Now"
+          ],
+          "file": "services/posture/service.go",
+          "helper_calls": [
+            "ListRiskSnapshots"
+          ],
+          "internal_package_calls": [
+            "pkg/timebucket.Buckets",
+            "pkg/timebucket.Index"
+          ],
+          "line": 1354,
+          "name": "RiskTrend",
+          "receiver_calls": [],
+          "store_calls": [
+            "ListRiskSnapshots"
+          ]
+        },
         {
           "external_package_calls": [],
           "file": "services/posture/service.go",
@@ -75899,7 +76044,7 @@
             "ListRiskSnapshots"
           ],
           "internal_package_calls": [],
-          "line": 1346,
+          "line": 1347,
           "name": "RiskHistory",
           "receiver_calls": [],
           "store_calls": [
@@ -75917,7 +76062,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 221,
+          "line": 232,
           "source": "serviceRequest"
         }
       ],
@@ -75932,7 +76077,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 233,
+      "handler_line": 249,
       "handler_name": "handleListActions",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -75970,7 +76115,7 @@
             "enrichActions"
           ],
           "internal_package_calls": [],
-          "line": 1330,
+          "line": 1331,
           "name": "ListActions",
           "receiver_calls": [],
           "store_calls": [
@@ -75992,7 +76137,7 @@
         {
           "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/posture.ts",
-          "line": 232,
+          "line": 243,
           "source": "serviceRequest"
         }
       ],
@@ -76006,7 +76151,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 253,
+      "handler_line": 269,
       "handler_name": "handleExecuteAction",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76044,7 +76189,7 @@
             "UpdateActionExecution"
           ],
           "internal_package_calls": [],
-          "line": 1153,
+          "line": 1154,
           "name": "ExecuteAction",
           "receiver_calls": [],
           "store_calls": [
@@ -76076,7 +76221,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 279,
+      "handler_line": 295,
       "handler_name": "handleDashboard",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -76134,7 +76279,7 @@
             "buildSLAOverview"
           ],
           "internal_package_calls": [],
-          "line": 1350,
+          "line": 1377,
           "name": "Dashboard",
           "receiver_calls": [],
           "store_calls": [
@@ -77122,7 +77267,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 163,
+          "line": 195,
           "source": "serviceRequest"
         }
       ],
@@ -77169,7 +77314,7 @@
           "internal_package_calls": [
             "pkg/clusterstate.RunsPrimaryJobs"
           ],
-          "line": 555,
+          "line": 556,
           "name": "ListAlerts",
           "receiver_calls": [],
           "store_calls": [
@@ -77196,7 +77341,7 @@
         "writeSSE"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 163,
+      "handler_line": 168,
       "handler_name": "alertsFeed",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -77219,7 +77364,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 185,
+          "line": 203,
           "source": "serviceRequest"
         }
       ],
@@ -77231,7 +77376,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 191,
+      "handler_line": 196,
       "handler_name": "alertsUnread",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77257,7 +77402,7 @@
             "CountUnreadBySeverity"
           ],
           "internal_package_calls": [],
-          "line": 578,
+          "line": 579,
           "name": "CountUnread",
           "receiver_calls": [],
           "store_calls": [
@@ -77280,7 +77425,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 200,
+      "handler_line": 205,
       "handler_name": "alert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77302,7 +77447,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 563,
+          "line": 564,
           "name": "GetAlert",
           "receiver_calls": [],
           "store_calls": []
@@ -77329,7 +77474,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 211,
+      "handler_line": 216,
       "handler_name": "alertOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77358,7 +77503,7 @@
             "UpdateAlertStatus"
           ],
           "internal_package_calls": [],
-          "line": 582,
+          "line": 583,
           "name": "AcknowledgeAlert",
           "receiver_calls": [],
           "store_calls": [
@@ -77372,7 +77517,7 @@
             "UpdateAlertStatus"
           ],
           "internal_package_calls": [],
-          "line": 586,
+          "line": 587,
           "name": "ResolveAlert",
           "receiver_calls": [],
           "store_calls": [
@@ -77386,7 +77531,7 @@
             "UpdateAlertStatus"
           ],
           "internal_package_calls": [],
-          "line": 590,
+          "line": 591,
           "name": "MarkFalsePositive",
           "receiver_calls": [],
           "store_calls": [
@@ -77398,7 +77543,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 594,
+          "line": 595,
           "name": "EscalateAlert",
           "receiver_calls": [],
           "store_calls": [
@@ -77417,7 +77562,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 305,
+          "line": 337,
           "source": "serviceRequest"
         }
       ],
@@ -77432,7 +77577,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 253,
+      "handler_line": 258,
       "handler_name": "bulkStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77458,7 +77603,7 @@
             "BulkUpdateAlertStatus"
           ],
           "internal_package_calls": [],
-          "line": 598,
+          "line": 599,
           "name": "BulkAlertStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -77484,7 +77629,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 253,
+      "handler_line": 258,
       "handler_name": "bulkStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77510,7 +77655,7 @@
             "BulkUpdateAlertStatus"
           ],
           "internal_package_calls": [],
-          "line": 598,
+          "line": 599,
           "name": "BulkAlertStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -77534,7 +77679,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 279,
+      "handler_line": 284,
       "handler_name": "incidents",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77556,7 +77701,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 602,
+          "line": 603,
           "name": "ListIncidents",
           "receiver_calls": [],
           "store_calls": [
@@ -77579,7 +77724,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 288,
+      "handler_line": 293,
       "handler_name": "incident",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77605,7 +77750,7 @@
             "ListAlerts"
           ],
           "internal_package_calls": [],
-          "line": 606,
+          "line": 607,
           "name": "GetIncident",
           "receiver_calls": [],
           "store_calls": [
@@ -77630,7 +77775,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 297,
+      "handler_line": 302,
       "handler_name": "incidentStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77662,7 +77807,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 624,
+          "line": 625,
           "name": "UpdateIncidentStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -77685,7 +77830,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 313,
+      "handler_line": 318,
       "handler_name": "incidentAssign",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77707,7 +77852,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 632,
+          "line": 633,
           "name": "AssignIncident",
           "receiver_calls": [],
           "store_calls": [
@@ -77725,7 +77870,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 222,
+          "line": 254,
           "source": "serviceRequest"
         }
       ],
@@ -77737,7 +77882,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 328,
+      "handler_line": 333,
       "handler_name": "listRules",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77759,7 +77904,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 636,
+          "line": 637,
           "name": "ListRules",
           "receiver_calls": [],
           "store_calls": [
@@ -77777,7 +77922,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 254,
+          "line": 286,
           "source": "serviceRequest"
         }
       ],
@@ -77789,7 +77934,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 339,
+      "handler_line": 344,
       "handler_name": "createRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77831,7 +77976,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 640,
+          "line": 641,
           "name": "CreateRule",
           "receiver_calls": [],
           "store_calls": [
@@ -77849,7 +77994,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 265,
+          "line": 297,
           "source": "serviceRequest"
         }
       ],
@@ -77861,7 +78006,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 372,
+      "handler_line": 377,
       "handler_name": "updateRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77901,7 +78046,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 657,
+          "line": 658,
           "name": "UpdateRule",
           "receiver_calls": [],
           "store_calls": [
@@ -77919,7 +78064,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 246,
+          "line": 278,
           "source": "serviceRequest"
         }
       ],
@@ -77930,7 +78075,7 @@
         "CheckRule"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 356,
+      "handler_line": 361,
       "handler_name": "testRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -77980,7 +78125,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 272,
+          "line": 304,
           "source": "serviceRequest"
         }
       ],
@@ -77992,7 +78137,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 384,
+      "handler_line": 389,
       "handler_name": "deleteRule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78014,7 +78159,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 670,
+          "line": 671,
           "name": "DeleteRule",
           "receiver_calls": [],
           "store_calls": [
@@ -78037,7 +78182,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 392,
+      "handler_line": 397,
       "handler_name": "getSeverityConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78073,7 +78218,7 @@
             "normalizeSeverity"
           ],
           "internal_package_calls": [],
-          "line": 674,
+          "line": 675,
           "name": "GetSeverityConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -78096,7 +78241,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 401,
+      "handler_line": 406,
       "handler_name": "updateSeverityConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78130,7 +78275,7 @@
             "normalizeSeverity"
           ],
           "internal_package_calls": [],
-          "line": 686,
+          "line": 687,
           "name": "UpdateSeverityConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -78148,7 +78293,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 217,
+          "line": 249,
           "source": "serviceRequest"
         }
       ],
@@ -78160,7 +78305,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 414,
+      "handler_line": 419,
       "handler_name": "listChannels",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78186,7 +78331,7 @@
             "ensureDefaultChannels"
           ],
           "internal_package_calls": [],
-          "line": 698,
+          "line": 699,
           "name": "ListChannels",
           "receiver_calls": [],
           "store_calls": []
@@ -78205,7 +78350,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 423,
+      "handler_line": 428,
       "handler_name": "updateChannels",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78233,7 +78378,7 @@
             "UpsertChannel"
           ],
           "internal_package_calls": [],
-          "line": 704,
+          "line": 705,
           "name": "UpdateChannels",
           "receiver_calls": [],
           "store_calls": [
@@ -78251,7 +78396,7 @@
         {
           "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 346,
+          "line": 378,
           "source": "serviceRequest"
         }
       ],
@@ -78262,7 +78407,7 @@
         "Templates"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 437,
+      "handler_line": 442,
       "handler_name": "reportTemplates",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78284,7 +78429,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 719,
+          "line": 720,
           "name": "Templates",
           "receiver_calls": [],
           "store_calls": []
@@ -78298,7 +78443,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 359,
+          "line": 391,
           "source": "serviceRequest"
         }
       ],
@@ -78310,7 +78455,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 443,
+      "handler_line": 448,
       "handler_name": "generateReport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78332,7 +78477,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 735,
+          "line": 736,
           "name": "GenerateReport",
           "receiver_calls": [],
           "store_calls": []
@@ -78346,7 +78491,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 386,
+          "line": 418,
           "source": "serviceRequest"
         }
       ],
@@ -78359,7 +78504,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 473,
+      "handler_line": 478,
       "handler_name": "listReportJobs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78381,7 +78526,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1053,
+          "line": 1054,
           "name": "ListReportJobs",
           "receiver_calls": [],
           "store_calls": [
@@ -78399,7 +78544,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 374,
+          "line": 406,
           "source": "serviceRequest"
         }
       ],
@@ -78411,7 +78556,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 464,
+      "handler_line": 469,
       "handler_name": "reportJob",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78433,7 +78578,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1049,
+          "line": 1050,
           "name": "GetReportJob",
           "receiver_calls": [],
           "store_calls": [
@@ -78451,7 +78596,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 404,
+          "line": 436,
           "source": "serviceRequest"
         }
       ],
@@ -78464,7 +78609,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 482,
+      "handler_line": 487,
       "handler_name": "reportDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78486,7 +78631,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1049,
+          "line": 1050,
           "name": "GetReportJob",
           "receiver_calls": [],
           "store_calls": [
@@ -78504,7 +78649,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 420,
+          "line": 452,
           "source": "serviceRequest"
         }
       ],
@@ -78516,7 +78661,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 504,
+      "handler_line": 509,
       "handler_name": "deleteReportJob",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78548,7 +78693,7 @@
             "GetReportJob"
           ],
           "internal_package_calls": [],
-          "line": 1060,
+          "line": 1061,
           "name": "DeleteReportJob",
           "receiver_calls": [],
           "store_calls": [
@@ -78568,7 +78713,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 426,
+          "line": 458,
           "source": "serviceRequest"
         }
       ],
@@ -78580,7 +78725,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 516,
+      "handler_line": 521,
       "handler_name": "listScheduledReports",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78602,7 +78747,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1108,
+          "line": 1109,
           "name": "ListScheduledReports",
           "receiver_calls": [],
           "store_calls": [
@@ -78620,7 +78765,7 @@
         {
           "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 440,
+          "line": 472,
           "source": "serviceRequest"
         }
       ],
@@ -78632,7 +78777,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 525,
+      "handler_line": 530,
       "handler_name": "createScheduledReport",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78654,7 +78799,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1081,
+          "line": 1082,
           "name": "ScheduleReport",
           "receiver_calls": [],
           "store_calls": []
@@ -78684,7 +78829,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 548,
+      "handler_line": 553,
       "handler_name": "captureErrorTelemetry",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78726,7 +78871,7 @@
             "CreateErrorTelemetry"
           ],
           "internal_package_calls": [],
-          "line": 1112,
+          "line": 1113,
           "name": "CaptureErrorTelemetry",
           "receiver_calls": [],
           "store_calls": [
@@ -78754,7 +78899,7 @@
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 593,
+      "handler_line": 598,
       "handler_name": "listErrorTelemetry",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78784,7 +78929,7 @@
             "newServiceError"
           ],
           "internal_package_calls": [],
-          "line": 1153,
+          "line": 1154,
           "name": "ListErrorTelemetry",
           "receiver_calls": [],
           "store_calls": [
@@ -78800,9 +78945,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
+          "expression": "serviceRequest(\"reporting\", `/alerts/stats?${windowQuery(session, window)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 194,
+          "line": 216,
           "source": "serviceRequest"
         }
       ],
@@ -78810,11 +78955,12 @@
       "handler_external_package_calls": [],
       "handler_file": "services/reporting/handler.go",
       "handler_helper_calls": [
+        "statsWindow",
         "AlertStats",
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 615,
+      "handler_line": 632,
       "handler_name": "alertStats",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78836,7 +78982,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1208,
+          "line": 1218,
           "name": "AlertStats",
           "receiver_calls": [],
           "store_calls": []
@@ -78848,9 +78994,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
+          "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${windowQuery(session, window)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 210,
+          "line": 238,
           "source": "serviceRequest"
         }
       ],
@@ -78858,11 +79004,12 @@
       "handler_external_package_calls": [],
       "handler_file": "services/reporting/handler.go",
       "handler_helper_calls": [
+        "statsWindow",
         "MTTDStats",
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 633,
+      "handler_line": 659,
       "handler_name": "mttdStats",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78888,7 +79035,7 @@
             "computeMTTDStats"
           ],
           "internal_package_calls": [],
-          "line": 1302,
+          "line": 1350,
           "name": "MTTDStats",
           "receiver_calls": [],
           "store_calls": []
@@ -78900,9 +79047,9 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
+          "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${windowQuery(session, window)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 205,
+          "line": 231,
           "source": "serviceRequest"
         }
       ],
@@ -78910,11 +79057,12 @@
       "handler_external_package_calls": [],
       "handler_file": "services/reporting/handler.go",
       "handler_helper_calls": [
+        "statsWindow",
         "MTTRStats",
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 624,
+      "handler_line": 646,
       "handler_name": "mttrStats",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78929,7 +79077,8 @@
       "service": "reporting",
       "service_external_package_calls": [],
       "service_helper_calls": [
-        "ListAlerts",
+        "query",
+        "ScanAlerts",
         "normalizeSeverity"
       ],
       "service_internal_package_calls": [],
@@ -78938,29 +79087,30 @@
           "external_package_calls": [],
           "file": "services/reporting/service.go",
           "helper_calls": [
-            "ListAlerts",
+            "query",
+            "ScanAlerts",
             "normalizeSeverity"
           ],
           "internal_package_calls": [],
-          "line": 1234,
+          "line": 1271,
           "name": "MTTRStats",
           "receiver_calls": [],
           "store_calls": [
-            "ListAlerts"
+            "ScanAlerts"
           ]
         }
       ],
       "service_receiver_calls": [],
       "service_store_calls": [
-        "ListAlerts"
+        "ScanAlerts"
       ]
     },
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
+          "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${windowQuery(session, window)}`)",
           "file": "web/dashboard/src/lib/reporting.ts",
-          "line": 333,
+          "line": 365,
           "source": "serviceRequest"
         }
       ],
@@ -78968,11 +79118,12 @@
       "handler_external_package_calls": [],
       "handler_file": "services/reporting/handler.go",
       "handler_helper_calls": [
+        "statsWindow",
         "TopSources",
         "serviceError"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 644,
+      "handler_line": 674,
       "handler_name": "topSources",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -78994,7 +79145,7 @@
           "file": "services/reporting/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1306,
+          "line": 1354,
           "name": "TopSources",
           "receiver_calls": [],
           "store_calls": []
@@ -84230,7 +84381,7 @@
   ],
   "service_counts": {
     "backend_routes": {
-      "audit": 33,
+      "audit": 34,
       "auth": 86,
       "autokey": 15,
       "backup": 11,
@@ -84261,7 +84412,7 @@
     },
     "frontend_calls": {
       "$dynamic-service": 2,
-      "audit": 20,
+      "audit": 21,
       "auth": 47,
       "auth-edge": 4,
       "autokey": 11,
@@ -84279,7 +84430,7 @@
       "keyaccess": 6,
       "keycore": 118,
       "kmip": 11,
-      "posture": 8,
+      "posture": 9,
       "pqc": 8,
       "reconciler": 1,
       "reporting": 24,
@@ -84468,17 +84619,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 842,
+    "backend_routes": 843,
     "backend_services": 28,
-    "button_inventory": 724,
-    "frontend_call_sites": 527,
-    "matched_frontend_call_sites": 485,
+    "button_inventory": 725,
+    "frontend_call_sites": 529,
+    "matched_frontend_call_sites": 487,
     "nav_items": 28,
-    "request_flows": 842,
-    "request_flows_with_frontend": 494,
-    "request_flows_with_internal_package_calls": 145,
+    "request_flows": 843,
+    "request_flows_with_frontend": 495,
+    "request_flows_with_internal_package_calls": 147,
     "request_flows_with_service_calls": 502,
-    "request_flows_with_store_calls": 603,
+    "request_flows_with_store_calls": 604,
     "subpane_groups": 8,
     "tab_components": 35,
     "unmatched_frontend_call_sites": 42
@@ -84515,7 +84666,7 @@
       ]
     },
     {
-      "call_count": 197,
+      "call_count": 198,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -84722,7 +84873,7 @@
       ]
     },
     {
-      "call_count": 9,
+      "call_count": 10,
       "component": "web/dashboard/src/components/v3/tabs/AuditLogTab.tsx",
       "group": "Security & compliance",
       "id": "audit",
@@ -84764,7 +84915,7 @@
       ]
     },
     {
-      "call_count": 94,
+      "call_count": 95,
       "component": "web/dashboard/src/components/v3/tabs/PostureTab.tsx",
       "group": "Security & compliance",
       "id": "posture",
@@ -85482,7 +85633,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/acknowledge?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 279,
+      "line": 311,
       "match_key": "reporting|PUT|/alerts/{param}/acknowledge",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/acknowledge",
@@ -85495,7 +85646,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"reporting\", `/alerts/${encodeURIComponent(String(alertID || \"\").trim())}/escalate?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/reporting.ts",
-      "line": 318,
+      "line": 350,
       "match_key": "reporting|PUT|/alerts/{param}/escalate",
       "method": "PUT",
       "normalized_path": "/alerts/{param}/escalate",
@@ -85536,7 +85687,7 @@
         "frontendSites": [],
         "handler": "handlePublish",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 114,
+        "handlerLine": 116,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -85575,13 +85726,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 88,
+            "line": 123,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvents",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 178,
+        "handlerLine": 180,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85610,13 +85761,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/events/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 93,
+            "line": 128,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleEvent",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 206,
+        "handlerLine": 211,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85643,13 +85794,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/timeline/${encodeURIComponent(String(targetId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 110,
+            "line": 145,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleTimeline",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 224,
+        "handlerLine": 229,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85676,13 +85827,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/session/${encodeURIComponent(String(sessionId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 167,
+            "line": 202,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSession",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 242,
+        "handlerLine": 247,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85709,13 +85860,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/correlation/${encodeURIComponent(String(correlationId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 183,
+            "line": 218,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCorrelation",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 260,
+        "handlerLine": 265,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85741,7 +85892,7 @@
         "frontendSites": [],
         "handler": "handleSearch",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 278,
+        "handlerLine": 283,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -85765,13 +85916,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/chain/verify?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 191,
+            "line": 226,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleChainVerify",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 283,
+        "handlerLine": 288,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -85823,13 +85974,13 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/config?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 203,
+            "line": 238,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleAuditConfig",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 297,
+        "handlerLine": 302,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -86090,7 +86241,7 @@
         "frontendSites": [],
         "handler": "handleFIPSBoundary",
         "handlerFile": "services/audit/handler.go",
-        "handlerLine": 312,
+        "handlerLine": 317,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -86398,6 +86549,39 @@
       },
       {
         "complexity": 1,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"audit\", `/audit/activity/stats?${q.toString()}`)",
+            "file": "web/dashboard/src/lib/audit.ts",
+            "line": 82,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "activityStats",
+        "handlerFile": "services/audit/stats.go",
+        "handlerLine": 153,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "GET",
+        "normalizedPath": "/audit/activity/stats",
+        "path": "/audit/activity/stats",
+        "receiverCalls": [],
+        "risk": "low",
+        "routeKey": "audit|GET|/audit/activity/stats",
+        "sensitive": false,
+        "service": "audit",
+        "serviceCalls": [],
+        "storeCalls": [
+          "AuditStats"
+        ],
+        "uiLabels": [
+          "Operations",
+          "Audit Log"
+        ]
+      },
+      {
+        "complexity": 1,
         "externalPackages": [
           "strings.TrimSpace"
         ],
@@ -86405,7 +86589,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/targets/${encodeURIComponent(String(targetId || \"\").trim())}/integrity?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 151,
+            "line": 186,
             "source": "serviceRequest"
           }
         ],
@@ -86440,7 +86624,7 @@
           {
             "expression": "serviceRequest(\"audit\", `/audit/checkpoints?${tenantQuery(session)}&limit=${limit}`)",
             "file": "web/dashboard/src/lib/audit.ts",
-            "line": 233,
+            "line": 268,
             "source": "serviceRequest"
           }
         ],
@@ -109314,13 +109498,14 @@
         ]
       },
       {
-        "complexity": 12,
+        "complexity": 14,
         "externalPackages": [
           "errors.Is",
           "errors.As",
           "strconv.Atoi",
           "strings.TrimSpace",
           "strings.EqualFold",
+          "time.Now",
           "strings.ToLower"
         ],
         "frontendSites": [],
@@ -109328,7 +109513,10 @@
         "handlerFile": "services/posture/handler.go",
         "handlerLine": 117,
         "hasFrontend": false,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/timebucket.Buckets",
+          "pkg/timebucket.Index"
+        ],
         "method": "POST",
         "normalizedPath": "/posture/events/batch",
         "path": "/posture/events/batch",
@@ -109348,6 +109536,7 @@
           "ListFindings",
           "UpdateFindingStatus",
           "LatestRisk",
+          "RiskTrend",
           "RiskHistory",
           "ListActions",
           "ExecuteAction",
@@ -109447,7 +109636,7 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/findings?${params.toString()}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 196,
+            "line": 207,
             "source": "serviceRequest"
           }
         ],
@@ -109484,7 +109673,7 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/findings/${encodeURIComponent(String(findingID || \"\").trim())}/status?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 205,
+            "line": 216,
             "source": "serviceRequest"
           }
         ],
@@ -109548,13 +109737,21 @@
         ]
       },
       {
-        "complexity": 1,
-        "externalPackages": [],
+        "complexity": 3,
+        "externalPackages": [
+          "time.Now"
+        ],
         "frontendSites": [
+          {
+            "expression": "serviceRequest(\"posture\", `/posture/risk/history?${q.toString()}`)",
+            "file": "web/dashboard/src/lib/posture.ts",
+            "line": 182,
+            "source": "serviceRequest"
+          },
           {
             "expression": "serviceRequest(\"posture\", `/posture/risk/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 50))}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 177,
+            "line": 187,
             "source": "serviceRequest"
           }
         ],
@@ -109562,7 +109759,10 @@
         "handlerFile": "services/posture/handler.go",
         "handlerLine": 220,
         "hasFrontend": true,
-        "internalPackages": [],
+        "internalPackages": [
+          "pkg/timebucket.Buckets",
+          "pkg/timebucket.Index"
+        ],
         "method": "GET",
         "normalizedPath": "/posture/risk/history",
         "path": "/posture/risk/history",
@@ -109572,6 +109772,7 @@
         "sensitive": false,
         "service": "posture",
         "serviceCalls": [
+          "RiskTrend",
           "RiskHistory"
         ],
         "storeCalls": [
@@ -109590,13 +109791,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/actions?${params.toString()}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 221,
+            "line": 232,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListActions",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 233,
+        "handlerLine": 249,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -109629,13 +109830,13 @@
           {
             "expression": "serviceRequest(\"posture\", `/posture/actions/${encodeURIComponent(String(actionID || \"\").trim())}/execute?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/posture.ts",
-            "line": 232,
+            "line": 243,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleExecuteAction",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 253,
+        "handlerLine": 269,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -109673,7 +109874,7 @@
         ],
         "handler": "handleDashboard",
         "handlerFile": "services/posture/handler.go",
-        "handlerLine": 279,
+        "handlerLine": 295,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110206,7 +110407,7 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts?${q.toString()}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 163,
+            "line": 195,
             "source": "serviceRequest"
           }
         ],
@@ -110247,7 +110448,7 @@
         "frontendSites": [],
         "handler": "alertsFeed",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 163,
+        "handlerLine": 168,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110271,13 +110472,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/unread?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 185,
+            "line": 203,
             "source": "serviceRequest"
           }
         ],
         "handler": "alertsUnread",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 191,
+        "handlerLine": 196,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110306,7 +110507,7 @@
         "frontendSites": [],
         "handler": "alert",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 200,
+        "handlerLine": 205,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110333,7 +110534,7 @@
         "frontendSites": [],
         "handler": "alertOperation",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 211,
+        "handlerLine": 216,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110367,13 +110568,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/bulk/acknowledge?${q.toString()}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 305,
+            "line": 337,
             "source": "serviceRequest"
           }
         ],
         "handler": "bulkStatus",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 253,
+        "handlerLine": 258,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110404,7 +110605,7 @@
         "frontendSites": [],
         "handler": "bulkStatus",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 253,
+        "handlerLine": 258,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -110431,7 +110632,7 @@
         "frontendSites": [],
         "handler": "incidents",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 279,
+        "handlerLine": 284,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110458,7 +110659,7 @@
         "frontendSites": [],
         "handler": "incident",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 288,
+        "handlerLine": 293,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110489,7 +110690,7 @@
         "frontendSites": [],
         "handler": "incidentStatus",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 297,
+        "handlerLine": 302,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110516,7 +110717,7 @@
         "frontendSites": [],
         "handler": "incidentAssign",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 313,
+        "handlerLine": 318,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110544,13 +110745,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 222,
+            "line": 254,
             "source": "serviceRequest"
           }
         ],
         "handler": "listRules",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 328,
+        "handlerLine": 333,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110583,13 +110784,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 254,
+            "line": 286,
             "source": "serviceRequest"
           }
         ],
         "handler": "createRule",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 339,
+        "handlerLine": 344,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110622,13 +110823,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 265,
+            "line": 297,
             "source": "serviceRequest"
           }
         ],
         "handler": "updateRule",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 372,
+        "handlerLine": 377,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -110658,13 +110859,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 246,
+            "line": 278,
             "source": "serviceRequest"
           }
         ],
         "handler": "testRule",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 356,
+        "handlerLine": 361,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110692,13 +110893,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 272,
+            "line": 304,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteRule",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 384,
+        "handlerLine": 389,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -110730,7 +110931,7 @@
         "frontendSites": [],
         "handler": "getSeverityConfig",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 392,
+        "handlerLine": 397,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -110760,7 +110961,7 @@
         "frontendSites": [],
         "handler": "updateSeverityConfig",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 401,
+        "handlerLine": 406,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110788,13 +110989,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/alerts/channels?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 217,
+            "line": 249,
             "source": "serviceRequest"
           }
         ],
         "handler": "listChannels",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 414,
+        "handlerLine": 419,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110821,7 +111022,7 @@
         "frontendSites": [],
         "handler": "updateChannels",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 423,
+        "handlerLine": 428,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -110849,13 +111050,13 @@
           {
             "expression": "serviceRequest(\"reporting\", \"/reports/templates\")",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 346,
+            "line": 378,
             "source": "serviceRequest"
           }
         ],
         "handler": "reportTemplates",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 437,
+        "handlerLine": 442,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110883,13 +111084,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/generate?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 359,
+            "line": 391,
             "source": "serviceRequest"
           }
         ],
         "handler": "generateReport",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 443,
+        "handlerLine": 448,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -110917,13 +111118,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Math.trunc(Number(limit || 50))))}&o...",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 386,
+            "line": 418,
             "source": "serviceRequest"
           }
         ],
         "handler": "listReportJobs",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 473,
+        "handlerLine": 478,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110953,13 +111154,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(id || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 374,
+            "line": 406,
             "source": "serviceRequest"
           }
         ],
         "handler": "reportJob",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 464,
+        "handlerLine": 469,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -110989,13 +111190,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${encodeURIComponent(String(jobID || \"\").trim())}/download?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 404,
+            "line": 436,
             "source": "serviceRequest"
           }
         ],
         "handler": "reportDownload",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 482,
+        "handlerLine": 487,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111027,13 +111228,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/jobs/${id}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 420,
+            "line": 452,
             "source": "serviceRequest"
           }
         ],
         "handler": "deleteReportJob",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 504,
+        "handlerLine": 509,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -111064,13 +111265,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 426,
+            "line": 458,
             "source": "serviceRequest"
           }
         ],
         "handler": "listScheduledReports",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 516,
+        "handlerLine": 521,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111100,13 +111301,13 @@
           {
             "expression": "serviceRequest(\"reporting\", `/reports/scheduled?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 440,
+            "line": 472,
             "source": "serviceRequest"
           }
         ],
         "handler": "createScheduledReport",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 525,
+        "handlerLine": 530,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111144,7 +111345,7 @@
         ],
         "handler": "captureErrorTelemetry",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 548,
+        "handlerLine": 553,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -111174,7 +111375,7 @@
         "frontendSites": [],
         "handler": "listErrorTelemetry",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 593,
+        "handlerLine": 598,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -111200,15 +111401,15 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"reporting\", `/alerts/stats?${tenantQuery(session)}`)",
+            "expression": "serviceRequest(\"reporting\", `/alerts/stats?${windowQuery(session, window)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 194,
+            "line": 216,
             "source": "serviceRequest"
           }
         ],
         "handler": "alertStats",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 615,
+        "handlerLine": 632,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111234,15 +111435,15 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${tenantQuery(session)}`)",
+            "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttd?${windowQuery(session, window)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 210,
+            "line": 238,
             "source": "serviceRequest"
           }
         ],
         "handler": "mttdStats",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 633,
+        "handlerLine": 659,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111268,15 +111469,15 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${tenantQuery(session)}`)",
+            "expression": "serviceRequest(\"reporting\", `/alerts/stats/mttr?${windowQuery(session, window)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 205,
+            "line": 231,
             "source": "serviceRequest"
           }
         ],
         "handler": "mttrStats",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 624,
+        "handlerLine": 646,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -111291,7 +111492,7 @@
           "MTTRStats"
         ],
         "storeCalls": [
-          "ListAlerts"
+          "ScanAlerts"
         ],
         "uiLabels": [
           "Operations",
@@ -111304,15 +111505,15 @@
         "externalPackages": [],
         "frontendSites": [
           {
-            "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${tenantQuery(session)}`)",
+            "expression": "serviceRequest(\"reporting\", `/alerts/stats/top-sources?${windowQuery(session, window)}`)",
             "file": "web/dashboard/src/lib/reporting.ts",
-            "line": 333,
+            "line": 365,
             "source": "serviceRequest"
           }
         ],
         "handler": "topSources",
         "handlerFile": "services/reporting/handler.go",
-        "handlerLine": 644,
+        "handlerLine": 674,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -114512,7 +114713,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-30T16:20:20Z",
+    "generatedAt": "2026-10-01T04:45:55Z",
     "methods": [
       "DELETE",
       "GET",
@@ -114552,8 +114753,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 842,
-      "frontendBacked": 494,
+      "flows": 843,
+      "frontendBacked": 495,
       "highRisk": 331,
       "services": 28
     }

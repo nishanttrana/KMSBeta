@@ -111,6 +111,11 @@ type FindingQuery struct {
 type RiskQuery struct {
 	Limit  int
 	Offset int
+	// From/To bound captured_at. Unbounded (a trend window) ignores Limit
+	// and Offset and reads every snapshot in the window.
+	From      time.Time
+	To        time.Time
+	Unbounded bool
 }
 
 type ActionQuery struct {

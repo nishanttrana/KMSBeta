@@ -302,6 +302,10 @@ an approach, record it here or in the matching doc below.
   drill, and `DrillPanel`. When a chart comes from a server aggregate, the
   drill-down pages over the same set the aggregate reads, so the list length
   equals the number on the bar. A new chart without a drill-down is not done.
+  Every analytics view offers the same windows (owner directive, 2026-09-30):
+  since uptime, last day, week, month, 6 months and year (`WINDOWS` in
+  `chartDrill.tsx`), and the server counts the whole window, never a sample.
+  Its buckets come from `pkg/timebucket`.
 
 ## Documentation is part of done
 

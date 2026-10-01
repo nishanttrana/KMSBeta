@@ -82,6 +82,8 @@ func (h *Handler) routes() *http.ServeMux {
 
 	// Per-target integrity and signed checkpoints (target_integrity.go, checkpoint.go)
 	h.integrityRouter(selfEmitter{h.svc}).MountOn(mux)
+	// Activity statistics for the Audit Log charts (stats.go).
+	h.statsRouter(selfEmitter{h.svc}).MountOn(mux)
 
 	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
 	mux.HandleFunc("POST /audit/cluster/signing-key/join-key", h.handleClusterKeyJoinKey)
@@ -182,16 +184,19 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := EventQuery{
-		Action:         strings.TrimSpace(r.URL.Query().Get("action")),
-		ActionPrefixes: r.URL.Query()["action_prefix"],
-		ActorID:        strings.TrimSpace(r.URL.Query().Get("actor_id")),
-		Result:         strings.TrimSpace(r.URL.Query().Get("result")),
-		TargetID:       strings.TrimSpace(r.URL.Query().Get("target_id")),
-		SessionID:      strings.TrimSpace(r.URL.Query().Get("session_id")),
-		CorrelationID:  strings.TrimSpace(r.URL.Query().Get("correlation_id")),
-		RiskMin:        atoi(r.URL.Query().Get("risk_min")),
-		Limit:          atoi(r.URL.Query().Get("limit")),
-		Offset:         atoi(r.URL.Query().Get("offset")),
+		Action:              strings.TrimSpace(r.URL.Query().Get("action")),
+		ActionPrefixes:      r.URL.Query()["action_prefix"],
+		ActorID:             strings.TrimSpace(r.URL.Query().Get("actor_id")),
+		Result:              strings.TrimSpace(r.URL.Query().Get("result")),
+		TargetID:            strings.TrimSpace(r.URL.Query().Get("target_id")),
+		SessionID:           strings.TrimSpace(r.URL.Query().Get("session_id")),
+		CorrelationID:       strings.TrimSpace(r.URL.Query().Get("correlation_id")),
+		RiskMin:             atoi(r.URL.Query().Get("risk_min")),
+		RiskMax:             atoi(r.URL.Query().Get("risk_max")),
+		Service:             strings.TrimSpace(r.URL.Query().Get("service")),
+		ExcludeHTTPRequests: r.URL.Query().Get("exclude_http_requests") == "true",
+		Limit:               atoi(r.URL.Query().Get("limit")),
+		Offset:              atoi(r.URL.Query().Get("offset")),
 	}
 	q.From = parseTS(r.URL.Query().Get("from"))
 	q.To = parseTS(r.URL.Query().Get("to"))

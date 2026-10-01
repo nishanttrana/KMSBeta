@@ -41,14 +41,14 @@ import {
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Chk, Inp, Modal, Sel, Stat, Tabs } from "../legacyPrimitives";
-import { clickable, clickedIndex, DrillHint, DrillPanel, type Drill } from "../chartDrill";
+import { bucketUnit, clickable, clickedIndex, DEFAULT_WINDOW, DrillHint, DrillPanel, windowFrom, windowLabel, WindowSelect, type Drill, type WindowId } from "../chartDrill";
 import {
   executePostureAction,
   getPostureDashboard,
   getPostureRisk,
   listPostureActions,
+  getPostureRiskTrend,
   listPostureFindings,
-  listPostureRiskHistory,
   runPostureScan,
   updatePostureFindingStatus
 } from "../../../lib/posture";
@@ -158,6 +158,19 @@ const findingStatusBucket = (f: any): "open" | "acknowledged" | "resolved" | "re
   return s === "acknowledged" || s === "resolved" || s === "reopened" ? s : "open";
 };
 
+// Findings detected in the chart window, paged in full up to FINDINGS_CAP so
+// the charts and their drill-downs count the same rows.
+const FINDINGS_CAP = 5000;
+async function listFindingsInWindow(session: any, opts: { status: string; severity: string; engine: string; from: string }) {
+  const out: any[] = [];
+  for (;;) {
+    const page = await listPostureFindings(session, { ...opts, limit: 1000, offset: out.length });
+    out.push(...page);
+    if (page.length < 1000) return { items: out, truncated: false };
+    if (out.length >= FINDINGS_CAP) return { items: out, truncated: true };
+  }
+}
+
 // ── Chart Tooltips ──────────────────────────────────────────────
 
 const ChartTooltip = ({ containerStyle, children }: any) => (
@@ -210,6 +223,9 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [selectedAction, setSelectedAction] = useState<any>(null);
   // Chart drill-down: findings a clicked segment counts, or one risk snapshot.
   const [drill, setDrill] = useState<Drill<any> | null>(null);
+  const [windowId, setWindowId] = useState<WindowId>(DEFAULT_WINDOW);
+  const [trendBucket, setTrendBucket] = useState(0);
+  const [findingsTruncated, setFindingsTruncated] = useState(false);
   const [snapshot, setSnapshot] = useState<any>(null);
 
   // ── Data loading ──────────────────────────────────────────────
@@ -224,8 +240,8 @@ export const PostureTab = ({ session, onToast }: any) => {
       const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, keyAccessSummaryOut, signingSummaryOut] = await Promise.all([
         getPostureDashboard(session),
         getPostureRisk(session),
-        listPostureRiskHistory(session, 60),
-        listPostureFindings(session, { limit: 300, status: findingStatus, severity: findingSeverity, engine: findingEngine }),
+        getPostureRiskTrend(session, windowFrom(windowId)),
+        listFindingsInWindow(session, { status: findingStatus, severity: findingSeverity, engine: findingEngine, from: windowFrom(windowId) }),
         listPostureActions(session, { limit: 300, status: actionStatus }),
         getAutokeySummary(session).catch(() => null),
         getWorkloadIdentitySummary(session).catch(() => null),
@@ -236,8 +252,10 @@ export const PostureTab = ({ session, onToast }: any) => {
       ]);
       setDashboard(dash || {});
       setRisk(latestRisk || dash?.risk || {});
-      setHistory(Array.isArray(riskHistory) ? riskHistory : []);
-      setFindings(Array.isArray(findingRows) ? findingRows : []);
+      setHistory(riskHistory.items);
+      setTrendBucket(riskHistory.bucket_seconds);
+      setFindings(findingRows.items);
+      setFindingsTruncated(findingRows.truncated);
       setActions(Array.isArray(actionRows) ? actionRows : []);
       setAutokeySummary(autokeySummaryOut || null);
       setWorkloadSummary(workloadSummaryOut || null);
@@ -256,7 +274,8 @@ export const PostureTab = ({ session, onToast }: any) => {
   useEffect(() => {
     void load(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.token, session?.tenantId, findingStatus, findingSeverity, findingEngine, actionStatus]);
+  }, [session?.token, session?.tenantId, findingStatus, findingSeverity, findingEngine, actionStatus, windowId]);
+  useEffect(() => { setDrill(null); }, [windowId]);
 
   // ── Action handlers ───────────────────────────────────────────
 
@@ -426,7 +445,7 @@ export const PostureTab = ({ session, onToast }: any) => {
   }, [validationBadges]);
 
   const trendData = useMemo(() => {
-    const items = Array.isArray(history) ? history.slice(0, 60).reverse() : [];
+    const items = Array.isArray(history) ? [...history].reverse() : [];
     return items.map((entry: any) => ({ name: shortTS(entry?.captured_at), risk: Math.max(0, Math.min(100, toNum(entry?.risk_24h))), entry }));
   }, [history]);
   const drillRows = useMemo(() => drill ? (Array.isArray(findings) ? findings : []).filter(drill.match) : [], [drill, findings]);
@@ -512,6 +531,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         <Tabs tabs={["Executive", "Operations"]} active={mode} onChange={setMode} />
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <WindowSelect value={windowId} onChange={setWindowId} />
         <Chk label="Sync audit" checked={syncAudit} onChange={() => setSyncAudit((v) => !v)} />
         <Btn small onClick={() => load(false)} disabled={loading}><RefreshCcw size={12} /> {loading ? "..." : "Refresh"}</Btn>
         <Btn small primary onClick={runScan} disabled={running}>{running ? "Running..." : "Run Scan"}</Btn>
@@ -760,7 +780,11 @@ export const PostureTab = ({ session, onToast }: any) => {
         </div>
       </div>}
 
-      <DrillHint />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <DrillHint />
+        <span style={{ fontSize: 9, color: C.muted, marginBottom: 8 }}>{`Charts cover findings detected and risk snapshots captured in: ${windowLabel(windowId)}.`}</span>
+        {findingsTruncated && <span style={{ fontSize: 9, color: C.amber, marginBottom: 8 }}>{`Newest ${FINDINGS_CAP} findings in this window charted; the window has more.`}</span>}
+      </div>
       {/* Row 1: Risk Gauge + Engine Radar + Severity Donut */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {/* Risk Gauge */}
@@ -826,7 +850,7 @@ export const PostureTab = ({ session, onToast }: any) => {
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
         <Card style={{ padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Trend</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{trendBucket ? `Risk Trend (latest snapshot per ${bucketUnit(trendBucket)})` : "Risk Trend"}</span>
             <B c="blue">{trendData.length ? `${trendData[trendData.length - 1]?.risk || 0} latest` : "No history"}</B>
           </div>
           {trendData.length > 0 ? <ResponsiveContainer width="100%" height={180}>
@@ -837,7 +861,7 @@ export const PostureTab = ({ session, onToast }: any) => {
               <Tooltip content={RiskTrendTooltip} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
               <Area type="monotone" dataKey="risk" stroke={C.accent} strokeWidth={2} fill="url(#riskGradient)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
             </AreaChart>
-          </ResponsiveContainer> : <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No risk history yet.</span></div>}
+          </ResponsiveContainer> : <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No risk snapshots in this window.</span></div>}
         </Card>
 
         <Card style={{ padding: "12px 14px" }}>

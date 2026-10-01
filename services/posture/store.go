@@ -865,13 +865,19 @@ func (s *SQLStore) ListRiskSnapshots(ctx context.Context, tenantID string, q Ris
 	if q.Limit <= 0 || q.Limit > 1000 {
 		q.Limit = 200
 	}
+	page := "LIMIT $4 OFFSET $5"
+	args := []interface{}{tenantID, nullableTime(q.From), nullableTime(q.To), q.Limit, max(0, q.Offset)}
+	if q.Unbounded {
+		page, args = "", args[:3]
+	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, risk_24h, risk_7d, predictive_score, preventive_score, corrective_score, top_signals_json, captured_at
 FROM posture_risk_snapshots
 WHERE tenant_id = $1
+  AND captured_at >= COALESCE($2, captured_at)
+  AND captured_at <= COALESCE($3, captured_at)
 ORDER BY captured_at DESC
-LIMIT $2 OFFSET $3
-`, tenantID, q.Limit, max(0, q.Offset))
+`+page, args...)
 	if err != nil {
 		return nil, err
 	}

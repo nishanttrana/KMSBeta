@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-30T16:20:20Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-01T04:45:55Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -25,7 +25,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1027 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
 | web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1062 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
-| web/dashboard/src/components/v3/chartDrill.tsx | 29 | - | Btn | Clear | onClear |
+| web/dashboard/src/components/v3/chartDrill.tsx | 133 | - | Btn | Clear | onClear |
+| web/dashboard/src/components/v3/chartDrill.tsx | 141 | - | Btn | (icon or dynamic label) | onMore} disabled={loading |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 165 | - | Btn | (icon or dynamic label) | submit |
@@ -33,8 +34,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 650 | - | button | (icon or dynamic label) | onClick} disabled={disabled |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 677 | - | button | onChange(t)} style={{ background: active === t ? C.accentDim : "transparent",... |  |
 | web/dashboard/src/components/v3/runtimeUtils.tsx | 66 | - | button | Retry | reset} style={{ border: "1px solid #243656", borderRadius: 6, padding: "4px 10px", background: "transparent", color:... |
-| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 97 | - | Btn | void load()}>Retry |  |
-| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 104 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 99 | - | Btn | void load()}>Retry |  |
+| web/dashboard/src/components/v3/tabs/AlertAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 426 | alerts | Btn | void ackAlert(item)} disabled= style={ }> |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 427 | alerts | Btn | void escalateOne(item)} disabled= style={ }> |  |
 | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | 453 | alerts | Btn | void refresh(false)}> |  |
@@ -49,7 +50,7 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 342 | - | Btn | editProfile(item)}>Edit |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 343 | - | Btn | void removeProfile(item)}>Delete |  |
 | web/dashboard/src/components/v3/tabs/ArtifactSigningTab.tsx | 366 | - | Btn | void verifyRecord(item)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 107 | - | Btn | void load()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/AuditAnalyticsPanel.tsx | 72 | - | Btn | void load()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 444 | audit | Btn | void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, si... |  |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 445 | audit | Btn | (icon or dynamic label) | verifyChain} disabled={chainVerifying |
 | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | 448 | audit | Btn | load()} disabled= >Refresh |  |
@@ -473,15 +474,15 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 750 | playbooks | Btn | setForm((p: any) => ({ ...p, actions: [...p.actions, ] }))}> Add action |  |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 752 | playbooks | Btn | (icon or dynamic label) | handleSave} disabled={saving \|\| !form.name |
 | web/dashboard/src/components/v3/tabs/PlaybooksTab.tsx | 753 | playbooks | Btn | }>Cancel |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 516 | posture | Btn | load(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 517 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 922 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1175 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1176 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1177 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1178 | posture | Btn | setSelectedFinding(null)}>Close |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1269 | posture | Btn | executeAction(selectedAction)}> Execute |  |
-| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1271 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 536 | posture | Btn | load(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 537 | posture | Btn | (icon or dynamic label) | runScan} disabled={running |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 946 | posture | Btn | setFindingEngine("")} style={ }>Clear engine filter |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1199 | posture | Btn | patchFinding(selectedFinding, "acknowledged")} disabled= >Acknowledge |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1200 | posture | Btn | patchFinding(selectedFinding, "resolved")} disabled= >Resolve |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1201 | posture | Btn | patchFinding(selectedFinding, "reopened")}>Reopen |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1202 | posture | Btn | setSelectedFinding(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1293 | posture | Btn | executeAction(selectedAction)}> Execute |  |
+| web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1295 | posture | Btn | setSelectedAction(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

@@ -234,7 +234,7 @@ func TestStoreErrorTelemetryOps(t *testing.T) {
 	}
 }
 
-// The statistics read up to alertScanLimit alerts. The store once clamped any
+// The statistics count every alert in the window. The store once clamped any
 // limit over 1000 back to 100, so every chart counted only the newest 100.
 func TestAlertStatsCountBeyondOneHundred(t *testing.T) {
 	svc, store, _, _, _, _ := newReportingService(t)
@@ -248,14 +248,14 @@ func TestAlertStatsCountBeyondOneHundred(t *testing.T) {
 			t.Fatalf("create alert: %v", err)
 		}
 	}
-	stats, err := svc.AlertStats(ctx, "t-many")
+	stats, err := svc.AlertStats(ctx, "t-many", AlertWindow{})
 	if err != nil {
 		t.Fatalf("stats: %v", err)
 	}
 	if stats["total"] != 150 {
 		t.Fatalf("total = %v, want 150", stats["total"])
 	}
-	top, err := svc.TopSources(ctx, "t-many")
+	top, err := svc.TopSources(ctx, "t-many", AlertWindow{})
 	if err != nil {
 		t.Fatalf("top sources: %v", err)
 	}
