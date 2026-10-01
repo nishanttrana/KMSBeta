@@ -113,10 +113,20 @@ choice each):
 
 - The choice is replicated (`cert_edge_certificate`, one row per
   listener); every node's materializer applies it on its next pass.
-- An external certificate is node-local: the key never leaves the node's
-  runtime certificate volume, and the CSR and install routes run on the
-  node that receives them (`pkg/clusterroute.Local`). In a cluster, request
-  and install on each node.
+- An external certificate is node-local: the key never leaves the node,
+  and the CSR and install routes run on the node that receives them
+  (`pkg/clusterroute.Local`). In a cluster, request and install on each
+  node.
+- The runtime certificate volume (`runtime-certs`) is tmpfs: keys certs can
+  issue again are never written to disk, and a full restart issues them
+  again. An external certificate, its key and the key of a pending CSR are
+  kept on the node's certs key volume (`/var/lib/vecta/certs/edge`,
+  `CERTS_EDGE_EXTERNAL_DIR`; mode 0600, not wrapped) and copied into
+  `runtime-certs` at start (`audit.certs.edge_tls_certificate_restored`).
+  Leaving the `external` source discards the kept certificate and key, and
+  an expired one is discarded at the next start. Only Compose creates
+  `runtime-certs`; `start-kms.sh` replaces one found on disk
+  (docs/DECISIONS.md, 2026-10-01).
 - Envoy reloads the files through SDS (a rename in the watched directory).
   KMIP re-reads them on the next handshake after they change (checked at
   most once a second); a replacement that doesn't load keeps the one in

@@ -5,6 +5,47 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### A Compose volume option does nothing if a script creates the volume first
+- **What happened:** the owner pasted four `docker compose up` warnings:
+  `volume "…_runtime-certs" already exists but was not created by Docker
+  Compose` (also `infra-tls`, `platform-state`, `certs-key-data`). The start
+  and install scripts ran `docker volume create` before `compose up` so a
+  helper container could set owners and seed the CRWK passphrase. A volume
+  made that way has no Compose labels, and Compose uses an existing volume
+  as it finds it: it warns and ignores the `driver_opts` in the compose
+  file. `runtime-certs` is declared tmpfs there. On every scripted install
+  it was an ordinary on-disk volume holding the edge, KMIP and Envoy-client
+  private keys.
+- **How it slipped through:** the tmpfs claim was in three places
+  (`docker-compose.yml`, `RUNTIME_CONTROL_FLOW.md`, a note in the certs
+  protocol schema) and nothing checked the mounted filesystem. The warning
+  that pointed at it printed on every start and was read as noise. A later
+  feature then came to depend on the bug: the external edge certificate
+  (6.13.0-beta) kept its only copy of the key on `runtime-certs`, and its
+  tests passed because the test directory, like the real volume, persisted.
+- **Fix:** scripts create volumes with Compose's labels and never create
+  `runtime-certs`. `start-kms.sh` repairs an existing install once
+  (`infra/scripts/compose-volumes.sh`). Certs keeps an external certificate
+  on the certs key volume and restores it into tmpfs at start.
+- **Rule:** a storage property stated in a doc or the compose file (tmpfs,
+  read-only, encrypted) is checked where it takes effect: `mount` inside the
+  container, not the YAML. `scripts/test-volume-repair.sh` reads the
+  `runtime-certs` block from the real compose file and asserts the mount is
+  tmpfs. Treat a warning that repeats on every start as a defect report.
+- **Rule:** when a script must touch a Compose volume before `up`, create it
+  with `compose_volume_create` (labels `com.docker.compose.project` and
+  `com.docker.compose.volume`). `docker run -v name:/x` also creates a
+  missing volume, unlabelled. Conformance `compose-volumes` enforces both.
+- **Trap:** volume labels can't be changed. Adopting a volume means copy,
+  verify, remove, re-create, copy back, verify; `docker volume rm` needs the
+  containers removed, not just stopped.
+- **Trap:** making a broken security property real can break what grew on
+  top of the bug. Before enforcing tmpfs, list what writes to the volume
+  and ask which of it can be regenerated.
+- **Open:** `install.sh` starts the stack with `compose up` directly and
+  does not create the `infra-tls` subdirectories or the `platform-state`
+  owner that `start-kms.sh` prepares. Not tested here; check a fresh
+  `install.sh` run.
 ### Fake label fixed: every long hex string was an "exposed secret"
 - **What happened:** the code scan called any 32 or more hex characters a
   `hex_secret` and classed it `exposed`. On one mounted config directory it

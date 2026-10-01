@@ -33,7 +33,7 @@ func newMTLSFixture(t *testing.T) mtlsFixture {
 	dir := t.TempDir()
 	cfg := RuntimeCertMaterializerConfig{
 		MaterializeDir: filepath.Join(dir, "runtime"), DashboardTLSDir: filepath.Join(dir, "dashboard-tls"),
-		InfraTLSDir: filepath.Join(dir, "infra-tls"),
+		InfraTLSDir: filepath.Join(dir, "infra-tls"), ExternalDir: filepath.Join(dir, "edge"),
 	}
 	trust := filepath.Join(dir, "trust")
 	svc.SetInternalMTLSDirs(trust, cfg)

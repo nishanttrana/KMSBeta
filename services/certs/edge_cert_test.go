@@ -3,13 +3,20 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/route/routetest"
 )
 
@@ -184,6 +191,133 @@ func TestEdgeExternalCertificateFlow(t *testing.T) {
 	if inv, _ := f.svc.EdgeInventory(ctx); !inv.Certificate.Served {
 		t.Fatalf("the probe must see the installed certificate served: %+v", inv.Certificate)
 	}
+}
+
+// The runtime directory is tmpfs, so a restart empties it. An installed
+// external certificate and the key of a pending CSR come back from this
+// node's kept copy, and the restore is audited. A kept copy that isn't an
+// installed external certificate, has expired, or was ended by leaving the
+// external source does not come back.
+func TestEdgeExternalCertificateSurvivesRestart(t *testing.T) {
+	f, cfg := edgeFixture(t)
+	ctx := context.Background()
+	rec := &subjectRecorder{}
+	f.svc.events = rec
+	const restored = "audit.certs.edge_tls_certificate_restored"
+	kept := f.svc.edgeKept(listenerHTTPS)
+	restart := func() {
+		t.Helper()
+		if err := os.RemoveAll(cfg.MaterializeDir); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ext, err := f.svc.CreateCA(ctx, CreateCARequest{TenantID: "customer", Name: "Customer Issuing CA", CALevel: "root",
+		Algorithm: "ECDSA-P256", KeyBackend: "software", Subject: "CN=Customer Issuing CA"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sign := func(csr string) string {
+		t.Helper()
+		signed, _, err := f.svc.IssueCertificate(ctx, IssueCertificateRequest{TenantID: "customer", CAID: ext.ID, CertType: "tls-server",
+			SubjectCN: "kms.example.com", SANs: []string{"kms.example.com"}, CSRPem: csr, ValidityDays: 30})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return signed.CertPEM
+	}
+	if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: edgeSourceExternal}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := f.svc.CreateEdgeCSR(ctx, "", "kms.example.com", []string{"kms.example.com"}, "", "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(f.svc.edgeFiles(listenerHTTPS).pending()); !os.IsNotExist(err) {
+		t.Fatalf("the pending key must not be on the runtime volume: %v", err)
+	}
+
+	// A restart between the CSR and the install keeps the pending key.
+	restart()
+	if got := installedIssuer(t, f); got != "vecta-runtime-root" || rec.count(restored) != 0 {
+		t.Fatalf("nothing is installed yet: issuer %q, restores %d", got, rec.count(restored))
+	}
+	leaf, err := f.svc.InstallEdgeCertificate(ctx, "", sign(p.CSRPEM), ext.CertPEM)
+	if err != nil {
+		t.Fatalf("install after a restart: %v", err)
+	}
+
+	// A restart after the install serves the same certificate and key again.
+	restart()
+	if got := installedIssuer(t, f); got != "Customer Issuing CA" {
+		t.Fatalf("the external certificate must survive a restart: %q", got)
+	}
+	if _, err := tls.LoadX509KeyPair(filepath.Join(f.svc.edgeDir(), "tls.crt"), filepath.Join(f.svc.edgeDir(), "tls.key")); err != nil {
+		t.Fatalf("restored key and certificate must pair: %v", err)
+	}
+	if v := f.svc.edgeCertificateView(ctx, "root", listenerHTTPS, ""); v.Installed == nil || !v.Installed.FromChoice {
+		t.Fatalf("view after the restore: %+v", v.Installed)
+	}
+	if rec.count(restored) != 1 || rec.last(t, restored)["serial"] != leaf.SerialNumber.Text(16) || rec.last(t, restored)["listener"] != listenerHTTPS {
+		t.Fatalf("the restore must be audited once with the serial: %d %v", rec.count(restored), rec.last(t, restored))
+	}
+	if err := f.svc.MaterializeRuntimeCerts(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if rec.count(restored) != 1 {
+		t.Fatalf("a pass that restores nothing must audit nothing: %d", rec.count(restored))
+	}
+
+	// Refused: each of these falls back to a runtime-root certificate, and
+	// the kept key is gone.
+	notRestored := func(why string) {
+		t.Helper()
+		restart()
+		if got := installedIssuer(t, f); got != "vecta-runtime-root" {
+			t.Fatalf("%s: served %q", why, got)
+		}
+		if _, err := os.Stat(kept.dir()); !os.IsNotExist(err) {
+			t.Fatalf("%s: the kept key must be discarded: %v", why, err)
+		}
+		if rec.count(restored) != 1 {
+			t.Fatalf("%s: audited as restored", why)
+		}
+	}
+	if err := os.WriteFile(kept.marker(), []byte("deadbeef\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	notRestored("a kept certificate the marker doesn't name")
+
+	signer, keyPEM, err := generateLeafKey(pkgcrypto.AlgECDSAP256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tpl := &x509.Certificate{SerialNumber: big.NewInt(77), Subject: pkix.Name{CommonName: "kms.example.com"},
+		NotBefore: time.Now().Add(-48 * time.Hour), NotAfter: time.Now().Add(-time.Hour)}
+	der, err := x509.CreateCertificate(pkgcrypto.Reader, tpl, tpl, signer.Public(), signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expired, _ := x509.ParseCertificate(der)
+	if err := kept.writeExternal([]byte(keyPEM), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), expired); err != nil {
+		t.Fatal(err)
+	}
+	notRestored("an expired kept certificate")
+
+	if p, err = f.svc.CreateEdgeCSR(ctx, "", "kms.example.com", []string{"kms.example.com"}, "", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.InstallEdgeCertificate(ctx, "", sign(p.CSRPEM), ext.CertPEM); err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range []string{edgeSourceRuntime, edgeSourceExternal} {
+		if _, _, err := f.svc.SetEdgeCertificateSource(ctx, "root", "", edgeCertChoice{Source: src}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	notRestored("a certificate ended by leaving the external source")
 }
 
 // Every edge certificate action and refusal is audited; the measurement is

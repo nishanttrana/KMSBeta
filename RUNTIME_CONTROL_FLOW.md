@@ -183,7 +183,7 @@ flowchart TD
 Notes:
 
 - `crwk.sealed` remains in Docker volume path (`/var/lib/vecta/certs`), not plaintext in DB.
-- Runtime cert materialization path is tmpfs-backed volume (`runtime-certs`), not persistent disk.
+- Runtime cert materialization path is tmpfs-backed volume (`runtime-certs`), not persistent disk. Only Compose creates it (it was on disk until 7.21.0-beta because the scripts created it first). An external edge certificate is kept on the `certs-key-data` volume and copied in at start (docs/SECURITY/INTERNAL_TLS.md, "Edge certificate").
 - If root key mode is `hsm`, provider is intentionally pending until HSM integration/config is completed.
 
 ## 6. Feature Enable/Disable Control Flow

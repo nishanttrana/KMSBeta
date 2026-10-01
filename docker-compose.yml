@@ -1340,6 +1340,9 @@ volumes:
   audit-data:
   certs-key-data:
   valkey-data:
+  # In memory only. No script may create this volume: Compose uses a volume
+  # that already exists as it finds it and drops these options (conformance
+  # compose-volumes, scripts/test-volume-repair.sh).
   runtime-certs:
     driver: local
     driver_opts:

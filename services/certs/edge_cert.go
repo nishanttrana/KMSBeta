@@ -113,11 +113,26 @@ func (s *Service) edgeStore() (edgeCertStore, error) {
 	return st, nil
 }
 
-// edgeFiles are a listener's files on this node's runtime certificate
-// volume (base is the materializer directory).
+// edgeFiles are a listener's files under base. base is the runtime
+// certificate volume the listener reads (the materializer directory), which
+// is tmpfs and empty after a restart, or this node's kept copy of what certs
+// can't issue again: an external certificate with its key, and the key of a
+// pending CSR (keptFor).
 type edgeFiles struct{ base, name string }
 
 func filesFor(base, listener string) edgeFiles { return edgeFiles{base, listenerDir(listener)} }
+
+const defaultEdgeExternalDir = "/var/lib/vecta/certs/edge"
+
+// keptFor is this node's kept copy, on the certs key volume. It never leaves
+// the node.
+func keptFor(cfg RuntimeCertMaterializerConfig, listener string) edgeFiles {
+	dir := strings.TrimSpace(cfg.ExternalDir)
+	if dir == "" {
+		dir = defaultEdgeExternalDir
+	}
+	return filesFor(dir, listener)
+}
 
 func (b edgeFiles) dir() string     { return filepath.Join(b.base, b.name) }
 func (b edgeFiles) pending() string { return filepath.Join(b.base, b.name+"-pending") }
@@ -129,11 +144,54 @@ func (b edgeFiles) marker() string { return filepath.Join(b.base, b.name+"-exter
 func (s *Service) edgeFiles(listener string) edgeFiles {
 	return filesFor(s.runtimeCfg.MaterializeDir, listener)
 }
-func (s *Service) edgeDir() string { return s.edgeFiles(listenerHTTPS).dir() }
+func (s *Service) edgeKept(listener string) edgeFiles { return keptFor(s.runtimeCfg, listener) }
+func (s *Service) edgeDir() string                    { return s.edgeFiles(listenerHTTPS).dir() }
 
 func (b edgeFiles) installedExternal(leaf *x509.Certificate) bool {
 	raw, err := os.ReadFile(b.marker())
 	return err == nil && leaf != nil && strings.TrimSpace(string(raw)) == leaf.SerialNumber.Text(16)
+}
+
+// writeExternal writes an external certificate (chain is the leaf and its
+// issuers) and its key under b.
+func (b edgeFiles) writeExternal(key, chain []byte, leaf *x509.Certificate) error {
+	// Key first: a reader that sees the new certificate finds its key.
+	if err := writeFileAtomically(filepath.Join(b.dir(), "tls.key"), key, 0o600); err != nil {
+		return err
+	}
+	if err := writeFileAtomically(filepath.Join(b.dir(), "tls.crt"), chain, 0o600); err != nil {
+		return err
+	}
+	return writeFileAtomically(b.marker(), []byte(leaf.SerialNumber.Text(16)+"\n"), 0o600)
+}
+
+// discardExternal removes the external certificate and its key under b. A
+// pending CSR key is left: it has no certificate yet.
+func (b edgeFiles) discardExternal() {
+	_ = os.RemoveAll(b.dir())
+	_ = os.Remove(b.marker())
+}
+
+// restoreExternal copies this node's kept external certificate into the
+// runtime directory and returns its leaf, or nil if there is none to serve.
+// A kept copy that expired or isn't an installed external certificate is
+// discarded; one whose key can't be read is left for the operator, and the
+// listener falls back to a runtime-root certificate.
+func (b edgeFiles) restoreExternal(runtime edgeFiles) (*x509.Certificate, error) {
+	leaf, chain, err := installedLeaf(b.dir())
+	if err != nil {
+		return nil, nil
+	}
+	if !b.installedExternal(leaf) || !time.Now().Before(leaf.NotAfter) {
+		b.discardExternal()
+		return nil, nil
+	}
+	key, err := os.ReadFile(filepath.Join(b.dir(), "tls.key"))
+	if err != nil {
+		return nil, nil
+	}
+	defer pkgcrypto.Zeroize(key)
+	return leaf, runtime.writeExternal(key, chain, leaf)
 }
 
 type edgePending struct {
@@ -246,6 +304,11 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 	}
 	leaf, _, _ := installedLeaf(dir)
 	due := force || leaf == nil || runtimeCertNeedsRenew(filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), renewBefore)
+	kept := keptFor(cfg, listener)
+	if choice.Source != edgeSourceExternal {
+		// Leaving the external source ends that certificate on this node.
+		kept.discardExternal()
+	}
 	switch choice.Source {
 	case edgeSourceCA:
 		ca, err := s.edgeCA(ctx, tenantID, choice.CAID)
@@ -261,6 +324,21 @@ func (s *Service) applyEdgeCertificate(ctx context.Context, tenantID string, run
 		// Until then (or once it expires) the edge keeps a runtime-root
 		// certificate rather than go dark.
 		if files.installedExternal(leaf) && time.Now().Before(leaf.NotAfter) {
+			return nil
+		}
+		// The runtime directory is tmpfs: after a restart the installed
+		// certificate comes back from this node's kept copy.
+		restored, err := kept.restoreExternal(files)
+		if err != nil {
+			return err
+		}
+		if restored != nil {
+			_ = s.publishAudit(ctx, "audit.certs.edge_tls_certificate_restored", tenantID, map[string]interface{}{
+				"target_id": listener, "listener": listener, "result": "success",
+				"serial": restored.SerialNumber.Text(16), "subject": restored.Subject.String(),
+				"issuer": restored.Issuer.String(), "not_after": restored.NotAfter.UTC().Format(time.RFC3339),
+				"description": "the external " + listener + " certificate was restored from this node's kept copy after a restart",
+			})
 			return nil
 		}
 	}
@@ -327,8 +405,9 @@ func (s *Service) SetEdgeCertificateSource(ctx context.Context, tenantID, listen
 }
 
 // CreateEdgeCSR generates this node's edge key and returns a CSR for an
-// external CA. The key stays in this node's pending directory until the
-// signed certificate is installed; a new CSR replaces it.
+// external CA. The key stays in this node's pending directory (in its kept
+// copy, so a restart doesn't lose it) until the signed certificate is
+// installed; a new CSR replaces it.
 func (s *Service) CreateEdgeCSR(ctx context.Context, listener, subjectCN string, sans []string, algorithm, actor string) (edgePending, error) {
 	st, err := s.edgeStore()
 	if err != nil {
@@ -376,17 +455,17 @@ func (s *Service) CreateEdgeCSR(ctx context.Context, listener, subjectCN string,
 	p := edgePending{SubjectCN: subjectCN, SANs: sans, KeyAlgorithm: algorithm, CreatedAt: time.Now().UTC(), CreatedBy: actor,
 		CSRPEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der}))}
 	meta, _ := json.MarshalIndent(p, "", "  ")
-	if err := writeFileAtomically(filepath.Join(s.edgeFiles(listener).pending(), "tls.key"), keyBytes, 0o600); err != nil {
+	if err := writeFileAtomically(filepath.Join(s.edgeKept(listener).pending(), "tls.key"), keyBytes, 0o600); err != nil {
 		return edgePending{}, err
 	}
-	if err := writeFileAtomically(filepath.Join(s.edgeFiles(listener).pending(), "pending.json"), meta, 0o600); err != nil {
+	if err := writeFileAtomically(filepath.Join(s.edgeKept(listener).pending(), "pending.json"), meta, 0o600); err != nil {
 		return edgePending{}, err
 	}
 	return p, nil
 }
 
 func (s *Service) edgePending(listener string) *edgePending {
-	raw, err := os.ReadFile(filepath.Join(s.edgeFiles(listener).pending(), "pending.json"))
+	raw, err := os.ReadFile(filepath.Join(s.edgeKept(listener).pending(), "pending.json"))
 	if err != nil {
 		return nil
 	}
@@ -408,7 +487,7 @@ func (s *Service) InstallEdgeCertificate(ctx context.Context, listener, certPEM,
 	if listener, err = normListener(listener); err != nil {
 		return nil, err
 	}
-	files := s.edgeFiles(listener)
+	files, kept := s.edgeFiles(listener), s.edgeKept(listener)
 	choice, err := st.GetEdgeCertChoice(ctx, listener)
 	if err != nil {
 		return nil, err
@@ -416,7 +495,7 @@ func (s *Service) InstallEdgeCertificate(ctx context.Context, listener, certPEM,
 	if choice.Source != edgeSourceExternal {
 		return nil, mtlsRefusal{"source_not_external", "choose the external source first"}
 	}
-	keyPath := filepath.Join(files.pending(), "tls.key")
+	keyPath := filepath.Join(kept.pending(), "tls.key")
 	keyRaw, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, mtlsRefusal{"no_pending_key", "request a CSR on this node first"}
@@ -451,17 +530,14 @@ func (s *Service) InstallEdgeCertificate(ctx context.Context, listener, certPEM,
 	for _, c := range certs {
 		out.Write(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}))
 	}
-	// Key first: a reader that sees the new certificate finds its key.
-	if err := writeFileAtomically(filepath.Join(files.dir(), "tls.key"), keyRaw, 0o600); err != nil {
-		return nil, err
+	// The kept copy first: the runtime directory is refilled from it after a
+	// restart.
+	for _, dst := range []edgeFiles{kept, files} {
+		if err := dst.writeExternal(keyRaw, []byte(out.String()), leaf); err != nil {
+			return nil, err
+		}
 	}
-	if err := writeFileAtomically(filepath.Join(files.dir(), "tls.crt"), []byte(out.String()), 0o600); err != nil {
-		return nil, err
-	}
-	if err := writeFileAtomically(files.marker(), []byte(leaf.SerialNumber.Text(16)+"\n"), 0o600); err != nil {
-		return nil, err
-	}
-	_ = os.RemoveAll(files.pending())
+	_ = os.RemoveAll(kept.pending())
 	return leaf, nil
 }
 

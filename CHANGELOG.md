@@ -4,6 +4,46 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.21.0-beta] — 2026-10-01
+
+### Runtime TLS keys are in memory as declared; Compose volume warnings gone
+- **Fixed (security):** the `runtime-certs` volume, which holds the private
+  keys of the HTTPS edge, the KMIP listener and Envoy's client certificate,
+  was written to disk. `docker-compose.yml` declares it tmpfs, but the start
+  and install scripts created the volume first with a plain
+  `docker volume create`, so Compose never applied its options. It is now
+  tmpfs on every install: Compose creates it, and no script does.
+- **Fixed:** every `docker compose up` warned that `infra-tls`,
+  `platform-state`, `runtime-certs` and `certs-key-data` "already exist but
+  were not created by Docker Compose". Scripts now create volumes with
+  Compose's labels.
+- **Upgrade:** the first start with `infra/scripts/start-kms.sh` (or
+  `deploy-local.sh`) repairs an existing install once, and for that stops and
+  restarts the whole stack:
+  - Unlabelled volumes are re-created with labels. Their contents are copied
+    to a scratch volume and compared (contents, owners, modes) before the
+    original is removed, then copied back and compared. An interrupted
+    repair resumes; a volume still in use is refused and left as it was.
+  - An on-disk `runtime-certs` is removed. Certs issues the edge, KMIP and
+    Envoy-client certificates again at start, so their serials change. The
+    previous certificates are not revoked; revoke them in Certificates / PKI
+    if the host's disk is not trusted. The old key files are deleted, not
+    wiped.
+- **Changed:** an external edge certificate (source `external`), its key and
+  the key of a pending CSR are now kept on the node's certs key volume
+  (`/var/lib/vecta/certs/edge`, `CERTS_EDGE_EXTERNAL_DIR`) and copied into
+  `runtime-certs` at start. They used to live only on `runtime-certs`, which
+  real tmpfs would empty on a restart. The upgrade moves an existing one.
+  Still node-local, still not uploaded or replicated.
+- **Changed:** on a full restart the runtime-issued edge, KMIP and
+  Envoy-client certificates are issued again (they were reused from disk
+  before).
+- **Added:** audit event `audit.certs.edge_tls_certificate_restored` when an
+  external certificate is restored into `runtime-certs` after a restart.
+- **Added:** conformance rule `compose-volumes` (a script may not create a
+  volume without Compose's labels, or name `runtime-certs`), and
+  `scripts/test-volume-repair.sh` in CI against real Docker volumes.
+
 ## [7.20.0-beta] — 2026-10-01
 
 ### Crypto Discovery: scan git repositories (public or private) and scan on a schedule

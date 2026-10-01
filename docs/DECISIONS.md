@@ -7,6 +7,37 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — runtime-certs is real tmpfs; an external edge certificate is kept on the certs key volume (7.21.0-beta)
+
+- **Decision:** `runtime-certs` is tmpfs on every install, created only by
+  Compose. What certs can issue again (the `runtime` and `ca` edge and KMIP
+  certificates, Envoy's client certificate) exists only there. What it
+  can't issue again is kept on the node's certs key volume
+  (`/var/lib/vecta/certs/edge`) and copied into tmpfs at start: an external
+  certificate with its key and serial marker, and the key of a pending CSR.
+  The kept copy is node-local and stored as the files were before (mode
+  0600, owned by certs, not wrapped). This amends the 6.13.0-beta entry
+  below only in where the node keeps the key.
+- **Why:** the compose file, `RUNTIME_CONTROL_FLOW.md` and the certs API
+  said these keys are materialized into tmpfs, and they were on disk (owner,
+  2026-10-01, chose to make the statement true). An external key can't be
+  regenerated without the customer's CA signing again, so it must survive a
+  restart.
+- **Rejected:**
+  - *Keep the volume on disk and correct the statements.* No behaviour
+    change, but every runtime key stays at rest for no reason.
+  - *Wrap the external key under the CRWK.* Rejected in 6.13.0-beta for the
+    rewrap on CRWK rotation it needs. In software root-key mode the CRWK
+    passphrase is on the same volume, so wrapping adds little there.
+- **Consequences:** a full restart issues the runtime certificates again,
+  so their serials change and the old ones stay valid until they expire.
+  Leaving the `external` source discards the kept certificate and key; an
+  expired kept certificate is discarded at the next start.
+- **Enforced by:** `scripts/test-volume-repair.sh` (the mount is tmpfs, using
+  the real compose declaration; an upgrade keeps external material and loses
+  no persistent volume), conformance `compose-volumes`,
+  `TestEdgeExternalCertificateSurvivesRestart` (restored and audited; a
+  mismatched, expired or discarded copy is not).
 ## 2026-10-01 — Discovery: git repositories through the hosting API; schedules on checked authority (7.20.0-beta)
 
 - **Decision (how a repository is read):** discovery asks the hosting

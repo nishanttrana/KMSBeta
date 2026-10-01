@@ -77,6 +77,19 @@ jobs:
       - name: Two-node replication test
         run: ./scripts/test-cluster-replication.sh
 
+  volume-repair:
+    # Real Docker volumes: scripts create volumes Compose adopts, and an
+    # upgrade moves runtime-certs to tmpfs without losing a persistent volume
+    # (infra/scripts/compose-volumes.sh).
+    name: Volume repair (Docker Compose)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Volume repair test
+        run: ./scripts/test-volume-repair.sh
+
   integration-postgres:
     # Backup/restore, signing, the backup service, the secrets MEK migration
     # and HSM key storage (with SoftHSM2) against real Postgres: they rely on information_schema, JSONB,

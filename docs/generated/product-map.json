@@ -31855,7 +31855,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T10:02:13Z",
+  "generated_at": "2026-10-01T10:31:35Z",
   "navigation": [
     {
       "group": "Overview",
@@ -38842,7 +38842,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 176,
+          "line": 179,
           "name": "CreateCA",
           "receiver_calls": [
             "s.keycore.EnsureKey",
@@ -38944,7 +38944,7 @@
             "ensureRuntimeRootCA"
           ],
           "internal_package_calls": [],
-          "line": 341,
+          "line": 344,
           "name": "ListCAs",
           "receiver_calls": [],
           "store_calls": [
@@ -39036,7 +39036,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 357,
+          "line": 360,
           "name": "DeleteCA",
           "receiver_calls": [
             "s.exposure.Retire"
@@ -39190,7 +39190,7 @@
             "meteredIf"
           ],
           "internal_package_calls": [],
-          "line": 492,
+          "line": 495,
           "name": "IssueCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39337,7 +39337,7 @@
             "meteredIf"
           ],
           "internal_package_calls": [],
-          "line": 492,
+          "line": 495,
           "name": "IssueCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39412,7 +39412,7 @@
             "RunTenantExpiryAlertSweep"
           ],
           "internal_package_calls": [],
-          "line": 666,
+          "line": 669,
           "name": "ListCertificates",
           "receiver_calls": [],
           "store_calls": [
@@ -39469,7 +39469,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 675,
+          "line": 678,
           "name": "GetCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39545,7 +39545,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 946,
+          "line": 949,
           "name": "DeleteCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39641,7 +39641,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 684,
+          "line": 687,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39714,7 +39714,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 883,
+          "line": 886,
           "name": "RenewCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39787,7 +39787,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 922,
+          "line": 925,
           "name": "RevokeCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -39862,7 +39862,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 428,
+          "line": 431,
           "name": "CreateProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -39930,7 +39930,7 @@
             "ensureDefaultProfiles"
           ],
           "internal_package_calls": [],
-          "line": 469,
+          "line": 472,
           "name": "ListProfiles",
           "receiver_calls": [],
           "store_calls": [
@@ -39991,7 +39991,7 @@
             "ensureDefaultProfiles"
           ],
           "internal_package_calls": [],
-          "line": 480,
+          "line": 483,
           "name": "GetProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -40260,7 +40260,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 979,
+          "line": 982,
           "name": "GenerateCRL",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -40593,7 +40593,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 1077,
+          "line": 1080,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -40647,7 +40647,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1038,
+          "line": 1041,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -40939,7 +40939,7 @@
             "pkg/crypto.DecryptEnvelope",
             "pkg/mek.Load"
           ],
-          "line": 1077,
+          "line": 1080,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -40993,7 +40993,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1038,
+          "line": 1041,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -41095,7 +41095,7 @@
             "GetInventory"
           ],
           "internal_package_calls": [],
-          "line": 1184,
+          "line": 1187,
           "name": "Inventory",
           "receiver_calls": [],
           "store_calls": [
@@ -41156,7 +41156,7 @@
             "Status"
           ],
           "internal_package_calls": [],
-          "line": 2519,
+          "line": 2522,
           "name": "SecurityStatus",
           "receiver_calls": [
             "s.securityProvider.Status"
@@ -41220,7 +41220,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1256,
+          "line": 1259,
           "name": "GetCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -41302,7 +41302,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1279,
+          "line": 1282,
           "name": "UpsertCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -41332,7 +41332,7 @@
             "UpsertCertExpiryAlertState"
           ],
           "internal_package_calls": [],
-          "line": 1322,
+          "line": 1325,
           "name": "RunTenantExpiryAlertSweep",
           "receiver_calls": [],
           "store_calls": [
@@ -41630,7 +41630,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2490,
+          "line": 2493,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -42193,7 +42193,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2490,
+          "line": 2493,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -42257,7 +42257,7 @@
             "defaultProtocolConfig"
           ],
           "internal_package_calls": [],
-          "line": 1193,
+          "line": 1196,
           "name": "ListProtocolConfigs",
           "receiver_calls": [],
           "store_calls": [
@@ -42385,7 +42385,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1220,
+          "line": 1223,
           "name": "UpsertProtocolConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -42483,7 +42483,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1829,
+          "line": 1832,
           "name": "UploadThirdPartyCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -42542,7 +42542,7 @@
             "parseACMEProtocolOptions"
           ],
           "internal_package_calls": [],
-          "line": 2002,
+          "line": 2005,
           "name": "acmeOptions",
           "receiver_calls": [],
           "store_calls": []
@@ -42590,7 +42590,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2108,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42644,7 +42644,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2108,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42722,7 +42722,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2122,
+          "line": 2125,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42739,7 +42739,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2108,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42761,7 +42761,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1412,
+          "line": 1415,
           "name": "AcmeNewAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -42849,7 +42849,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2122,
+          "line": 2125,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42866,7 +42866,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2108,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -42896,7 +42896,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 1437,
+          "line": 1440,
           "name": "AcmeNewOrder",
           "receiver_calls": [],
           "store_calls": [
@@ -43036,7 +43036,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 2179,
+          "line": 2182,
           "name": "ACMEChallengeInfo",
           "receiver_calls": [],
           "store_calls": [
@@ -43108,7 +43108,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1509,
+          "line": 1512,
           "name": "AcmeRespondChallenge",
           "receiver_calls": [],
           "store_calls": [
@@ -43190,7 +43190,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2122,
+          "line": 2125,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -43207,7 +43207,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2105,
+          "line": 2108,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -43232,7 +43232,7 @@
             "Error"
           ],
           "internal_package_calls": [],
-          "line": 1542,
+          "line": 1545,
           "name": "AcmeFinalize",
           "receiver_calls": [],
           "store_calls": [
@@ -43320,7 +43320,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 684,
+          "line": 687,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -43379,7 +43379,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 1917,
+          "line": 1920,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -43447,7 +43447,7 @@
             "ListProfiles"
           ],
           "internal_package_calls": [],
-          "line": 2238,
+          "line": 2241,
           "name": "ESTCSRAttributes",
           "receiver_calls": [],
           "store_calls": [
@@ -43530,7 +43530,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1585,
+          "line": 1588,
           "name": "ESTSimpleEnroll",
           "receiver_calls": [],
           "store_calls": []
@@ -43604,7 +43604,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1618,
+          "line": 1621,
           "name": "ESTSimpleReenroll",
           "receiver_calls": [],
           "store_calls": [
@@ -43676,7 +43676,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1660,
+          "line": 1663,
           "name": "ESTServerKeygen",
           "receiver_calls": [],
           "store_calls": []
@@ -43756,7 +43756,7 @@
             "dedupStrings"
           ],
           "internal_package_calls": [],
-          "line": 1931,
+          "line": 1934,
           "name": "SCEPCapabilities",
           "receiver_calls": [],
           "store_calls": []
@@ -43773,7 +43773,7 @@
             "GetCertificateBySerial"
           ],
           "internal_package_calls": [],
-          "line": 2266,
+          "line": 2269,
           "name": "SCEPGetCert",
           "receiver_calls": [],
           "store_calls": [
@@ -43791,7 +43791,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 1917,
+          "line": 1920,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -43883,7 +43883,7 @@
             "loadCASignerFor"
           ],
           "internal_package_calls": [],
-          "line": 2396,
+          "line": 2399,
           "name": "loadCASigner",
           "receiver_calls": [],
           "store_calls": []
@@ -43902,7 +43902,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1692,
+          "line": 1695,
           "name": "SCEPPKIOperation",
           "receiver_calls": [],
           "store_calls": []
@@ -43996,7 +43996,7 @@
             "GetCertificate"
           ],
           "internal_package_calls": [],
-          "line": 1744,
+          "line": 1747,
           "name": "CMPv2Request",
           "receiver_calls": [],
           "store_calls": [
@@ -44074,7 +44074,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2296,
+          "line": 2299,
           "name": "CMPv2Confirm",
           "receiver_calls": [],
           "store_calls": [
@@ -44088,7 +44088,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2342,
+          "line": 2345,
           "name": "CMPv2Error",
           "receiver_calls": [],
           "store_calls": []
@@ -116473,7 +116473,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T10:02:13Z",
+    "generatedAt": "2026-10-01T10:31:35Z",
     "methods": [
       "DELETE",
       "GET",

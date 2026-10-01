@@ -175,7 +175,8 @@ fi
 # JWT_PUBLIC_KEY_B64 (required by compose) is real from the first start.
 if [[ -z "$(env_get JWT_PUBLIC_KEY_B64)" ]]; then
   say "generating the auth JWT signing key"
-  docker volume create "${AUTH_VOL}" >/dev/null
+  # With Compose's labels, so `compose up` adopts the volume.
+  docker volume create --label "com.docker.compose.project=${PROJECT}" --label "com.docker.compose.volume=auth-data" "${AUTH_VOL}" >/dev/null
   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null \
     | docker run --rm -i -v "${AUTH_VOL}:/a" vecta-local/alpine:3.24 \
         sh -c 'set -eu; umask 077; [ -s /a/jwt_private.pem ] || cat > /a/jwt_private.pem; chown 100:101 /a/jwt_private.pem' \

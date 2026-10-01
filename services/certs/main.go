@@ -316,6 +316,8 @@ func loadRuntimeMaterializerConfig() RuntimeCertMaterializerConfig {
 		// Dedicated volume mounted only by certs and the dashboard.
 		DashboardTLSDir: envOr("CERTS_DASHBOARD_TLS_DIR", "/run/vecta/dashboard-tls"),
 		InfraTLSDir:     envOr("CERTS_INFRA_TLS_DIR", "/run/vecta/infra-tls"),
+		// On the certs key volume, beside the sealed CRWK.
+		ExternalDir: envOr("CERTS_EDGE_EXTERNAL_DIR", defaultEdgeExternalDir),
 	}
 }
 

@@ -9,6 +9,8 @@
 #      no key material is derived from a repo literal, and .env.example ships
 #      no secret values.
 #   4. Shell scripts parse (bash 3.2 on macOS included).
+#   4b. Compose volumes: scripts create volumes with Compose's labels and
+#      never create runtime-certs (it is tmpfs, made by Compose).
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
@@ -349,6 +351,22 @@ if [ -n "$sh_fail" ]; then
   echo "FAIL [shell-syntax]: $SH_BIN -n fails for:$sh_fail"
 else
   echo "PASS [shell-syntax]"
+fi
+
+# Rule 4b: a volume a script creates ahead of Compose carries Compose's
+# labels, and no script names the runtime-certs volume. Compose doesn't adopt
+# an unlabelled volume: it warns on every `up` and drops the options
+# docker-compose.yml declares, which left the runtime TLS keys on disk
+# instead of tmpfs (learning.md, 2026-10-01).
+vol_scripts=$(git ls-files '*.sh' | grep -vE '^scripts/(conformance|test-volume-repair)\.sh$')
+vol_fail=$(grep -nE 'volume create' $vol_scripts 2>/dev/null | grep -v 'com\.docker\.compose\.project=' || true)
+vol_fail="$vol_fail$(grep -nE '_runtime-certs' $vol_scripts 2>/dev/null | grep -v '^infra/scripts/compose-volumes\.sh:' || true)"
+if [ -n "$vol_fail" ]; then
+  FAIL=1
+  echo "FAIL [compose-volumes]: create volumes with Compose's labels (compose_volume_create) and leave runtime-certs to Compose"
+  if [ "$VERBOSE" = "-v" ]; then printf '  %s\n' "$vol_fail"; fi
+else
+  echo "PASS [compose-volumes]"
 fi
 
 # Burn-down report.

@@ -728,7 +728,7 @@ seed_auth_jwt_key() {
   fi
   local auth_volume="${project_name}_auth-data"
   info "Seeding auth JWT signing key into ${auth_volume} ..."
-  "${DOCKER_BIN[@]}" volume create "${auth_volume}" >/dev/null
+  "${DOCKER_BIN[@]}" volume create --label "com.docker.compose.project=${project_name}" --label "com.docker.compose.volume=auth-data" "${auth_volume}" >/dev/null
   local seeded="false" image
   for image in alpine:3.24 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm -i \
@@ -1876,7 +1876,6 @@ seed_cert_bootstrap_secret() {
   fi
 
   local certs_volume="${project_name}_certs-key-data"
-  local runtime_volume="${project_name}_runtime-certs"
   local seed_bootstrap_secret="false"
   local bootstrap_secret="${CERTS_BOOTSTRAP_PASSPHRASE:-}"
   local target_path="${CERTS_PASSPHRASE_FILE_PATH:-/var/lib/vecta/certs/bootstrap.passphrase}"
@@ -1888,9 +1887,10 @@ seed_cert_bootstrap_secret() {
     seed_bootstrap_secret="true"
   fi
 
-  info "Preparing certificate bootstrap volumes (${certs_volume}, ${runtime_volume}) ..."
-  "${DOCKER_BIN[@]}" volume create "${certs_volume}" >/dev/null
-  "${DOCKER_BIN[@]}" volume create "${runtime_volume}" >/dev/null
+  # Created with Compose's labels so `compose up` adopts it. runtime-certs is
+  # left to Compose, which creates it as tmpfs (docker-compose.yml).
+  info "Preparing certificate bootstrap volume (${certs_volume}) ..."
+  "${DOCKER_BIN[@]}" volume create --label "com.docker.compose.project=${project_name}" --label "com.docker.compose.volume=certs-key-data" "${certs_volume}" >/dev/null
 
   local prepared="false"
   local image
@@ -1900,14 +1900,13 @@ seed_cert_bootstrap_secret() {
   for image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm \
       -v "${certs_volume}:/var/lib/vecta/certs" \
-      -v "${runtime_volume}:/run/vecta/certs" \
       -v "${certs_volume}:/data" \
       -v "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
       -e CERTS_CRWK_BOOTSTRAP_PASSPHRASE \
       -e SEED_BOOTSTRAP_SECRET="${seed_bootstrap_secret}" \
       -e CERTS_CRWK_PASSPHRASE_FILE="${target_path}" \
       "${image}" \
-      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/certs /run/vecta/certs; chown -R 100:101 /var/lib/vecta/certs /run/vecta/certs; chmod 700 /var/lib/vecta/certs /run/vecta/certs; if [ "${SEED_BOOTSTRAP_SECRET}" = "true" ]; then sh /crwk-passphrase.sh >/dev/null; fi' >/dev/null 2>&1; then
+      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/certs; chown -R 100:101 /var/lib/vecta/certs; chmod 700 /var/lib/vecta/certs; if [ "${SEED_BOOTSTRAP_SECRET}" = "true" ]; then sh /crwk-passphrase.sh >/dev/null; fi' >/dev/null 2>&1; then
       prepared="true"
       break
     fi
@@ -1916,7 +1915,7 @@ seed_cert_bootstrap_secret() {
   unset CERTS_CRWK_BOOTSTRAP_PASSPHRASE
   bootstrap_secret=""
   if [[ "${prepared}" != "true" ]]; then
-    die "Unable to prepare certificate bootstrap volumes (${certs_volume}, ${runtime_volume})."
+    die "Unable to prepare certificate bootstrap volume (${certs_volume})."
   fi
 
   if [[ "${seed_bootstrap_secret}" == "true" ]]; then

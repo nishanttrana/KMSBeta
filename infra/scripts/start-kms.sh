@@ -24,6 +24,9 @@ HEALTH_SCRIPT="${ROOT_DIR}/infra/scripts/healthcheck-enabled-services.sh"
 COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
 BASH_BIN="${BASH:-bash}"
 
+# shellcheck source=infra/scripts/compose-volumes.sh
+source "${ROOT_DIR}/infra/scripts/compose-volumes.sh"
+
 wait_docker() {
   local timeout_seconds="${1:-90}"
   local deadline=$((SECONDS + timeout_seconds))
@@ -99,7 +102,6 @@ prepare_certs_volumes() {
     project_name="vecta-kms"
   fi
   local certs_volume="${project_name}_certs-key-data"
-  local runtime_volume="${project_name}_runtime-certs"
   # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): the public trust bundle
   # every service reads, and the dashboard's TLS files (certs writes both).
   local trust_volume="${project_name}_internal-trust"
@@ -111,14 +113,13 @@ prepare_certs_volumes() {
   # service before any cryptography (pkg/config).
   local platform_state_volume="${project_name}_platform-state"
   local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"
-  local prepared=0 helper_image="" helper_out=""
+  local prepared=0 helper_image="" helper_out="" key
 
-  docker volume create "${certs_volume}" >/dev/null 2>&1 || true
-  docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
-  docker volume create "${trust_volume}" >/dev/null 2>&1 || true
-  docker volume create "${dashboard_tls_volume}" >/dev/null 2>&1 || true
-  docker volume create "${infra_tls_volume}" >/dev/null 2>&1 || true
-  docker volume create "${platform_state_volume}" >/dev/null 2>&1 || true
+  # runtime-certs is not made here: Compose creates it as tmpfs, already
+  # owned by the certs user (docker-compose.yml).
+  for key in certs-key-data internal-trust dashboard-tls infra-tls platform-state; do
+    volume_exists "${project_name}_${key}" || compose_volume_create "${project_name}" "${key}"
+  done
 
   # The CRWK passphrase is generated inside the volume and never crosses the
   # host (infra/scripts/crwk-passphrase.sh). An operator-supplied one is
@@ -127,7 +128,6 @@ prepare_certs_volumes() {
     if helper_out="$(docker run --rm \
       --volume "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
       --volume "${certs_volume}:/data" \
-      --volume "${runtime_volume}:/runtime" \
       --volume "${trust_volume}:/trust" \
       --volume "${dashboard_tls_volume}:/dashboard-tls" \
       --volume "${infra_tls_volume}:/infra-tls" \
@@ -137,9 +137,9 @@ prepare_certs_volumes() {
       "${helper_image}" \
       sh -lc '
         set -eu
-        mkdir -p /data /runtime
-        chown -R 100:101 /data /runtime
-        chmod 700 /data /runtime
+        mkdir -p /data
+        chown -R 100:101 /data
+        chmod 700 /data
         mkdir -p /trust /dashboard-tls
         chown 100:101 /trust /dashboard-tls
         chmod 755 /trust
@@ -168,6 +168,8 @@ prepare_certs_volumes() {
     return 1
   fi
   export_internal_pki_cache "${certs_volume}"
+  # Last: the export above needs the running database.
+  repair_volumes "${project_name}"
 }
 
 if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then

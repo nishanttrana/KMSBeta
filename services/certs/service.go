@@ -97,6 +97,9 @@ type RuntimeCertMaterializerConfig struct {
 	KMIPSANs        []string
 	DashboardTLSDir string
 	InfraTLSDir     string
+	// ExternalDir is this node's kept copy of an external edge certificate
+	// (edge_cert.go). MaterializeDir is tmpfs.
+	ExternalDir string
 }
 
 func NewService(store Store, events EventPublisher, keycore KeyCoreSigner, mek []byte, fipsStrict bool, keycoreFailClosed bool) *Service {
