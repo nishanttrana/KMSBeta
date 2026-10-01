@@ -25,7 +25,10 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
-var errExpired = errors.New("secret lease has expired")
+var (
+	errExpired        = errors.New("secret lease has expired")
+	errAlreadyCurrent = errors.New("that version is already the current one")
+)
 
 // Service holds the secrets domain logic. It emits no audit events itself:
 // every call arrives through a pkg/route handler, and the kernel emits the
@@ -94,16 +97,46 @@ func (s *Service) CreateSecret(ctx context.Context, req CreateSecretRequest) (Se
 }
 
 func (s *Service) ListSecrets(ctx context.Context, tenantID string, secretType string, limit int, offset int) ([]Secret, error) {
+	return s.ListVisible(ctx, tenantID, secretType, SecretStatusActive, limit, offset, nil)
+}
+
+// ListVisible pages the secrets of one status that visible accepts (nil
+// accepts all). limit and offset count visible secrets, so a caller's pages
+// are full until the last one whatever the access rules hide.
+func (s *Service) ListVisible(ctx context.Context, tenantID, secretType, status string, limit, offset int, visible func(Secret) bool) ([]Secret, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return nil, errors.New("tenant_id is required")
 	}
 	secretType = normalizeSecretType(secretType)
-	items, err := s.store.ListSecrets(ctx, tenantID, secretType, limit, offset)
-	if err != nil {
-		return nil, err
+	if visible == nil {
+		return s.store.ListSecrets(ctx, tenantID, secretType, status, limit, offset)
 	}
-	return items, nil
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	const page = 500
+	out := make([]Secret, 0)
+	for from, skipped := 0, 0; len(out) < limit; from += page {
+		items, err := s.store.ListSecrets(ctx, tenantID, secretType, status, page, from)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range items {
+			if !visible(item) {
+				continue
+			}
+			if skipped < offset {
+				skipped++
+			} else if len(out) < limit {
+				out = append(out, item)
+			}
+		}
+		if len(items) < page {
+			break
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) GetSecret(ctx context.Context, tenantID string, secretID string) (Secret, error) {
@@ -132,16 +165,24 @@ func (s *Service) GetSecretByName(ctx context.Context, tenantID string, name str
 	return secret, nil
 }
 
-func (s *Service) GetSecretValue(ctx context.Context, tenantID string, secretID string, format string) (SecretValueResponse, error) {
+// GetSecretValue returns one version of the value, the current one when
+// version is 0.
+func (s *Service) GetSecretValue(ctx context.Context, tenantID string, secretID string, format string, version int) (SecretValueResponse, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	secretID = strings.TrimSpace(secretID)
 	format = strings.TrimSpace(strings.ToLower(format))
 	if tenantID == "" || secretID == "" {
 		return SecretValueResponse{}, errors.New("tenant_id and secret_id are required")
 	}
-	secret, enc, err := s.store.GetSecretWithValue(ctx, tenantID, secretID)
+	secret, enc, err := s.store.GetSecretWithValue(ctx, tenantID, secretID, version)
 	if err != nil {
 		return SecretValueResponse{}, err
+	}
+	if secret.Status != SecretStatusActive {
+		return SecretValueResponse{}, errDeleted
+	}
+	if version <= 0 {
+		version = secret.CurrentVersion
 	}
 	if secret.ExpiresAt != nil && time.Now().UTC().After(secret.ExpiresAt.UTC()) {
 		return SecretValueResponse{}, errExpired
@@ -158,6 +199,7 @@ func (s *Service) GetSecretValue(ctx context.Context, tenantID string, secretID 
 	}
 	return SecretValueResponse{
 		Value:       string(converted),
+		Version:     version,
 		Format:      usedFormat,
 		ContentType: contentType,
 	}, nil
@@ -200,19 +242,58 @@ func (s *Service) UpdateSecret(ctx context.Context, tenantID string, secretID st
 	return updated, nil
 }
 
+// DeleteSecret marks the secret deleted. Its versions are kept, unreadable,
+// until RestoreSecret or DestroySecret.
 func (s *Service) DeleteSecret(ctx context.Context, tenantID string, secretID string, actor string) error {
-	tenantID = strings.TrimSpace(tenantID)
-	secretID = strings.TrimSpace(secretID)
-	if tenantID == "" || secretID == "" {
-		return errors.New("tenant_id and secret_id are required")
+	return s.store.SoftDeleteSecret(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(secretID), actorOrSystem(actor))
+}
+
+func (s *Service) RestoreSecret(ctx context.Context, tenantID string, secretID string, actor string) error {
+	return s.store.RestoreSecret(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(secretID), actorOrSystem(actor))
+}
+
+// DestroySecret removes the secret and every version, for good.
+func (s *Service) DestroySecret(ctx context.Context, tenantID string, secretID string, actor string) error {
+	return s.store.DestroySecret(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(secretID), actorOrSystem(actor))
+}
+
+func (s *Service) DestroyVersion(ctx context.Context, tenantID string, secretID string, version int, actor string) error {
+	return s.store.DestroyVersion(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(secretID), version, actorOrSystem(actor))
+}
+
+// Rollback makes an earlier version's value the current one again, as a new
+// version sealed under a new data key. Rolling back to the current version
+// would change nothing and is refused.
+func (s *Service) Rollback(ctx context.Context, tenantID string, secretID string, version int, expected *int, actor string) (Secret, error) {
+	secret, enc, err := s.store.GetSecretWithValue(ctx, tenantID, secretID, version)
+	if err != nil {
+		return Secret{}, err
 	}
+	if version <= 0 || version == secret.CurrentVersion {
+		return Secret{}, errAlreadyCurrent
+	}
+	plain, err := s.decryptValue(enc)
+	if err != nil {
+		return Secret{}, err
+	}
+	defer pkgcrypto.Zeroize(plain)
+	sealed, err := s.encryptValue(plain)
+	if err != nil {
+		return Secret{}, err
+	}
+	return s.store.UpdateSecret(ctx, tenantID, secretID, UpdateSecretRequest{
+		UpdatedBy:       actorOrSystem(actor),
+		ExpectedVersion: expected,
+		changeAction:    "rolled_back",
+		changeDetail:    fmt.Sprintf("Value of version %d restored as version %d", version, secret.CurrentVersion+1),
+	}, nil, &sealed)
+}
+
+func actorOrSystem(actor string) string {
 	if actor == "" {
-		actor = "system"
+		return "system"
 	}
-	if err := s.store.DeleteSecret(ctx, tenantID, secretID, actor); err != nil {
-		return err
-	}
-	return nil
+	return actor
 }
 
 func (s *Service) GenerateSSHKey(ctx context.Context, req GenerateSSHKeyRequest) (Secret, string, error) {
@@ -354,7 +435,7 @@ func (s *Service) GetSecretAuditLog(ctx context.Context, tenantID string, secret
 	return entries, nil
 }
 
-func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID string, newValue string, updatedBy string) (Secret, error) {
+func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID string, newValue string, expected *int, updatedBy string) (Secret, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	secretID = strings.TrimSpace(secretID)
 	if tenantID == "" || secretID == "" || newValue == "" {
@@ -364,8 +445,9 @@ func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID st
 		updatedBy = "system"
 	}
 	updated, err := s.UpdateSecret(ctx, tenantID, secretID, UpdateSecretRequest{
-		Value:     &newValue,
-		UpdatedBy: updatedBy,
+		Value:           &newValue,
+		UpdatedBy:       updatedBy,
+		ExpectedVersion: expected,
 	})
 	if err != nil {
 		return Secret{}, err
@@ -373,12 +455,73 @@ func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID st
 	return updated, nil
 }
 
-func (s *Service) GetStats(ctx context.Context, tenantID string) (VaultStats, error) {
+// GetStats counts the active secrets visible accepts (nil accepts all) and
+// their stored versions. A failed count is an error, never a zero.
+func (s *Service) GetStats(ctx context.Context, tenantID string, visible func(Secret) bool) (VaultStats, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return VaultStats{}, errors.New("tenant_id is required")
 	}
-	return s.store.GetStats(ctx, tenantID)
+	versions, err := s.store.VersionCounts(ctx, tenantID)
+	if err != nil {
+		return VaultStats{}, err
+	}
+	stats := VaultStats{ByType: map[string]int{}}
+	now := time.Now().UTC()
+	for from := 0; ; from += 500 {
+		items, err := s.store.ListSecrets(ctx, tenantID, "", SecretStatusActive, 500, from)
+		if err != nil {
+			return VaultStats{}, err
+		}
+		for _, item := range items {
+			if visible != nil && !visible(item) {
+				continue
+			}
+			stats.TotalSecrets++
+			stats.TotalVersions += versions[item.ID]
+			stats.ByType[item.SecretType]++
+			switch {
+			case item.ExpiresAt == nil:
+			case !item.ExpiresAt.After(now):
+				stats.Expired++
+			case !item.ExpiresAt.After(now.Add(30 * 24 * time.Hour)):
+				stats.ExpiringWithin++
+			}
+		}
+		if len(items) < 500 {
+			return stats, nil
+		}
+	}
+}
+
+// Access rules.
+
+func (s *Service) AccessRules(ctx context.Context, tenantID string) ([]AccessRule, error) {
+	return s.store.ListAccessRules(ctx, strings.TrimSpace(tenantID))
+}
+
+func (s *Service) CreateAccessRule(ctx context.Context, rule AccessRule) (AccessRule, error) {
+	rule, err := normalizeRule(rule)
+	if err != nil {
+		return AccessRule{}, err
+	}
+	existing, err := s.store.ListAccessRules(ctx, rule.TenantID)
+	if err != nil {
+		return AccessRule{}, err
+	}
+	if len(existing) >= maxRulesPerTenant {
+		return AccessRule{}, fmt.Errorf("a tenant may have at most %d access rules", maxRulesPerTenant)
+	}
+	rule.ID = newID("sar")
+	rule.CreatedAt = time.Now().UTC()
+	if err := s.store.CreateAccessRule(ctx, rule); err != nil {
+		return AccessRule{}, err
+	}
+	return rule, nil
+}
+
+func (s *Service) DeleteAccessRule(ctx context.Context, tenantID, ruleID string) (AccessRule, error) {
+	return s.store.DeleteAccessRule(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(ruleID))
 }
 
 func generateSSHKeyPair(keyType string) (string, string, error) {

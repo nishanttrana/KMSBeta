@@ -25,12 +25,16 @@ type Handler struct {
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
-// kms.write the rest (see route.Allowed).
+// kms.write the .write and .delete ones (see route.Allowed); destroying and
+// managing access rules are granted only by name, secrets.* or *.
 const (
-	permRead      = "secrets.read"       // metadata, versions, stats
-	permValueRead = "secrets.value.read" // reveals a secret value
-	permWrite     = "secrets.write"      // create, update, rotate, generate
-	permDelete    = "secrets.delete"
+	permRead         = "secrets.read"          // metadata, versions, stats
+	permValueRead    = "secrets.value.read"    // reveals a secret value
+	permWrite        = "secrets.write"         // create, update, rotate, roll back, restore, generate
+	permDelete       = "secrets.delete"        // recoverable delete
+	permDestroy      = "secrets.destroy"       // permanent: a secret or one of its versions
+	permAccessRead   = "secrets.access.read"   // list access rules
+	permAccessManage = "secrets.access.manage" // create and delete access rules
 )
 
 var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
@@ -45,7 +49,7 @@ func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, keyring *
 }
 
 // remediate closes the secret's exposure-register entry (it was stored under
-// a public key before 1.2.0-beta) once its value is replaced or deleted.
+// a public key before 1.2.0-beta) once its value is replaced or destroyed.
 func (h *Handler) remediate(c *route.Call, secretID, how string) {
 	if h.keyring == nil {
 		return
@@ -64,18 +68,27 @@ func (h *Handler) routes() {
 	secret := func(action, perm string) route.Spec {
 		return route.Spec{Action: action, Permission: perm, Resource: "secret", TargetParam: "id"}
 	}
+	warn := func(spec route.Spec) route.Spec { spec.Severity = "warning"; return spec }
 	r.Handle("POST /secrets", route.Spec{Action: "created", Permission: permWrite, Resource: "secret"}, h.createSecret)
 	r.Handle("GET /secrets", route.Spec{Action: "listed", Permission: permRead, Resource: "secret"}, h.listSecrets)
 	r.Handle("GET /secrets/{id}", secret("read", permRead), h.getSecret)
-	r.Handle("GET /secrets/{id}/value", route.Spec{Action: "value_read", Permission: permValueRead, Resource: "secret", TargetParam: "id", Severity: "warning"}, h.getSecretValue)
+	r.Handle("GET /secrets/{id}/value", warn(secret("value_read", permValueRead)), h.getSecretValue)
 	r.Handle("PUT /secrets/{id}", secret("updated", permWrite), h.updateSecret)
-	r.Handle("DELETE /secrets/{id}", route.Spec{Action: "deleted", Permission: permDelete, Resource: "secret", TargetParam: "id", Severity: "warning"}, h.deleteSecret)
+	r.Handle("DELETE /secrets/{id}", warn(secret("deleted", permDelete)), h.deleteSecret)
+	r.Handle("POST /secrets/{id}/restore", secret("restored", permWrite), h.restoreSecret)
+	r.Handle("POST /secrets/{id}/destroy", warn(route.Spec{Action: "destroyed", Permission: permDestroy, Resource: "secret", TargetParam: "id"}), h.destroySecret)
 	r.Handle("POST /secrets/generate/ssh_key", route.Spec{Action: "generated", Permission: permWrite, Resource: "secret"}, h.generateSSHKey)
 	r.Handle("POST /secrets/generate/keypair", route.Spec{Action: "generated", Permission: permWrite, Resource: "secret"}, h.generateKeyPair)
 	r.Handle("GET /secrets/{id}/versions", secret("versions_listed", permRead), h.listVersions)
+	r.Handle("DELETE /secrets/{id}/versions/{version}", warn(secret("version_destroyed", permDestroy)), h.destroyVersion)
 	r.Handle("GET /secrets/{id}/audit", secret("audit_log_read", permRead), h.secretAuditLog)
 	r.Handle("POST /secrets/{id}/rotate", secret("rotated", permWrite), h.rotateSecret)
+	r.Handle("POST /secrets/{id}/rollback", warn(secret("rolled_back", permWrite)), h.rollbackSecret)
+	r.Handle("GET /secrets/{id}/access", secret("access_read", permRead), h.secretAccess)
 	r.Handle("GET /secrets/stats", route.Spec{Action: "stats_read", Permission: permRead}, h.stats)
+	r.Handle("GET /secrets/access/rules", route.Spec{Action: "access_rules_listed", Permission: permAccessRead, Resource: "secret_access_rule"}, h.listAccessRules)
+	r.Handle("POST /secrets/access/rules", warn(route.Spec{Action: "access_rule_created", Permission: permAccessManage, Resource: "secret_access_rule"}), h.createAccessRule)
+	r.Handle("DELETE /secrets/access/rules/{rule_id}", warn(route.Spec{Action: "access_rule_deleted", Permission: permAccessManage, Resource: "secret_access_rule", TargetParam: "rule_id"}), h.deleteAccessRule)
 
 	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset). The
 	// namespace headers carry the tenant; the kernel enforces it like any other.
@@ -99,15 +112,30 @@ func (h *Handler) routes() {
 	r.Handle("DELETE /v1/{mount}/{path...}", vault("vault_kv_deleted", permDelete), h.vaultKVDelete)
 }
 
-// statusOf maps service errors to HTTP status, def for anything unclassified.
-func statusOf(err error, def int) int {
+// fail writes a service error with the status and code that say what it was.
+// A request the secret's state rules out is a refusal, audited with its
+// reason; anything else is a failure under def.
+func fail(c *route.Call, err error, def int, code string) {
 	switch {
 	case errors.Is(err, errNotFound):
-		return http.StatusNotFound
+		c.Error(http.StatusNotFound, code, err.Error())
+	case errors.Is(err, errVersionNotFound):
+		c.Error(http.StatusNotFound, "version_not_found", err.Error())
 	case errors.Is(err, errExpired):
-		return http.StatusGone
+		c.Refuse(http.StatusGone, "secret_expired", err.Error())
+	case errors.Is(err, errDeleted):
+		c.Refuse(http.StatusGone, "secret_deleted", err.Error())
+	case errors.Is(err, errNotDeleted):
+		c.Refuse(http.StatusConflict, "secret_not_deleted", err.Error())
+	case errors.Is(err, errVersionConflict):
+		c.Refuse(http.StatusConflict, "version_conflict", err.Error())
+	case errors.Is(err, errVersionCurrent):
+		c.Refuse(http.StatusConflict, "version_is_current", err.Error())
+	case errors.Is(err, errAlreadyCurrent):
+		c.Refuse(http.StatusConflict, "already_current", err.Error())
+	default:
+		c.Error(def, code, err.Error())
 	}
-	return def
 }
 
 // actorOr records the verified caller as the author; the body's claim is
@@ -119,6 +147,63 @@ func actorOr(c *route.Call, claimed string) string {
 	return claimed
 }
 
+// allowed applies the tenant's access rules to one capability on one path
+// (access.go). A refusal is written and audited with its reason, the path
+// and the capability. Every route that touches a secret calls it.
+func (h *Handler) allowed(c *route.Call, path, capability string) bool {
+	rules, ok := h.rules(c)
+	return ok && permitted(c, rules, path, capability)
+}
+
+// rules loads the tenant's access rules. Without them no decision can be
+// made, so a failure ends the request.
+func (h *Handler) rules(c *route.Call) ([]AccessRule, bool) {
+	rules, err := h.svc.AccessRules(c.R.Context(), c.Tenant)
+	if err != nil {
+		c.Error(http.StatusInternalServerError, "access_rules_unavailable", err.Error())
+		return nil, false
+	}
+	return rules, true
+}
+
+func permitted(c *route.Call, rules []AccessRule, path, capability string) bool {
+	if reason := decide(rules, c.Claims, path, capability); reason != "" {
+		c.Detail("path", path)
+		c.Detail("capability", capability)
+		c.Refuse(http.StatusForbidden, reason, "an access rule on "+path+" does not allow "+capability+" for this caller")
+		return false
+	}
+	return true
+}
+
+// secretFor loads the secret a route names and applies the access rules.
+func (h *Handler) secretFor(c *route.Call, capability string) (Secret, bool) {
+	secret, err := h.svc.GetSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		fail(c, err, http.StatusInternalServerError, "read_failed")
+		return Secret{}, false
+	}
+	rules, ok := h.rules(c)
+	if !ok {
+		return Secret{}, false
+	}
+	secret.Restricted = restricted(rules, secret.Path)
+	return secret, permitted(c, rules, secret.Path, capability)
+}
+
+// visible returns the filter for listings: the secrets the caller may read,
+// each marked with whether a rule restricts its value.
+func (h *Handler) visible(c *route.Call) (func(*Secret) bool, bool) {
+	rules, ok := h.rules(c)
+	if !ok {
+		return nil, false
+	}
+	return func(s *Secret) bool {
+		s.Restricted = restricted(rules, s.Path)
+		return decide(rules, c.Claims, s.Path, capRead) == ""
+	}, true
+}
+
 func (h *Handler) createSecret(c *route.Call) {
 	var req CreateSecretRequest
 	if !c.Decode(&req) {
@@ -126,12 +211,22 @@ func (h *Handler) createSecret(c *route.Call) {
 	}
 	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
 	c.Detail("secret_type", req.SecretType)
+	if !h.allowed(c, secretPath(req.Labels, req.Name), capWrite) {
+		return
+	}
+	// A deleted secret keeps its name until it is destroyed.
+	if held, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, strings.TrimSpace(req.Name)); err == nil && held.Status != SecretStatusActive {
+		c.Detail("held_by", held.ID)
+		c.Refuse(http.StatusConflict, "name_held_by_deleted_secret", "a deleted secret has this name; restore or destroy it first")
+		return
+	}
 	out, err := h.svc.CreateSecret(c.R.Context(), req)
 	if err != nil {
 		c.Error(http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
 	c.Target(out.ID)
+	c.Detail("path", out.Path)
 	c.Detail("current_version", out.CurrentVersion)
 	c.Detail("expires_at", toRFC3339(out.ExpiresAt))
 	c.JSON(http.StatusCreated, map[string]interface{}{"secret": out})
@@ -140,42 +235,57 @@ func (h *Handler) createSecret(c *route.Call) {
 func (h *Handler) listSecrets(c *route.Call) {
 	q := c.R.URL.Query()
 	secretType := strings.TrimSpace(q.Get("secret_type"))
-	items, err := h.svc.ListSecrets(c.R.Context(), c.Tenant, secretType, atoi(q.Get("limit")), atoi(q.Get("offset")))
+	status := SecretStatusActive
+	if q.Get("deleted") == "true" {
+		status = SecretStatusDeleted
+	}
+	see, ok := h.visible(c)
+	if !ok {
+		return
+	}
+	marked := map[string]bool{}
+	items, err := h.svc.ListVisible(c.R.Context(), c.Tenant, secretType, status, atoi(q.Get("limit")), atoi(q.Get("offset")), func(s Secret) bool {
+		ok := see(&s)
+		marked[s.ID] = s.Restricted
+		return ok
+	})
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "list_failed", err.Error())
 		return
 	}
+	for i := range items {
+		items[i].Restricted = marked[items[i].ID]
+	}
 	c.Detail("count", len(items))
 	c.Detail("secret_type", secretType)
+	c.Detail("status", status)
 	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
 func (h *Handler) getSecret(c *route.Call) {
-	secret, err := h.svc.GetSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"))
-	if err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
+	secret, ok := h.secretFor(c, capRead)
+	if !ok {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": secret})
 }
 
 func (h *Handler) getSecretValue(c *route.Call) {
-	format := strings.TrimSpace(strings.ToLower(c.R.URL.Query().Get("format")))
-	out, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, c.R.PathValue("id"), format)
+	q := c.R.URL.Query()
+	secret, ok := h.secretFor(c, capValue)
+	if !ok {
+		return
+	}
+	out, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, secret.ID, strings.TrimSpace(strings.ToLower(q.Get("format"))), atoi(q.Get("version")))
 	if err != nil {
-		status, code := statusOf(err, http.StatusBadRequest), "value_read_failed"
-		switch status {
-		case http.StatusGone:
-			code = "secret_expired"
-		case http.StatusNotFound:
-			code = "not_found"
-		}
-		c.Error(status, code, err.Error())
+		fail(c, err, http.StatusBadRequest, "value_read_failed")
 		return
 	}
 	c.Detail("format", out.Format)
+	c.Detail("version", out.Version)
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"value":        out.Value,
+		"version":      out.Version,
 		"format":       out.Format,
 		"content_type": out.ContentType,
 	})
@@ -186,10 +296,29 @@ func (h *Handler) updateSecret(c *route.Call) {
 	if !c.Decode(&req) {
 		return
 	}
+	secret, ok := h.secretFor(c, capWrite)
+	if !ok {
+		return
+	}
+	// Renaming or re-labelling moves the secret: the caller needs write
+	// where it lands too, or a move would be a way out of a rule.
+	name, labels := secret.Name, secret.Labels
+	if req.Name != nil {
+		name = *req.Name
+	}
+	if req.Labels != nil {
+		labels = *req.Labels
+	}
+	if moved := secretPath(labels, name); moved != secret.Path {
+		c.Detail("moved_to", moved)
+		if !h.allowed(c, moved, capWrite) {
+			return
+		}
+	}
 	req.UpdatedBy = actorOr(c, req.UpdatedBy)
-	out, err := h.svc.UpdateSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), req)
+	out, err := h.svc.UpdateSecret(c.R.Context(), c.Tenant, secret.ID, req)
 	if err != nil {
-		c.Error(statusOf(err, http.StatusBadRequest), "update_failed", err.Error())
+		fail(c, err, http.StatusBadRequest, "update_failed")
 		return
 	}
 	c.Detail("value_changed", req.Value != nil)
@@ -201,12 +330,60 @@ func (h *Handler) updateSecret(c *route.Call) {
 }
 
 func (h *Handler) deleteSecret(c *route.Call) {
-	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), c.Actor()); err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
+	secret, ok := h.secretFor(c, capDelete)
+	if !ok {
 		return
 	}
-	h.remediate(c, c.R.PathValue("id"), "deleted")
-	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
+	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, secret.ID, c.Actor()); err != nil {
+		fail(c, err, http.StatusInternalServerError, "delete_failed")
+		return
+	}
+	c.Detail("recoverable", true)
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted", "recoverable": true})
+}
+
+func (h *Handler) restoreSecret(c *route.Call) {
+	secret, ok := h.secretFor(c, capWrite)
+	if !ok {
+		return
+	}
+	if err := h.svc.RestoreSecret(c.R.Context(), c.Tenant, secret.ID, c.Actor()); err != nil {
+		fail(c, err, http.StatusInternalServerError, "restore_failed")
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "active"})
+}
+
+func (h *Handler) destroySecret(c *route.Call) {
+	secret, ok := h.secretFor(c, capDelete)
+	if !ok {
+		return
+	}
+	if err := h.svc.DestroySecret(c.R.Context(), c.Tenant, secret.ID, c.Actor()); err != nil {
+		fail(c, err, http.StatusInternalServerError, "destroy_failed")
+		return
+	}
+	c.Detail("versions_destroyed", secret.CurrentVersion)
+	h.remediate(c, secret.ID, "deleted")
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "destroyed"})
+}
+
+func (h *Handler) destroyVersion(c *route.Call) {
+	version := atoi(c.R.PathValue("version"))
+	c.Detail("version", version)
+	secret, ok := h.secretFor(c, capDelete)
+	if !ok {
+		return
+	}
+	if version <= 0 {
+		c.Error(http.StatusBadRequest, "bad_request", "version must be a positive number")
+		return
+	}
+	if err := h.svc.DestroyVersion(c.R.Context(), c.Tenant, secret.ID, version, c.Actor()); err != nil {
+		fail(c, err, http.StatusInternalServerError, "destroy_failed")
+		return
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "destroyed", "version": version})
 }
 
 func (h *Handler) generateSSHKey(c *route.Call) {
@@ -216,6 +393,9 @@ func (h *Handler) generateSSHKey(c *route.Call) {
 	}
 	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
 	c.Detail("secret_type", "ssh_private_key")
+	if !h.allowed(c, secretPath(req.Labels, req.Name), capWrite) {
+		return
+	}
 	secret, pub, err := h.svc.GenerateSSHKey(c.R.Context(), req)
 	if err != nil {
 		c.Error(http.StatusBadRequest, "generate_failed", err.Error())
@@ -232,6 +412,9 @@ func (h *Handler) generateKeyPair(c *route.Call) {
 	}
 	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
 	c.Detail("key_type", req.KeyType)
+	if !h.allowed(c, secretPath(req.Labels, req.Name), capWrite) {
+		return
+	}
 	secret, pub, keyType, err := h.svc.GenerateKeyPair(c.R.Context(), req)
 	if err != nil {
 		c.Error(http.StatusBadRequest, "generate_failed", err.Error())
@@ -248,9 +431,13 @@ func (h *Handler) generateKeyPair(c *route.Call) {
 }
 
 func (h *Handler) listVersions(c *route.Call) {
-	versions, err := h.svc.ListVersions(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	secret, ok := h.secretFor(c, capRead)
+	if !ok {
+		return
+	}
+	versions, err := h.svc.ListVersions(c.R.Context(), c.Tenant, secret.ID)
 	if err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "versions_failed", err.Error())
+		fail(c, err, http.StatusInternalServerError, "versions_failed")
 		return
 	}
 	c.Detail("count", len(versions))
@@ -262,6 +449,11 @@ func (h *Handler) secretAuditLog(c *route.Call) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
+	// The history outlives a destroyed secret, so there may be no secret to
+	// load; the rules then apply to nothing and the route permission decides.
+	if secret, err := h.svc.GetSecret(c.R.Context(), c.Tenant, c.R.PathValue("id")); err == nil && !h.allowed(c, secret.Path, capRead) {
+		return
+	}
 	entries, err := h.svc.GetSecretAuditLog(c.R.Context(), c.Tenant, c.R.PathValue("id"), limit)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "audit_failed", err.Error())
@@ -272,8 +464,9 @@ func (h *Handler) secretAuditLog(c *route.Call) {
 
 func (h *Handler) rotateSecret(c *route.Call) {
 	var req struct {
-		Value     string `json:"value"`
-		UpdatedBy string `json:"updated_by"`
+		Value           string `json:"value"`
+		UpdatedBy       string `json:"updated_by"`
+		ExpectedVersion *int   `json:"expected_version"`
 	}
 	if !c.Decode(&req) {
 		return
@@ -282,9 +475,13 @@ func (h *Handler) rotateSecret(c *route.Call) {
 		c.Error(http.StatusBadRequest, "bad_request", "value is required for rotation")
 		return
 	}
-	out, err := h.svc.RotateSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), req.Value, actorOr(c, req.UpdatedBy))
+	secret, ok := h.secretFor(c, capWrite)
+	if !ok {
+		return
+	}
+	out, err := h.svc.RotateSecret(c.R.Context(), c.Tenant, secret.ID, req.Value, req.ExpectedVersion, actorOr(c, req.UpdatedBy))
 	if err != nil {
-		c.Error(statusOf(err, http.StatusBadRequest), "rotate_failed", err.Error())
+		fail(c, err, http.StatusBadRequest, "rotate_failed")
 		return
 	}
 	c.Detail("new_version", out.CurrentVersion)
@@ -292,13 +489,114 @@ func (h *Handler) rotateSecret(c *route.Call) {
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
 
+func (h *Handler) rollbackSecret(c *route.Call) {
+	var req struct {
+		Version         int  `json:"version"`
+		ExpectedVersion *int `json:"expected_version"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	c.Detail("from_version", req.Version)
+	secret, ok := h.secretFor(c, capWrite)
+	if !ok {
+		return
+	}
+	out, err := h.svc.Rollback(c.R.Context(), c.Tenant, secret.ID, req.Version, req.ExpectedVersion, c.Actor())
+	if err != nil {
+		fail(c, err, http.StatusBadRequest, "rollback_failed")
+		return
+	}
+	c.Detail("new_version", out.CurrentVersion)
+	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
+}
+
 func (h *Handler) stats(c *route.Call) {
-	stats, err := h.svc.GetStats(c.R.Context(), c.Tenant)
+	see, ok := h.visible(c)
+	if !ok {
+		return
+	}
+	stats, err := h.svc.GetStats(c.R.Context(), c.Tenant, func(s Secret) bool { return see(&s) })
 	if err != nil {
 		c.Error(http.StatusInternalServerError, "stats_failed", err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"stats": stats})
+}
+
+// secretAccess answers, for one secret: which rules cover it, and what this
+// caller may do to it under them.
+func (h *Handler) secretAccess(c *route.Call) {
+	secret, ok := h.secretFor(c, capRead)
+	if !ok {
+		return
+	}
+	rules, ok := h.rules(c)
+	if !ok {
+		return
+	}
+	covering := make([]AccessRule, 0)
+	for _, r := range rules {
+		if r.covers(secret.Path) {
+			covering = append(covering, r)
+		}
+	}
+	can := map[string]bool{}
+	for _, capability := range capabilities {
+		can[capability] = decide(rules, c.Claims, secret.Path, capability) == ""
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"path": secret.Path, "rules": covering, "caller": can})
+}
+
+func (h *Handler) listAccessRules(c *route.Call) {
+	rules, ok := h.rules(c)
+	if !ok {
+		return
+	}
+	c.Detail("count", len(rules))
+	c.JSON(http.StatusOK, map[string]interface{}{"items": rules})
+}
+
+func ruleDetails(c *route.Call, r AccessRule) {
+	c.Detail("path", r.Path)
+	c.Detail("subject", r.SubjectType+":"+r.SubjectID)
+	c.Detail("capabilities", strings.Join(r.Capabilities, ","))
+	c.Detail("effect", r.Effect)
+}
+
+func (h *Handler) createAccessRule(c *route.Call) {
+	var req struct {
+		TenantID     string   `json:"tenant_id"`
+		Path         string   `json:"path"`
+		SubjectType  string   `json:"subject_type"`
+		SubjectID    string   `json:"subject_id"`
+		Capabilities []string `json:"capabilities"`
+		Effect       string   `json:"effect"`
+	}
+	if !c.Decode(&req) {
+		return
+	}
+	rule, err := h.svc.CreateAccessRule(c.R.Context(), AccessRule{
+		TenantID: c.Tenant, Path: req.Path, SubjectType: req.SubjectType, SubjectID: req.SubjectID,
+		Capabilities: req.Capabilities, Effect: req.Effect, CreatedBy: c.Actor(),
+	})
+	if err != nil {
+		c.Error(http.StatusBadRequest, "invalid_access_rule", err.Error())
+		return
+	}
+	c.Target(rule.ID)
+	ruleDetails(c, rule)
+	c.JSON(http.StatusCreated, map[string]interface{}{"rule": rule})
+}
+
+func (h *Handler) deleteAccessRule(c *route.Call) {
+	rule, err := h.svc.DeleteAccessRule(c.R.Context(), c.Tenant, c.R.PathValue("rule_id"))
+	if err != nil {
+		fail(c, err, http.StatusInternalServerError, "delete_failed")
+		return
+	}
+	ruleDetails(c, rule)
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
 // vaultSysHealth and vaultSealStatus answer Vault/OpenBao clients' readiness
@@ -361,27 +659,38 @@ func vaultPath(c *route.Call) (string, bool) {
 	return path, true
 }
 
+// vaultSecret loads the secret a KV path names and applies the access rules,
+// the same decision the /secrets routes use.
+func (h *Handler) vaultSecret(c *route.Call, capability, code string) (Secret, bool) {
+	path, ok := vaultPath(c)
+	if !ok {
+		return Secret{}, false
+	}
+	secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
+	if err != nil {
+		fail(c, err, http.StatusInternalServerError, code)
+		return Secret{}, false
+	}
+	c.Target(secret.ID)
+	return secret, h.allowed(c, secret.Path, capability)
+}
+
 func (h *Handler) vaultKVRead(kv2 bool) func(*route.Call) {
 	return func(c *route.Call) {
-		path, ok := vaultPath(c)
+		secret, ok := h.vaultSecret(c, capValue, "read_failed")
 		if !ok {
 			return
 		}
-		secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
-		if err != nil {
-			c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
+		if secret.Status != SecretStatusActive { // Vault answers 404 for a deleted path
+			c.Error(http.StatusNotFound, "read_failed", errNotFound.Error())
 			return
 		}
-		c.Target(secret.ID)
-		valueOut, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, secret.ID, "raw")
+		valueOut, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, secret.ID, "raw", atoi(c.R.URL.Query().Get("version")))
 		if err != nil {
-			if errors.Is(err, errExpired) {
-				c.Error(http.StatusGone, "secret_expired", err.Error())
-				return
-			}
-			c.Error(http.StatusBadRequest, "value_read_failed", err.Error())
+			fail(c, err, http.StatusBadRequest, "value_read_failed")
 			return
 		}
+		c.Detail("version", valueOut.Version)
 		dataMap := parseVaultDataMap(valueOut.Value)
 		payload := map[string]interface{}{"lease_id": "", "renewable": false, "lease_duration": 0, "data": dataMap}
 		if kv2 {
@@ -392,7 +701,7 @@ func (h *Handler) vaultKVRead(kv2 bool) func(*route.Call) {
 					"updated_time":  secret.UpdatedAt.UTC().Format(time.RFC3339),
 					"deletion_time": "",
 					"destroyed":     false,
-					"version":       secret.CurrentVersion,
+					"version":       valueOut.Version,
 				},
 			}
 		}
@@ -417,7 +726,7 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 		var written Secret
 		switch {
 		case errors.Is(err, errNotFound):
-			created, createErr := h.svc.CreateSecret(c.R.Context(), CreateSecretRequest{
+			createReq := CreateSecretRequest{
 				TenantID:    c.Tenant,
 				Name:        path,
 				SecretType:  "api_key",
@@ -425,7 +734,11 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 				Description: "vault-compatible secret",
 				CreatedBy:   author,
 				Metadata:    map[string]interface{}{"vault_compat": true, "mount": strings.TrimSpace(c.R.PathValue("mount"))},
-			})
+			}
+			if !h.allowed(c, secretPath(nil, path), capWrite) {
+				return
+			}
+			created, createErr := h.svc.CreateSecret(c.R.Context(), createReq)
 			if createErr != nil {
 				c.Error(http.StatusBadRequest, "create_failed", createErr.Error())
 				return
@@ -439,8 +752,19 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 		default:
 			c.Target(secret.ID)
 			c.Detail("created", false)
+			if !h.allowed(c, secret.Path, capWrite) {
+				return
+			}
+			// As in Vault, writing to a deleted path brings it back.
+			if secret.Status != SecretStatusActive {
+				if err := h.svc.RestoreSecret(c.R.Context(), c.Tenant, secret.ID, author); err != nil {
+					fail(c, err, http.StatusInternalServerError, "restore_failed")
+					return
+				}
+				c.Detail("restored", true)
+			}
 			if written, err = h.svc.UpdateSecret(c.R.Context(), c.Tenant, secret.ID, UpdateSecretRequest{Value: ptrString(value), UpdatedBy: author}); err != nil {
-				c.Error(http.StatusBadRequest, "update_failed", err.Error())
+				fail(c, err, http.StatusBadRequest, "update_failed")
 				return
 			}
 			h.remediate(c, secret.ID, "rotated")
@@ -456,43 +780,33 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 	}
 }
 
+// vaultKVDelete is a recoverable delete, as KV v2's is: the versions stay
+// until the secret is destroyed (POST /secrets/{id}/destroy).
 func (h *Handler) vaultKVDelete(c *route.Call) {
-	path, ok := vaultPath(c)
+	secret, ok := h.vaultSecret(c, capDelete, "delete_failed")
 	if !ok {
 		return
 	}
-	secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
-	if err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
-		return
-	}
-	c.Target(secret.ID)
 	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, secret.ID, c.Actor()); err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
+		fail(c, err, http.StatusInternalServerError, "delete_failed")
 		return
 	}
-	h.remediate(c, secret.ID, "deleted")
+	c.Detail("recoverable", true)
 	c.W.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) vaultKV2Metadata(c *route.Call) {
-	path, ok := vaultPath(c)
+	secret, ok := h.vaultSecret(c, capRead, "read_failed")
 	if !ok {
 		return
 	}
-	secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
-	if err != nil {
-		c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
-		return
-	}
-	c.Target(secret.ID)
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
 			"created_time":         secret.CreatedAt.UTC().Format(time.RFC3339),
 			"updated_time":         secret.UpdatedAt.UTC().Format(time.RFC3339),
+			"deletion_time":        toRFC3339(secret.DeletedAt),
 			"max_versions":         0,
 			"current_version":      secret.CurrentVersion,
-			"oldest_version":       1,
 			"cas_required":         false,
 			"delete_version_after": "0s",
 		},

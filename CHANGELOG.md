@@ -4,6 +4,49 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.29.0-beta] — 2026-10-01
+
+### Secrets: per-path access rules and version operations
+- **Added: access rules.** A rule names a path (one secret, or everything
+  under a folder such as `/finance/*`), a caller (user, role, client or
+  workload, always from the verified token), capabilities (`read`, `value`,
+  `write`, `delete`) and an effect. Once an allow rule covers a path, only
+  the callers it names may use that capability there; a deny rule wins.
+  Until now anyone holding `secrets.value.read` could read every secret in
+  the tenant. A tenant with no rules behaves as before.
+- **Enforced on every route**, the Vault KV ones included, by one decision.
+  Secrets a caller may not see are left out of lists and counts; creating in
+  or moving a secret into a restricted folder needs `write` there. Every
+  refusal is audited with its reason, path and capability
+  ([docs/SECURITY/SECRET_ACCESS.md](docs/SECURITY/SECRET_ACCESS.md)).
+- **Added: version operations.** Read any stored version
+  (`/value?version=N`), roll back to one (stored as a new version, nothing
+  removed), destroy one earlier version, and write conditionally
+  (`expected_version`, refused with `409 version_conflict`).
+- **Changed (API behaviour): delete is recoverable.** `DELETE /secrets/{id}`
+  and the Vault KV delete now mark the secret deleted and keep its versions.
+  Its value cannot be read, and its name stays taken, until it is restored
+  (`POST /secrets/{id}/restore`) or destroyed (`POST /secrets/{id}/destroy`).
+  A client that deleted and re-created a name must now destroy it first, or
+  write through the Vault KV route, which restores it.
+- **New permissions:** `secrets.destroy` (destroy a secret or a version) and
+  `secrets.access.manage` (create and delete rules). `kms.write` grants
+  neither; grant them by name.
+- **Dashboard:** the Secret Vault has **Secrets**, **Deleted** and **Access
+  rules** views and an **Access-restricted** tile that lists its secrets. A
+  secret's detail shows the rules on its path and what you may do; each
+  earlier version can be read, rolled back to or destroyed. Rotating from
+  the dashboard is refused if someone else changed the secret meanwhile.
+- **Playbooks:** triggers `secret_access_rule_changed` and `secret_destroyed`.
+- **Fixed:** two concurrent writes to one secret could both read the same
+  version; the update now holds only if the secret is still at the version
+  it was read at.
+- **Changed:** an exposure-register entry for a secret closes when the
+  secret is destroyed, not when it is deleted (the material is still there).
+- **Open:** no default-deny mode, no groups as rule subjects, no retention
+  period for deleted secrets or cap on versions. The Vault KV routes still
+  ignore the mount.
+
 ## [7.28.0-beta] — 2026-10-01
 
 ### Overview → Operations → Status says "unavailable" when a source fails

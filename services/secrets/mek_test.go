@@ -79,10 +79,10 @@ func exerciseUpgrade(t *testing.T, conn *pkgdb.DB) {
 	}
 	svc := NewService(store, keyring.Current())
 	for id, want := range map[string]string{a.ID: "hunter2", b.ID: "k-1"} {
-		if v, err := svc.GetSecretValue(ctx, "t1", id, "raw"); err != nil || v.Value != want {
+		if v, err := svc.GetSecretValue(ctx, "t1", id, "raw", 0); err != nil || v.Value != want {
 			t.Fatalf("after upgrade %s = %q %v", id, v.Value, err)
 		}
-		if _, err := old.GetSecretValue(ctx, "t1", id, "raw"); err == nil {
+		if _, err := old.GetSecretValue(ctx, "t1", id, "raw", 0); err == nil {
 			t.Fatal("the public dev key still opens a stored secret")
 		}
 	}
@@ -101,13 +101,20 @@ func exerciseUpgrade(t *testing.T, conn *pkgdb.DB) {
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"open":2`) {
 		t.Fatalf("exposure list: %d %s", rr.Code, rr.Body)
 	}
-	// Rotating a value closes its entry; deleting the other closes that one.
+	// Rotating a value closes its entry. A delete is recoverable and keeps
+	// the exposed material, so the other stays open until it is destroyed.
 	rr = serveAs(h, admin, httptest.NewRequest(http.MethodPost, "/secrets/"+a.ID+"/rotate", strings.NewReader(`{"value":"n3w"}`)))
 	if rr.Code != http.StatusOK || rec.Last(t).Event.Details["exposure_remediated"] != true {
 		t.Fatalf("rotate: %d %s %+v", rr.Code, rr.Body, rec.Last(t))
 	}
 	if rr := serveAs(h, admin, httptest.NewRequest(http.MethodDelete, "/secrets/"+b.ID, nil)); rr.Code != http.StatusOK {
 		t.Fatalf("delete: %d", rr.Code)
+	}
+	if open, _ := keyring.Exposures(ctx, "t1", true); len(open) != 1 || open[0].ItemID != b.ID {
+		t.Fatalf("a recoverable delete closed the exposure: %+v", open)
+	}
+	if rr := serveAs(h, admin, httptest.NewRequest(http.MethodPost, "/secrets/"+b.ID+"/destroy", nil)); rr.Code != http.StatusOK || rec.Last(t).Event.Details["exposure_remediated"] != true {
+		t.Fatalf("destroy: %d %+v", rr.Code, rec.Last(t))
 	}
 	if open, _ := keyring.Exposures(ctx, "t1", true); len(open) != 0 {
 		t.Fatalf("still exposed: %+v", open)

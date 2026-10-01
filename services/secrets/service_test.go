@@ -56,6 +56,8 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			created_by TEXT NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted_at TIMESTAMP,
+			deleted_by TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id),
 			UNIQUE (tenant_id, name)
 		);`,
@@ -70,6 +72,18 @@ func createSecretsSchemaForTest(conn *pkgdb.DB) error {
 			value_hash BLOB NOT NULL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, secret_id, version)
+		);`,
+		`CREATE TABLE secret_access_rules (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			path TEXT NOT NULL,
+			subject_type TEXT NOT NULL,
+			subject_id TEXT NOT NULL,
+			capabilities TEXT NOT NULL,
+			effect TEXT NOT NULL DEFAULT 'allow',
+			created_by TEXT NOT NULL,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE secret_audit_log (
 			id TEXT NOT NULL,
@@ -103,14 +117,14 @@ func TestEnvelopeEncryptionAtRestRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, encrypted, err := store.GetSecretWithValue(ctx, "t1", created.ID)
+	_, encrypted, err := store.GetSecretWithValue(ctx, "t1", created.ID, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(encrypted.Ciphertext), "super-secret-value") {
 		t.Fatalf("ciphertext should not contain plaintext")
 	}
-	out, err := svc.GetSecretValue(ctx, "t1", created.ID, "")
+	out, err := svc.GetSecretValue(ctx, "t1", created.ID, "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +174,7 @@ func TestTTLExpiryReturnsGoneError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = svc.GetSecretValue(ctx, "t3", created.ID, "")
+	_, err = svc.GetSecretValue(ctx, "t3", created.ID, "", 0)
 	if !errors.Is(err, errExpired) {
 		t.Fatalf("expected errExpired, got %v", err)
 	}
@@ -195,10 +209,10 @@ func TestFormatConversions(t *testing.T) {
 	}
 	sshID := items[0].ID
 
-	if _, err := svc.GetSecretValue(ctx, "t4", sshID, "ppk"); err == nil {
+	if _, err := svc.GetSecretValue(ctx, "t4", sshID, "ppk", 0); err == nil {
 		t.Fatal("ppk export is not a real PuTTY encoding and must be refused")
 	}
-	openSSH, err := svc.GetSecretValue(ctx, "t4", sshID, "openssh")
+	openSSH, err := svc.GetSecretValue(ctx, "t4", sshID, "openssh", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +231,7 @@ func TestFormatConversions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	armored, err := svc.GetSecretValue(ctx, "t4", pgp.ID, "armored")
+	armored, err := svc.GetSecretValue(ctx, "t4", pgp.ID, "armored", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +249,7 @@ func TestFormatConversions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	extract, err := svc.GetSecretValue(ctx, "t4", p12.ID, "extract")
+	extract, err := svc.GetSecretValue(ctx, "t4", p12.ID, "extract", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +272,7 @@ func TestGenerateSSHKey(t *testing.T) {
 	if !strings.HasPrefix(pub, "ssh-ed25519") {
 		t.Fatalf("expected ssh-ed25519 public key, got %q", pub)
 	}
-	val, err := svc.GetSecretValue(ctx, "t5", secret.ID, "pem")
+	val, err := svc.GetSecretValue(ctx, "t5", secret.ID, "pem", 0)
 	if err != nil {
 		t.Fatal(err)
 	}

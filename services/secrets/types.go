@@ -46,6 +46,12 @@ type Secret struct {
 	CreatedBy       string                 `json:"created_by"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`
+	DeletedAt       *time.Time             `json:"deleted_at,omitempty"`
+	DeletedBy       string                 `json:"deleted_by,omitempty"`
+	// Path is the folder label and the name; access rules match on it.
+	Path string `json:"path"`
+	// Restricted is set when an access rule limits who may read the value.
+	Restricted bool `json:"restricted"`
 }
 
 type EncryptedSecretValue struct {
@@ -76,6 +82,12 @@ type UpdateSecretRequest struct {
 	LeaseTTLSeconds *int64                  `json:"lease_ttl_seconds,omitempty"`
 	Value           *string                 `json:"value,omitempty"`
 	UpdatedBy       string                  `json:"updated_by"`
+	// ExpectedVersion makes the write conditional: it is refused unless the
+	// secret is still at this version.
+	ExpectedVersion *int `json:"expected_version,omitempty"`
+
+	// The change-history entry, when the update is not a plain edit or rotate.
+	changeAction, changeDetail string
 }
 
 type GenerateSSHKeyRequest struct {
@@ -99,6 +111,7 @@ type GenerateKeyPairRequest struct {
 
 type SecretValueResponse struct {
 	Value       string `json:"value"`
+	Version     int    `json:"version"`
 	Format      string `json:"format"`
 	ContentType string `json:"content_type"`
 }

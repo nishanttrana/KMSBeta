@@ -16,6 +16,12 @@ export type SecretItem = {
   created_by?: string;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string;
+  deleted_by?: string;
+  // Folder label plus name; access rules match on it.
+  path?: string;
+  // An access rule limits who may read the value.
+  restricted?: boolean;
 };
 
 type ListSecretsResponse = {
@@ -26,8 +32,9 @@ type SecretResponse = {
   secret: SecretItem;
 };
 
-type SecretValueResponse = {
+export type SecretValueResponse = {
   value: string;
+  version: number;
   format: string;
   content_type: string;
 };
@@ -64,7 +71,7 @@ export type UpdateSecretInput = {
 
 export async function listSecrets(
   session: AuthSession,
-  options?: { secretType?: string; limit?: number; offset?: number; noCache?: boolean }
+  options?: { secretType?: string; limit?: number; offset?: number; noCache?: boolean; deleted?: boolean }
 ): Promise<SecretItem[]> {
   const limit = Math.max(1, Math.min(500, Math.trunc(Number(options?.limit || 200))));
   const offset = Math.max(0, Math.trunc(Number(options?.offset || 0)));
@@ -76,6 +83,9 @@ export async function listSecrets(
   if (secretType) {
     q.set("secret_type", secretType);
   }
+  if (options?.deleted) {
+    q.set("deleted", "true");
+  }
   if (options?.noCache) {
     q.set("_ts", String(Date.now()));
   }
@@ -83,13 +93,14 @@ export async function listSecrets(
   return Array.isArray(res?.items) ? res.items : [];
 }
 
-// Every secret of the tenant, paged in full: the vault's charts count this
-// list, so it is never a sample.
-export async function listAllSecrets(session: AuthSession): Promise<SecretItem[]> {
+// Every secret of the tenant the caller may see (active, or deleted and not
+// yet destroyed), paged in full: the vault's charts count this list, so it
+// is never a sample.
+export async function listAllSecrets(session: AuthSession, deleted = false): Promise<SecretItem[]> {
   const PAGE = 500;
   const all: SecretItem[] = [];
   for (;;) {
-    const page = await listSecrets(session, { limit: PAGE, offset: all.length, noCache: true });
+    const page = await listSecrets(session, { limit: PAGE, offset: all.length, noCache: true, deleted });
     all.push(...page);
     if (page.length < PAGE) return all;
   }
@@ -149,16 +160,81 @@ export async function deleteSecret(session: AuthSession, secretId: string): Prom
 }
 
 
+// version 0 reads the current version.
 export async function getSecretValue(
   session: AuthSession,
   secretId: string,
-  format = "raw"
+  format = "raw",
+  version = 0
 ): Promise<SecretValueResponse> {
   return serviceRequest<SecretValueResponse>(
     session,
     "secrets",
-    `/secrets/${encodeURIComponent(secretId)}/value?tenant_id=${encodeURIComponent(session.tenantId)}&format=${encodeURIComponent(format)}`
+    `${secretURL(session, secretId, "/value")}&format=${encodeURIComponent(format)}${version > 0 ? `&version=${version}` : ""}`
   );
+}
+
+const secretURL = (session: AuthSession, secretId: string, suffix = "") =>
+  `/secrets/${encodeURIComponent(secretId)}${suffix}?tenant_id=${encodeURIComponent(session.tenantId)}`;
+
+const post = (body?: unknown) => ({ method: "POST", body: JSON.stringify(body ?? {}) });
+
+// A deleted secret keeps its versions until it is restored or destroyed.
+export async function restoreSecret(session: AuthSession, secretId: string): Promise<void> {
+  await serviceRequest(session, "secrets", secretURL(session, secretId, "/restore"), post());
+}
+
+export async function destroySecret(session: AuthSession, secretId: string): Promise<void> {
+  await serviceRequest(session, "secrets", secretURL(session, secretId, "/destroy"), post());
+}
+
+// Makes an earlier version's value current again, as a new version. Refused
+// if the secret is no longer at expectedVersion.
+export async function rollbackSecret(session: AuthSession, secretId: string, version: number, expectedVersion: number): Promise<SecretItem> {
+  const out = await serviceRequest<SecretResponse>(session, "secrets", secretURL(session, secretId, "/rollback"), post({ version, expected_version: expectedVersion }));
+  return out.secret;
+}
+
+export async function destroySecretVersion(session: AuthSession, secretId: string, version: number): Promise<void> {
+  await serviceRequest(session, "secrets", secretURL(session, secretId, `/versions/${version}`), { method: "DELETE" });
+}
+
+export const ACCESS_CAPABILITIES = ["read", "value", "write", "delete"] as const;
+export const ACCESS_SUBJECT_TYPES = ["user", "role", "client", "workload"] as const;
+
+export type AccessRule = {
+  id: string;
+  path: string;
+  subject_type: string;
+  subject_id: string;
+  capabilities: string[];
+  effect: "allow" | "deny" | string;
+  created_by: string;
+  created_at: string;
+};
+
+export type AccessRuleInput = Pick<AccessRule, "path" | "subject_type" | "subject_id" | "capabilities" | "effect">;
+
+// What the rules say about one secret: the rules covering its path, and what
+// the signed-in caller may do under them.
+export type SecretAccess = { path: string; rules: AccessRule[]; caller: Record<string, boolean> };
+
+export async function listAccessRules(session: AuthSession): Promise<AccessRule[]> {
+  const res = await serviceRequest<{ items: AccessRule[] }>(session, "secrets", `/secrets/access/rules?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
+export async function createAccessRule(session: AuthSession, input: AccessRuleInput): Promise<AccessRule> {
+  const res = await serviceRequest<{ rule: AccessRule }>(session, "secrets", "/secrets/access/rules", post({ tenant_id: session.tenantId, ...input }));
+  return res.rule;
+}
+
+export async function deleteAccessRule(session: AuthSession, ruleId: string): Promise<void> {
+  await serviceRequest(session, "secrets", `/secrets/access/rules/${encodeURIComponent(ruleId)}?tenant_id=${encodeURIComponent(session.tenantId)}`, { method: "DELETE" });
+}
+
+export async function getSecretAccess(session: AuthSession, secretId: string): Promise<SecretAccess> {
+  return serviceRequest<SecretAccess>(session, "secrets", secretURL(session, secretId, "/access"));
 }
 
 
@@ -205,11 +281,14 @@ export async function getSecretAuditLog(session: AuthSession, secretId: string, 
   return Array.isArray(res?.entries) ? res.entries : [];
 }
 
-export async function rotateSecret(session: AuthSession, secretId: string, newValue: string): Promise<SecretItem> {
+// With expectedVersion the rotate is refused if someone else changed the
+// secret since it was loaded.
+export async function rotateSecret(session: AuthSession, secretId: string, newValue: string, expectedVersion?: number): Promise<SecretItem> {
   const payload = await serviceRequest<{ secret: SecretItem }>(session, "secrets", `/secrets/${encodeURIComponent(secretId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`, {
     method: "POST",
     body: JSON.stringify({
       value: newValue,
+      ...(expectedVersion ? { expected_version: expectedVersion } : {}),
       updated_by: session.username || "dashboard"
     })
   });

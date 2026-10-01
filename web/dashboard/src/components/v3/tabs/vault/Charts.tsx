@@ -1,4 +1,4 @@
-import { Clock, History, Lock, RotateCcw, ShieldAlert } from "lucide-react";
+import { Clock, History, Lock, RotateCcw, ShieldAlert, UserCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import type { SecretItem, VaultStats } from "../../../../lib/secrets";
 import { clickable } from "../../chartDrill";
@@ -7,7 +7,7 @@ import { C } from "../../theme";
 import { BarRow, ChartCard, Swatch, solid } from "../discovery/Charts";
 import {
   AGE_BUCKETS, EXPIRY_BUCKETS, SERIES_FILL, ageBucket, ageDrill, allDrill, expiringDrill, expiryBucket, expiryDrill,
-  fmtAgo, fmtDate, getBadge, neverRotatedDrill, typeDrill, VAULT_ROUTES, type VaultDrill,
+  fmtAgo, fmtDate, getBadge, neverRotatedDrill, restrictedDrill, typeDrill, VAULT_ROUTES, type VaultDrill,
 } from "./meta";
 
 const MONO = "'JetBrains Mono',ui-monospace,monospace";
@@ -21,11 +21,11 @@ export const TypeBadge = ({ type }: { type?: string }) => {
 // One entry of a drill-down; it opens the secret's detail view.
 export const SecretRow = ({ secret: s, onOpen }: { secret: SecretItem; onOpen: () => void }) => (
   <div onClick={onOpen}
-    style={{ ...clickable, display: "grid", gridTemplateColumns: "2.4fr 1.1fr 60px 1.2fr 80px", gap: 10, alignItems: "center", padding: "7px 4px", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}
+    style={{ ...clickable, display: "grid", gridTemplateColumns: "2.4fr 1.1fr 110px 1.2fr 80px", gap: 10, alignItems: "center", padding: "7px 4px", borderBottom: `1px solid ${C.border}`, fontSize: 11 }}
     onMouseEnter={(e) => { e.currentTarget.style.background = C.cardHover; }} onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
     <span style={{ fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
     <span><TypeBadge type={s.secret_type} /></span>
-    <span style={{ color: C.dim }}>v{s.current_version}</span>
+    <span style={{ color: C.dim }}>v{s.current_version}{s.restricted ? " · restricted" : ""}</span>
     <span style={{ color: C.dim }}>{s.expires_at ? `expires ${fmtDate(s.expires_at)}` : "no expiry"}</span>
     <span style={{ color: C.muted, textAlign: "right" }}>{fmtAgo(s.updated_at)}</span>
   </div>
@@ -67,6 +67,7 @@ export function VaultTiles({ secrets, now, active, onDrill, stats, statsError }:
   const expired = count(secrets, expiryDrill("expired", now));
   const expiring = count(secrets, expiringDrill(now));
   const v1 = count(secrets, neverRotatedDrill());
+  const limited = count(secrets, restrictedDrill());
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 14 }}>
       {tile(allDrill(), <Stat l="Secrets" v={total.toLocaleString()} s={`${new Set(secrets.map((s) => s.secret_type)).size} types`} c="accent" i={Lock} />)}
@@ -74,6 +75,7 @@ export function VaultTiles({ secrets, now, active, onDrill, stats, statsError }:
       {tile(expiringDrill(now), <Stat l="Expiring in 30 days" v={String(expiring)} s={`${pct(expiring, total)}% of secrets`} c="amber" i={Clock} />)}
       {tile(expiryDrill("expired", now), <Stat l="Expired" v={String(expired)} s="value reads are refused" c="red" i={ShieldAlert} />)}
       {tile(neverRotatedDrill(), <Stat l="Never rotated" v={String(v1)} s={`${pct(v1, total)}% still version 1`} c="orange" i={RotateCcw} />)}
+      {tile(restrictedDrill(), <Stat l="Access-restricted" v={String(limited)} s={`${pct(limited, total)}% limited by a rule`} c="purple" i={UserCheck} />)}
     </div>
   );
 }

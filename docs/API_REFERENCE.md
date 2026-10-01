@@ -1894,6 +1894,9 @@ this.
   `key_compromised`,
   `audit_chain_broken` (`audit.audit.chain_broken`),
   `secret_exposed` (`audit.discovery.secret_exposed`, 7.18.0-beta),
+  `secret_access_rule_changed` (`audit.secrets.access_rule_created`,
+  `access_rule_deleted`) and `secret_destroyed` (`audit.secrets.destroyed`),
+  both success only (7.29.0-beta),
   `key_created`, `key_rotated`, `key_destroyed`, `key_exported` (success
   only), `key_access_refused`, `key_request_replay_detected`,
   `key_hsm_refused`, `crypto_policy_refused`
@@ -3053,9 +3056,9 @@ Audit (member): `audit.<service>.cluster_write_forwarded` and
 
 ## Service 25: Secrets (`/svc/secrets/`)
 
-Secret vault: typed secrets, envelope-encrypted, versioned, with expiry and a
-Vault / OpenBao KV-compatible subset. There is no rollback to an earlier
-version and no path-based policy; access is by the permissions below.
+Secret vault: typed secrets, envelope-encrypted, versioned, with expiry,
+per-path access rules, version read / rollback / recoverable delete
+(docs/SECURITY/SECRET_ACCESS.md) and a Vault / OpenBao KV-compatible subset.
 
 ### Master key and exposure register
 
@@ -3088,7 +3091,15 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /secrets/{id}` | `secrets.read` | `read` |
 | `GET /secrets/{id}/value` | `secrets.value.read` | `value_read` (warning) |
 | `PUT /secrets/{id}` | `secrets.write` | `updated` |
-| `DELETE /secrets/{id}` | `secrets.delete` | `deleted` (warning) |
+| `DELETE /secrets/{id}` | `secrets.delete` | `deleted` (warning; recoverable since 7.29.0-beta) |
+| `POST /secrets/{id}/restore` | `secrets.write` | `restored` |
+| `POST /secrets/{id}/destroy` | `secrets.destroy` | `destroyed` (warning) |
+| `POST /secrets/{id}/rollback` | `secrets.write` | `rolled_back` (warning) |
+| `DELETE /secrets/{id}/versions/{version}` | `secrets.destroy` | `version_destroyed` (warning) |
+| `GET /secrets/{id}/access` | `secrets.read` | `access_read` |
+| `GET /secrets/access/rules` | `secrets.access.read` | `access_rules_listed` |
+| `POST /secrets/access/rules` | `secrets.access.manage` | `access_rule_created` (warning) |
+| `DELETE /secrets/access/rules/{rule_id}` | `secrets.access.manage` | `access_rule_deleted` (warning) |
 | `POST /secrets/generate/ssh_key`, `/generate/keypair` | `secrets.write` | `generated` |
 | `GET /secrets/{id}/versions` | `secrets.read` | `versions_listed` |
 | `GET /secrets/{id}/audit` | `secrets.read` | `audit_log_read` |
@@ -3111,12 +3122,19 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 
 `*` grants all of these. `secrets` is in `route.CoarseDomains`, so `kms.read`
 grants the `.read` permissions and `kms.write` grants `.write` and `.delete`.
+`secrets.destroy` and `secrets.access.manage` are granted only by name,
+`secrets.*` or `*`. On top of the permission, the tenant's access rules must
+allow the caller on the secret's path, or the request is refused with
+`403 not_in_access_rule` / `access_rule_denied`.
 A Vault KV v1 write body is the secret's data, so a `tenant_id` key inside it
 is stored, not treated as a tenant. `created_by` / `updated_by` are
 set to the verified caller.
 
 Vault responses carry only what is true here (7.27.0-beta). A KV write
 returns `data.version` and `data.created_time` of the version it produced.
+`GET /v1/{mount}/data/{path}?version=N` reads a version. A KV delete is
+recoverable (the path then reads `404`, and its metadata carries
+`deletion_time`); writing to the path again restores it.
 `lookup-self` returns the verified token's `id`, its permissions as
 `policies`, `creation_time` / `expire_time` / `ttl` from the token, and
 `meta.tenant_id`; there are no Vault policies, accessors or renewals.
@@ -3131,8 +3149,10 @@ sealed under the secrets service's master key and are returned only by
 (value, audited at `warning`), `secrets.write`, `secrets.delete`.
 
 Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
-`labels`, `metadata`, `status`, `lease_ttl_seconds`, `expires_at`,
-`current_version`, `created_by`, `created_at`, `updated_at`.
+`labels`, `metadata`, `status` (`active` or `deleted`), `lease_ttl_seconds`,
+`expires_at`, `current_version`, `created_by`, `created_at`, `updated_at`,
+`deleted_at`, `deleted_by`, `path` (folder label and name), `restricted`
+(an access rule limits who may read the value).
 
 `secret_type`: `api_key`, `password`, `token`, `database_credentials`,
 `oauth_client_secret`, `ssh_private_key`, `ssh_public_key`,
@@ -3143,13 +3163,21 @@ Secret object: `id`, `tenant_id`, `name`, `secret_type`, `description`,
 
 | Route | Body / query | Response |
 |---|---|---|
-| `GET /svc/secrets/secrets` | `secret_type`, `limit`, `offset` | `items[]` (no values) |
+| `GET /svc/secrets/secrets` | `secret_type`, `limit`, `offset`, `deleted=true` (the deleted ones instead) | `items[]` (no values), only secrets the caller may `read` |
 | `POST /svc/secrets/secrets` | `name`, `secret_type`, `value`, `description`, `labels`, `metadata`, `lease_ttl_seconds` | `201` `secret` |
 | `GET /svc/secrets/secrets/{id}` | | `secret` |
-| `GET /svc/secrets/secrets/{id}/value` | `format` (optional) | `value`, `format`, `content_type` |
-| `PUT /svc/secrets/secrets/{id}` | any of `name`, `description`, `labels`, `metadata`, `lease_ttl_seconds`, `value` (a new value makes a new version) | `secret` |
-| `POST /svc/secrets/secrets/{id}/rotate` | `value` | `secret` |
-| `DELETE /svc/secrets/secrets/{id}` | | `status: deleted` |
+| `GET /svc/secrets/secrets/{id}/value` | `format`, `version` (both optional; default the current version) | `value`, `version`, `format`, `content_type`; `410 secret_expired` / `secret_deleted`, `404 version_not_found` |
+| `PUT /svc/secrets/secrets/{id}` | any of `name`, `description`, `labels`, `metadata`, `lease_ttl_seconds`, `value` (a new value makes a new version), `expected_version` | `secret`; `409 version_conflict` |
+| `POST /svc/secrets/secrets/{id}/rotate` | `value`, `expected_version` (optional) | `secret`; `409 version_conflict` |
+| `POST /svc/secrets/secrets/{id}/rollback` | `version`, `expected_version` (optional) | `secret` at a new version holding that version's value; `409 already_current` |
+| `DELETE /svc/secrets/secrets/{id}` | | `status: deleted`, `recoverable: true`. The versions are kept and the name stays taken (`409 name_held_by_deleted_secret` on create) |
+| `POST /svc/secrets/secrets/{id}/restore` | | `status: active`; `409 secret_not_deleted` |
+| `POST /svc/secrets/secrets/{id}/destroy` | | `status: destroyed`: the secret and every version, permanently |
+| `DELETE /svc/secrets/secrets/{id}/versions/{version}` | | `status: destroyed`; `409 version_is_current` |
+| `GET /svc/secrets/secrets/{id}/access` | | `path`, `rules[]` covering it, `caller`: `{read, value, write, delete}` |
+| `GET /svc/secrets/secrets/access/rules` | | `items[]`: `id`, `path`, `subject_type`, `subject_id`, `capabilities[]`, `effect`, `created_by`, `created_at` |
+| `POST /svc/secrets/secrets/access/rules` | `path`, `subject_type` (`user`, `role`, `client`, `workload`), `subject_id`, `capabilities[]` (`read`, `value`, `write`, `delete`), `effect` (`allow` default, `deny`) | `201` `rule`; `400 invalid_access_rule` |
+| `DELETE /svc/secrets/secrets/access/rules/{rule_id}` | | `status: deleted` |
 | `GET /svc/secrets/secrets/{id}/versions` | | `versions[]`: `version`, `created_at` (no digest of the value, 7.27.0-beta) |
 | `GET /svc/secrets/secrets/{id}/audit` | | the secret's audit trail |
 | `GET /svc/secrets/secrets/stats` | | `stats`: `total_secrets`, `total_versions`, `expiring_within_30d`, `expired`, `by_type`; `500 stats_failed` if any count fails, never zeros |
@@ -3653,7 +3681,7 @@ Selected events with dedicated audit classification:
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.service_derive_refused`, enterprise control upserts carry `feature_status` / `feature_id`
-- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
+- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `restored`, `destroyed`, `rolled_back`, `version_destroyed`, `access_read`, `access_rules_listed`, `access_rule_created`, `access_rule_deleted` (7.29.0-beta; refusal reasons `not_in_access_rule`, `access_rule_denied`, `secret_deleted`, `secret_not_deleted`, `version_conflict`, `version_is_current`, `already_current`, `name_held_by_deleted_secret`), `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
@@ -4558,16 +4586,24 @@ from the code; do not edit by hand.
 
 - `GET /svc/secrets/secrets`
 - `POST /svc/secrets/secrets`
+- `GET /svc/secrets/secrets/access/rules`
+- `POST /svc/secrets/secrets/access/rules`
+- `DELETE /svc/secrets/secrets/access/rules/{rule_id}`
 - `POST /svc/secrets/secrets/generate/keypair`
 - `POST /svc/secrets/secrets/generate/ssh_key`
 - `GET /svc/secrets/secrets/stats`
 - `DELETE /svc/secrets/secrets/{id}`
 - `GET /svc/secrets/secrets/{id}`
 - `PUT /svc/secrets/secrets/{id}`
+- `GET /svc/secrets/secrets/{id}/access`
 - `GET /svc/secrets/secrets/{id}/audit`
+- `POST /svc/secrets/secrets/{id}/destroy`
+- `POST /svc/secrets/secrets/{id}/restore`
+- `POST /svc/secrets/secrets/{id}/rollback`
 - `POST /svc/secrets/secrets/{id}/rotate`
 - `GET /svc/secrets/secrets/{id}/value`
 - `GET /svc/secrets/secrets/{id}/versions`
+- `DELETE /svc/secrets/secrets/{id}/versions/{version}`
 - `POST /svc/secrets/v1/auth/token/lookup-self`
 - `GET /svc/secrets/v1/sys/health`
 - `GET /svc/secrets/v1/sys/seal-status`

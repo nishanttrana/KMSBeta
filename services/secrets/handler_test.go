@@ -224,6 +224,7 @@ func TestSecretLifecycleEmitsSpecificEvents(t *testing.T) {
 		{"GET", "/secrets/" + id + "/value", "", "value_read", http.StatusOK},
 		{"POST", "/secrets/" + id + "/rotate", `{"value":"n3w"}`, "rotated", http.StatusOK},
 		{"DELETE", "/secrets/" + id, "", "deleted", http.StatusOK},
+		{"POST", "/secrets/" + id + "/destroy", "", "destroyed", http.StatusOK},
 		{"GET", "/secrets/" + id, "", "read", http.StatusNotFound},
 	}
 	for _, st := range steps {
@@ -339,7 +340,7 @@ func TestStatsFailureIsNotZero(t *testing.T) {
 	if _, err := svc.CreateSecret(context.Background(), CreateSecretRequest{TenantID: "t1", Name: "a", SecretType: "token", Value: "v", LeaseTTLSeconds: 3600}); err != nil {
 		t.Fatal(err)
 	}
-	stats, err := svc.GetStats(context.Background(), "t1")
+	stats, err := svc.GetStats(context.Background(), "t1", nil)
 	if err != nil || stats.TotalSecrets != 1 || stats.TotalVersions != 1 || stats.ExpiringWithin != 1 || stats.Expired != 0 || stats.ByType["token"] != 1 {
 		t.Fatalf("stats %+v err %v", stats, err)
 	}

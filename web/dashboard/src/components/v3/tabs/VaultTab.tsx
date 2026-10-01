@@ -1,32 +1,29 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Clock, Copy, Download, Eye, EyeOff, Folder, History, KeyRound,
-  Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, ShieldAlert, Trash2
-} from "lucide-react";
+import { Clock, Copy, Download, Folder, KeyRound, Lock, Plus, RefreshCcw, Search, ShieldAlert, Trash2, UserCheck } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
 import {
   createSecret,
   deleteSecret as deleteVaultSecret,
   generateKeyPairSecret,
-  getSecretAuditLog,
   getSecretValue,
   getVaultStats,
+  listAccessRules,
   listAllSecrets,
-  listSecretVersions,
   rotateSecret
 } from "../../../lib/secrets";
 import { DrillHint, DrillPanel, clickable } from "../chartDrill";
-import { B, Btn, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
+import { Btn, FG, Inp, Modal, Row2, Section, Sel, Tabs, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
+import { AccessRules } from "./vault/Access";
 import { SecretRow, TypeBadge, VaultApiCard, VaultCharts, VaultTiles } from "./vault/Charts";
+import { SecretDetail } from "./vault/Detail";
 import {
-  CATEGORIES, GENERATE_TYPE_OPTIONS, SUPPORTED_TYPES, defaultFormatForType, expiryBucket, fmtAgo, fmtDate,
+  CATEGORIES, GENERATE_TYPE_OPTIONS, SUPPORTED_TYPES, defaultFormatForType, expiryBucket, fmtAgo,
   getBadge, matchesCategory, safeFileName, secretPath, ttlLabel, ttlToSeconds
 } from "./vault/meta";
 
-const MONO = "'JetBrains Mono',ui-monospace,monospace";
 const PAGE = 60;
 
 function copyToClipboard(text, onToast) {
@@ -40,8 +37,6 @@ function expiryStatus(s, now) {
   return null;
 }
 
-const changeColor = (action) => action === "created" ? C.greenFg : action === "rotated" ? C.amberFg : action === "deleted" ? C.redFg : C.blueFg;
-
 /* ── MAIN COMPONENT ── */
 export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSession | null; onToast?: (m: string) => void; onNavigate?: (tab: string) => void }) => {
   const [modal, setModal] = useState(null);
@@ -49,6 +44,12 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const [loading, setLoading] = useState(true);
   const [secrets, setSecrets] = useState([]);
   const [loadError, setLoadError] = useState("");
+  // Deleted secrets (kept until destroyed) and access rules: null with an
+  // error when their call failed, never an empty list.
+  const [deleted, setDeleted] = useState(null);
+  const [rules, setRules] = useState(null);
+  const [sideError, setSideError] = useState({ deleted: "", rules: "" });
+  const [view, setView] = useState("Secrets");
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState("");
   // One "now" for the charts, the tiles and their drill-downs.
@@ -74,15 +75,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const [generateName, setGenerateName] = useState("");
   const [generatedPublicKey, setGeneratedPublicKey] = useState("");
 
-  // Detail: the value is read only when asked for (each read is audited).
   const [selectedSecret, setSelectedSecret] = useState(null);
-  const [valueFormat, setValueFormat] = useState("raw");
-  const [retrieved, setRetrieved] = useState(null);
-  const [valueError, setValueError] = useState("");
-  const [showValue, setShowValue] = useState(false);
-  const [versions, setVersions] = useState(null);
-  const [changes, setChanges] = useState(null);
-  const [historyError, setHistoryError] = useState("");
   const [rotateValue, setRotateValue] = useState("");
 
   const promptDialog = usePromptDialog();
@@ -91,7 +84,10 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
   const loadAll = useCallback(async () => {
     if (!session) return;
     setLoading(true);
-    const [items, vaultStats] = await Promise.allSettled([listAllSecrets(session), getVaultStats(session)]);
+    const [items, vaultStats, gone, ruleList] = await Promise.allSettled([listAllSecrets(session), getVaultStats(session), listAllSecrets(session, true), listAccessRules(session)]);
+    setDeleted(gone.status === "fulfilled" ? gone.value : null);
+    setRules(ruleList.status === "fulfilled" ? ruleList.value : null);
+    setSideError({ deleted: gone.status === "rejected" ? errMsg(gone.reason) : "", rules: ruleList.status === "rejected" ? errMsg(ruleList.reason) : "" });
     setAsOf(Date.now());
     if (items.status === "fulfilled") { setSecrets(items.value); setLoadError(""); }
     else { setSecrets([]); setLoadError(errMsg(items.reason)); }
@@ -178,26 +174,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
     } catch (e) { onToast?.(`Generate failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const openDetail = async (secret) => {
-    if (!session) return;
-    setSelectedSecret(secret);
-    setValueFormat(defaultFormatForType(secret)); setRetrieved(null); setValueError(""); setShowValue(false);
-    setVersions(null); setChanges(null); setHistoryError("");
-    setModal("detail");
-    try {
-      const [vers, log] = await Promise.all([listSecretVersions(session, secret.id), getSecretAuditLog(session, secret.id)]);
-      setVersions(vers); setChanges(log);
-    } catch (e) { setHistoryError(errMsg(e)); }
-  };
-
-  const revealValue = async () => {
-    if (!session || !selectedSecret) return;
-    setBusy(true); setValueError("");
-    try {
-      setRetrieved(await getSecretValue(session, selectedSecret.id, valueFormat));
-      setShowValue(true);
-    } catch (e) { setRetrieved(null); setValueError(errMsg(e)); } finally { setBusy(false); }
-  };
+  const openDetail = (secret) => { setSelectedSecret(secret); setModal("detail"); };
 
   const downloadSecret = async (secret) => {
     if (!session) return;
@@ -215,12 +192,12 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
 
   const removeSecret = async (secret) => {
     if (!session) return;
-    const ok = await promptDialog.confirm({ title: "Delete Secret", message: `Permanently delete "${secret.name}" and all its versions? This cannot be undone.`, confirmLabel: "Delete", danger: true });
+    const ok = await promptDialog.confirm({ title: "Delete Secret", message: `Delete "${secret.name}"? It moves to Deleted, where it can be restored or destroyed. Its value cannot be read meanwhile.`, confirmLabel: "Delete", danger: true });
     if (!ok) return;
     setBusy(true);
     try {
       await deleteVaultSecret(session, secret.id);
-      onToast?.("Secret deleted."); setModal(null);
+      onToast?.("Secret deleted. It can be restored from Deleted."); setModal(null);
       await loadAll();
     } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
@@ -229,7 +206,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
     if (!session || !selectedSecret || !rotateValue) { onToast?.("New value is required for rotation."); return; }
     setBusy(true);
     try {
-      const updated = await rotateSecret(session, selectedSecret.id, rotateValue);
+      const updated = await rotateSecret(session, selectedSecret.id, rotateValue, selectedSecret.current_version);
       onToast?.(`Secret rotated to version ${updated.current_version}.`);
       setModal(null); setRotateValue("");
       await loadAll();
@@ -255,12 +232,22 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
       <VaultCharts secrets={secrets} now={asOf} active={drill?.key || ""} onDrill={pickDrill} />
     </>}
     {drill && <DrillPanel label={drill.label} count={drilled.length} onClear={() => setDrill(null)}>
-      {drilled.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => void openDetail(s)} />)}
+      {drilled.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => openDetail(s)} />)}
     </DrillPanel>}
     <div style={{ height: 16 }} />
 
+    {!loadError && <Tabs tabs={["Secrets", "Deleted", "Access rules"]} active={view} onChange={setView} />}
+
+    {!loadError && view === "Deleted" && (deleted === null
+      ? <div style={{ fontSize: 11.5, color: C.redFg }}>Deleted secrets unavailable: {sideError.deleted}</div>
+      : deleted.length === 0 ? <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "28px 0" }}>Nothing deleted. A deleted secret stays here until it is restored or destroyed.</div>
+      : deleted.map((s) => <SecretRow key={s.id} secret={s} onOpen={() => openDetail(s)} />))}
+
+    {!loadError && view === "Access rules" && <AccessRules session={session} rules={rules} error={sideError.rules} restricted={secrets.filter((s) => s.restricted).length} total={secrets.length}
+      confirm={promptDialog.confirm} onChanged={() => void loadAll()} onToast={onToast} />}
+
     {/* ── Inventory ── */}
-    {!loadError && <>
+    {!loadError && view === "Secrets" && <>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
         {CATEGORIES.map((cat) => <button key={cat.id} type="button" onClick={() => setCategory(cat.id)} style={chip(category === cat.id)}>{cat.label}</button>)}
       </div>
@@ -304,7 +291,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
         {listed.slice(0, shown).map((s) => {
           const badge = getBadge(s.secret_type);
           const exp = expiryStatus(s, asOf);
-          return <div key={s.id} onClick={() => void openDetail(s)} className="vecta-stat-card" style={{
+          return <div key={s.id} onClick={() => openDetail(s)} className="vecta-stat-card" style={{
             background: C.card, border: `1px solid ${C.border}`, borderLeft: `3px solid ${badge.fg}`, borderRadius: "var(--radius-md)", padding: "12px 14px", cursor: "pointer", boxShadow: "var(--shadow-sm)", minWidth: 0
           }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
@@ -319,6 +306,7 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={10} /> {ttlLabel(s)}</span>
                 <span>v{s.current_version}</span>
                 {exp && <span style={{ color: exp.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}><ShieldAlert size={10} /> {exp.label}</span>}
+                {s.restricted && <span title="An access rule limits who may read this value" style={{ color: C.purpleFg, display: "inline-flex", alignItems: "center", gap: 3 }}><UserCheck size={10} /> restricted</span>}
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span>{fmtAgo(s.updated_at)}</span>
@@ -403,84 +391,9 @@ export const VaultTab = ({ session, onToast, onNavigate }: { session: AuthSessio
       </div>
     </Modal>
 
-    {/* ══════════════ SECRET DETAIL MODAL ══════════════ */}
-    <Modal open={modal === "detail"} onClose={() => setModal(null)} title={selectedSecret ? `Secret: ${selectedSecret.name}` : "Secret Detail"} wide>
-      {selectedSecret && <>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
-          {[
-            ["Type", <TypeBadge key="t" type={selectedSecret.secret_type} />],
-            ["Version", `v${selectedSecret.current_version}`],
-            ["Lease", ttlLabel(selectedSecret)],
-            ["Expires", selectedSecret.expires_at ? <span key="e" style={{ color: expiryStatus(selectedSecret, asOf)?.color || C.text }}>{fmtDate(selectedSecret.expires_at)}</span> : "Never"],
-          ].map(([label, value]) => (
-            <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{value}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14, fontSize: 11, color: C.dim }}>
-          <div><span style={{ color: C.muted }}>Created: </span>{fmtDate(selectedSecret.created_at)} by {selectedSecret.created_by || "-"}</div>
-          <div><span style={{ color: C.muted }}>Changed: </span>{fmtDate(selectedSecret.updated_at)}</div>
-          <div><span style={{ color: C.muted }}>Folder: </span>{secretPath(selectedSecret)}</div>
-          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: MONO, fontSize: 10 }}>{selectedSecret.id}</span></div>
-          {selectedSecret.description && <div style={{ gridColumn: "1/3" }}><span style={{ color: C.muted }}>Description: </span>{selectedSecret.description}</div>}
-        </div>
-
-        {/* ── Value: read on request ── */}
-        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "inline-flex", alignItems: "center", gap: 6, marginRight: "auto" }}><Eye size={13} /> Value</span>
-            <Sel w={120} value={valueFormat} onChange={(e) => { setValueFormat(e.target.value); setRetrieved(null); setShowValue(false); setValueError(""); }}>
-              {["raw", "pem", "openssh", "armored", "jwk", "extract"].map((f) => <option key={f} value={f}>{f}</option>)}
-            </Sel>
-            {retrieved
-              ? <Btn small onClick={() => setShowValue((v) => !v)}>{showValue ? <><EyeOff size={11} /> Hide</> : <><Eye size={11} /> Show</>}</Btn>
-              : <Btn small primary onClick={() => void revealValue()} disabled={busy} title="Reads the value; the read is audited">{busy ? "Reading..." : <><Eye size={11} /> Reveal</>}</Btn>}
-            {retrieved && showValue && <Btn small onClick={() => copyToClipboard(retrieved.value, onToast)}><Copy size={11} /> Copy</Btn>}
-            <Btn small onClick={() => void downloadSecret(selectedSecret)} disabled={busy}><Download size={11} /> Download</Btn>
-          </div>
-          {valueError
-            ? <div style={{ fontSize: 11, color: C.redFg }}>Value unavailable: {valueError}</div>
-            : <Txt rows={retrieved && showValue ? 6 : 2} readOnly value={retrieved ? (showValue ? retrieved.value : "••••••••••••••••") : ""} placeholder="Not read. Reveal reads the value and records it in the audit log." />}
-          {retrieved && <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{retrieved.format} · {retrieved.content_type}</div>}
-        </div>
-
-        {historyError && <div style={{ fontSize: 11, color: C.redFg, marginBottom: 14 }}>History unavailable: {historyError}</div>}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 14, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><History size={13} /> Versions{versions ? ` (${versions.length})` : ""}</div>
-            <div style={{ maxHeight: 170, overflow: "auto" }}>
-              {(versions || []).map((v) => {
-                const current = v.version === selectedSecret.current_version;
-                return <div key={v.version} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", fontSize: 11, borderRadius: 6, marginBottom: 4, border: `1px solid ${current ? C.accentFg : C.border}` }}>
-                  <span style={{ fontWeight: 600, color: C.text }}>v{v.version} {current && <B c="accent">current</B>}</span>
-                  <span style={{ color: C.muted }}>{fmtDate(v.created_at)}</span>
-                </div>;
-              })}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><ScrollText size={13} /> Changes{changes ? ` (${changes.length})` : ""}</div>
-            <div style={{ maxHeight: 170, overflow: "auto" }}>
-              {(changes || []).map((e) => <div key={e.id} style={{ display: "grid", gridTemplateColumns: "60px 1fr auto", gap: 8, padding: "5px 8px", fontSize: 11, borderBottom: `1px solid ${C.border}` }}>
-                <span style={{ color: changeColor(e.action), fontWeight: 600 }}>{e.action}</span>
-                <span style={{ color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={e.detail}>{e.actor}</span>
-                <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{fmtDate(e.created_at)}</span>
-              </div>)}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", gap: 8, justifyContent: "space-between" }}>
-          <Btn onClick={() => { setRotateValue(""); setModal("rotate"); }}><RotateCcw size={12} /> Rotate value</Btn>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn danger onClick={() => void removeSecret(selectedSecret)} disabled={busy}><Trash2 size={12} /> Delete</Btn>
-            <Btn onClick={() => setModal(null)}>Close</Btn>
-          </div>
-        </div>
-      </>}
-    </Modal>
+    {modal === "detail" && session && <SecretDetail key={selectedSecret?.id} session={session} secret={selectedSecret} now={asOf} confirm={promptDialog.confirm}
+      onClose={() => setModal(null)} onChanged={() => void loadAll()} onToast={onToast}
+      onRotate={() => { setRotateValue(""); setModal("rotate"); }} onDelete={() => void removeSecret(selectedSecret)} onDownload={() => void downloadSecret(selectedSecret)} />}
 
     {/* ══════════════ ROTATE SECRET MODAL ══════════════ */}
     <Modal open={modal === "rotate"} onClose={() => setModal(null)} title={`Rotate Secret: ${selectedSecret?.name || ""}`}>

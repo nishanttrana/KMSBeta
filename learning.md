@@ -5,6 +5,31 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Secrets access rules and soft delete: what bit (7.29.0-beta)
+- **A recoverable delete changes what "deleted" proves.** The exposure
+  register closed an entry when its secret was deleted, because the material
+  was gone. With soft delete it is not gone, so the entry now closes on
+  destroy. `TestUpgradeMovesSecretsOffPublicKey` caught it; any "X is
+  remediated when deleted" logic has to be re-read when delete stops
+  destroying.
+- **Filtering after paging breaks pagers.** Hiding rows a caller may not see
+  after `LIMIT/OFFSET` returns short pages, and the dashboard's "stop when a
+  page is short" loop then silently drops the rest. The limit and offset
+  count visible rows (`ListVisible`, `TestListPagesCountVisibleSecrets`).
+- **A move is a write to the destination.** Access by path means a rename or
+  a label change relocates the secret. Checking only the old path would let
+  a caller move a secret out of (or plant one into) a restricted folder.
+- **Counts leak.** `/secrets/stats` was a SQL aggregate over the tenant; it
+  would have told a caller how many secrets a folder they cannot see holds.
+  It is now computed over the same visible set as the list.
+- **Read-then-update is not a version check.** The store read
+  `current_version`, then updated unconditionally; the new `UPDATE ... WHERE
+  current_version = $read` is what makes `expected_version` (and plain
+  concurrent rotates) safe.
+- **UI trap:** the shared `Chk` toggles only when its box is clicked, not
+  its label. A browser test that clicked the label text found it; the rule
+  form's labels toggle too.
+
 ### A zero that means "the call failed" (7.28.0-beta)
 - **What was wrong:** the Operations Status loader awaited keys, secrets,
   certificates, alert counts and the expiry policy in one `Promise.all`

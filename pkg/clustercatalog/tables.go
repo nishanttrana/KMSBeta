@@ -224,6 +224,7 @@ var Replicated = map[string][]string{
 		"sbom_snapshots",
 	},
 	"secrets": {
+		"secret_access_rules",
 		"secret_values",
 		"secrets",
 		"secrets_mek_exposure",

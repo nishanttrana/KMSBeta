@@ -119,12 +119,11 @@ const TTL_SECONDS: Record<string, number> = { none: 0, "1h": 3600, "24h": 86400,
 export const ttlToSeconds = (mode: string, custom: string) =>
   mode === "custom" ? Math.max(0, Math.trunc(Number(custom || 0))) : TTL_SECONDS[mode] ?? 0;
 
-// The folder a secret sits in: its "path" label, or the directory part of a
-// path-style name (a Vault KV path such as app/prod/db).
+// The folder a secret sits in: the directory part of its path (its "path"
+// label, then its name; a Vault KV path such as app/prod/db is already one).
 export function secretPath(s: SecretItem): string {
-  const label = String(s?.labels?.path || "").trim().replace(/^\/+|\/+$/g, "");
-  if (label) return `/${label}`;
-  const parts = String(s?.name || "").split("/").filter(Boolean);
+  const full = s?.path || `${String(s?.labels?.path || "")}/${String(s?.name || "")}`;
+  const parts = full.split("/").filter(Boolean);
   return parts.length >= 2 ? `/${parts.slice(0, -1).join("/")}` : "/";
 }
 
@@ -182,14 +181,17 @@ export const expiringDrill = (now: number): VaultDrill =>
   ({ key: "expiring", label: "Expiring within 30 days", match: (s) => ["7d", "30d"].includes(expiryBucket(s, now)) });
 export const neverRotatedDrill = (): VaultDrill =>
   ({ key: "v1", label: "Never rotated (still version 1)", match: (s) => Number(s.current_version) === 1 });
+export const restrictedDrill = (): VaultDrill =>
+  ({ key: "restricted", label: "Value limited by an access rule", match: (s) => s.restricted === true });
 export const allDrill = (): VaultDrill => ({ key: "all", label: "All secrets", match: () => true });
 
 // The Vault / OpenBao KV routes the secrets service registers
 // (services/secrets/handler.go). X-Vault-Namespace carries the tenant.
 export const VAULT_ROUTES = [
   { method: "GET", path: "/v1/{mount}/data/{path}", what: "KV v2 read" },
+  { method: "GET", path: "/v1/{mount}/data/{path}?version=N", what: "KV v2 read of a version" },
   { method: "POST", path: "/v1/{mount}/data/{path}", what: "KV v2 write (new version)" },
-  { method: "DELETE", path: "/v1/{mount}/data/{path}", what: "Delete the secret" },
+  { method: "DELETE", path: "/v1/{mount}/data/{path}", what: "Delete (recoverable)" },
   { method: "GET", path: "/v1/{mount}/metadata/{path}", what: "KV v2 metadata" },
   { method: "GET", path: "/v1/{mount}/{path}", what: "KV v1 read" },
   { method: "POST", path: "/v1/{mount}/{path}", what: "KV v1 write" },

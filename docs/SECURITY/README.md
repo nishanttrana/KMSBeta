@@ -42,6 +42,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [DATAPROTECT_KEY_DERIVATION.md](DATAPROTECT_KEY_DERIVATION.md): dataprotect
   working keys come from keycore key material (service-derive), never from
   identifiers; includes the per-key migration runbook for legacy data.
+- [SECRET_ACCESS.md](SECRET_ACCESS.md): per-path access rules on secrets (one
+  decision for every route, deny wins) and version operations: read a
+  version, roll back, recoverable delete, destroy.
 - [CONNECTIONS.md](CONNECTIONS.md): every outbound URL and credential
   (Slack, Teams, webhooks, Jira, ServiceNow, SIEMs) lives only in sealed
   compliance connections; who can open one, TLS for every call, and the

@@ -500,16 +500,20 @@ sbom,sbom,GET,/cbom/{param}/export?{param}&format={param},/cbom/{param}/export,T
 sbom,sbom,GET,/cbom/diff?{param}&from={param}&to={param},/cbom/diff,True,serviceRequest,web/dashboard/src/lib/sbom.ts,167,sbom|GET|/cbom/diff
 sbom,sbom,GET,/sbom/diff?from={param}&to={param},/sbom/diff,True,serviceRequest,web/dashboard/src/lib/sbom.ts,187,sbom|GET|/sbom/diff
 sbom,sbom,GET,/cbom/pqc-readiness?{param},/cbom/pqc-readiness,True,serviceRequest,web/dashboard/src/lib/sbom.ts,196,sbom|GET|/cbom/pqc-readiness
-secrets,secrets,GET,/secrets?{param},/secrets,True,serviceRequest,web/dashboard/src/lib/secrets.ts,82,secrets|GET|/secrets
-secrets,secrets,POST,/secrets,/secrets,False,serviceRequest,web/dashboard/src/lib/secrets.ts,99,secrets|POST|/secrets
-secrets,secrets,PUT,/secrets/{param}?tenant_id={param},/secrets/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,138,secrets|PUT|/secrets/{param}
-secrets,secrets,DELETE,/secrets/{param}?tenant_id={param},/secrets/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,146,secrets|DELETE|/secrets/{param}
-secrets,secrets,GET,/secrets/{param}/value?tenant_id={param}&format={param},/secrets/{param}/value,True,serviceRequest,web/dashboard/src/lib/secrets.ts,157,secrets|GET|/secrets/{param}/value
-secrets,secrets,GET,/secrets/stats?tenant_id={param},/secrets/stats,True,serviceRequest,web/dashboard/src/lib/secrets.ts,188,secrets|GET|/secrets/stats
-secrets,secrets,GET,/secrets/{param}/versions?tenant_id={param},/secrets/{param}/versions,True,serviceRequest,web/dashboard/src/lib/secrets.ts,193,secrets|GET|/secrets/{param}/versions
-secrets,secrets,GET,/secrets/{param}/audit?tenant_id={param}&limit={param},/secrets/{param}/audit,True,serviceRequest,web/dashboard/src/lib/secrets.ts,201,secrets|GET|/secrets/{param}/audit
-secrets,secrets,POST,/secrets/{param}/rotate?tenant_id={param},/secrets/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/secrets.ts,209,secrets|POST|/secrets/{param}/rotate
-secrets,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,False,serviceRequest,web/dashboard/src/lib/secrets.ts,229,secrets|POST|/secrets/generate/keypair
+secrets,secrets,GET,/secrets?{param},/secrets,True,serviceRequest,web/dashboard/src/lib/secrets.ts,92,secrets|GET|/secrets
+secrets,secrets,POST,/secrets,/secrets,False,serviceRequest,web/dashboard/src/lib/secrets.ts,110,secrets|POST|/secrets
+secrets,secrets,PUT,/secrets/{param}?tenant_id={param},/secrets/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,149,secrets|PUT|/secrets/{param}
+secrets,secrets,DELETE,/secrets/{param}?tenant_id={param},/secrets/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,157,secrets|DELETE|/secrets/{param}
+secrets,secrets,GET,"{param}&format={param}{param}` : """"}","/{param}&format={param}{param}` : """"}",True,serviceRequest,web/dashboard/src/lib/secrets.ts,170,"secrets|GET|/{param}&format={param}{param}` : """"}"
+secrets,secrets,DELETE,"secretURL(session, secretId, `/versions/{param}`)","/secretURL(session, secretId, `/versions/{param}`)",True,serviceRequest,web/dashboard/src/lib/secrets.ts,199,"secrets|DELETE|/secretURL(session, secretId, `/versions/{param}`)"
+secrets,secrets,GET,/secrets/access/rules?tenant_id={param},/secrets/access/rules,True,serviceRequest,web/dashboard/src/lib/secrets.ts,223,secrets|GET|/secrets/access/rules
+secrets,secrets,GET,/secrets/access/rules,/secrets/access/rules,False,serviceRequest,web/dashboard/src/lib/secrets.ts,228,secrets|GET|/secrets/access/rules
+secrets,secrets,DELETE,/secrets/access/rules/{param}?tenant_id={param},/secrets/access/rules/{param},True,serviceRequest,web/dashboard/src/lib/secrets.ts,233,secrets|DELETE|/secrets/access/rules/{param}
+secrets,secrets,GET,/secrets/stats?tenant_id={param},/secrets/stats,True,serviceRequest,web/dashboard/src/lib/secrets.ts,264,secrets|GET|/secrets/stats
+secrets,secrets,GET,/secrets/{param}/versions?tenant_id={param},/secrets/{param}/versions,True,serviceRequest,web/dashboard/src/lib/secrets.ts,269,secrets|GET|/secrets/{param}/versions
+secrets,secrets,GET,/secrets/{param}/audit?tenant_id={param}&limit={param},/secrets/{param}/audit,True,serviceRequest,web/dashboard/src/lib/secrets.ts,277,secrets|GET|/secrets/{param}/audit
+secrets,secrets,POST,/secrets/{param}/rotate?tenant_id={param},/secrets/{param}/rotate,True,serviceRequest,web/dashboard/src/lib/secrets.ts,287,secrets|POST|/secrets/{param}/rotate
+secrets,secrets,POST,/secrets/generate/keypair,/secrets/generate/keypair,False,serviceRequest,web/dashboard/src/lib/secrets.ts,308,secrets|POST|/secrets/generate/keypair
 signing,signing,GET,/signing/settings?tenant_id={param},/signing/settings,True,serviceRequest,web/dashboard/src/lib/signing.ts,84,signing|GET|/signing/settings
 signing,signing,PUT,/signing/settings,/signing/settings,False,serviceRequest,web/dashboard/src/lib/signing.ts,89,signing|PUT|/signing/settings
 signing,signing,GET,/signing/summary?tenant_id={param},/signing/summary,True,serviceRequest,web/dashboard/src/lib/signing.ts,97,signing|GET|/signing/summary

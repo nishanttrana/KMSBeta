@@ -7,6 +7,40 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-01 — Secret access rules restrict, on top of the route permission (7.29.0-beta)
+
+**Decision.** Access to a secret needs the route permission **and**, where
+an allow rule covers the secret's path for that capability, being named by
+such a rule; a deny rule naming the caller wins
+(docs/SECURITY/SECRET_ACCESS.md). Paths with no allow rule stay governed by
+the permission alone. Subjects are fields of the verified token (user, role,
+client, workload). Delete is recoverable; destroying and managing rules are
+separate permissions that `kms.write` does not grant.
+
+**Why.** `secrets.value.read` was tenant-wide: one grant read everything.
+Restricting rules can be adopted one folder at a time with no migration and
+no lockout, and they cannot widen access, so a mistaken rule fails closed
+for that path only. Destroy is irreversible and rule changes decide who
+reads what, so neither should ride on a coarse write grant.
+
+**Rejected.** Rules that grant (Vault-style policies replacing the
+permission): two sources of grants to reason about, and every existing
+tenant would need policies written before anything worked. Default-deny for
+unlisted paths: right as an opt-in tenant setting later, wrong as a default
+that empties every existing vault on upgrade. Reusing keycore's key access
+groups as subjects: a cross-service call on every secret read; left open.
+Keeping delete permanent and adding a separate "archive": two verbs for
+operators to confuse, and Vault KV clients already expect delete to be
+recoverable.
+
+**Enforced by.** `TestAccessRulesAreEnforcedOnEveryRoute` (each route, as a
+caller no rule names), `TestDecide`, `TestAccessRuleValidation`,
+`TestListPagesCountVisibleSecrets`, `TestSoftDeleteRestoreDestroy`,
+`TestVersionReadRollbackDestroyAndConditionalWrite`; `routetest.RefusalsAudited`
+covers the new routes' permissions.
+
+---
+
 ## 2026-10-01 — Secret Vault charts count the full list; a value is read only on request (7.27.0-beta)
 
 **Decision.** The vault page pages every secret of the tenant and computes
