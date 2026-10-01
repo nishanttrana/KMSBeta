@@ -20254,7 +20254,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(\"certs\")}>View Certificates \u2192",
-      "line": 229,
+      "line": 218,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20262,7 +20262,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onUnpinTab?.(tabId)} title={`Unpin $ `} style={ } >",
-      "line": 256,
+      "line": 245,
       "tabs": [],
       "tag": "button"
     },
@@ -20270,7 +20270,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "onNavigate?.(tabId)} style={{ display: \"inline-flex\", alignItems: \"center\", g...",
-      "line": 266,
+      "line": 255,
       "tabs": [],
       "tag": "button"
     },
@@ -20278,7 +20278,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"approved\")} disabled={approvalVoteBusy ===...",
-      "line": 429,
+      "line": 384,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20286,7 +20286,7 @@
       "file": "web/dashboard/src/components/v3/tabs/DashboardTabView.tsx",
       "handler": "",
       "label": "void submitHomeApprovalVote(item, \"denied\")} disabled={approvalVoteBusy === `...",
-      "line": 430,
+      "line": 385,
       "tabs": [],
       "tag": "Btn"
     },
@@ -31839,7 +31839,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T11:14:59Z",
+  "generated_at": "2026-10-01T11:20:23Z",
   "navigation": [
     {
       "group": "Overview",
@@ -85979,7 +85979,7 @@
       ]
     },
     {
-      "call_count": 198,
+      "call_count": 192,
       "component": "web/dashboard/src/components/v3/tabs/DashboardTab.tsx",
       "group": "Overview",
       "id": "ops",
@@ -85996,13 +85996,13 @@
         "secrets"
       ],
       "support_files": [
-        "web/dashboard/src/lib/audit.ts",
         "web/dashboard/src/lib/auth.ts",
         "web/dashboard/src/lib/certs.ts",
         "web/dashboard/src/lib/cluster.ts",
         "web/dashboard/src/lib/compliance.ts",
         "web/dashboard/src/lib/governance.ts",
         "web/dashboard/src/lib/keycore.ts",
+        "web/dashboard/src/lib/opsMetrics.ts",
         "web/dashboard/src/lib/reporting.ts",
         "web/dashboard/src/lib/secrets.ts"
       ]
@@ -87051,7 +87051,6 @@
           "QueryEvents"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87086,7 +87085,6 @@
           "GetEvent"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87119,7 +87117,6 @@
           "QueryEvents"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87152,7 +87149,6 @@
           "QueryEvents"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87185,7 +87181,6 @@
           "QueryEvents"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87241,7 +87236,6 @@
         ],
         "storeCalls": [],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87297,7 +87291,6 @@
         "serviceCalls": [],
         "storeCalls": [],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87414,7 +87407,7 @@
           "GetOpsOverview"
         ],
         "uiLabels": [
-          "opsMetrics"
+          "Operations"
         ]
       },
       {
@@ -87471,7 +87464,7 @@
           "GetLatencyPercentiles"
         ],
         "uiLabels": [
-          "opsMetrics"
+          "Operations"
         ]
       },
       {
@@ -87503,7 +87496,7 @@
           "GetServiceStats"
         ],
         "uiLabels": [
-          "opsMetrics"
+          "Operations"
         ]
       },
       {
@@ -87535,7 +87528,7 @@
           "GetErrorBreakdown"
         ],
         "uiLabels": [
-          "opsMetrics"
+          "Operations"
         ]
       },
       {
@@ -87879,7 +87872,6 @@
           "AuditStats"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87916,7 +87908,6 @@
           "VerifyTarget"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -87951,7 +87942,6 @@
           "ListCheckpoints"
         ],
         "uiLabels": [
-          "Operations",
           "Audit Log"
         ]
       },
@@ -116441,7 +116431,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T11:14:59Z",
+    "generatedAt": "2026-10-01T11:20:23Z",
     "methods": [
       "DELETE",
       "GET",

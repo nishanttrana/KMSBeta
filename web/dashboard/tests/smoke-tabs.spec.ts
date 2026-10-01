@@ -215,6 +215,12 @@ test("analytics, alerts and audit each have a single home", async ({ page }) => 
   // Analytics is no longer an Overview tab; its two views live in Operations.
   await nav("Operations");
   await expect(page.getByText("Analytics", { exact: true })).toHaveCount(0);
+  // Status shows only what a service returned (7.26.0-beta): the mocked
+  // cluster has no nodes, so none is listed, and nothing is invented.
+  await expect(page.getByText("No nodes reported.")).toBeVisible();
+  for (const fake of ["Disk Encryption", "vecta-kms-01", "34.2 / 120 GB", "Violations"]) {
+    await expect(page.getByText(fake)).toHaveCount(0);
+  }
   for (const t of ["Status", "Key inventory", "Operation metrics"]) {
     await expect(page.getByRole("button", { name: t, exact: true })).toHaveCount(1);
   }

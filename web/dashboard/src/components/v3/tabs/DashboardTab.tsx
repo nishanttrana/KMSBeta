@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../lib/auth";
-import { listAuditEvents } from "../../../lib/audit";
+import { getOverview } from "../../../lib/opsMetrics";
 import { listKeys } from "../../../lib/keycore";
 import { getCertExpiryAlertPolicy, listCertificates } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
@@ -46,9 +46,8 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     alerts:0,
     criticalAlerts:0,
     keyGrowthWeek:0,
-    opsPerDay:0,
-    opsGrowthPct:0,
-    opsHasBaseline:false,
+    opsPerDay:null,
+    opsWeekTotal:null,
     complianceScore:0,
     complianceDeltaWeek:0,
     complianceHasAssessment:false,
@@ -137,9 +136,8 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     alerts:0,
     criticalAlerts:0,
     keyGrowthWeek:0,
-    opsPerDay:0,
-    opsGrowthPct:0,
-    opsHasBaseline:false,
+    opsPerDay:null,
+    opsWeekTotal:null,
     complianceScore:0,
     complianceDeltaWeek:0,
     complianceHasAssessment:false,
@@ -167,7 +165,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     const refreshHome=async()=>{
       setHomeLoading(true);
       try{
-        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,auditEvents]=await Promise.all([
+        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,opsDay,opsWeek]=await Promise.all([
           listKeys(session),
           listSecrets(session),
           listCertificates(session,{limit:1000,offset:0}),
@@ -180,7 +178,8 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           getGovernanceSystemState(session).catch(()=>null),
           getComplianceAssessment(session,"default").catch(()=>null),
           listComplianceAssessmentHistory(session,2,"default").catch(()=>[]),
-          listAuditEvents(session,{limit:500}).catch(()=>[])
+          getOverview(session,"24h").catch(()=>null), // unavailable, not 0
+          getOverview(session,"7d").catch(()=>null)
         ]);
         if(cancelled){
           return;
@@ -218,27 +217,12 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           .filter((item:any)=>item.expiresAt<=threshold)
           .sort((a:any,b:any)=>a.expiresAt-b.expiresAt);
         const unreadTotal=Object.values(counts||{}).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0);
-        const criticalAlerts=Math.max(0,Number(counts?.critical||counts?.high||0));
-        const keyGrowthWeek=Math.max(0,Math.round(keyCount*0.0045));
-        const auditItems=(Array.isArray(auditEvents)?auditEvents:[]).filter((entry:any)=>entry&&typeof entry==="object");
-        const dayMs=24*60*60*1000;
-        const last24hStart=now-dayMs;
-        const previousWeekStart=now-(8*dayMs);
-        const previousWeekEnd=last24hStart;
-        const opsLast24h=auditItems.filter((entry:any)=>{
-          const ts=new Date(String(entry?.timestamp||entry?.created_at||"")).getTime();
-          return Number.isFinite(ts)&&ts>=last24hStart&&ts<=now;
-        }).length;
-        const previousWeekEvents=auditItems.filter((entry:any)=>{
-          const ts=new Date(String(entry?.timestamp||entry?.created_at||"")).getTime();
-          return Number.isFinite(ts)&&ts>=previousWeekStart&&ts<previousWeekEnd;
-        }).length;
-        const previousWeekDailyAvg=previousWeekEvents/7;
-        const opsHasBaseline=previousWeekEvents>0;
-        const opsPerDay=Math.max(0,opsLast24h);
-        const opsGrowthPct=opsHasBaseline&&previousWeekDailyAvg>0
-          ? Number((((opsLast24h-previousWeekDailyAvg)/previousWeekDailyAvg)*100).toFixed(1))
-          : 0;
+        const criticalAlerts=Math.max(0,Number(counts?.critical||0));
+        const weekAgo=now-7*24*60*60*1000;
+        const keyGrowthWeek=keyItems.filter((k:any)=>new Date(String(k?.created_at||"")).getTime()>=weekAgo).length;
+        // Metered cryptographic operations (the Operation metrics tab's source).
+        const opsPerDay=opsDay?Math.max(0,Number(opsDay.total_ops||0)):null;
+        const opsWeekTotal=opsWeek?Math.max(0,Number(opsWeek.total_ops||0)):null;
         const complianceHistoryItems=(Array.isArray(complianceHistory)?complianceHistory:[]).filter((entry:any)=>isRealComplianceAssessment(entry));
         const latestComplianceAssessment=isRealComplianceAssessment(complianceAssessment)
           ? complianceAssessment
@@ -388,16 +372,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         const runtimeCryptoLibrary=String((governanceSystemState as any)?.state?.fips_crypto_library||"").trim();
         const runtimeCryptoLibraryValidated=Boolean((governanceSystemState as any)?.state?.fips_library_validated);
 
-        const serviceHealth:{[k:string]:string}={
-          "kms-auth":session?.token?"ok":"down",
-          "kms-keycore":"ok",
-          "kms-audit":"ok",
-          "kms-policy":governanceSettings!==null?"ok":"degraded",
-          "kms-compliance":"ok",
-          "kms-posture":"ok",
-          "kms-reporting":counts!==null?"ok":"degraded",
-          "kms-cluster":Array.isArray(clusterOverview?.nodes)&&(clusterOverview as any).nodes.length>0?"ok":"degraded"
-        };
 
         setHomeSummary({
           keys:keyCount,
@@ -407,8 +381,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           criticalAlerts,
           keyGrowthWeek,
           opsPerDay,
-          opsGrowthPct,
-          opsHasBaseline,
+          opsWeekTotal,
           complianceScore,
           complianceDeltaWeek,
           complianceHasAssessment,
@@ -426,9 +399,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           clusterNodes,
           clusterSummary,
           clusterLagSec,
-          algorithms,
-          serviceHealth,
-          auditChainOk:true
+          algorithms
         });
       }catch(error){
         if(!cancelled){
@@ -498,7 +469,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
   const homeSystemState=(homeSummary&&typeof homeSummary==="object"&&homeSummary.systemState&&typeof homeSummary.systemState==="object")
     ? homeSummary.systemState
     : {};
-  const networkStatus=(Number(clusterSummary?.down_nodes||0)>0)?"degraded":"ok";
 
   if(keyAnalyticsEnabled&&view!=="Status"){
     return <div>
@@ -521,7 +491,6 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     cryptoLibraryLabel={cryptoLibraryLabel}
     cryptoLibraryValidated={cryptoLibraryValidated}
     homeSystemState={homeSystemState}
-    networkStatus={networkStatus}
     modal={modal}
     setModal={setModal}
     submitHomeApprovalVote={submitHomeApprovalVote}

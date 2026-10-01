@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import {
-  ArrowRight, BarChart3, Bell, CheckCircle2, ClipboardCheck, Cloud,
+  ArrowRight, BarChart3, Bell, CheckCircle2, ClipboardCheck,
   Cpu, Database, FileText, Gauge, GitBranch, KeyRound, Lock,
   ScrollText, Settings, ShieldCheck, TrendingDown, TrendingUp,
   X, Zap
@@ -51,7 +51,6 @@ export const DashboardTabView = (props: any) => {
     cryptoLibraryLabel = "",
     cryptoLibraryValidated = false,
     homeSystemState = {},
-    networkStatus = "ok",
     modal = null,
     setModal,
     submitHomeApprovalVote,
@@ -63,13 +62,9 @@ export const DashboardTabView = (props: any) => {
 
   const pending = Array.isArray(homeSummary?.pendingApprovals) ? homeSummary.pendingApprovals : [];
   const algos = Array.isArray(homeSummary?.algorithms) ? homeSummary.algorithms : [];
-  const nodes = clusterNodes.length
-    ? clusterNodes
-    : [{ id: "local", name: "vecta-kms-01", status: "online", role: "leader", address: "127.0.0.1" }];
-  const auditChainOk = homeSummary?.auditChainOk !== false;
+  const nodes = clusterNodes;
+  const clusterTone = clusterSummary?.unavailable ? "amber" : clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green";
   const complianceHasAssessment = Boolean(homeSummary?.complianceHasAssessment);
-  const opsHasBaseline = Boolean(homeSummary?.opsHasBaseline);
-  const opsGrowthPos = Number(homeSummary?.opsGrowthPct || 0) >= 0;
   const complianceTrendPos = Number(homeSummary?.complianceDeltaWeek || 0) >= 0;
   const alertTrendPos = Number(homeSummary?.criticalAlerts || 0) === 0;
   const pinnedList = Array.isArray(pinnedTabs) ? pinnedTabs.filter((id: string) => id !== "home") : [];
@@ -80,12 +75,10 @@ export const DashboardTabView = (props: any) => {
       case "certs": return fmtInt(homeSummary?.certs || 0);
       case "vault": case "secrets": return fmtInt(homeSummary?.secrets || 0);
       case "alerts": return fmtInt(homeSummary?.alerts || 0);
-      case "audit": return auditChainOk ? "INTACT" : "BROKEN";
       case "posture": return homeSummary?.postureRisk != null ? `${Number(homeSummary.postureRisk).toFixed(0)}%` : "—";
-      case "compliance": return `${homeSummary?.complianceScore || 0}/100`;
+      case "compliance": return complianceHasAssessment ? `${homeSummary?.complianceScore || 0}/100` : "Not assessed";
       case "cluster": return clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`;
       case "approvals": case "governance": return fmtInt(homeSummary?.myPendingApprovals || 0);
-      case "reporting": return "Live";
       default: return "—";
     }
   };
@@ -96,19 +89,17 @@ export const DashboardTabView = (props: any) => {
       case "certs": return Number(homeSummary?.expiring) > 0 ? `${fmtInt(homeSummary.expiring)} expiring` : "All valid";
       case "vault": case "secrets": return "encrypted at rest";
       case "alerts": return `${fmtInt(homeSummary?.criticalAlerts || 0)} critical`;
-      case "audit": return auditChainOk ? "Chain verified" : "Chain broken!";
+      case "audit": return "Integrity in Checkpoints";
       case "posture": return "24h risk score";
       case "compliance": return complianceHasAssessment ? `+${fmtInt(homeSummary?.complianceDeltaWeek || 0)} this week` : "No score yet";
       case "cluster": return `Lag: ${clusterLagText}`;
       case "approvals": case "governance": return "pending review";
       case "hsm": return globalFipsEnabled ? "FIPS strict" : "Standard mode";
-      case "reporting": return "analytics ready";
       default: return "";
     }
   };
 
   const getWidgetPrimaryColor = (tabId: string) => {
-    if (tabId === "audit") return auditChainOk ? C.green : C.red;
     if (tabId === "alerts") return Number(homeSummary?.criticalAlerts || 0) > 0 ? C.red : C.amber;
     if (tabId === "approvals" || tabId === "governance") return Number(homeSummary?.myPendingApprovals || 0) > 0 ? C.amber : C.green;
     return (WIDGET_CONF[tabId] || WIDGET_CONF["keys"]).color;
@@ -126,9 +117,9 @@ export const DashboardTabView = (props: any) => {
         {DIcon && <DIcon size={11} strokeWidth={2.2} />}
         {delta}
       </div>
-      <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
+      {barPct != null && <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
         <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 55%, transparent))`, borderRadius: 999, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
-      </div>
+      </div>}
     </div>
   );
 
@@ -159,7 +150,7 @@ export const DashboardTabView = (props: any) => {
             <span title={cryptoLibraryLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: cryptoLibraryValidated ? C.accentFg : C.dim, background: C.accentDim, border: `1px solid color-mix(in oklab, ${C.accent} 25%, transparent)`, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               <Cpu size={12} strokeWidth={2.4} /> {cryptoLibraryValidated ? "VALIDATED CRYPTO" : (cryptoLibraryLabel || "CRYPTO LIBRARY")}
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: networkStatus === "ok" ? C.greenFg : C.redFg, background: networkStatus === "ok" ? C.greenDim : C.redDim, border: `1px solid color-mix(in oklab, ${networkStatus === "ok" ? C.green : C.red} 30%, transparent)` }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: (C as any)[`${clusterTone}Fg`], background: (C as any)[`${clusterTone}Dim`], border: `1px solid color-mix(in oklab, ${(C as any)[clusterTone]} 30%, transparent)` }}>
               <GitBranch size={12} strokeWidth={2.4} /> {clusterSummary?.unavailable ? "CLUSTER unavailable" : `CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
             </span>
           </div>
@@ -191,26 +182,24 @@ export const DashboardTabView = (props: any) => {
         <Kpi label="Total Keys" value={fmtInt(homeSummary.keys)} icon={KeyRound}
           color={C.accentFg} dim={C.accentDim} deltaIcon={TrendingUp} deltaColor={C.greenFg}
           delta={`+${fmtInt(homeSummary.keyGrowthWeek)} this week`}
-          barPct={Math.min(100, Math.max(4, Number(homeSummary?.keys || 0) / 5))} />
-        <Kpi label="Ops / Day" value={fmtCompact(homeSummary.opsPerDay)} icon={Zap}
-          color={C.greenFg} dim={C.greenDim}
-          deltaIcon={opsHasBaseline ? (opsGrowthPos ? TrendingUp : TrendingDown) : undefined}
-          deltaColor={opsHasBaseline ? (opsGrowthPos ? C.greenFg : C.redFg) : C.dim}
-          delta={opsHasBaseline ? `${Math.abs(Number(homeSummary.opsGrowthPct || 0)).toFixed(1)}% vs last week` : "No prior-week baseline yet"}
-          barPct={62} />
-        <Kpi label="Compliance" value={`${homeSummary.complianceScore}`} icon={ShieldCheck}
+          />
+        <Kpi label="Ops / Day" value={homeSummary.opsPerDay == null ? "—" : fmtCompact(homeSummary.opsPerDay)} icon={Zap}
+          color={C.greenFg} dim={C.greenDim} deltaColor={C.dim}
+          delta={homeSummary.opsPerDay == null ? "Unavailable" : homeSummary.opsWeekTotal == null ? "Last 24 hours" : `${fmtCompact(homeSummary.opsWeekTotal)} in the last 7 days`}
+          />
+        <Kpi label="Compliance" value={complianceHasAssessment ? `${homeSummary.complianceScore}` : "—"} icon={ShieldCheck}
           color={C.blueFg} dim={C.blueDim}
           deltaIcon={complianceHasAssessment ? (complianceTrendPos ? TrendingUp : TrendingDown) : undefined}
           deltaColor={complianceHasAssessment ? (complianceTrendPos ? C.greenFg : C.redFg) : C.dim}
-          delta={complianceHasAssessment ? `${homeSummary.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(homeSummary.complianceDeltaWeek)} this week · score /100` : "No assessment yet"}
-          barPct={Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0)))} />
+          delta={complianceHasAssessment ? `${homeSummary.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(homeSummary.complianceDeltaWeek)} this week · score /100` : "Not assessed"}
+          barPct={complianceHasAssessment ? Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0))) : undefined} />
         <Kpi label="Open Alerts" value={fmtInt(homeSummary.alerts)} icon={Bell}
           color={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redFg : C.amberFg}
           dim={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redDim : C.amberDim}
           deltaIcon={alertTrendPos ? TrendingDown : TrendingUp}
           deltaColor={alertTrendPos ? C.greenFg : C.redFg}
           delta={`${fmtInt(homeSummary.criticalAlerts)} critical`}
-          barPct={Math.min(100, Math.max(0, Number(homeSummary?.criticalAlerts || 0) * 10))} />
+          />
       </div>
 
       {/* Expiring Certificates Warning */}
@@ -281,31 +270,12 @@ export const DashboardTabView = (props: any) => {
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
-              <Lock size={12} color={C.dim} />
-              Disk Encryption
-            </div>
-            {statusPill("ACTIVE", "green", true)}
-          </div>
-          <div style={{ fontSize: 13, color: C.text, marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>AES-256-XTS | LUKS2 | RSA-4096</div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.dim, marginBottom: 6, fontFamily: "'JetBrains Mono',monospace" }}>
-            <span>34.2 / 120 GB</span>
-            <span>28.5%</span>
-          </div>
-          <div style={{ height: 7, borderRadius: 999, background: C.border, overflow: "hidden", marginBottom: 8 }}>
-            <div style={{ height: "100%", width: "28.5%", background: C.accent, borderRadius: 999 }} />
-          </div>
-          <div style={{ fontSize: 11, color: C.green }}>Integrity passed | Recovery: 3-of-5</div>
-        </Card>
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
               <ShieldCheck size={12} color={C.dim} />
               FIPS Mode
             </div>
             {statusPill(globalFipsEnabled ? "STRICT" : "STANDARD", globalFipsEnabled ? "green" : "blue", true)}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
             <div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Go Crypto</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text, lineHeight: 1.3, wordBreak: "break-word" }}>{cryptoLibraryLabel}</div>
@@ -319,25 +289,9 @@ export const DashboardTabView = (props: any) => {
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>RNG</div>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.fips_rng_mode || "not reported")}</div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Violations</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{`${fmtInt(Number(homeSystemState?.fips_violations_24h || 0))} (24h)`}</div>
-            </div>
           </div>
         </Card>
 
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
-              <Cloud size={12} color={C.dim} />
-              Network
-            </div>
-            {statusPill(networkStatus === "ok" ? "OK" : "DEGRADED", statusTone(networkStatus), networkStatus !== "down")}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{"TLS 1.3 mTLS · ML-KEM"}</div></div>
-          </div>
-        </Card>
       </div>
 
       {/* Algorithm Distribution + Cluster + Approvals */}
@@ -345,7 +299,7 @@ export const DashboardTabView = (props: any) => {
         <Card>
           <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Algorithm Distribution</div>
           <div style={{ display: "grid", gap: 8 }}>
-            {(algos.length ? algos : [{ name: "Other", pct: 100, color: C.muted }]).map((item: any) => {
+            {algos.map((item: any) => {
               const pct = Math.max(0, Math.min(100, Number(item?.pct || 0)));
               return (
                 <div key={`algo-${String(item?.name || "")}`} style={{ display: "grid", gridTemplateColumns: "130px 1fr 42px", alignItems: "center", gap: 10 }}>
@@ -357,7 +311,7 @@ export const DashboardTabView = (props: any) => {
                 </div>
               );
             })}
-            {!algos.length && <div style={{ fontSize: 10, color: C.muted }}>No key algorithms available for distribution yet.</div>}
+            {!algos.length && <div style={{ fontSize: 10, color: C.muted }}>No keys yet.</div>}
           </div>
         </Card>
 
@@ -371,7 +325,7 @@ export const DashboardTabView = (props: any) => {
                     {`${fmtInt(clusterSummary.degraded_nodes)} degraded`}
                   </span>
                 )}
-                <B c={clusterSummary?.unavailable ? "amber" : clusterSummary?.down_nodes > 0 ? "red" : clusterSummary?.degraded_nodes > 0 ? "amber" : "green"}>
+                <B c={clusterTone}>
                   {clusterSummary?.unavailable ? "unavailable" : `${fmtInt(clusterSummary?.online_nodes || 0)}/${fmtInt(clusterSummary?.total_nodes || 0)}`}
                 </B>
               </div>
@@ -401,6 +355,7 @@ export const DashboardTabView = (props: any) => {
                   </div>
                 );
               })}
+              {!nodes.length && !clusterSummary?.unavailable && <div style={{ fontSize: 10, color: C.muted }}>No nodes reported.</div>}
             </div>
             <div style={{ fontSize: 10, color: C.dim, marginTop: 10, fontFamily: "'JetBrains Mono',monospace" }}>
               {clusterSummary?.unavailable ? "Cluster status unavailable (cluster service did not answer)" : `Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}

@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.26.0-beta] — 2026-10-01
+
+### Overview → Operations → Status shows only measured values
+- **Removed:** the **Disk Encryption** card. Its cipher, disk usage,
+  "Integrity passed" and "Recovery: 3-of-5" were text in the page; the KMS
+  has no disk-encryption status to report.
+- **Removed:** the **Network** card ("TLS 1.3 mTLS · ML-KEM", always "OK")
+  and the FIPS card's **Violations** count, neither of which any service
+  reports. Service TLS is shown per service in Certificates / PKI.
+- **Fixed:** the Cluster card listed an online leader `vecta-kms-01` when
+  the cluster service returned no nodes. It now says "No nodes reported",
+  or "unavailable" when the service doesn't answer. The header's cluster
+  pill is no longer green in that case.
+- **Fixed:** Compliance showed a score of 0 before any assessment; it now
+  shows "Not assessed". Algorithm Distribution no longer draws an "Other
+  100%" bar with no keys. The pinned Audit widget no longer says "INTACT /
+  Chain verified" without checking (chain verification is in Audit Log →
+  Checkpoints). Progress bars with no real scale under Total Keys, Ops / Day
+  and Open Alerts are gone.
+- **Fixed:** Total Keys' "+N this week" was 0.45% of the key count; it is
+  now the number of keys created in the last 7 days. **Ops / Day** counted
+  the newest 500 audit events of any kind; it is now the metered
+  cryptographic operations of the last 24 hours (the Operation metrics
+  figure), with the 7-day total beside it, and "—" when the metrics are
+  unavailable. Open Alerts' "critical" no longer falls back to the count of
+  high alerts.
+
 ## [7.25.0-beta] — 2026-10-01
 
 ### Dashboard CI passes again, and checks what it claimed to

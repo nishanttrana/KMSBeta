@@ -5,6 +5,30 @@ Newest entries on top.
 
 ## 2026-10-01
 
+### Fake removed: placeholder cards on the Operations Status view (7.26.0-beta)
+- **What was fake:** a Disk Encryption card (cipher, `34.2 / 120 GB`,
+  "Integrity passed | Recovery: 3-of-5"), a Network card ("TLS 1.3 mTLS ·
+  ML-KEM", always OK), a FIPS "Violations 0 (24h)" row, a `vecta-kms-01`
+  leader shown when the cluster returned no nodes, `auditChainOk: true` set
+  in the loader and shown as "INTACT / Chain verified", an "Other 100%"
+  algorithm bar, a compliance score of 0 before any assessment, and KPI
+  bars with constant or invented scales (`barPct={62}`). In the loader:
+  "+N this week" was `keyCount * 0.0045`, Ops / Day was a count of the
+  newest 500 audit events of any kind, and "critical" alerts fell back to
+  the high count.
+- **How it slipped through:** they are JSX literals and `||` fallbacks, not
+  functions. `real-capability` looks for `simulate*`/`mock*`/`fake*` names
+  and `Math.random`, so a string in markup or a default object in a ternary
+  passes. The smoke test only checked that the tab rendered. The cards were
+  design placeholders from the first dashboard that no backend ever fed.
+- **How to catch the next one:** on any page, ask of each value "which
+  response field is this?". A literal number, a `?? "ok"`, a `!== false`
+  and a `list.length ? list : [{...}]` are the shapes to grep for. The smoke
+  test now asserts these strings are absent with an empty cluster.
+- **Open:** Total Keys and Open Alerts still show 0 when their call fails
+  (the refresh aborts and the initial zeros stay). They should show
+  "unavailable"; not changed here.
+
 ### A red CI step hides every step after it, and a gate that can only fail is not a gate
 - **What happened:** the dashboard CI job stopped at lint on every commit
   since 6.25.0-beta. Nobody saw the steps after it, so a stale browser test
@@ -40,11 +64,6 @@ Newest entries on top.
   `npm run test:smoke`. The build also rewrites
   `src/generated/restApiCatalog.generated.ts` when routes have been added
   since it was last committed; that drift is not part of a UI change.
-- **Open:** the Operations Status view shows figures that are written in the
-  component, not measured: the disk encryption card (`34.2 / 120 GB`,
-  `Integrity passed | Recovery: 3-of-5`) and a `vecta-kms-01` node when the
-  cluster call returns none (`DashboardTabView.tsx`). Rule 8 forbids both;
-  reported to the owner, not changed in this commit.
 
 ### The external edge certificate, run on the live stack: what it showed
 - **What was run:** root admin chose `external` for the HTTPS listener,
