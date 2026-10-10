@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -109,6 +110,23 @@ type Bucket struct {
 	// PassInProgress: a pass has started and not reached the end of the
 	// listing; the next scan continues it.
 	PassInProgress bool `json:"pass_in_progress"`
+}
+
+// MarshalJSON leaves out the times that have not happened yet (a zero
+// time.Time is not "empty" to encoding/json and would read as year 1).
+func (b Bucket) MarshalJSON() ([]byte, error) {
+	type plain Bucket
+	opt := func(t time.Time) *time.Time {
+		if t.IsZero() {
+			return nil
+		}
+		return &t
+	}
+	return json.Marshal(struct {
+		plain
+		LastPassAt *time.Time `json:"last_pass_at,omitempty"`
+		ScannedAt  *time.Time `json:"scanned_at,omitempty"`
+	}{plain(b), opt(b.LastPassAt), opt(b.ScannedAt)})
 }
 
 // BucketObject records an object the scan read: its ETag when read, and the

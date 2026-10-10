@@ -47,6 +47,9 @@ type Service struct {
 	// repoRoots trusts a test hosting server's certificate; nil in
 	// production (the system roots).
 	repoRoots *x509.CertPool
+	// Where a bucket connection's tokens come from (storage_auth.go): the
+	// Entra ID and Google token endpoints and AWS STS (%s: the region).
+	entraURL, googleURL, stsURL string
 	// primary reports whether this node runs scheduled scans
 	// (clusterstate.RunsPrimaryJobs).
 	primary func(context.Context) bool
@@ -64,6 +67,7 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, events Ev
 
 		targetGuard: newTargetGuard,
 		active:      map[string]string{},
+		entraURL:    entraLogin, googleURL: googleTokenURL, stsURL: awsSTSURL,
 	}
 }
 

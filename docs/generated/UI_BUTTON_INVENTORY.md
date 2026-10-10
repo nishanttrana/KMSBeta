@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-10T18:24:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:33:22Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -613,11 +613,11 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 159 | - | button | setStatus(s)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 167 | - | Btn | void save()} disabled= >Save |  |
 | web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 174 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 124 | - | button | setDeep((d) => !d)} title="Also read the first kilobyte of every object whose... |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 129 | - | Btn | void add()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 133 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 152 | - | Btn | void test(b)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 153 | - | button | void remove(b)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 125 | - | button | setDeep((d) => !d)} title="Also read the first kilobyte of every object whose... |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 130 | - | Btn | void add()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 134 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 153 | - | Btn | void test(b)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 154 | - | button | void remove(b)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/Charts.tsx | 39 | - | button | (icon or dynamic label) | onClick} title={title |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 88 | - | button | set( )} title="Assets the last scan of their source didn't observe" style={{... |  |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 96 | - | button | setFilters(NO_FILTERS)} style={ }>Clear filters |  |

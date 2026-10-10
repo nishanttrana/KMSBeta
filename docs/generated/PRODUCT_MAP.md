@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-10T18:24:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:33:22Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -407,10 +407,10 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/retry | h.retryRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 148 |
-| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 309 |
-| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 310 |
-| compliance | DELETE | /compliance/playbooks/connections/{id} | h.deleteConnection | compliance.playbook.delete | services/compliance/playbook_connections.go | 311 |
-| compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 312 |
+| compliance | POST | /compliance/playbooks/connections | h.createConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 377 |
+| compliance | PUT | /compliance/playbooks/connections/{id} | h.updateConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 378 |
+| compliance | DELETE | /compliance/playbooks/connections/{id} | h.deleteConnection | compliance.playbook.delete | services/compliance/playbook_connections.go | 379 |
+| compliance | POST | /compliance/playbooks/connections/{id}/test | h.testConnection | compliance.playbook.write | services/compliance/playbook_connections.go | 380 |
 
 Showing `120` of `357`. Full data is in `docs/generated/product-map.json`.
 

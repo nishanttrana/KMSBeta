@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
@@ -369,9 +375,63 @@ func TestStorageConnectionsAreDiscoverysAlone(t *testing.T) {
 			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())
 		}
 	}
+	// 7.39.0-beta: one Azure credential, each well formed; a role only on
+	// Amazon endpoints; a Google connection holds a real service account key.
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p8, _ := x509.MarshalPKCS8PrivateKey(key)
+	saJSON := func(pemText string) string {
+		raw, _ := json.Marshal(map[string]string{"type": "service_account", "client_email": "scan@acme.iam.gserviceaccount.com", "private_key": pemText})
+		return string(raw)
+	}
+	goodSA := saJSON(string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: p8})))
+	accountKey := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 64))
+	const sas = "sv=2022-11-02&sp=rl&sig=c2FzLXNpZ25hdHVyZQ%3D%3D"
+	aws := map[string]string{"endpoint_url": "https://s3.eu-west-1.amazonaws.com", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "long-enough-secret"}
+	with := func(base map[string]string, kv ...string) map[string]string {
+		out := map[string]string{}
+		for k, v := range base {
+			out[k] = v
+		}
+		for i := 0; i < len(kv); i += 2 {
+			out[kv[i]] = kv[i+1]
+		}
+		return out
+	}
+	az := map[string]string{"account_url": "https://1.1.1.1"}
+	for name, w := range map[string]*httptest.ResponseRecorder{
+		"a role that is not an ARN":      create("s3", with(aws, "role_arn", "scanner-role")),
+		"a role on a non-Amazon service": create("s3", map[string]string{"endpoint_url": "https://1.1.1.1", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "long-enough-secret", "role_arn": "arn:aws:iam::123456789012:role/scanner"}),
+		"an external ID without a role":  create("s3", with(aws, "external_id", "x")),
+		"azure with two credentials":     create("azure_blob", with(az, "sas_token", sas, "account_key", accountKey)),
+		"azure with half an application": create("azure_blob", with(az, "azure_tenant_id", "acme.onmicrosoft.com", "client_id", "app")),
+		"azure with a short account key": create("azure_blob", with(az, "account_key", "c2hvcnQ=")),
+		"azure account name without key": create("azure_blob", with(az, "sas_token", sas, "account_name", "acme")),
+		"gcs without a key file":         create("gcs", map[string]string{"gcs_url": "https://1.1.1.1"}),
+		"gcs with a user key file":       create("gcs", map[string]string{"gcs_url": "https://1.1.1.1", "service_account_json": `{"type":"authorized_user","client_email":"a@b"}`}),
+		"gcs with no private key":        create("gcs", map[string]string{"gcs_url": "https://1.1.1.1", "service_account_json": saJSON("not a key")}),
+	} {
+		if w.Code != http.StatusBadRequest || strings.Contains(w.Body.String(), "long-enough-secret") || strings.Contains(w.Body.String(), accountKey) {
+			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())
+		}
+	}
+	for name, w := range map[string]*httptest.ResponseRecorder{
+		"s3 with a role":         create("s3", with(aws, "role_arn", "arn:aws:iam::123456789012:role/kms/scanner", "external_id", "vecta")),
+		"azure with Entra ID":    create("azure_blob", with(az, "azure_tenant_id", "acme.onmicrosoft.com", "client_id", "app-id", "client_secret", "entra-client-secret")),
+		"azure with account key": create("azure_blob", with(az, "account_key", accountKey, "account_name", "acme")),
+		"gcs":                    create("gcs", map[string]string{"gcs_url": "https://1.1.1.1", "service_account_json": goodSA}),
+	} {
+		if w.Code != http.StatusCreated || strings.Contains(w.Body.String(), "entra-client-secret") || strings.Contains(w.Body.String(), accountKey) || strings.Contains(w.Body.String(), "PRIVATE KEY") || strings.Contains(w.Body.String(), "long-enough-secret") {
+			t.Fatalf("%s: %d %s", name, w.Code, w.Body.String())
+		}
+	}
+
 	ids := map[string]string{}
 	for typ, fields := range map[string]map[string]string{
 		"s3":         {"endpoint_url": "https://1.1.1.1", "access_key_id": "AKIDEXAMPLE", "secret_access_key": "s3-secret-access-key"},
+		"gcs":        {"gcs_url": "https://1.1.1.1", "service_account_json": goodSA},
 		"azure_blob": {"account_url": "https://1.1.1.1", "sas_token": "?sv=2022-11-02&sp=rl&sig=c2FzLXNpZ25hdHVyZQ%3D%3D"},
 	} {
 		w := create(typ, fields)
@@ -386,7 +446,7 @@ func TestStorageConnectionsAreDiscoverysAlone(t *testing.T) {
 		w := hs.do(t, http.MethodPost, "/compliance/connections/"+id+"/resolve?tenant_id=t1", who, map[string]any{})
 		return w.Code, w.Body.String()
 	}
-	for typ, secret := range map[string]string{"s3": `"secret_access_key":"s3-secret-access-key"`, "azure_blob": `sig=c2FzLXNpZ25hdHVyZQ%3D%3D`} {
+	for typ, secret := range map[string]string{"s3": `"secret_access_key":"s3-secret-access-key"`, "azure_blob": `sig=c2FzLXNpZ25hdHVyZQ%3D%3D`, "gcs": `scan@acme.iam.gserviceaccount.com`} {
 		id := ids[typ]
 		if code, body := resolve(id, svcClaims("kms-discovery")); code != http.StatusOK || !strings.Contains(body, secret) {
 			t.Fatalf("discovery resolve %s: %d %s", typ, code, body)

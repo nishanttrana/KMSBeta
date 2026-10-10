@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -227,6 +228,7 @@ func TestNormalizeBucket(t *testing.T) {
 		{"s3", "https://storage.googleapis.com:443", "acme_logs.eu", "", "auto", Bucket{Provider: "s3", Endpoint: "https://storage.googleapis.com", Name: "acme_logs.eu", Region: "auto"}},
 		{"s3", "https://10.4.0.20", "ceph", "", "", Bucket{Provider: "s3", Endpoint: "https://10.4.0.20", Name: "ceph", Region: "us-east-1"}},
 		{"azure", "https://acme.blob.core.windows.net", "configs", "prod/", "ignored", Bucket{Provider: "azure", Endpoint: "https://acme.blob.core.windows.net", Name: "configs", Prefix: "prod/"}},
+		{"gcs", "", "acme-logs", "", "ignored", Bucket{Provider: "gcs", Endpoint: "https://storage.googleapis.com", Name: "acme-logs"}},
 	} {
 		got, err := normalizeBucket(c.provider, c.endpoint, c.name, c.prefix, c.region)
 		if err != nil || got != c.want {
@@ -234,7 +236,7 @@ func TestNormalizeBucket(t *testing.T) {
 		}
 	}
 	for _, c := range [][5]string{
-		{"gcs", "https://storage.googleapis.com", "acme", "", ""},                     // unknown provider
+		{"ftp", "https://storage.googleapis.com", "acme", "", ""},                     // unknown provider
 		{"azure", "", "configs", "", ""},                                              // no endpoint to default to
 		{"s3", "http://minio.corp.example", "builds", "", ""},                         // not https
 		{"s3", "https://AKID:secret@minio.corp.example", "builds", "", ""},            // credential in the endpoint
@@ -742,7 +744,7 @@ func TestBucketRoutesAudited(t *testing.T) {
 	expectAudit(t, rec, "bucket_add", route.ResultRefused, route.ReasonPermissionDenied)
 
 	for body, reason := range map[string]string{
-		`{"provider":"gcs","bucket":"acme-artifacts"}`:                                                              "invalid_bucket",
+		`{"provider":"ftp","bucket":"acme-artifacts"}`:                                                              "invalid_bucket",
 		`{"provider":"s3","endpoint":"http://minio.corp.example","bucket":"builds"}`:                                "invalid_bucket",
 		`{"provider":"s3","endpoint":"https://AKID:wJalrSecret@minio.corp.example","bucket":"builds"}`:              "invalid_bucket",
 		`{"provider":"azure","endpoint":"https://acme.blob.core.windows.net?sv=1&sig=c2FzLXNlY3JldA","bucket":"c"}`: "invalid_bucket",
@@ -775,6 +777,10 @@ func TestBucketRoutesAudited(t *testing.T) {
 	}
 	if strings.Contains(rr.Body.String(), testS3Secret) {
 		t.Fatal("secret key in the response")
+	}
+	// A bucket that has not been scanned has no pass times, not year 1.
+	if strings.Contains(rr.Body.String(), "0001-01-01") || strings.Contains(rr.Body.String(), "last_pass_at") || !strings.Contains(rr.Body.String(), `"pass_in_progress":false`) {
+		t.Fatalf("pass times of a bucket never scanned: %s", rr.Body)
 	}
 	expectAudit(t, rec, "bucket_add", route.ResultSuccess, "")
 	if rr := post(testWriter, `{"provider":"s3","region":"eu-west-1","bucket":"acme-artifacts","prefix":"app/"}`); rr.Code != http.StatusConflict {
@@ -876,8 +882,18 @@ func TestLiveObjectStorage(t *testing.T) {
 		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"sas_token": os.Getenv("VECTA_TEST_AZURE_SAS")}}
 		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
 	}
+	// Azure Shared Key: VECTA_TEST_AZURE_ACCOUNT_KEY and VECTA_TEST_AZURE_ACCOUNT_NAME.
+	if ep, key := os.Getenv("VECTA_TEST_AZURE_ENDPOINT"), os.Getenv("VECTA_TEST_AZURE_ACCOUNT_KEY"); ep != "" && key != "" {
+		conn := ResolvedConnection{Type: "azure_blob", Endpoint: host(ep), Fields: map[string]string{"account_key": key, "account_name": os.Getenv("VECTA_TEST_AZURE_ACCOUNT_NAME")}}
+		cases = append(cases, live{Bucket{Provider: "azure", Endpoint: ep, Name: os.Getenv("VECTA_TEST_AZURE_CONTAINER"), ConnectionID: "live"}, conn})
+	}
+	// Google's JSON API: VECTA_TEST_GCS_BUCKET and VECTA_TEST_GCS_PREFIX (a
+	// public bucket, read with no credential).
+	if name := os.Getenv("VECTA_TEST_GCS_BUCKET"); name != "" {
+		cases = append(cases, live{Bucket{Provider: "gcs", Endpoint: "https://storage.googleapis.com", Name: name, Prefix: os.Getenv("VECTA_TEST_GCS_PREFIX")}, ResolvedConnection{}})
+	}
 	if len(cases) == 0 {
-		t.Skip("set VECTA_TEST_S3_ENDPOINT or VECTA_TEST_AZURE_ENDPOINT to scan a real storage service")
+		t.Skip("set VECTA_TEST_S3_ENDPOINT, VECTA_TEST_AZURE_ENDPOINT or VECTA_TEST_GCS_BUCKET to scan a real storage service")
 	}
 	svc, _, _ := newDiscoveryService(t)
 	if ca := os.Getenv("VECTA_TEST_STORAGE_CA"); ca != "" {
@@ -891,8 +907,9 @@ func TestLiveObjectStorage(t *testing.T) {
 		}
 	}
 	least, _ := strconv.Atoi(os.Getenv("VECTA_TEST_STORAGE_MIN_ASSETS"))
-	for _, c := range cases {
-		c.b.TenantID, c.b.Deep = "t1", os.Getenv("VECTA_TEST_STORAGE_DEEP") != ""
+	for i, c := range cases {
+		// Each case keeps its own scan state.
+		c.b.ID, c.b.TenantID, c.b.Deep = fmt.Sprintf("live%d", i), fmt.Sprintf("t-live%d", i), os.Getenv("VECTA_TEST_STORAGE_DEEP") != ""
 		svc.conns = stubConnections{"live": c.conn}
 		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s", false)
 		t.Logf("%s %s: %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
@@ -901,7 +918,7 @@ func TestLiveObjectStorage(t *testing.T) {
 		}
 		// A second run: the real service's ETags say nothing changed, so
 		// nothing is downloaded and every asset is marked seen.
-		svc.storeAssets(context.Background(), "t1", res.assets, map[string]bool{})
+		svc.storeAssets(context.Background(), c.b.TenantID, res.assets, map[string]bool{})
 		again, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s2", false)
 		t.Logf("%s second run: %d read, %d unchanged, %d assets kept, err %v", c.b.label(), again.files, again.unchanged, again.kept, err)
 		if err != nil || again.files != 0 || again.unchanged < res.files || again.kept != len(res.assets) {
@@ -914,6 +931,8 @@ func TestLiveObjectStorage(t *testing.T) {
 		for k := range c.conn.Fields {
 			if k == "secret_access_key" {
 				c.conn.Fields[k] += "x"
+			} else if k == "account_key" {
+				c.conn.Fields[k] = base64.StdEncoding.EncodeToString([]byte("not-the-account-key-0123456789ab"))
 			} else if k == "sas_token" {
 				c.conn.Fields[k] = strings.Replace(c.conn.Fields[k], "sig=", "sig=AAAA", 1)
 			}

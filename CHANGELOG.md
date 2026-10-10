@@ -4,6 +4,42 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.39.0-beta] — 2026-10-11
+
+### Crypto Discovery: more ways to authenticate to object storage
+- **Added: AWS role assumption.** An `s3` connection can name a `role_arn`
+  (and `external_id`). For each scan the stored key signs one `AssumeRole`
+  call to AWS STS and the bucket is read with the temporary credentials it
+  returns, so the stored key needs no access to the bucket itself. Amazon
+  endpoints only.
+- **Added: Azure Entra ID.** An `azure_blob` connection can hold an
+  application's `azure_tenant_id`, `client_id` and `client_secret` instead
+  of a SAS token; the scan obtains a storage token with them for each scan.
+- **Added: Azure account key (Shared Key).** An `azure_blob` connection can
+  hold the storage account's `account_key`; every request is signed with
+  it and the key is never sent. The key grants the whole account, so the
+  form says to prefer a SAS token or Entra ID. An Azure connection holds
+  exactly one of the three credentials.
+- **Added: Google Cloud Storage's own API with a service account.** A new
+  connection type `gcs` holds a service account key file, and a new bucket
+  provider `gcs` reads through Google's JSON API with a read-only token
+  obtained by a signed assertion. The earlier route (Google's S3-compatible
+  endpoint with an HMAC key) remains as "Google Cloud Storage (HMAC key)".
+- **Secrets stay where they belong:** the Entra client secret goes only to
+  the Entra token endpoint and the Google assertion only to Google's; AWS
+  keys and the Azure account key are never sent, only signatures. Tokens
+  and temporary credentials live for one scan, in memory. A refusal reports
+  the provider's error code and nothing else of its answer.
+- **Fixed:** a bucket that had never completed a pass returned
+  `last_pass_at` as year 1 instead of leaving it out (7.38.0-beta).
+- **What was verified against a real service and what was not:** Azure
+  Shared Key against Azurite, and Google's JSON API against a public
+  bucket. AWS role assumption, Entra ID and the Google service-account
+  token exchange were tested against protocol doubles that verify the
+  signatures (the AWS SDK's signer, the assertion's RSA signature); they
+  have not been run against a real AWS account, Entra tenant or Google
+  project.
+
 ## [7.38.0-beta] — 2026-10-10
 
 ### Crypto Discovery: bucket scans are incremental and continue across runs

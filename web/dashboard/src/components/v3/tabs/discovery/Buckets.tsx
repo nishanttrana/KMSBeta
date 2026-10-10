@@ -17,16 +17,17 @@ function progress(b: DiscoveryBucket): string {
   return last || "not scanned yet";
 }
 
-// Each service is one of the two APIs the scan speaks: S3 (signed requests)
-// or Azure Blob (a SAS token). endpoint/region set here are fixed for it.
+// Each service is one of the three APIs the scan speaks: S3, Azure Blob or
+// Google Cloud Storage. endpoint/region set here are fixed for it.
 type Service = { id: string; label: string; provider: DiscoveryBucket["provider"]; endpoint?: string; region?: string; endpointHint: string };
 const SERVICES: Service[] = [
   { id: "aws", label: "Amazon S3", provider: "s3", endpoint: "", endpointHint: "set by the region" },
   { id: "s3", label: "S3-compatible (MinIO, Ceph, R2)", provider: "s3", endpointHint: "https://storage.example.com" },
-  { id: "gcs", label: "Google Cloud Storage", provider: "s3", endpoint: "https://storage.googleapis.com", region: "auto", endpointHint: "" },
+  { id: "gcs", label: "Google Cloud Storage (service account)", provider: "gcs", endpoint: "https://storage.googleapis.com", region: "", endpointHint: "" },
+  { id: "gcs-hmac", label: "Google Cloud Storage (HMAC key)", provider: "s3", endpoint: "https://storage.googleapis.com", region: "auto", endpointHint: "" },
   { id: "azure", label: "Azure Blob Storage", provider: "azure", region: "", endpointHint: "https://account.blob.core.windows.net" },
 ];
-const PROVIDER_LABEL: Record<string, string> = { s3: "S3", azure: "Azure" };
+const PROVIDER_LABEL: Record<string, string> = { s3: "S3", azure: "Azure", gcs: "Google" };
 
 type Props = {
   open: boolean;
@@ -112,7 +113,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
           {SERVICES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </Sel>
         <Inp mono placeholder={service.endpointHint} disabled={fixedEndpoint} value={fixedEndpoint ? service.endpoint : endpoint} onChange={(e) => setEndpoint(e.target.value)} />
-        <Inp mono placeholder={service.provider === "azure" ? "no region" : "region (us-east-1)"} disabled={fixedRegion} value={fixedRegion ? service.region : region} onChange={(e) => setRegion(e.target.value)} />
+        <Inp mono placeholder={service.provider === "s3" ? "region (us-east-1)" : "no region"} disabled={fixedRegion} value={fixedRegion ? service.region : region} onChange={(e) => setRegion(e.target.value)} />
       </div>
       <div style={{ ...row, gridTemplateColumns: "minmax(140px,1.2fr) minmax(120px,1fr) minmax(160px,1.3fr) auto auto" }}>
         <Inp mono placeholder={service.provider === "azure" ? "container" : "bucket"} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} />

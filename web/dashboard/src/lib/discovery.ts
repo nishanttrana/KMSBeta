@@ -389,13 +389,13 @@ export async function listSourceConnections(session: AuthSession, types: string[
 export const listGitConnections = (session: AuthSession) => listSourceConnections(session, ["git"]);
 
 // An object storage bucket the tenant added for the "storage" scan source:
-// provider "s3" (S3 or a service that speaks its API) or "azure" (a Blob
-// container). The endpoint holds no credential; a private bucket names a
+// provider "s3" (S3 or a service that speaks its API), "azure" (a Blob
+// container) or "gcs" (Google Cloud Storage's own API). The endpoint holds no credential; a private bucket names a
 // sealed s3 or azure_blob connection (Playbooks, Connections).
 export type DiscoveryBucket = {
   id: string;
   tenant_id: string;
-  provider: "s3" | "azure";
+  provider: "s3" | "azure" | "gcs";
   endpoint: string;
   bucket: string;
   prefix: string;
@@ -414,7 +414,7 @@ export type DiscoveryBucket = {
 };
 
 // The connection type a provider's private bucket reads with.
-export const BUCKET_CONNECTION_TYPE: Record<DiscoveryBucket["provider"], string> = { s3: "s3", azure: "azure_blob" };
+export const BUCKET_CONNECTION_TYPE: Record<DiscoveryBucket["provider"], string> = { s3: "s3", azure: "azure_blob", gcs: "gcs" };
 
 export async function listDiscoveryBuckets(session: AuthSession): Promise<DiscoveryBucket[]> {
   const res = await serviceRequest<{ items?: DiscoveryBucket[] }>(

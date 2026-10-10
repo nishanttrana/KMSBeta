@@ -22,7 +22,7 @@ keep one.
 | ticketing | `jira`, `servicenow` | playbook actions |
 | siem | `splunk_hec`, `datadog`, `elastic`, `sentinel`, `syslog` (`pkg/siem`) | `send_siem_alert`, event streams |
 | source | `git`: the hosting site (`git_url`), an access `token`, optional `username` for Basic authentication (7.20.0-beta) | discovery's git repository scans |
-| source | `s3`: the storage service (`endpoint_url`), `access_key_id`, `secret_access_key` (at least 10 characters). `azure_blob`: the storage account (`account_url`) and a `sas_token` with read and list (7.34.0-beta) | discovery's object storage scans |
+| source | `s3`: the storage service (`endpoint_url`), `access_key_id`, `secret_access_key` (at least 10 characters), optional `role_arn` and `external_id` (Amazon only). `azure_blob`: the storage account (`account_url`) and exactly one credential: a `sas_token` with read and list, an Entra ID application (`azure_tenant_id`, `client_id`, `client_secret`), or the `account_key` (with `account_name` if the address does not name the account). `gcs`: `gcs_url` and a `service_account_json` key file (7.34.0-beta; roles, Entra ID, account key and `gcs` 7.39.0-beta) | discovery's object storage scans |
 
 ## Who can open one
 
@@ -53,6 +53,16 @@ keep one.
   request's query to the connection's host only. No redirect is followed,
   and no error or audit event carries the URL. Tested on a bucket that uses
   it (`POST /discovery/buckets/{id}/test`).
+- **Where each storage secret goes** (7.39.0-beta): an AWS key signs
+  requests to the bucket's host and, with a role, one `AssumeRole` call to
+  AWS STS; the key is never sent. An Azure account key signs requests and
+  is never sent. An Entra ID client secret is sent only to
+  `login.microsoftonline.com`, and a Google assertion only to
+  `oauth2.googleapis.com`; the tokens they return go only to the bucket's
+  host. Temporary credentials and tokens are held for one scan and never
+  stored. The preferred choices are the narrow ones: a role, a SAS token,
+  an Entra ID application or a service account with read access to the
+  bucket. An account key grants the whole storage account.
 - The audit service keeps an opened connection in memory for 60 seconds and
   governance for one notice. Neither writes one to disk, a log or an error:
   delivery errors name the host, never the URL (a Slack or Teams URL is
@@ -123,6 +133,9 @@ again after a restore:
   need no token. The same holds for a storage service on a private address
   (an on-premises MinIO or Ceph): its public buckets can be scanned, its
   private ones can't until the allowlist exists.
-- Object storage credentials are a static S3 access key or an Azure SAS
-  token. Azure account keys and Entra ID, Google's native API and temporary
-  (STS) credentials are not supported.
+- AWS role assumption, Entra ID and the Google service-account token
+  exchange are tested against protocol doubles that verify the signatures,
+  not against a real AWS account, Entra tenant or Google project
+  (7.39.0-beta). Entra ID supports the public Azure cloud only (the login
+  host is fixed), and role assumption the standard AWS partition's regional
+  STS endpoints.

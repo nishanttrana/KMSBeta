@@ -1985,7 +1985,7 @@ recorded in the exposure register: rotate those webhook URLs and tokens.
 
 | Route | Caller | Audit action |
 |---|---|---|
-| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta; `s3`, `azure_blob`, 7.34.0-beta) | `connection_resolved` |
+| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta; `s3`, `azure_blob`, 7.34.0-beta; `gcs`, 7.39.0-beta) | `connection_resolved` |
 | `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
@@ -3425,12 +3425,13 @@ created_at}]}`). `POST /discovery/buckets` with body
 adds one (`201
 {"bucket": {...}}`). `provider` is `s3` (Amazon S3 or a service that speaks
 its API: MinIO, Ceph, Cloudflare R2, or Google Cloud Storage at
-`https://storage.googleapis.com` with HMAC keys and region `auto`) or
-`azure` (a Blob container). `endpoint` is the service's https address with
+`https://storage.googleapis.com` with HMAC keys and region `auto`),
+`azure` (a Blob container) or `gcs` (Google Cloud Storage's JSON API,
+7.39.0-beta; `endpoint` may be empty). `endpoint` is the service's https address with
 no path, query or credential; for `s3` it may be empty, which means
 `https://s3.{region}.amazonaws.com`. `region` (`s3` only) defaults to
-`us-east-1`. `connection_id` names a sealed `s3` or `azure_blob` connection
-for a private bucket. `DELETE /discovery/buckets/{id}` removes one.
+`us-east-1`. `connection_id` names a sealed `s3`, `azure_blob` or `gcs`
+connection for a private bucket. `DELETE /discovery/buckets/{id}` removes one.
 Refusals: `400 invalid_bucket` (an unknown provider, an endpoint that is
 not an https service address or carries a credential or query, a reserved
 address, or a bad bucket name, prefix or region), `400 platform_target`,
@@ -3457,6 +3458,21 @@ the scan; a bucket that fails, or an object that can't be read, is named in
 service's error only its code is reported (`access denied
 (SignatureDoesNotMatch)`). Object versions, archives inside the bucket and
 archive storage classes are not read.
+
+**Credentials (7.39.0-beta).** What a bucket's connection holds decides
+how the scan authenticates. `s3`: `access_key_id` and `secret_access_key`
+sign each request (Signature V4); with `role_arn` (and `external_id`) the
+key signs `AssumeRole` at `https://sts.{region}.amazonaws.com/` and the
+scan reads with the temporary credentials. `azure_blob`: exactly one of
+`sas_token`; `azure_tenant_id` + `client_id` + `client_secret` (an Entra ID
+token for `https://storage.azure.com/.default`); or `account_key` (Shared
+Key signing; `account_name` when the address does not begin with the
+account). `gcs`: `service_account_json`, exchanged at
+`https://oauth2.googleapis.com/token` for a
+`devstorage.read_only` token. A refusal by a token service fails the bucket
+with that service's error code (`AWS STS refused to assume the role
+(AccessDenied)`, `Entra ID refused the connection's credential
+(invalid_client)`), and no request is made to the bucket.
 
 **Incremental and resumable (7.38.0-beta).** One run reads at most 100,000
 objects, 512 MiB or six minutes of a bucket, then records where it stopped;

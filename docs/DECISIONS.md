@@ -7,6 +7,36 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Discovery: storage credentials are signed or exchanged in the service; the account key is allowed and discouraged (7.39.0-beta)
+
+- **Decision:** discovery implements each provider's authentication itself,
+  over the scan's guarded HTTPS client: Signature V4 for S3 and STS
+  `AssumeRole`, Shared Key for Azure, the client-credentials grant for
+  Entra ID, and a signed assertion (RS256 from `pkg/crypto`) for Google.
+  Tokens and temporary credentials are fetched per scan and never stored.
+- **Why not the SDKs:** as in the 7.34.0-beta entry: their HTTP clients and
+  credential chains (environment, instance metadata, config files) would
+  bypass the dial guard and could pick up credentials that are not the
+  tenant's.
+- **Decision (owner default, recorded when the owner said "fix all"
+  without choosing):** the Azure account key is supported, with the form
+  saying it grants the whole storage account and to prefer a SAS token or
+  Entra ID. An Azure connection holds exactly one credential, so which one
+  is in use is never in doubt.
+- **Rejected:** storing a long-lived token instead of exchanging per scan
+  (it expires, and a stored bearer token is a second secret to protect).
+  Static session tokens pasted into a connection (they expire within
+  hours; the role is what should be stored).
+- **Cost:** role assumption, Entra ID and the Google exchange are proven
+  against doubles that verify signatures, not real tenants. Entra ID is the
+  public Azure cloud only.
+- **Enforced by:** `TestS3AssumesItsRole`, `TestAzureSharedKeyAndEntraID`,
+  `TestGCSServiceAccount`, `TestStorageConnectionsAreDiscoverysAlone`, and
+  `TestLiveObjectStorage` (Shared Key against Azurite and the JSON API
+  against a public Google bucket, 2026-10-11).
+
+---
+
 ## 2026-10-10 — Discovery: a bucket is read over as many scans as it takes; unchanged objects are skipped by ETag (7.38.0-beta)
 
 - **Decision:** a run reads a bounded part of a bucket and saves a cursor;

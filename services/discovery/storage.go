@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -63,7 +64,7 @@ var (
 	errBucketExists  = errors.New("bucket already added")
 	errBucketLimit   = fmt.Errorf("at most %d buckets per tenant", maxBucketsPerTenant)
 
-	bucketProviders = map[string]string{"s3": "s3", "azure": "azure_blob"} // provider -> connection type
+	bucketProviders = map[string]string{"s3": "s3", "azure": "azure_blob", "gcs": "gcs"} // provider -> connection type
 
 	reBucketName = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$`)
 	reRegion     = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
@@ -76,10 +77,10 @@ func normalizeBucket(provider, endpoint, name, prefix, region string) (Bucket, e
 	bad := func(msg string) (Bucket, error) { return Bucket{}, fmt.Errorf("%w: %s", errInvalidBucket, msg) }
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if _, ok := bucketProviders[provider]; !ok {
-		return bad("provider must be s3 or azure")
+		return bad("provider must be s3, azure or gcs")
 	}
 	region = strings.ToLower(strings.TrimSpace(region))
-	if provider == "azure" {
+	if provider != "s3" {
 		region = ""
 	} else if region == "" {
 		region = "us-east-1"
@@ -87,8 +88,11 @@ func normalizeBucket(provider, endpoint, name, prefix, region string) (Bucket, e
 		return bad("the region has characters a region name can't have")
 	}
 	endpoint = strings.TrimSpace(endpoint)
-	if endpoint == "" && provider == "s3" {
+	switch {
+	case endpoint == "" && provider == "s3":
 		endpoint = "https://s3." + region + ".amazonaws.com"
+	case endpoint == "" && provider == "gcs":
+		endpoint = "https://storage.googleapis.com"
 	}
 	u, err := neturl.Parse(endpoint)
 	if err != nil || u.Hostname() == "" {
@@ -145,48 +149,6 @@ func (b Bucket) label() string {
 	return strings.TrimPrefix(b.Endpoint, "https://") + "/" + b.Name
 }
 
-// bucketCredential is an opened s3 or azure_blob connection, held for one
-// scan.
-type bucketCredential struct {
-	accessKey, secretKey string        // s3
-	sas                  neturl.Values // azure
-}
-
-// bucketCredential opens the bucket's connection. It must be of the
-// provider's type and for the bucket's own host: a credential is never sent
-// to a host its connection doesn't name.
-func (s *Service) bucketCredential(ctx context.Context, b Bucket) (bucketCredential, error) {
-	if b.ConnectionID == "" {
-		return bucketCredential{}, nil
-	}
-	if s.conns == nil {
-		return bucketCredential{}, errConnectionsUnset
-	}
-	conn, err := s.conns.Resolve(ctx, b.TenantID, b.ConnectionID)
-	if err != nil {
-		return bucketCredential{}, fmt.Errorf("connection %s: %w", b.ConnectionID, err)
-	}
-	if want := bucketProviders[b.Provider]; conn.Type != want {
-		return bucketCredential{}, fmt.Errorf("%w: %s is a %s connection, not %s", errConnectionUnfit, b.ConnectionID, conn.Type, want)
-	}
-	if !strings.EqualFold(conn.Endpoint, b.host()) {
-		return bucketCredential{}, fmt.Errorf("%w: its credential is for %s, not %s", errConnectionUnfit, conn.Endpoint, b.host())
-	}
-	if b.Provider == "azure" {
-		sas, err := neturl.ParseQuery(strings.TrimPrefix(strings.TrimSpace(conn.Fields["sas_token"]), "?"))
-		if err != nil || sas.Get("sig") == "" {
-			return bucketCredential{}, fmt.Errorf("%w: its SAS token is not a signed query string", errConnectionUnfit)
-		}
-		return bucketCredential{sas: sas}, nil
-	}
-	cred := bucketCredential{accessKey: strings.TrimSpace(conn.Fields["access_key_id"]), secretKey: strings.TrimSpace(conn.Fields["secret_access_key"])}
-	// An HMAC key under 112 bits is not approved, and panics in FIPS-only mode.
-	if cred.accessKey == "" || len("AWS4"+cred.secretKey) < 14 {
-		return bucketCredential{}, fmt.Errorf("%w: its access key is missing or its secret key is too short to sign with", errConnectionUnfit)
-	}
-	return cred, nil
-}
-
 // awsEscape percent-encodes s as request signing requires: every byte but
 // the unreserved characters, and "/" when it separates path segments.
 func awsEscape(s string, keepSlash bool) string {
@@ -222,28 +184,6 @@ func canonicalQuery(q neturl.Values) string {
 // emptySHA256 is the payload hash of a request with no body.
 var emptySHA256 = hex.EncodeToString(pkgcrypto.SHA256(nil))
 
-// signV4 signs a bodyless GET with AWS Signature Version 4 for service s3.
-// The request's path and query must already be in canonical encoding.
-func signV4(req *http.Request, cred bucketCredential, region string, now time.Time) {
-	stamp := now.UTC().Format("20060102T150405Z")
-	date := stamp[:8]
-	req.Header.Set("X-Amz-Date", stamp)
-	req.Header.Set("X-Amz-Content-Sha256", emptySHA256)
-	const signed = "host;x-amz-content-sha256;x-amz-date"
-	canonical := strings.Join([]string{
-		req.Method, req.URL.EscapedPath(), req.URL.RawQuery,
-		"host:" + req.URL.Host + "\nx-amz-content-sha256:" + emptySHA256 + "\nx-amz-date:" + stamp + "\n",
-		signed, emptySHA256,
-	}, "\n")
-	scope := date + "/" + region + "/s3/aws4_request"
-	toSign := "AWS4-HMAC-SHA256\n" + stamp + "\n" + scope + "\n" + hex.EncodeToString(pkgcrypto.SHA256([]byte(canonical)))
-	key := []byte("AWS4" + cred.secretKey)
-	for _, part := range []string{date, region, "s3", "aws4_request"} {
-		key = pkgcrypto.HMACSHA256(key, []byte(part))
-	}
-	req.Header.Set("Authorization", "AWS4-HMAC-SHA256 Credential="+cred.accessKey+"/"+scope+", SignedHeaders="+signed+", Signature="+hex.EncodeToString(pkgcrypto.HMACSHA256(key, []byte(toSign))))
-}
-
 // storageClient is the HTTPS client for one scan's bucket reads. It follows
 // no redirect: a signature is for one host, and a SAS token is in the URL.
 func (s *Service) storageClient(guard dialControl) *http.Client {
@@ -268,15 +208,7 @@ func (s *Service) storageClient(guard dialControl) *http.Client {
 // storageError turns a storage service's answer into what the operator can
 // act on. Of the response it keeps only the service's error code.
 func storageError(resp *http.Response, private bool) error {
-	var e struct {
-		Code string `xml:"Code"`
-	}
-	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	_ = xml.Unmarshal(raw, &e)
-	code := ""
-	if reErrorCode.MatchString(e.Code) {
-		code = " (" + e.Code + ")"
-	}
+	code := errorCode(resp)
 	switch status := resp.StatusCode; {
 	case status == http.StatusUnauthorized || status == http.StatusForbidden:
 		if private {
@@ -304,7 +236,14 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 		q[k] = v
 	}
 	target := b.Endpoint + "/" + awsEscape(b.Name, false)
-	if key != "" {
+	if b.Provider == "gcs" {
+		// The JSON API names an object as one path segment.
+		target = b.Endpoint + "/storage/v1/b/" + awsEscape(b.Name, false) + "/o"
+		if key != "" {
+			target += "/" + awsEscape(key, false)
+			q.Set("alt", "media")
+		}
+	} else if key != "" {
 		target += "/" + awsEscape(key, true)
 	}
 	if enc := canonicalQuery(q); enc != "" {
@@ -318,11 +257,16 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 	if first > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", first-1))
 	}
-	switch {
-	case b.Provider == "azure":
+	if b.Provider == "azure" {
 		req.Header.Set("x-ms-version", azureAPIVersion)
-	case cred.accessKey != "":
-		signV4(req, cred, b.Region, s.now())
+	}
+	switch {
+	case cred.bearer != "":
+		req.Header.Set("Authorization", "Bearer "+cred.bearer)
+	case cred.accountKey != nil:
+		signSharedKey(req, cred, s.now())
+	case b.Provider == "s3" && cred.accessKey != "":
+		signV4(req, cred, b.Region, "s3", s.now())
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -352,6 +296,9 @@ type bucketObject struct {
 // An S3 cursor is the last key listed (start-after), which stays valid
 // between scans; an Azure cursor is the service's marker.
 func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, cursor string) ([]bucketObject, string, error) {
+	if b.Provider == "gcs" {
+		return s.listGCS(ctx, client, b, cred, cursor)
+	}
 	q := neturl.Values{}
 	if b.Provider == "azure" {
 		q.Set("restype", "container")
@@ -411,6 +358,40 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 		return nil, "", errors.New("the storage service's listing is incomplete and names no next page")
 	}
 	return out, out[len(out)-1].key, nil
+}
+
+// listGCS reads one page of a bucket's listing from Google's JSON API. Its
+// cursor is the service's page token.
+func (s *Service) listGCS(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, cursor string) ([]bucketObject, string, error) {
+	q := neturl.Values{"maxResults": {fmt.Sprint(bucketPageSize)}, "fields": {"items(name,size,etag),nextPageToken"}}
+	if cursor != "" {
+		q.Set("pageToken", cursor)
+	}
+	if b.Prefix != "" {
+		q.Set("prefix", b.Prefix)
+	}
+	resp, err := s.bucketGet(ctx, client, b, cred, "", q, 0)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	var page struct {
+		Items []struct {
+			Name string `json:"name"`
+			Size string `json:"size"`
+			ETag string `json:"etag"`
+		} `json:"items"`
+		Next string `json:"nextPageToken"`
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
+	if err != nil || !json.Valid(raw) || json.Unmarshal(raw, &page) != nil {
+		return nil, "", errors.New("the storage service did not return a listing")
+	}
+	out := make([]bucketObject, 0, len(page.Items))
+	for _, o := range page.Items {
+		out = append(out, bucketObject{o.Name, int64(atoi(o.Size)), o.ETag})
+	}
+	return out, page.Next, nil
 }
 
 // readObject downloads an object of at most limit bytes. first > 0 reads
@@ -519,6 +500,9 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 	var out bucketScan
 	cred, err := s.bucketCredential(ctx, b)
 	if err != nil {
+		return out, err
+	}
+	if err := s.authorize(ctx, client, b, &cred); err != nil {
 		return out, err
 	}
 	started := s.now()

@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	neturl "net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -73,10 +75,18 @@ var connectionTypes = func() []ConnectionSpec {
 		// endpoint_url is the storage service (https://s3.eu-west-1.amazonaws.com,
 		// a MinIO or Ceph address, https://storage.googleapis.com with HMAC
 		// keys). The key signs requests to that host only.
-		{Type: "s3", Label: "S3 object storage (access key)", Fields: []string{"endpoint_url", "access_key_id", "secret_access_key"}, URLField: "endpoint_url", Category: categorySource, Secrets: []string{"secret_access_key"}},
-		// account_url is the storage account (https://account.blob.core.windows.net);
-		// sas_token is a shared access signature with read and list.
-		{Type: "azure_blob", Label: "Azure Blob Storage (SAS token)", Fields: []string{"account_url", "sas_token"}, URLField: "account_url", Category: categorySource, Secrets: []string{"sas_token"}},
+		// role_arn (AWS only): the key signs an AssumeRole call and the
+		// scan reads with the role's temporary credentials (7.39.0-beta).
+		{Type: "s3", Label: "S3 object storage (access key, optional role)", Fields: []string{"endpoint_url", "access_key_id", "secret_access_key"}, URLField: "endpoint_url", Optional: []string{"role_arn", "external_id"}, Category: categorySource, Secrets: []string{"secret_access_key"}},
+		// account_url is the storage account (https://account.blob.core.windows.net).
+		// One credential: sas_token (read and list), an Entra ID application
+		// (azure_tenant_id, client_id, client_secret), or account_key, which
+		// grants the whole storage account (7.39.0-beta).
+		{Type: "azure_blob", Label: "Azure Blob Storage (SAS token, Entra ID or account key)", Fields: []string{"account_url"}, URLField: "account_url",
+			Optional: []string{"sas_token", "azure_tenant_id", "client_id", "client_secret", "account_key", "account_name"}, Category: categorySource, Secrets: []string{"sas_token", "client_secret", "account_key"}},
+		// gcs_url is https://storage.googleapis.com; service_account_json is
+		// a service account key file, used for a read-only token (7.39.0-beta).
+		{Type: "gcs", Label: "Google Cloud Storage (service account)", Fields: []string{"gcs_url", "service_account_json"}, URLField: "gcs_url", Category: categorySource, Secrets: []string{"service_account_json"}},
 	}
 	for _, s := range siem.Specs {
 		out = append(out, ConnectionSpec{Type: s.Kind, Label: s.Label, Fields: s.Required, URLField: s.URLField, Optional: s.Optional,
@@ -257,10 +267,8 @@ func validateConnection(c Connection) error {
 	if s, ok := c.Fields["secret_access_key"]; ok && len(strings.TrimSpace(s)) < minS3SecretKey {
 		return fmt.Errorf("secret_access_key must be at least %d characters (HMAC keys under 112 bits are not approved)", minS3SecretKey)
 	}
-	if s, ok := c.Fields["sas_token"]; ok {
-		if q, err := neturl.ParseQuery(strings.TrimPrefix(strings.TrimSpace(s), "?")); err != nil || q.Get("sig") == "" {
-			return errors.New("sas_token must be the shared access signature's query string (sv=...&sig=...)")
-		}
+	if err := validateSourceCredential(c); err != nil {
+		return err
 	}
 	if spec.Category == categorySIEM {
 		// Build it: the destination checks its own fields (https, DCR and
@@ -271,6 +279,66 @@ func validateConnection(c Connection) error {
 		return checkOutboundURL(siem.ValidationURL(c.Type, c.Fields))
 	}
 	return checkOutboundURL(c.Fields[spec.URLField])
+}
+
+var reIAMRole = regexp.MustCompile(`^arn:aws[a-z-]*:iam::\d{12}:role/[\w+=,.@/-]{1,512}$`)
+
+// validateSourceCredential checks the credential of a storage connection:
+// an Azure connection holds exactly one kind, and each is well formed.
+func validateSourceCredential(c Connection) error {
+	f := func(k string) string { return strings.TrimSpace(c.Fields[k]) }
+	switch c.Type {
+	case "s3":
+		if arn := f("role_arn"); arn != "" {
+			if !reIAMRole.MatchString(arn) {
+				return errors.New("role_arn must be an IAM role ARN (arn:aws:iam::123456789012:role/name)")
+			}
+			if !strings.HasSuffix(strings.ToLower(endpointHost(f("endpoint_url"))), ".amazonaws.com") {
+				return errors.New("role_arn is for Amazon S3 endpoints (…amazonaws.com); other services take the access key alone")
+			}
+		} else if f("external_id") != "" {
+			return errors.New("external_id is used with role_arn")
+		}
+	case "azure_blob":
+		kinds := 0
+		if s := f("sas_token"); s != "" {
+			kinds++
+			if q, err := neturl.ParseQuery(strings.TrimPrefix(s, "?")); err != nil || q.Get("sig") == "" {
+				return errors.New("sas_token must be the shared access signature's query string (sv=...&sig=...)")
+			}
+		}
+		if k := f("account_key"); k != "" {
+			kinds++
+			// Under 14 bytes the HMAC key is below 112 bits, which is not approved.
+			if raw, err := base64.StdEncoding.DecodeString(k); err != nil || len(raw) < 14 {
+				return errors.New("account_key must be the storage account's base64 key")
+			}
+		} else if f("account_name") != "" {
+			return errors.New("account_name is used with account_key")
+		}
+		if f("azure_tenant_id") != "" || f("client_id") != "" || f("client_secret") != "" {
+			kinds++
+			if f("azure_tenant_id") == "" || f("client_id") == "" || f("client_secret") == "" {
+				return errors.New("an Entra ID application needs azure_tenant_id, client_id and client_secret")
+			}
+		}
+		if kinds != 1 {
+			return errors.New("give one credential: sas_token, or azure_tenant_id with client_id and client_secret, or account_key")
+		}
+	case "gcs":
+		var sa struct {
+			Type        string `json:"type"`
+			ClientEmail string `json:"client_email"`
+			PrivateKey  string `json:"private_key"`
+		}
+		if json.Unmarshal([]byte(c.Fields["service_account_json"]), &sa) != nil || sa.Type != "service_account" || sa.ClientEmail == "" {
+			return errors.New("service_account_json must be a Google service account key file")
+		}
+		if _, err := pkgcrypto.SignPKCS1v15SHA256PEM(sa.PrivateKey, []byte("check")); err != nil {
+			return errors.New("service_account_json holds no usable RSA private key")
+		}
+	}
+	return nil
 }
 
 // connectionEndpoint is the host shown for a connection.

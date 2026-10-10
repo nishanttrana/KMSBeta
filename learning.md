@@ -3,6 +3,36 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-11
+
+### Discovery: storage credentials (7.39.0-beta)
+- **A zero time is not empty.** `json:",omitempty"` does nothing for
+  `time.Time`, so a bucket never scanned said `"last_pass_at":
+  "0001-01-01T00:00:00Z"`, which the dialog would have shown as a pass. It
+  went out in 7.38.0-beta because the smoke fixture set the field by hand.
+  `Bucket.MarshalJSON` now omits unset times and a route test reads the
+  real response.
+- **The first label of a host is an account name only for a name.** For
+  `127.0.0.1` it is `127`, which passed the account-name pattern. An IP
+  endpoint needs `account_name` stated.
+- **Each provider signs something different, and none needs the secret on
+  the wire.** SigV4 (S3, and STS with the session token as a signed header),
+  Shared Key (a fixed twelve-line string, then the x-ms headers and the
+  resource with its sorted query), and a JWT for Google. Only the Entra
+  client secret is itself sent, and only to the token endpoint.
+- **A test double is only evidence if it checks independently.** The STS and
+  S3 doubles compare against the AWS SDK's signer; the Shared Key double
+  recomputes with the standard library; the Google double verifies the
+  assertion with the public key. Where a real service exists locally
+  (Azurite) the live test is the proof; where none does (STS, Entra, Google
+  token exchange) the changelog says so.
+- **Live cases must not share state.** Two live cases against the same
+  container shared scan state, so the second "read nothing" and looked like
+  a pass. Each case now has its own tenant and bucket ID.
+- **A pinned test CA breaks public endpoints.** The live script's CA pool
+  for the local servers made Google's certificate unverifiable; public
+  services are run without it.
+
 ## 2026-10-10
 
 ### Discovery: incremental, resumable bucket scans (7.38.0-beta)

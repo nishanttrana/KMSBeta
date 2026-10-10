@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-10T18:24:15Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:33:22Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -196,7 +196,7 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/risk/keys | GET /compliance/risk/keys | handleGetKeyRiskRanking (services/compliance/handler_dri.go:194) | publishAudit |  |  |  | web/dashboard/src/lib/dri.ts:54 |
 | compliance\|GET\|/compliance/risk/summary | GET /compliance/risk/summary | handleGetDataRiskSummary (services/compliance/handler_dri.go:244) |  |  |  |  | web/dashboard/src/lib/dri.ts:62 |
 | compliance\|GET\|/compliance/risk/remediation | GET /compliance/risk/remediation | handleGetRiskRemediation (services/compliance/handler_dri.go:322) |  |  |  |  | web/dashboard/src/lib/dri.ts:82 |
-| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:315) |  | ListConnections |  |  | web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:218 |
+| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:383) |  | ListConnections |  |  | web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:218 |
 | confidential\|GET\|/confidential/policy | GET /confidential/policy | getPolicy (services/confidential/handler.go:59) | GetAttestationPolicy | GetAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:137 |
 | confidential\|PUT\|/confidential/policy | PUT /confidential/policy | setPolicy (services/confidential/handler.go:68) | UpdateAttestationPolicy | UpsertAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:149 |
 | confidential\|GET\|/confidential/summary | GET /confidential/summary | getSummary (services/confidential/handler.go:92) | GetAttestationSummary | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:165 |
@@ -834,11 +834,11 @@ This file connects frontend requests to backend Go processing. It is static anal
 | compliance\|GET\|/compliance/playbook-runs/{param} | GET /compliance/playbook-runs/{run_id} | getRun (services/compliance/handler_playbooks.go:427) |  |  |  |  |  |
 | compliance\|POST\|/compliance/playbook-runs/{param}/cancel | POST /compliance/playbook-runs/{run_id}/cancel | cancelRun (services/compliance/handler_playbooks.go:435) |  |  | h.executor.Cancel |  |  |
 | compliance\|POST\|/compliance/playbook-runs/{param}/retry | POST /compliance/playbook-runs/{run_id}/retry | retryRun (services/compliance/handler_playbooks.go:464) |  |  |  |  |  |
-| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:315) |  | ListConnections |  |  | web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:218 |
-| compliance\|POST\|/compliance/playbooks/connections | POST /compliance/playbooks/connections | createConnection (services/compliance/playbook_connections.go:324) |  | CreateConnection |  |  |  |
-| compliance\|PUT\|/compliance/playbooks/connections/{param} | PUT /compliance/playbooks/connections/{id} | updateConnection (services/compliance/playbook_connections.go:345) |  | GetConnection, UpdateConnection | h.connVault.Open, h.connVault.current |  |  |
-| compliance\|DELETE\|/compliance/playbooks/connections/{param} | DELETE /compliance/playbooks/connections/{id} | deleteConnection (services/compliance/playbook_connections.go:414) |  | GetConnection, ListPlaybooks, DeleteConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.usage.Users, h.connVault.current, h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
-| compliance\|POST\|/compliance/playbooks/connections/{param}/test | POST /compliance/playbooks/connections/{id}/test | testConnection (services/compliance/playbook_connections.go:483) |  | GetConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
+| compliance\|GET\|/compliance/playbooks/connections | GET /compliance/playbooks/connections | listConnections (services/compliance/playbook_connections.go:383) |  | ListConnections |  |  | web/dashboard/src/lib/discovery.ts:381, web/dashboard/src/lib/governance.ts:218 |
+| compliance\|POST\|/compliance/playbooks/connections | POST /compliance/playbooks/connections | createConnection (services/compliance/playbook_connections.go:392) |  | CreateConnection |  |  |  |
+| compliance\|PUT\|/compliance/playbooks/connections/{param} | PUT /compliance/playbooks/connections/{id} | updateConnection (services/compliance/playbook_connections.go:413) |  | GetConnection, UpdateConnection | h.connVault.Open, h.connVault.current |  |  |
+| compliance\|DELETE\|/compliance/playbooks/connections/{param} | DELETE /compliance/playbooks/connections/{id} | deleteConnection (services/compliance/playbook_connections.go:482) |  | GetConnection, ListPlaybooks, DeleteConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.usage.Users, h.connVault.current, h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
+| compliance\|POST\|/compliance/playbooks/connections/{param}/test | POST /compliance/playbooks/connections/{id}/test | testConnection (services/compliance/playbook_connections.go:551) |  | GetConnection, ListAllPlaybooks, CreateConnection, UpdatePlaybook | h.executor.testConnection | pkg/tenantcheck.InternalServiceTenant |  |
 | confidential\|GET\|/confidential/policy | GET /confidential/policy | getPolicy (services/confidential/handler.go:59) | GetAttestationPolicy | GetAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:137 |
 | confidential\|PUT\|/confidential/policy | PUT /confidential/policy | setPolicy (services/confidential/handler.go:68) | UpdateAttestationPolicy | UpsertAttestationPolicy |  |  | web/dashboard/src/lib/confidential.ts:149 |
 | confidential\|GET\|/confidential/summary | GET /confidential/summary | getSummary (services/confidential/handler.go:92) | GetAttestationSummary | ListReleaseRecords |  |  | web/dashboard/src/lib/confidential.ts:165 |
