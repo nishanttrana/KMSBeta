@@ -486,7 +486,8 @@ var bucketRunBudget = 6 * time.Minute
 // learns something new, so unchanged objects are read again.
 const scanRules = 2
 
-// scanBucket reads the bucket from where its last run stopped: it lists the
+// scanBucket reads the bucket from where its last run stopped, through
+// guard (and, with a connection, only to addresses its credential may go): it lists the
 // objects, skips those whose ETag says they have not changed since they were
 // read (their assets are marked seen), and inventories the rest. A run stops
 // at its budget of objects, bytes or time and records where; the next
@@ -494,7 +495,7 @@ const scanRules = 2
 // most one object and records nothing, to prove the endpoint, the bucket
 // and the credential work together. An object that can't be read is named
 // in the error and tried again next time; the others are still scanned.
-func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket, scanID string, probe bool) (bucketScan, error) {
+func (s *Service) scanBucket(ctx context.Context, guard dialControl, b Bucket, scanID string, probe bool) (bucketScan, error) {
 	ctx, cancel := context.WithTimeout(ctx, bucketFetchTimeout)
 	defer cancel()
 	var out bucketScan
@@ -502,6 +503,12 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 	if err != nil {
 		return out, err
 	}
+	// Its own client: a connection opened without a credential is never
+	// reused for a request that carries one.
+	if b.ConnectionID != "" {
+		guard = credentialGuard(guard, cred.approved)
+	}
+	client := s.storageClient(guard)
 	if err := s.authorize(ctx, client, b, &cred); err != nil {
 		return out, err
 	}
@@ -669,7 +676,7 @@ func (s *Service) scanStorage(ctx context.Context, tenantID string, scanID strin
 		return nil, nil, fmt.Errorf("%w: add a bucket in Crypto Discovery", errScanNotConfigured)
 	}
 	sort.SliceStable(buckets, func(i, j int) bool { return buckets[i].ScannedAt.Before(buckets[j].ScannedAt) })
-	client := s.storageClient(s.targetGuard(ctx))
+	guard := s.targetGuard(ctx)
 	var (
 		assets []CryptoAsset
 		failed []string
@@ -677,7 +684,7 @@ func (s *Service) scanStorage(ctx context.Context, tenantID string, scanID strin
 		inPass int
 	)
 	for _, b := range buckets {
-		res, err := s.scanBucket(ctx, client, b, scanID, false)
+		res, err := s.scanBucket(ctx, guard, b, scanID, false)
 		assets = append(assets, res.assets...)
 		total.objects += res.objects
 		total.files += res.files
@@ -799,6 +806,6 @@ func (s *Service) TestBucket(ctx context.Context, tenantID, id string) (Bucket, 
 	if err != nil {
 		return Bucket{}, bucketScan{}, err
 	}
-	res, err := s.scanBucket(ctx, s.storageClient(s.targetGuard(ctx)), b, "", true)
+	res, err := s.scanBucket(ctx, s.targetGuard(ctx), b, "", true)
 	return b, res, err
 }

@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 import { C } from "../../v3/theme";
 import { EventStreams } from "./WebhooksTab";
+import { PrivateEndpoints } from "./PrivateEndpoints";
 
 // Connection field hints (placeholders only; nothing here is a default).
 const FIELD_HINTS: Record<string, string> = {
   webhook_url: "https://hooks.slack.com/services/…", url: "https://…", base_url: "https://your-org.atlassian.net",
-  instance_url: "https://your-instance.service-now.com", headers: '{"Authorization":"Bearer …"}',
-  signing_secret: "16+ characters; signs each body (X-KMS-Signature)", index: "optional", sourcetype: "vecta:audit",
+  instance_url: "https://your-instance.service-now.com", headers: '{"Authorization":"Bearer …"}', signing_secret: "16+ characters; signs each body (X-KMS-Signature)", index: "optional", sourcetype: "vecta:audit",
   dce_url: "https://<dce>.<region>.ingest.monitor.azure.com", dcr_immutable_id: "dcr-<32 hex>", stream_name: "Custom-VectaKMSAudit_CL",
   azure_tenant_id: "Entra directory (tenant) ID", client_id: "app registration client ID", address: "siem.example.com:6514",
   ca_pem: "-----BEGIN CERTIFICATE----- (the collector's CA, if not publicly trusted)", server_name: "name on the collector's certificate",
@@ -671,7 +671,7 @@ export function PlaybooksTab({ session }: { session: any }) {
           )}
         </Card>
       )}
-
+      {view === "connections" && <PrivateEndpoints session={session} />}
       {view === "streams" && (
         <EventStreams session={session} connections={connections} connectionTypes={catalog?.connection_types || []} />
       )}

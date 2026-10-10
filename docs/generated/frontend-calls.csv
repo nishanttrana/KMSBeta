@@ -452,6 +452,9 @@ pqc,pqc,GET,/pqc/migration/plans?tenant_id={param}&limit=50,/pqc/migration/plans
 pqc,pqc,POST,/pqc/migration/plans,/pqc/migration/plans,False,serviceRequest,web/dashboard/src/lib/pqc.ts,178,pqc|POST|/pqc/migration/plans
 pqc,pqc,POST,/pqc/migration/plans/{param}/execute,/pqc/migration/plans/{param}/execute,True,serviceRequest,web/dashboard/src/lib/pqc.ts,186,pqc|POST|/pqc/migration/plans/{param}/execute
 pqc,pqc,POST,/pqc/migration/plans/{param}/rollback,/pqc/migration/plans/{param}/rollback,True,serviceRequest,web/dashboard/src/lib/pqc.ts,194,pqc|POST|/pqc/migration/plans/{param}/rollback
+compliance,compliance,GET,/compliance/private-endpoints?{param},/compliance/private-endpoints,True,serviceRequest,web/dashboard/src/lib/privateEndpoints.ts,16,compliance|GET|/compliance/private-endpoints
+compliance,compliance,POST,/compliance/private-endpoints?{param},/compliance/private-endpoints,True,serviceRequest,web/dashboard/src/lib/privateEndpoints.ts,25,compliance|POST|/compliance/private-endpoints
+compliance,compliance,DELETE,/compliance/private-endpoints/{param}?{param},/compliance/private-endpoints/{param},True,serviceRequest,web/dashboard/src/lib/privateEndpoints.ts,32,compliance|DELETE|/compliance/private-endpoints/{param}
 keycore,keycore,GET,/compliance/regulatory,/compliance/regulatory,False,trackedFetch,web/dashboard/src/lib/regulatory.ts,6,keycore|GET|/compliance/regulatory
 keycore,keycore,GET,/compliance/dashboard,/compliance/dashboard,False,trackedFetch,web/dashboard/src/lib/regulatory.ts,12,keycore|GET|/compliance/dashboard
 keycore,keycore,GET,/compliance/report,/compliance/report,True,trackedFetch,web/dashboard/src/lib/regulatory.ts,18,keycore|GET|/compliance/report

@@ -1985,7 +1985,10 @@ recorded in the exposure register: rotate those webhook URLs and tokens.
 
 | Route | Caller | Audit action |
 |---|---|---|
-| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta; `s3`, `azure_blob`, 7.34.0-beta; `gcs`, 7.39.0-beta) | `connection_resolved` |
+| `POST /compliance/connections/{id}/resolve` | `kms-audit` (stream types), `kms-governance` (`slack`, `teams`), `kms-discovery` (`git`, 7.20.0-beta; `s3`, `azure_blob`, 7.34.0-beta; `gcs`, 7.39.0-beta). For those four types the answer carries `private_ranges`: the private ranges approved for the tenant (7.40.0-beta) | `connection_resolved` |
+| `GET /compliance/private-endpoints` | `compliance.playbook.read`; a tenant gets the ranges approved for it, the root tenant every tenant's (`{"data": [{id, tenant_id, cidr, note, created_by, created_at}], "can_approve"}`) | `private_endpoints_listed` |
+| `POST /compliance/private-endpoints` | a person in the root tenant with `compliance.private_endpoint.approve`; body `{"for_tenant", "cidr", "note"}`; `cidr` is an address or range inside private address space, at most a /16 (IPv4) or /48 (IPv6); refusals `403 platform_tenant_required`, `400 invalid_private_endpoint`, `409 private_endpoint_exists`, `409 private_endpoint_limit` (64 per tenant) | `private_endpoint_added` |
+| `DELETE /compliance/private-endpoints/{id}` | the same caller; withdraws the approval | `private_endpoint_removed` |
 | `POST /compliance/connections/import` | `kms-audit`, `kms-governance` | `connection_imported` |
 
 `resolve` returns `{id, name, type, endpoint, fields}` with the opened
@@ -3459,6 +3462,15 @@ service's error only its code is reported (`access denied
 (SignatureDoesNotMatch)`). Object versions, archives inside the bucket and
 archive storage classes are not read.
 
+**Private addresses (7.40.0-beta).** A bucket or repository on a private
+address is scanned without a credential as before. With a connection, the
+credential is sent to a private address (RFC 1918, 100.64.0.0/10, IPv6
+unique local) only if a root administrator approved a range containing it
+for the tenant (`/compliance/private-endpoints`); otherwise the bucket or
+repository fails with `refused <addr>: a private address that is not
+approved for this tenant's connections`. The address checked is the one
+dialled, after DNS resolution.
+
 **Credentials (7.39.0-beta).** What a bucket's connection holds decides
 how the scan authenticates. `s3`: `access_key_id` and `secret_access_key`
 sign each request (Signature V4); with `role_arn` (and `external_id`) the
@@ -4197,6 +4209,9 @@ from the code; do not edit by hand.
 - `GET /svc/compliance/compliance/posture`
 - `GET /svc/compliance/compliance/posture/breakdown`
 - `GET /svc/compliance/compliance/posture/history`
+- `GET /svc/compliance/compliance/private-endpoints`
+- `POST /svc/compliance/compliance/private-endpoints`
+- `DELETE /svc/compliance/compliance/private-endpoints/{id}`
 - `GET /svc/compliance/compliance/risk/keys`
 - `GET /svc/compliance/compliance/risk/remediation`
 - `GET /svc/compliance/compliance/risk/summary`

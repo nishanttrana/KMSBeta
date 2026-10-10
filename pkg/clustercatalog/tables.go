@@ -82,6 +82,7 @@ var Replicated = map[string][]string{
 		"compliance_playbook_threshold_hits",
 		"compliance_playbooks",
 		"compliance_posture_snapshots",
+		"compliance_private_endpoints",
 		"compliance_templates",
 	},
 	"confidential": {

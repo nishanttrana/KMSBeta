@@ -5,6 +5,35 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Private endpoints for source connections (7.40.0-beta)
+- **Checking an address when a connection is saved says nothing about where
+  its credential goes later.** The save-time check resolved the name once.
+  Discovery's dial guard allows private addresses on purpose (scanning the
+  customer's network is the point), so a name that later resolved to a
+  private address would have taken the token with it. The rule belongs at
+  the dial, on the address actually connected to, and only for requests
+  that carry a credential.
+- **A shared HTTP client shares its connections.** With one client per scan,
+  a keep-alive connection opened for a bucket with no credential could be
+  reused for one with a credential to the same address, without a dial and
+  so without the guard. Each credentialed bucket and repository now builds
+  its own client.
+- **An allowlist needs an owner who is not the one it constrains.** If a
+  tenant's administrator could approve ranges, the list would constrain
+  nothing. The route checks the caller's own tenant is the root tenant, on
+  top of a permission that the coarse `kms.write` grant does not cover
+  (its name does not end in `.write`).
+- **A real private address was available to test with.** The machine's own
+  LAN address gives a listener on RFC 1918 space, so the test proves "no
+  connection is accepted before approval, one is after" on the real dial
+  path instead of asserting on a function's return value. It skips where
+  no such address exists.
+- **The size gate counts differently from `wc -l`.** A file ending in a
+  newline has one more line to the gate than to `wc`. Check with the gate.
+- **UI modules don't call `serviceRequest`.** The lint rule wants a typed
+  client in `src/lib`; the panel's three calls live in
+  `lib/privateEndpoints.ts`.
+
 ### Discovery: storage credentials (7.39.0-beta)
 - **A zero time is not empty.** `json:",omitempty"` does nothing for
   `time.Time`, so a bucket never scanned said `"last_pass_at":

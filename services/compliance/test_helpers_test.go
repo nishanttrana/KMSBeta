@@ -293,6 +293,16 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			retry_of TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		// migration 009
+		`CREATE TABLE compliance_private_endpoints (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL,
+			cidr TEXT NOT NULL,
+			note TEXT NOT NULL DEFAULT '',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (tenant_id, cidr)
+		);`,
 		// migration 006
 		`CREATE TABLE compliance_playbook_connections (
 			tenant_id TEXT NOT NULL,

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	neturl "net/url"
 	"strings"
 	"time"
@@ -22,6 +23,21 @@ type ResolvedConnection struct {
 	Type     string            `json:"type"`
 	Endpoint string            `json:"endpoint"` // the host the connection is for
 	Fields   map[string]string `json:"fields"`
+	// PrivateRanges are the private address ranges a root administrator
+	// approved for the tenant: the only private addresses this
+	// connection's credential may be sent to (credentialGuard).
+	PrivateRanges []string `json:"private_ranges"`
+}
+
+// approved parses the connection's approved private ranges.
+func (c ResolvedConnection) approved() []netip.Prefix {
+	var out []netip.Prefix
+	for _, r := range c.PrivateRanges {
+		if p, err := netip.ParsePrefix(r); err == nil {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // ConnectionResolver opens a git connection as the discovery service

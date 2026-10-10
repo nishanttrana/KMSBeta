@@ -105,6 +105,10 @@ func ValidateWebhookURL(rawURL string) error {
 	return nil
 }
 
+// BlockedIP reports whether ip is one the guard refuses: private, loopback,
+// link-local, metadata, multicast or reserved.
+func BlockedIP(ip net.IP) bool { return isBlockedIP(ip) }
+
 func isBlockedIP(ip net.IP) bool {
 	if v4 := ip.To4(); v4 != nil {
 		for _, cidr := range blockedCIDRs {

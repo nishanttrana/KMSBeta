@@ -89,7 +89,7 @@ func TestS3AssumesItsRole(t *testing.T) {
 	conn.Fields["role_arn"], conn.Fields["external_id"] = "arn:aws:iam::123456789012:role/kms/scanner", "vecta-discovery"
 	svc.conns = stubConnections{"c1": conn}
 	b := Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: s3.URL, Name: "acme-artifacts", Prefix: "app/", Region: "eu-west-1", ConnectionID: "c1"}
-	res, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false)
+	res, err := svc.scanBucket(ctx, nil, b, "s", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,13 +114,13 @@ func TestS3AssumesItsRole(t *testing.T) {
 	// never asked.
 	refuse = true
 	before := len(s3.requests())
-	_, err = svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false)
+	_, err = svc.scanBucket(ctx, nil, b, "s", false)
 	if err == nil || !strings.Contains(err.Error(), "AWS STS refused to assume the role (AccessDenied): HTTP 403") || strings.Contains(err.Error(), "internal detail") || strings.Contains(err.Error(), "arn:aws:iam::1") || len(s3.requests()) != before {
 		t.Fatalf("refused role: %v (%d bucket requests)", err, len(s3.requests())-before)
 	}
 	// A role that is not an ARN is refused before any request.
 	conn.Fields["role_arn"] = "scanner"
-	if _, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false); err == nil || !strings.Contains(err.Error(), errConnectionUnfit.Error()) {
+	if _, err := svc.scanBucket(ctx, nil, b, "s", false); err == nil || !strings.Contains(err.Error(), errConnectionUnfit.Error()) {
 		t.Fatalf("bad role: %v", err)
 	}
 }
@@ -186,7 +186,7 @@ func TestAzureSharedKeyAndEntraID(t *testing.T) {
 		conn := ResolvedConnection{Type: "azure_blob", Endpoint: srvHost(srv), Fields: map[string]string{"account_key": base64.StdEncoding.EncodeToString(accountKey), "account_name": "acmestore"}}
 		svc.conns = stubConnections{"c1": conn}
 		b := Bucket{ID: "b1", TenantID: "t1", Provider: "azure", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", ConnectionID: "c1", Deep: true}
-		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false)
+		res, err := svc.scanBucket(context.Background(), nil, b, "s", false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -201,14 +201,14 @@ func TestAzureSharedKeyAndEntraID(t *testing.T) {
 			}
 		}
 		conn.Fields["account_key"] = base64.StdEncoding.EncodeToString([]byte("another-key-of-enough-length-0000"))
-		_, err = svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false)
+		_, err = svc.scanBucket(context.Background(), nil, b, "s", false)
 		if err == nil || !strings.Contains(err.Error(), "access denied (AuthenticationFailed)") || strings.Contains(err.Error(), "internal detail") {
 			t.Fatalf("wrong key: %v", err)
 		}
 		// Without a name, and with an address that is not account.host, the
 		// account can't be known.
 		delete(conn.Fields, "account_name")
-		if _, err := svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false); err == nil || !strings.Contains(err.Error(), "set account_name") {
+		if _, err := svc.scanBucket(context.Background(), nil, b, "s", false); err == nil || !strings.Contains(err.Error(), "set account_name") {
 			t.Fatalf("no account name: %v", err)
 		}
 	})
@@ -238,7 +238,7 @@ func TestAzureSharedKeyAndEntraID(t *testing.T) {
 		svc.entraURL = login.URL
 		svc.conns = stubConnections{"c1": {Type: "azure_blob", Endpoint: srvHost(srv), Fields: map[string]string{"azure_tenant_id": "acme.onmicrosoft.com", "client_id": "app-id", "client_secret": "entra-client-secret"}}}
 		b := Bucket{ID: "b1", TenantID: "t1", Provider: "azure", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", ConnectionID: "c1", Deep: true}
-		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false)
+		res, err := svc.scanBucket(context.Background(), nil, b, "s", false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -256,7 +256,7 @@ func TestAzureSharedKeyAndEntraID(t *testing.T) {
 		}
 		reject = true
 		before := len(srv.requests())
-		_, err = svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false)
+		_, err = svc.scanBucket(context.Background(), nil, b, "s", false)
 		if err == nil || !strings.Contains(err.Error(), "Entra ID refused the connection's credential (invalid_client): HTTP 401") || strings.Contains(err.Error(), "internal detail") || strings.Contains(err.Error(), "entra-client-secret") || len(srv.requests()) != before {
 			t.Fatalf("refused application: %v", err)
 		}
@@ -348,7 +348,7 @@ func TestGCSServiceAccount(t *testing.T) {
 	svc.googleURL = tokenURL
 	svc.conns = stubConnections{"c1": {Type: "gcs", Endpoint: srvHost(api), Fields: map[string]string{"service_account_json": string(sa)}}}
 	b := Bucket{ID: "b1", TenantID: "t1", Provider: "gcs", Endpoint: api.URL, Name: "acme-artifacts", Prefix: "app/", ConnectionID: "c1"}
-	res, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false)
+	res, err := svc.scanBucket(ctx, nil, b, "s", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,11 +366,11 @@ func TestGCSServiceAccount(t *testing.T) {
 	// A public bucket: no connection, no token request.
 	private = false
 	pub := Bucket{ID: "b2", TenantID: "t1", Provider: "gcs", Endpoint: api.URL, Name: "acme-artifacts", Prefix: "app/"}
-	if res, err := svc.scanBucket(ctx, svc.storageClient(nil), pub, "s", false); err != nil || len(res.assets) != 4 || len(token.requests()) != 1 {
+	if res, err := svc.scanBucket(ctx, nil, pub, "s", false); err != nil || len(res.assets) != 4 || len(token.requests()) != 1 {
 		t.Fatalf("public bucket: %d assets, %v, %d token requests", len(res.assets), err, len(token.requests()))
 	}
 	private = true
-	if _, err := svc.scanBucket(ctx, svc.storageClient(nil), pub, "s", false); err == nil || !strings.Contains(err.Error(), "access denied (forbidden): a private bucket needs a connection") || strings.Contains(err.Error(), "internal detail") {
+	if _, err := svc.scanBucket(ctx, nil, pub, "s", false); err == nil || !strings.Contains(err.Error(), "access denied (forbidden): a private bucket needs a connection") || strings.Contains(err.Error(), "internal detail") {
 		t.Fatalf("private bucket without a connection: %v", err)
 	}
 
@@ -380,13 +380,13 @@ func TestGCSServiceAccount(t *testing.T) {
 	wrong, _ := json.Marshal(map[string]string{"type": "service_account", "client_email": "scan@acme.iam.gserviceaccount.com", "private_key": string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: o8}))})
 	svc.conns = stubConnections{"c1": {Type: "gcs", Endpoint: srvHost(api), Fields: map[string]string{"service_account_json": string(wrong)}}}
 	before := len(api.requests())
-	_, err = svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false)
+	_, err = svc.scanBucket(ctx, nil, b, "s", false)
 	if err == nil || !strings.Contains(err.Error(), "Google refused the connection's credential (invalid_grant): HTTP 400") || strings.Contains(err.Error(), "internal detail") || len(api.requests()) != before {
 		t.Fatalf("refused assertion: %v", err)
 	}
 	// Not a service account key file at all.
 	svc.conns = stubConnections{"c1": {Type: "gcs", Endpoint: srvHost(api), Fields: map[string]string{"service_account_json": `{"type":"authorized_user"}`}}}
-	if _, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false); err == nil || !strings.Contains(err.Error(), errConnectionUnfit.Error()) {
+	if _, err := svc.scanBucket(ctx, nil, b, "s", false); err == nil || !strings.Contains(err.Error(), errConnectionUnfit.Error()) {
 		t.Fatalf("user key file: %v", err)
 	}
 }

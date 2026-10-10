@@ -480,7 +480,7 @@ func TestStorageScanReportsRefusals(t *testing.T) {
 	// A server that can't be reached: the error names no URL, so no SAS.
 	azure.Close()
 	svc.conns = stubConnections{"az": azureConnection(srvHost(azure))}
-	_, err = svc.scanBucket(ctx, svc.storageClient(nil), Bucket{TenantID: "t1", Provider: "azure", Endpoint: azure.URL, Name: "acme-artifacts", ConnectionID: "az"}, "s", false)
+	_, err = svc.scanBucket(ctx, nil, Bucket{TenantID: "t1", Provider: "azure", Endpoint: azure.URL, Name: "acme-artifacts", ConnectionID: "az"}, "s", false)
 	if err == nil || strings.Contains(err.Error(), "sig") || strings.Contains(err.Error(), "c2lnbmF0dXJl") {
 		t.Fatalf("unreachable server: %v", err)
 	}
@@ -668,7 +668,7 @@ func TestStorageByteBudgetAndUnreadableObjects(t *testing.T) {
 	maxBucketBytes = 600 // less than one private key
 	files, runs := 0, 0
 	for ; runs < 10; runs++ {
-		res, err := svc.scanBucket(ctx, svc.storageClient(nil), load(), "s", false)
+		res, err := svc.scanBucket(ctx, nil, load(), "s", false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -700,7 +700,7 @@ func TestStorageByteBudgetAndUnreadableObjects(t *testing.T) {
 	b2 := Bucket{ID: "b2", TenantID: "t1", Provider: "s3", Endpoint: vanishing.URL, Name: "acme-artifacts", Prefix: "app/", Region: "us-east-1"}
 	_ = store.CreateBucket(ctx, b2)
 	for i := 0; i < 2; i++ {
-		res, err := svc.scanBucket(ctx, svc.storageClient(nil), b2, "s", false)
+		res, err := svc.scanBucket(ctx, nil, b2, "s", false)
 		if err == nil || !strings.Contains(err.Error(), "1 objects could not be read, the first: app/deploy keys/id_rsa: bucket or object not found (NoSuchKey)") {
 			t.Fatalf("run %d, unreadable object: %v", i+1, err)
 		}
@@ -716,7 +716,7 @@ func TestStorageByteBudgetAndUnreadableObjects(t *testing.T) {
 	html := newHostingServer(t, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("<html>sign in")) })
 	trust(t, svc, html)
 	b.Endpoint = html.URL
-	if _, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false); err == nil || !strings.Contains(err.Error(), "did not return a listing") {
+	if _, err := svc.scanBucket(ctx, nil, b, "s", false); err == nil || !strings.Contains(err.Error(), "did not return a listing") {
 		t.Fatalf("an HTML page read as a listing: %v", err)
 	}
 }
@@ -911,7 +911,7 @@ func TestLiveObjectStorage(t *testing.T) {
 		// Each case keeps its own scan state.
 		c.b.ID, c.b.TenantID, c.b.Deep = fmt.Sprintf("live%d", i), fmt.Sprintf("t-live%d", i), os.Getenv("VECTA_TEST_STORAGE_DEEP") != ""
 		svc.conns = stubConnections{"live": c.conn}
-		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s", false)
+		res, err := svc.scanBucket(context.Background(), nil, c.b, "s", false)
 		t.Logf("%s %s: %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
 		if err != nil || len(res.assets) < least {
 			t.Errorf("%s: %d assets (want at least %d), %v", c.b.label(), len(res.assets), least, err)
@@ -919,7 +919,7 @@ func TestLiveObjectStorage(t *testing.T) {
 		// A second run: the real service's ETags say nothing changed, so
 		// nothing is downloaded and every asset is marked seen.
 		svc.storeAssets(context.Background(), c.b.TenantID, res.assets, map[string]bool{})
-		again, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s2", false)
+		again, err := svc.scanBucket(context.Background(), nil, c.b, "s2", false)
 		t.Logf("%s second run: %d read, %d unchanged, %d assets kept, err %v", c.b.label(), again.files, again.unchanged, again.kept, err)
 		if err != nil || again.files != 0 || again.unchanged < res.files || again.kept != len(res.assets) {
 			t.Errorf("%s: second run read %d, unchanged %d (first read %d), kept %d of %d, %v", c.b.label(), again.files, again.unchanged, res.files, again.kept, len(res.assets), err)
@@ -937,7 +937,7 @@ func TestLiveObjectStorage(t *testing.T) {
 				c.conn.Fields[k] = strings.Replace(c.conn.Fields[k], "sig=", "sig=AAAA", 1)
 			}
 		}
-		if _, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s", false); err == nil || !strings.Contains(err.Error(), "access denied") {
+		if _, err := svc.scanBucket(context.Background(), nil, c.b, "s", false); err == nil || !strings.Contains(err.Error(), "access denied") {
 			t.Errorf("%s with a wrong credential: %v", c.b.label(), err)
 		}
 	}

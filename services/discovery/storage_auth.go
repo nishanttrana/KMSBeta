@@ -67,6 +67,8 @@ type bucketCredential struct {
 	serviceAccount *googleServiceAccount
 	// bearer is the access token obtained for this scan (Entra or Google).
 	bearer string
+	// approved: the private ranges this credential may be sent to.
+	approved []netip.Prefix
 }
 
 type googleServiceAccount struct {
@@ -90,6 +92,14 @@ func (s *Service) bucketCredential(ctx context.Context, b Bucket) (bucketCredent
 	if err != nil {
 		return bucketCredential{}, fmt.Errorf("connection %s: %w", b.ConnectionID, err)
 	}
+	cred, err := connectionCredential(b, conn)
+	cred.approved = conn.approved()
+	return cred, err
+}
+
+// connectionCredential reads a bucket's credential out of its opened
+// connection.
+func connectionCredential(b Bucket, conn ResolvedConnection) (bucketCredential, error) {
 	unfit := func(msg string) (bucketCredential, error) {
 		return bucketCredential{}, fmt.Errorf("%w: %s", errConnectionUnfit, msg)
 	}

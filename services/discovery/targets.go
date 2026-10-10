@@ -160,6 +160,45 @@ func guardAddrs(platform map[netip.Addr]bool) dialControl {
 	}
 }
 
+var errPrivateNotApproved = errors.New("a private address that is not approved for this tenant's connections; a root administrator approves a range in Playbooks, Connections, Private endpoints")
+
+var cgnRange = netip.MustParsePrefix("100.64.0.0/10")
+
+// privateAddr: private (RFC 1918, IPv6 unique local) or carrier-grade NAT
+// address space.
+func privateAddr(a netip.Addr) bool { return a.IsPrivate() || cgnRange.Contains(a) }
+
+// credentialGuard is the dial guard for requests that carry a connection's
+// credential (7.40.0-beta). On top of base it refuses a private address
+// unless a root administrator approved a range containing it for the
+// tenant. The address checked is the one dialled, after DNS resolution, so
+// a name that later resolves somewhere else on the private network does
+// not take the credential with it. Scans without a credential still reach
+// private addresses: inventorying the customer's own network is the point.
+func credentialGuard(base dialControl, approved []netip.Prefix) dialControl {
+	return func(network, address string, c syscall.RawConn) error {
+		if base != nil {
+			if err := base(network, address, c); err != nil {
+				return err
+			}
+		}
+		ap, err := netip.ParseAddrPort(address)
+		if err != nil {
+			return err
+		}
+		a := ap.Addr().Unmap()
+		if !privateAddr(a) {
+			return nil
+		}
+		for _, p := range approved {
+			if p.Contains(a) {
+				return nil
+			}
+		}
+		return fmt.Errorf("refused %s: %w", a, errPrivateNotApproved)
+	}
+}
+
 // refuseReservedAddr is a net.Dialer Control hook: it checks the address
 // actually being dialled, after DNS resolution, so a name that resolves (or
 // rebinds) to a reserved address is refused too.

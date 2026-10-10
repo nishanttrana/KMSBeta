@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -137,5 +138,29 @@ func TestPlaybookStorePostgres(t *testing.T) {
 	sum, err = store.GetPlaybookSummary(ctx, tenant)
 	if err != nil || sum["total_playbooks"] != 2 || sum["enabled_count"] != 1 || sum["runs_today"] != 1 || sum["last_run_status"] != runPendingApproval {
 		t.Fatalf("summary: %v %v", sum, err)
+	}
+
+	// Migration 009: approved private endpoints.
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM compliance_private_endpoints WHERE tenant_id=$1`, tenant) })
+	pe := PrivateEndpoint{ID: newID("pvt"), TenantID: tenant, CIDR: "10.4.0.0/24", Note: "MinIO", CreatedBy: "u-root"}
+	if err := store.CreatePrivateEndpoint(ctx, pe); err != nil {
+		t.Fatal(err)
+	}
+	dup := pe
+	dup.ID = newID("pvt")
+	if err := store.CreatePrivateEndpoint(ctx, dup); !errors.Is(err, errPrivateEndpointExists) {
+		t.Fatalf("duplicate range: %v", err)
+	}
+	if got, err := store.ListPrivateEndpoints(ctx, tenant); err != nil || len(got) != 1 || got[0].CIDR != "10.4.0.0/24" || got[0].Note != "MinIO" || got[0].CreatedAt.IsZero() {
+		t.Fatalf("private endpoints %+v, %v", got, err)
+	}
+	if all, err := store.ListPrivateEndpoints(ctx, ""); err != nil || len(all) < 1 {
+		t.Fatalf("every tenant's: %d, %v", len(all), err)
+	}
+	if got, err := store.DeletePrivateEndpoint(ctx, pe.ID); err != nil || got.TenantID != tenant || got.CIDR != "10.4.0.0/24" {
+		t.Fatalf("delete: %+v, %v", got, err)
+	}
+	if _, err := store.DeletePrivateEndpoint(ctx, pe.ID); !errors.Is(err, errNotFound) {
+		t.Fatalf("second delete: %v", err)
 	}
 }

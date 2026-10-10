@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	neturl "net/url"
 	"path"
 	"regexp"
@@ -175,7 +176,10 @@ func (r Repository) archiveURL(ref string) string {
 }
 
 // repoCredential is an opened git connection, held for one scan.
-type repoCredential struct{ username, token string }
+type repoCredential struct {
+	username, token string
+	approved        []netip.Prefix // private ranges the token may be sent to
+}
 
 func (c repoCredential) authorize(req *http.Request, provider string) {
 	switch {
@@ -210,7 +214,7 @@ func (s *Service) credential(ctx context.Context, r Repository) (repoCredential,
 	if !strings.EqualFold(conn.Endpoint, host) {
 		return repoCredential{}, fmt.Errorf("%w: its token is for %s, not %s", errConnectionUnfit, conn.Endpoint, host)
 	}
-	return repoCredential{username: conn.Fields["username"], token: conn.Fields["token"]}, nil
+	return repoCredential{username: conn.Fields["username"], token: conn.Fields["token"], approved: conn.approved()}, nil
 }
 
 // repoClient is the HTTPS client for one scan's repository downloads.
@@ -292,11 +296,7 @@ func (s *Service) repoGet(ctx context.Context, client *http.Client, r Repository
 }
 
 // openArchive requests the repository's archive and returns its body.
-func (s *Service) openArchive(ctx context.Context, client *http.Client, r Repository) (io.ReadCloser, error) {
-	cred, err := s.credential(ctx, r)
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) openArchive(ctx context.Context, client *http.Client, r Repository, cred repoCredential) (io.ReadCloser, error) {
 	ref := r.Ref
 	if ref == "" && r.Provider == "gitea" {
 		// Gitea's archive route needs a ref; ask for the default branch.
@@ -398,10 +398,20 @@ func skippedPath(rel string) bool {
 	return false
 }
 
-func (s *Service) scanRepository(ctx context.Context, client *http.Client, r Repository, scanID string, limit int) (repoScan, error) {
+// scanRepository reads one repository through guard. With a connection it
+// uses its own client, whose dial guard also keeps the token off private
+// addresses that are not approved for the tenant.
+func (s *Service) scanRepository(ctx context.Context, guard dialControl, r Repository, scanID string, limit int) (repoScan, error) {
 	ctx, cancel := context.WithTimeout(ctx, repoFetchTimeout)
 	defer cancel()
-	body, err := s.openArchive(ctx, client, r)
+	cred, err := s.credential(ctx, r)
+	if err != nil {
+		return repoScan{}, err
+	}
+	if r.ConnectionID != "" {
+		guard = credentialGuard(guard, cred.approved)
+	}
+	body, err := s.openArchive(ctx, s.repoClient(guard), r, cred)
 	if err != nil {
 		return repoScan{}, err
 	}
@@ -419,7 +429,7 @@ func (s *Service) scanGit(ctx context.Context, tenantID string, scanID string) (
 	if len(repos) == 0 {
 		return nil, nil, fmt.Errorf("%w: add a repository in Crypto Discovery", errScanNotConfigured)
 	}
-	client := s.repoClient(s.targetGuard(ctx))
+	guard := s.targetGuard(ctx)
 	var (
 		mu     sync.Mutex
 		wg     sync.WaitGroup
@@ -433,7 +443,7 @@ func (s *Service) scanGit(ctx context.Context, tenantID string, scanID string) (
 		go func() {
 			defer wg.Done()
 			for r := range jobs {
-				res, err := s.scanRepository(ctx, client, r, scanID, 0)
+				res, err := s.scanRepository(ctx, guard, r, scanID, 0)
 				mu.Lock()
 				assets = append(assets, res.assets...)
 				files += res.files
@@ -522,6 +532,6 @@ func (s *Service) TestRepository(ctx context.Context, tenantID, id string) (Repo
 	if err != nil {
 		return Repository{}, repoScan{}, err
 	}
-	res, err := s.scanRepository(ctx, s.repoClient(s.targetGuard(ctx)), r, "", 1)
+	res, err := s.scanRepository(ctx, s.targetGuard(ctx), r, "", 1)
 	return r, res, err
 }

@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-10T18:33:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:46:15Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -481,6 +481,8 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1228 | posture | Btn | setSelectedFinding(null)}>Close |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1319 | posture | Btn | executeAction(selectedAction)}> Execute |  |
 | web/dashboard/src/components/v3/tabs/PostureTab.tsx | 1321 | posture | Btn | setSelectedAction(null)}>Close |  |
+| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 80 | - | Btn | void approve()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx | 94 | - | button | void withdraw(e)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 478 | restapi | Btn | (icon or dynamic label) | executeRequest} disabled={running |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 509 | restapi | Btn | void loadClientSecurity(false)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/RestAPITab.tsx | 517 | restapi | button | setSelectedClientID(String(item?.id\|\|""))} style={{ textAlign:"left", border:... |  |

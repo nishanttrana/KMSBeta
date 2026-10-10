@@ -4396,6 +4396,51 @@
       "service": "compliance"
     },
     {
+      "action": "private_endpoints_listed",
+      "code_scope": "compliance",
+      "file": "services/compliance/private_endpoints.go",
+      "handler": "h.listPrivateEndpoints",
+      "line": 111,
+      "match_key": "compliance|GET|/compliance/private-endpoints",
+      "method": "GET",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints",
+      "permission": "compliance.playbook.read",
+      "registration": "kernel",
+      "resource": "private_endpoint",
+      "service": "compliance"
+    },
+    {
+      "action": "private_endpoint_added",
+      "code_scope": "compliance",
+      "file": "services/compliance/private_endpoints.go",
+      "handler": "h.addPrivateEndpoint",
+      "line": 112,
+      "match_key": "compliance|POST|/compliance/private-endpoints",
+      "method": "POST",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints",
+      "permission": "compliance.private_endpoint.approve",
+      "registration": "kernel",
+      "resource": "private_endpoint",
+      "service": "compliance"
+    },
+    {
+      "action": "private_endpoint_removed",
+      "code_scope": "compliance",
+      "file": "services/compliance/private_endpoints.go",
+      "handler": "h.removePrivateEndpoint",
+      "line": 113,
+      "match_key": "compliance|DELETE|/compliance/private-endpoints/{param}",
+      "method": "DELETE",
+      "normalized_path": "/compliance/private-endpoints/{param}",
+      "path": "/compliance/private-endpoints/{id}",
+      "permission": "compliance.private_endpoint.approve",
+      "registration": "kernel",
+      "resource": "private_endpoint",
+      "service": "compliance"
+    },
+    {
       "action": "policy_viewed",
       "code_scope": "confidential",
       "file": "services/confidential/handler.go",
@@ -22993,6 +23038,22 @@
       "tag": "Btn"
     },
     {
+      "file": "web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx",
+      "handler": "",
+      "label": "void approve()} disabled= >",
+      "line": 80,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/PrivateEndpoints.tsx",
+      "handler": "",
+      "label": "void withdraw(e)} style={ }>",
+      "line": 94,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
       "file": "web/dashboard/src/components/v3/tabs/RestAPITab.tsx",
       "handler": "executeRequest} disabled={running",
       "label": "(icon or dynamic label)",
@@ -31262,6 +31323,45 @@
       "source": "serviceRequest"
     },
     {
+      "dynamic": true,
+      "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/privateEndpoints.ts",
+      "line": 16,
+      "match_key": "compliance|GET|/compliance/private-endpoints",
+      "method": "GET",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints?{param}",
+      "service": "compliance",
+      "service_key": "compliance",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/privateEndpoints.ts",
+      "line": 25,
+      "match_key": "compliance|POST|/compliance/private-endpoints",
+      "method": "POST",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints?{param}",
+      "service": "compliance",
+      "service_key": "compliance",
+      "source": "serviceRequest"
+    },
+    {
+      "dynamic": true,
+      "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+      "file": "web/dashboard/src/lib/privateEndpoints.ts",
+      "line": 32,
+      "match_key": "compliance|DELETE|/compliance/private-endpoints/{param}",
+      "method": "DELETE",
+      "normalized_path": "/compliance/private-endpoints/{param}",
+      "path": "/compliance/private-endpoints/{param}?{param}",
+      "service": "compliance",
+      "service_key": "compliance",
+      "source": "serviceRequest"
+    },
+    {
       "dynamic": false,
       "expression": "trackedFetch(`${BASE}/compliance/regulatory`)",
       "file": "web/dashboard/src/lib/regulatory.ts",
@@ -32588,7 +32688,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-10T18:33:22Z",
+  "generated_at": "2026-10-10T18:46:15Z",
   "navigation": [
     {
       "group": "Overview",
@@ -47917,10 +48017,11 @@
         "GetConnection",
         "Error",
         "usable",
-        "Open"
+        "Open",
+        "approvedRanges"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 78,
+      "handler_line": 82,
       "handler_name": "resolveConnection",
       "handler_receiver_calls": [
         "h.connVault.Open"
@@ -47961,7 +48062,7 @@
         "CreateConnection"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 121,
+      "handler_line": 137,
       "handler_name": "importConnection",
       "handler_receiver_calls": [
         "h.connVault.current"
@@ -50519,7 +50620,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 383,
+      "handler_line": 384,
       "handler_name": "listConnections",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -50553,7 +50654,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 392,
+      "handler_line": 393,
       "handler_name": "createConnection",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -50590,7 +50691,7 @@
         "current"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 413,
+      "handler_line": 414,
       "handler_name": "updateConnection",
       "handler_receiver_calls": [
         "h.connVault.Open",
@@ -50654,7 +50755,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 482,
+      "handler_line": 499,
       "handler_name": "deleteConnection",
       "handler_receiver_calls": [
         "h.usage.Users",
@@ -50718,7 +50819,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.InternalServiceTenant"
       ],
-      "handler_line": 551,
+      "handler_line": 568,
       "handler_name": "testConnection",
       "handler_receiver_calls": [
         "h.executor.testConnection"
@@ -50735,6 +50836,134 @@
       "path": "/compliance/playbooks/connections/{id}/test",
       "route_file": "services/compliance/playbook_connections.go",
       "route_line": 380,
+      "service": "compliance",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/privateEndpoints.ts",
+          "line": 16,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.listPrivateEndpoints",
+      "handler_external_package_calls": [],
+      "handler_file": "services/compliance/private_endpoints.go",
+      "handler_helper_calls": [
+        "ListPrivateEndpoints",
+        "Error"
+      ],
+      "handler_internal_package_calls": [
+        "pkg/route.Allowed",
+        "pkg/tenantcheck.InternalServiceTenant",
+        "pkg/tenantcheck.IsServicePrincipal"
+      ],
+      "handler_line": 118,
+      "handler_name": "listPrivateEndpoints",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListPrivateEndpoints"
+      ],
+      "method": "GET",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints",
+      "route_file": "services/compliance/private_endpoints.go",
+      "route_line": 111,
+      "service": "compliance",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/privateEndpoints.ts",
+          "line": 25,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.addPrivateEndpoint",
+      "handler_external_package_calls": [
+        "errors.Is",
+        "fmt.Sprintf",
+        "strings.TrimSpace",
+        "time.Now"
+      ],
+      "handler_file": "services/compliance/private_endpoints.go",
+      "handler_helper_calls": [
+        "rootApprover",
+        "normalizePrivateRange",
+        "Error",
+        "ListPrivateEndpoints",
+        "newID",
+        "CreatePrivateEndpoint"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 131,
+      "handler_name": "addPrivateEndpoint",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "ListPrivateEndpoints",
+        "CreatePrivateEndpoint"
+      ],
+      "method": "POST",
+      "normalized_path": "/compliance/private-endpoints",
+      "path": "/compliance/private-endpoints",
+      "route_file": "services/compliance/private_endpoints.go",
+      "route_line": 112,
+      "service": "compliance",
+      "service_external_package_calls": [],
+      "service_helper_calls": [],
+      "service_internal_package_calls": [],
+      "service_method_details": [],
+      "service_receiver_calls": [],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [
+        {
+          "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+          "file": "web/dashboard/src/lib/privateEndpoints.ts",
+          "line": 32,
+          "source": "serviceRequest"
+        }
+      ],
+      "handler": "h.removePrivateEndpoint",
+      "handler_external_package_calls": [
+        "errors.Is"
+      ],
+      "handler_file": "services/compliance/private_endpoints.go",
+      "handler_helper_calls": [
+        "rootApprover",
+        "DeletePrivateEndpoint",
+        "Error"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 182,
+      "handler_name": "removePrivateEndpoint",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [],
+      "handler_store_calls": [
+        "DeletePrivateEndpoint"
+      ],
+      "method": "DELETE",
+      "normalized_path": "/compliance/private-endpoints/{param}",
+      "path": "/compliance/private-endpoints/{id}",
+      "route_file": "services/compliance/private_endpoints.go",
+      "route_line": 113,
       "service": "compliance",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -55456,7 +55685,7 @@
           "file": "services/discovery/targets.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 240,
+          "line": 279,
           "name": "ListTargets",
           "receiver_calls": [],
           "store_calls": [
@@ -55532,7 +55761,7 @@
             "CreateTarget"
           ],
           "internal_package_calls": [],
-          "line": 206,
+          "line": 245,
           "name": "AddTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -55592,7 +55821,7 @@
             "DeleteTarget"
           ],
           "internal_package_calls": [],
-          "line": 244,
+          "line": 283,
           "name": "RemoveTarget",
           "receiver_calls": [],
           "store_calls": [
@@ -55896,7 +56125,7 @@
           "file": "services/discovery/repo.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 492,
+          "line": 502,
           "name": "ListRepositories",
           "receiver_calls": [],
           "store_calls": [
@@ -55969,7 +56198,6 @@
         "repository",
         "DeleteRepository",
         "scanRepository",
-        "repoClient",
         "normalizeBucket",
         "ListBuckets",
         "bucketCredential",
@@ -55980,8 +56208,7 @@
         "PruneBucketObjects",
         "storageStaleBefore",
         "TestBucket",
-        "scanBucket",
-        "storageClient"
+        "scanBucket"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -55998,7 +56225,7 @@
             "CreateRepository"
           ],
           "internal_package_calls": [],
-          "line": 462,
+          "line": 472,
           "name": "AddRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56014,7 +56241,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 509,
+          "line": 519,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56026,11 +56253,10 @@
           "file": "services/discovery/repo.go",
           "helper_calls": [
             "repository",
-            "scanRepository",
-            "repoClient"
+            "scanRepository"
           ],
           "internal_package_calls": [],
-          "line": 520,
+          "line": 530,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -56040,7 +56266,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 746,
+          "line": 753,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56064,11 +56290,10 @@
             "PruneBucketObjects",
             "storageStaleBefore",
             "TestBucket",
-            "scanBucket",
-            "storageClient"
+            "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 716,
+          "line": 723,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56135,7 +56360,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 509,
+          "line": 519,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56184,8 +56409,7 @@
       "service_external_package_calls": [],
       "service_helper_calls": [
         "repository",
-        "scanRepository",
-        "repoClient"
+        "scanRepository"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -56194,11 +56418,10 @@
           "file": "services/discovery/repo.go",
           "helper_calls": [
             "repository",
-            "scanRepository",
-            "repoClient"
+            "scanRepository"
           ],
           "internal_package_calls": [],
-          "line": 520,
+          "line": 530,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -56246,7 +56469,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 746,
+          "line": 753,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56331,7 +56554,6 @@
         "storageStaleBefore",
         "TestBucket",
         "scanBucket",
-        "storageClient",
         "containsString",
         "GetSchedule",
         "PutSchedule"
@@ -56355,11 +56577,10 @@
             "PruneBucketObjects",
             "storageStaleBefore",
             "TestBucket",
-            "scanBucket",
-            "storageClient"
+            "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 716,
+          "line": 723,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56378,7 +56599,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 763,
+          "line": 770,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56391,11 +56612,10 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [
             "bucket",
-            "scanBucket",
-            "storageClient"
+            "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 797,
+          "line": 804,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -56494,7 +56714,7 @@
             "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 763,
+          "line": 770,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56545,8 +56765,7 @@
       "service_external_package_calls": [],
       "service_helper_calls": [
         "bucket",
-        "scanBucket",
-        "storageClient"
+        "scanBucket"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -56555,11 +56774,10 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [
             "bucket",
-            "scanBucket",
-            "storageClient"
+            "scanBucket"
           ],
           "internal_package_calls": [],
-          "line": 797,
+          "line": 804,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -87783,7 +88001,7 @@
       "certs": 69,
       "cloud": 14,
       "cluster-manager": 21,
-      "compliance": 54,
+      "compliance": 57,
       "confidential": 7,
       "dataprotect": 50,
       "discovery": 24,
@@ -87815,7 +88033,7 @@
       "certs": 52,
       "cloud": 10,
       "cluster-manager": 11,
-      "compliance": 20,
+      "compliance": 23,
       "confidential": 6,
       "dataprotect": 29,
       "discovery": 22,
@@ -88014,17 +88232,17 @@
     ]
   },
   "summary": {
-    "backend_routes": 874,
+    "backend_routes": 877,
     "backend_services": 28,
-    "button_inventory": 760,
-    "frontend_call_sites": 555,
-    "matched_frontend_call_sites": 511,
+    "button_inventory": 762,
+    "frontend_call_sites": 558,
+    "matched_frontend_call_sites": 514,
     "nav_items": 26,
-    "request_flows": 874,
-    "request_flows_with_frontend": 517,
-    "request_flows_with_internal_package_calls": 153,
+    "request_flows": 877,
+    "request_flows_with_frontend": 520,
+    "request_flows_with_internal_package_calls": 154,
     "request_flows_with_service_calls": 527,
-    "request_flows_with_store_calls": 627,
+    "request_flows_with_store_calls": 630,
     "subpane_groups": 8,
     "tab_components": 33,
     "unmatched_frontend_call_sites": 44
@@ -97796,7 +98014,7 @@
         "frontendSites": [],
         "handler": "resolveConnection",
         "handlerFile": "services/compliance/connections_service.go",
-        "handlerLine": 78,
+        "handlerLine": 82,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -97827,7 +98045,7 @@
         "frontendSites": [],
         "handler": "importConnection",
         "handlerFile": "services/compliance/connections_service.go",
-        "handlerLine": 121,
+        "handlerLine": 137,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -99248,7 +99466,7 @@
         ],
         "handler": "listConnections",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 383,
+        "handlerLine": 384,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -99277,7 +99495,7 @@
         "frontendSites": [],
         "handler": "createConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 392,
+        "handlerLine": 393,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -99305,7 +99523,7 @@
         "frontendSites": [],
         "handler": "updateConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 413,
+        "handlerLine": 414,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -99341,7 +99559,7 @@
         "frontendSites": [],
         "handler": "deleteConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 482,
+        "handlerLine": 499,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -99383,7 +99601,7 @@
         "frontendSites": [],
         "handler": "testConnection",
         "handlerFile": "services/compliance/playbook_connections.go",
-        "handlerLine": 551,
+        "handlerLine": 568,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/tenantcheck.InternalServiceTenant"
@@ -99407,6 +99625,114 @@
         ],
         "uiLabels": [
           "API only"
+        ]
+      },
+      {
+        "complexity": 4,
+        "externalPackages": [],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/privateEndpoints.ts",
+            "line": 16,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "listPrivateEndpoints",
+        "handlerFile": "services/compliance/private_endpoints.go",
+        "handlerLine": 118,
+        "hasFrontend": true,
+        "internalPackages": [
+          "pkg/route.Allowed",
+          "pkg/tenantcheck.InternalServiceTenant",
+          "pkg/tenantcheck.IsServicePrincipal"
+        ],
+        "method": "GET",
+        "normalizedPath": "/compliance/private-endpoints",
+        "path": "/compliance/private-endpoints",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "compliance|GET|/compliance/private-endpoints",
+        "sensitive": false,
+        "service": "compliance",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListPrivateEndpoints"
+        ],
+        "uiLabels": [
+          "privateEndpoints"
+        ]
+      },
+      {
+        "complexity": 2,
+        "externalPackages": [
+          "errors.Is",
+          "fmt.Sprintf",
+          "strings.TrimSpace",
+          "time.Now"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/privateEndpoints.ts",
+            "line": 25,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "addPrivateEndpoint",
+        "handlerFile": "services/compliance/private_endpoints.go",
+        "handlerLine": 131,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "POST",
+        "normalizedPath": "/compliance/private-endpoints",
+        "path": "/compliance/private-endpoints",
+        "receiverCalls": [],
+        "risk": "medium",
+        "routeKey": "compliance|POST|/compliance/private-endpoints",
+        "sensitive": false,
+        "service": "compliance",
+        "serviceCalls": [],
+        "storeCalls": [
+          "ListPrivateEndpoints",
+          "CreatePrivateEndpoint"
+        ],
+        "uiLabels": [
+          "privateEndpoints"
+        ]
+      },
+      {
+        "complexity": 1,
+        "externalPackages": [
+          "errors.Is"
+        ],
+        "frontendSites": [
+          {
+            "expression": "serviceRequest(\"compliance\", `/compliance/private-endpoints/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
+            "file": "web/dashboard/src/lib/privateEndpoints.ts",
+            "line": 32,
+            "source": "serviceRequest"
+          }
+        ],
+        "handler": "removePrivateEndpoint",
+        "handlerFile": "services/compliance/private_endpoints.go",
+        "handlerLine": 182,
+        "hasFrontend": true,
+        "internalPackages": [],
+        "method": "DELETE",
+        "normalizedPath": "/compliance/private-endpoints/{param}",
+        "path": "/compliance/private-endpoints/{id}",
+        "receiverCalls": [],
+        "risk": "high",
+        "routeKey": "compliance|DELETE|/compliance/private-endpoints/{param}",
+        "sensitive": false,
+        "service": "compliance",
+        "serviceCalls": [],
+        "storeCalls": [
+          "DeletePrivateEndpoint"
+        ],
+        "uiLabels": [
+          "privateEndpoints"
         ]
       },
       {
@@ -119240,7 +119566,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-10T18:33:22Z",
+    "generatedAt": "2026-10-10T18:46:15Z",
     "methods": [
       "DELETE",
       "GET",
@@ -119280,9 +119606,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 874,
-      "frontendBacked": 517,
-      "highRisk": 339,
+      "flows": 877,
+      "frontendBacked": 520,
+      "highRisk": 340,
       "services": 28
     }
   }

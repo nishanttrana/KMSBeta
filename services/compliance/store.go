@@ -66,6 +66,12 @@ type Store interface {
 	CreateConnection(ctx context.Context, c Connection) (Connection, error)
 	UpdateConnection(ctx context.Context, c Connection) (Connection, error)
 	DeleteConnection(ctx context.Context, tenantID, id string) error
+
+	// Private endpoints approved for source connections. tenantID "" lists
+	// every tenant's.
+	ListPrivateEndpoints(ctx context.Context, tenantID string) ([]PrivateEndpoint, error)
+	CreatePrivateEndpoint(ctx context.Context, e PrivateEndpoint) error
+	DeletePrivateEndpoint(ctx context.Context, id string) (PrivateEndpoint, error)
 }
 
 type SQLStore struct {

@@ -455,7 +455,7 @@ func TestLivePublicRepositories(t *testing.T) {
 			continue
 		}
 		r.TenantID = "t1"
-		res, err := svc.scanRepository(context.Background(), svc.repoClient(svc.targetGuard(context.Background())), r, "s", 0)
+		res, err := svc.scanRepository(context.Background(), svc.targetGuard(context.Background()), r, "s", 0)
 		t.Logf("%s (%s): %d files parsed, %d assets, commit %q, err %v", u.Host, r.Provider, res.files, len(res.assets), res.commit, err)
 		if err != nil {
 			t.Errorf("%s: %v", raw, err)

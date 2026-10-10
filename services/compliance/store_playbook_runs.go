@@ -225,6 +225,54 @@ func (s *SQLStore) DeleteConnection(ctx context.Context, tenantID, id string) er
 	return nil
 }
 
+func (s *SQLStore) ListPrivateEndpoints(ctx context.Context, tenantID string) ([]PrivateEndpoint, error) {
+	query, args := `SELECT id, tenant_id, cidr, note, created_by, created_at FROM compliance_private_endpoints ORDER BY tenant_id, cidr`, []interface{}{}
+	if tenantID != "" {
+		query, args = `SELECT id, tenant_id, cidr, note, created_by, created_at FROM compliance_private_endpoints WHERE tenant_id=$1 ORDER BY cidr`, []interface{}{tenantID}
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []PrivateEndpoint{}
+	for rows.Next() {
+		var e PrivateEndpoint
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.CIDR, &e.Note, &e.CreatedBy, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) CreatePrivateEndpoint(ctx context.Context, e PrivateEndpoint) error {
+	var n int
+	if err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM compliance_private_endpoints WHERE tenant_id=$1 AND cidr=$2`, e.TenantID, e.CIDR).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return errPrivateEndpointExists
+	}
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO compliance_private_endpoints (id, tenant_id, cidr, note, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)`, e.ID, e.TenantID, e.CIDR, e.Note, e.CreatedBy)
+	return err
+}
+
+func (s *SQLStore) DeletePrivateEndpoint(ctx context.Context, id string) (PrivateEndpoint, error) {
+	var e PrivateEndpoint
+	err := s.db.SQL().QueryRowContext(ctx, `SELECT id, tenant_id, cidr, note, created_by, created_at FROM compliance_private_endpoints WHERE id=$1`, id).
+		Scan(&e.ID, &e.TenantID, &e.CIDR, &e.Note, &e.CreatedBy, &e.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return PrivateEndpoint{}, errNotFound
+	} else if err != nil {
+		return PrivateEndpoint{}, err
+	}
+	_, err = s.db.SQL().ExecContext(ctx, `DELETE FROM compliance_private_endpoints WHERE id=$1`, id)
+	return e, err
+}
+
 func scanConnection(row rowScanner) (Connection, error) {
 	var c Connection
 	var fields string

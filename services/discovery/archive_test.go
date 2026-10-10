@@ -218,7 +218,7 @@ func TestDeepScanReadsByContent(t *testing.T) {
 		trust(t, svc, srv)
 		svc.conns = stubConnections{"c1": s3Connection(srvHost(srv))}
 		b := Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Region: "eu-west-1", ConnectionID: "c1", Deep: deep}
-		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), b, "s", false)
+		res, err := svc.scanBucket(context.Background(), nil, b, "s", false)
 		if err != nil {
 			t.Fatalf("deep %v: %v", deep, err)
 		}

@@ -4,6 +4,50 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.40.0-beta] — 2026-10-11
+
+### Git servers and object stores on a private network can have a connection
+- **Added: approved private endpoints.** A root administrator can approve a
+  private address range (or one address) for a tenant in Playbooks →
+  Connections → Private endpoints. A Git or storage connection of that
+  tenant may then name a host inside it, so Crypto Discovery can read
+  private repositories and buckets on the customer's own network (an
+  on-premises GitLab, MinIO or Ceph). Before, every connection to a private
+  address was refused, and such sources could only be scanned if they
+  needed no credential.
+- **Security: a credential now goes to a private address only if that
+  address is approved.** Discovery checks the address it actually dials,
+  after DNS resolution, for every request that carries a connection's
+  credential, and refuses a private one outside the tenant's approved
+  ranges. This also closes a gap that existed before: a connection saved
+  for a name that resolved publicly would have had its token sent to
+  wherever that name resolved later, including a private address. Each
+  bucket and repository with a connection uses its own HTTP client, so a
+  connection opened without a credential is never reused with one.
+- **Who decides:** only a person in the root tenant holding
+  `compliance.private_endpoint.approve` (root administrators) can approve
+  or withdraw a range. A tenant's own administrator can see the ranges
+  approved for it and cannot change them. Withdrawing a range takes effect
+  at the next scan: the connection stays, and its credential is no longer
+  sent there.
+- **What can never be approved:** loopback, link-local and cloud metadata
+  addresses, anything public (it needs no approval), a range wider than a
+  /16 (IPv4) or /48 (IPv6), and the KMS platform's own services, which
+  discovery refuses whatever is approved.
+- **Not changed:** notification, ticketing and SIEM connections still can't
+  name a private address. Compliance and the audit service dial those
+  themselves through the outbound guard, which refuses every private
+  address.
+- **Audit:** `audit.compliance.private_endpoints_listed`,
+  `private_endpoint_added` and `private_endpoint_removed`, with refusals
+  (`platform_tenant_required`, `permission_denied`,
+  `invalid_private_endpoint`, `private_endpoint_exists`,
+  `private_endpoint_limit`). Approving and withdrawing are a new playbook
+  trigger, "Private endpoint approved or withdrawn".
+- **Owner default, recorded:** approval is by a root administrator alone,
+  audited, with no separate governance approval step. Say if a second
+  approver is wanted.
+
 ## [7.39.0-beta] — 2026-10-11
 
 ### Crypto Discovery: more ways to authenticate to object storage

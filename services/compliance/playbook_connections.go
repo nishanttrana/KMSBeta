@@ -378,6 +378,7 @@ func (h *Handler) connectionRoutes(rt *route.Router) {
 	rt.Handle("PUT /compliance/playbooks/connections/{id}", spec("connection_updated", permPlaybookWrite, "id", "warning"), h.updateConnection)
 	rt.Handle("DELETE /compliance/playbooks/connections/{id}", spec("connection_deleted", permPlaybookDelete, "id", "warning"), h.deleteConnection)
 	rt.Handle("POST /compliance/playbooks/connections/{id}/test", spec("connection_tested", permPlaybookWrite, "id", ""), h.testConnection)
+	h.privateEndpointRoutes(rt)
 }
 
 func (h *Handler) listConnections(c *route.Call) {
@@ -461,7 +462,23 @@ func (h *Handler) updateConnection(c *route.Call) {
 func (h *Handler) sealConnection(c *route.Call, conn *Connection) bool {
 	c.Detail("name", conn.Name)
 	c.Detail("type", conn.Type)
-	if err := validateConnection(*conn); err != nil {
+	err := validateConnection(*conn)
+	var blocked urlError
+	if errors.As(err, &blocked) && connectionByType[conn.Type].Category == categorySource {
+		// A source connection may name a private address a root
+		// administrator approved for this tenant (private_endpoints.go).
+		switch ok, perr := h.privateSourceAllowed(c.R.Context(), c.Tenant, conn.Fields[connectionByType[conn.Type].URLField]); {
+		case perr != nil:
+			c.Error(http.StatusInternalServerError, "internal_error", "read private endpoints failed")
+			return false
+		case ok:
+			err = nil
+			c.Detail("private_endpoint", true)
+		default:
+			err = urlError{fmt.Errorf("%v; a root administrator can approve a private range for this tenant (Playbooks, Connections, Private endpoints)", blocked.err)}
+		}
+	}
+	if err != nil {
 		var ue urlError
 		if errors.As(err, &ue) {
 			c.Refuse(http.StatusBadRequest, reasonURLBlocked, err.Error())

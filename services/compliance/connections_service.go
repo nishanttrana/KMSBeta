@@ -73,6 +73,10 @@ type resolvedConnection struct {
 	Type     string            `json:"type"`
 	Endpoint string            `json:"endpoint"`
 	Fields   map[string]string `json:"fields"`
+	// PrivateRanges: for a source connection, the private ranges approved
+	// for the tenant. Discovery sends the credential to a private address
+	// only inside one of them (7.40.0-beta).
+	PrivateRanges []string `json:"private_ranges"`
 }
 
 func (h *Handler) resolveConnection(c *route.Call) {
@@ -99,7 +103,19 @@ func (h *Handler) resolveConnection(c *route.Call) {
 		c.Error(http.StatusServiceUnavailable, "connections_unavailable", err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, map[string]interface{}{"data": resolvedConnection{ID: conn.ID, Name: conn.Name, Type: conn.Type, Endpoint: conn.Endpoint, Fields: opened.Fields}})
+	out := resolvedConnection{ID: conn.ID, Name: conn.Name, Type: conn.Type, Endpoint: conn.Endpoint, Fields: opened.Fields, PrivateRanges: []string{}}
+	if connectionByType[conn.Type].Category == categorySource {
+		// Fail closed: without the list, discovery would have to treat
+		// every private address as unapproved or as approved.
+		_, ranges, err := h.approvedRanges(c.R.Context(), c.Tenant)
+		if err != nil {
+			c.Error(http.StatusInternalServerError, "internal_error", "read private endpoints failed")
+			return
+		}
+		out.PrivateRanges = append(out.PrivateRanges, ranges...)
+		c.Detail("private_ranges", len(ranges))
+	}
+	c.JSON(http.StatusOK, map[string]interface{}{"data": out})
 }
 
 type importInput struct {

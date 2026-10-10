@@ -998,6 +998,8 @@ func TestTriggerSubjectsAreEmitted(t *testing.T) {
 		"audit.key.compromise_detected":             {"services/keycore/enterprise_audit_service.go", `"audit.key.compromise_detected"`},
 		"audit.audit.chain_broken":                  {"services/audit/service.go", `s.publisher.Publish(ctx, evt.Action, payload)`},
 		"audit.discovery.secret_exposed":            {"services/discovery/service.go", `Emit(ctx, "secret_exposed"`},
+		"audit.compliance.private_endpoint_added":   {"services/compliance/private_endpoints.go", `Action: "private_endpoint_added"`},
+		"audit.compliance.private_endpoint_removed": {"services/compliance/private_endpoints.go", `Action: "private_endpoint_removed"`},
 		"audit.secrets.access_rule_created":         {"services/secrets/handler.go", `Action: "access_rule_created"`},
 		"audit.secrets.access_rule_deleted":         {"services/secrets/handler.go", `Action: "access_rule_deleted"`},
 		"audit.secrets.destroyed":                   {"services/secrets/handler.go", `Action: "destroyed"`},

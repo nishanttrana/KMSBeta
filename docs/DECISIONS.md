@@ -7,6 +7,42 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Private addresses for source connections: a root administrator's allowlist, enforced at the dial (7.40.0-beta)
+
+- **Decision:** private address ranges are approved per tenant by a root
+  administrator and stored in compliance. They apply to source connections
+  only. Compliance accepts a private host for such a connection when it is
+  inside an approved range, and gives discovery the tenant's ranges with
+  each opened connection; discovery refuses to send a credential to a
+  private address outside them, checking the address it dials.
+- **Why this shape:** it is the allowlist the earlier entry called for
+  ("an administrator-approved allowlist of private ranges, not an
+  exception"). Enforcing at the dial is what makes it mean something: a
+  check when the connection is saved can be outlived by a DNS change.
+- **Decision (owner default, recorded when the owner said "fix all"
+  without choosing):** a root administrator approves alone, with the
+  approval audited and available as a playbook trigger. No governance
+  second approver.
+- **Rejected:** letting a tenant administrator approve ranges for their own
+  tenant (the list would constrain no one). Approving host names (a name
+  is not an address; what is approved must be what is dialled). A
+  platform-wide list for all tenants (one tenant's network is not
+  another's). Extending it to SIEM and webhook connections in the same
+  change: those are dialled by compliance and the audit service through
+  `ssrfguard`, which needs the same per-tenant check built into its dialer
+  and tested there.
+- **Cost:** a scan that used a credential against a name resolving to a
+  private address now fails until that range is approved. That was never a
+  supported configuration (such a connection could not be saved by address)
+  and the failure names the address and how to approve it.
+- **Enforced by:** `TestCredentialGuard`,
+  `TestCredentialNeverReachesAnUnapprovedPrivateAddress`,
+  `TestPrivateEndpointRoutes`,
+  `TestSourceConnectionOnAnApprovedPrivateAddress`,
+  `TestNormalizePrivateRange`, `TestPlaybookStorePostgres` (migration 009).
+
+---
+
 ## 2026-10-11 — Discovery: storage credentials are signed or exchanged in the service; the account key is allowed and discouraged (7.39.0-beta)
 
 - **Decision:** discovery implements each provider's authentication itself,

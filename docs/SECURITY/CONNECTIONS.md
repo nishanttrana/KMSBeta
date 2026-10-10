@@ -68,6 +68,36 @@ keep one.
   delivery errors name the host, never the URL (a Slack or Teams URL is
   itself a credential).
 
+## Private endpoints (7.40.0-beta)
+
+The outbound guard refuses private addresses for every connection. Source
+connections (`git`, `s3`, `azure_blob`, `gcs`) are the exception a root
+administrator can grant, because what they reach is often on the
+customer's own network:
+
+- A root administrator approves a private range for one tenant
+  (`POST /compliance/private-endpoints`, Playbooks → Connections → Private
+  endpoints). The caller must be a person in the root tenant holding
+  `compliance.private_endpoint.approve`; a tenant's administrator and a
+  service are refused (`platform_tenant_required`).
+- A range lies wholly inside private address space (10.0.0.0/8,
+  172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, fc00::/7) and is at most a
+  /16 (IPv4) or /48 (IPv6). Loopback, link-local, metadata and public
+  addresses can't be approved.
+- When a source connection is saved, a private host is accepted only if
+  every address it has is public or inside a range approved for the
+  tenant.
+- Compliance hands the tenant's approved ranges to discovery with each
+  opened connection. Discovery refuses to dial a private address outside
+  them for any request that carries the credential, checking the address
+  actually dialled. Its own guard still refuses reserved addresses and the
+  KMS platform's services, whatever is approved.
+- Withdrawing a range leaves the connections in place; from the next scan
+  their credential is no longer sent there.
+- Notification, ticketing and SIEM connections are not covered: compliance
+  and the audit service dial those through `ssrfguard`, which refuses
+  every private address.
+
 ## Every call is TLS
 
 - HTTP types go through `ssrfguard.NewHTTPSClient`: HTTPS only, TLS 1.3, no
@@ -122,17 +152,17 @@ again after a restore:
 ## What is still open
 
 - A SIEM on a private network (an on-premises QRadar or Splunk) can't be a
-  destination: the outbound guard refuses private addresses for every
-  connection. Allowing it needs an administrator-approved allowlist of
-  private ranges, not an exception.
+  destination: the outbound guard refuses private addresses for
+  notification, ticketing and SIEM connections. The approved private
+  endpoints of 7.40.0-beta cover source connections only; extending them to
+  what compliance and the audit service dial needs the same check in
+  `ssrfguard`'s dialer.
 - Streams deliver one event per request. Batching (every `pkg/siem`
   destination accepts a batch) would cut request volume for busy tenants.
 - Sentinel supports the public Azure cloud only (the Entra host is fixed).
-- A git server on a private network can't have a connection, for the same
-  reason as a private SIEM. Discovery can still scan its repositories that
-  need no token. The same holds for a storage service on a private address
-  (an on-premises MinIO or Ceph): its public buckets can be scanned, its
-  private ones can't until the allowlist exists.
+- Approving a private endpoint is a root administrator's decision alone,
+  audited, with no second approver (7.40.0-beta). A governance approval
+  step can be added if the owner wants one.
 - AWS role assumption, Entra ID and the Google service-account token
   exchange are tested against protocol doubles that verify the signatures,
   not against a real AWS account, Entra tenant or Google project

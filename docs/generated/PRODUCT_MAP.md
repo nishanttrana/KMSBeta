@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-10T18:33:22Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:46:15Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `874` across `28` services
-- Backend routes on the `pkg/route` kernel: `446` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `555`
-- Frontend call sites with exact backend route match: `511`
+- Backend HTTP routes discovered: `877` across `28` services
+- Backend routes on the `pkg/route` kernel: `449` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `558`
+- Frontend call sites with exact backend route match: `514`
 - Frontend call sites needing review or dynamic/runtime confirmation: `44`
-- Clickable controls with static `onClick` handlers: `760`
-- Backend request flows with handler/service/package summaries: `874`
+- Clickable controls with static `onClick` handlers: `762`
+- Backend request flows with handler/service/package summaries: `877`
 
 ## How To Use This For Launch
 
@@ -141,7 +141,7 @@ flowchart LR
   svc_certs["certs (69 routes)"]
   svc_cloud["cloud (14 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
-  svc_compliance["compliance (54 routes)"]
+  svc_compliance["compliance (57 routes)"]
   svc_confidential["confidential (7 routes)"]
   svc_discovery["discovery (24 routes)"]
   svc_ekm["ekm (64 routes)"]
@@ -210,7 +210,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | certs | 69 | 52 |
 | cloud | 14 | 10 |
 | cluster-manager | 21 | 11 |
-| compliance | 54 | 20 |
+| compliance | 57 | 23 |
 | confidential | 7 | 6 |
 | dataprotect | 50 | 29 |
 | discovery | 24 | 22 |

@@ -31,6 +31,11 @@ const catalog = {
   event_fields: [], filter_ops: [], templates: [], incident_statuses: []
 };
 
+// GET /compliance/private-endpoints as the root tenant sees it; a test can
+// switch to a tenant's read-only view.
+let privateEndpoints: { data: unknown[]; can_approve: boolean } = { data: [], can_approve: false };
+const approved = [{ id: "pvt_1", tenant_id: "bank-a", cidr: "10.4.0.0/24", note: "MinIO, data centre A", created_by: "root-admin", created_at: "2026-10-10T09:00:00Z" }];
+
 const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
 
 async function stub(page: Page, created: unknown[]): Promise<void> {
@@ -46,6 +51,12 @@ async function stub(page: Page, created: unknown[]): Promise<void> {
     if (p.endsWith("/audit/webhooks")) return route.fulfill(json({ items: streams }));
     if (p.endsWith("/mek/exposure")) return route.fulfill(json({ items: [], open: 0 }));
     if (p.endsWith("/auth/tenants")) return route.fulfill(json({ items: [{ id: "root", name: "root", status: "active" }] }));
+    if (p.endsWith("/compliance/private-endpoints") && req.method() === "POST") {
+      created.push(req.postDataJSON());
+      return route.fulfill(json({ data: { id: "pvt_new", ...req.postDataJSON() } }, 201));
+    }
+    if (p.endsWith("/compliance/private-endpoints/pvt_1") && req.method() === "DELETE") return route.fulfill(json({ error: { code: "internal_error", message: "remove private endpoint failed" } }, 500));
+    if (p.endsWith("/compliance/private-endpoints")) return route.fulfill(json(privateEndpoints));
     if (p.endsWith("/compliance/playbooks/catalog")) return route.fulfill(json({ data: catalog }));
     if (p.endsWith("/compliance/playbooks/connections")) return route.fulfill(json({ data: connections }));
     if (p.endsWith("/compliance/playbooks/summary")) return route.fulfill(json({ data: {} }));
@@ -102,4 +113,40 @@ test("SIEM connection types are grouped with masked credentials", async ({ page 
   await expect(token).toHaveCount(1);
   await expect(page.getByText("Test sends one labelled event to the SIEM.", { exact: false })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/siem-connection.png`, fullPage: true });
+});
+
+test("a root administrator approves a private range; a refusal is shown, not swallowed", async ({ page }) => {
+  privateEndpoints = { data: approved, can_approve: true };
+  const created: any[] = [];
+  await stub(page, created);
+  await openPlaybooks(page, "Connections");
+  await expect(page.getByText("Private endpoints", { exact: true })).toBeVisible();
+  await expect(page.getByText("10.4.0.0/24", { exact: true })).toBeVisible();
+  await expect(page.getByText("MinIO, data centre A")).toBeVisible();
+
+  await page.getByPlaceholder("tenant", { exact: true }).fill("bank-b");
+  await page.getByPlaceholder("10.4.0.0/24 or 10.4.0.20").fill("192.168.7.0/24");
+  await page.getByPlaceholder("note (what is there)").fill("GitLab");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/private-endpoints.png`, fullPage: true });
+  await page.getByRole("button", { name: "Approve" }).click();
+  await expect.poll(() => created.length).toBe(1);
+  expect(created[0]).toEqual({ tenant_id: "root", for_tenant: "bank-b", cidr: "192.168.7.0/24", note: "GitLab" });
+
+  // The service refuses the withdrawal: the reason is on the page.
+  await page.getByRole("button", { name: "Withdraw 10.4.0.0/24 for bank-a" }).click();
+  await expect(page.getByText(/Approval not withdrawn: .*remove private endpoint failed/)).toBeVisible();
+});
+
+test("a tenant sees its approved ranges and cannot change them", async ({ page }) => {
+  privateEndpoints = { data: approved, can_approve: false };
+  await stub(page, []);
+  await openPlaybooks(page, "Connections");
+  await expect(page.getByText("10.4.0.0/24", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Withdraw/ })).toHaveCount(0);
+  privateEndpoints = { data: [], can_approve: false };
+  await page.reload();
+  await page.getByText("Playbooks", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Connections" }).first().click();
+  await expect(page.getByText("No private ranges approved for this tenant. A root administrator approves them here.")).toBeVisible();
 });
