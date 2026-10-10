@@ -413,6 +413,7 @@ func (h *Handler) addBucket(c *route.Call) {
 	c.Detail("bucket", req.Name)
 	c.Detail("prefix", req.Prefix)
 	c.Detail("connection_id", req.ConnectionID)
+	c.Detail("deep", req.Deep)
 	b, err := h.svc.AddBucket(c.R.Context(), c.Tenant, req, c.Actor())
 	switch {
 	case errors.Is(err, errInvalidBucket):

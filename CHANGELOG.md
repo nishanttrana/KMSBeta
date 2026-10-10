@@ -4,6 +4,33 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.37.0-beta] — 2026-10-10
+
+### Crypto Discovery: files are recognised by content; archives are scanned; deep scan for buckets
+- **Changed: a keystore is recognised by what it holds, not its name.** JKS,
+  JCEKS and PKCS#12 files are identified by their first bytes, so a
+  keystore called `backup.bin` is found. PEM blocks, DER certificates and
+  SSH keys were already read by content once a file was opened.
+- **Added: archives are opened and scanned in memory.** A zip (and so a
+  jar, war or ear), tar or gzipped tar found in a repository, a bucket, the
+  mounted tree or an upload is read member by member with the same rules as
+  a file beside it, by name or by content. Findings are located as
+  `archive.zip!/path/in/archive:line`. Nothing is unpacked to disk.
+- **Added: deep scan for a bucket** (a switch in the Buckets dialog, off by
+  default). Until now only objects with a telling file name were downloaded.
+  With deep scan on, the scan also reads the first kilobyte of every other
+  object and downloads it only if that holds key material (a PEM block, a
+  keystore, an SSH key, a DER certificate or an archive). It costs one small
+  request per such object, which is why it is a choice. The scan reports how
+  many objects it looked into (`storage_sniffed`).
+- **Limits:** an archive of at most 32 MiB, 20,000 entries and 256 MiB
+  unpacked, members of at most 2 MiB; over a cap the scan keeps what it read
+  and says so for a bucket. An archive inside an archive is not opened.
+  Encrypted zip members are skipped. A deep scan sees key material only if
+  it starts in the object's first kilobyte.
+- **Fixed:** the asset detail showed no location facts for assets found in a
+  bucket (added with 7.36.0-beta's detail rows; archives add "Archive").
+
 ## [7.36.0-beta] — 2026-10-10
 
 ### Crypto Discovery: crypto usage in code and configuration; more secret formats

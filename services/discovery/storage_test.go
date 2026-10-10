@@ -134,7 +134,7 @@ func newS3Server(t *testing.T, objects map[string]string, signed bool) *hostingS
 				writeXML(w, http.StatusNotFound, `<Error><Code>NoSuchKey</Code></Error>`)
 				return
 			}
-			_, _ = w.Write([]byte(body))
+			http.ServeContent(w, r, "", time.Time{}, strings.NewReader(body)) // honours Range
 			return
 		}
 		q := r.URL.Query()
@@ -174,7 +174,7 @@ func newAzureServer(t *testing.T, objects map[string]string) *hostingServer {
 				writeXML(w, http.StatusNotFound, `<Error><Code>BlobNotFound</Code></Error>`)
 				return
 			}
-			_, _ = w.Write([]byte(body))
+			http.ServeContent(w, r, "", time.Time{}, strings.NewReader(body)) // honours Range
 			return
 		}
 		if q.Get("restype") != "container" || q.Get("comp") != "list" {
@@ -278,7 +278,7 @@ func TestSignV4MatchesTheAWSSDK(t *testing.T) {
 		{"trailing/space .pem", nil},
 	} {
 		// 204 is not a success for the scan; only the signature matters here.
-		_, _ = svc.bucketGet(context.Background(), client, b, cred, c.key, c.q)
+		_, _ = svc.bucketGet(context.Background(), client, b, cred, c.key, c.q, 0)
 	}
 	if len(got) != 10 {
 		t.Fatalf("%d requests reached the server", len(got)/2)
@@ -668,8 +668,9 @@ func TestBucketLimit(t *testing.T) {
 // VECTA_TEST_S3_REGION and VECTA_TEST_S3_PREFIX (no access key: a public
 // bucket, read with no credential); for Azure Blob VECTA_TEST_AZURE_ENDPOINT,
 // VECTA_TEST_AZURE_CONTAINER and VECTA_TEST_AZURE_SAS. VECTA_TEST_STORAGE_CA
-// names a PEM file to trust for a private endpoint, and
-// VECTA_TEST_STORAGE_MIN_ASSETS the least number of assets to expect.
+// names a PEM file to trust for a private endpoint,
+// VECTA_TEST_STORAGE_MIN_ASSETS the least number of assets to expect, and
+// VECTA_TEST_STORAGE_DEEP=1 turns the deep scan on.
 func TestLiveObjectStorage(t *testing.T) {
 	type live struct {
 		b    Bucket
@@ -705,10 +706,10 @@ func TestLiveObjectStorage(t *testing.T) {
 	}
 	least, _ := strconv.Atoi(os.Getenv("VECTA_TEST_STORAGE_MIN_ASSETS"))
 	for _, c := range cases {
-		c.b.TenantID = "t1"
+		c.b.TenantID, c.b.Deep = "t1", os.Getenv("VECTA_TEST_STORAGE_DEEP") != ""
 		svc.conns = stubConnections{"live": c.conn}
 		res, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s", false)
-		t.Logf("%s %s: %d objects listed, %d read, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, len(res.assets), assetLines(res.assets, c.b.label()), err)
+		t.Logf("%s %s: %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
 		if err != nil || len(res.assets) < least {
 			t.Errorf("%s: %d assets (want at least %d), %v", c.b.label(), len(res.assets), least, err)
 		}

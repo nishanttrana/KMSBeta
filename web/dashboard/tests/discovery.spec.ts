@@ -12,8 +12,8 @@ const finished = { ...running, status: "completed", stats: { sources_done: ["net
 
 // Buckets as GET /discovery/buckets returns them (services/discovery Bucket).
 const buckets = [
-  { id: "bucket_s3", tenant_id: "root", provider: "s3", endpoint: "https://s3.eu-west-1.amazonaws.com", bucket: "acme-artifacts", prefix: "releases/", region: "eu-west-1", connection_id: "pbconn_s3", created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
-  { id: "bucket_az", tenant_id: "root", provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "configs", prefix: "", region: "", connection_id: "pbconn_az", created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
+  { id: "bucket_s3", tenant_id: "root", provider: "s3", endpoint: "https://s3.eu-west-1.amazonaws.com", bucket: "acme-artifacts", prefix: "releases/", region: "eu-west-1", connection_id: "pbconn_s3", deep: true, created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
+  { id: "bucket_az", tenant_id: "root", provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "configs", prefix: "", region: "", connection_id: "pbconn_az", deep: false, created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
 ];
 
 // The asset list as the service filters and pages it (FindAssets).
@@ -244,9 +244,10 @@ test("a private bucket is added with a storage connection and tested", async ({ 
   await expect(page.getByText("Artifacts read key · s3.eu-west-1.amazonaws.com")).toHaveCount(0);
   await expect(page.getByText("GitLab read token · gitlab.example.com")).toHaveCount(0);
   await page.getByText("Configs SAS · acme.blob.core.windows.net").last().click();
+  await page.getByRole("switch", { name: "Deep scan" }).click();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/discovery-buckets.png` });
   await page.getByRole("button", { name: "Add" }).click();
   const added = () => writes.filter((w) => w.method() === "POST" && w.url().includes("/discovery/buckets?"));
   await expect.poll(() => added().length).toBe(1);
-  expect(added()[0]!.postDataJSON()).toEqual({ provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "backups", prefix: "keys/", region: "", connection_id: "pbconn_az" });
+  expect(added()[0]!.postDataJSON()).toEqual({ provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "backups", prefix: "keys/", region: "", connection_id: "pbconn_az", deep: true });
 });

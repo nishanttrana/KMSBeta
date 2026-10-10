@@ -360,7 +360,7 @@ func (s *Service) scanArchive(r Repository, scanID string, body io.Reader, limit
 		}
 		// The first path element is the archive's own folder (repo-commit).
 		_, rel, ok := strings.Cut(path.Clean(h.Name), "/")
-		if h.Typeflag != tar.TypeReg || !ok || h.Size <= 0 || h.Size > maxUploadBytes || !codeScanFile(path.Base(rel)) || skippedPath(rel) {
+		if h.Typeflag != tar.TypeReg || !ok || !fileSizeOK(rel, h.Size) || !codeScanFile(path.Base(rel)) || skippedPath(rel) {
 			continue
 		}
 		raw := make([]byte, h.Size)
@@ -371,7 +371,8 @@ func (s *Service) scanArchive(r Repository, scanID string, body io.Reader, limit
 			return out, errors.New("the archive ended early or is damaged")
 		}
 		out.files++
-		for _, a := range s.materialAssets(r.TenantID, scanID, "git", label+"/"+rel, findMaterial(rel, raw)) {
+		found, _ := s.fileAssets(r.TenantID, scanID, "git", label+"/"+rel, rel, raw) // an archive over its caps: what was read
+		for _, a := range found {
 			a.Metadata["repository"], a.Metadata["path"] = r.URL, rel
 			if r.Ref != "" {
 				a.Metadata["ref"] = r.Ref

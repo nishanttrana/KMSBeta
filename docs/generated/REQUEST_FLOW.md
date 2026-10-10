@@ -1,6 +1,6 @@
 # Generated Request Flow Map
 
-Generated at `2026-10-10T18:04:36Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:15:01Z` by `scripts/generate_product_map.py`.
 
 This file connects frontend requests to backend Go processing. It is static analysis: it shows likely code paths from source, while runtime branches still need logs, traces, or Playwright network captures.
 
@@ -248,12 +248,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:319) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:301 |
 | discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:361) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
 | discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:374) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
-| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:412 |
-| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:424 |
-| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:442) | RemoveBucket | DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:434 |
-| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:456) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:445 |
-| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:473) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
-| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:485) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
+| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:414 |
+| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:426 |
+| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:443) | RemoveBucket | DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:436 |
+| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:457) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:447 |
+| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
+| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |
@@ -914,12 +914,12 @@ This file connects frontend requests to backend Go processing. It is static anal
 | discovery\|POST\|/discovery/repositories | POST /discovery/repositories | addRepository (services/discovery/handler.go:319) | AddRepository, RemoveRepository, TestRepository, ListBuckets, AddBucket | ListRepositories, CreateRepository, DeleteRepository, ListBuckets, CreateBucket, DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:301 |
 | discovery\|DELETE\|/discovery/repositories/{param} | DELETE /discovery/repositories/{id} | removeRepository (services/discovery/handler.go:361) | RemoveRepository | DeleteRepository |  |  | web/dashboard/src/lib/discovery.ts:311 |
 | discovery\|POST\|/discovery/repositories/{param}/test | POST /discovery/repositories/{id}/test | testRepository (services/discovery/handler.go:374) | TestRepository |  |  |  | web/dashboard/src/lib/discovery.ts:322 |
-| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:412 |
-| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:424 |
-| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:442) | RemoveBucket | DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:434 |
-| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:456) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:445 |
-| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:473) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
-| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:485) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
+| discovery\|GET\|/discovery/buckets | GET /discovery/buckets | listBuckets (services/discovery/handler.go:389) | ListBuckets | ListBuckets |  |  | web/dashboard/src/lib/discovery.ts:414 |
+| discovery\|POST\|/discovery/buckets | POST /discovery/buckets | addBucket (services/discovery/handler.go:403) | AddBucket, RemoveBucket, TestBucket, GetSchedule, SaveSchedule | ListBuckets, CreateBucket, DeleteBucket, GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:426 |
+| discovery\|DELETE\|/discovery/buckets/{param} | DELETE /discovery/buckets/{id} | removeBucket (services/discovery/handler.go:443) | RemoveBucket | DeleteBucket |  |  | web/dashboard/src/lib/discovery.ts:436 |
+| discovery\|POST\|/discovery/buckets/{param}/test | POST /discovery/buckets/{id}/test | testBucket (services/discovery/handler.go:457) | TestBucket |  |  |  | web/dashboard/src/lib/discovery.ts:447 |
+| discovery\|GET\|/discovery/schedule | GET /discovery/schedule | getSchedule (services/discovery/handler.go:474) | GetSchedule | GetSchedule |  |  | web/dashboard/src/lib/discovery.ts:347 |
+| discovery\|PUT\|/discovery/schedule | PUT /discovery/schedule | putSchedule (services/discovery/handler.go:486) | SaveSchedule | GetSchedule, PutSchedule |  | pkg/tenantcheck.IsServicePrincipal | web/dashboard/src/lib/discovery.ts:362 |
 | ekm\|POST\|/ekm/agents/register | POST /ekm/agents/register | handleRegisterAgent (services/ekm/handler.go:157) | RegisterAgent | GetAgent, UpsertAgent |  |  | web/dashboard/src/lib/ekm.ts:317 |
 | ekm\|GET\|/ekm/agents | GET /ekm/agents | handleListAgents (services/ekm/handler.go:182) | ListAgents | ListAgents |  |  | web/dashboard/src/lib/ekm.ts:285 |
 | ekm\|GET\|/ekm/agents/{param}/status | GET /ekm/agents/{id}/status | handleAgentStatus (services/ekm/handler.go:197) | GetAgentStatus | GetAgent, ListDatabases, GetTDEKey |  |  | web/dashboard/src/lib/ekm.ts:290 |

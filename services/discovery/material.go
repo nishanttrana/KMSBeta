@@ -48,9 +48,12 @@ func sshFingerprint(blob []byte) string {
 	return "SHA256:" + base64.RawStdEncoding.EncodeToString(sum[:])
 }
 
-// findMaterial parses one file. name is only used to recognise a keystore by
-// its extension.
+// findMaterial parses one file. A keystore is recognised by its first bytes
+// or its extension; name also picks the usage rules for its language.
 func findMaterial(name string, raw []byte) []finding {
+	if format := keystoreFormat(raw); format != "" {
+		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": format}}}
+	}
 	if keystoreExt[strings.ToLower(filepath.Ext(name))] {
 		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")}}}
 	}

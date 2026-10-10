@@ -316,7 +316,7 @@ func (s *Service) ScanUpload(ctx context.Context, tenantID, name string, content
 	_ = s.publishAudit(ctx, "audit.discovery.scan_initiated", tenantID, map[string]interface{}{
 		"scan_id": scan.ID, "scan_types": []string{"upload"}, "file": name,
 	})
-	assets := s.materialAssets(tenantID, scan.ID, "upload", name, findMaterial(name, content))
+	assets, _ := s.fileAssets(tenantID, scan.ID, "upload", name, name, content) // an archive over its caps: what was read
 	n := s.storeAssets(ctx, tenantID, assets, map[string]bool{})
 	scan.Status, scan.CompletedAt = "completed", s.now()
 	scan.Stats = map[string]interface{}{"file": name, "bytes": len(content), "upload_assets": len(assets), "assets_discovered": n, "sources_done": []string{"upload"}}

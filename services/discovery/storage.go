@@ -294,8 +294,9 @@ func storageError(resp *http.Response, private bool) error {
 	}
 }
 
-// bucketGet sends one authorized GET for the bucket. key "" is the listing.
-func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, key string, q neturl.Values) (*http.Response, error) {
+// bucketGet sends one authorized GET for the bucket. key "" is the listing;
+// first > 0 asks for only that many bytes from the start of an object.
+func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, key string, q neturl.Values, first int) (*http.Response, error) {
 	if q == nil {
 		q = neturl.Values{}
 	}
@@ -314,6 +315,9 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 		return nil, errors.New("the object's name can't be put in a request")
 	}
 	req.Header.Set("User-Agent", "VectaKMS-Discovery")
+	if first > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", first-1))
+	}
 	switch {
 	case b.Provider == "azure":
 		req.Header.Set("x-ms-version", azureAPIVersion)
@@ -328,7 +332,9 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 		}
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
+	// 206: the range asked for. A service that ignores Range answers 200
+	// with the whole object, which the caller's limit still bounds.
+	if resp.StatusCode != http.StatusOK && !(first > 0 && resp.StatusCode == http.StatusPartialContent) {
 		defer resp.Body.Close() //nolint:errcheck
 		return nil, storageError(resp, b.ConnectionID != "")
 	}
@@ -361,7 +367,7 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 	if b.Prefix != "" {
 		q.Set("prefix", b.Prefix)
 	}
-	resp, err := s.bucketGet(ctx, client, b, cred, "", q)
+	resp, err := s.bucketGet(ctx, client, b, cred, "", q, 0)
 	if err != nil {
 		return nil, "", err
 	}
@@ -400,18 +406,26 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 	return out, next, nil
 }
 
-// readObject downloads one object of at most maxUploadBytes.
-func (s *Service) readObject(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, key string) ([]byte, error) {
-	resp, err := s.bucketGet(ctx, client, b, cred, key, nil)
+// readObject downloads an object of at most limit bytes. first > 0 reads
+// only the object's first bytes.
+func (s *Service) readObject(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, key string, limit int64, first int) ([]byte, error) {
+	resp, err := s.bucketGet(ctx, client, b, cred, key, nil, first)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close() //nolint:errcheck
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxUploadBytes+1))
+	if first > 0 {
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, int64(first)))
+		if err != nil {
+			return nil, errors.New("the download ended early")
+		}
+		return raw, nil
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return nil, errors.New("the download ended early")
 	}
-	if len(raw) > maxUploadBytes {
+	if int64(len(raw)) > limit {
 		return nil, errors.New("the object is larger than its listing said")
 	}
 	return raw, nil
@@ -421,13 +435,54 @@ type bucketScan struct {
 	assets     []CryptoAsset
 	objects    int // objects listed
 	files      int // objects read and parsed
+	sniffed    int // objects whose first bytes a deep scan read
 	unreadable []string
 }
 
 // scannable: an object the parser reads, by the same rules as a repository
 // file (name, size, not under a dependency or build folder).
 func scannable(o bucketObject) bool {
-	return o.size > 0 && o.size <= maxUploadBytes && !strings.HasSuffix(o.key, "/") && codeScanFile(path.Base(o.key)) && !skippedPath(o.key)
+	return fileSizeOK(o.key, o.size) && !strings.HasSuffix(o.key, "/") && codeScanFile(path.Base(o.key)) && !skippedPath(o.key)
+}
+
+// sniffable: an object a deep scan looks into because its name says
+// nothing: any other object small enough to hold, outside dependency and
+// build folders.
+func sniffable(o bucketObject) bool {
+	return o.size > 0 && o.size <= maxArchiveBytes && !strings.HasSuffix(o.key, "/") && !skippedPath(o.key)
+}
+
+// bucketJob is one object to read; sniff: only if its first bytes look like
+// key material.
+type bucketJob struct {
+	bucketObject
+	sniff bool
+}
+
+// fetchObject reads the object a job names. A sniffed object that holds
+// nothing of interest returns nil.
+func (s *Service) fetchObject(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, j bucketJob) ([]byte, error) {
+	limit := int64(maxUploadBytes)
+	if !j.sniff {
+		if archiveName(j.key) {
+			limit = maxArchiveBytes
+		}
+		return s.readObject(ctx, client, b, cred, j.key, limit, 0)
+	}
+	head, err := s.readObject(ctx, client, b, cred, j.key, 0, sniffBytes)
+	if err != nil || !looksLikeKeyMaterial(head) {
+		return nil, err
+	}
+	if j.size <= int64(len(head)) {
+		return head, nil
+	}
+	if archiveKind(head) != "" {
+		limit = maxArchiveBytes
+	}
+	if j.size > limit {
+		return nil, nil // key material by its first bytes, but too large to hold
+	}
+	return s.readObject(ctx, client, b, cred, j.key, limit, 0)
 }
 
 // scanBucket lists the bucket and inventories each scannable object. With
@@ -456,37 +511,46 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 		if out.objects > maxBucketObjects {
 			return out, errBucketTooLarge
 		}
-		var todo []bucketObject
+		var todo []bucketJob
 		for _, o := range page {
-			if !scannable(o) {
-				continue
+			j := bucketJob{bucketObject: o, sniff: !scannable(o)}
+			cost := o.size
+			if j.sniff {
+				if !b.Deep || probe || !sniffable(o) {
+					continue
+				}
+				cost = sniffBytes
 			}
-			if bytes += o.size; bytes > maxBucketBytes {
+			if bytes += cost; bytes > maxBucketBytes {
 				return out, errBucketTooLarge
 			}
-			if todo = append(todo, o); probe {
+			if todo = append(todo, j); probe {
 				break
 			}
 		}
-		jobs := make(chan bucketObject)
+		jobs := make(chan bucketJob)
 		var wg sync.WaitGroup
 		for i := 0; i < min(bucketWorkers, len(todo)); i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				for o := range jobs {
-					raw, err := s.readObject(ctx, client, b, cred, o.key)
+					raw, err := s.fetchObject(ctx, client, b, cred, o)
 					var found []CryptoAsset
-					if err == nil {
-						found = s.materialAssets(b.TenantID, scanID, "storage", label+"/"+o.key, findMaterial(o.key, raw))
+					if err == nil && raw != nil {
+						found, err = s.fileAssets(b.TenantID, scanID, "storage", label+"/"+o.key, o.key, raw)
 						for _, a := range found {
 							a.Metadata["endpoint"], a.Metadata["bucket"], a.Metadata["key"], a.Metadata["provider"] = b.Endpoint, b.Name, o.key, b.Provider
 						}
 					}
 					mu.Lock()
+					if o.sniff {
+						out.sniffed++
+					}
 					if err != nil {
 						out.unreadable = append(out.unreadable, o.key+": "+err.Error())
-					} else {
+					}
+					if raw != nil {
 						out.files++
 						out.assets = append(out.assets, found...)
 					}
@@ -522,20 +586,21 @@ func (s *Service) scanStorage(ctx context.Context, tenantID string, scanID strin
 	}
 	client := s.storageClient(s.targetGuard(ctx))
 	var (
-		assets         []CryptoAsset
-		failed         []string
-		objects, files int
+		assets                  []CryptoAsset
+		failed                  []string
+		objects, files, sniffed int
 	)
 	for _, b := range buckets {
 		res, err := s.scanBucket(ctx, client, b, scanID, false)
 		assets = append(assets, res.assets...)
 		objects += res.objects
 		files += res.files
+		sniffed += res.sniffed
 		if err != nil {
 			failed = append(failed, b.label()+": "+err.Error())
 		}
 	}
-	stats := map[string]interface{}{"storage_buckets": len(buckets), "storage_objects": objects, "storage_files": files}
+	stats := map[string]interface{}{"storage_buckets": len(buckets), "storage_objects": objects, "storage_files": files, "storage_sniffed": sniffed}
 	if len(failed) > 0 {
 		return assets, stats, fmt.Errorf("%d of %d buckets failed: %s", len(failed), len(buckets), strings.Join(failed, "; "))
 	}
@@ -551,6 +616,7 @@ type BucketInput struct {
 	Prefix       string `json:"prefix"`
 	Region       string `json:"region"`
 	ConnectionID string `json:"connection_id"`
+	Deep         bool   `json:"deep"`
 }
 
 func (s *Service) AddBucket(ctx context.Context, tenantID string, in BucketInput, actor string) (Bucket, error) {
@@ -558,7 +624,7 @@ func (s *Service) AddBucket(ctx context.Context, tenantID string, in BucketInput
 	if err != nil {
 		return Bucket{}, err
 	}
-	b.ID, b.TenantID, b.ConnectionID, b.CreatedBy = newID("bucket"), tenantID, strings.TrimSpace(in.ConnectionID), actor
+	b.ID, b.TenantID, b.ConnectionID, b.CreatedBy, b.Deep = newID("bucket"), tenantID, strings.TrimSpace(in.ConnectionID), actor, in.Deep
 	existing, err := s.store.ListBuckets(ctx, tenantID)
 	if err != nil {
 		return Bucket{}, err

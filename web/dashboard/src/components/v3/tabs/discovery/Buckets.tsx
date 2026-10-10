@@ -41,6 +41,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
   const [connection, setConnection] = useState("");
+  const [deep, setDeep] = useState(false);
   const [busy, setBusy] = useState(false);
   const [connections, setConnections] = useState<SourceConnection[]>([]);
   const [connError, setConnError] = useState("");
@@ -67,7 +68,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
     try {
       await addDiscoveryBucket(session, {
         provider: service.provider, endpoint: fixedEndpoint ? service.endpoint! : endpoint.trim(),
-        bucket: name.trim(), prefix: prefix.trim(), region: fixedRegion ? service.region! : region.trim(), connection_id: connection,
+        bucket: name.trim(), prefix: prefix.trim(), region: fixedRegion ? service.region! : region.trim(), connection_id: connection, deep,
       });
       setName(""); setPrefix("");
       onChanged();
@@ -106,13 +107,18 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
         <Inp mono placeholder={service.endpointHint} disabled={fixedEndpoint} value={fixedEndpoint ? service.endpoint : endpoint} onChange={(e) => setEndpoint(e.target.value)} />
         <Inp mono placeholder={service.provider === "azure" ? "no region" : "region (us-east-1)"} disabled={fixedRegion} value={fixedRegion ? service.region : region} onChange={(e) => setRegion(e.target.value)} />
       </div>
-      <div style={{ ...row, gridTemplateColumns: "minmax(150px,1.2fr) minmax(130px,1fr) minmax(170px,1.3fr) auto" }}>
+      <div style={{ ...row, gridTemplateColumns: "minmax(140px,1.2fr) minmax(120px,1fr) minmax(160px,1.3fr) auto auto" }}>
         <Inp mono placeholder={service.provider === "azure" ? "container" : "bucket"} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} />
         <Inp mono placeholder="prefix (optional)" value={prefix} onChange={(e) => setPrefix(e.target.value)} />
         <Sel value={connection} onChange={(e) => setConnection(e.target.value)}>
           <option value="">Public (no credential)</option>
           {offered.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.endpoint}</option>)}
         </Sel>
+        <button type="button" role="switch" aria-checked={deep} onClick={() => setDeep((d) => !d)}
+          title="Also read the first kilobyte of every object whose name says nothing, and scan those that hold keys. One small request per object."
+          style={{ border: `1px solid ${deep ? C.accentFg : C.border}`, background: deep ? C.accentDim : "transparent", color: deep ? C.accentFg : C.muted, borderRadius: 7, padding: "7px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+          Deep scan
+        </button>
         <Btn primary onClick={() => void add()} disabled={busy || !ready}><Plus size={12} />{busy ? "Adding..." : "Add"}</Btn>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 10.5, color: C.muted, marginBottom: 12 }}>
@@ -133,7 +139,8 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
                     {b.endpoint.replace(/^https:\/\//, "")}/{b.bucket}{b.prefix ? <span style={{ color: C.muted }}>/{b.prefix}</span> : null}
                   </span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10.5, color: C.muted }}>
-                    {b.connection_id ? <><Lock size={11} />{connName(b.connection_id)}</> : "public"}
+                    {b.deep && <span style={{ color: C.accentFg, fontWeight: 600 }}>deep ·</span>}
+                    {b.connection_id ? <><Lock size={11} /><span>{connName(b.connection_id)}</span></> : <span>public</span>}
                   </span>
                   <Btn small onClick={() => void test(b)} disabled={t.busy}>{t.busy ? "Testing..." : "Test"}</Btn>
                   <button type="button" aria-label={`Remove ${b.bucket}`} onClick={() => void remove(b)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", display: "inline-flex" }}><X size={13} /></button>

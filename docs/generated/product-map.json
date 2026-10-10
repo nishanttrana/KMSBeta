@@ -24126,7 +24126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
-      "line": 158,
+      "line": 159,
       "tabs": [],
       "tag": "button"
     },
@@ -24134,7 +24134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "void save()} disabled= >Save",
-      "line": 166,
+      "line": 167,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24142,15 +24142,23 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
-      "line": 173,
+      "line": 174,
       "tabs": [],
       "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
+      "label": "setDeep((d) => !d)} title=\"Also read the first kilobyte of every object whose...",
+      "line": 117,
+      "tabs": [],
+      "tag": "button"
+    },
+    {
+      "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
+      "handler": "",
       "label": "void add()} disabled= >",
-      "line": 116,
+      "line": 122,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24158,7 +24166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "onNavigate?.(\"playbooks\")} style={ }>New storage connection",
-      "line": 120,
+      "line": 126,
       "tabs": [],
       "tag": "button"
     },
@@ -24166,7 +24174,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "void test(b)} disabled= >",
-      "line": 138,
+      "line": 145,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24174,7 +24182,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "void remove(b)} style={ }>",
-      "line": 139,
+      "line": 146,
       "tabs": [],
       "tag": "button"
     },
@@ -28657,7 +28665,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 412,
+      "line": 414,
       "match_key": "discovery|GET|/discovery/buckets",
       "method": "GET",
       "normalized_path": "/discovery/buckets",
@@ -28670,7 +28678,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 424,
+      "line": 426,
       "match_key": "discovery|POST|/discovery/buckets",
       "method": "POST",
       "normalized_path": "/discovery/buckets",
@@ -28683,7 +28691,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 434,
+      "line": 436,
       "match_key": "discovery|DELETE|/discovery/buckets/{param}",
       "method": "DELETE",
       "normalized_path": "/discovery/buckets/{param}",
@@ -28696,7 +28704,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 445,
+      "line": 447,
       "match_key": "discovery|POST|/discovery/buckets/{param}/test",
       "method": "POST",
       "normalized_path": "/discovery/buckets/{param}/test",
@@ -32580,7 +32588,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-10T18:04:36Z",
+  "generated_at": "2026-10-10T18:15:01Z",
   "navigation": [
     {
       "group": "Overview",
@@ -55755,8 +55763,7 @@
         "newID",
         "CreateScan",
         "publishAudit",
-        "materialAssets",
-        "findMaterial",
+        "fileAssets",
         "storeAssets",
         "UpdateScan"
       ],
@@ -55770,8 +55777,7 @@
             "newID",
             "CreateScan",
             "publishAudit",
-            "materialAssets",
-            "findMaterial",
+            "fileAssets",
             "storeAssets",
             "UpdateScan"
           ],
@@ -55888,7 +55894,7 @@
           "file": "services/discovery/repo.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 491,
+          "line": 492,
           "name": "ListRepositories",
           "receiver_calls": [],
           "store_calls": [
@@ -55988,7 +55994,7 @@
             "CreateRepository"
           ],
           "internal_package_calls": [],
-          "line": 461,
+          "line": 462,
           "name": "AddRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56004,7 +56010,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 508,
+          "line": 509,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56020,7 +56026,7 @@
             "repoClient"
           ],
           "internal_package_calls": [],
-          "line": 519,
+          "line": 520,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -56030,7 +56036,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 586,
+          "line": 652,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56056,7 +56062,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 556,
+          "line": 622,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56121,7 +56127,7 @@
             "DeleteRepository"
           ],
           "internal_package_calls": [],
-          "line": 508,
+          "line": 509,
           "name": "RemoveRepository",
           "receiver_calls": [],
           "store_calls": [
@@ -56184,7 +56190,7 @@
             "repoClient"
           ],
           "internal_package_calls": [],
-          "line": 519,
+          "line": 520,
           "name": "TestRepository",
           "receiver_calls": [],
           "store_calls": []
@@ -56198,7 +56204,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 412,
+          "line": 414,
           "source": "serviceRequest"
         }
       ],
@@ -56232,7 +56238,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 586,
+          "line": 652,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56250,7 +56256,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 424,
+          "line": 426,
           "source": "serviceRequest"
         }
       ],
@@ -56341,7 +56347,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 556,
+          "line": 622,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56358,7 +56364,7 @@
             "DeleteBucket"
           ],
           "internal_package_calls": [],
-          "line": 603,
+          "line": 669,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56374,7 +56380,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 613,
+          "line": 679,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -56430,7 +56436,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 434,
+          "line": 436,
           "source": "serviceRequest"
         }
       ],
@@ -56442,7 +56448,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 442,
+      "handler_line": 443,
       "handler_name": "removeBucket",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56470,7 +56476,7 @@
             "DeleteBucket"
           ],
           "internal_package_calls": [],
-          "line": 603,
+          "line": 669,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
@@ -56488,7 +56494,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 445,
+          "line": 447,
           "source": "serviceRequest"
         }
       ],
@@ -56503,7 +56509,7 @@
         "Error"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 456,
+      "handler_line": 457,
       "handler_name": "testBucket",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56533,7 +56539,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 613,
+          "line": 679,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -56559,7 +56565,7 @@
         "fail"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 473,
+      "handler_line": 474,
       "handler_name": "getSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -56621,7 +56627,7 @@
       "handler_internal_package_calls": [
         "pkg/tenantcheck.IsServicePrincipal"
       ],
-      "handler_line": 485,
+      "handler_line": 486,
       "handler_name": "putSchedule",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -87990,7 +87996,7 @@
   "summary": {
     "backend_routes": 874,
     "backend_services": 28,
-    "button_inventory": 759,
+    "button_inventory": 760,
     "frontend_call_sites": 555,
     "matched_frontend_call_sites": 511,
     "nav_items": 26,
@@ -102012,7 +102018,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 412,
+            "line": 414,
             "source": "serviceRequest"
           }
         ],
@@ -102055,7 +102061,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 424,
+            "line": 426,
             "source": "serviceRequest"
           }
         ],
@@ -102099,13 +102105,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 434,
+            "line": 436,
             "source": "serviceRequest"
           }
         ],
         "handler": "removeBucket",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 442,
+        "handlerLine": 443,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -102135,13 +102141,13 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 445,
+            "line": 447,
             "source": "serviceRequest"
           }
         ],
         "handler": "testBucket",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 456,
+        "handlerLine": 457,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -102175,7 +102181,7 @@
         ],
         "handler": "getSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 473,
+        "handlerLine": 474,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -102215,7 +102221,7 @@
         ],
         "handler": "putSchedule",
         "handlerFile": "services/discovery/handler.go",
-        "handlerLine": 485,
+        "handlerLine": 486,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/tenantcheck.IsServicePrincipal"
@@ -119211,7 +119217,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-10T18:04:36Z",
+    "generatedAt": "2026-10-10T18:15:01Z",
     "methods": [
       "DELETE",
       "GET",

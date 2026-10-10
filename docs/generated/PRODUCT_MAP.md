@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-10T18:04:36Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:15:01Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -14,7 +14,7 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Frontend API call sites discovered: `555`
 - Frontend call sites with exact backend route match: `511`
 - Frontend call sites needing review or dynamic/runtime confirmation: `44`
-- Clickable controls with static `onClick` handlers: `759`
+- Clickable controls with static `onClick` handlers: `760`
 - Backend request flows with handler/service/package summaries: `874`
 
 ## How To Use This For Launch

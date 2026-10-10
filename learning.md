@@ -5,6 +5,31 @@ Newest entries on top.
 
 ## 2026-10-10
 
+### Discovery: content detection, archives, deep scan (7.37.0-beta)
+- **A file name is a claim, not a fact.** Selection by extension missed
+  every keystore and key someone had renamed. Magic bytes are cheap: JKS
+  `FEEDFEED`, JCEKS `CECECECE`, PKCS#12 `SEQUENCE { INTEGER 3`.
+- **An archive's header is also a claim.** A zip member's declared size is
+  what the archive says; the read is bounded by `io.LimitReader` whatever
+  the header says, and the total unpacked bytes are capped separately.
+- **"Deep" has to be a choice with its cost stated.** One ranged GET per
+  object is nothing for a config bucket and a bill for a data lake. Both
+  real servers (Versity S3 gateway, Azurite) honour `Range: bytes=0-1023`
+  with 206; a service that ignores it answers 200 and the reader's limit
+  still bounds what is held.
+- **An assertion that can't fail proves nothing.** My first deep-scan test
+  checked "not downloaded in full" with a helper that returned true for
+  every request to that object; it would have passed with a full download.
+  It now counts requests per object.
+- **Text in the same element changes exact-text matches.** Adding a "deep ·"
+  marker inside the span that held the connection name broke the smoke
+  test's exact match on the name. Each fact gets its own element.
+- **A service's log echoes request URLs.** Tailing the Azurite container log
+  printed a SAS signature into the session output. It was an emulator token
+  from the published development key, but the habit is wrong: don't tail
+  the log of a service whose URLs carry credentials; ask it a question
+  (`curl -o /dev/null -w '%{http_code}'`) instead.
+
 ### Discovery: crypto usage rules (7.36.0-beta)
 - **Match the call, not the word.** A rule is a call, import or directive
   with the algorithm as its argument, per language, and comment lines are

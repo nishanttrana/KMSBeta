@@ -150,6 +150,7 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			prefix TEXT NOT NULL DEFAULT '',
 			region TEXT NOT NULL DEFAULT '',
 			connection_id TEXT NOT NULL DEFAULT '',
+			deep_scan BOOLEAN NOT NULL DEFAULT FALSE,
 			created_by TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id),

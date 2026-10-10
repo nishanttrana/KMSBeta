@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-10T18:04:36Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:15:01Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -610,13 +610,14 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 158 | - | button | setStatus(s)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 166 | - | Btn | void save()} disabled= >Save |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 173 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 116 | - | Btn | void add()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 120 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 138 | - | Btn | void test(b)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 139 | - | button | void remove(b)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 159 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 167 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 174 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 117 | - | button | setDeep((d) => !d)} title="Also read the first kilobyte of every object whose... |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 122 | - | Btn | void add()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 126 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 145 | - | Btn | void test(b)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 146 | - | button | void remove(b)} style={ }> |  |
 | web/dashboard/src/components/v3/tabs/discovery/Charts.tsx | 39 | - | button | (icon or dynamic label) | onClick} title={title |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 88 | - | button | set( )} title="Assets the last scan of their source didn't observe" style={{... |  |
 | web/dashboard/src/components/v3/tabs/discovery/Inventory.tsx | 96 | - | button | setFilters(NO_FILTERS)} style={ }>Clear filters |  |

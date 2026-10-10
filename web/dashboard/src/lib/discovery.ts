@@ -401,6 +401,8 @@ export type DiscoveryBucket = {
   prefix: string;
   region: string;
   connection_id: string;
+  // Also read the first kilobyte of objects whose names say nothing.
+  deep: boolean;
   created_by: string;
   created_at: string;
 };
@@ -419,7 +421,7 @@ export async function listDiscoveryBuckets(session: AuthSession): Promise<Discov
 
 export async function addDiscoveryBucket(
   session: AuthSession,
-  bucket: { provider: string; endpoint: string; bucket: string; prefix: string; region: string; connection_id: string }
+  bucket: { provider: string; endpoint: string; bucket: string; prefix: string; region: string; connection_id: string; deep: boolean }
 ): Promise<DiscoveryBucket> {
   const res = await serviceRequest<{ bucket?: DiscoveryBucket }>(
     session,

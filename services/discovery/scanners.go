@@ -398,7 +398,7 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			return fs.SkipAll
 		}
 		count++
-		if info, err := d.Info(); err != nil || info.Size() > maxUploadBytes {
+		if info, err := d.Info(); err != nil || !fileSizeOK(d.Name(), info.Size()) {
 			return nil
 		}
 		raw, err := os.ReadFile(path)
@@ -406,7 +406,8 @@ func (s *Service) scanCode(_ context.Context, tenantID string, scanID string) ([
 			return nil
 		}
 		rel, _ := filepath.Rel(root, path)
-		out = append(out, s.materialAssets(tenantID, scanID, "code", rel, findMaterial(rel, raw))...)
+		found, _ := s.fileAssets(tenantID, scanID, "code", rel, rel, raw) // an archive over its caps: what was read
+		out = append(out, found...)
 		return nil
 	})
 	return out, err
@@ -424,7 +425,7 @@ func codeScanFile(name string) bool {
 		return false
 	}
 	ext := filepath.Ext(name)
-	return ext != ".lock" && (codeScanExt[ext] || keystoreExt[ext] || strings.HasPrefix(name, ".env"))
+	return ext != ".lock" && (codeScanExt[ext] || keystoreExt[ext] || archiveExt[ext] || strings.HasPrefix(name, ".env"))
 }
 
 var codeScanExt = func() map[string]bool {

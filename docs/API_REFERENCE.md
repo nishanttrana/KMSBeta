@@ -3290,6 +3290,17 @@ records only what it observed:
   (`private_key_material`, `metadata.format: "json"`): exposed secrets, by
   `fingerprint_sha256_prefix` only.
 
+**Content, archives and deep scan (7.37.0-beta).** A keystore is recognised
+by its first bytes (`metadata.format`: `jks`, `jceks`, `p12`) whatever its
+name. A zip (jar, war, ear), tar or gzipped tar from any file source is
+opened in memory: at most 32 MiB, 20,000 entries and 256 MiB unpacked,
+members of at most 2 MiB, no archive inside an archive. A member's asset
+has `location` `archive!/member:line` and `metadata.archive` and
+`metadata.member`. A bucket added with `"deep": true` also has the first
+1024 bytes of every object without a telling name read (`Range:
+bytes=0-1023`), and those that hold key material downloaded;
+`stats.storage_sniffed` counts the objects looked into.
+
 **Uploads (7.18.0-beta).** `POST /discovery/upload` with body
 `{"name": "bundle.pem", "content": "<base64>"}` inventories one file of at
 most 2 MiB with the code scan's parser and returns
@@ -3410,7 +3421,8 @@ or `502 repository_unreachable` with the reason. It stores nothing.
 endpoint, bucket, prefix, region, connection_id, created_by,
 created_at}]}`). `POST /discovery/buckets` with body
 `{"provider": "s3", "endpoint": "", "bucket": "acme-artifacts", "prefix":
-"releases/", "region": "eu-west-1", "connection_id": ""}` adds one (`201
+"releases/", "region": "eu-west-1", "connection_id": "", "deep": false}`
+adds one (`201
 {"bucket": {...}}`). `provider` is `s3` (Amazon S3 or a service that speaks
 its API: MinIO, Ceph, Cloudflare R2, or Google Cloud Storage at
 `https://storage.googleapis.com` with HMAC keys and region `auto`) or

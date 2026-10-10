@@ -47,6 +47,7 @@ const FACTS: [string, string, ((v: unknown) => ReactNode)?][] = [
   ["endpoint", "Storage endpoint"],
   ["bucket", "Bucket"],
   ["key", "Object"],
+  ["archive", "Archive"],
   ["file", "File"],
   ["api", "Named by"],
   ["format", "Format"],

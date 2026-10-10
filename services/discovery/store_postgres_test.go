@@ -108,7 +108,7 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	}
 	// Migration 007: buckets. The same bucket under another prefix is a
 	// different row; the same prefix is a duplicate.
-	in := BucketInput{Provider: "s3", Name: "acme-artifacts", Prefix: "releases/", Region: "eu-west-1"}
+	in := BucketInput{Provider: "s3", Name: "acme-artifacts", Prefix: "releases/", Region: "eu-west-1", Deep: true}
 	added, err := svc.AddBucket(ctx, tenant, in, "w")
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 		t.Fatal(err)
 	}
 	bs, err := store.ListBuckets(ctx, tenant)
-	if err != nil || len(bs) != 3 || bs[0].Provider != "azure" || bs[2].Prefix != "releases/" || bs[2].Region != "eu-west-1" || bs[2].Endpoint != "https://s3.eu-west-1.amazonaws.com" || bs[2].CreatedAt.IsZero() {
+	if err != nil || len(bs) != 3 || bs[0].Provider != "azure" || bs[2].Prefix != "releases/" || bs[2].Region != "eu-west-1" || bs[2].Endpoint != "https://s3.eu-west-1.amazonaws.com" || bs[2].CreatedAt.IsZero() || !bs[2].Deep || bs[0].Deep {
 		t.Fatalf("buckets %+v, %v", bs, err)
 	}
 	if src, err := svc.Sources(ctx, tenant); err != nil || src[4].ID != "storage" || src[4].Detail["buckets"] != 3 {

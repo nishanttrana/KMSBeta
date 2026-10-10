@@ -7,6 +7,29 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-10 — Discovery: deep scan is opt-in per bucket; archives are opened one level (7.37.0-beta)
+
+- **Decision:** a bucket's objects are chosen by name unless the tenant
+  turns deep scan on for that bucket; then every other object's first
+  kilobyte is read and the object downloaded only if that holds key
+  material. Archives from any source are opened in memory, one level.
+- **Why opt-in:** a deep scan is one request per object. On a bucket of
+  build artifacts that is seconds; on a data lake it is hours and a request
+  bill. The person who knows which it is chooses.
+- **Rejected:** downloading every object (cost and time without bound).
+  Deep by default (a surprise bill is not a secure default). Opening nested
+  archives (the unpacked size multiplies at every level, which is how
+  archive bombs work).
+- **Cost:** key material that starts after an object's first kilobyte, or
+  sits in an archive inside an archive, is missed.
+- **Enforced by:** `TestKeyMaterialByContent`,
+  `TestArchivesAreScannedInMemory`, `TestUploadedArchive`,
+  `TestDeepScanReadsByContent`, and `TestLiveObjectStorage` with
+  `VECTA_TEST_STORAGE_DEEP=1` (run on 2026-10-10 against the Versity S3
+  gateway and Azurite).
+
+---
+
 ## 2026-10-10 — Discovery: crypto usage by per-language rules on one line (7.36.0-beta)
 
 - **Decision:** usage of cryptography in source and configuration is found

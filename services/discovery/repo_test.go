@@ -73,8 +73,9 @@ func repoArchive(t *testing.T) []byte {
 // request's escaped path and Authorization header.
 type hostingServer struct {
 	*httptest.Server
-	mu   sync.Mutex
-	seen []string
+	mu     sync.Mutex
+	seen   []string
+	ranged []string // paths asked for with a Range header
 }
 
 func newHostingServer(t *testing.T, handler func(w http.ResponseWriter, r *http.Request)) *hostingServer {
@@ -82,6 +83,9 @@ func newHostingServer(t *testing.T, handler func(w http.ResponseWriter, r *http.
 	h.Server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h.mu.Lock()
 		h.seen = append(h.seen, r.URL.RequestURI()+" | "+r.Header.Get("Authorization"))
+		if r.Header.Get("Range") != "" {
+			h.ranged = append(h.ranged, r.URL.Path+" "+r.Header.Get("Range"))
+		}
 		h.mu.Unlock()
 		handler(w, r)
 	}))

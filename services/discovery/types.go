@@ -77,16 +77,19 @@ type Repository struct {
 // credential; ConnectionID names the sealed s3 or azure_blob connection for
 // a private one.
 type Bucket struct {
-	ID           string    `json:"id"`
-	TenantID     string    `json:"tenant_id"`
-	Provider     string    `json:"provider"`
-	Endpoint     string    `json:"endpoint"`
-	Name         string    `json:"bucket"`
-	Prefix       string    `json:"prefix"`
-	Region       string    `json:"region"`
-	ConnectionID string    `json:"connection_id"`
-	CreatedBy    string    `json:"created_by"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string `json:"id"`
+	TenantID     string `json:"tenant_id"`
+	Provider     string `json:"provider"`
+	Endpoint     string `json:"endpoint"`
+	Name         string `json:"bucket"`
+	Prefix       string `json:"prefix"`
+	Region       string `json:"region"`
+	ConnectionID string `json:"connection_id"`
+	// Deep: also read the first kilobyte of every object whose name says
+	// nothing, and scan those that hold key material (7.37.0-beta).
+	Deep      bool      `json:"deep"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Schedule runs a tenant's scan every IntervalHours on the authority of the

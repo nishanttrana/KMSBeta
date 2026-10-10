@@ -312,15 +312,15 @@ DELETE FROM discovery_repositories WHERE tenant_id = $1 AND id = $2
 
 func (s *SQLStore) CreateBucket(ctx context.Context, b Bucket) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO discovery_buckets (tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, created_by, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)
-`, b.TenantID, b.ID, b.Provider, b.Endpoint, b.Name, b.Prefix, b.Region, b.ConnectionID, b.CreatedBy)
+INSERT INTO discovery_buckets (tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, deep_scan, created_by, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP)
+`, b.TenantID, b.ID, b.Provider, b.Endpoint, b.Name, b.Prefix, b.Region, b.ConnectionID, b.Deep, b.CreatedBy)
 	return err
 }
 
 func (s *SQLStore) ListBuckets(ctx context.Context, tenantID string) ([]Bucket, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, created_by, created_at
+SELECT tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, deep_scan, created_by, created_at
 FROM discovery_buckets
 WHERE tenant_id = $1
 ORDER BY endpoint, bucket, prefix
@@ -335,7 +335,7 @@ ORDER BY endpoint, bucket, prefix
 			b          Bucket
 			createdRaw interface{}
 		)
-		if err := rows.Scan(&b.TenantID, &b.ID, &b.Provider, &b.Endpoint, &b.Name, &b.Prefix, &b.Region, &b.ConnectionID, &b.CreatedBy, &createdRaw); err != nil {
+		if err := rows.Scan(&b.TenantID, &b.ID, &b.Provider, &b.Endpoint, &b.Name, &b.Prefix, &b.Region, &b.ConnectionID, &b.Deep, &b.CreatedBy, &createdRaw); err != nil {
 			return nil, err
 		}
 		b.CreatedAt = parseTimeValue(createdRaw)
