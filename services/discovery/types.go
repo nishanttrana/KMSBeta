@@ -35,6 +35,11 @@ type Store interface {
 	CreateBucket(ctx context.Context, bucket Bucket) error
 	ListBuckets(ctx context.Context, tenantID string) ([]Bucket, error)
 	DeleteBucket(ctx context.Context, tenantID string, id string) error
+	SaveBucketProgress(ctx context.Context, bucket Bucket) error
+	BucketObjects(ctx context.Context, tenantID string, bucketID string) (map[string]BucketObject, error)
+	PutBucketObjects(ctx context.Context, objects []BucketObject, at time.Time) error
+	PruneBucketObjects(ctx context.Context, tenantID string, bucketID string, before time.Time) error
+	TouchAssets(ctx context.Context, tenantID string, ids []string, scanID string, at time.Time) (int, error)
 
 	GetSchedule(ctx context.Context, tenantID string) (Schedule, error)
 	PutSchedule(ctx context.Context, sch Schedule) error
@@ -90,6 +95,33 @@ type Bucket struct {
 	Deep      bool      `json:"deep"`
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// Scan progress (7.38.0-beta). A pass is one reading of the whole
+	// listing; a bucket larger than a run's budget takes several scans.
+	// Cursor is where the pass in progress continues ("" between passes).
+	Cursor            string    `json:"-"`
+	PassStartedAt     time.Time `json:"-"`
+	PassObjects       int       `json:"pass_objects"` // listed so far in the pass in progress
+	LastPassStartedAt time.Time `json:"-"`
+	LastPassAt        time.Time `json:"last_pass_at,omitempty"` // when the last complete pass ended
+	LastPassObjects   int       `json:"last_pass_objects"`
+	ScannedAt         time.Time `json:"scanned_at,omitempty"`
+	// PassInProgress: a pass has started and not reached the end of the
+	// listing; the next scan continues it.
+	PassInProgress bool `json:"pass_in_progress"`
+}
+
+// BucketObject records an object the scan read: its ETag when read, and the
+// assets found in it. An object listed again with the same ETag is not read
+// again; its assets are marked seen.
+type BucketObject struct {
+	TenantID string
+	BucketID string
+	Key      string
+	ETag     string
+	Size     int64
+	AssetIDs []string
+	Rules    int // the parser's rule set when read (scanRules)
 }
 
 // Schedule runs a tenant's scan every IntervalHours on the authority of the

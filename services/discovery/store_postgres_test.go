@@ -130,8 +130,54 @@ func TestTargetsAndAssetRemovalPostgres(t *testing.T) {
 	if src, err := svc.Sources(ctx, tenant); err != nil || src[4].ID != "storage" || src[4].Detail["buckets"] != 3 {
 		t.Fatalf("storage source %+v, %v", src, err)
 	}
+	// Migration 009: scan progress and per-object state.
+	t0 := time.Now().UTC().Truncate(time.Second)
+	added.Cursor, added.PassStartedAt, added.PassObjects, added.ScannedAt = "releases/m", t0, 1000, t0
+	added.LastPassStartedAt, added.LastPassAt, added.LastPassObjects = t0.Add(-time.Hour), t0.Add(-50*time.Minute), 2400
+	if err := store.SaveBucketProgress(ctx, added); err != nil {
+		t.Fatal(err)
+	}
+	bs, _ = store.ListBuckets(ctx, tenant)
+	if g := bs[2]; g.Cursor != "releases/m" || !g.PassInProgress || g.PassObjects != 1000 || g.LastPassObjects != 2400 || !g.PassStartedAt.Equal(t0) || !g.LastPassStartedAt.Equal(t0.Add(-time.Hour)) || !g.LastPassAt.Equal(t0.Add(-50*time.Minute)) {
+		t.Fatalf("progress %+v", g)
+	}
+	if before, err := svc.storageStaleBefore(ctx, tenant); err != nil || !before.IsZero() {
+		t.Fatalf("stale-before with buckets that never completed a pass: %v %v", before, err)
+	}
+	objs := []BucketObject{
+		{TenantID: tenant, BucketID: added.ID, Key: "releases/a.pem", ETag: "e1", Size: 10, AssetIDs: []string{"a2", "a3"}, Rules: scanRules},
+		{TenantID: tenant, BucketID: added.ID, Key: "releases/b.bin", ETag: "e2", Size: 20, Rules: scanRules},
+	}
+	if err := store.PutBucketObjects(ctx, objs[:1], t0.Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PutBucketObjects(ctx, objs[1:], t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	objs[1].ETag = "e3"
+	if err := store.PutBucketObjects(ctx, objs[1:], t0.Add(time.Minute)); err != nil {
+		t.Fatalf("second write of one object: %v", err)
+	}
+	if got, err := store.BucketObjects(ctx, tenant, added.ID); err != nil || len(got) != 2 || got["releases/b.bin"].ETag != "e3" || strings.Join(got["releases/a.pem"].AssetIDs, ",") != "a2,a3" || got["releases/b.bin"].AssetIDs != nil {
+		t.Fatalf("objects %+v, %v", got, err)
+	}
+	if n, err := store.TouchAssets(ctx, tenant, []string{"a2", "a3", "no-such-asset"}, "scan_touch", t0.Add(2*time.Hour)); err != nil || n != 2 {
+		t.Fatalf("touch: %d, %v", n, err)
+	}
+	if a, _ := store.GetAsset(ctx, tenant, "a2"); a.ScanID != "scan_touch" || !a.LastSeen.Equal(t0.Add(2*time.Hour)) || a.Algorithm != "RSA-2048" {
+		t.Fatalf("touched asset %+v", a)
+	}
+	if err := store.PruneBucketObjects(ctx, tenant, added.ID, t0); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := store.BucketObjects(ctx, tenant, added.ID); len(got) != 1 || got["releases/b.bin"].ETag != "e3" {
+		t.Fatalf("after pruning what the pass did not see: %+v", got)
+	}
 	if _, err := svc.RemoveBucket(ctx, tenant, added.ID); err != nil {
 		t.Fatal(err)
+	}
+	if got, _ := store.BucketObjects(ctx, tenant, added.ID); len(got) != 0 {
+		t.Fatalf("object rows left after the bucket was removed: %+v", got)
 	}
 	if err := store.DeleteBucket(ctx, tenant, added.ID); !errors.Is(err, errNotFound) {
 		t.Fatalf("second bucket delete: %v", err)

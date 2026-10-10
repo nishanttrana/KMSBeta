@@ -153,7 +153,9 @@ func (s *Service) runScan(ctx context.Context, scan DiscoveryScan, types []strin
 				stats["errors"] = copyErrs(errs)
 			}
 			inserted += s.storeAssets(ctx, scan.TenantID, items, seen)
-			stats[t+"_assets"] = len(items)
+			// Assets of objects that have not changed were not read again;
+			// they are still what the source holds.
+			stats[t+"_assets"] = len(items) + extractInt(extra[t+"_assets_unchanged"])
 			for k, v := range extra {
 				stats[k] = v
 			}
@@ -419,6 +421,14 @@ func (s *Service) walkAssets(ctx context.Context, tenantID string, f AssetFilter
 			if sc, ok := last[src]; ok {
 				lastScan[src] = sc.StartedAt
 			}
+		}
+		// A bucket can take several scans to read, so a storage asset is
+		// missing only when a complete pass did not find it.
+		delete(lastScan, "storage")
+		if before, err := s.storageStaleBefore(ctx, tenantID); err != nil {
+			return err
+		} else if !before.IsZero() {
+			lastScan["storage"] = before
 		}
 	}
 	now := s.now()
@@ -748,7 +758,17 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 			private++
 		}
 	}
-	storage := SourceStatus{ID: "storage", Configured: len(buckets) > 0, Detail: map[string]interface{}{"buckets": len(buckets), "private": private}}
+	continuing := 0
+	for _, b := range buckets {
+		if b.PassInProgress {
+			continuing++
+		}
+	}
+	storage := SourceStatus{ID: "storage", Configured: len(buckets) > 0, Detail: map[string]interface{}{"buckets": len(buckets), "private": private, "continuing": continuing}}
+	staleBefore, err := s.storageStaleBefore(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
 	upload := SourceStatus{ID: "upload", Configured: true, Detail: map[string]interface{}{"max_bytes": maxUploadBytes}}
 	out := []SourceStatus{network, cloud, certs, git, storage, code, upload}
 
@@ -768,6 +788,10 @@ func (s *Service) Sources(ctx context.Context, tenantID string) ([]SourceStatus,
 		}
 		if errs, ok := sc.Stats["errors"].(map[string]interface{}); ok {
 			l.Error = firstString(errs[out[i].ID])
+		}
+		if out[i].ID == "storage" {
+			// Zero until every bucket has completed a pass.
+			l.StartedAt = staleBefore
 		}
 		out[i].LastScan = l
 	}

@@ -25,7 +25,7 @@ function sourceLine(s: DiscoverySource): string {
     case "git":
       return s.configured ? `${plural(d.repositories, "repository", "repositories")}${d.private ? ` · ${d.private} private` : ""}` : "No repositories yet";
     case "storage":
-      return s.configured ? `${plural(d.buckets, "bucket")}${d.private ? ` · ${d.private} private` : ""}` : "No buckets yet";
+      return s.configured ? `${plural(d.buckets, "bucket")}${d.private ? ` · ${d.private} private` : ""}${d.continuing ? ` · ${d.continuing} continuing` : ""}` : "No buckets yet";
     case "code":
       return s.configured ? "Source tree mounted" : "Not mounted";
     default:

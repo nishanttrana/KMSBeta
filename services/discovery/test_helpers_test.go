@@ -153,8 +153,26 @@ func createDiscoverySchemaForTest(conn *pkgdb.DB) error {
 			deep_scan BOOLEAN NOT NULL DEFAULT FALSE,
 			created_by TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			scan_cursor TEXT NOT NULL DEFAULT '',
+			pass_started_at TIMESTAMP,
+			pass_objects INTEGER NOT NULL DEFAULT 0,
+			last_pass_started_at TIMESTAMP,
+			last_pass_at TIMESTAMP,
+			last_pass_objects INTEGER NOT NULL DEFAULT 0,
+			scanned_at TIMESTAMP,
 			PRIMARY KEY (tenant_id, id),
 			UNIQUE (tenant_id, endpoint, bucket, prefix)
+		);`,
+		`CREATE TABLE discovery_bucket_objects (
+			tenant_id TEXT NOT NULL,
+			bucket_id TEXT NOT NULL,
+			object_key TEXT NOT NULL,
+			etag TEXT NOT NULL DEFAULT '',
+			size_bytes BIGINT NOT NULL DEFAULT 0,
+			asset_ids TEXT NOT NULL DEFAULT '',
+			rules INTEGER NOT NULL DEFAULT 0,
+			seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, bucket_id, object_key)
 		);`,
 		`CREATE TABLE discovery_schedules (
 			tenant_id TEXT PRIMARY KEY,

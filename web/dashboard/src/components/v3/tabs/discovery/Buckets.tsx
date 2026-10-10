@@ -8,7 +8,14 @@ import {
   type DiscoveryBucket, type SourceConnection,
 } from "../../../../lib/discovery";
 import type { AuthSession } from "../../../../lib/auth";
-import { MONO } from "./meta";
+import { MONO, relTime } from "./meta";
+
+// progress says how much of the bucket the scans have read.
+function progress(b: DiscoveryBucket): string {
+  const last = b.last_pass_at ? `full pass ${relTime(b.last_pass_at)} · ${Number(b.last_pass_objects || 0).toLocaleString()} objects` : "";
+  if (b.pass_in_progress) return `${Number(b.pass_objects || 0).toLocaleString()} objects read so far · continues next scan${last ? ` · last ${last}` : ""}`;
+  return last || "not scanned yet";
+}
 
 // Each service is one of the two APIs the scan speaks: S3 (signed requests)
 // or Azure Blob (a SAS token). endpoint/region set here are fixed for it.
@@ -145,6 +152,7 @@ export function BucketsModal({ open, onClose, session, buckets, error, onChanged
                   <Btn small onClick={() => void test(b)} disabled={t.busy}>{t.busy ? "Testing..." : "Test"}</Btn>
                   <button type="button" aria-label={`Remove ${b.bucket}`} onClick={() => void remove(b)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", display: "inline-flex" }}><X size={13} /></button>
                 </div>
+                <div style={{ fontSize: 10.5, color: b.pass_in_progress ? C.amberFg : C.muted, marginTop: 4, paddingLeft: 80 }}>{progress(b)}</div>
                 {t.ok && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: C.greenFg, marginTop: 5, paddingLeft: 80 }}><CheckCircle2 size={11} />Readable · {t.ok}</div>}
                 {t.fail && <div style={{ fontSize: 10.5, color: C.redFg, marginTop: 5, paddingLeft: 80, wordBreak: "break-word" }}>Not readable: {t.fail}</div>}
               </div>

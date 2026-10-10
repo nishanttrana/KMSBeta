@@ -5,6 +5,34 @@ Newest entries on top.
 
 ## 2026-10-10
 
+### Discovery: incremental, resumable bucket scans (7.38.0-beta)
+- **A cap that fails is a cap that hides.** "More objects than the limit"
+  ended every scan of a big bucket with an error, and the objects past the
+  cap were never read, on any scan. A budget per run with a saved cursor
+  reads the same bucket to the end.
+- **The cursor must outlive the run.** An S3 continuation token is the
+  service's and may expire; `start-after=<last key>` is ours and is valid
+  forever. Azure has only its marker, which names the next blob.
+- **Skipping needs proof that what was found is still held.** Recording "read,
+  ETag X" before the assets are stored means a crash in between, or an
+  operator removing an asset, makes the scan skip that object for good. An
+  existing test that called the bucket scan without storing assets caught
+  it. The skip now requires every recorded asset to exist.
+- **"Not seen by the last scan" is false for a source read over several
+  scans.** Staleness for bucket assets is measured against the start of the
+  last complete pass, and is undefined (nothing is stale) until one exists.
+- **Skipping by ETag freezes the parser's knowledge.** Unchanged objects
+  would never get new rules. Each object row carries the rule set it was
+  read with (`scanRules`); raising it re-reads everything.
+- **Files placed on a gateway's disk have no ETag.** The Versity posix
+  backend keeps ETags in extended attributes written on upload; files
+  copied in by `docker cp` list with none, and are (correctly) re-read every
+  time. The live test uploads through the S3 API (`curl --aws-sigv4` with
+  the credential in a config file).
+- **Compare timestamps in Go, not SQL** (again): SQLite stores them as text
+  and Postgres as timestamps; pruning "seen before the pass started" reads
+  the rows and compares parsed values.
+
 ### Discovery: content detection, archives, deep scan (7.37.0-beta)
 - **A file name is a claim, not a fact.** Selection by extension missed
   every keystore and key someone had renamed. Magic bytes are cheap: JKS

@@ -24150,7 +24150,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "setDeep((d) => !d)} title=\"Also read the first kilobyte of every object whose...",
-      "line": 117,
+      "line": 124,
       "tabs": [],
       "tag": "button"
     },
@@ -24158,7 +24158,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "void add()} disabled= >",
-      "line": 122,
+      "line": 129,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24166,7 +24166,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "onNavigate?.(\"playbooks\")} style={ }>New storage connection",
-      "line": 126,
+      "line": 133,
       "tabs": [],
       "tag": "button"
     },
@@ -24174,7 +24174,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "void test(b)} disabled= >",
-      "line": 145,
+      "line": 152,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24182,7 +24182,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx",
       "handler": "",
       "label": "void remove(b)} style={ }>",
-      "line": 146,
+      "line": 153,
       "tabs": [],
       "tag": "button"
     },
@@ -28665,7 +28665,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 414,
+      "line": 420,
       "match_key": "discovery|GET|/discovery/buckets",
       "method": "GET",
       "normalized_path": "/discovery/buckets",
@@ -28678,7 +28678,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 426,
+      "line": 432,
       "match_key": "discovery|POST|/discovery/buckets",
       "method": "POST",
       "normalized_path": "/discovery/buckets",
@@ -28691,7 +28691,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 436,
+      "line": 442,
       "match_key": "discovery|DELETE|/discovery/buckets/{param}",
       "method": "DELETE",
       "normalized_path": "/discovery/buckets/{param}",
@@ -28704,7 +28704,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/discovery.ts",
-      "line": 447,
+      "line": 453,
       "match_key": "discovery|POST|/discovery/buckets/{param}/test",
       "method": "POST",
       "normalized_path": "/discovery/buckets/{param}/test",
@@ -32588,7 +32588,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-10T18:15:01Z",
+  "generated_at": "2026-10-10T18:24:15Z",
   "navigation": [
     {
       "group": "Overview",
@@ -55025,7 +55025,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 350,
+          "line": 352,
           "name": "ListScans",
           "receiver_calls": [],
           "store_calls": [
@@ -55087,7 +55087,7 @@
             "settle"
           ],
           "internal_package_calls": [],
-          "line": 362,
+          "line": 364,
           "name": "GetScan",
           "receiver_calls": [],
           "store_calls": [
@@ -55156,7 +55156,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -55214,7 +55214,7 @@
             "walkAssets"
           ],
           "internal_package_calls": [],
-          "line": 386,
+          "line": 388,
           "name": "FindAssets",
           "receiver_calls": [],
           "store_calls": []
@@ -55269,7 +55269,7 @@
             "withReview"
           ],
           "internal_package_calls": [],
-          "line": 528,
+          "line": 538,
           "name": "GetAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55340,7 +55340,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 574,
+          "line": 584,
           "name": "ClassifyAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55408,7 +55408,7 @@
             "pct"
           ],
           "internal_package_calls": [],
-          "line": 612,
+          "line": 622,
           "name": "Summary",
           "receiver_calls": [],
           "store_calls": []
@@ -55659,6 +55659,7 @@
         "ListCertificates",
         "ListRepositories",
         "ListBuckets",
+        "storageStaleBefore",
         "ListScans",
         "lastScans",
         "extractInt"
@@ -55689,12 +55690,13 @@
             "ListCertificates",
             "ListRepositories",
             "ListBuckets",
+            "storageStaleBefore",
             "ListScans",
             "lastScans",
             "extractInt"
           ],
           "internal_package_calls": [],
-          "line": 657,
+          "line": 667,
           "name": "Sources",
           "receiver_calls": [
             "s.cloud.ListAccounts",
@@ -55782,7 +55784,7 @@
             "UpdateScan"
           ],
           "internal_package_calls": [],
-          "line": 307,
+          "line": 309,
           "name": "ScanUpload",
           "receiver_calls": [],
           "store_calls": [
@@ -55842,7 +55844,7 @@
             "DeleteAsset"
           ],
           "internal_package_calls": [],
-          "line": 520,
+          "line": 530,
           "name": "RemoveAsset",
           "receiver_calls": [],
           "store_calls": [
@@ -55975,6 +55977,8 @@
         "bucket",
         "RemoveBucket",
         "DeleteBucket",
+        "PruneBucketObjects",
+        "storageStaleBefore",
         "TestBucket",
         "scanBucket",
         "storageClient"
@@ -56036,7 +56040,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 652,
+          "line": 762,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56057,18 +56061,21 @@
             "bucket",
             "RemoveBucket",
             "DeleteBucket",
+            "PruneBucketObjects",
+            "storageStaleBefore",
             "TestBucket",
             "scanBucket",
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 622,
+          "line": 732,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
             "ListBuckets",
             "CreateBucket",
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ]
         }
       ],
@@ -56079,7 +56086,8 @@
         "DeleteRepository",
         "ListBuckets",
         "CreateBucket",
-        "DeleteBucket"
+        "DeleteBucket",
+        "PruneBucketObjects"
       ]
     },
     {
@@ -56204,7 +56212,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 414,
+          "line": 420,
           "source": "serviceRequest"
         }
       ],
@@ -56238,7 +56246,7 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 652,
+          "line": 762,
           "name": "ListBuckets",
           "receiver_calls": [],
           "store_calls": [
@@ -56256,7 +56264,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 426,
+          "line": 432,
           "source": "serviceRequest"
         }
       ],
@@ -56319,6 +56327,8 @@
         "bucket",
         "RemoveBucket",
         "DeleteBucket",
+        "PruneBucketObjects",
+        "storageStaleBefore",
         "TestBucket",
         "scanBucket",
         "storageClient",
@@ -56342,18 +56352,21 @@
             "bucket",
             "RemoveBucket",
             "DeleteBucket",
+            "PruneBucketObjects",
+            "storageStaleBefore",
             "TestBucket",
             "scanBucket",
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 622,
+          "line": 732,
           "name": "AddBucket",
           "receiver_calls": [],
           "store_calls": [
             "ListBuckets",
             "CreateBucket",
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ]
         },
         {
@@ -56361,14 +56374,16 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [
             "bucket",
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 669,
+          "line": 779,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ]
         },
         {
@@ -56380,7 +56395,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 679,
+          "line": 813,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -56427,6 +56442,7 @@
         "ListBuckets",
         "CreateBucket",
         "DeleteBucket",
+        "PruneBucketObjects",
         "GetSchedule",
         "PutSchedule"
       ]
@@ -56436,7 +56452,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 436,
+          "line": 442,
           "source": "serviceRequest"
         }
       ],
@@ -56464,7 +56480,8 @@
       "service_external_package_calls": [],
       "service_helper_calls": [
         "bucket",
-        "DeleteBucket"
+        "DeleteBucket",
+        "PruneBucketObjects"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -56473,20 +56490,23 @@
           "file": "services/discovery/storage.go",
           "helper_calls": [
             "bucket",
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ],
           "internal_package_calls": [],
-          "line": 669,
+          "line": 779,
           "name": "RemoveBucket",
           "receiver_calls": [],
           "store_calls": [
-            "DeleteBucket"
+            "DeleteBucket",
+            "PruneBucketObjects"
           ]
         }
       ],
       "service_receiver_calls": [],
       "service_store_calls": [
-        "DeleteBucket"
+        "DeleteBucket",
+        "PruneBucketObjects"
       ]
     },
     {
@@ -56494,7 +56514,7 @@
         {
           "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/discovery.ts",
-          "line": 447,
+          "line": 453,
           "source": "serviceRequest"
         }
       ],
@@ -56539,7 +56559,7 @@
             "storageClient"
           ],
           "internal_package_calls": [],
-          "line": 679,
+          "line": 813,
           "name": "TestBucket",
           "receiver_calls": [],
           "store_calls": []
@@ -101896,7 +101916,7 @@
         ]
       },
       {
-        "complexity": 6,
+        "complexity": 7,
         "externalPackages": [
           "errors.Is",
           "net/url.Parse",
@@ -101937,7 +101957,8 @@
           "DeleteRepository",
           "ListBuckets",
           "CreateBucket",
-          "DeleteBucket"
+          "DeleteBucket",
+          "PruneBucketObjects"
         ],
         "uiLabels": [
           "Crypto Discovery"
@@ -102018,7 +102039,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 414,
+            "line": 420,
             "source": "serviceRequest"
           }
         ],
@@ -102046,7 +102067,7 @@
         ]
       },
       {
-        "complexity": 6,
+        "complexity": 7,
         "externalPackages": [
           "errors.Is",
           "errors.As",
@@ -102061,7 +102082,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 426,
+            "line": 432,
             "source": "serviceRequest"
           }
         ],
@@ -102091,6 +102112,7 @@
           "ListBuckets",
           "CreateBucket",
           "DeleteBucket",
+          "PruneBucketObjects",
           "GetSchedule",
           "PutSchedule"
         ],
@@ -102099,13 +102121,13 @@
         ]
       },
       {
-        "complexity": 1,
+        "complexity": 2,
         "externalPackages": [],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 436,
+            "line": 442,
             "source": "serviceRequest"
           }
         ],
@@ -102126,7 +102148,8 @@
           "RemoveBucket"
         ],
         "storeCalls": [
-          "DeleteBucket"
+          "DeleteBucket",
+          "PruneBucketObjects"
         ],
         "uiLabels": [
           "Crypto Discovery"
@@ -102141,7 +102164,7 @@
           {
             "expression": "serviceRequest(\"discovery\", `/discovery/buckets/${encodeURIComponent(id)}/test?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/discovery.ts",
-            "line": 447,
+            "line": 453,
             "source": "serviceRequest"
           }
         ],
@@ -119217,7 +119240,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-10T18:15:01Z",
+    "generatedAt": "2026-10-10T18:24:15Z",
     "methods": [
       "DELETE",
       "GET",

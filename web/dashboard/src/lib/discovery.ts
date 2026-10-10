@@ -405,6 +405,12 @@ export type DiscoveryBucket = {
   deep: boolean;
   created_by: string;
   created_at: string;
+  // Scan progress. A bucket larger than one run's budget is read over
+  // several scans; a pass is one reading of the whole listing.
+  pass_in_progress: boolean;
+  pass_objects: number;
+  last_pass_at?: string;
+  last_pass_objects: number;
 };
 
 // The connection type a provider's private bucket reads with.

@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"encoding/xml"
@@ -77,6 +79,12 @@ func xmlText(s string) string {
 	return sb.String()
 }
 
+// etagOf is an object's ETag: it changes when the content does.
+func etagOf(body string) string {
+	sum := sha256.Sum256([]byte(body))
+	return hex.EncodeToString(sum[:8])
+}
+
 // page returns the keys under prefix after the key named by token, three
 // at a time, and the token for the next page.
 func page(objects map[string]string, prefix, token string) (keys []string, next string) {
@@ -142,13 +150,10 @@ func newS3Server(t *testing.T, objects map[string]string, signed bool) *hostingS
 			writeXML(w, http.StatusBadRequest, `<Error><Code>InvalidArgument</Code></Error>`)
 			return
 		}
-		keys, next := page(objects, q.Get("prefix"), q.Get("continuation-token"))
+		keys, next := page(objects, q.Get("prefix"), q.Get("start-after"))
 		out := `<ListBucketResult><IsTruncated>` + strconv.FormatBool(next != "") + `</IsTruncated>`
 		for _, k := range keys {
-			out += `<Contents><Key>` + xmlText(k) + `</Key><Size>` + strconv.Itoa(len(objects[k])) + `</Size></Contents>`
-		}
-		if next != "" {
-			out += `<NextContinuationToken>` + xmlText(next) + `</NextContinuationToken>`
+			out += `<Contents><Key>` + xmlText(k) + `</Key><Size>` + strconv.Itoa(len(objects[k])) + `</Size><ETag>&quot;` + etagOf(objects[k]) + `&quot;</ETag></Contents>`
 		}
 		writeXML(w, http.StatusOK, out+`</ListBucketResult>`)
 	})
@@ -184,7 +189,7 @@ func newAzureServer(t *testing.T, objects map[string]string) *hostingServer {
 		keys, next := page(objects, q.Get("prefix"), q.Get("marker"))
 		out := `<EnumerationResults><Blobs>`
 		for _, k := range keys {
-			out += `<Blob><Name>` + xmlText(k) + `</Name><Properties><Content-Length>` + strconv.Itoa(len(objects[k])) + `</Content-Length></Properties></Blob>`
+			out += `<Blob><Name>` + xmlText(k) + `</Name><Properties><Content-Length>` + strconv.Itoa(len(objects[k])) + `</Content-Length><Etag>` + etagOf(objects[k]) + `</Etag></Properties></Blob>`
 		}
 		writeXML(w, http.StatusOK, out+`</Blobs><NextMarker>`+xmlText(next)+`</NextMarker></EnumerationResults>`)
 	})
@@ -479,49 +484,230 @@ func TestStorageScanReportsRefusals(t *testing.T) {
 	}
 }
 
-// A bucket over the caps stops with what was found so far, and an object
-// that can't be read is named while the others are still scanned.
-func TestStorageLimitsAndUnreadableObjects(t *testing.T) {
-	svc, _, _ := newDiscoveryService(t)
+// A bucket larger than one run's budget is read over several scans: each
+// run records where it stopped and the next continues, until the listing
+// ends. An object that can't be read is named and tried again.
+func TestStorageResumesAcrossRuns(t *testing.T) {
+	for _, provider := range []string{"s3", "azure"} {
+		t.Run(provider, func(t *testing.T) {
+			svc, store, _ := newDiscoveryService(t)
+			ctx := context.Background()
+			objects := bucketObjects(t)
+			var srv *hostingServer
+			conns := stubConnections{}
+			if provider == "s3" {
+				srv = newS3Server(t, objects, true)
+				conns["c1"] = s3Connection(srvHost(srv))
+			} else {
+				srv = newAzureServer(t, objects)
+				conns["c1"] = azureConnection(srvHost(srv))
+			}
+			trust(t, svc, srv)
+			svc.conns = conns
+			b := Bucket{ID: "b1", TenantID: "t1", Provider: provider, Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", Region: "eu-west-1", ConnectionID: "c1"}
+			if err := store.CreateBucket(ctx, b); err != nil {
+				t.Fatal(err)
+			}
+			oldObjects := maxBucketObjects
+			defer func() { maxBucketObjects = oldObjects }()
+			maxBucketObjects = 3 // one page of the test server's listing a run
+
+			// Eight objects, three a page: runs one and two stop at the
+			// budget, run three reaches the end.
+			var all []string
+			for run, want := range []struct {
+				partial      bool
+				passObjects  int
+				lastComplete int
+			}{{true, 3, 0}, {true, 6, 0}, {false, 0, 8}} {
+				scan, err := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"storage"}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				done := finishScan(t, svc, scan)
+				if done.Status != "completed" || (extractInt(done.Stats["storage_buckets_continuing"]) == 1) != want.partial {
+					t.Fatalf("run %d: %s %+v", run+1, done.Status, done.Stats)
+				}
+				got, _ := svc.ListBuckets(ctx, "t1")
+				if g := got[0]; g.PassInProgress != want.partial || g.PassObjects != want.passObjects || g.LastPassObjects != want.lastComplete || g.LastPassAt.IsZero() == (want.lastComplete > 0) {
+					t.Fatalf("run %d: progress %+v", run+1, g)
+				}
+				src, _ := svc.Sources(ctx, "t1")
+				if st := src[4]; st.ID != "storage" || (st.Detail["continuing"] == 1) != want.partial || st.LastScan == nil || st.LastScan.StartedAt.IsZero() == (want.lastComplete > 0) {
+					t.Fatalf("run %d: source %+v %+v", run+1, st, st.LastScan)
+				}
+				items, _, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage"})
+				all = assetLines(items, b.label())
+				// Nothing is called missing while the first pass is unfinished.
+				if _, n, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage", NotSeen: true}); n != 0 {
+					t.Fatalf("run %d: %d assets called not seen", run+1, n)
+				}
+			}
+			if !reflect.DeepEqual(all, wantBucketAssets) {
+				t.Fatalf("after three runs\n got %q\nwant %q", all, wantBucketAssets)
+			}
+		})
+	}
+}
+
+// An object whose ETag has not changed is not downloaded again and its
+// assets are marked seen; a changed one is read again, and a removed one's
+// assets are called not seen once a complete pass has missed them.
+func TestStorageSkipsUnchangedObjects(t *testing.T) {
+	svc, store, _ := newDiscoveryService(t)
+	ctx := context.Background()
+	objects := bucketObjects(t)
+	srv := newS3Server(t, objects, true)
+	trust(t, svc, srv)
+	svc.conns = stubConnections{"c1": s3Connection(srvHost(srv))}
+	clock := time.Now().UTC()
+	svc.now = func() time.Time { clock = clock.Add(time.Minute); return clock }
+	_ = store.CreateBucket(ctx, Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", Region: "eu-west-1", ConnectionID: "c1", Deep: true})
+	gets := func() (n int) {
+		for _, r := range srv.requests() {
+			if uri, _, _ := strings.Cut(r, " | "); !strings.HasPrefix(uri, "/acme-artifacts?") {
+				n++
+			}
+		}
+		return n
+	}
+	run := func() DiscoveryScan {
+		t.Helper()
+		scan, err := svc.StartScan(ctx, ScanRequest{TenantID: "t1", ScanTypes: []string{"storage"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return finishScan(t, svc, scan)
+	}
+	first := run()
+	// Deep: the four files by name, and the image's first kilobyte.
+	if extractInt(first.Stats["storage_files"]) != 4 || extractInt(first.Stats["storage_sniffed"]) != 1 || extractInt(first.Stats["storage_assets"]) != 4 || gets() != 5 {
+		t.Fatalf("first scan %+v, %d reads", first.Stats, gets())
+	}
+	before, _, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage"})
+
+	// Nothing changed: nothing is read, and every asset is still seen.
+	second := run()
+	if gets() != 5 || extractInt(second.Stats["storage_files"]) != 0 || extractInt(second.Stats["storage_unchanged"]) != 5 || extractInt(second.Stats["storage_assets"]) != 4 || extractInt(second.Stats["storage_assets_unchanged"]) != 4 {
+		t.Fatalf("unchanged scan %+v, %d reads", second.Stats, gets())
+	}
+	after, _, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage"})
+	for _, a := range after {
+		for _, old := range before {
+			if old.ID == a.ID && (!a.LastSeen.After(old.LastSeen) || a.ScanID != second.ID) {
+				t.Fatalf("asset %s not marked seen: %v -> %v (scan %s)", a.ID, old.LastSeen, a.LastSeen, a.ScanID)
+			}
+		}
+	}
+	if _, n, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage", NotSeen: true}); n != 0 || len(after) != 4 {
+		t.Fatalf("%d assets, %d not seen", len(after), n)
+	}
+
+	// An asset removed from the inventory is found again: its object is read
+	// although its ETag has not changed.
+	if _, err := svc.RemoveAsset(ctx, "t1", after[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	reread := run()
+	if gets() != 6 || extractInt(reread.Stats["storage_files"]) != 1 || extractInt(reread.Stats["storage_unchanged"]) != 4 {
+		t.Fatalf("after removing an asset %+v, %d reads", reread.Stats, gets())
+	}
+	if _, n, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage"}); n != 4 {
+		t.Fatalf("%d assets after the re-read, want 4", n)
+	}
+
+	// One object changes and one is removed.
+	objects["app/config/prod+eu=1/.env"] = "REGION=us\n"
+	delete(objects, "app/deploy keys/id_rsa")
+	third := run()
+	if gets() != 7 || extractInt(third.Stats["storage_files"]) != 1 || extractInt(third.Stats["storage_unchanged"]) != 3 {
+		t.Fatalf("after a change %+v, %d reads", third.Stats, gets())
+	}
+	gone, n, _ := svc.FindAssets(ctx, "t1", 100, 0, AssetFilter{Source: "storage", NotSeen: true})
+	var lines []string
+	for _, a := range gone {
+		lines = append(lines, a.AssetType)
+	}
+	sort.Strings(lines)
+	// The key that was removed, and the two secrets the rewritten file no
+	// longer holds.
+	if n != 3 || !reflect.DeepEqual(lines, []string{"cloud_access_key", "hex_secret", "private_key_material"}) {
+		t.Fatalf("not seen: %d %q", n, lines)
+	}
+	if rows, _ := store.BucketObjects(ctx, "t1", "b1"); len(rows) != 4 || rows["app/deploy keys/id_rsa"].ETag != "" {
+		t.Fatalf("scan state after a removal: %d rows", len(rows))
+	}
+
+	// Removing the bucket forgets its scan state.
+	if _, err := svc.RemoveBucket(ctx, "t1", "b1"); err != nil {
+		t.Fatal(err)
+	}
+	if rows, _ := store.BucketObjects(ctx, "t1", "b1"); len(rows) != 0 {
+		t.Fatalf("%d object rows left after the bucket was removed", len(rows))
+	}
+}
+
+// The byte budget can end inside a page; what was read of it is not read
+// again, and an object that can't be read is named and tried again.
+func TestStorageByteBudgetAndUnreadableObjects(t *testing.T) {
+	svc, store, _ := newDiscoveryService(t)
 	ctx := context.Background()
 	objects := bucketObjects(t)
 	srv := newS3Server(t, objects, false)
 	trust(t, svc, srv)
-	b := Bucket{TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", Region: "us-east-1"}
-	client := svc.storageClient(nil)
-
-	oldObjects, oldBytes := maxBucketObjects, maxBucketBytes
-	defer func() { maxBucketObjects, maxBucketBytes = oldObjects, oldBytes }()
-	maxBucketObjects = 5
-	if res, err := svc.scanBucket(ctx, client, b, "s", false); !errors.Is(err, errBucketTooLarge) || res.files == 0 || res.files >= 4 {
-		t.Fatalf("over the object cap: %d files, %v", res.files, err)
+	b := Bucket{ID: "b1", TenantID: "t1", Provider: "s3", Endpoint: srv.URL, Name: "acme-artifacts", Prefix: "app/", Region: "us-east-1"}
+	_ = store.CreateBucket(ctx, b)
+	load := func() Bucket {
+		got, _ := store.ListBuckets(ctx, "t1")
+		return got[0]
 	}
-	maxBucketObjects, maxBucketBytes = oldObjects, 600
-	if res, err := svc.scanBucket(ctx, client, b, "s", false); !errors.Is(err, errBucketTooLarge) || res.files >= 4 {
-		t.Fatalf("over the byte cap: %d files, %v", res.files, err)
+	oldBytes := maxBucketBytes
+	defer func() { maxBucketBytes = oldBytes }()
+	maxBucketBytes = 600 // less than one private key
+	files, runs := 0, 0
+	for ; runs < 10; runs++ {
+		res, err := svc.scanBucket(ctx, svc.storageClient(nil), load(), "s", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files += res.files
+		svc.storeAssets(ctx, "t1", res.assets, map[string]bool{}) // as a scan does after each bucket
+		if !res.partial {
+			break
+		}
+		if res.files == 0 {
+			t.Fatalf("run %d read nothing: no progress", runs+1)
+		}
+	}
+	if files != 4 || runs < 2 || load().LastPassObjects != 8 {
+		t.Fatalf("%d files over %d runs, progress %+v", files, runs+1, load())
 	}
 	maxBucketBytes = oldBytes
 
 	// Listed, then gone before it is read.
-	listed := map[string]string{}
-	for k, v := range objects {
-		listed[k] = v
-	}
+	objects2 := bucketObjects(t)
+	inner := newS3Server(t, objects2, false)
 	vanishing := newHostingServer(t, func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/id_rsa") {
 			writeXML(w, http.StatusNotFound, `<Error><Code>NoSuchKey</Code></Error>`)
 			return
 		}
-		srv.Config.Handler.ServeHTTP(w, r)
+		inner.Config.Handler.ServeHTTP(w, r)
 	})
-	trust(t, svc, srv, vanishing)
-	b.Endpoint = vanishing.URL
-	res, err := svc.scanBucket(ctx, svc.storageClient(nil), b, "s", false)
-	if err == nil || !strings.Contains(err.Error(), "1 objects could not be read, the first: app/deploy keys/id_rsa: bucket or object not found (NoSuchKey)") {
-		t.Fatalf("unreadable object: %v", err)
-	}
-	if res.files != 3 || len(res.assets) != 3 {
-		t.Fatalf("%d files, %d assets after one unreadable object", res.files, len(res.assets))
+	trust(t, svc, srv, inner, vanishing)
+	b2 := Bucket{ID: "b2", TenantID: "t1", Provider: "s3", Endpoint: vanishing.URL, Name: "acme-artifacts", Prefix: "app/", Region: "us-east-1"}
+	_ = store.CreateBucket(ctx, b2)
+	for i := 0; i < 2; i++ {
+		res, err := svc.scanBucket(ctx, svc.storageClient(nil), b2, "s", false)
+		if err == nil || !strings.Contains(err.Error(), "1 objects could not be read, the first: app/deploy keys/id_rsa: bucket or object not found (NoSuchKey)") {
+			t.Fatalf("run %d, unreadable object: %v", i+1, err)
+		}
+		// The first run reads the other three; the second finds them
+		// unchanged and tries the unreadable one again.
+		if want := []int{3, 0}[i]; res.files != want || len(res.assets) != want {
+			t.Fatalf("run %d: %d files, %d assets", i+1, res.files, len(res.assets))
+		}
+		svc.storeAssets(ctx, "t1", res.assets, map[string]bool{})
 	}
 
 	// Not a listing at all.
@@ -712,6 +898,14 @@ func TestLiveObjectStorage(t *testing.T) {
 		t.Logf("%s %s: %d objects listed, %d read, %d sniffed, %d assets %q, err %v", c.b.Provider, c.b.label(), res.objects, res.files, res.sniffed, len(res.assets), assetLines(res.assets, c.b.label()), err)
 		if err != nil || len(res.assets) < least {
 			t.Errorf("%s: %d assets (want at least %d), %v", c.b.label(), len(res.assets), least, err)
+		}
+		// A second run: the real service's ETags say nothing changed, so
+		// nothing is downloaded and every asset is marked seen.
+		svc.storeAssets(context.Background(), "t1", res.assets, map[string]bool{})
+		again, err := svc.scanBucket(context.Background(), svc.storageClient(nil), c.b, "s2", false)
+		t.Logf("%s second run: %d read, %d unchanged, %d assets kept, err %v", c.b.label(), again.files, again.unchanged, again.kept, err)
+		if err != nil || again.files != 0 || again.unchanged < res.files || again.kept != len(res.assets) {
+			t.Errorf("%s: second run read %d, unchanged %d (first read %d), kept %d of %d, %v", c.b.label(), again.files, again.unchanged, res.files, again.kept, len(res.assets), err)
 		}
 		if c.b.ConnectionID == "" {
 			continue

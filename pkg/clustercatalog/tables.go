@@ -101,6 +101,7 @@ var Replicated = map[string][]string{
 	},
 	"discovery": {
 		"discovery_assets",
+		"discovery_bucket_objects",
 		"discovery_buckets",
 		"discovery_repositories",
 		"discovery_scans",

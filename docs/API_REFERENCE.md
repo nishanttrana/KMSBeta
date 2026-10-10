@@ -3446,8 +3446,8 @@ object the code scan's parser reads, over TLS 1.3 through the scan's dial
 guard, following no redirect: objects of at most 2 MiB with a source,
 configuration, key or certificate file name, skipping `.git`,
 `node_modules`, `vendor`, `bin`, `dist` and lock files; at most 100,000
-objects listed and 512 MiB read per bucket (`the bucket has more objects or
-bytes than the scan limit`, with what was found so far). Assets have
+objects listed and 512 MiB read per bucket in one run (see "Incremental and
+resumable" below). Assets have
 `source: "storage"`, `location` `host/bucket/key:line`, and
 `metadata.endpoint`, `bucket`, `key` and `provider`. A credential is sent
 only to the connection's host. `stats.storage_buckets`,
@@ -3457,6 +3457,22 @@ the scan; a bucket that fails, or an object that can't be read, is named in
 service's error only its code is reported (`access denied
 (SignatureDoesNotMatch)`). Object versions, archives inside the bucket and
 archive storage classes are not read.
+
+**Incremental and resumable (7.38.0-beta).** One run reads at most 100,000
+objects, 512 MiB or six minutes of a bucket, then records where it stopped;
+the next scan continues, and the pass is complete when the listing ends
+(S3: `start-after` the last key; Azure: the service's marker). A bucket
+record carries `pass_in_progress`, `pass_objects` (listed so far in the pass
+in progress), `last_pass_at`, `last_pass_objects` and `scanned_at`. An
+object listed with the ETag it had when last read is not downloaded; the
+assets found in it are marked seen (`stats.storage_unchanged`,
+`stats.storage_assets_unchanged`), unless one of them is no longer in the
+inventory, in which case it is read again. `stats.storage_buckets_continuing`
+counts buckets whose pass is unfinished, which is not an error.
+`stats.storage_assets` is found plus unchanged. For `source: "storage"`,
+`GET /discovery/sources` gives `last_scan.started_at` as the start of the
+oldest bucket's last complete pass (absent until every bucket has completed
+one), and `not_seen=true` selects assets last seen before it.
 
 `POST /discovery/buckets/{id}/test` lists the first page of the bucket and
 reads one object with the bucket's connection, and returns `200 {"ok":

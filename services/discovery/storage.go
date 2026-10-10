@@ -50,18 +50,18 @@ const (
 	azureAPIVersion     = "2021-08-06"
 )
 
-// Caps on one bucket, so a large one can't hold the scan (variables so a
-// test can lower them).
+// What one run reads of one bucket, so a large one can't hold the scan
+// (variables so a test can lower them). Beyond it the bucket continues with
+// the next scan (scanBucket).
 var (
 	maxBucketObjects       = 100000    // objects listed
 	maxBucketBytes   int64 = 512 << 20 // bytes read
 )
 
 var (
-	errInvalidBucket  = errors.New("invalid bucket")
-	errBucketExists   = errors.New("bucket already added")
-	errBucketLimit    = fmt.Errorf("at most %d buckets per tenant", maxBucketsPerTenant)
-	errBucketTooLarge = errors.New("the bucket has more objects or bytes than the scan limit; narrow it with a prefix")
+	errInvalidBucket = errors.New("invalid bucket")
+	errBucketExists  = errors.New("bucket already added")
+	errBucketLimit   = fmt.Errorf("at most %d buckets per tenant", maxBucketsPerTenant)
 
 	bucketProviders = map[string]string{"s3": "s3", "azure": "azure_blob"} // provider -> connection type
 
@@ -344,24 +344,27 @@ func (s *Service) bucketGet(ctx context.Context, client *http.Client, b Bucket, 
 type bucketObject struct {
 	key  string
 	size int64
+	etag string // "" when the service names none
 }
 
-// listPage reads one page of the bucket's listing after token ("" starts)
-// and returns the token for the next page ("" when the listing is complete).
-func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, token string) ([]bucketObject, string, error) {
+// listPage reads one page of the bucket's listing from cursor ("" starts)
+// and returns the cursor of the next page ("" when the listing is complete).
+// An S3 cursor is the last key listed (start-after), which stays valid
+// between scans; an Azure cursor is the service's marker.
+func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, cred bucketCredential, cursor string) ([]bucketObject, string, error) {
 	q := neturl.Values{}
 	if b.Provider == "azure" {
 		q.Set("restype", "container")
 		q.Set("comp", "list")
 		q.Set("maxresults", fmt.Sprint(bucketPageSize))
-		if token != "" {
-			q.Set("marker", token)
+		if cursor != "" {
+			q.Set("marker", cursor)
 		}
 	} else {
 		q.Set("list-type", "2")
 		q.Set("max-keys", fmt.Sprint(bucketPageSize))
-		if token != "" {
-			q.Set("continuation-token", token)
+		if cursor != "" {
+			q.Set("start-after", cursor)
 		}
 	}
 	if b.Prefix != "" {
@@ -377,13 +380,14 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 		Contents []struct {
 			Key  string `xml:"Key"`
 			Size int64  `xml:"Size"`
+			ETag string `xml:"ETag"`
 		} `xml:"Contents"`
-		IsTruncated           bool   `xml:"IsTruncated"`
-		NextContinuationToken string `xml:"NextContinuationToken"`
+		IsTruncated bool `xml:"IsTruncated"`
 		// Azure List Blobs
 		Blobs []struct {
 			Name string `xml:"Name"`
 			Size int64  `xml:"Properties>Content-Length"`
+			ETag string `xml:"Properties>Etag"`
 		} `xml:"Blobs>Blob"`
 		NextMarker string `xml:"NextMarker"`
 	}
@@ -392,18 +396,21 @@ func (s *Service) listPage(ctx context.Context, client *http.Client, b Bucket, c
 	}
 	out := make([]bucketObject, 0, len(page.Contents)+len(page.Blobs))
 	for _, o := range page.Contents {
-		out = append(out, bucketObject{o.Key, o.Size})
+		out = append(out, bucketObject{o.Key, o.Size, strings.Trim(o.ETag, `"`)})
 	}
 	for _, o := range page.Blobs {
-		out = append(out, bucketObject{o.Name, o.Size})
+		out = append(out, bucketObject{o.Name, o.Size, strings.Trim(o.ETag, `"`)})
 	}
-	next := page.NextMarker
-	if b.Provider != "azure" {
-		if next = page.NextContinuationToken; page.IsTruncated && next == "" {
-			return nil, "", errors.New("the storage service's listing is incomplete and names no next page")
-		}
+	if b.Provider == "azure" {
+		return out, page.NextMarker, nil
 	}
-	return out, next, nil
+	if !page.IsTruncated {
+		return out, "", nil
+	}
+	if len(out) == 0 {
+		return nil, "", errors.New("the storage service's listing is incomplete and names no next page")
+	}
+	return out, out[len(out)-1].key, nil
 }
 
 // readObject downloads an object of at most limit bytes. first > 0 reads
@@ -433,9 +440,12 @@ func (s *Service) readObject(ctx context.Context, client *http.Client, b Bucket,
 
 type bucketScan struct {
 	assets     []CryptoAsset
-	objects    int // objects listed
-	files      int // objects read and parsed
-	sniffed    int // objects whose first bytes a deep scan read
+	objects    int  // objects listed in this run
+	files      int  // objects read and parsed
+	sniffed    int  // objects whose first bytes a deep scan read
+	unchanged  int  // objects not read: the same ETag as when last read
+	kept       int  // assets of unchanged objects, marked seen
+	partial    bool // the run stopped at a budget; the next scan continues
 	unreadable []string
 }
 
@@ -485,10 +495,24 @@ func (s *Service) fetchObject(ctx context.Context, client *http.Client, b Bucket
 	return s.readObject(ctx, client, b, cred, j.key, limit, 0)
 }
 
-// scanBucket lists the bucket and inventories each scannable object. With
-// probe set it reads only the first page and at most one object, to prove
-// the endpoint, the bucket and the credential work together. An object that
-// can't be read is named in the error; the others are still scanned.
+// One run's budget for one bucket (variables so a test can lower them). A
+// bucket larger than a run can cover is read over several scans: each run
+// continues where the last stopped, and the pass is complete when the
+// listing ends.
+var bucketRunBudget = 6 * time.Minute
+
+// scanRules is recorded with each object read. Raise it when the parser
+// learns something new, so unchanged objects are read again.
+const scanRules = 2
+
+// scanBucket reads the bucket from where its last run stopped: it lists the
+// objects, skips those whose ETag says they have not changed since they were
+// read (their assets are marked seen), and inventories the rest. A run stops
+// at its budget of objects, bytes or time and records where; the next
+// continues from there. With probe set it reads only the first page and at
+// most one object and records nothing, to prove the endpoint, the bucket
+// and the credential work together. An object that can't be read is named
+// in the error and tried again next time; the others are still scanned.
 func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket, scanID string, probe bool) (bucketScan, error) {
 	ctx, cancel := context.WithTimeout(ctx, bucketFetchTimeout)
 	defer cancel()
@@ -497,21 +521,53 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 	if err != nil {
 		return out, err
 	}
+	started := s.now()
+	known := map[string]BucketObject{}
+	if !probe {
+		if known, err = s.store.BucketObjects(ctx, b.TenantID, b.ID); err != nil {
+			return out, fmt.Errorf("read scan state: %w", err)
+		}
+		if b.Cursor == "" {
+			b.PassStartedAt, b.PassObjects = started, 0
+		}
+	}
 	var (
 		mu    sync.Mutex
 		bytes int64
 		label = b.label()
+		wall  = time.Now()
 	)
-	for token := ""; ; {
-		page, next, err := s.listPage(ctx, client, b, cred, token)
+	finish := func(complete bool) error {
+		if probe {
+			return nil
+		}
+		b.ScannedAt = s.now()
+		if complete {
+			// Objects read in an earlier pass and not listed in this one
+			// are gone.
+			if err := s.store.PruneBucketObjects(ctx, b.TenantID, b.ID, b.PassStartedAt); err != nil {
+				return err
+			}
+			b.LastPassStartedAt, b.LastPassAt, b.LastPassObjects = b.PassStartedAt, b.ScannedAt, b.PassObjects
+			b.Cursor, b.PassObjects, b.PassStartedAt = "", 0, time.Time{}
+		}
+		return s.store.SaveBucketProgress(ctx, b)
+	}
+	for cursor := b.Cursor; ; {
+		if out.objects > 0 && (out.objects >= maxBucketObjects || bytes >= maxBucketBytes || time.Since(wall) > bucketRunBudget) {
+			out.partial = true
+			break
+		}
+		page, next, err := s.listPage(ctx, client, b, cred, cursor)
 		if err != nil {
+			_ = finish(false)
 			return out, err
 		}
-		out.objects += len(page)
-		if out.objects > maxBucketObjects {
-			return out, errBucketTooLarge
-		}
-		var todo []bucketJob
+		var (
+			todo []bucketJob
+			rows []BucketObject
+			cut  bool // the byte budget ended inside this page
+		)
 		for _, o := range page {
 			j := bucketJob{bucketObject: o, sniff: !scannable(o)}
 			cost := o.size
@@ -521,9 +577,26 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 				}
 				cost = sniffBytes
 			}
-			if bytes += cost; bytes > maxBucketBytes {
-				return out, errBucketTooLarge
+			if old, ok := known[o.key]; ok && !probe && o.etag != "" && old.ETag == o.etag && old.Rules == scanRules {
+				n, err := s.store.TouchAssets(ctx, b.TenantID, old.AssetIDs, scanID, s.now())
+				if err != nil {
+					return out, fmt.Errorf("mark unchanged assets seen: %w", err)
+				}
+				// Skipped only if every asset found in it is still in the
+				// inventory; one that is not (removed, or never stored
+				// because the scan stopped first) is found by reading again.
+				if n == len(old.AssetIDs) {
+					out.unchanged++
+					out.kept += n
+					rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.etag, Size: o.size, AssetIDs: old.AssetIDs, Rules: scanRules})
+					continue
+				}
 			}
+			if bytes+cost > maxBucketBytes && bytes > 0 {
+				cut = true
+				break
+			}
+			bytes += cost
 			if todo = append(todo, j); probe {
 				break
 			}
@@ -547,12 +620,18 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 					if o.sniff {
 						out.sniffed++
 					}
-					if err != nil {
-						out.unreadable = append(out.unreadable, o.key+": "+err.Error())
-					}
 					if raw != nil {
 						out.files++
 						out.assets = append(out.assets, found...)
+					}
+					if err != nil {
+						out.unreadable = append(out.unreadable, o.key+": "+err.Error())
+					} else {
+						ids := make([]string, 0, len(found))
+						for _, a := range found {
+							ids = append(ids, a.ID)
+						}
+						rows = append(rows, BucketObject{TenantID: b.TenantID, BucketID: b.ID, Key: o.key, ETag: o.etag, Size: o.size, AssetIDs: ids, Rules: scanRules})
 					}
 					mu.Unlock()
 				}
@@ -563,9 +642,28 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 		}
 		close(jobs)
 		wg.Wait()
-		if token = next; token == "" || probe {
+		if probe {
+			out.objects = len(page)
 			break
 		}
+		if err := s.store.PutBucketObjects(ctx, rows, s.now()); err != nil {
+			return out, fmt.Errorf("record scan state: %w", err)
+		}
+		if cut {
+			// This page is listed again next run; what was read of it is
+			// skipped by ETag.
+			out.partial = true
+			break
+		}
+		out.objects += len(page)
+		b.PassObjects += len(page)
+		b.Cursor = next
+		if cursor = next; cursor == "" {
+			break
+		}
+	}
+	if err := finish(!out.partial && !probe); err != nil {
+		return out, fmt.Errorf("record scan progress: %w", err)
 	}
 	if n := len(out.unreadable); n > 0 {
 		sort.Strings(out.unreadable)
@@ -574,8 +672,10 @@ func (s *Service) scanBucket(ctx context.Context, client *http.Client, b Bucket,
 	return out, nil
 }
 
-// scanStorage scans every bucket the tenant added. A bucket that fails is an
-// error naming it; the others are still scanned.
+// scanStorage scans every bucket the tenant added, the one scanned longest
+// ago first. A bucket that fails is an error naming it; the others are still
+// scanned. A bucket too large for one run is not an error: it continues
+// with the next scan.
 func (s *Service) scanStorage(ctx context.Context, tenantID string, scanID string) ([]CryptoAsset, map[string]interface{}, error) {
 	buckets, err := s.store.ListBuckets(ctx, tenantID)
 	if err != nil {
@@ -584,23 +684,33 @@ func (s *Service) scanStorage(ctx context.Context, tenantID string, scanID strin
 	if len(buckets) == 0 {
 		return nil, nil, fmt.Errorf("%w: add a bucket in Crypto Discovery", errScanNotConfigured)
 	}
+	sort.SliceStable(buckets, func(i, j int) bool { return buckets[i].ScannedAt.Before(buckets[j].ScannedAt) })
 	client := s.storageClient(s.targetGuard(ctx))
 	var (
-		assets                  []CryptoAsset
-		failed                  []string
-		objects, files, sniffed int
+		assets []CryptoAsset
+		failed []string
+		total  bucketScan
+		inPass int
 	)
 	for _, b := range buckets {
 		res, err := s.scanBucket(ctx, client, b, scanID, false)
 		assets = append(assets, res.assets...)
-		objects += res.objects
-		files += res.files
-		sniffed += res.sniffed
+		total.objects += res.objects
+		total.files += res.files
+		total.sniffed += res.sniffed
+		total.unchanged += res.unchanged
+		total.kept += res.kept
+		if res.partial {
+			inPass++
+		}
 		if err != nil {
 			failed = append(failed, b.label()+": "+err.Error())
 		}
 	}
-	stats := map[string]interface{}{"storage_buckets": len(buckets), "storage_objects": objects, "storage_files": files, "storage_sniffed": sniffed}
+	stats := map[string]interface{}{
+		"storage_buckets": len(buckets), "storage_objects": total.objects, "storage_files": total.files, "storage_sniffed": total.sniffed,
+		"storage_unchanged": total.unchanged, "storage_assets_unchanged": total.kept, "storage_buckets_continuing": inPass,
+	}
 	if len(failed) > 0 {
 		return assets, stats, fmt.Errorf("%d of %d buckets failed: %s", len(failed), len(buckets), strings.Join(failed, "; "))
 	}
@@ -671,7 +781,31 @@ func (s *Service) RemoveBucket(ctx context.Context, tenantID, id string) (Bucket
 	if err != nil {
 		return Bucket{}, err
 	}
-	return b, s.store.DeleteBucket(ctx, tenantID, id)
+	if err := s.store.DeleteBucket(ctx, tenantID, id); err != nil {
+		return b, err
+	}
+	// Its scan state goes with it; its assets stay until removed or stale.
+	return b, s.store.PruneBucketObjects(ctx, tenantID, id, time.Time{})
+}
+
+// storageStaleBefore: a storage asset last seen before this was not found
+// by a complete pass of any bucket. Zero while a bucket has yet to complete
+// its first pass: until then nothing can be called missing.
+func (s *Service) storageStaleBefore(ctx context.Context, tenantID string) (time.Time, error) {
+	buckets, err := s.store.ListBuckets(ctx, tenantID)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var oldest time.Time
+	for _, b := range buckets {
+		if b.LastPassStartedAt.IsZero() {
+			return time.Time{}, nil
+		}
+		if oldest.IsZero() || b.LastPassStartedAt.Before(oldest) {
+			oldest = b.LastPassStartedAt
+		}
+	}
+	return oldest, nil
 }
 
 // TestBucket lists the first page of the bucket and reads one object with

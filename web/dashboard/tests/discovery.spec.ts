@@ -12,8 +12,8 @@ const finished = { ...running, status: "completed", stats: { sources_done: ["net
 
 // Buckets as GET /discovery/buckets returns them (services/discovery Bucket).
 const buckets = [
-  { id: "bucket_s3", tenant_id: "root", provider: "s3", endpoint: "https://s3.eu-west-1.amazonaws.com", bucket: "acme-artifacts", prefix: "releases/", region: "eu-west-1", connection_id: "pbconn_s3", deep: true, created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
-  { id: "bucket_az", tenant_id: "root", provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "configs", prefix: "", region: "", connection_id: "pbconn_az", deep: false, created_by: "admin", created_at: "2026-10-01T09:54:08Z" },
+  { id: "bucket_s3", tenant_id: "root", provider: "s3", endpoint: "https://s3.eu-west-1.amazonaws.com", bucket: "acme-artifacts", prefix: "releases/", region: "eu-west-1", connection_id: "pbconn_s3", deep: true, created_by: "admin", created_at: "2026-10-01T09:54:08Z", pass_in_progress: true, pass_objects: 100000, last_pass_objects: 0 },
+  { id: "bucket_az", tenant_id: "root", provider: "azure", endpoint: "https://acme.blob.core.windows.net", bucket: "configs", prefix: "", region: "", connection_id: "pbconn_az", deep: false, created_by: "admin", created_at: "2026-10-01T09:54:08Z", pass_in_progress: false, pass_objects: 0, last_pass_at: new Date(Date.now() - 2 * 3600e3).toISOString(), last_pass_objects: 214 },
 ];
 
 // The asset list as the service filters and pages it (FindAssets).
@@ -226,6 +226,11 @@ test("a private bucket is added with a storage connection and tested", async ({ 
   // Each bucket shows which connection reads it; no credential is on the page.
   await expect(page.getByText("s3.eu-west-1.amazonaws.com/acme-artifacts", { exact: false })).toBeVisible();
   await expect(page.getByText("Artifacts read key", { exact: true })).toBeVisible();
+
+  // A bucket too large for one scan says how far it has got; a finished one
+  // says when its last full pass was.
+  await expect(page.getByText("100,000 objects read so far · continues next scan")).toBeVisible();
+  await expect(page.getByText("full pass 2h ago · 214 objects")).toBeVisible();
 
   const tests = page.getByRole("button", { name: "Test", exact: true });
   await tests.nth(0).click();

@@ -4,6 +4,42 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.38.0-beta] — 2026-10-10
+
+### Crypto Discovery: bucket scans are incremental and continue across runs
+- **Changed: a large bucket no longer fails at the scan limit.** One run
+  still reads at most 100,000 objects, 512 MiB or six minutes of a bucket,
+  but it now records where it stopped and the next scan (manual or
+  scheduled) continues from there until the listing ends. The Buckets
+  dialog shows how far a bucket has got ("100,000 objects read so far ·
+  continues next scan") and when its last full pass was. Before, such a
+  bucket ended every scan with an error and its tail was never read.
+- **Changed: an object that has not changed is not downloaded again.** The
+  scan records each object's ETag when it reads it. Listed again with the
+  same ETag, the object is skipped and the assets found in it are marked
+  seen. A second scan of an unchanged bucket makes only the listing
+  requests. The same holds for objects a deep scan looked into and found
+  nothing in. A service that returns no ETag is read in full every time.
+- **Changed: "not seen" for bucket assets means a complete pass missed
+  them.** An asset is called not seen only after every bucket has completed
+  a pass and that pass did not find it, never because a pass is still in
+  progress.
+- **Safety:** an unchanged object is skipped only if every asset found in it
+  is still in the inventory; if one was removed, or the scan stopped before
+  storing it, the object is read again. An object that could not be read is
+  named in the scan's errors and tried again next time. When the scanner
+  learns new formats, objects are read again regardless of ETag.
+- **Storage:** new table `discovery_bucket_objects` (key, ETag, size and
+  asset IDs per object read; never content), removed with its bucket.
+- **API:** bucket records carry `pass_in_progress`, `pass_objects`,
+  `last_pass_at`, `last_pass_objects` and `scanned_at`; scan stats add
+  `storage_unchanged`, `storage_assets_unchanged` and
+  `storage_buckets_continuing`. `storage_assets` now counts the assets the
+  source holds (found plus unchanged).
+- **Verified live:** the Versity S3 gateway, Azurite and Google Cloud
+  Storage each downloaded nothing on a second run; a 4,608-object prefix on
+  AWS S3 was listed across five pages.
+
 ## [7.37.0-beta] — 2026-10-10
 
 ### Crypto Discovery: files are recognised by content; archives are scanned; deep scan for buckets

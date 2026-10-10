@@ -318,9 +318,12 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP)
 	return err
 }
 
+const bucketColumns = `tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, deep_scan, created_by, created_at,
+	scan_cursor, pass_started_at, pass_objects, last_pass_started_at, last_pass_at, last_pass_objects, scanned_at`
+
 func (s *SQLStore) ListBuckets(ctx context.Context, tenantID string) ([]Bucket, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, provider, endpoint, bucket, prefix, region, connection_id, deep_scan, created_by, created_at
+SELECT `+bucketColumns+`
 FROM discovery_buckets
 WHERE tenant_id = $1
 ORDER BY endpoint, bucket, prefix
@@ -332,16 +335,131 @@ ORDER BY endpoint, bucket, prefix
 	out := make([]Bucket, 0)
 	for rows.Next() {
 		var (
-			b          Bucket
-			createdRaw interface{}
+			b                                              Bucket
+			created, passStart, lastStart, lastAt, scanned interface{}
 		)
-		if err := rows.Scan(&b.TenantID, &b.ID, &b.Provider, &b.Endpoint, &b.Name, &b.Prefix, &b.Region, &b.ConnectionID, &b.Deep, &b.CreatedBy, &createdRaw); err != nil {
+		if err := rows.Scan(&b.TenantID, &b.ID, &b.Provider, &b.Endpoint, &b.Name, &b.Prefix, &b.Region, &b.ConnectionID, &b.Deep, &b.CreatedBy, &created,
+			&b.Cursor, &passStart, &b.PassObjects, &lastStart, &lastAt, &b.LastPassObjects, &scanned); err != nil {
 			return nil, err
 		}
-		b.CreatedAt = parseTimeValue(createdRaw)
+		b.CreatedAt, b.PassStartedAt, b.LastPassStartedAt = parseTimeValue(created), parseTimeValue(passStart), parseTimeValue(lastStart)
+		b.LastPassAt, b.ScannedAt = parseTimeValue(lastAt), parseTimeValue(scanned)
+		b.PassInProgress = b.Cursor != ""
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// SaveBucketProgress records where a bucket's pass stands.
+func (s *SQLStore) SaveBucketProgress(ctx context.Context, b Bucket) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+UPDATE discovery_buckets
+SET scan_cursor = $3, pass_started_at = $4, pass_objects = $5, last_pass_started_at = $6, last_pass_at = $7, last_pass_objects = $8, scanned_at = $9
+WHERE tenant_id = $1 AND id = $2
+`, b.TenantID, b.ID, b.Cursor, nullableTime(b.PassStartedAt), b.PassObjects, nullableTime(b.LastPassStartedAt), nullableTime(b.LastPassAt), b.LastPassObjects, nullableTime(b.ScannedAt))
+	return err
+}
+
+// BucketObjects returns what the scan recorded of a bucket's objects, by key.
+func (s *SQLStore) BucketObjects(ctx context.Context, tenantID string, bucketID string) (map[string]BucketObject, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT object_key, etag, size_bytes, asset_ids, rules
+FROM discovery_bucket_objects
+WHERE tenant_id = $1 AND bucket_id = $2
+`, tenantID, bucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := map[string]BucketObject{}
+	for rows.Next() {
+		o := BucketObject{TenantID: tenantID, BucketID: bucketID}
+		var ids string
+		if err := rows.Scan(&o.Key, &o.ETag, &o.Size, &ids, &o.Rules); err != nil {
+			return nil, err
+		}
+		if ids != "" {
+			o.AssetIDs = strings.Split(ids, ",")
+		}
+		out[o.Key] = o
+	}
+	return out, rows.Err()
+}
+
+// PutBucketObjects records objects as read or seen unchanged at at.
+func (s *SQLStore) PutBucketObjects(ctx context.Context, objects []BucketObject, at time.Time) error {
+	for _, o := range objects {
+		if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO discovery_bucket_objects (tenant_id, bucket_id, object_key, etag, size_bytes, asset_ids, rules, seen_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+ON CONFLICT (tenant_id, bucket_id, object_key) DO UPDATE SET
+	etag = excluded.etag,
+	size_bytes = excluded.size_bytes,
+	asset_ids = excluded.asset_ids,
+	rules = excluded.rules,
+	seen_at = excluded.seen_at
+`, o.TenantID, o.BucketID, o.Key, o.ETag, o.Size, strings.Join(o.AssetIDs, ","), o.Rules, at.UTC()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PruneBucketObjects forgets a bucket's objects last seen before before; a
+// zero before forgets them all.
+func (s *SQLStore) PruneBucketObjects(ctx context.Context, tenantID string, bucketID string, before time.Time) error {
+	if before.IsZero() {
+		_, err := s.db.SQL().ExecContext(ctx, `DELETE FROM discovery_bucket_objects WHERE tenant_id = $1 AND bucket_id = $2`, tenantID, bucketID)
+		return err
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT object_key, seen_at FROM discovery_bucket_objects WHERE tenant_id = $1 AND bucket_id = $2`, tenantID, bucketID)
+	if err != nil {
+		return err
+	}
+	// Compared here, not in SQL: the two databases store and compare
+	// timestamps differently.
+	var gone []string
+	for rows.Next() {
+		var (
+			key  string
+			seen interface{}
+		)
+		if err := rows.Scan(&key, &seen); err != nil {
+			rows.Close() //nolint:errcheck
+			return err
+		}
+		if parseTimeValue(seen).Before(before) {
+			gone = append(gone, key)
+		}
+	}
+	rows.Close() //nolint:errcheck
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, key := range gone {
+		if _, err := s.db.SQL().ExecContext(ctx, `DELETE FROM discovery_bucket_objects WHERE tenant_id = $1 AND bucket_id = $2 AND object_key = $3`, tenantID, bucketID, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TouchAssets marks assets as seen by a scan without rewriting them, and
+// returns how many exist.
+func (s *SQLStore) TouchAssets(ctx context.Context, tenantID string, ids []string, scanID string, at time.Time) (int, error) {
+	n := 0
+	for _, id := range ids {
+		res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE discovery_assets SET last_seen = $3, scan_id = $4, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2
+`, tenantID, id, at.UTC(), scanID)
+		if err != nil {
+			return n, err
+		}
+		if c, _ := res.RowsAffected(); c > 0 {
+			n++
+		}
+	}
+	return n, nil
 }
 
 func (s *SQLStore) DeleteBucket(ctx context.Context, tenantID string, id string) error {

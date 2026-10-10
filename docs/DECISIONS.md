@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-10 — Discovery: a bucket is read over as many scans as it takes; unchanged objects are skipped by ETag (7.38.0-beta)
+
+- **Decision:** a run reads a bounded part of a bucket and saves a cursor;
+  later scans continue until the listing ends (a pass). Each object read is
+  recorded with its ETag and the IDs of the assets found in it, and is
+  skipped while its ETag is unchanged and those assets are still in the
+  inventory.
+- **Why:** a fixed cap with an error meant the objects past it were never
+  read. Raising the cap only moves the wall, and one scan has a deadline. A
+  saved cursor has no wall. Skipping unchanged objects is what makes a
+  schedule on a large bucket affordable.
+- **Rejected:** a change token of last-modified time and size when a
+  service returns no ETag: two writes in one second with the same length
+  would be missed, and what would be missed is a replaced key. Such
+  services are read in full. Reading large buckets in a background job
+  outside the scan: a second lifecycle to audit, schedule and cluster.
+- **Cost:** one row per object read (key, ETag, size, asset IDs), in a new
+  replicated table. Until every bucket has completed a pass, no bucket
+  asset is reported as not seen.
+- **Enforced by:** `TestStorageResumesAcrossRuns`,
+  `TestStorageSkipsUnchangedObjects`,
+  `TestStorageByteBudgetAndUnreadableObjects`,
+  `TestTargetsAndAssetRemovalPostgres` (migration 009), and the second-run
+  check in `TestLiveObjectStorage`.
+
+---
+
 ## 2026-10-10 — Discovery: deep scan is opt-in per bucket; archives are opened one level (7.37.0-beta)
 
 - **Decision:** a bucket's objects are chosen by name unless the tenant
