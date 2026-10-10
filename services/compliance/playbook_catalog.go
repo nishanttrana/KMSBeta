@@ -47,7 +47,7 @@ var playbookTriggers = []TriggerSpec{
 	{Type: "sustained_risk_detected", Label: "Sustained high-risk activity on a target", Group: "Incident response", Subjects: []string{"audit.security.sustained_risk_detected"}},
 	{Type: "key_compromised", Label: "Key compromise reported", Group: "Incident response", Subjects: []string{"audit.key.compromise_detected"}},
 	{Type: "audit_chain_broken", Label: "Audit trail tampering detected", Group: "Incident response", Subjects: []string{"audit.audit.chain_broken"}},
-	{Type: "secret_exposed", Label: "Exposed secret discovered (code or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
+	{Type: "secret_exposed", Label: "Exposed secret discovered (code, repository, bucket or upload)", Group: "Incident response", Subjects: []string{"audit.discovery.secret_exposed"}},
 	{Type: "secret_access_rule_changed", Label: "Secret access rule or vault setting changed", Group: "Access", Subjects: []string{"audit.secrets.access_rule_created", "audit.secrets.access_rule_deleted", "audit.secrets.settings_updated", "audit.secrets.version_cap_set", "audit.secrets.version_cap_deleted"}, SuccessOnly: true},
 	{Type: "secret_access_rule_stale", Label: "Secret access rule names a subject that no longer exists", Group: "Access", Subjects: []string{"audit.secrets.access_rule_subject_missing"}},
 	{Type: "secret_destroyed", Label: "Secret destroyed", Group: "Access", Subjects: []string{"audit.secrets.destroyed", "audit.secrets.retention_purged"}, SuccessOnly: true},

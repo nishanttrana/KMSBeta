@@ -3,6 +3,29 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-10-10
+
+### Discovery: crypto usage rules (7.36.0-beta)
+- **Match the call, not the word.** A rule is a call, import or directive
+  with the algorithm as its argument, per language, and comment lines are
+  skipped. Matching `MD5` anywhere would have listed every README and
+  changelog. The cost is stated: one line at a time, no data flow.
+- **A library's default is a fact worth recording.** `Cipher.getInstance
+  ("AES")` gives AES/ECB/PKCS5Padding in the JDK. The name says "AES"; the
+  behaviour is ECB. The label follows the behaviour.
+- **`crypto/des` is not DES.** The Go package also provides 3DES, so the
+  import alone names neither; the rule reads the constructor called.
+- **The catalogue had no entry for a mode without a size.** `AES-ECB` was
+  "not assessed" because it names no key size, though ECB is weak at every
+  size. A fact that holds for every parameter set does not need one.
+- **One asset per algorithm per line.** The asset ID was built from file,
+  line and fingerprint; usage has no fingerprint, so `RC4` and `3DES` on one
+  `ssl_ciphers` line were one asset until the algorithm joined the ID. IDs
+  of existing kinds are unchanged, so a rescan does not duplicate them.
+- **Test tokens are assembled at run time.** A token-shaped literal in a
+  test file is a finding for every secret scanner, including the hosting
+  service's push protection.
+
 ## 2026-10-01
 
 ### Documentation tab removed (7.35.0-beta)

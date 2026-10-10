@@ -30,7 +30,8 @@ type finding struct {
 }
 
 // secretKinds: findings that are a secret wherever they are found.
-var secretKinds = map[string]bool{"private_key_material": true, "cloud_access_key": true, "hex_secret": true, "keystore": true}
+var secretKinds = map[string]bool{"private_key_material": true, "cloud_access_key": true, "hex_secret": true, "keystore": true,
+	"api_token": true, "cloud_secret_key": true}
 
 var reSSHPublicKey = regexp.MustCompile(`(?:^|\s)(ssh-ed25519|ssh-rsa|ssh-dss|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com)\s+(AAAA[0-9A-Za-z+/]+={0,3})(?:\s+(\S.*))?$`)
 
@@ -54,6 +55,7 @@ func findMaterial(name string, raw []byte) []finding {
 		return []finding{{kind: "keystore", fingerprint: secretFingerprint(raw), meta: map[string]interface{}{"format": strings.TrimPrefix(strings.ToLower(filepath.Ext(name)), ".")}}}
 	}
 	var out []finding
+	ext, usage := usageFile(name)
 	line := 0
 	sc := bufio.NewScanner(bytes.NewReader(raw))
 	sc.Buffer(make([]byte, 64*1024), 1024*1024)
@@ -66,10 +68,17 @@ func findMaterial(name string, raw []byte) []finding {
 				continue
 			}
 		}
+		secrets := secretFindings(text, line)
 		if m := reAKIA.FindString(text); m != "" {
 			out = append(out, finding{kind: "cloud_access_key", fingerprint: secretFingerprint([]byte(m)), line: line})
-		} else if m := reHexSecret.FindStringSubmatch(text); m != nil {
-			out = append(out, finding{kind: "hex_secret", fingerprint: secretFingerprint([]byte(m[1])), line: line})
+		} else if len(secrets) == 0 {
+			if m := reHexSecret.FindStringSubmatch(text); m != nil {
+				out = append(out, finding{kind: "hex_secret", fingerprint: secretFingerprint([]byte(m[1])), line: line})
+			}
+		}
+		out = append(out, secrets...)
+		if usage {
+			out = append(out, usageFindings(ext, text, line)...)
 		}
 	}
 	rest, sawPEM := raw, false
@@ -91,6 +100,29 @@ func findMaterial(name string, raw []byte) []finding {
 	if !sawPEM && len(out) == 0 {
 		if c, err := x509.ParseCertificate(raw); err == nil {
 			out = append(out, certFinding(c, 0))
+		}
+	}
+	return out
+}
+
+// secretFindings: service tokens, cloud secret keys and PEM private keys
+// held in JSON strings on one line, each by fingerprint only.
+func secretFindings(text string, line int) []finding {
+	var out []finding
+	for _, f := range apiTokenFormats {
+		for _, m := range f.re.FindAllStringSubmatch(text, -1) {
+			out = append(out, finding{kind: "api_token", fingerprint: secretFingerprint([]byte(m[1])), line: line, name: f.provider + " token", meta: map[string]interface{}{"provider": f.provider}})
+		}
+	}
+	for _, f := range cloudSecretFormats {
+		for _, m := range f.re.FindAllStringSubmatch(text, -1) {
+			out = append(out, finding{kind: "cloud_secret_key", fingerprint: secretFingerprint([]byte(m[1])), line: line, name: f.provider + " secret key", meta: map[string]interface{}{"provider": f.provider}})
+		}
+	}
+	if m := reJSONPrivateKey.FindStringSubmatch(text); m != nil {
+		pemText := strings.ReplaceAll(m[1], `\n`, "\n")
+		if block, _ := pem.Decode([]byte(pemText)); block != nil {
+			out = append(out, finding{kind: "private_key_material", algorithm: privateKeyName(block), fingerprint: secretFingerprint(block.Bytes), line: line, meta: map[string]interface{}{"format": "json"}})
 		}
 	}
 	return out
@@ -233,8 +265,14 @@ func (s *Service) materialAssets(tenantID, scanID, source, file string, fs []fin
 		for k, v := range f.meta {
 			md[k] = v
 		}
+		// A usage finding has no fingerprint: what it names makes it unique
+		// on its line.
+		key := f.fingerprint
+		if key == "" && f.kind == "crypto_usage" {
+			key = f.algorithm + "|" + fmt.Sprint(f.meta["api"])
+		}
 		a := CryptoAsset{
-			ID: assetDeterministicID(tenantID, source, f.kind, file, fmt.Sprint(f.line), f.fingerprint), TenantID: tenantID, ScanID: scanID,
+			ID: assetDeterministicID(tenantID, source, f.kind, file, fmt.Sprint(f.line), key), TenantID: tenantID, ScanID: scanID,
 			AssetType: f.kind, Name: defaultString(f.name, filepath.Base(file)), Location: loc, Source: source,
 			Algorithm: f.algorithm, StrengthBits: strengthBits(f.algorithm), Status: "active",
 			PQCReady: pqcReady(f.algorithm), QSLScore: round2(algorithmQSL(f.algorithm)),
@@ -245,7 +283,9 @@ func (s *Service) materialAssets(tenantID, scanID, source, file string, fs []fin
 			md["fingerprint_sha256_prefix"] = f.fingerprint
 		} else {
 			a.Classification = classifyAlgorithm(f.algorithm)
-			md["fingerprint"] = f.fingerprint
+			if f.fingerprint != "" {
+				md["fingerprint"] = f.fingerprint
+			}
 		}
 		if na, ok := f.meta["not_after"].(string); ok && parseTimeString(na).Before(now) {
 			a.Status = "expired"

@@ -291,6 +291,30 @@ var (
 	// in a repository an exposed secret.
 	reHexSecret   = regexp.MustCompile(`(?i)(?:secret|token|passw(?:or)?d|api[_-]?key|access[_-]?key|private[_-]?key|credential)[A-Za-z0-9_.-]*["']?\s*[:=]\s*["']?([0-9a-fA-F]{32,})\b`)
 	reTLSHostPort = regexp.MustCompile(`^[a-zA-Z0-9._\-]+:\d{2,5}$`)
+
+	// Service tokens and cloud secret keys by their published formats
+	// (7.36.0-beta). Each is an exposed secret wherever it is found.
+	apiTokenFormats = []struct {
+		provider string
+		re       *regexp.Regexp
+	}{
+		{"github", regexp.MustCompile(`\b(gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82})\b`)},
+		{"gitlab", regexp.MustCompile(`\b(glpat-[A-Za-z0-9_-]{20})\b`)},
+		{"slack", regexp.MustCompile(`\b(xox[abposr]-[A-Za-z0-9-]{10,})\b`)},
+		{"stripe", regexp.MustCompile(`\b((?:sk|rk)_live_[A-Za-z0-9]{24,})\b`)},
+		{"google", regexp.MustCompile(`\b(AIza[0-9A-Za-z_-]{35})\b`)},
+		{"jwt", regexp.MustCompile(`\b(eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b`)},
+	}
+	cloudSecretFormats = []struct {
+		provider string
+		re       *regexp.Regexp
+	}{
+		{"aws", regexp.MustCompile(`(?i)aws_?secret_?access_?key["']?\s*[:=]\s*["']?([A-Za-z0-9/+]{40})\b`)},
+		{"azure", regexp.MustCompile(`AccountKey=([A-Za-z0-9+/]{86}==)`)},
+	}
+	// reJSONPrivateKey: a PEM private key inside a JSON string (a Google
+	// service account key file, a Firebase or Vault export).
+	reJSONPrivateKey = regexp.MustCompile(`"private_key"\s*:\s*"(-----BEGIN [A-Z ]*PRIVATE KEY-----[^"]+-----END [A-Z ]*PRIVATE KEY-----(?:\\n)?)"`)
 )
 
 func containsString(items []string, needle string) bool {

@@ -47,6 +47,9 @@ export const TYPE_LABEL: Record<string, string> = {
   cloud_access_key: "Cloud access key",
   hex_secret: "Hex secret",
   keystore: "Keystore",
+  api_token: "API token",
+  cloud_secret_key: "Cloud secret key",
+  crypto_usage: "Crypto usage",
 };
 export const typeLabel = (t: string) => TYPE_LABEL[t] ?? t.replace(/_/g, " ");
 

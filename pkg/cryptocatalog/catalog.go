@@ -22,7 +22,8 @@ type Entry struct {
 	Algorithm string `json:"algorithm"` // canonical name
 	Family    string `json:"family"`
 	// Function: signature, key_establishment, public_key (RSA and generic
-	// EC: both), encryption, key_wrap, mac or hash.
+	// EC: both), encryption, key_wrap, mac, hash or protocol (a TLS or SSL
+	// version, 7.36.0-beta).
 	Function string `json:"function"`
 	// SecurityBits is the classical security strength; 0 when the
 	// parameter set does not fix one.
@@ -79,6 +80,11 @@ var (
 	reAES   = regexp.MustCompile(`^AES-?(128|192|256)(?:-(ECB|CBC|CBC-CS[123]|CFB|CFB8|CFB128|CTR|OFB|GCM|CCM|XTS|KW|KWP|CMAC|GMAC|FF1|FF3))?$`)
 	reTDEA  = regexp.MustCompile(`^(?:3DES|TDES|TDEA|3TDEA|DES-?EDE3?|TRIPLE-?DES|2DES|2TDEA)(?:-.+)?$`)
 	reDES   = regexp.MustCompile(`^DES(?:-(?:ECB|CBC|CFB|OFB))?$`)
+	// AES in ECB mode is weak whatever the key size, so the name needs no
+	// size to be assessed (7.36.0-beta; a bare "AES" still isn't).
+	reAESECB = regexp.MustCompile(`^AES-?ECB$`)
+	// SSL and TLS protocol versions: SSLV3, TLSV1, TLS1.1, TLS-1.2.
+	reProto = regexp.MustCompile(`^(SSL|TLS)-?V?([1-3])(?:[.-]?([0-3]))?$`)
 	reHash  = regexp.MustCompile(`^(HMAC-)?(SHA-?1|SHA-?224|SHA-?256|SHA-?384|SHA-?512|SHA-?512/224|SHA-?512/256|SHA3-?224|SHA3-?256|SHA3-?384|SHA3-?512)$`)
 	// A hybrid names its classical group and its ML-KEM parameter set, in
 	// either order (X25519MLKEM768, ECDH-P256-ML-KEM-768-HYBRID,
@@ -176,11 +182,43 @@ func Lookup(algorithm string) (Entry, bool) {
 		return hashEntry(m[1] != "", hashNames[strings.ReplaceAll(m[2], "-", "")]), true
 	case strings.HasPrefix(a, "CHACHA20") || strings.HasPrefix(a, "XCHACHA20"):
 		return Entry{Algorithm: a, Family: "ChaCha20", Function: "encryption", SecurityBits: 256}, true
-	case a == "RC4" || a == "MD5" || a == "HMAC-MD5":
-		function := map[string]string{"RC4": "encryption", "MD5": "hash", "HMAC-MD5": "mac"}[a]
+	case a == "RC4" || a == "MD5" || a == "HMAC-MD5" || a == "MD4":
+		function := map[string]string{"RC4": "encryption", "MD5": "hash", "HMAC-MD5": "mac", "MD4": "hash"}[a]
 		return Entry{Algorithm: a, Family: strings.TrimPrefix(a, "HMAC-"), Function: function, Weak: true, Note: "broken"}, true
+	case a == "RC2" || a == "BLOWFISH" || a == "IDEA" || a == "CAST5" || a == "CAST-128":
+		name := map[string]string{"RC2": "RC2", "BLOWFISH": "Blowfish", "IDEA": "IDEA", "CAST5": "CAST5", "CAST-128": "CAST5"}[a]
+		return Entry{Algorithm: name, Family: name, Function: "encryption", Weak: true,
+			Note: "64-bit block: collision attacks after a few GB under one key"}, true
+	case reAESECB.MatchString(a):
+		return Entry{Algorithm: "AES-ECB", Family: "AES", Function: "encryption", Weak: true,
+			Note: "ECB leaks equal plaintext blocks; key size not named"}, true
+	case reProto.MatchString(a):
+		return protocol(reProto.FindStringSubmatch(a))
 	}
 	return Entry{}, false
+}
+
+// protocol is an SSL or TLS version. SSL and TLS before 1.2 are weak; TLS
+// 1.2 and 1.3 are not, whatever the cipher suites they negotiate.
+func protocol(m []string) (Entry, bool) {
+	major, minor := m[2], m[3]
+	if minor == "" {
+		minor = "0"
+	}
+	if m[1] == "SSL" {
+		if major != "2" && major != "3" {
+			return Entry{}, false
+		}
+		return Entry{Algorithm: "SSL-" + major + ".0", Family: "SSL", Function: "protocol", Weak: true, Note: "broken protocol"}, true
+	}
+	if major != "1" {
+		return Entry{}, false
+	}
+	e := Entry{Algorithm: "TLS-1." + minor, Family: "TLS", Function: "protocol"}
+	if minor == "0" || minor == "1" {
+		e.Weak, e.Note = true, "deprecated: SHA-1 and MD5 in the handshake, no AEAD"
+	}
+	return e, true
 }
 
 func aes(m []string) Entry {

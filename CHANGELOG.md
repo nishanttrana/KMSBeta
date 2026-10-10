@@ -4,6 +4,47 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [7.36.0-beta] — 2026-10-10
+
+### Crypto Discovery: crypto usage in code and configuration; more secret formats
+- **Added: the scan finds what cryptography code and servers are written to
+  use, not only the keys lying around.** A new asset type `crypto_usage`
+  records a call that names an algorithm (Java `Cipher.getInstance`,
+  `MessageDigest`, `Signature`, `Mac`; Python `hashlib`, PyCryptodome,
+  `cryptography`; Go `crypto/md5`, `sha1`, `des`, `rc4`; Node `createHash`,
+  `createCipheriv`; .NET; OpenSSL `EVP_*`; PHP; Ruby; Rust), a key size given
+  at generation (`rsa.GenerateKey(r, 1024)`, `key_size=1024`,
+  `modulusLength: 1024`, `openssl genrsa 1024`, `ssh-keygen -b`), an
+  elliptic curve, and the protocols and suites a server configuration
+  enables (`ssl_protocols`, `SSLProtocol`, `ssl_ciphers`, `SSLCipherSuite`,
+  sshd `Ciphers`, `MACs`, `KexAlgorithms`). It applies to every file source:
+  git repositories, object storage, mounted code and uploads.
+- **How it reads:** each finding is the file, the line number, the
+  algorithm by the catalogue's name and which call or directive named it
+  ("Named by"). The line itself is never stored. Its class is the
+  catalogue's for that algorithm (weak, quantum-vulnerable, strong); a name
+  with no parameter set, such as a bare `RSA`, is recorded as not assessed.
+  Rules match calls and directives, not words, and skip comment lines, so
+  prose that mentions MD5 is not a finding. Java's
+  `Cipher.getInstance("AES")` is recorded as AES-ECB, which is what the
+  JDK's providers give for that name.
+- **Added: more secrets are recognised** by their published formats: GitHub,
+  GitLab, Slack, Stripe and Google API tokens and JWTs (`api_token`), AWS
+  secret access keys and Azure storage account keys (`cloud_secret_key`),
+  and a PEM private key held in a JSON string, as in a Google service
+  account key file. Each is an exposed secret recorded by location and
+  fingerprint, never the value, and raises `secret_exposed` once.
+- **Changed: the algorithm catalogue knows more of what old code names:**
+  MD4, RC2, Blowfish, IDEA and CAST5 (weak), AES in ECB mode without a key
+  size (weak: the mode is), and SSL 2.0/3.0 and TLS 1.0/1.1 (weak) beside
+  TLS 1.2 and 1.3.
+- **Dashboard:** the asset detail shows "Named by" for usage findings and
+  the storage endpoint, bucket and object for assets found in a bucket.
+- **Limits:** the rules read one line at a time, so an algorithm built up
+  across lines or passed in a variable is not seen, and a key size set on a
+  different line from the generator call (Java's `initialize(1024)`) is
+  not tied to it.
+
 ## [7.35.0-beta] — 2026-10-01
 
 ### Documentation tab removed from the dashboard

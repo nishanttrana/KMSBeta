@@ -24126,7 +24126,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "setStatus(s)} style={ }>",
-      "line": 154,
+      "line": 158,
       "tabs": [],
       "tag": "button"
     },
@@ -24134,7 +24134,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "void save()} disabled= >Save",
-      "line": 162,
+      "line": 166,
       "tabs": [],
       "tag": "Btn"
     },
@@ -24142,7 +24142,7 @@
       "file": "web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx",
       "handler": "",
       "label": "(confirmRemove ? void remove() : setConfirmRemove(true))} disabled= >",
-      "line": 169,
+      "line": 173,
       "tabs": [],
       "tag": "Btn"
     },
@@ -32580,7 +32580,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-01T17:59:56Z",
+  "generated_at": "2026-10-10T18:04:36Z",
   "navigation": [
     {
       "group": "Overview",
@@ -119211,7 +119211,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-01T17:59:56Z",
+    "generatedAt": "2026-10-10T18:04:36Z",
     "methods": [
       "DELETE",
       "GET",

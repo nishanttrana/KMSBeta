@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-01T17:59:56Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-10T18:04:36Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -610,9 +610,9 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/agility/PqcExecutionPanel.tsx | 169 | - | button | { if (!window.confirm(`Roll back "$ "? The successor keys it created are deac... |  |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 72 | - | button | Cancel | onClose} style={{ background: "transparent", border: `1px solid ${C.border |
 | web/dashboard/src/components/v3/tabs/agility/ui.tsx | 73 | - | button | (icon or dynamic label) | onSave |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 154 | - | button | setStatus(s)} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 162 | - | Btn | void save()} disabled= >Save |  |
-| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 169 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 158 | - | button | setStatus(s)} style={ }> |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 166 | - | Btn | void save()} disabled= >Save |  |
+| web/dashboard/src/components/v3/tabs/discovery/AssetDetail.tsx | 173 | - | Btn | (confirmRemove ? void remove() : setConfirmRemove(true))} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 116 | - | Btn | void add()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 120 | - | button | onNavigate?.("playbooks")} style={ }>New storage connection |  |
 | web/dashboard/src/components/v3/tabs/discovery/Buckets.tsx | 138 | - | Btn | void test(b)} disabled= > |  |

@@ -3275,6 +3275,21 @@ records only what it observed:
   certificate requests, public keys and SSH public keys (`authorized_keys`,
   `known_hosts`, `.pub`) by the key they hold.
 
+**Crypto usage and more secret formats (7.36.0-beta).** Every file source
+(`git`, `storage`, `code`, `upload`) also reports:
+- `asset_type: "crypto_usage"`: a call, key size or configuration directive
+  that names an algorithm. `algorithm` is the catalogue's name (`MD5`,
+  `3TDEA`, `AES-ECB`, `RSA-1024`, `EC-P256`, `TLS-1.0`), `location` is
+  `file:line`, `metadata.api` is what named it (`Cipher.getInstance`,
+  `hashlib`, `ssl_protocols`, `sshd Ciphers`), and `classification` is the
+  catalogue's class, `unknown` when the name states no parameter set. The
+  line is not stored. Rules read one line at a time and skip comment lines.
+- `asset_type: "api_token"` (`metadata.provider`: `github`, `gitlab`,
+  `slack`, `stripe`, `google`, `jwt`) and `"cloud_secret_key"` (`aws`,
+  `azure`), and a PEM private key inside a JSON string
+  (`private_key_material`, `metadata.format: "json"`): exposed secrets, by
+  `fingerprint_sha256_prefix` only.
+
 **Uploads (7.18.0-beta).** `POST /discovery/upload` with body
 `{"name": "bundle.pem", "content": "<base64>"}` inventories one file of at
 most 2 MiB with the code scan's parser and returns

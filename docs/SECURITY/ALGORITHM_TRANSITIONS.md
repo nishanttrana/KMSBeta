@@ -15,7 +15,12 @@ policy"):
   migration dates, approval statuses, standards citations or draft
   references.
 - A name without a parameter set (`RSA`, `AES`, `Dilithium3`) is **not
-  assessed**, never guessed.
+  assessed**, never guessed. A fact that holds for every parameter set needs
+  none: `AES-ECB` is weak at any key size (7.36.0-beta).
+- Since 7.36.0-beta the catalogue also covers what discovery reads in
+  source code and server configuration: MD4, RC2, Blowfish, IDEA and CAST5
+  (weak), and protocol versions (SSL 2.0/3.0 and TLS 1.0/1.1 weak; TLS 1.2
+  and 1.3 not).
 
 ## The customer's migration policy
 

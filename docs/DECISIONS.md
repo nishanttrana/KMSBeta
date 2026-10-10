@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-10 — Discovery: crypto usage by per-language rules on one line (7.36.0-beta)
+
+- **Decision:** usage of cryptography in source and configuration is found
+  by rules that each match one call, key size or directive
+  (`services/discovery/usage.go`), applied a line at a time by the parser
+  every file source shares. A finding is an asset of type `crypto_usage`
+  named and classified by `pkg/cryptocatalog`.
+- **Why:** it is deterministic and explainable (the asset says which call
+  named the algorithm), runs in memory on any source with no build, and
+  needs nothing outside the service.
+- **Rejected:** matching algorithm names as words (prose and comments
+  become findings). Parsing each language into a syntax tree and following
+  values (a parser per language, and repositories that don't build). An LLM
+  (see the 7.34.0-beta entry).
+- **Cost:** an algorithm passed in a variable or assembled across lines is
+  missed, and a key size on another line is not tied to its generator.
+  Strong algorithms named in calls are listed too, so the inventory is
+  larger than a list of problems.
+- **Decision (catalogue):** entries were added for what code and servers
+  name (MD4, RC2, Blowfish, IDEA, CAST5, `AES-ECB`, SSL and TLS versions),
+  as facts only. Discovery keeps no list of its own.
+- **Enforced by:** `TestCryptoUsageRules`, `TestCryptoUsageAssets`,
+  `TestSecretFormats`, `TestCatalogFacts`,
+  `TestNamesWithoutAParameterSetAreNotAssessed`.
+
+---
+
 ## 2026-10-01 — Discovery: object storage through two wire APIs; the scanner stays deterministic and in-process (7.34.0-beta)
 
 - **Decision (how assets are found):** discovery finds cryptographic assets

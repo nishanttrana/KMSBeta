@@ -44,7 +44,11 @@ const FACTS: [string, string, ((v: unknown) => ReactNode)?][] = [
   ["repository", "Repository"],
   ["ref", "Branch or tag"],
   ["commit", "Commit"],
+  ["endpoint", "Storage endpoint"],
+  ["bucket", "Bucket"],
+  ["key", "Object"],
   ["file", "File"],
+  ["api", "Named by"],
   ["format", "Format"],
 ];
 
@@ -125,7 +129,7 @@ export function AssetDetail({ asset, stale, session, onClose, onChanged, onToast
       {asset.location && <Fact label="Location"><span style={{ fontFamily: MONO }}>{asset.location}</span></Fact>}
       {asset.status && <Fact label="Observed status">{asset.status.replace(/_/g, " ")}</Fact>}
       {FACTS.filter(([k]) => md[k] !== undefined && md[k] !== "" && md[k] !== null).map(([k, label, fmt]) => (
-        <Fact key={k} label={label}>{fmt ? fmt(md[k]) : <span style={{ fontFamily: /fingerprint|serial|cert_id|cloud_key_ref|commit|repository/.test(k) ? MONO : "inherit" }}>{String(md[k])}</span>}</Fact>
+        <Fact key={k} label={label}>{fmt ? fmt(md[k]) : <span style={{ fontFamily: /fingerprint|serial|cert_id|cloud_key_ref|commit|repository|endpoint|bucket|^key$/.test(k) ? MONO : "inherit" }}>{String(md[k])}</span>}</Fact>
       ))}
       {OFFERED.filter(([k]) => Array.isArray(md[k]) && md[k].length).map(([k, weakKey, label]) => {
         const weak: string[] = Array.isArray(md[weakKey]) ? md[weakKey] : [];

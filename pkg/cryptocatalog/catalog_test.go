@@ -45,6 +45,19 @@ func TestCatalogFacts(t *testing.T) {
 		{"SHA3-512", "SHA3-512", 256, 5, false, false, false},
 		{"ChaCha20-Poly1305", "CHACHA20-POLY1305", 256, 0, false, false, false},
 		{"MD5", "MD5", 0, 0, false, false, true},
+		// 7.36.0-beta: what source code and server configuration name.
+		{"MD4", "MD4", 0, 0, false, false, true},
+		{"RC2", "RC2", 0, 0, false, false, true},
+		{"Blowfish", "Blowfish", 0, 0, false, false, true},
+		{"IDEA", "IDEA", 0, 0, false, false, true},
+		{"CAST5", "CAST5", 0, 0, false, false, true},
+		{"AES-ECB", "AES-ECB", 0, 0, false, false, true},
+		{"SSLv3", "SSL-3.0", 0, 0, false, false, true},
+		{"TLSv1", "TLS-1.0", 0, 0, false, false, true},
+		{"TLSv1.1", "TLS-1.1", 0, 0, false, false, true},
+		{"TLS1_1", "TLS-1.1", 0, 0, false, false, true},
+		{"TLSv1.2", "TLS-1.2", 0, 0, false, false, false},
+		{"TLS-1.3", "TLS-1.3", 0, 0, false, false, false},
 	}
 	for _, c := range cases {
 		e, ok := Lookup(c.name)
@@ -60,7 +73,7 @@ func TestCatalogFacts(t *testing.T) {
 }
 
 func TestNamesWithoutAParameterSetAreNotAssessed(t *testing.T) {
-	for _, name := range []string{"", "RSA", "AES", "ECDSA", "ML-KEM", "CRYSTALS-Kyber", "Dilithium3", "ECDSA-Brainpool-P256r1", "RSA-KEX", "AES-256-GCM-SIV", "UNKNOWN"} {
+	for _, name := range []string{"", "RSA", "AES", "ECDSA", "ML-KEM", "CRYSTALS-Kyber", "Dilithium3", "ECDSA-Brainpool-P256r1", "RSA-KEX", "AES-256-GCM-SIV", "UNKNOWN", "AES-CBC", "TLSv2", "SSLv1", "TLS"} {
 		if e, ok := Lookup(name); ok {
 			t.Errorf("%q assessed as %s; a name without a parameter set must not be guessed", name, e.Algorithm)
 		}
