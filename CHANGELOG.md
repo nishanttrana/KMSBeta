@@ -4,6 +4,21 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [10.2.0-beta] — 2026-10-11
+
+### System Health lists every running component
+- **Fixed: Administration → System Administration → Health showed 28 of 32
+  components.** The list is Consul's registered services plus a fixed set of
+  TCP probes. Envoy, the dashboard, the reconciler and the watchdog register
+  nothing in Consul and had no probe, so they never appeared. They are now
+  probed, along with posture and backup; the probes for the removed AI
+  gateway, QKD and MPC services are gone. A test keeps the probe list
+  covering every platform identity in `pkg/svctls`.
+- Unchanged: the auth service has no access to the container runtime, so a
+  component is listed from Consul or a successful probe, an unreachable
+  optional component is not listed, and Network Interfaces stays
+  "unavailable".
+
 ## [10.1.0-beta] — 2026-10-11
 
 ### Opening HYOK no longer signs you out

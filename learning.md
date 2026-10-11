@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### A health list that drifted from what runs (10.2.0-beta)
+- **28 of 32.** `services/auth/system_health.go` builds System Health from
+  three sources: the container runtime, Consul, and a hard-coded TCP probe
+  list. The runtime source needs `/var/run/docker.sock`, which compose does
+  not mount into auth, so it fails on every call (logged, never shown on the
+  Health panel). That left Consul (25 services) plus PostgreSQL, Valkey and
+  NATS. Envoy, the dashboard, the reconciler and the watchdog register
+  nothing in Consul and were not in the probe list; the list still named
+  three services that no longer exist.
+  How it slipped through: the probe list was a second copy of the service
+  inventory with nothing tying it to `pkg/svctls.Services`. It now has
+  `TestHealthTargetsCoverEveryPlatformIdentity`.
+- **Still open:** the runtime path in auth (container states, published
+  ports, the restart button's container lookup) can't work without the
+  socket, and mounting it would give auth control of the host's containers.
+  Either remove that code and the Network Interfaces panel, or decide on a
+  narrower source. Owner decision.
+
 ### A service that started without its token key (10.1.0-beta)
 - **HYOK signed the dashboard out.** `services/hyok` had its own
   `loadJWTParser` that read only `HYOK_JWT_PUBLIC_KEY_*`. Compose sets the

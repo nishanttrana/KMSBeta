@@ -183,6 +183,10 @@ func defaultInfraTargets(consulAddr string) []serviceTarget {
 	return targets
 }
 
+// knownBackendTargets is every platform component probed by TCP. It covers
+// each host in svctls.Services and svctls.Materialized
+// (TestHealthTargetsCoverEveryPlatformIdentity), so a new service is listed
+// even where Consul doesn't know it.
 func knownBackendTargets() []serviceTarget {
 	return []serviceTarget{
 		{name: "kms-auth", address: "auth:18001"},
@@ -194,24 +198,29 @@ func knownBackendTargets() []serviceTarget {
 		{name: "kms-pqc", address: "pqc:18060"},
 		{name: "kms-audit", address: "audit:18070"},
 		{name: "kms-cloud", address: "cloud:18080"},
-		{name: "kms-ai", address: "ai:18090"},
 		{name: "kms-discovery", address: "discovery:18100"},
 		{name: "kms-compliance", address: "compliance:18110"},
 		{name: "kms-hyok-proxy", address: "hyok:18120"},
 		{name: "kms-ekm", address: "ekm:18130"},
 		{name: "kms-reporting", address: "reporting:18140"},
-		{name: "kms-qkd", address: "qkd:18150"},
 		{name: "kms-confidential", address: "confidential:18240"},
 		{name: "kms-workload-identity", address: "workload:18250"},
 		{name: "kms-autokey", address: "autokey:18260"},
 		{name: "kms-signing", address: "signing:18280"},
 		{name: "kms-key-access", address: "keyaccess:18270"},
 		{name: "kms-sbom", address: "sbom:18180"},
-		{name: "kms-mpc", address: "mpc:18190"},
 		{name: "kms-dataprotect", address: "dataprotect:18200"},
 		{name: "kms-cluster-manager", address: "cluster-manager:18210"},
 		{name: "kms-hsm-connector", address: "hsm-connector:18430"},
 		{name: "kms-kmip", address: "kmip:15696"},
+		{name: "kms-posture", address: "posture:18220"},
+		{name: "kms-backup", address: "backup:18290"},
+		// Not in Consul: these register no service, so the probe is the only
+		// source that lists them.
+		{name: "kms-reconciler", address: "reconciler:8470"},
+		{name: "kms-watchdog", address: "watchdog:8480"},
+		{name: "Envoy", address: "envoy:443"},
+		{name: "dashboard", address: "dashboard:5173"},
 	}
 }
 
