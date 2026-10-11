@@ -310,3 +310,60 @@ test("a module's sub-options expand under its name in the sidebar", async ({ pag
   await expect(page.getByTestId("subnav-admin").getByRole("button", { name: "Tenant Administration", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.locator(".vk-subcard")).toHaveCount(0);
 });
+
+// The top bar has no search box and ⌘K opens nothing (11.5.0-beta): the
+// sidebar's "Filter modules" is the one way to find a module.
+test("the top bar has no search box and no command palette", async ({ page }) => {
+  await expect(page.getByLabel("Filter modules")).toBeVisible();
+  await page.locator("body").press("Control+k");
+  await page.locator("body").press("Meta+k");
+  await expect(page.getByText(/Search or jump/i)).toHaveCount(0);
+  await expect(page.getByPlaceholder(/search|jump/i)).toHaveCount(0);
+  await expect(page.getByRole("textbox")).toHaveCount(1);
+});
+
+// Collapsed, the rail is 60px: the toggle sat on top of the mark. Nothing in
+// the sidebar may cover another control, in either state.
+test("nothing in the sidebar covers the mark or another control, collapsed or open", async ({ page }) => {
+  const sidebar = page.getByTestId("sidebar");
+  const covered = () => sidebar.evaluate((root) => {
+    const rail = root.getBoundingClientRect();
+    const faults: string[] = [];
+    for (const el of Array.from(root.querySelectorAll("svg, button, input"))) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) { faults.push(`${el.tagName} has no size`); continue; }
+      if (r.left < rail.left - 0.5 || r.right > rail.right + 0.5) faults.push(`${el.tagName} spills out of the rail`);
+      const x = r.left + r.width / 2, y = r.top + r.height / 2;
+      // Scrolled out of the module list: not on screen, so nothing can cover it.
+      let clipped = false;
+      for (let a = el.parentElement; a && a !== root.parentElement; a = a.parentElement) {
+        const c = a.getBoundingClientRect();
+        if (getComputedStyle(a).overflowY !== "visible" && (y < c.top || y > c.bottom)) clipped = true;
+      }
+      if (clipped) continue;
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !(el.contains(hit) || hit.contains(el))) faults.push(`${el.tagName} "${el.getAttribute("title") || el.getAttribute("class") || ""}" is covered by ${hit?.tagName}`);
+    }
+    return faults;
+  });
+  const overlap = async () => {
+    const [a, b] = await Promise.all([page.getByTestId("sidebar-mark").boundingBox(), sidebar.getByRole("button", { name: /sidebar$/ }).boundingBox()]);
+    if (!a || !b) throw new Error("the mark or the toggle is not rendered");
+    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  };
+  const width = () => sidebar.evaluate((el) => el.getBoundingClientRect().width);
+
+  await expect.poll(width).toBe(248);
+  expect(await overlap()).toBe(false);
+  expect(await covered()).toEqual([]);
+
+  await sidebar.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect.poll(width).toBe(60);
+  await expect(page.getByTestId("sidebar-mark")).toBeVisible();
+  expect(await overlap()).toBe(false);
+  expect(await covered()).toEqual([]);
+
+  await sidebar.getByRole("button", { name: "Expand sidebar" }).click();
+  await expect.poll(width).toBe(248);
+  await expect(page.getByLabel("Filter modules")).toBeVisible();
+});

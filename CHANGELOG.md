@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [11.5.0-beta] — 2026-10-11
+
+### Removed
+- **The top bar's "Search or jump to…" box and the ⌘K / Ctrl+K palette it
+  opened.** It only jumped between modules, which **Filter modules** at the
+  top of the sidebar already does (Enter opens the first match). The top bar
+  now holds the page name, FIPS mode, tenant, alerts, clock and theme.
+
+### Fixed
+- **The collapse button no longer sits on top of the Vecta mark when the
+  sidebar is collapsed.** The 60px rail has no room for both side by side:
+  the mark keeps the header and the expand button sits in the row below it.
+
+Enforced by the smoke tests "the top bar has no search box and no command
+palette" and "nothing in the sidebar covers the mark or another control,
+collapsed or open".
+
 ## [11.4.0-beta] — 2026-10-11
 
 ### Fixed

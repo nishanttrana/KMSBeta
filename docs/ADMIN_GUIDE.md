@@ -24,8 +24,9 @@ The dashboard is organized around long-lived platform state rather than individu
 
 The sidebar is grouped by task (Overview, Keys & lifecycle, PKI & certificates,
 Data & integrations, Security & compliance, Platform). Type in **Filter modules**
-at the top of the sidebar (Enter opens the first match) or press **⌘K / Ctrl+K**
-to jump anywhere. The top bar shows where you are (group / page), FIPS mode,
+at the top of the sidebar (Enter opens the first match) to jump anywhere. The
+collapse button beside the mark folds the sidebar to an icon rail. The top bar
+shows where you are (group / page), FIPS mode,
 the tenant switcher, alerts and the light/dark toggle.
 
 - **Command Center** (home) — live key-management posture score, KPIs (active

@@ -44,7 +44,6 @@ const BUILD_INFO: Array<[string, string]> = [
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
-import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
 import { listKeysPaginated, listTags } from "../lib/keycore";
@@ -338,7 +337,6 @@ export default function VectaDashboardV3Shell(props: Props) {
   }));
   // The one module whose sub-options are listed in the sidebar.
   const [expandedTab, setExpandedTab] = useState(tab);
-  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const session = useMemo(
     () => ({
@@ -351,25 +349,6 @@ export default function VectaDashboardV3Shell(props: Props) {
   useEffect(() => {
     const id = setInterval(() => setT(new Date()), 1000);
     return () => clearInterval(id);
-  }, []);
-
-  // ⌘K / Ctrl+K — open command palette.
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement;
-      // Don't capture inside text inputs/textareas to avoid interfering with typing.
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) return;
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setPaletteOpen((v) => !v);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -529,20 +508,6 @@ export default function VectaDashboardV3Shell(props: Props) {
   const activeSubPane = activePaneItems.find((item) => item.id === activeSubPaneSelection);
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
-  // Flatten visible nav into command-palette items.
-  const paletteItems = useMemo<PaletteItem[]>(
-    () =>
-      navGroups.flatMap((g: any) =>
-        (Array.isArray(g.items) ? g.items : []).map((item: any) => ({
-          id: String(item.id),
-          label: String(TITLES[item.id] || item.label || item.id),
-          group: String(g.g || ""),
-          icon: item.icon,
-        }))
-      ),
-    [navGroups]
-  );
-
   const selectTab = (nextTab: string) => {
     try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch { /* ignored */ }
     try { window.history.replaceState(null, "", `#${nextTab}`); } catch { /* ignored */ }
@@ -572,6 +537,23 @@ export default function VectaDashboardV3Shell(props: Props) {
 
   const Tab = TABS[tab] || DashboardTab;
 
+  const sidebarToggle = (
+    <button
+      onClick={() => setCollapsed((v) => !v)}
+      title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      className="vk-icon-btn"
+      style={{
+        width: 22, height: 22, borderRadius: 3,
+        border: `1px solid ${C.border}`, background: "transparent",
+        color: C.muted, display: "inline-flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", flexShrink: 0,
+      }}
+    >
+      {collapsed ? <PanelLeftOpen size={13} strokeWidth={1.8} /> : <PanelLeftClose size={13} strokeWidth={1.8} />}
+    </button>
+  );
+
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, overflow: "hidden" }}>
       {/* ── Global keyframes + scrollbar + transition helpers ── */}
@@ -593,15 +575,12 @@ export default function VectaDashboardV3Shell(props: Props) {
         .vk-icon-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
         .vk-topbar-cluster{transition:border-color .12s}
         .vk-topbar-cluster:hover{border-color:${C.borderHi}!important}
-        .vk-search-btn{transition:border-color .12s,color .12s}
-        .vk-search-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
-        @media (max-width:1440px){.vk-search-label{display:none}}
       `}</style>
 
       {/* ══════════════════════════════════════════════
           SIDEBAR
       ══════════════════════════════════════════════ */}
-      <div style={{
+      <div data-testid="sidebar" style={{
         width: collapsed ? 60 : 248,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,
@@ -619,28 +598,21 @@ export default function VectaDashboardV3Shell(props: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
-          padding: collapsed ? "0 15px" : "0 14px",
+          padding: "0 14px",
           flexShrink: 0,
           gap: 10,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-            <span style={{ color: C.text, display: "inline-flex" }}><BrandMark size={26} /></span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: collapsed ? "none" : 1 }}>
+            <span data-testid="sidebar-mark" style={{ color: C.text, display: "inline-flex", flexShrink: 0 }}><BrandMark size={26} /></span>
             {!collapsed && <Wordmark />}
           </div>
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="vk-icon-btn"
-            style={{
-              width: 22, height: 22, borderRadius: 3,
-              border: `1px solid ${C.border}`, background: "transparent",
-              color: C.muted, display: "inline-flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", flexShrink: 0,
-            }}
-          >
-            {collapsed ? <PanelLeftOpen size={13} strokeWidth={1.8} /> : <PanelLeftClose size={13} strokeWidth={1.8} />}
-          </button>
+          {!collapsed && sidebarToggle}
         </div>
+
+        {/* Collapsed, the rail is too narrow for the mark and the toggle side by side: the toggle takes the filter's row. */}
+        {collapsed && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 2px", flexShrink: 0 }}>{sidebarToggle}</div>
+        )}
 
         {/* Nav filter */}
         {!collapsed && (
@@ -888,36 +860,6 @@ export default function VectaDashboardV3Shell(props: Props) {
           {/* Right: action strip */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
 
-            {/* ⌘K search button */}
-            <button
-              onClick={() => setPaletteOpen(true)}
-              title="Command palette (⌘K)"
-              className="vk-search-btn"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 7,
-                height: 30, padding: "0 10px",
-                borderRadius: 4,
-                border: `1px solid ${C.border}`,
-                background: "transparent",
-                color: C.muted,
-                cursor: "pointer",
-                fontSize: 12.5,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <span className="vk-search-label" style={{ flex: 1, textAlign: "left", minWidth: 130 }}>Search or jump to…</span>
-              <span style={{
-                fontSize: 10, background: C.card,
-                border: `1px solid ${C.border}`,
-                borderRadius: 4, padding: "1px 5px",
-                fontFamily: "var(--font-mono)",
-                color: C.muted,
-              }}>⌘K</span>
-            </button>
-
             {/* FIPS badge */}
             <B c={globalFipsEnabled ? "green" : "blue"} pulse={globalFipsEnabled}>
               {globalFipsEnabled ? "FIPS STRICT" : "STANDARD"}
@@ -1100,13 +1042,6 @@ export default function VectaDashboardV3Shell(props: Props) {
           {toast}
         </div>
       )}
-
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        items={paletteItems}
-        onSelect={(id) => { selectTab(id); }}
-      />
     </div>
   );
 }

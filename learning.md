@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### A collapsed rail nobody rendered (11.5.0-beta)
+- **Collapsed, the sidebar toggle was drawn on top of the mark.** The header
+  kept both in one row: 60px rail, 15px padding each side, so 30px for a
+  26px mark, a 10px gap and a 22px button. The mark's wrapper was
+  `flex: 1; min-width: 0`, so it shrank to nothing and the mark spilled out
+  of it under the button. How it slipped through: 11.1 to 11.3 restyled the
+  shell and were looked at expanded only; no test ever collapsed the
+  sidebar. **Rule: a control that changes the layout is rendered and tested
+  in each state it produces.**
+- **The check is geometric, not a snapshot.** The smoke test asks the
+  browser what is drawn at the centre of every icon, button and input in
+  the sidebar (`elementFromPoint`), expanded and collapsed, and fails when
+  the answer is some other control or when one spills out of the rail. It
+  was run against the old header first and failed there on the mark.
+- **Two finders for the same list.** The ⌘K palette and the sidebar's
+  "Filter modules" both searched the module names and nothing else, while
+  docs/GETTING_STARTED.md described the palette as a search "across keys,
+  certificates, audit events, users", which it never was. The palette, its
+  shortcut and its component are deleted and the docs corrected.
+
 ### A fix tested against a value I made up (11.4.0-beta)
 - **11.3.0-beta's posture fix did not work on a real stack.** It read
   `captured_at` from `GET /posture/risk` as "a scan is on record". For a

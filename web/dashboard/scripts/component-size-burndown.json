@@ -16,13 +16,13 @@
   "src/components/v3/tabs/HYOKTab.tsx": 680,
   "src/components/v3/tabs/KeysTab.tsx": 2815,
   "src/components/v3/tabs/KMIPTab.tsx": 977,
-  "src/components/v3/tabs/PlaybooksTab.tsx": 672,
+  "src/components/v3/tabs/PlaybooksTab.tsx": 671,
   "src/components/v3/tabs/PostureTab.tsx": 1327,
   "src/components/v3/tabs/RestAPITab.tsx": 750,
   "src/components/v3/tabs/SBOMTab.tsx": 755,
   "src/components/v3/tabs/TokenizeTab.tsx": 2459,
   "src/components/v3/tabs/WorkloadIdentityTab.tsx": 600,
-  "src/components/VectaDashboardV3Shell.tsx": 1117,
+  "src/components/VectaDashboardV3Shell.tsx": 1048,
   "src/modules/admin/SystemAdminTab.tsx": 2114,
   "src/modules/admin/TenantAdminTab.tsx": 963
 }

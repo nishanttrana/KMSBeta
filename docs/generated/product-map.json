@@ -19265,8 +19265,8 @@
     {
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
-      "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 630,
+      "label": "setCollapsed((v) => !v)} title= aria-label= className=\"vk-icon-btn\" style={{...",
+      "line": 541,
       "tabs": [],
       "tag": "button"
     },
@@ -19274,7 +19274,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 817,
+      "line": 789,
       "tabs": [],
       "tag": "button"
     },
@@ -19282,15 +19282,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 869,
-      "tabs": [],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
-      "handler": "",
-      "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 892,
+      "line": 841,
       "tabs": [],
       "tag": "button"
     },
@@ -19298,7 +19290,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 941,
+      "line": 883,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19306,7 +19298,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 978,
+      "line": 920,
       "tabs": [],
       "tag": "button"
     },
@@ -19314,7 +19306,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1013,
+      "line": 955,
       "tabs": [],
       "tag": "button"
     },
@@ -33049,7 +33041,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T18:09:56Z",
+  "generated_at": "2026-10-11T18:22:58Z",
   "navigation": [
     {
       "group": "Overview",
@@ -90081,7 +90073,7 @@
   "summary": {
     "backend_routes": 900,
     "backend_services": 28,
-    "button_inventory": 762,
+    "button_inventory": 761,
     "frontend_call_sites": 537,
     "matched_frontend_call_sites": 515,
     "nav_items": 26,
@@ -121853,7 +121845,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T18:09:56Z",
+    "generatedAt": "2026-10-11T18:22:58Z",
     "methods": [
       "DELETE",
       "GET",

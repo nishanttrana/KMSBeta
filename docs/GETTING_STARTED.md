@@ -693,11 +693,11 @@ curl -X POST https://localhost/svc/auth/auth/change-password \
 
 ### 5.3 Navigating the Dashboard
 
-The dashboard is organized into a **left sidebar navigation** grouped by functional area, a **top bar** with tenant selector, search, notifications, and user menu, and a **main content area**.
+The dashboard is organized into a **left sidebar navigation** grouped by functional area, a **top bar** with tenant selector, notifications, and user menu, and a **main content area**.
 
 **Top Bar Elements:**
 - **Tenant selector:** Dropdown showing your current tenant context. Click to switch tenants (you must have access to the target tenant).
-- **Global search:** `Cmd+K` / `Ctrl+K` — search across keys, certificates, audit events, users.
+- **Finding a module:** type in **Filter modules** at the top of the sidebar; Enter opens the first match.
 - **Notifications bell:** Governance approvals pending, expiring keys, compliance alerts.
 - **Theme toggle:** Dark / Light / Auto (follows system preference). Located in user menu → Preferences.
 - **Timezone picker:** Display timestamps in your local timezone or UTC. Located in user menu → Preferences.

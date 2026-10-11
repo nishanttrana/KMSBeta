@@ -7,6 +7,19 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — One module finder: the sidebar filter; no top-bar search or ⌘K palette
+**Decision:** the top bar has no search box and the console has no command
+palette or ⌘K / Ctrl+K shortcut (11.5.0-beta). Modules are found with
+**Filter modules** at the top of the sidebar.
+**Why:** owner direction, 2026-10-11: "remove this find, completely". The
+palette listed the same module names the sidebar filter does and searched
+nothing else, so it was a second copy of one view.
+**Rejected:** keeping the shortcut without the box (a hidden feature);
+growing it into a search across keys, certificates and audit (each of those
+is searched in its own tab, beside its entries).
+**Enforced by:** smoke test "the top bar has no search box and no command
+palette".
+
 ## 2026-10-11 — Console look: one plane per theme, IBM Plex, petrol and brass
 **Decision:** each theme is one plane (Basalt dark, Limestone light): the
 sidebar, top bar and page share it. The typeface is IBM Plex Sans with IBM
