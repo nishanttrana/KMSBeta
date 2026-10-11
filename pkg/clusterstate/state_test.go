@@ -5,8 +5,13 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func TestMemberDetectionAndPrimaryJobs(t *testing.T) {
@@ -91,7 +96,56 @@ func TestMissingTableIsCachedAsStandalone(t *testing.T) {
 			t.Fatal("a node without the table was treated as a member")
 		}
 	}
-	if n := queries.Load(); n != 1 {
-		t.Fatalf("%d queries for 50 lookups inside the TTL, want 1", n)
+	// One catalogue probe and one read of the table, then the cache.
+	if n := queries.Load(); n != 2 {
+		t.Fatalf("%d queries for 50 lookups inside the TTL, want 2", n)
+	}
+}
+
+// On Postgres the absent table is found through the catalogue (no failed
+// read), and the table is picked up once the cluster manager creates it.
+func TestMissingTableThenCreatedPostgres(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close() //nolint:errcheck
+	ctx := context.Background()
+	if _, err := db.ExecContext(ctx, `DROP TABLE IF EXISTS cluster_local_state`); err != nil {
+		t.Fatal(err)
+	}
+	failed := func() (n int64) {
+		if err := db.QueryRowContext(ctx, `SELECT xact_rollback FROM pg_stat_database WHERE datname = current_database()`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	r := NewReader(db)
+	r.ttl = 0
+	before := failed()
+	for i := 0; i < 20; i++ {
+		if r.Get(ctx).IsMember() || r.tableSeen {
+			t.Fatal("a node without the table was treated as clustered")
+		}
+	}
+	// Statistics are flushed when the session goes idle; a failed read would
+	// have rolled back 20 transactions.
+	time.Sleep(1500 * time.Millisecond)
+	if after := failed(); after-before >= 20 {
+		t.Fatalf("%d failed statements for 20 lookups of an absent table", after-before)
+	}
+	if _, err := db.ExecContext(ctx, `CREATE TABLE cluster_local_state (id INTEGER PRIMARY KEY, node_id TEXT, role TEXT, primary_node_id TEXT, primary_url TEXT, primary_fingerprint TEXT, forward_credential TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	defer db.ExecContext(ctx, `DROP TABLE cluster_local_state`) //nolint:errcheck
+	if _, err := db.ExecContext(ctx, `INSERT INTO cluster_local_state VALUES (1, 'n2', 'follower', 'n1', 'https://p:8210', 'fp', 'c')`); err != nil {
+		t.Fatal(err)
+	}
+	if !r.Get(ctx).IsMember() || !r.tableSeen {
+		t.Fatal("the table was not picked up once created")
 	}
 }

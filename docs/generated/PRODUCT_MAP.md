@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-11T16:32:59Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T17:07:18Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -11,9 +11,9 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Sub-pane groups: `8`
 - Backend HTTP routes discovered: `901` across `28` services
 - Backend routes on the `pkg/route` kernel: `475` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `565`
-- Frontend call sites with exact backend route match: `519`
-- Frontend call sites needing review or dynamic/runtime confirmation: `46`
+- Frontend API call sites discovered: `538`
+- Frontend call sites with exact backend route match: `516`
+- Frontend call sites needing review or dynamic/runtime confirmation: `22`
 - Clickable controls with static `onClick` handlers: `767`
 - Backend request flows with handler/service/package summaries: `901`
 
@@ -223,7 +223,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | hsm-connector | 14 | 0 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 177 | 119 |
+| keycore | 177 | 92 |
 | kmip | 12 | 11 |
 | policy | 12 | 0 |
 | posture | 13 | 10 |
@@ -242,10 +242,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 
 | Service | Method | Path | Source | File | Line |
 | --- | --- | --- | --- | --- | --- |
-| keycore | GET | /audit/chain | trackedFetch | web/dashboard/src/lib/auditChain.ts | 6 |
-| keycore | POST | /audit/chain/verify | trackedFetch | web/dashboard/src/lib/auditChain.ts | 12 |
-| keycore | POST | /audit/chain/anchor | trackedFetch | web/dashboard/src/lib/auditChain.ts | 21 |
-| keycore | GET | /audit/events | trackedFetch | web/dashboard/src/lib/auditChain.ts | 30 |
 | audit | POST | /audit/events | serviceRequest | web/dashboard/src/lib/auditLogger.ts | 20 |
 | auth-edge | POST | /auth/logout | trackedFetch | web/dashboard/src/lib/auth.ts | 148 |
 | auth-edge | POST | /auth/login | trackedFetch | web/dashboard/src/lib/auth.ts | 190 |
@@ -258,38 +254,18 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | cloud | GET | /cloud/region-mappings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 157 |
 | cloud | GET | /cloud/inventory{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 203 |
 | cloud | GET | /cloud/bindings{param} | serviceRequest | web/dashboard/src/lib/cloud.ts | 224 |
-| keycore | GET | /cost/metrics | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 6 |
-| keycore | GET | /cost/suggestions | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 12 |
-| keycore | POST | /cost/suggestions/{param}/apply | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 18 |
 | compliance | GET | /compliance/playbooks/connections/{param}/test | serviceRequest | web/dashboard/src/lib/credentials.ts | 72 |
 | compliance | GET | /compliance/playbooks/connections/{param} | serviceRequest | web/dashboard/src/lib/credentials.ts | 76 |
 | ekm | GET | /ekm/agents/{param}/validate-deploy | serviceRequest | web/dashboard/src/lib/ekm.ts | 956 |
 | tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 1003 |
 | hyok | POST | /hyok/{param}/v1/keys/{param}/{param} | serviceRequest | web/dashboard/src/lib/hyok.ts | 180 |
-| keycore | GET | /analytics/keys | trackedFetch | web/dashboard/src/lib/keyAnalytics.ts | 7 |
-| keycore | GET | /analytics/report | trackedFetch | web/dashboard/src/lib/keyAnalytics.ts | 13 |
-| keycore | GET | /analytics/usage-timeline | trackedFetch | web/dashboard/src/lib/keyAnalytics.ts | 19 |
-| keycore | GET | /federation/peers | trackedFetch | web/dashboard/src/lib/keyFederation.ts | 6 |
-| keycore | POST | /federation/peers | trackedFetch | web/dashboard/src/lib/keyFederation.ts | 12 |
-| keycore | POST | /federation/peers/{param}/sync | trackedFetch | web/dashboard/src/lib/keyFederation.ts | 22 |
-| keycore | DELETE | /federation/peers/{param} | trackedFetch | web/dashboard/src/lib/keyFederation.ts | 31 |
-| keycore | GET | /health/scores | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 6 |
-| keycore | POST | /health/scores/{param}/refresh | trackedFetch | web/dashboard/src/lib/keyHealth.ts | 12 |
-| keycore | GET | /inventory/export | trackedFetch | web/dashboard/src/lib/keyInventory.ts | 18 |
-| keycore | GET | /ml/anomalies | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 6 |
-| keycore | POST | /ml/detect | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 12 |
-| keycore | GET | /ml/access-heatmap | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 21 |
-| keycore | POST | /ml/anomalies/{param}/dismiss | trackedFetch | web/dashboard/src/lib/mlAnomaly.ts | 27 |
-| keycore | GET | /compliance/regulatory | trackedFetch | web/dashboard/src/lib/regulatory.ts | 6 |
-| keycore | GET | /compliance/dashboard | trackedFetch | web/dashboard/src/lib/regulatory.ts | 12 |
-| keycore | GET | /compliance/report | trackedFetch | web/dashboard/src/lib/regulatory.ts | 18 |
 | reporting | PUT | /alerts/{param}/acknowledge | serviceRequest | web/dashboard/src/lib/reporting.ts | 311 |
 | reporting | PUT | /alerts/{param}/escalate | serviceRequest | web/dashboard/src/lib/reporting.ts | 350 |
 | keycore | GET | /rotation/runs{param} | serviceRequest | web/dashboard/src/lib/rotationScheduler.ts | 88 |
 | secrets | GET | /{param}&format={param}{param}` : ""} | serviceRequest | web/dashboard/src/lib/secrets.ts | 170 |
 | secrets | DELETE | /secretURL(session, secretId, `/versions/{param}`) | serviceRequest | web/dashboard/src/lib/secrets.ts | 199 |
 
-Showing `46` of `46`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `22` of `22`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -418,7 +394,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbooks/{id} | h.getPlaybook | compliance.playbook.read | services/compliance/handler_playbooks.go | 139 |
 | compliance | PUT | /compliance/playbooks/{id} | h.updatePlaybook | compliance.playbook.write | services/compliance/handler_playbooks.go | 140 |
 
-Showing `120` of `375`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `378`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

@@ -245,6 +245,7 @@ export async function exchangeWorkloadToken(
 ): Promise<TokenExchangeResult> {
   const out = await serviceRequest<{ exchange: TokenExchangeResult }>(session, "workload", "/workload-identity/token/exchange", {
     method: "POST",
+    keepSessionOn401: true,
     body: JSON.stringify({ tenant_id: session.tenantId, ...input })
   });
   return (out?.exchange || {}) as TokenExchangeResult;

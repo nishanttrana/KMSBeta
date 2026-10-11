@@ -5,6 +5,31 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Closing the open faults (10.4.0-beta)
+- **Dead clients for routes that never existed.** Eight files in
+  `web/dashboard/src/lib` called 15 keycore routes with no handler
+  (`/ml/anomalies`, `/cost/metrics`, `/federation/peers`, ...). Nothing
+  imported them, so no page broke and no test failed.
+  How it slipped through: the product map lists frontend calls and backend
+  routes side by side but nothing failed on a call without a route, and the
+  files used `trackedFetch` directly. `scripts/live-check.py` now fails on
+  the router's own 404.
+- **A catalogue probe instead of a failing read.** Caching the failed read
+  of `cluster_local_state` (10.3.0) still left one failed query per service
+  per 10 seconds. Asking `information_schema.tables` first costs one cheap
+  query and fails nothing; SQLite has no such catalogue, so there the probe
+  errors and the table is read directly. Tested on real Postgres by counting
+  rolled-back transactions (`TestMissingTableThenCreatedPostgres`).
+- **macOS tooling and TLS 1.3.** The system Python (LibreSSL) can't speak
+  TLS 1.3 and the system curl (SecureTransport) rejects `--tlsv1.3`, though
+  it negotiates 1.3 without the flag. The live check drives curl and passes
+  the URL, token and body on stdin (`--config -`), never on the command
+  line.
+- **401 where the session is not the credential.** The workload token
+  exchange is authenticated by the SVID in its body; its 401 is correct for
+  a workload and wrong for the dashboard's session logic. The client call
+  opts out (`keepSessionOn401`) rather than the server changing its status.
+
 ### Why the owner was the one finding the bugs (10.3.0-beta)
 - **Nothing looked at the running product.** The HYOK sign-out and the
   short health list both passed every gate: unit tests inject their own

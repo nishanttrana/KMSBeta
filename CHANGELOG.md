@@ -4,6 +4,32 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [10.4.0-beta] — 2026-10-11
+
+### The open faults from 10.1.0–10.3.0 are closed
+- **Fixed: a wrong password no longer signs you out.** A signed-in user who
+  typed a wrong current password (`POST /auth/change-password`) or a wrong
+  CLI password (`POST /auth/cli/session`) got 401, which the dashboard treats
+  as a dead session. Both now answer 403 (`invalid_current_password`,
+  `invalid_credentials`). The refused password change is audited as
+  `audit.auth.password_change_refused`.
+- **Fixed: a refused workload token exchange no longer signs you out.** The
+  exchange's credential is the SVID in its body, so its 401 refuses the
+  SVID, not the session; the dashboard keeps the session for that call.
+- **Fixed: no failed queries for the cluster state on a standalone node.**
+  Services find out through the database catalogue whether
+  `cluster_local_state` exists before reading it, and pick the table up
+  within 10 seconds of the cluster manager creating it.
+- **New: `scripts/live-check.py`** signs in to the running stack and sends
+  every parameterless GET the dashboard makes (191) through the edge. It
+  fails on 401, 5xx and routes that are not registered. It signs in as the
+  bootstrap CLI account, so it proves every service verifies tokens and
+  answers; it does not check page contents.
+- **Removed: eight unused dashboard client files** that called 15 keycore
+  routes that do not exist (analytics, cost, federation, anomaly, health
+  score, inventory export, regulatory and audit-chain clients). Found by the
+  first live check; no page used them.
+
 ## [10.3.0-beta] — 2026-10-11
 
 ### Faults are looked for, not waited for

@@ -192,6 +192,7 @@ Proven by `TestEnrollmentIssuesRegistrySANsFromTheSubCA` and
 |---|---|---|---|
 | `audit.hsm.provider_library_inventory` | connector start: each tenant's provider files with SHA-256 | info | `TestLibraryWatcherAuditsUploads` |
 | `audit.hsm.provider_library_added` / `_changed` / `_removed` | a file uploaded, replaced or deleted over SSH/SFTP | warning | `TestLibraryWatcherAuditsUploads` |
+| `audit.auth.password_change_refused` | a signed-in user gave a wrong current password to `POST /auth/change-password` (10.4.0-beta); `result: refused`, `reason: invalid_current_password`, `user_id`. Answered 403, the password is unchanged | warning | `TestWrongPasswordFromASignedInCallerIs403AndAudited` |
 | `audit.auth.cli_session_refused` | CLI session refused, `result: refused`, `reason` `invalid_credentials` or `public_default_password` | warning | `TestCLISessionRefusesThePublicPasswordAndAuditsRefusals` |
 | `audit.auth.cli_ssh_password_synced` | auth set the SSH password on hsm-integration (`result` success/failure) | info | `TestCLISSHPasswordSyncKeepsThePasswordOffTheCommandLine` |
 | `audit.auth.cli_password_revoked` | a CLI user on the retired public password got a random one; SSH copy locked | critical | `TestRevokeRetiredCLIPasswords` |

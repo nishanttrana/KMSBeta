@@ -56,6 +56,9 @@ type Reader struct {
 	cur     State
 	loaded  time.Time
 	pending bool
+	// tableSeen is set once the table is known to exist; until then Postgres
+	// is asked through its catalogue, which doesn't fail when it is absent.
+	tableSeen bool
 }
 
 func NewReader(db *sql.DB) *Reader { return &Reader{db: db, ttl: 10 * time.Second} }
@@ -101,6 +104,21 @@ func (r *Reader) Get(ctx context.Context) State {
 	}
 	if time.Since(r.loaded) < r.ttl {
 		return r.cur
+	}
+	if !r.tableSeen {
+		// The table exists only where the cluster manager is deployed. Reading
+		// it when absent is a failed query in the database log for every
+		// service, every TTL. The catalogue probe fails only on a database
+		// without information_schema (SQLite), which then reads the table.
+		var one int
+		err := r.db.QueryRowContext(ctx, `
+SELECT 1 FROM information_schema.tables
+WHERE table_schema = current_schema() AND table_name = 'cluster_local_state'`).Scan(&one)
+		if errors.Is(err, sql.ErrNoRows) {
+			r.cur, r.loaded = State{}, time.Now()
+			return r.cur
+		}
+		r.tableSeen = err == nil
 	}
 	var s State
 	err := r.db.QueryRowContext(ctx, `

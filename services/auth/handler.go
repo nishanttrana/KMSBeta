@@ -837,7 +837,12 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !VerifyPassword(user.Password, req.CurrentPassword) {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid current password", reqID, claims.TenantID)
+		// 403, not 401: the session is valid, and a client ends the session
+		// on 401.
+		_ = h.publishAudit(r.Context(), "audit.auth.password_change_refused", reqID, claims.TenantID, map[string]any{
+			"user_id": claims.UserID, "reason": "invalid_current_password", "result": "refused", "severity": "warning",
+		})
+		writeErr(w, http.StatusForbidden, "invalid_current_password", "invalid current password", reqID, claims.TenantID)
 		return
 	}
 	if err := h.enforcePasswordPolicy(r.Context(), claims.TenantID, req.NewPassword, user.Username, user.Email); err != nil {
@@ -2108,7 +2113,7 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 	}
 	if !VerifyPassword(cliUser.Password, req.Password) {
 		h.auditCLISessionRefused(r, reqID, claims, cliUsername, "invalid_credentials")
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid CLI credentials", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "invalid_credentials", "invalid CLI credentials", reqID, claims.TenantID)
 		return
 	}
 	// The public default must never become the SSH password of the

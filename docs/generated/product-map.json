@@ -17703,6 +17703,21 @@
       "service": "keycore"
     },
     {
+      "action": "inventory_keys_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/key_visibility.go",
+      "handler": "legacy(h.handleListInventory)",
+      "line": 179,
+      "match_key": "keycore|GET|/inventory/keys",
+      "method": "GET",
+      "normalized_path": "/inventory/keys",
+      "path": "/inventory/keys",
+      "permission": "key.inventory.read",
+      "registration": "kernel",
+      "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
       "action": "inventory_orphans_read",
       "code_scope": "keycore",
       "file": "services/keycore/key_visibility.go",
@@ -17727,6 +17742,36 @@
       "method": "GET",
       "normalized_path": "/inventory/duplicates",
       "path": "/inventory/duplicates",
+      "permission": "key.inventory.read",
+      "registration": "kernel",
+      "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
+      "action": "inventory_dependencies_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/key_visibility.go",
+      "handler": "legacy(h.handleListKeyDependencies)",
+      "line": 182,
+      "match_key": "keycore|GET|/inventory/dependencies",
+      "method": "GET",
+      "normalized_path": "/inventory/dependencies",
+      "path": "/inventory/dependencies",
+      "permission": "key.inventory.read",
+      "registration": "kernel",
+      "resource": "key_inventory",
+      "service": "keycore"
+    },
+    {
+      "action": "health_summary_read",
+      "code_scope": "keycore",
+      "file": "services/keycore/key_visibility.go",
+      "handler": "legacy(h.handleGetHealthSummary)",
+      "line": 186,
+      "match_key": "keycore|GET|/health/summary",
+      "method": "GET",
+      "normalized_path": "/health/summary",
+      "path": "/health/summary",
       "permission": "key.inventory.read",
       "registration": "kernel",
       "resource": "key_inventory",
@@ -26210,58 +26255,6 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/audit/chain?limit=${limit}`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/audit/chain",
-      "method": "GET",
-      "normalized_path": "/audit/chain",
-      "path": "/audit/chain",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/audit/chain/verify`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/audit/chain/verify",
-      "method": "POST",
-      "normalized_path": "/audit/chain/verify",
-      "path": "/audit/chain/verify",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/audit/chain/anchor`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 21,
-      "match_key": "keycore|POST|/audit/chain/anchor",
-      "method": "POST",
-      "normalized_path": "/audit/chain/anchor",
-      "path": "/audit/chain/anchor",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/audit/events?limit=${limit}`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 30,
-      "match_key": "keycore|GET|/audit/events",
-      "method": "GET",
-      "normalized_path": "/audit/events",
-      "path": "/audit/events",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
       "dynamic": false,
       "expression": "serviceRequest(\"audit\", \"/audit/events\")",
       "file": "web/dashboard/src/lib/auditLogger.ts",
@@ -28576,45 +28569,6 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/cost/metrics`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/cost/metrics",
-      "method": "GET",
-      "normalized_path": "/cost/metrics",
-      "path": "/cost/metrics",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/cost/suggestions`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 12,
-      "match_key": "keycore|GET|/cost/suggestions",
-      "method": "GET",
-      "normalized_path": "/cost/suggestions",
-      "path": "/cost/suggestions",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/cost/suggestions/${suggestionId}/apply`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 18,
-      "match_key": "keycore|POST|/cost/suggestions/{param}/apply",
-      "method": "POST",
-      "normalized_path": "/cost/suggestions/{param}/apply",
-      "path": "/cost/suggestions/{param}/apply",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"compliance\", `/compliance/playbooks/connections?${q(session)}`)",
       "file": "web/dashboard/src/lib/credentials.ts",
@@ -30579,45 +30533,6 @@
     },
     {
       "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/analytics/keys?${q}`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 7,
-      "match_key": "keycore|GET|/analytics/keys",
-      "method": "GET",
-      "normalized_path": "/analytics/keys",
-      "path": "/analytics/keys",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/analytics/report?format=${format}`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 13,
-      "match_key": "keycore|GET|/analytics/report",
-      "method": "GET",
-      "normalized_path": "/analytics/report",
-      "path": "/analytics/report",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/analytics/usage-timeline`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 19,
-      "match_key": "keycore|GET|/analytics/usage-timeline",
-      "method": "GET",
-      "normalized_path": "/analytics/usage-timeline",
-      "path": "/analytics/usage-timeline",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
       "expression": "serviceRequest(\"keycore\", `/keys/${encodeURIComponent(keyID)}/consumers?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/keyConsumers.ts",
       "line": 35,
@@ -30628,136 +30543,6 @@
       "service": "keycore",
       "service_key": "keycore",
       "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/federation/peers`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/federation/peers",
-      "method": "GET",
-      "normalized_path": "/federation/peers",
-      "path": "/federation/peers",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/federation/peers`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/federation/peers",
-      "method": "POST",
-      "normalized_path": "/federation/peers",
-      "path": "/federation/peers",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/federation/peers/${peerId}/sync`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 22,
-      "match_key": "keycore|POST|/federation/peers/{param}/sync",
-      "method": "POST",
-      "normalized_path": "/federation/peers/{param}/sync",
-      "path": "/federation/peers/{param}/sync",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/federation/peers/${peerId}`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 31,
-      "match_key": "keycore|DELETE|/federation/peers/{param}",
-      "method": "DELETE",
-      "normalized_path": "/federation/peers/{param}",
-      "path": "/federation/peers/{param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/health/scores`)",
-      "file": "web/dashboard/src/lib/keyHealth.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/health/scores",
-      "method": "GET",
-      "normalized_path": "/health/scores",
-      "path": "/health/scores",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/health/scores/${keyId}/refresh`)",
-      "file": "web/dashboard/src/lib/keyHealth.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/health/scores/{param}/refresh",
-      "method": "POST",
-      "normalized_path": "/health/scores/{param}/refresh",
-      "path": "/health/scores/{param}/refresh",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/health/summary`)",
-      "file": "web/dashboard/src/lib/keyHealth.ts",
-      "line": 21,
-      "match_key": "keycore|GET|/health/summary",
-      "method": "GET",
-      "normalized_path": "/health/summary",
-      "path": "/health/summary",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/inventory/keys`)",
-      "file": "web/dashboard/src/lib/keyInventory.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/inventory/keys",
-      "method": "GET",
-      "normalized_path": "/inventory/keys",
-      "path": "/inventory/keys",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/inventory/dependencies`)",
-      "file": "web/dashboard/src/lib/keyInventory.ts",
-      "line": 12,
-      "match_key": "keycore|GET|/inventory/dependencies",
-      "method": "GET",
-      "normalized_path": "/inventory/dependencies",
-      "path": "/inventory/dependencies",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/inventory/export`)",
-      "file": "web/dashboard/src/lib/keyInventory.ts",
-      "line": 18,
-      "match_key": "keycore|GET|/inventory/export",
-      "method": "GET",
-      "normalized_path": "/inventory/export",
-      "path": "/inventory/export",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
     },
     {
       "dynamic": false,
@@ -31722,58 +31507,6 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/anomalies`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/ml/anomalies",
-      "method": "GET",
-      "normalized_path": "/ml/anomalies",
-      "path": "/ml/anomalies",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/detect`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/ml/detect",
-      "method": "POST",
-      "normalized_path": "/ml/detect",
-      "path": "/ml/detect",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/access-heatmap`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 21,
-      "match_key": "keycore|GET|/ml/access-heatmap",
-      "method": "GET",
-      "normalized_path": "/ml/access-heatmap",
-      "path": "/ml/access-heatmap",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/ml/anomalies/${id}/dismiss`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 27,
-      "match_key": "keycore|POST|/ml/anomalies/{param}/dismiss",
-      "method": "POST",
-      "normalized_path": "/ml/anomalies/{param}/dismiss",
-      "path": "/ml/anomalies/{param}/dismiss",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"audit\", `/ops-metrics/overview?window=${window}`)",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
@@ -32097,45 +31830,6 @@
       "service": "compliance",
       "service_key": "compliance",
       "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/compliance/regulatory`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/compliance/regulatory",
-      "method": "GET",
-      "normalized_path": "/compliance/regulatory",
-      "path": "/compliance/regulatory",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/compliance/dashboard`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 12,
-      "match_key": "keycore|GET|/compliance/dashboard",
-      "method": "GET",
-      "normalized_path": "/compliance/dashboard",
-      "path": "/compliance/dashboard",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/compliance/report?framework=${encodeURIComponent(framework)}`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 18,
-      "match_key": "keycore|GET|/compliance/report",
-      "method": "GET",
-      "normalized_path": "/compliance/report",
-      "path": "/compliance/report",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
     },
     {
       "dynamic": true,
@@ -33402,7 +33096,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 254,
+      "line": 255,
       "match_key": "workload|GET|/workload-identity/graph",
       "method": "GET",
       "normalized_path": "/workload-identity/graph",
@@ -33415,7 +33109,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
       "file": "web/dashboard/src/lib/workloadIdentity.ts",
-      "line": 259,
+      "line": 260,
       "match_key": "workload|GET|/workload-identity/usage",
       "method": "GET",
       "normalized_path": "/workload-identity/usage",
@@ -33425,7 +33119,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-10-11T16:32:59Z",
+  "generated_at": "2026-10-11T17:07:18Z",
   "navigation": [
     {
       "group": "Overview",
@@ -35649,6 +35343,7 @@
         "writeErr",
         "GetUserByID",
         "VerifyPassword",
+        "publishAudit",
         "enforcePasswordPolicy",
         "HashPassword",
         "UpdateUserPassword",
@@ -35659,7 +35354,6 @@
         "CreateSession",
         "NewID",
         "clientIP",
-        "publishAudit",
         "writeJSON"
       ],
       "handler_internal_package_calls": [
@@ -35764,7 +35458,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 901,
+      "handler_line": 906,
       "handler_name": "handleLogout",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35796,7 +35490,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 922,
+      "handler_line": 927,
       "handler_name": "handleMe",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35830,7 +35524,7 @@
         "tenantWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 935,
+      "handler_line": 940,
       "handler_name": "handleCreateTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35867,7 +35561,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 948,
+      "handler_line": 953,
       "handler_name": "handleListTenants",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35901,7 +35595,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 958,
+      "handler_line": 963,
       "handler_name": "handleGetTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35946,7 +35640,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 972,
+      "handler_line": 977,
       "handler_name": "handleGetTenantDeleteReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -35995,7 +35689,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1004,
+      "handler_line": 1009,
       "handler_name": "handleDisableTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36032,7 +35726,7 @@
         "tenantWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 938,
+      "handler_line": 943,
       "handler_name": "handleUpdateTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36082,7 +35776,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1109,
+      "handler_line": 1114,
       "handler_name": "handleDeleteTenant",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36113,7 +35807,7 @@
         "roleWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 941,
+      "handler_line": 946,
       "handler_name": "handleCreateTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36140,7 +35834,7 @@
         "roleWrite"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 944,
+      "handler_line": 949,
       "handler_name": "handleUpdateTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36173,7 +35867,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1385,
+      "handler_line": 1390,
       "handler_name": "handleDeleteTenantRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36208,7 +35902,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1404,
+      "handler_line": 1409,
       "handler_name": "handleListUsers",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36261,7 +35955,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize"
       ],
-      "handler_line": 1420,
+      "handler_line": 1425,
       "handler_name": "handleCreateUser",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36685,7 +36379,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1495,
+      "handler_line": 1500,
       "handler_name": "handleUpdateUserRole",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36733,7 +36427,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1550,
+      "handler_line": 1555,
       "handler_name": "handleUpdateUserStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36787,7 +36481,7 @@
         "pkg/auth.ClaimsFromContext",
         "pkg/crypto.Zeroize"
       ],
-      "handler_line": 1587,
+      "handler_line": 1592,
       "handler_name": "handleResetUserPassword",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36830,7 +36524,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1656,
+      "handler_line": 1661,
       "handler_name": "handleListGroupRoleBindings",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36876,7 +36570,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1672,
+      "handler_line": 1677,
       "handler_name": "handleUpsertGroupRoleBinding",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -36922,7 +36616,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1718,
+      "handler_line": 1723,
       "handler_name": "handleDeleteGroupRoleBinding",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37226,7 +36920,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1750,
+      "handler_line": 1755,
       "handler_name": "handleGetPasswordPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37269,7 +36963,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1761,
+      "handler_line": 1766,
       "handler_name": "handleUpdatePasswordPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37310,7 +37004,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1847,
+      "handler_line": 1852,
       "handler_name": "handleGetSecurityPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37353,7 +37047,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1858,
+      "handler_line": 1863,
       "handler_name": "handleUpdateSecurityPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37400,7 +37094,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2041,
+      "handler_line": 2046,
       "handler_name": "handleCLIStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37532,7 +37226,7 @@
         "pkg/restauth.FingerprintHexToThumbprintB64URL",
         "pkg/tenantcheck.ServicePermissionReserved"
       ],
-      "handler_line": 2068,
+      "handler_line": 2073,
       "handler_name": "handleCLISession",
       "handler_receiver_calls": [
         "h.events.Publish",
@@ -37598,7 +37292,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1903,
+      "handler_line": 1908,
       "handler_name": "handleGetCLIHSMConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37656,7 +37350,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 1933,
+      "handler_line": 1938,
       "handler_name": "handleUpdateCLIHSMConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37709,7 +37403,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2159,
+      "handler_line": 2164,
       "handler_name": "handleCLIHSMPartitions",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -37979,7 +37673,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2225,
+      "handler_line": 2230,
       "handler_name": "handleListClients",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38022,7 +37716,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2236,
+      "handler_line": 2241,
       "handler_name": "handleGetClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38073,7 +37767,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2251,
+      "handler_line": 2256,
       "handler_name": "handleUpdateClient",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -38118,7 +37812,7 @@
       "handler_internal_package_calls": [
         "pkg/auth.ClaimsFromContext"
       ],
-      "handler_line": 2329,
+      "handler_line": 2334,
       "handler_name": "handleRESTClientSecuritySummary",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -77704,14 +77398,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "trackedFetch(`${BASE}/inventory/keys`)",
-          "file": "web/dashboard/src/lib/keyInventory.ts",
-          "line": 6,
-          "source": "trackedFetch"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "legacy(h.handleListInventory)",
       "handler_external_package_calls": [
         "strings.TrimSpace"
@@ -77894,14 +77581,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "trackedFetch(`${BASE}/inventory/dependencies`)",
-          "file": "web/dashboard/src/lib/keyInventory.ts",
-          "line": 12,
-          "source": "trackedFetch"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "legacy(h.handleListKeyDependencies)",
       "handler_external_package_calls": [
         "strings.TrimSpace"
@@ -78120,14 +77800,7 @@
       ]
     },
     {
-      "frontend_call_sites": [
-        {
-          "expression": "trackedFetch(`${BASE}/health/summary`)",
-          "file": "web/dashboard/src/lib/keyHealth.ts",
-          "line": 21,
-          "source": "trackedFetch"
-        }
-      ],
+      "frontend_call_sites": [],
       "handler": "legacy(h.handleGetHealthSummary)",
       "handler_external_package_calls": [],
       "handler_file": "services/keycore/handler_enterprise_audit.go",
@@ -88869,7 +88542,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 254,
+          "line": 255,
           "source": "serviceRequest"
         }
       ],
@@ -88945,7 +88618,7 @@
         {
           "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
           "file": "web/dashboard/src/lib/workloadIdentity.ts",
-          "line": 259,
+          "line": 260,
           "source": "serviceRequest"
         }
       ],
@@ -90307,7 +89980,7 @@
       "governance": 23,
       "hyok": 7,
       "keyaccess": 6,
-      "keycore": 119,
+      "keycore": 92,
       "kmip": 11,
       "posture": 10,
       "pqc": 8,
@@ -90501,17 +90174,17 @@
     "backend_routes": 901,
     "backend_services": 28,
     "button_inventory": 767,
-    "frontend_call_sites": 565,
-    "matched_frontend_call_sites": 519,
+    "frontend_call_sites": 538,
+    "matched_frontend_call_sites": 516,
     "nav_items": 26,
     "request_flows": 901,
-    "request_flows_with_frontend": 526,
+    "request_flows_with_frontend": 523,
     "request_flows_with_internal_package_calls": 161,
     "request_flows_with_service_calls": 532,
     "request_flows_with_store_calls": 637,
     "subpane_groups": 8,
     "tab_components": 33,
-    "unmatched_frontend_call_sites": 46
+    "unmatched_frontend_call_sites": 22
   },
   "tabs": [
     {
@@ -90990,58 +90663,6 @@
   "titles": {},
   "unmatched_frontend_calls": [
     {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/audit/chain?limit=${limit}`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/audit/chain",
-      "method": "GET",
-      "normalized_path": "/audit/chain",
-      "path": "/audit/chain",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/audit/chain/verify`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/audit/chain/verify",
-      "method": "POST",
-      "normalized_path": "/audit/chain/verify",
-      "path": "/audit/chain/verify",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/audit/chain/anchor`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 21,
-      "match_key": "keycore|POST|/audit/chain/anchor",
-      "method": "POST",
-      "normalized_path": "/audit/chain/anchor",
-      "path": "/audit/chain/anchor",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/audit/events?limit=${limit}`)",
-      "file": "web/dashboard/src/lib/auditChain.ts",
-      "line": 30,
-      "match_key": "keycore|GET|/audit/events",
-      "method": "GET",
-      "normalized_path": "/audit/events",
-      "path": "/audit/events",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
       "dynamic": false,
       "expression": "serviceRequest(\"audit\", \"/audit/events\")",
       "file": "web/dashboard/src/lib/auditLogger.ts",
@@ -91198,45 +90819,6 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/cost/metrics`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/cost/metrics",
-      "method": "GET",
-      "normalized_path": "/cost/metrics",
-      "path": "/cost/metrics",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/cost/suggestions`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 12,
-      "match_key": "keycore|GET|/cost/suggestions",
-      "method": "GET",
-      "normalized_path": "/cost/suggestions",
-      "path": "/cost/suggestions",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/cost/suggestions/${suggestionId}/apply`)",
-      "file": "web/dashboard/src/lib/costOptimization.ts",
-      "line": 18,
-      "match_key": "keycore|POST|/cost/suggestions/{param}/apply",
-      "method": "POST",
-      "normalized_path": "/cost/suggestions/{param}/apply",
-      "path": "/cost/suggestions/{param}/apply",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"compliance\", `/compliance/playbooks/connections/${encodeURIComponent(id)}/test?${q(session)}`)",
       "file": "web/dashboard/src/lib/credentials.ts",
@@ -91300,227 +90882,6 @@
       "service": "hyok",
       "service_key": "hyok",
       "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/analytics/keys?${q}`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 7,
-      "match_key": "keycore|GET|/analytics/keys",
-      "method": "GET",
-      "normalized_path": "/analytics/keys",
-      "path": "/analytics/keys",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/analytics/report?format=${format}`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 13,
-      "match_key": "keycore|GET|/analytics/report",
-      "method": "GET",
-      "normalized_path": "/analytics/report",
-      "path": "/analytics/report",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/analytics/usage-timeline`)",
-      "file": "web/dashboard/src/lib/keyAnalytics.ts",
-      "line": 19,
-      "match_key": "keycore|GET|/analytics/usage-timeline",
-      "method": "GET",
-      "normalized_path": "/analytics/usage-timeline",
-      "path": "/analytics/usage-timeline",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/federation/peers`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/federation/peers",
-      "method": "GET",
-      "normalized_path": "/federation/peers",
-      "path": "/federation/peers",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/federation/peers`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/federation/peers",
-      "method": "POST",
-      "normalized_path": "/federation/peers",
-      "path": "/federation/peers",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/federation/peers/${peerId}/sync`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 22,
-      "match_key": "keycore|POST|/federation/peers/{param}/sync",
-      "method": "POST",
-      "normalized_path": "/federation/peers/{param}/sync",
-      "path": "/federation/peers/{param}/sync",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/federation/peers/${peerId}`)",
-      "file": "web/dashboard/src/lib/keyFederation.ts",
-      "line": 31,
-      "match_key": "keycore|DELETE|/federation/peers/{param}",
-      "method": "DELETE",
-      "normalized_path": "/federation/peers/{param}",
-      "path": "/federation/peers/{param}",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/health/scores`)",
-      "file": "web/dashboard/src/lib/keyHealth.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/health/scores",
-      "method": "GET",
-      "normalized_path": "/health/scores",
-      "path": "/health/scores",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/health/scores/${keyId}/refresh`)",
-      "file": "web/dashboard/src/lib/keyHealth.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/health/scores/{param}/refresh",
-      "method": "POST",
-      "normalized_path": "/health/scores/{param}/refresh",
-      "path": "/health/scores/{param}/refresh",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/inventory/export`)",
-      "file": "web/dashboard/src/lib/keyInventory.ts",
-      "line": 18,
-      "match_key": "keycore|GET|/inventory/export",
-      "method": "GET",
-      "normalized_path": "/inventory/export",
-      "path": "/inventory/export",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/anomalies`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/ml/anomalies",
-      "method": "GET",
-      "normalized_path": "/ml/anomalies",
-      "path": "/ml/anomalies",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/detect`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 12,
-      "match_key": "keycore|POST|/ml/detect",
-      "method": "POST",
-      "normalized_path": "/ml/detect",
-      "path": "/ml/detect",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/ml/access-heatmap`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 21,
-      "match_key": "keycore|GET|/ml/access-heatmap",
-      "method": "GET",
-      "normalized_path": "/ml/access-heatmap",
-      "path": "/ml/access-heatmap",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/ml/anomalies/${id}/dismiss`)",
-      "file": "web/dashboard/src/lib/mlAnomaly.ts",
-      "line": 27,
-      "match_key": "keycore|POST|/ml/anomalies/{param}/dismiss",
-      "method": "POST",
-      "normalized_path": "/ml/anomalies/{param}/dismiss",
-      "path": "/ml/anomalies/{param}/dismiss",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/compliance/regulatory`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 6,
-      "match_key": "keycore|GET|/compliance/regulatory",
-      "method": "GET",
-      "normalized_path": "/compliance/regulatory",
-      "path": "/compliance/regulatory",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": false,
-      "expression": "trackedFetch(`${BASE}/compliance/dashboard`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 12,
-      "match_key": "keycore|GET|/compliance/dashboard",
-      "method": "GET",
-      "normalized_path": "/compliance/dashboard",
-      "path": "/compliance/dashboard",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "trackedFetch(`${BASE}/compliance/report?framework=${encodeURIComponent(framework)}`)",
-      "file": "web/dashboard/src/lib/regulatory.ts",
-      "line": 18,
-      "match_key": "keycore|GET|/compliance/report",
-      "method": "GET",
-      "normalized_path": "/compliance/report",
-      "path": "/compliance/report",
-      "service": "keycore",
-      "service_key": "keycore",
-      "source": "trackedFetch"
     },
     {
       "dynamic": true,
@@ -93197,7 +92558,7 @@
         "frontendSites": [],
         "handler": "handleLogout",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 901,
+        "handlerLine": 906,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93224,7 +92585,7 @@
         "frontendSites": [],
         "handler": "handleMe",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 922,
+        "handlerLine": 927,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93256,7 +92617,7 @@
         ],
         "handler": "handleCreateTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 935,
+        "handlerLine": 940,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93289,7 +92650,7 @@
         ],
         "handler": "handleListTenants",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 948,
+        "handlerLine": 953,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93319,7 +92680,7 @@
         "frontendSites": [],
         "handler": "handleGetTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 958,
+        "handlerLine": 963,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93354,7 +92715,7 @@
         ],
         "handler": "handleGetTenantDeleteReadiness",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 972,
+        "handlerLine": 977,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93395,7 +92756,7 @@
         ],
         "handler": "handleDisableTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1004,
+        "handlerLine": 1009,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93433,7 +92794,7 @@
         ],
         "handler": "handleUpdateTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 938,
+        "handlerLine": 943,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -93472,7 +92833,7 @@
         ],
         "handler": "handleDeleteTenant",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1109,
+        "handlerLine": 1114,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93504,7 +92865,7 @@
         "frontendSites": [],
         "handler": "handleCreateTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 941,
+        "handlerLine": 946,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -93527,7 +92888,7 @@
         "frontendSites": [],
         "handler": "handleUpdateTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 944,
+        "handlerLine": 949,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "PUT",
@@ -93552,7 +92913,7 @@
         "frontendSites": [],
         "handler": "handleDeleteTenantRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1385,
+        "handlerLine": 1390,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "DELETE",
@@ -93577,7 +92938,7 @@
         "frontendSites": [],
         "handler": "handleListUsers",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1404,
+        "handlerLine": 1409,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93614,7 +92975,7 @@
         ],
         "handler": "handleCreateUser",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1420,
+        "handlerLine": 1425,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -93926,7 +93287,7 @@
         ],
         "handler": "handleUpdateUserRole",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1495,
+        "handlerLine": 1500,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -93966,7 +93327,7 @@
         ],
         "handler": "handleUpdateUserStatus",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1550,
+        "handlerLine": 1555,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94007,7 +93368,7 @@
         ],
         "handler": "handleResetUserPassword",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1587,
+        "handlerLine": 1592,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -94046,7 +93407,7 @@
         ],
         "handler": "handleListGroupRoleBindings",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1656,
+        "handlerLine": 1661,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94085,7 +93446,7 @@
         ],
         "handler": "handleUpsertGroupRoleBinding",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1672,
+        "handlerLine": 1677,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94125,7 +93486,7 @@
         ],
         "handler": "handleDeleteGroupRoleBinding",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1718,
+        "handlerLine": 1723,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94384,7 +93745,7 @@
         ],
         "handler": "handleGetPasswordPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1750,
+        "handlerLine": 1755,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94419,7 +93780,7 @@
         ],
         "handler": "handleUpdatePasswordPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1761,
+        "handlerLine": 1766,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94456,7 +93817,7 @@
         ],
         "handler": "handleGetSecurityPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1847,
+        "handlerLine": 1852,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94491,7 +93852,7 @@
         ],
         "handler": "handleUpdateSecurityPolicy",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1858,
+        "handlerLine": 1863,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94531,7 +93892,7 @@
         ],
         "handler": "handleCLIStatus",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2041,
+        "handlerLine": 2046,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94585,7 +93946,7 @@
         ],
         "handler": "handleCLISession",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2068,
+        "handlerLine": 2073,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext",
@@ -94647,7 +94008,7 @@
         ],
         "handler": "handleGetCLIHSMConfig",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1903,
+        "handlerLine": 1908,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94691,7 +94052,7 @@
         ],
         "handler": "handleUpdateCLIHSMConfig",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 1933,
+        "handlerLine": 1938,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94735,7 +94096,7 @@
         ],
         "handler": "handleCLIHSMPartitions",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2159,
+        "handlerLine": 2164,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94945,7 +94306,7 @@
         ],
         "handler": "handleListClients",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2225,
+        "handlerLine": 2230,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -94984,7 +94345,7 @@
         ],
         "handler": "handleGetClient",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2236,
+        "handlerLine": 2241,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95024,7 +94385,7 @@
         ],
         "handler": "handleUpdateClient",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2251,
+        "handlerLine": 2256,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -95063,7 +94424,7 @@
         ],
         "handler": "handleRESTClientSecuritySummary",
         "handlerFile": "services/auth/handler.go",
-        "handlerLine": 2329,
+        "handlerLine": 2334,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/auth.ClaimsFromContext"
@@ -115344,18 +114705,11 @@
           "strings.ToUpper",
           "strings.SplitN"
         ],
-        "frontendSites": [
-          {
-            "expression": "trackedFetch(`${BASE}/inventory/keys`)",
-            "file": "web/dashboard/src/lib/keyInventory.ts",
-            "line": 6,
-            "source": "trackedFetch"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleListInventory",
         "handlerFile": "services/keycore/handler_enterprise_audit.go",
         "handlerLine": 168,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/inventory/keys",
@@ -115374,7 +114728,7 @@
           "ListKeys"
         ],
         "uiLabels": [
-          "keyInventory"
+          "API only"
         ]
       },
       {
@@ -115441,18 +114795,11 @@
         "externalPackages": [
           "strings.TrimSpace"
         ],
-        "frontendSites": [
-          {
-            "expression": "trackedFetch(`${BASE}/inventory/dependencies`)",
-            "file": "web/dashboard/src/lib/keyInventory.ts",
-            "line": 12,
-            "source": "trackedFetch"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleListKeyDependencies",
         "handlerFile": "services/keycore/handler_enterprise_audit.go",
         "handlerLine": 212,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/inventory/dependencies",
@@ -115467,7 +114814,7 @@
           "ListKeyDependencies"
         ],
         "uiLabels": [
-          "keyInventory"
+          "API only"
         ]
       },
       {
@@ -115580,18 +114927,11 @@
       {
         "complexity": 2,
         "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "trackedFetch(`${BASE}/health/summary`)",
-            "file": "web/dashboard/src/lib/keyHealth.ts",
-            "line": 21,
-            "source": "trackedFetch"
-          }
-        ],
+        "frontendSites": [],
         "handler": "handleGetHealthSummary",
         "handlerFile": "services/keycore/handler_enterprise_audit.go",
         "handlerLine": 135,
-        "hasFrontend": true,
+        "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
         "normalizedPath": "/health/summary",
@@ -115607,7 +114947,7 @@
           "ListKeyHealthScores"
         ],
         "uiLabels": [
-          "keyHealth"
+          "API only"
         ]
       },
       {
@@ -121524,7 +120864,7 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/graph?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 254,
+            "line": 255,
             "source": "serviceRequest"
           }
         ],
@@ -121559,7 +120899,7 @@
           {
             "expression": "serviceRequest(\"workload\", `/workload-identity/usage?${tenantQuery(session)}&limit=${Math.max(1, Math.min(500, Number(limit) || 100))}`)",
             "file": "web/dashboard/src/lib/workloadIdentity.ts",
-            "line": 259,
+            "line": 260,
             "source": "serviceRequest"
           }
         ],
@@ -122646,7 +121986,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-10-11T16:32:59Z",
+    "generatedAt": "2026-10-11T17:07:18Z",
     "methods": [
       "DELETE",
       "GET",
@@ -122687,7 +122027,7 @@
     ],
     "summary": {
       "flows": 901,
-      "frontendBacked": 526,
+      "frontendBacked": 523,
       "highRisk": 346,
       "services": 28
     }

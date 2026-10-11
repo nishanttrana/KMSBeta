@@ -29,6 +29,9 @@ function handleUnauthorizedResponse(status: number): void {
 type RequestCountListener = (count: number) => void;
 export type ServiceRequestInit = RequestInit & {
   skipGlobalLoading?: boolean;
+  // The call's credential is in its body, not the session token (an SVID
+  // exchange): a 401 refuses that credential and must not end the session.
+  keepSessionOn401?: boolean;
 };
 
 let inFlightRequests = 0;
@@ -91,7 +94,7 @@ function timeoutSignal(timeoutMs: number): AbortSignal {
 }
 
 function buildServiceRequestInit(session: AuthSession, init: ServiceRequestInit | undefined, timeoutMs: number): RequestInit {
-  const { skipGlobalLoading: _skipGlobalLoading, ...requestInit } = (init || {}) as ServiceRequestInit;
+  const { skipGlobalLoading: _skipGlobalLoading, keepSessionOn401: _keepSessionOn401, ...requestInit } = (init || {}) as ServiceRequestInit;
   return {
     ...requestInit,
     signal: timeoutSignal(timeoutMs),
@@ -129,7 +132,9 @@ export async function serviceRequest<T = unknown>(
 ): Promise<T> {
   const response = await serviceRequestRaw(session, service, path, init, timeoutMs);
   if (!response.ok) {
-    handleUnauthorizedResponse(response.status);
+    if (!init?.keepSessionOn401) {
+      handleUnauthorizedResponse(response.status);
+    }
     throw new Error(await parseError(response));
   }
   if (response.status === 204) {

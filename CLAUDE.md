@@ -396,8 +396,10 @@ changes code without touching CHANGELOG.md or learning.md.
     them, and add the test or conformance check that fails if it returns. A
     learning.md entry without that check is not a fix.
   - After every deploy or rebuild, and before calling a fix done, run
-    `scripts/live-sweep.sh` against the running stack and fix what it
-    reports, asked or not. Then check the changed feature on the live stack,
+    `scripts/live-sweep.sh` (unhealthy containers, repeating errors) and
+    `scripts/live-check.py` (every dashboard GET, signed in: no 401, 5xx or
+    unregistered route) against the running stack and fix what they report,
+    asked or not. Then check the changed feature on the live stack,
     not only in tests.
   - A service refuses to start without something it needs to answer
     requests (a verification key, a required URL); it never starts healthy
@@ -407,7 +409,9 @@ changes code without touching CHANGELOG.md or learning.md.
     source.
   - The dashboard ends a session on 401, so a service returns 401 only for a
     missing or unverifiable token; a refusal to a signed-in caller is 403 or
-    4xx.
+    4xx. A dashboard call whose credential is in its body, not the session
+    token, sets `keepSessionOn401`.
+  - A dashboard client file with no importer is deleted, not kept.
 
 - `make conformance` passes. It enforces rules 1–3 and 5, that routes use
   the `pkg/route` kernel, that every shell script parses under macOS
