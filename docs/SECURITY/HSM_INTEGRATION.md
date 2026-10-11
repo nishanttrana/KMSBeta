@@ -59,10 +59,31 @@ with the material's (a mismatch removes the object, `hsm_kcv_mismatch`).
 
 - The HSM reports such a key honestly: `CKA_LOCAL` is false, and the key
   carries `hsm_origin: imported`.
-- Other algorithms are refused (`hsm_import_not_supported`).
-- An HSM whose policy forbids `C_CreateObject` for secret keys (some
-  FIPS-mode partitions) refuses it (`hsm_import_refused`); import by
-  HSM-side unwrap is not built.
+- **Where the HSM forbids `C_CreateObject` for secret keys** (some
+  FIPS-mode partitions), AES material is unwrapped inside the HSM instead
+  (8.2.0-beta): the HSM generates an RSA-3072 key pair that exists for the
+  session only and whose private half can only unwrap, the connector wraps
+  the material to its public key (RSA-OAEP, SHA-256, MGF1-SHA-256), and
+  `C_UnwrapKey` places it straight into the token key. The pair is
+  destroyed. The connector tries `C_CreateObject` first; `import_method`
+  (`create_object` or `unwrap`) on `POST /hsm/keys/import` uses one only,
+  and the audit event records which was used. An HSM that allows neither
+  refuses it (`hsm_import_refused`) and nothing is left behind.
+- **RSA and ECDSA private keys** (8.2.0-beta): an imported RSA-2048, 3072
+  or 4096 key, or a P-256 or P-384 key (PKCS#8, PKCS#1 or SEC 1), is
+  placed with `C_CreateObject` as a private key object (sensitive, not
+  extractable, sign only) with its public key object. The public half is
+  derived from the private key, never taken from the input. The connector
+  then signs with it in the HSM and verifies the signature; keycore
+  compares the public key the HSM answers with to the material's
+  (`hsm_public_key_mismatch` removes the objects) and keeps only the public
+  key. Its check value is the first three bytes of SHA-256 over the public
+  key (`sha256-spki`).
+- Anything else is refused (`hsm_import_not_supported`): a public key, a
+  certificate, an HMAC key, Ed25519, other curves and other RSA sizes.
+- A private key is not unwrapped into an HSM that forbids
+  `C_CreateObject`: that needs a two-step wrap the connector does not do.
+  Create the key in the HSM instead.
 - The material crosses the internal network (mTLS) from keycore to the
   connector once, and is zeroized there after the call.
 
@@ -345,9 +366,12 @@ normal setup. A node-local HSM would not see objects made on the primary.
   - an HSM that refuses ECB (the AES KCV is left empty).
 - **Algorithms not in the HSM:** RSA encryption, Ed25519, ML-DSA/ML-KEM,
   HMAC and non-GCM AES modes can't be HSM-resident.
-- **No existing-key migration** into the tenant key (new keys only). Import
-  of outside material into an HSM is AES only, by `C_CreateObject`
-  (8.0.0-beta); asymmetric import and HSM-side unwrap are not built.
+- **No existing-key migration** into the tenant key (new keys only).
+- **Import limits:** a private key can't be imported into an HSM that
+  forbids `C_CreateObject` (AES material can, by unwrap). The unwrap needs
+  an HSM that supports RSA-OAEP with SHA-256; it is verified against
+  SoftHSM2 2.7.0, and SoftHSM2 2.6 (SHA-1 only) refuses it cleanly. No
+  vendor HSM has been tried.
 - **A key can't be moved between HSMs**, and the KMS does not replicate
   keys across HSM credentials: availability is the vendor's HA group.
 - **Objects already in the partition are listed, not used.** Using a key the

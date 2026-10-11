@@ -5,6 +5,46 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### Identity provider secrets, the external token vault, HSM import (9.0.0-beta)
+- **"It takes a `password_ref` nothing resolves" was the small end of a
+  fake.** The tokenization "External DB vault" stored a host, user and
+  password reference, generated per-database setup SQL, labelled the vault
+  `external` in the list and in each token's metadata, and never opened a
+  connection: `CreateToken` writes to `token_vault_records` whatever the
+  vault says. How it slipped through every sweep: it validates carefully
+  (refuses an inline password, requires host and database), which reads as
+  a feature with a missing detail, not a feature with no body. **Rule:**
+  when a reference "resolves nothing", look for the code that would have
+  used the resolved value before wiring the resolver.
+- **A patch that writes into the map it was read from can't be compared
+  with "before".** The provider upsert merges the request into
+  `existing.Secrets`, so "did every secret change?" compared a map with
+  itself and never closed an exposure entry. Copy the values you will
+  compare before the merge. The test caught it; the first draft did not.
+- **Auth can use `pkg/mek` only lazily.** Keycore verifies the service
+  token against auth's JWKS, so auth must be serving before its own key
+  can open. The audit service's pattern (open in the background, 503 for
+  what needs the key, everything else unaffected) fits; refusing to start
+  would deadlock the platform.
+- **A legacy mux that authenticates per route gives a mounted kernel no
+  claims.** `route.Router.MountOn` assumes a middleware has already put the
+  claims in the context. Auth wraps each handler instead, so the mounted
+  `/mek/*` routes would have answered 401 to everyone. `MountOnWith` takes
+  the service's own wrapper.
+- **`CKA_VALUE_LEN` is the HSM's to set on an unwrapped key.** Supplying it
+  in the `C_UnwrapKey` template is `CKR_ATTRIBUTE_READ_ONLY`. And SoftHSM2
+  leaves it unset afterwards, so `inspect` reports 0 bits for an unwrapped
+  key there; the check value is what proves the length.
+- **The packaged SoftHSM2 (2.6.1) can't verify RSA-OAEP with SHA-256.** It
+  answers `CKR_ARGUMENTS_BAD`. Rather than add a SHA-1 path to make the
+  test run, the unwrap is verified against 2.7.0 built from source, and the
+  test skips, saying why, on a library that refuses the mechanism. CI
+  therefore does not prove the unwrap until its image has 2.7.
+- **A weak-key fixture can't be made in strict FIPS mode.** `rsa.GenerateKey`
+  refuses 1024 bits under `fips140=only` and returns nil; a test that
+  ignores the error dereferences it. Make the "refused weak key" case
+  conditional on being able to produce the key.
+
 ### Discovery limits and private destinations (8.1.0-beta)
 - **A rule that matched "some number after the call" labelled the wrong
   number.** `RSA_generate_key(?:_ex)?\(\s*[^,]*?,?\s*(\d{3,5})\s*,` was

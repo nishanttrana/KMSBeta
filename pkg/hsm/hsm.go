@@ -283,13 +283,15 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 	return json.Unmarshal(raw, out)
 }
 
-// Import places AES material in the HSM as a non-extractable key and
-// returns the KCV the HSM computed for it.
+// Import places existing key material in the HSM as a non-extractable key:
+// AES material, or an RSA or ECDSA private key in DER. It returns the KCV
+// the HSM computed (AES) or the public key (asymmetric).
 func (c *Client) Import(ctx context.Context, tenant, label, algorithm string, material []byte) (GenerateResult, error) {
 	var out struct {
-		Label string   `json:"label"`
-		KCV   string   `json:"kcv_b64"`
-		HSM   Identity `json:"hsm"`
+		Label     string   `json:"label"`
+		KCV       string   `json:"kcv_b64"`
+		PublicKey string   `json:"public_key_b64"`
+		HSM       Identity `json:"hsm"`
 	}
 	if err := c.call(ctx, http.MethodPost, "/hsm/keys/import", map[string]any{
 		"tenant_id": tenant, "label": label, "algorithm": algorithm, "material_b64": b64(material),
@@ -298,6 +300,7 @@ func (c *Client) Import(ctx context.Context, tenant, label, algorithm string, ma
 	}
 	res := GenerateResult{Label: out.Label, HSM: out.HSM}
 	res.KCV, _ = unb64(out.KCV)
+	res.PublicKey, _ = unb64(out.PublicKey)
 	return res, nil
 }
 

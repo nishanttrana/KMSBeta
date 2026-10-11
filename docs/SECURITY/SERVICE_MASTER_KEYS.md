@@ -17,6 +17,7 @@ Seven services store envelope-encrypted data. Each value has its own data key
 | audit | webhook signing secrets and custom header values (Splunk HEC tokens, Datadog API keys), sealed together per webhook | `webhooks` (`creds_wrapped_dek` set) |
 | compliance | playbook connection credentials (Slack/Teams webhook URLs, webhook URLs and headers, Jira and ServiceNow tokens), sealed together per connection (2.5.0-beta) | `compliance_playbook_connections` |
 | workload (`kms-workload-identity`) | each tenant's SPIFFE root CA private key and JWT-SVID signer private key, sealed together per tenant (6.11.0-beta) | `workload_identity_settings` (`signing_wrapped_dek` set) |
+| auth (`kms-auth`) | identity provider secrets: LDAP and Active Directory bind passwords, OIDC and Entra client secrets, the SAML certificate, sealed together per tenant and provider (9.0.0-beta) | `auth_identity_provider_configs` (`secrets_wrapped_dek` set) |
 
 ## What was wrong (found 2026-09-26)
 
@@ -70,6 +71,22 @@ it never refuses to start over its master key:
   retries and keeps credentials unavailable (fail closed) rather than stopping
   the audit service;
 - its `/mek/exposure` routes appear once the key is open.
+
+**Auth is the other exception** (9.0.0-beta). Keycore verifies a service
+token against auth, so auth must be serving before its own key can open:
+- it asks itself for a `kms-auth` service token and opens the key in the
+  background, retrying every 15 seconds while keycore is unreachable;
+- local sign-in, tokens, and providers with no stored secret are unaffected;
+- until the key is open, reading or saving a provider's secrets answers
+  `503 secrets_unavailable`, so directory and SSO sign-in fail closed. A
+  secret is never written or read in plaintext as a fallback;
+- the listing the sign-in page reads carries no secrets and always answers;
+- the sealed payload names its tenant and provider, so an envelope copied
+  onto another row does not open there;
+- rows an earlier release stored in plaintext are sealed by the primary
+  once the key opens and every 15 minutes after (which catches a restore),
+  each recorded in the exposure register first
+  (`audit.auth.identity_provider_secrets_sealed`).
 
 The sealed payload names its tenant and webhook, so a blob copied onto
 another row doesn't open there.
@@ -126,6 +143,7 @@ the material. So each item found under a public key is recorded in
 | audit | every credential the webhook had is replaced in one or more updates (a new or removed secret, and each header sent with a new value or dropped), or the webhook is deleted |
 | compliance | every field of the connection is sent anew in one update, or the connection is deleted |
 | workload | the tenant's signing keys are rotated (`POST /workload-identity/settings/rotate-signing-keys`) or its trust domain is changed |
+| auth | every secret the provider held is saved with a different value, or cleared, in one update |
 
 An administrator can also close an entry with a reason of at least 10
 characters (`POST /mek/exposure/{item_type}/{item_id}/acknowledge`,

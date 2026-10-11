@@ -7,6 +7,54 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-10-11 — Identity provider secrets are sealed in auth; the external token vault is removed, not built; HSM import widened (9.0.0-beta)
+
+Owner asked for what 8.0.0-beta left undone or undecided to be fixed. Two
+of the items were put to the owner as decisions; the recommendation given
+then is what was built, and can be overturned.
+
+- **Identity provider secrets are sealed inside auth (`pkg/mek`), not moved
+  to the credential store.** The store is compliance, which needs auth to
+  verify every call; a directory or SSO sign-in that had to open a
+  credential there would make auth depend on its own dependent, and an
+  outage of compliance would stop sign-in. This is the second exception to
+  "every external credential is added once, in Playbooks → Credentials",
+  beside the tenant HSM profile's PIN. *Rejected:* a start-time copy of the
+  secret fetched from the store (a second place it lives, stale after a
+  change). *Cost:* directory and SSO sign-in need keycore reachable once
+  after auth starts. *Enforced by:*
+  `TestIdentityProviderSecretsAreSealedAtRest`,
+  `TestIdentityProviderSecretsFailClosedWithoutKey`,
+  `TestIdentityProviderSecretsAreBoundToTheirProvider`,
+  `TestPlaintextIdentityProviderSecretsAreSealedAndRegistered`,
+  `TestIdentityProviderSecretsPostgres`.
+- **The external token vault is removed.** It was configuration presented
+  as storage: nothing connected to the database it named. Rule 8 offers
+  removal or a labelled preview. A preview would have had to refuse
+  tokenization on those vaults, breaking vaults that work (internally)
+  today; removal with an honest relabel keeps them working. *Rejected:*
+  building it now for five database engines (four new drivers inside the
+  crypto boundary, and a second store for every token operation), or
+  resolving `password_ref` into a connection nothing opens. If the owner
+  wants tokens in a customer database, it is a feature to design: one
+  engine first, a credential type in the store, and the token store behind
+  an interface. *Enforced by:* `TestExternalTokenVaultIsRefused`,
+  `TestStoredExternalVaultReadsAsInternal`.
+- **The tenant HSM profile keeps holding keys** where the tenant turned HSM
+  keys on. Stopping it would strand those keys, and CLAUDE.md records the
+  two roles as the owner stated them. No change.
+- **HSM import: private keys by `C_CreateObject`; AES by unwrap where
+  injection is refused.** RSA-OAEP with SHA-256 to a session key pair the
+  HSM generates is the mechanism vendor HSMs document for this.
+  *Rejected:* a SHA-1 OAEP fallback so the packaged SoftHSM2 could run the
+  test (a weaker path added for a test double), raw ECDH output as a
+  wrapping key (no KDF), and unwrapping private keys (needs AES key wrap
+  with padding outside the certified module). *Enforced by:*
+  `TestImportedPrivateKeySignsInHSM`, `TestAESImportByUnwrapInTheHSM`
+  (SoftHSM2 2.7.0), `TestImportPrivateKeyIntoHSM`.
+
+---
+
 ## 2026-10-11 — Discovery: statements, nested archives, whole small objects and a last-modified stand-in; private ranges for notification and SIEM (8.1.0-beta)
 
 Owner asked for the limits left open after 7.36.0 to 8.0.0-beta to be

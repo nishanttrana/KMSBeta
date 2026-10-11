@@ -4,6 +4,62 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.0.0-beta] — 2026-10-11
+
+### Identity provider secrets sealed; a fake token vault option removed; more key import into HSMs
+What 8.0.0-beta listed as not done or undecided. **Breaking:** a token vault
+can no longer be created with `storage_type: "external"`, and
+`GET /token-vaults/external-schema` is gone (see below for why).
+
+- **Security: identity provider secrets are sealed.** The LDAP and Active
+  Directory bind password, the OIDC and Entra client secret and the SAML
+  certificate were plaintext JSON in the auth database. They are now sealed
+  per tenant and provider under an auth service master key that keycore
+  holds, and the row keeps only their names.
+  - Existing rows are sealed automatically by the primary once the key
+    opens, and listed in the exposure register (System Administration)
+    until the secret is changed at the identity provider. **Change those
+    bind passwords and client secrets.**
+  - Auth opens its key in the background, because keycore needs auth to be
+    serving first. Until then local sign-in and tokens work as before;
+    directory and SSO sign-in, and reading or saving a provider's secrets,
+    answer 503 `secrets_unavailable` and do not fall back to plaintext.
+  - They stay in auth, not in Playbooks → Credentials: signing a user in
+    can't depend on a service that itself needs auth.
+- **Removed: the "External DB vault" option for token vaults.** It asked
+  for a database host, user and a password reference, stored them and
+  labelled the vault external. Nothing ever connected to that database: the
+  tokens of every vault have always been kept in the KMS's own database,
+  and the password reference was never read. The option, its form and its
+  "setup query" download are removed. Asking for it is refused
+  (`400 external_vault_removed`, audited); existing vaults keep working and
+  are relabelled internal, which is where their tokens are. **If you chose
+  that option believing tokens were stored in your own database, they were
+  not.**
+- **Added: RSA and ECDSA private keys can be imported into an HSM.** With
+  "Create in HSM" ticked, the Import Key dialog now takes an RSA-2048, 3072
+  or 4096 or an ECDSA P-256 or P-384 private key as well as AES material.
+  The HSM holds it non-extractable, keycore keeps only the public key, and
+  the key is made to sign in the HSM before the import is reported done.
+- **Added: AES import into HSMs that forbid direct key injection.** Where
+  the HSM refuses to create a secret key from a value, the material is
+  wrapped to a key pair the HSM generates for the session (RSA-OAEP,
+  SHA-256) and unwrapped inside it. The audit event says which way was
+  used.
+- **Changed:** auth has its own service identity (`kms-auth`) and exposure
+  register routes (`/svc/auth/mek/exposure`).
+
+**Upgrade.** Nothing to configure. Auth must be able to reach keycore for
+directory and SSO sign-in to work; local sign-in never depends on it.
+
+Not verified: no vendor HSM was tried. The in-HSM unwrap is verified
+against SoftHSM2 2.7.0 (built from source); the SoftHSM2 2.6 that CI
+installs supports SHA-1 only, refuses it cleanly, and that test is skipped
+there. A private key can't be imported into an HSM that forbids direct
+injection. Auth obtaining its key from a live keycore was not exercised
+(the stack was not redeployed); the sealing itself is tested, including on
+Postgres.
+
 ## [8.1.0-beta] — 2026-10-11
 
 ### Crypto Discovery and private networks: four open limits closed

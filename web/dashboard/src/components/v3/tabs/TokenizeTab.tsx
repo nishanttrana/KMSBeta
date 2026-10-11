@@ -34,7 +34,6 @@ import {
   deleteTokenVault,
   detokenizeValues,
   downloadFieldEncryptionWrapperSDK,
-  downloadTokenVaultExternalSchema,
   fpeDecrypt,
   fpeEncrypt,
   getDataProtectionPolicy,
@@ -481,20 +480,12 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
               <Sel value={tokenVaultId} onChange={(e)=>setTokenVaultId(e.target.value)}>
                 <option value="">{vaultSelectOptions.length?"Select vault":"No token vault found. Create vault from Token / Mask / Redact Policy."}</option>
                 {vaultSelectOptions.map((v:any)=>{
-                  const storage=String(v?.storage_type||"internal").toLowerCase()==="external"
-                    ? `external:${String(v?.external_provider||"db")}`
-                    : "internal";
                   return <option key={String(v?.id||"")} value={String(v?.id||"")}>
-                    {`${String(v?.name||"")} (${String(v?.token_type||"")}/${String(v?.format||"")}) [${storage}]`}
+                    {`${String(v?.name||"")} (${String(v?.token_type||"")}/${String(v?.format||"")})`}
                   </option>;
                 })}
               </Sel>
             </FG>
-            <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
-              {selectedTokenVault
-                ? `Selected vault storage: ${String(selectedTokenVault?.storage_type||"internal")}${String(selectedTokenVault?.external_provider||"").trim()?` (${String(selectedTokenVault?.external_provider||"")})`:""}.`
-                : "Vault list includes internal and external vault connections created from policy."}
-            </div>
           </>:<>
             <FG label="Vaultless Format" required>
               <Sel value={tokenVaultlessFormat} onChange={(e)=>setTokenVaultlessFormat(e.target.value)}>
@@ -1833,16 +1824,6 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
   const [newVaultCustomFormat,setNewVaultCustomFormat]=useState("");
   const [newVaultKeyId,setNewVaultKeyId]=useState("");
   const [newVaultRegex,setNewVaultRegex]=useState("");
-  const [newVaultStorageType,setNewVaultStorageType]=useState("internal");
-  const [newVaultProvider,setNewVaultProvider]=useState("postgres");
-  const [newVaultHost,setNewVaultHost]=useState("");
-  const [newVaultPort,setNewVaultPort]=useState("");
-  const [newVaultDatabase,setNewVaultDatabase]=useState("");
-  const [newVaultSchema,setNewVaultSchema]=useState("public");
-  const [newVaultTable,setNewVaultTable]=useState("token_vault_records");
-  const [newVaultUser,setNewVaultUser]=useState("");
-  const [newVaultPasswordRef,setNewVaultPasswordRef]=useState("");
-  const [newVaultTLSMode,setNewVaultTLSMode]=useState("require");
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
   const tokenTypes=["credit_card","ssn","iban","email","phone","custom"];
   const tokenFormats=["random","format_preserving","deterministic","irreversible","custom"];
@@ -1903,32 +1884,6 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
-  const downloadVaultSetup=async()=>{
-    if(!session?.token){
-      onToast?.("Login is required.");
-      return;
-    }
-    try{
-      const item=await downloadTokenVaultExternalSchema(session,newVaultProvider as any);
-      const content=String(item?.content||"");
-      if(!content){
-        throw new Error("External setup script is empty.");
-      }
-      const blob=new Blob([content],{type:String(item?.content_type||"text/plain")});
-      const url=URL.createObjectURL(blob);
-      const anchor=document.createElement("a");
-      anchor.href=url;
-      anchor.download=String(item?.filename||`token_vault_${newVaultProvider}.sql`);
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      onToast?.("External vault setup script downloaded.");
-    }catch(error){
-      onToast?.(`Setup script download failed: ${errMsg(error)}`);
-    }
-  };
-
   const createVaultFromPolicy=async()=>{
     if(!session?.token){
       onToast?.("Login is required.");
@@ -1950,56 +1905,15 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
       onToast?.("Custom regex is required for custom token type.");
       return;
     }
-    if(String(newVaultStorageType||"")==="external"){
-      if(newVaultProvider==="mongodb"){
-        if(!String(newVaultHost||"").trim()||!String(newVaultDatabase||"").trim()){
-          onToast?.("MongoDB vault requires URI and database.");
-          return;
-        }
-      }else if(!String(newVaultHost||"").trim()||!String(newVaultDatabase||"").trim()){
-        onToast?.("External vault requires host and database.");
-        return;
-      }
-    }
     setCreatingVault(true);
     try{
-      const externalConfig=String(newVaultStorageType||"")==="external"
-        ? (newVaultProvider==="mongodb"
-            ? {
-                uri:(()=>{
-                  const raw=String(newVaultHost||"").trim();
-                  if(/^mongodb(\+srv)?:\/\//i.test(raw)){
-                    return raw;
-                  }
-                  return `mongodb://${raw}`;
-                })(),
-                database:String(newVaultDatabase||"").trim()||"vecta_token_vault",
-                auth_database:String(newVaultSchema||"").trim()||"admin",
-                table:String(newVaultTable||"").trim()||"token_vault_records",
-                password_ref:String(newVaultPasswordRef||"").trim()
-              }
-            : {
-                host:String(newVaultHost||"").trim(),
-                port:String(newVaultPort||"").trim(),
-                database:String(newVaultDatabase||"").trim(),
-                schema:String(newVaultSchema||"").trim(),
-                table:String(newVaultTable||"").trim(),
-                username:String(newVaultUser||"").trim(),
-                password_ref:String(newVaultPasswordRef||"").trim(),
-                tls_mode:String(newVaultTLSMode||"").trim()
-              })
-        : undefined;
       const created=await createTokenVault(session,{
         name:String(newVaultName||"").trim(),
         token_type:String(newVaultTokenType||"").trim(),
         format:newVaultFormat as any,
         custom_token_format:String(newVaultCustomFormat||"").trim()||undefined,
         key_id:String(newVaultKeyId||"").trim(),
-        custom_regex:String(newVaultRegex||"").trim()||undefined,
-        storage_type:(newVaultStorageType==="external"?"external":"internal") as any,
-        external_provider:newVaultStorageType==="external"?String(newVaultProvider||"").trim():undefined,
-        external_config:externalConfig,
-        external_schema_version:newVaultStorageType==="external"?"v1":undefined
+        custom_regex:String(newVaultRegex||"").trim()||undefined
       });
       onToast?.(`Token vault created: ${String(created?.id||"")}`);
       await refreshVaultRows(true);
@@ -2023,10 +1937,8 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
       onToast?.("Vault ID is required.");
       return;
     }
-    const storageType=String(row?.storage_type||"internal").toLowerCase();
-    const targetLabel=storageType==="external"?"external vault connection":"internal token vault";
     if(typeof window!=="undefined"){
-      const ok=window.confirm(`Delete ${targetLabel} ${String(row?.name||vaultID)}? This will remove local metadata and token mappings for this vault.`);
+      const ok=window.confirm(`Delete token vault ${String(row?.name||vaultID)}? This removes the vault and its token mappings.`);
       if(!ok){
         return;
       }
@@ -2034,7 +1946,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
     setDeletingVaultId(vaultID);
     try{
       await deleteTokenVault(session,vaultID,{governanceApproved:true});
-      onToast?.(storageType==="external"?"External vault connection deleted.":"Token vault deleted.");
+      onToast?.("Token vault deleted.");
       await refreshVaultRows(true);
     }catch(error){
       onToast?.(`Delete vault failed: ${errMsg(error)}`);
@@ -2381,7 +2293,6 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
             <div style={{fontSize:11,color:C.text,fontWeight:700}}>Create Token Vault (from Policy)</div>
             <div style={{display:"flex",gap:8}}>
               <Btn small onClick={()=>void refreshVaultRows(false)} disabled={refreshingVaults||creatingVault}>{refreshingVaults?"Refreshing...":"Refresh Vaults"}</Btn>
-              {newVaultStorageType==="external"&&<Btn small onClick={()=>void downloadVaultSetup()} disabled={creatingVault}>Download Setup Query</Btn>}
               <Btn small primary onClick={()=>void createVaultFromPolicy()} disabled={creatingVault||refreshingVaults}>{creatingVault?"Creating...":"Create Vault"}</Btn>
             </div>
           </div>
@@ -2400,44 +2311,15 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
             {newVaultFormat==="custom"&&<FG label="Custom Format Name" required><Inp value={newVaultCustomFormat} onChange={(e)=>setNewVaultCustomFormat(e.target.value)} placeholder="pan_enterprise"/></FG>}
             {newVaultTokenType==="custom"&&<FG label="Custom Regex" required><Inp value={newVaultRegex} onChange={(e)=>setNewVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>}
             <FG label="Key ID" required><Inp value={newVaultKeyId} onChange={(e)=>setNewVaultKeyId(e.target.value)} placeholder="key-1" mono/></FG>
-            <FG label="Storage Type">
-              <Sel value={newVaultStorageType} onChange={(e)=>setNewVaultStorageType(e.target.value==="external"?"external":"internal")}>
-                <option value="internal">Internal KMS vault DB</option>
-                <option value="external">External DB vault</option>
-              </Sel>
-            </FG>
-            {newVaultStorageType==="external"&&<FG label="External Provider" required>
-              <Sel value={newVaultProvider} onChange={(e)=>setNewVaultProvider(e.target.value)}>
-                <option value="postgres">PostgreSQL</option>
-                <option value="mysql">MySQL</option>
-                <option value="mssql">MSSQL</option>
-                <option value="oracle">Oracle</option>
-                <option value="mongodb">MongoDB</option>
-              </Sel>
-            </FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Host" required><Inp value={newVaultHost} onChange={(e)=>setNewVaultHost(e.target.value)} placeholder="db.example.com"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Port"><Inp value={newVaultPort} onChange={(e)=>setNewVaultPort(e.target.value)} placeholder="5432"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Database" required><Inp value={newVaultDatabase} onChange={(e)=>setNewVaultDatabase(e.target.value)} placeholder="vecta_token_vault"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Schema"><Inp value={newVaultSchema} onChange={(e)=>setNewVaultSchema(e.target.value)} placeholder="public"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Table"><Inp value={newVaultTable} onChange={(e)=>setNewVaultTable(e.target.value)} placeholder="token_vault_records"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Username"><Inp value={newVaultUser} onChange={(e)=>setNewVaultUser(e.target.value)} placeholder="vault_user"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="MongoDB URI" required><Inp value={newVaultHost} onChange={(e)=>setNewVaultHost(e.target.value)} placeholder="mongodb://mongo.example.com:27017"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Database" required><Inp value={newVaultDatabase} onChange={(e)=>setNewVaultDatabase(e.target.value)} placeholder="vecta_token_vault"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Auth Database"><Inp value={newVaultSchema} onChange={(e)=>setNewVaultSchema(e.target.value)} placeholder="admin"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Collection"><Inp value={newVaultTable} onChange={(e)=>setNewVaultTable(e.target.value)} placeholder="token_vault_records"/></FG>}
-            {newVaultStorageType==="external"&&<FG label="Password Secret Ref" hint="Store DB password in KMS secret vault and reference it here."><Inp value={newVaultPasswordRef} onChange={(e)=>setNewVaultPasswordRef(e.target.value)} placeholder="secret://db/token-vault-password"/></FG>}
-            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="TLS Mode"><Inp value={newVaultTLSMode} onChange={(e)=>setNewVaultTLSMode(e.target.value)} placeholder="require"/></FG>}
           </div>
           <div style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
           <div style={{fontSize:10,color:C.text,fontWeight:700}}>Existing token vaults: {Array.isArray(vaultRows)?vaultRows.length:0}</div>
           <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
             {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=>{
               const id=String(row?.id||"");
-              const storageType=String(row?.storage_type||"internal").toLowerCase();
-              const isExternal=storageType==="external";
               return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.line}`,borderRadius:8,padding:"6px 8px"}}>
                 <div style={{fontSize:10,color:C.text}}>
-                  {`${String(row?.name||"")} (${id}) - ${String(row?.token_type||"")}/${String(row?.format||"")} - ${storageType}${String(row?.external_provider||"").trim()?`:${String(row?.external_provider||"")}`:""}`}
+                  {`${String(row?.name||"")} (${id}) - ${String(row?.token_type||"")}/${String(row?.format||"")}`}
                 </div>
                 <Btn
                   small
@@ -2446,7 +2328,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
                 >
                   {deletingVaultId===id
                     ? "Deleting..."
-                    : (isExternal?"Delete Connection":"Delete Vault")}
+                    : "Delete Vault"}
                 </Btn>
               </div>;
             })}

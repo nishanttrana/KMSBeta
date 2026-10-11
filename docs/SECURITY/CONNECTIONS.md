@@ -274,12 +274,13 @@ It is deleted, not migrated.
   (7.39.0-beta). Entra ID supports the public Azure cloud only (the login
   host is fixed), and role assumption the standard AWS partition's regional
   STS endpoints.
-- Identity provider secrets (LDAP bind password, OIDC client secret) are
-  plaintext JSON in `auth_identity_provider_configs`. Auth can't depend on
-  compliance to sign users in (compliance depends on auth), so they need
-  either sealing inside auth with `pkg/mek` or an owner decision.
-- The tokenization external vault takes a `password_ref` that nothing
-  resolves; it should name a database credential type here.
+- Identity provider secrets (LDAP and AD bind passwords, OIDC and Entra
+  client secrets) are not in this store, by decision: auth can't depend on
+  compliance to sign users in. They are sealed inside auth under its own
+  master key (9.0.0-beta, [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md)).
+- The tokenization "external vault" and its `password_ref` are gone
+  (9.0.0-beta): nothing ever connected to the database it named
+  ([REAL_CAPABILITY.md](REAL_CAPABILITY.md)).
 - Cloud credentials name public provider endpoints only: a custom endpoint
   on a private address is refused, and the cloud service's own HTTP clients
   don't go through the outbound guard.

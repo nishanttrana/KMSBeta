@@ -258,9 +258,12 @@ an approach, record it here or in the matching doc below.
   new integration is a credential type with its service added to
   `connectionUsers`, a usage lookup for the delete guard, and a real test
   ([docs/SECURITY/CONNECTIONS.md](docs/SECURITY/CONNECTIONS.md)). Its UI is
-  a `CredentialPicker`, linking to Credentials when none exists. The one
-  exception is the tenant's HSM profile (root of trust), whose PIN stays on
-  the connector host.
+  a `CredentialPicker`, linking to Credentials when none exists. Two
+  exceptions: the tenant's HSM profile (root of trust), whose PIN stays on
+  the connector host; and identity provider secrets (LDAP and AD bind
+  passwords, OIDC and Entra client secrets), which auth seals itself under
+  its own master key, because signing in can't depend on compliance
+  (9.0.0-beta, docs/DECISIONS.md).
 - **Playbooks are the platform's response layer** (owner directive,
   2026-09-28: "playbook should be fundamental part of the KMS for any and
   every action incident"). An event that signals an incident or a

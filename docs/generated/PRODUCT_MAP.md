@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-10-11T04:20:01Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T09:21:14Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,13 +9,13 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `26`
 - Tab/component mappings: `33`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `888` across `28` services
-- Backend routes on the `pkg/route` kernel: `460` (permission and audit action in `backend-routes.csv`)
-- Frontend API call sites discovered: `564`
-- Frontend call sites with exact backend route match: `518`
+- Backend HTTP routes discovered: `890` across `28` services
+- Backend routes on the `pkg/route` kernel: `462` (permission and audit action in `backend-routes.csv`)
+- Frontend API call sites discovered: `563`
+- Frontend call sites with exact backend route match: `517`
 - Frontend call sites needing review or dynamic/runtime confirmation: `46`
-- Clickable controls with static `onClick` handlers: `764`
-- Backend request flows with handler/service/package summaries: `888`
+- Clickable controls with static `onClick` handlers: `763`
+- Backend request flows with handler/service/package summaries: `890`
 
 ## How To Use This For Launch
 
@@ -138,7 +138,7 @@ flowchart LR
   tab_restapi --> svc_certs
   tab_restapi --> svc_secrets
   svc_audit["audit (34 routes)"]
-  svc_auth["auth (87 routes)"]
+  svc_auth["auth (90 routes)"]
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
@@ -208,7 +208,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Service | Routes | Frontend call sites |
 | --- | --- | --- |
 | audit | 34 | 21 |
-| auth | 87 | 47 |
+| auth | 90 | 47 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
 | certs | 69 | 52 |
@@ -216,7 +216,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | cluster-manager | 21 | 11 |
 | compliance | 61 | 28 |
 | confidential | 7 | 6 |
-| dataprotect | 50 | 29 |
+| dataprotect | 49 | 28 |
 | discovery | 24 | 22 |
 | ekm | 65 | 44 |
 | governance | 35 | 23 |
@@ -313,42 +313,42 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | auth | POST | /auth/delegated/users/{id}/disable | h.delegatedDisableUser | authenticated | services/auth/delegated.go | 78 |
 | auth | POST | /auth/delegated/api-keys/{id}/revoke | h.delegatedRevokeAPIKey | authenticated | services/auth/delegated.go | 79 |
 | auth | POST | /auth/delegated/clients/{id}/revoke | h.delegatedRevokeClient | authenticated | services/auth/delegated.go | 80 |
-| auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 68 |
-| auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 69 |
-| auth | POST | /auth/client-token | h.handleClientToken |  | services/auth/handler.go | 70 |
-| auth | POST | /auth/cluster/mint | h.handleClusterMint |  | services/auth/handler.go | 71 |
-| auth | POST | /auth/workload-token | h.handleIssueWorkloadToken |  | services/auth/handler.go | 72 |
-| auth | POST | /auth/refresh | h.withAuth(h.handleRefresh, "auth.token.refresh") |  | services/auth/handler.go | 75 |
-| auth | POST | /auth/change-password | h.withAuth(h.handleChangePassword, "") |  | services/auth/handler.go | 76 |
-| auth | POST | /auth/logout | h.withAuth(h.handleLogout, "auth.session.logout") |  | services/auth/handler.go | 79 |
-| auth | GET | /auth/me | h.withAuth(h.handleMe, "auth.self.read") |  | services/auth/handler.go | 80 |
-| auth | GET | /tenants/{id} | h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin") |  | services/auth/handler.go | 84 |
-| auth | POST | /tenants/{id}/roles | h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 89 |
-| auth | PUT | /tenants/{id}/roles/{name} | h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 90 |
-| auth | DELETE | /tenants/{id}/roles/{name} | h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 91 |
-| auth | GET | /auth/users | h.withAuth(h.handleListUsers, "auth.user.read") |  | services/auth/handler.go | 93 |
-| auth | GET | /auth/identity/providers/{provider} | h.withAuth(h.handleGetIdentityProviderConfig, "auth.user.read") |  | services/auth/handler.go | 96 |
-| auth | GET | /auth/identity/providers/{provider}/users | h.withAuth(h.handleListIdentityProviderUsers, "auth.user.read") |  | services/auth/handler.go | 99 |
-| auth | GET | /auth/identity/providers/{provider}/groups | h.withAuth(h.handleListIdentityProviderGroups, "auth.user.read") |  | services/auth/handler.go | 100 |
-| auth | GET | /auth/identity/providers/{provider}/groups/{id}/members | h.withAuth(h.handleListIdentityProviderGroupMembers, "auth.user.read") |  | services/auth/handler.go | 101 |
-| auth | POST | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 128 |
-| auth | GET | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 129 |
-| auth | GET | /auth/sso/saml/metadata | h.handleSAMLMetadata |  | services/auth/handler.go | 130 |
-| auth | GET | /scim/v2/ServiceProviderConfig | h.handleSCIMServiceProviderConfig |  | services/auth/handler.go | 136 |
-| auth | GET | /scim/v2/Schemas | h.handleSCIMSchemas |  | services/auth/handler.go | 137 |
-| auth | GET | /scim/v2/ResourceTypes | h.handleSCIMResourceTypes |  | services/auth/handler.go | 138 |
-| auth | GET | /scim/v2/Users | h.handleSCIMListUsers |  | services/auth/handler.go | 139 |
-| auth | POST | /scim/v2/Users | h.handleSCIMCreateUser |  | services/auth/handler.go | 140 |
-| auth | GET | /scim/v2/Users/{id} | h.handleSCIMGetUser |  | services/auth/handler.go | 141 |
-| auth | PUT | /scim/v2/Users/{id} | h.handleSCIMReplaceUser |  | services/auth/handler.go | 142 |
-| auth | PATCH | /scim/v2/Users/{id} | h.handleSCIMPatchUser |  | services/auth/handler.go | 143 |
-| auth | DELETE | /scim/v2/Users/{id} | h.handleSCIMDeleteUser |  | services/auth/handler.go | 144 |
-| auth | GET | /scim/v2/Groups | h.handleSCIMListGroups |  | services/auth/handler.go | 145 |
-| auth | POST | /scim/v2/Groups | h.handleSCIMCreateGroup |  | services/auth/handler.go | 146 |
-| auth | GET | /scim/v2/Groups/{id} | h.handleSCIMGetGroup |  | services/auth/handler.go | 147 |
-| auth | PUT | /scim/v2/Groups/{id} | h.handleSCIMReplaceGroup |  | services/auth/handler.go | 148 |
-| auth | PATCH | /scim/v2/Groups/{id} | h.handleSCIMPatchGroup |  | services/auth/handler.go | 149 |
-| auth | DELETE | /scim/v2/Groups/{id} | h.handleSCIMDeleteGroup |  | services/auth/handler.go | 150 |
+| auth | GET | /auth/register/{id}/status | h.handleRegistrationStatus |  | services/auth/handler.go | 71 |
+| auth | POST | /auth/login | h.handleLogin |  | services/auth/handler.go | 72 |
+| auth | POST | /auth/client-token | h.handleClientToken |  | services/auth/handler.go | 73 |
+| auth | POST | /auth/cluster/mint | h.handleClusterMint |  | services/auth/handler.go | 74 |
+| auth | POST | /auth/workload-token | h.handleIssueWorkloadToken |  | services/auth/handler.go | 75 |
+| auth | POST | /auth/refresh | h.withAuth(h.handleRefresh, "auth.token.refresh") |  | services/auth/handler.go | 78 |
+| auth | POST | /auth/change-password | h.withAuth(h.handleChangePassword, "") |  | services/auth/handler.go | 79 |
+| auth | POST | /auth/logout | h.withAuth(h.handleLogout, "auth.session.logout") |  | services/auth/handler.go | 82 |
+| auth | GET | /auth/me | h.withAuth(h.handleMe, "auth.self.read") |  | services/auth/handler.go | 83 |
+| auth | GET | /tenants/{id} | h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin") |  | services/auth/handler.go | 87 |
+| auth | POST | /tenants/{id}/roles | h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 92 |
+| auth | PUT | /tenants/{id}/roles/{name} | h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 93 |
+| auth | DELETE | /tenants/{id}/roles/{name} | h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin") |  | services/auth/handler.go | 94 |
+| auth | GET | /auth/users | h.withAuth(h.handleListUsers, "auth.user.read") |  | services/auth/handler.go | 96 |
+| auth | GET | /auth/identity/providers/{provider} | h.withAuth(h.handleGetIdentityProviderConfig, "auth.user.read") |  | services/auth/handler.go | 99 |
+| auth | GET | /auth/identity/providers/{provider}/users | h.withAuth(h.handleListIdentityProviderUsers, "auth.user.read") |  | services/auth/handler.go | 102 |
+| auth | GET | /auth/identity/providers/{provider}/groups | h.withAuth(h.handleListIdentityProviderGroups, "auth.user.read") |  | services/auth/handler.go | 103 |
+| auth | GET | /auth/identity/providers/{provider}/groups/{id}/members | h.withAuth(h.handleListIdentityProviderGroupMembers, "auth.user.read") |  | services/auth/handler.go | 104 |
+| auth | POST | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 131 |
+| auth | GET | /auth/sso/{provider}/callback | h.handleSSOCallback |  | services/auth/handler.go | 132 |
+| auth | GET | /auth/sso/saml/metadata | h.handleSAMLMetadata |  | services/auth/handler.go | 133 |
+| auth | GET | /scim/v2/ServiceProviderConfig | h.handleSCIMServiceProviderConfig |  | services/auth/handler.go | 139 |
+| auth | GET | /scim/v2/Schemas | h.handleSCIMSchemas |  | services/auth/handler.go | 140 |
+| auth | GET | /scim/v2/ResourceTypes | h.handleSCIMResourceTypes |  | services/auth/handler.go | 141 |
+| auth | GET | /scim/v2/Users | h.handleSCIMListUsers |  | services/auth/handler.go | 142 |
+| auth | POST | /scim/v2/Users | h.handleSCIMCreateUser |  | services/auth/handler.go | 143 |
+| auth | GET | /scim/v2/Users/{id} | h.handleSCIMGetUser |  | services/auth/handler.go | 144 |
+| auth | PUT | /scim/v2/Users/{id} | h.handleSCIMReplaceUser |  | services/auth/handler.go | 145 |
+| auth | PATCH | /scim/v2/Users/{id} | h.handleSCIMPatchUser |  | services/auth/handler.go | 146 |
+| auth | DELETE | /scim/v2/Users/{id} | h.handleSCIMDeleteUser |  | services/auth/handler.go | 147 |
+| auth | GET | /scim/v2/Groups | h.handleSCIMListGroups |  | services/auth/handler.go | 148 |
+| auth | POST | /scim/v2/Groups | h.handleSCIMCreateGroup |  | services/auth/handler.go | 149 |
+| auth | GET | /scim/v2/Groups/{id} | h.handleSCIMGetGroup |  | services/auth/handler.go | 150 |
+| auth | PUT | /scim/v2/Groups/{id} | h.handleSCIMReplaceGroup |  | services/auth/handler.go | 151 |
+| auth | PATCH | /scim/v2/Groups/{id} | h.handleSCIMPatchGroup |  | services/auth/handler.go | 152 |
+| auth | DELETE | /scim/v2/Groups/{id} | h.handleSCIMDeleteGroup |  | services/auth/handler.go | 153 |
 | auth | POST | /internal/subjects/check | h.checkSubjects | authenticated | services/auth/subjects.go | 36 |
 | auth | GET | /internal/tenant-ids | h.listTenantIDs | authenticated | services/auth/tenant_ids.go | 20 |
 | autokey | POST | /autokey/templates | h.handleUpsertTemplate |  | services/autokey/handler.go | 34 |
@@ -418,7 +418,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/playbook-runs/{run_id} | h.getRun | compliance.playbook.read | services/compliance/handler_playbooks.go | 146 |
 | compliance | POST | /compliance/playbook-runs/{run_id}/cancel | h.cancelRun | compliance.playbook.run | services/compliance/handler_playbooks.go | 147 |
 
-Showing `120` of `365`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `366`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

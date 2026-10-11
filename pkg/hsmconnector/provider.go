@@ -286,30 +286,179 @@ func generate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label, algorithm string)
 // errImportRefused is an HSM that won't take key material from outside.
 var errImportRefused = errors.New("the HSM refused the key material")
 
-// importAES creates an AES key from material: a token object, sensitive and
-// not extractable, with the usages a generated key gets. An HSM whose policy
-// forbids C_CreateObject for secret keys (some FIPS-mode partitions) refuses
-// it, and nothing is left behind.
-func importAES(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label string, material []byte) (hsm.GenerateResult, error) {
-	if objs, err := find(ctx, sh, -1, label); err != nil {
-		return hsm.GenerateResult{}, err
-	} else if len(objs) > 0 {
-		return hsm.GenerateResult{}, errExists
-	}
-	tmpl := append(privateTemplate(label),
+// Import methods, as audited.
+const (
+	importCreateObject = "create_object"
+	importUnwrap       = "unwrap"
+)
+
+func aesImportTemplate(label string) []*pkcs11.Attribute {
+	return append(privateTemplate(label),
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_AES),
-		pkcs11.NewAttribute(pkcs11.CKA_VALUE, material),
 		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, false),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, false),
 	)
-	obj, err := ctx.CreateObject(sh, tmpl)
-	if err != nil {
-		return hsm.GenerateResult{}, fmt.Errorf("%w: C_CreateObject: %v", errImportRefused, err)
+}
+
+// importAES places AES material in the HSM as a token object, sensitive and
+// not extractable, with the usages a generated key gets. It returns how:
+// by C_CreateObject, or, where the HSM's policy forbids creating a secret
+// key from a value (some FIPS-mode partitions), by unwrapping it inside the
+// HSM (unwrapAES). An HSM that allows neither refuses it, and nothing is
+// left behind. only names one method to use and not fall back from ("":
+// either).
+func importAES(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label string, material []byte, only string) (hsm.GenerateResult, string, error) {
+	if objs, err := find(ctx, sh, -1, label); err != nil {
+		return hsm.GenerateResult{}, "", err
+	} else if len(objs) > 0 {
+		return hsm.GenerateResult{}, "", errExists
 	}
-	return hsm.GenerateResult{Label: label, KCV: aesKCV(ctx, sh, obj)}, nil
+	var (
+		obj     pkcs11.ObjectHandle
+		created = errors.New("not tried")
+	)
+	if only != importUnwrap {
+		if obj, created = ctx.CreateObject(sh, append(aesImportTemplate(label), pkcs11.NewAttribute(pkcs11.CKA_VALUE, material))); created == nil {
+			return hsm.GenerateResult{Label: label, KCV: aesKCV(ctx, sh, obj)}, importCreateObject, nil
+		}
+		if only == importCreateObject {
+			return hsm.GenerateResult{}, "", fmt.Errorf("%w: C_CreateObject: %v", errImportRefused, created)
+		}
+	}
+	obj, err := unwrapAES(ctx, sh, label, material)
+	if err != nil {
+		return hsm.GenerateResult{}, "", fmt.Errorf("%w: C_CreateObject: %v; unwrapping it in the HSM: %v", errImportRefused, created, err)
+	}
+	return hsm.GenerateResult{Label: label, KCV: aesKCV(ctx, sh, obj)}, importUnwrap, nil
+}
+
+// unwrapKeyBits is the size of the RSA key pair the HSM makes to receive a
+// key: 3072 bits, the strength the platform's own key transport uses.
+const unwrapKeyBits = 3072
+
+// unwrapAES brings AES material into the HSM without creating an object
+// from a value. The HSM generates an RSA key pair that exists for this
+// session only and whose private half can do nothing but unwrap; the
+// material is wrapped to its public key (RSA-OAEP, SHA-256) and the HSM
+// unwraps it straight into the token key. The pair is destroyed afterwards.
+func unwrapAES(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label string, material []byte) (pkcs11.ObjectHandle, error) {
+	pubTmpl := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
+		pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, unwrapKeyBits),
+		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{1, 0, 1}),
+	}
+	privTmpl := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true),
+		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, true),
+		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
+		pkcs11.NewAttribute(pkcs11.CKA_SIGN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, false),
+	}
+	pub, priv, err := ctx.GenerateKeyPair(sh, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)}, pubTmpl, privTmpl)
+	if err != nil {
+		return 0, fmt.Errorf("C_GenerateKeyPair (unwrapping key): %w", err)
+	}
+	defer ctx.DestroyObject(sh, pub)  //nolint:errcheck
+	defer ctx.DestroyObject(sh, priv) //nolint:errcheck
+	attrs, err := ctx.GetAttributeValue(sh, pub, []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_MODULUS, nil), pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, nil),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("C_GetAttributeValue: %w", err)
+	}
+	wrapped, err := pkgcrypto.WrapKeyToHSM(attrs[0].Value, attrs[1].Value, material)
+	if err != nil {
+		return 0, err
+	}
+	mech := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, pkcs11.NewOAEPParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, pkcs11.CKZ_DATA_SPECIFIED, nil))
+	// No CKA_VALUE_LEN: the HSM takes the length from what it unwraps and
+	// refuses a template that sets it (CKR_ATTRIBUTE_READ_ONLY).
+	obj, err := ctx.UnwrapKey(sh, []*pkcs11.Mechanism{mech}, priv, wrapped, aesImportTemplate(label))
+	if err != nil {
+		return 0, fmt.Errorf("C_UnwrapKey (RSA-OAEP, SHA-256): %w", err)
+	}
+	return obj, nil
+}
+
+// importPrivate places an RSA or ECDSA private key in the HSM, with its
+// public key object, as a generated pair would be: the private key a token
+// object, sensitive, not extractable, able to sign. It is then made to sign
+// and the signature checked against the public key, so a key the HSM
+// accepted but can't use is not left behind as if it worked.
+func importPrivate(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle, label string, k *pkgcrypto.HSMPrivateKey) (hsm.GenerateResult, error) {
+	if objs, err := find(ctx, sh, -1, label); err != nil {
+		return hsm.GenerateResult{}, err
+	} else if len(objs) > 0 {
+		return hsm.GenerateResult{}, errExists
+	}
+	pub := append(keyTemplateCommon(label),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
+	)
+	priv := append(privateTemplate(label),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
+	)
+	if strings.HasPrefix(k.Algorithm, "RSA-") {
+		pub = append(pub,
+			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+			pkcs11.NewAttribute(pkcs11.CKA_MODULUS, k.Modulus),
+			pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, k.PublicExponent),
+		)
+		priv = append(priv,
+			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
+			pkcs11.NewAttribute(pkcs11.CKA_MODULUS, k.Modulus),
+			pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, k.PublicExponent),
+			pkcs11.NewAttribute(pkcs11.CKA_PRIVATE_EXPONENT, k.PrivateExponent),
+			pkcs11.NewAttribute(pkcs11.CKA_PRIME_1, k.Prime1),
+			pkcs11.NewAttribute(pkcs11.CKA_PRIME_2, k.Prime2),
+			pkcs11.NewAttribute(pkcs11.CKA_EXPONENT_1, k.Exponent1),
+			pkcs11.NewAttribute(pkcs11.CKA_EXPONENT_2, k.Exponent2),
+			pkcs11.NewAttribute(pkcs11.CKA_COEFFICIENT, k.Coefficient),
+		)
+	} else {
+		pub = append(pub,
+			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
+			pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, k.ECParams),
+			pkcs11.NewAttribute(pkcs11.CKA_EC_POINT, k.ECPoint),
+		)
+		priv = append(priv,
+			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
+			pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, k.ECParams),
+			pkcs11.NewAttribute(pkcs11.CKA_VALUE, k.ECValue),
+		)
+	}
+	undo := func() { _, _ = destroy(ctx, sh, label) }
+	if _, err := ctx.CreateObject(sh, priv); err != nil {
+		return hsm.GenerateResult{}, fmt.Errorf("%w: C_CreateObject (private key): %v", errImportRefused, err)
+	}
+	if _, err := ctx.CreateObject(sh, pub); err != nil {
+		undo()
+		return hsm.GenerateResult{}, fmt.Errorf("%w: C_CreateObject (public key): %v", errImportRefused, err)
+	}
+	digest := pkgcrypto.SHA256([]byte("vecta-kms hsm import check " + label))
+	sig, err := sign(ctx, sh, label, "SHA-256", digest)
+	if err == nil {
+		var ok bool
+		if ok, err = verify(ctx, sh, label, "SHA-256", digest, sig); err == nil && !ok {
+			err = errors.New("its signature does not verify under its public key")
+		}
+	}
+	if err != nil {
+		undo()
+		return hsm.GenerateResult{}, fmt.Errorf("%w: the HSM took the key but can't sign with it: %v", errImportRefused, err)
+	}
+	return hsm.GenerateResult{Label: label, PublicKey: k.PublicKey}, nil
 }
 
 // aesKCV is the key check value, E(K, 0^128)[:3], computed in the HSM. It's

@@ -2388,7 +2388,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
     {/*  IMPORT KEY MODAL  */}
     <Modal open={modal==="import"} onClose={()=>setModal(null)} title="Import Key Material" width={920}>
-      <HSMTargetPicker session={session} material="imported" supported={/^AES-(128|192|256)/i.test(importAlgorithm)} unsupportedReason="Only AES-128/192/256 material can be placed in an HSM: choose the algorithm (not auto-detect)."
+      <HSMTargetPicker session={session} material="imported" supported={/^(auto$|AES-(128|192|256)|RSA-(2048|3072|4096)|ECDSA-P(256|384))/i.test(importAlgorithm)} unsupportedReason="An HSM takes AES-128/192/256 material and RSA-2048/3072/4096 or ECDSA P-256/P-384 private keys."
         checked={matHSM.on} onChecked={(on)=>setMatHSM((p)=>({...p,on}))} connection={matHSM.conn} onConnection={(conn)=>setMatHSM((p)=>({...p,conn}))} onNavigate={onNavigate}/>
       <FG label="Import Method" required>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>

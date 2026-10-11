@@ -36,7 +36,10 @@ type Handler struct {
 	logger        *log.Logger
 	healthChecker *SystemHealthChecker
 	mux           *http.ServeMux
-	kernelAudit   route.Emitter
+	// idpRemediate closes a provider's exposure register entry once its
+	// secrets are replaced; nil until the master key is open.
+	idpRemediate func(ctx context.Context, tenantID, provider, by string) bool
+	kernelAudit  route.Emitter
 }
 
 func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *metering.Meter, logger *log.Logger, healthChecker ...*SystemHealthChecker) *Handler {

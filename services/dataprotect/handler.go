@@ -75,7 +75,6 @@ func (h *Handler) routes(audit route.Emitter) *route.Router {
 	r.Handle("POST /detokenize/batch", route.Spec{Action: "detokenize_batch", Permission: "dataprotect.use", Resource: "dataprotect", Severity: "warning"}, legacy(h.handleDetokenize))
 	r.Handle("GET /token-vaults", route.Spec{Action: "token_vaults_list", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleListTokenVaults))
 	r.Handle("POST /token-vaults", route.Spec{Action: "token_vault_create", Permission: "dataprotect.write", Resource: "dataprotect"}, legacy(h.handleCreateTokenVault))
-	r.Handle("GET /token-vaults/external-schema", route.Spec{Action: "token_vault_schema_read", Permission: "dataprotect.read", Resource: "dataprotect"}, legacy(h.handleGetTokenVaultExternalSchema))
 	r.Handle("GET /token-vaults/{id}", route.Spec{Action: "token_vault_read", Permission: "dataprotect.read", Resource: "dataprotect", TargetParam: "id"}, legacy(h.handleGetTokenVault))
 	r.Handle("DELETE /token-vaults/{id}", route.Spec{Action: "token_vault_delete", Permission: "dataprotect.delete", Resource: "dataprotect", TargetParam: "id", Severity: "warning"}, legacy(h.handleDeleteTokenVault))
 	r.Handle("POST /fpe/encrypt", route.Spec{Action: "fpe_encrypt", Permission: "dataprotect.use", Resource: "dataprotect"}, legacy(h.handleFPEEncrypt))
@@ -189,21 +188,6 @@ func (h *Handler) handleGetTokenVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item, err := h.svc.GetTokenVault(r.Context(), tenantID, r.PathValue("id"))
-	if err != nil {
-		h.writeServiceError(w, err, reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
-}
-
-func (h *Handler) handleGetTokenVaultExternalSchema(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	provider := strings.TrimSpace(r.URL.Query().Get("provider"))
-	item, err := h.svc.GetExternalTokenVaultSetup(provider)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return

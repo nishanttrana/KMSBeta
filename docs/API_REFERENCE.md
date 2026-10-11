@@ -2034,7 +2034,7 @@ without `compliance.connection.use` (`403 credential_use_not_permitted`):
 | `POST /cloud/accounts/{id}/test` | | `cloud.write`; lists the provider's keys with the account's credential and records the result on it (`audit.cloud.account_test_requested`, `audit.cloud.account_tested`) |
 | `POST /ekm/azure/configs`, `PUT /ekm/azure/configs/{id}` | `connection_id` (was `client_secret`; `azure_tenant_id` and `client_id` are read from the credential) | `audit.ekm.azure_config_refused`; `auth_mode: managed_identity` needs none |
 | `PUT /governance/settings` | `smtp_connection_id` (was `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from`, `smtp_starttls`) | `audit.governance.mail_settings_refused`; also `mail_relay_is_a_credential` |
-| `POST /keys`, `POST /keys/form`, `POST /keys/import` | `hsm_connection_id` with `hsm: true` | the HSM credential the key goes on; empty is the tenant's HSM. Form and import: AES-128/192/256 only |
+| `POST /keys`, `POST /keys/form`, `POST /keys/import` | `hsm_connection_id` with `hsm: true` | the HSM credential the key goes on; empty is the tenant's HSM. Form: AES-128/192/256. Import: AES-128/192/256 material, or (9.0.0-beta) an RSA-2048/3072/4096 or ECDSA P-256/P-384 private key (`import_method: pem`); anything else is `400 hsm_import_not_supported` |
 | `POST /certs/ca` | `hsm_connection_id` with `key_backend: "hsm"` | `403 hsm_credential_not_permitted` (`audit.cert.hsm_credential_refused`) |
 | `GET /hsm/targets` (keycore) | | `key.hsm.read`; `{"targets": [{id, kind, name, topology, vendor, usable, reason, status}], "credentials_state"}` where `credentials_state` is `listed`, `not_deployed`, `not_permitted` or `unavailable` (`audit.key.hsm_targets_listed`) |
 | `GET /hsm/objects?connection_id=` (keycore) | | lists an HSM credential's partition |
@@ -2045,7 +2045,30 @@ Internal lookups, callable only by `kms-compliance` (others:
 `POST /cloud/credentials/{id}/test`, `GET /ekm/credential-usage`,
 `GET /keys/hsm/credential-usage`. The HSM connector takes
 `?connection_id=` on every route and adds `POST /hsm/keys/import`
-(`audit.hsm.key_imported`).
+(`audit.hsm.key_imported`). Its body is `{tenant_id, label, algorithm,
+material_b64, import_method}`: `material_b64` is AES material or a private
+key in DER; `import_method` (AES only) is `create_object` or `unwrap` to
+use that way alone, empty to try the first and then the second. The answer
+carries `kcv_b64` (AES), `public_key_b64` (private key) and the
+`import_method` used (9.0.0-beta).
+
+**9.0.0-beta.**
+- `POST /token-vaults` (dataprotect) no longer takes external storage:
+  `storage_type` other than `internal`, or any of `external_provider`,
+  `external_config`, `external_schema_version`, is
+  `400 external_vault_removed` (`audit.dataprotect.token_vault_refused`).
+  A vault's `storage_type` is always `internal`. The route that served
+  setup SQL for an external database is removed.
+- `GET|PUT /auth/identity/providers/{provider}` and
+  `GET /auth/identity/providers` answer `503 secrets_unavailable` while
+  the auth master key is not open and the provider has sealed secrets. A
+  provider's secrets are never returned; `secret_presence` says which are
+  set.
+- Auth serves the exposure register like every master-key service:
+  `GET /mek/exposure` (`auth.read`),
+  `POST /mek/exposure/{item_type}/{item_id}/acknowledge`
+  (`auth.exposure.acknowledge`), `POST /mek/rewrap-legacy`
+  (`kms-governance` only). `kms-auth` is a service identity.
 
 The Cloud BYOK and Autokey services now require a verified bearer token on
 every route (`401`, audited as `audit.cloud.request_refused` /
@@ -3849,6 +3872,8 @@ Selected events with dedicated audit classification:
 - `audit.hsm.random_generated` (hsm-connector `POST /hsm/random`)
 - `audit.pqc.migration_step_executed` (per step: `successor_created` or `rotated`), `audit.pqc.migration_executed`, `audit.pqc.migration_failed`, `audit.pqc.migration_rolled_back`
 - `audit.sbom.generated` (`snapshot_id`, `component_count`, `trigger`), `audit.sbom.cbom_generated` (was `audit.cbom.generated` before 1.37.0-beta): the snapshot produced, manual or scheduled (`trigger`), emitted through `pkg/audit` with actor `kms-sbom`. `GET /cbom/history` returns `[]` when no snapshot exists; it never generates one
+- `audit.auth.identity_provider_secrets_sealed` / `identity_provider_secrets_seal_refused` (9.0.0-beta): the primary sealed identity provider secrets an earlier release stored in plaintext, or could not
+- `audit.dataprotect.token_vault_refused` (9.0.0-beta): a token vault was asked for with the removed external database storage
 - `audit.workload.mek_signing_keys_sealed` / `mek_signing_keys_seal_refused` (6.11.0-beta): the primary sealed a tenant's plaintext signing keys from an earlier release, or couldn't (`result: refused`, `reason: seal_failed`); `audit.workload.mek_exposure_recorded` precedes each seal
 - `audit.workload.*` request events (route kernel, 6.9.0-beta): `settings_viewed`, `settings_updated`, `signing_keys_rotated` (6.11.0-beta), `summary_viewed`, `registrations_viewed`, `registration_upserted`, `registration_deleted`, `federation_viewed`, `federation_bundle_upserted`, `federation_bundle_deleted`, `svid_issued`, `issuance_history_viewed`, `token_exchanged` (actor: the verified SPIFFE ID), `graph_viewed`, `key_usage_viewed`
 - `audit.keyaccess.*` request events (route kernel, 6.9.0-beta): `settings_viewed`, `settings_updated`, `summary_viewed`, `codes_viewed`, `code_upserted`, `code_deleted`, `decisions_viewed`, `decision_evaluated` (refusals `evaluator_identity_required`, `service_mismatch`)
@@ -4356,7 +4381,6 @@ from the code; do not edit by hand.
 - `GET /svc/dataprotect/stats`
 - `GET /svc/dataprotect/token-vaults`
 - `POST /svc/dataprotect/token-vaults`
-- `GET /svc/dataprotect/token-vaults/external-schema`
 - `DELETE /svc/dataprotect/token-vaults/{id}`
 - `GET /svc/dataprotect/token-vaults/{id}`
 - `POST /svc/dataprotect/tokenize`

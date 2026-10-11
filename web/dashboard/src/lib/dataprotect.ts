@@ -6,10 +6,8 @@ export type TokenVault = {
   tenant_id: string;
   name: string;
   mode?: "vault" | "vaultless" | string;
-  storage_type?: "internal" | "external" | string;
-  external_provider?: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
-  external_config?: Record<string, string>;
-  external_schema_version?: string;
+  // Always "internal": tokens are stored in the KMS.
+  storage_type?: string;
   token_type: string;
   format: "random" | "format_preserving" | "deterministic" | "irreversible" | "custom" | string;
   custom_token_format?: string;
@@ -63,7 +61,6 @@ type RedactionPoliciesResponse = { items: RedactionPolicy[] };
 type RedactionPolicyResponse = { item: RedactionPolicy };
 type AppResponse = { result: Record<string, unknown> };
 type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
-type TokenVaultExternalSchemaResponse = { item: TokenVaultExternalSchema };
 type FieldEncryptionWrapperResponse = {
   wrapper: FieldEncryptionWrapper;
   auth_profile?: FieldEncryptionAuthProfile;
@@ -301,10 +298,6 @@ export type CreateTokenVaultInput = {
   format: "random" | "format_preserving" | "deterministic" | "irreversible" | "custom";
   custom_token_format?: string;
   key_id: string;
-  storage_type?: "internal" | "external";
-  external_provider?: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
-  external_config?: Record<string, string>;
-  external_schema_version?: string;
   custom_regex?: string;
 };
 
@@ -320,14 +313,6 @@ export type TokenizeInput = {
   ttl_hours?: number;
   one_time_token?: boolean;
   metadata_tags?: Record<string, string>;
-};
-
-export type TokenVaultExternalSchema = {
-  provider: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
-  filename: string;
-  content_type: string;
-  content: string;
-  schema_ver?: string;
 };
 
 export type DetokenizeInput = {
@@ -450,18 +435,6 @@ export async function deleteTokenVault(
   await serviceRequest(session, "dataprotect", `/token-vaults/${encodeURIComponent(String(vaultId || "").trim())}?${q.toString()}`, {
     method: "DELETE"
   });
-}
-
-export async function downloadTokenVaultExternalSchema(
-  session: AuthSession,
-  provider: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string
-): Promise<TokenVaultExternalSchema> {
-  const out = await serviceRequest<TokenVaultExternalSchemaResponse>(
-    session,
-    "dataprotect",
-    `/token-vaults/external-schema?tenant_id=${encodeURIComponent(session.tenantId)}&provider=${encodeURIComponent(String(provider || "").trim())}`
-  );
-  return out?.item || { provider: String(provider || ""), filename: "", content_type: "text/plain", content: "" };
 }
 
 export async function tokenizeValues(session: AuthSession, input: TokenizeInput): Promise<Array<Record<string, unknown>>> {

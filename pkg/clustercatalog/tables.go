@@ -19,6 +19,8 @@ var Replicated = map[string][]string{
 		"auth_client_registrations",
 		"auth_group_role_bindings",
 		"auth_identity_provider_configs",
+		"auth_mek_exposure",
+		"auth_mek_state",
 		"auth_password_policies",
 		"auth_scim_group_members",
 		"auth_scim_groups",

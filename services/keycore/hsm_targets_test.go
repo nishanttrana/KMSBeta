@@ -1,8 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	stdcrypto "crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -270,7 +279,7 @@ func TestImportAndFormIntoHSM(t *testing.T) {
 	if _, err := svc.ImportKey(ctx, bad); err == nil || !strings.Contains(err.Error(), "kcv mismatch") {
 		t.Fatalf("wrong KCV: %v", err)
 	}
-	// Only AES material can be placed in an HSM.
+	// Material with no HSM form (an HMAC key) can't be placed in one.
 	rsa := ImportKeyRequest{ImportMethod: "raw", MaterialB64: b64(raw)}
 	rsa.TenantID, rsa.Name, rsa.Algorithm, rsa.HSMConnectionID = "c3", "hmac", "HMAC-SHA256", lunaHA
 	if _, err := svc.ImportKey(ctx, rsa); hsmRefusalReason(err) != "hsm_import_not_supported" {
@@ -314,6 +323,100 @@ func TestImportAndFormIntoHSM(t *testing.T) {
 	}
 	for _, k := range []Key{key, formed, pk} {
 		if err := svc.DestroyKeyImmediately(ctx, "c3", k.ID, "test cleanup of imported HSM keys", "tester", "", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// An imported RSA or ECDSA private key goes to the HSM too (8.2.0-beta):
+// keycore keeps the public key and no private material, the HSM holds the
+// private key non-extractable, and the key signs there. A public key, or a
+// key the HSM path excludes, is refused and audited.
+func TestImportPrivateKeyIntoHSM(t *testing.T) {
+	svc, rec, client, _ := newHSMCredentialService(t, "c5")
+	ctx := adminCtx()
+	ec, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemOf := func(k any) string {
+		der, err := x509.MarshalPKCS8PrivateKey(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+	}
+	var made []Key
+	for alg, c := range map[string]struct{ priv, pub any }{"ECDSA-P256": {ec, &ec.PublicKey}, "RSA-2048": {rsaKey, &rsaKey.PublicKey}} {
+		imp := ImportKeyRequest{MaterialB64: pemOf(c.priv), ImportMethod: "pem"}
+		imp.TenantID, imp.Name, imp.Purpose, imp.HSMConnectionID = "c5", "imported-"+alg, "sign", lunaHA
+		key, err := svc.ImportKey(ctx, imp)
+		if err != nil {
+			t.Fatalf("%s: %v", alg, err)
+		}
+		made = append(made, key)
+		wantPub, _ := x509.MarshalPKIXPublicKey(c.pub)
+		sum := sha256.Sum256(wantPub)
+		if key.KCVAlgorithm != "sha256-spki" || !bytes.Equal(key.KCV, sum[:3]) || key.Labels[labelHSMOrigin] != "imported" || key.Labels[labelHSMConnection] != lunaHA || key.ExportAllowed {
+			t.Fatalf("%s key: kcv %x (%s) labels %v", alg, key.KCV, key.KCVAlgorithm, key.Labels)
+		}
+		ver, _ := svc.store.GetVersion(context.Background(), "c5", key.ID, 1)
+		if ver.Protection != protectionHSMResident || len(ver.EncryptedMaterial) != 0 || len(ver.WrappedDEK) != 0 || !bytes.Equal(ver.PublicKey, wantPub) {
+			t.Fatalf("%s version: protection %s, %d material bytes, public key matches %v", alg, ver.Protection, len(ver.EncryptedMaterial), bytes.Equal(ver.PublicKey, wantPub))
+		}
+		if d, _ := rec.find("audit.key.import")["details"].(map[string]any); d["hsm"] != true || d[labelHSMOrigin] != "imported" || d["key_id"] != key.ID {
+			t.Fatalf("%s import audit: %+v", alg, d)
+		}
+		objs, _, err := client.On(lunaHA).Inspect(context.Background(), "c5", ver.HSMLabel)
+		if err != nil || len(objs) != 2 {
+			t.Fatalf("%s objects: %v %+v", alg, err, objs)
+		}
+		for _, o := range objs {
+			if o.Class == "private_key" && (o.Extractable == nil || *o.Extractable || o.Sensitive == nil || !*o.Sensitive || o.Local == nil || *o.Local) {
+				t.Fatalf("%s private key object: %+v", alg, o)
+			}
+		}
+		// The HSM signs with it; the signature verifies under the public
+		// key of the key that was imported.
+		digest := sha256.Sum256([]byte("statement"))
+		sig, err := client.On(lunaHA).Sign(context.Background(), "c5", ver.HSMLabel, "SHA-256", digest[:])
+		if err != nil {
+			t.Fatalf("%s sign in the HSM: %v", alg, err)
+		}
+		switch pub := c.pub.(type) {
+		case *ecdsa.PublicKey:
+			if !ecdsa.VerifyASN1(pub, digest[:], sig) {
+				t.Fatalf("%s: signature does not verify", alg)
+			}
+		case *rsa.PublicKey:
+			if err := rsa.VerifyPSS(pub, stdcrypto.SHA256, digest[:], sig, &rsa.PSSOptions{SaltLength: 32}); err != nil {
+				t.Fatalf("%s: %v", alg, err)
+			}
+		}
+	}
+
+	pubDER, _ := x509.MarshalPKIXPublicKey(&ec.PublicKey)
+	refused := map[string]string{"a public key": string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))}
+	// Outside strict FIPS mode only: there the module won't make such a key.
+	if small, err := rsa.GenerateKey(rand.Reader, 1024); err == nil {
+		refused["a 1024-bit RSA key"] = pemOf(small)
+	}
+	for name, material := range refused {
+		imp := ImportKeyRequest{MaterialB64: material, ImportMethod: "pem"}
+		imp.TenantID, imp.Name, imp.HSMConnectionID = "c5", "refused", lunaHA
+		if _, err := svc.ImportKey(ctx, imp); hsmRefusalReason(err) != "hsm_import_not_supported" {
+			t.Fatalf("%s into the HSM: %v", name, err)
+		}
+		if d := refusalDetails(t, rec, "audit.key.hsm_refused"); d["reason"] != "hsm_import_not_supported" {
+			t.Fatalf("%s refusal audit: %+v", name, d)
+		}
+	}
+	for _, k := range made {
+		if err := svc.DestroyKeyImmediately(ctx, "c5", k.ID, "test cleanup of imported HSM keys", "tester", "", ""); err != nil {
 			t.Fatal(err)
 		}
 	}

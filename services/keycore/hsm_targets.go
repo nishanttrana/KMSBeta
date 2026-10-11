@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -282,13 +283,29 @@ func (s *Service) hsmTarget(ctx context.Context, req CreateKeyRequest, operation
 	}, nil
 }
 
-// importHSMKey places AES material (an imported key, or one formed from
-// components) in an HSM as a non-extractable key. Keycore keeps no copy.
+// importHSMKey places existing material in an HSM as a non-extractable key:
+// AES material (an imported key, or one formed from components), or an
+// imported RSA or ECDSA private key. Keycore keeps no copy.
 func (s *Service) importHSMKey(ctx context.Context, req CreateKeyRequest, raw []byte, expectedKCV, operation, auditSubject string) (Key, error) {
 	alg := hsm.NormalizeAlgorithm(req.Algorithm)
-	if !strings.HasPrefix(alg, "AES-") {
+	symmetric := strings.HasPrefix(alg, "AES-")
+	var private *crypto.HSMPrivateKey
+	if alg != "" && !symmetric {
+		// The material itself says what it is; a public key or a
+		// certificate is not something an HSM holds for the KMS.
+		var err error
+		if private, err = crypto.HSMPrivateKeyFromDER(raw); err == nil {
+			defer private.Zeroize()
+			if private.Algorithm != alg {
+				alg = ""
+			}
+		} else {
+			alg = ""
+		}
+	}
+	if alg == "" {
 		return Key{}, s.refuseHSM(ctx, req.TenantID, "", operation, http.StatusBadRequest, "hsm_import_not_supported",
-			"only AES-128/192/256 material can be placed in an HSM; create other keys in the HSM instead")
+			"AES-128/192/256 material and RSA-2048/3072/4096 or ECDSA P-256/P-384 private keys can be placed in an HSM; create other keys in the HSM instead")
 	}
 	backend, target, err := s.hsmTarget(ctx, req, operation)
 	if err != nil {
@@ -298,7 +315,7 @@ func (s *Service) importHSMKey(ctx context.Context, req CreateKeyRequest, raw []
 		return Key{}, err
 	}
 	if req.KeyType == "" {
-		req.KeyType = "symmetric"
+		req.KeyType = inferKeyTypeFromAlgorithm(req.Algorithm)
 	}
 	if req.CreatedBy == "" {
 		req.CreatedBy = "system"
@@ -316,9 +333,15 @@ func (s *Service) importHSMKey(ctx context.Context, req CreateKeyRequest, raw []
 	}); err != nil {
 		return Key{}, err
 	}
-	want, _, err := computeKCVStrict(req.Algorithm, raw)
-	if err != nil {
-		return Key{}, err
+	// What the HSM must end up holding: an AES key with this check value,
+	// or a private key with this public key.
+	var want []byte
+	if symmetric {
+		if want, _, err = computeKCVStrict(req.Algorithm, raw); err != nil {
+			return Key{}, err
+		}
+	} else {
+		want, _ = hsmKCV(hsm.GenerateResult{PublicKey: private.PublicKey})
 	}
 	if expectedKCV != "" && !strings.EqualFold(strings.TrimSpace(expectedKCV), hex.EncodeToString(want)) {
 		return Key{}, errors.New("kcv mismatch")
@@ -331,16 +354,25 @@ func (s *Service) importHSMKey(ctx context.Context, req CreateKeyRequest, raw []
 	} else if err != nil {
 		return Key{}, s.hsmFailure(ctx, req.TenantID, keyID, operation, err)
 	}
-	// The HSM computed its own KCV for what it now holds: it must be the
-	// material that was sent.
-	if len(gen.KCV) > 0 && !crypto.ConstantTimeEqual(gen.KCV, want) {
-		_ = backend.Destroy(ctx, req.TenantID, label)
-		return Key{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadGateway, "hsm_kcv_mismatch",
-			"the HSM's check value for the imported key differs from the material's: the object was removed")
-	}
+	// The HSM answered with its own check value, or the public key of what
+	// it now holds: it must be the material that was sent.
 	kcv, kcvMethod := want, "aes-ecb-zero"
-	if len(gen.KCV) > 0 {
-		kcvMethod = "aes-ecb-zero-hsm"
+	if symmetric {
+		if len(gen.KCV) > 0 && !crypto.ConstantTimeEqual(gen.KCV, want) {
+			_ = backend.Destroy(ctx, req.TenantID, label)
+			return Key{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadGateway, "hsm_kcv_mismatch",
+				"the HSM's check value for the imported key differs from the material's: the object was removed")
+		}
+		if len(gen.KCV) > 0 {
+			kcvMethod = "aes-ecb-zero-hsm"
+		}
+	} else {
+		if !bytes.Equal(gen.PublicKey, private.PublicKey) {
+			_ = backend.Destroy(ctx, req.TenantID, label)
+			return Key{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadGateway, "hsm_public_key_mismatch",
+				"the HSM's public key for the imported key differs from the material's: the objects were removed")
+		}
+		kcvMethod = "sha256-spki"
 	}
 	labels := hsmKeyLabels(req.Labels, target, gen.HSM)
 	labels[labelHSMOrigin] = "imported"
@@ -356,7 +388,7 @@ func (s *Service) importHSMKey(ctx context.Context, req CreateKeyRequest, raw []
 	ver := KeyVersion{
 		ID: newID("kv"), TenantID: req.TenantID, KeyID: keyID, Version: 1,
 		EncryptedMaterial: []byte{}, MaterialIV: []byte{}, WrappedDEK: []byte{},
-		KCV: kcv, Status: initialStatus, Protection: protectionHSMResident, HSMLabel: label,
+		PublicKey: gen.PublicKey, KCV: kcv, Status: initialStatus, Protection: protectionHSMResident, HSMLabel: label,
 	}
 	if err := s.store.CreateKeyWithVersion(ctx, key, ver); err != nil {
 		_ = backend.Destroy(ctx, req.TenantID, label) // don't leave an orphan in the HSM

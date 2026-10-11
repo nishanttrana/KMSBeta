@@ -6782,34 +6782,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "dataprotect-get-token-vaults-external-schema",
-    "group": "Data Protection (dataprotect)",
-    "title": "GET /token-vaults/external-schema",
-    "service": "dataprotect",
-    "method": "GET",
-    "pathTemplate": "/token-vaults/external-schema?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Data Protect service.",
-    "requestExample": "GET /svc/dataprotect/token-vaults/external-schema?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "dataprotect-post-app-decrypt-fields",
     "group": "Data Protection (dataprotect)",
     "title": "POST /app/decrypt-fields",

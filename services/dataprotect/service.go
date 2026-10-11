@@ -2795,10 +2795,18 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	}
 	in.Name = strings.TrimSpace(in.Name)
 	in.Mode = "vault"
-	in.StorageType = normalizeTokenStorageType(in.StorageType)
-	in.ExternalProvider = normalizeExternalVaultProvider(in.ExternalProvider)
-	in.ExternalConfig = normalizeExternalVaultConfig(in.ExternalConfig)
-	in.ExternalSchemaVersion = strings.TrimSpace(in.ExternalSchemaVersion)
+	// Tokens are stored in this KMS's own database. Until 9.0.0-beta a
+	// vault could be created as "external" with a database's address; the
+	// settings were stored and labelled, nothing ever connected to that
+	// database, and the tokens were kept here all the same. The option is
+	// removed and asking for it is refused, not quietly made internal.
+	if externalVaultRequested(in) {
+		_ = s.publishAudit(ctx, "audit.dataprotect.token_vault_refused", tenantID, map[string]interface{}{
+			"result": "refused", "reason": reasonExternalVaultRemoved, "severity": "warning", "name": strings.TrimSpace(in.Name),
+		})
+		return TokenVault{}, newServiceError(http.StatusBadRequest, reasonExternalVaultRemoved, "token vaults are stored in the KMS: an external database vault was never connected to and is no longer offered; omit storage_type and the external_* fields")
+	}
+	in.StorageType = "internal"
 	in.TokenType = strings.ToLower(strings.TrimSpace(in.TokenType))
 	in.Format = normalizeTokenFormat(in.Format)
 	in.CustomTokenFormat = normalizeTokenFormatName(in.CustomTokenFormat)
@@ -2806,22 +2814,6 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	in.CustomRegex = strings.TrimSpace(in.CustomRegex)
 	if in.Name == "" || in.TokenType == "" || in.KeyID == "" {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "name, token_type and key_id are required")
-	}
-	if in.StorageType == "external" {
-		if in.ExternalProvider == "" {
-			return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "external_provider is required for external token vaults")
-		}
-		if err := validateExternalVaultConfig(in.ExternalProvider, in.ExternalConfig); err != nil {
-			return TokenVault{}, err
-		}
-		if in.ExternalSchemaVersion == "" {
-			in.ExternalSchemaVersion = "v1"
-		}
-	} else {
-		in.StorageType = "internal"
-		in.ExternalProvider = ""
-		in.ExternalConfig = map[string]string{}
-		in.ExternalSchemaVersion = ""
 	}
 	if !isSupportedTokenType(in.TokenType) {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported token_type")
@@ -2879,7 +2871,6 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	_ = s.publishAudit(ctx, "audit.dataprotect.token_vault_created", tenantID, map[string]interface{}{
 		"vault_id":          in.ID,
 		"storage_type":      in.StorageType,
-		"external_provider": in.ExternalProvider,
 		"token_type":        in.TokenType,
 		"token_format":      in.Format,
 		"custom_format":     in.CustomTokenFormat,
@@ -2933,119 +2924,6 @@ func (s *Service) DeleteTokenVault(ctx context.Context, tenantID string, vaultID
 		"vault_id": vaultID,
 	})
 	return nil
-}
-
-func (s *Service) GetExternalTokenVaultSetup(provider string) (map[string]interface{}, error) {
-	provider = normalizeExternalVaultProvider(provider)
-	if provider == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "provider must be one of postgres, mysql, mssql, oracle, mongodb")
-	}
-	filename := ""
-	contentType := "text/plain; charset=utf-8"
-	content := ""
-	switch provider {
-	case "postgres":
-		filename = "token_vault_schema_postgres.sql"
-		content = `CREATE TABLE IF NOT EXISTS token_vault_records (
-    tenant_id TEXT NOT NULL,
-    vault_id TEXT NOT NULL,
-    token TEXT NOT NULL,
-    token_hash TEXT NOT NULL,
-    original_hash TEXT NOT NULL,
-    ciphertext BYTEA NOT NULL,
-    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    use_count INTEGER NOT NULL DEFAULT 0,
-    use_limit INTEGER NOT NULL DEFAULT 0,
-    renew_count INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMPTZ NULL,
-    PRIMARY KEY (tenant_id, vault_id, token)
-);
-CREATE INDEX IF NOT EXISTS idx_token_vault_records_lookup ON token_vault_records (tenant_id, vault_id, original_hash);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_token_vault_records_unique_input ON token_vault_records (tenant_id, vault_id, original_hash);`
-	case "mysql":
-		filename = "token_vault_schema_mysql.sql"
-		content = `CREATE TABLE IF NOT EXISTS token_vault_records (
-    tenant_id VARCHAR(128) NOT NULL,
-    vault_id VARCHAR(128) NOT NULL,
-    token VARCHAR(256) NOT NULL,
-    token_hash VARCHAR(128) NOT NULL,
-    original_hash VARCHAR(128) NOT NULL,
-    ciphertext LONGBLOB NOT NULL,
-    metadata_json JSON NOT NULL,
-    use_count INT NOT NULL DEFAULT 0,
-    use_limit INT NOT NULL DEFAULT 0,
-    renew_count INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NULL,
-    PRIMARY KEY (tenant_id, vault_id, token),
-    KEY idx_token_vault_records_lookup (tenant_id, vault_id, original_hash),
-    UNIQUE KEY idx_token_vault_records_unique_input (tenant_id, vault_id, original_hash)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
-	case "mssql":
-		filename = "token_vault_schema_mssql.sql"
-		content = `IF OBJECT_ID('dbo.token_vault_records', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.token_vault_records (
-        tenant_id NVARCHAR(128) NOT NULL,
-        vault_id NVARCHAR(128) NOT NULL,
-        token NVARCHAR(256) NOT NULL,
-        token_hash NVARCHAR(128) NOT NULL,
-        original_hash NVARCHAR(128) NOT NULL,
-        ciphertext VARBINARY(MAX) NOT NULL,
-        metadata_json NVARCHAR(MAX) NOT NULL,
-        use_count INT NOT NULL DEFAULT 0,
-        use_limit INT NOT NULL DEFAULT 0,
-        renew_count INT NOT NULL DEFAULT 0,
-        created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-        expires_at DATETIME2 NULL,
-        CONSTRAINT PK_token_vault_records PRIMARY KEY (tenant_id, vault_id, token)
-    );
-    CREATE INDEX IX_token_vault_records_lookup ON dbo.token_vault_records (tenant_id, vault_id, original_hash);
-    CREATE UNIQUE INDEX IX_token_vault_records_unique_input ON dbo.token_vault_records (tenant_id, vault_id, original_hash);
-END;`
-	case "oracle":
-		filename = "token_vault_schema_oracle.sql"
-		content = `BEGIN
-    EXECUTE IMMEDIATE '
-        CREATE TABLE token_vault_records (
-            tenant_id VARCHAR2(128) NOT NULL,
-            vault_id VARCHAR2(128) NOT NULL,
-            token VARCHAR2(256) NOT NULL,
-            token_hash VARCHAR2(128) NOT NULL,
-            original_hash VARCHAR2(128) NOT NULL,
-            ciphertext BLOB NOT NULL,
-            metadata_json CLOB NOT NULL,
-            use_count NUMBER(10) DEFAULT 0 NOT NULL,
-            use_limit NUMBER(10) DEFAULT 0 NOT NULL,
-            renew_count NUMBER(10) DEFAULT 0 NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-            expires_at TIMESTAMP NULL,
-            CONSTRAINT pk_token_vault_records PRIMARY KEY (tenant_id, vault_id, token)
-        )';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -955 THEN RAISE; END IF;
-END;
-/
-CREATE INDEX idx_token_vault_records_lookup ON token_vault_records (tenant_id, vault_id, original_hash);
-CREATE UNIQUE INDEX idx_token_vault_records_unique_input ON token_vault_records (tenant_id, vault_id, original_hash);`
-	case "mongodb":
-		filename = "token_vault_schema_mongodb.js"
-		contentType = "application/javascript; charset=utf-8"
-		content = `db = db.getSiblingDB("vecta_token_vault");
-db.createCollection("token_vault_records");
-db.token_vault_records.createIndex({tenant_id:1, vault_id:1, token:1}, {unique:true, name:"uq_token"});
-db.token_vault_records.createIndex({tenant_id:1, vault_id:1, original_hash:1}, {unique:true, name:"uq_original_hash"});
-db.token_vault_records.createIndex({tenant_id:1, vault_id:1, created_at:-1}, {name:"idx_created_at"});`
-	}
-	return map[string]interface{}{
-		"provider":     provider,
-		"filename":     filename,
-		"content_type": contentType,
-		"content":      content,
-		"schema_ver":   "v1",
-	}, nil
 }
 
 func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) (_ []map[string]interface{}, err error) {
@@ -5079,53 +4957,13 @@ func normalizeTokenFormatName(v string) string {
 	return strings.Trim(strings.ReplaceAll(string(buf), "__", "_"), "_")
 }
 
-func normalizeExternalVaultConfig(in map[string]string) map[string]string {
-	out := map[string]string{}
-	if len(in) == 0 {
-		return out
-	}
-	for rawKey, rawValue := range in {
-		key := strings.ToLower(strings.TrimSpace(rawKey))
-		value := strings.TrimSpace(rawValue)
-		if key == "" || value == "" {
-			continue
-		}
-		switch key {
-		case "host", "port", "database", "schema", "table", "username", "password_ref", "tls_mode", "uri", "auth_database":
-			if len(value) > 512 {
-				value = value[:512]
-			}
-			out[key] = value
-		}
-	}
-	return out
-}
+const reasonExternalVaultRemoved = "external_vault_removed"
 
-func validateExternalVaultConfig(provider string, cfg map[string]string) error {
-	provider = normalizeExternalVaultProvider(provider)
-	if provider == "" {
-		return newServiceError(http.StatusBadRequest, "bad_request", "unsupported external_provider")
-	}
-	if len(cfg) == 0 {
-		return newServiceError(http.StatusBadRequest, "bad_request", "external_config is required for external token vaults")
-	}
-	for k := range cfg {
-		key := strings.ToLower(strings.TrimSpace(k))
-		if strings.Contains(key, "password") && key != "password_ref" {
-			return newServiceError(http.StatusBadRequest, "bad_request", "external_config must use password_ref instead of inline password")
-		}
-	}
-	switch provider {
-	case "postgres", "mysql", "mssql", "oracle":
-		if strings.TrimSpace(cfg["host"]) == "" || strings.TrimSpace(cfg["database"]) == "" {
-			return newServiceError(http.StatusBadRequest, "bad_request", "external_config host and database are required for SQL vault providers")
-		}
-	case "mongodb":
-		if strings.TrimSpace(cfg["uri"]) == "" {
-			return newServiceError(http.StatusBadRequest, "bad_request", "external_config uri is required for mongodb vault provider")
-		}
-	}
-	return nil
+// externalVaultRequested: a create request that asks for the removed
+// external storage, by any of its fields.
+func externalVaultRequested(in TokenVault) bool {
+	st := strings.ToLower(strings.TrimSpace(in.StorageType))
+	return (st != "" && st != "internal") || strings.TrimSpace(in.ExternalProvider) != "" || len(in.ExternalConfig) > 0 || strings.TrimSpace(in.ExternalSchemaVersion) != ""
 }
 
 func resolveCustomTokenFormatTemplate(policy DataProtectionPolicy, formatName string) (string, bool) {

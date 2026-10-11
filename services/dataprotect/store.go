@@ -32,7 +32,7 @@ INSERT INTO token_vaults (
 ) VALUES (
 	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP
 )
-`, item.TenantID, item.ID, item.Name, item.Mode, item.StorageType, item.ExternalProvider, mustJSON(item.ExternalConfig, "{}"), item.ExternalSchemaVersion, item.TokenType, item.Format, item.CustomTokenFormat, item.KeyID, item.CustomRegex)
+`, item.TenantID, item.ID, item.Name, item.Mode, "internal", "", "{}", "", item.TokenType, item.Format, item.CustomTokenFormat, item.KeyID, item.CustomRegex)
 	return err
 }
 
@@ -1537,20 +1537,22 @@ func parseFieldProtectionRules(v string) []FieldProtectionRule {
 func scanTokenVault(scanner interface {
 	Scan(dest ...interface{}) error
 }) (TokenVault, error) {
+	// The external_* columns are from the removed external database vault
+	// (9.0.0-beta, migration 012 empties them); read and dropped.
 	var (
-		item               TokenVault
-		externalConfigJSON string
-		createdRaw         interface{}
+		item                                  TokenVault
+		storage, provider, config, schemaVers string
+		createdRaw                            interface{}
 	)
 	if err := scanner.Scan(
 		&item.TenantID,
 		&item.ID,
 		&item.Name,
 		&item.Mode,
-		&item.StorageType,
-		&item.ExternalProvider,
-		&externalConfigJSON,
-		&item.ExternalSchemaVersion,
+		&storage,
+		&provider,
+		&config,
+		&schemaVers,
 		&item.TokenType,
 		&item.Format,
 		&item.CustomTokenFormat,
@@ -1561,9 +1563,7 @@ func scanTokenVault(scanner interface {
 		return TokenVault{}, err
 	}
 	item.Mode = normalizeTokenMode(item.Mode)
-	item.StorageType = normalizeTokenStorageType(item.StorageType)
-	item.ExternalProvider = normalizeExternalVaultProvider(item.ExternalProvider)
-	item.ExternalConfig = parseStringMap(externalConfigJSON)
+	item.StorageType = "internal"
 	item.CreatedAt = parseTimeValue(createdRaw)
 	return item, nil
 }

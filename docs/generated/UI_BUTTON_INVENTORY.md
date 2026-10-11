@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-10-11T04:20:01Z` by `scripts/generate_product_map.py`.
+Generated at `2026-10-11T09:21:14Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -522,33 +522,32 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 306 | - | Btn | void run(`$ -cert`, async () => { await setEdgeCertificateSource(session, );... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 317 | - | Btn | void run(`$ -csr`, async () => { const out = await createEdgeCSR(session, );... |  |
 | web/dashboard/src/components/v3/tabs/ServiceMTLSPanel.tsx | 326 | - | Btn | void run(`$ -install`, async () => { await installEdgeCertificate(session, li... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 446 | - | button | setOp(name)} style={{ background:op===name?C.accent:"transparent", color:op==... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 465 | - | Btn | {if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaul... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 564 | - | Btn | void submitCurrent()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 580 | - | Btn | setOp("Mask")}>Open Mask Operation |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 588 | - | Btn | setOp("Redact")}>Open Redact Operation |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 767 | - | button | } style={{ background:mode===name?C.accentDim:"transparent", color:mode===nam... |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 814 | - | Btn | void submit()} disabled= style={ }> |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1186 | - | Btn | void downloadSDK()} disabled= >Download SDK |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1187 | - | Btn | void refresh(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1217 | - | Btn | void submitInit()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1240 | - | Btn | void submitComplete()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1263 | - | Btn | void submitLease()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1279 | - | Btn | void submitReceipt()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1319 | - | Btn | void revokeLease(item)} disabled= >Revoke |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1609 | - | Btn | void loadPolicy(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1610 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2187 | - | Btn | void loadPolicy(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2188 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2383 | - | Btn | void refreshVaultRows(false)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2384 | - | Btn | void downloadVaultSetup()} disabled= >Download Setup Query |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2385 | - | Btn | void createVaultFromPolicy()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2442 | - | Btn | void deleteVaultFromPolicy(row)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2489 | - | Btn | void refresh()} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2562 | - | Btn | selectSubtab("fieldenc")}>Field Encryption |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2563 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2564 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
-| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2565 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 445 | - | button | setOp(name)} style={{ background:op===name?C.accent:"transparent", color:op==... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 464 | - | Btn | {if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaul... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 555 | - | Btn | void submitCurrent()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 571 | - | Btn | setOp("Mask")}>Open Mask Operation |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 579 | - | Btn | setOp("Redact")}>Open Redact Operation |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 758 | - | button | } style={{ background:mode===name?C.accentDim:"transparent", color:mode===nam... |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 805 | - | Btn | void submit()} disabled= style={ }> |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1177 | - | Btn | void downloadSDK()} disabled= >Download SDK |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1178 | - | Btn | void refresh(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1208 | - | Btn | void submitInit()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1231 | - | Btn | void submitComplete()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1254 | - | Btn | void submitLease()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1270 | - | Btn | void submitReceipt()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1310 | - | Btn | void revokeLease(item)} disabled= >Revoke |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1600 | - | Btn | void loadPolicy(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 1601 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2099 | - | Btn | void loadPolicy(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2100 | - | Btn | (icon or dynamic label) | savePolicy} disabled={saving\|\|loading |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2295 | - | Btn | void refreshVaultRows(false)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2296 | - | Btn | void createVaultFromPolicy()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2324 | - | Btn | void deleteVaultFromPolicy(row)} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2371 | - | Btn | void refresh()} disabled= > |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2444 | - | Btn | selectSubtab("fieldenc")}>Field Encryption |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2445 | - | Btn | selectSubtab("dataenc-policy")}>Data Encryption Policy |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2446 | - | Btn | selectSubtab("token-policy")}>Token / Mask / Redact Policy |  |
+| web/dashboard/src/components/v3/tabs/TokenizeTab.tsx | 2447 | - | Btn | selectSubtab("pkcs11")}>Java SDK |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 235 | vault | Btn | void loadAll()} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 236 | vault | Btn | Generate key pair | openGenerate |
 | web/dashboard/src/components/v3/tabs/VaultTab.tsx | 237 | vault | Btn | Store secret | openCreate |

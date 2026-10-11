@@ -5,7 +5,8 @@ import { serviceRequest, serviceRequestRaw } from "./serviceApi";
 // whose material was once stored where a database copy can reveal it: under
 // a public development key before 1.2.0-beta, or in plaintext (webhook
 // credentials before 1.25.0-beta, playbook connection credentials before
-// 2.5.0-beta, workload signing keys before 6.11.0-beta). The live data is now under a
+// 2.5.0-beta, workload signing keys before 6.11.0-beta, identity provider
+// secrets before 8.2.0-beta). The live data is now under a
 // keycore-held key, but a copy or backup made earlier still holds the old
 // form, so an item stays listed until its material is replaced (rotated,
 // re-issued, deleted) or an administrator acknowledges it with a reason.
@@ -39,6 +40,7 @@ export const EXPOSURE_SERVICES: { service: string; label: string; remedy: string
   { service: "ekm", label: "BitLocker recovery keys", remedy: "Run a BitLocker rotate job for the volume (or delete the client)." },
   { service: "audit", label: "Webhook credentials", remedy: "Rotate the signing secret and every header token (Splunk, Datadog) at the receiver, then enter the new values on the webhook (or delete it)." },
   { service: "compliance", label: "Playbook connections", remedy: "Rotate the webhook URL or token where it was issued (Slack, Teams, Jira, ServiceNow, the receiver), then enter every new value on the connection under Playbooks → Connections (or delete it)." },
+  { service: "auth", label: "Identity provider secrets", remedy: "Change the bind password or client secret at the identity provider (the directory, Entra ID or the OIDC provider), then enter the new value under Administration → Identity providers." },
   { service: "workload", label: "Workload signing keys", remedy: "Rotate the tenant's SPIFFE root CA and JWT-SVID signer under Workload Identity → Rotate Signing Keys, then give federated trust domains the new JWKS." }
 ];
 

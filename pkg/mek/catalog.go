@@ -97,6 +97,20 @@ var Catalog = map[string]ServiceTables{
 			Where: "creds_wrapped_dek IS NOT NULL",
 		}},
 	},
+	// auth: identity provider secrets (LDAP and AD bind passwords, OIDC and
+	// Entra client secrets), sealed per (tenant, provider) from 8.2.0-beta.
+	// Earlier releases stored them as plaintext JSON, not under a key, so
+	// there are no legacy keys; auth seals those rows itself and records
+	// them in the exposure register (services/auth/idp_secrets.go).
+	"auth": {
+		Service: "auth", ClientID: "kms-auth",
+		StateTable: "auth_mek_state", ExposureTable: "auth_mek_exposure",
+		Tables: []Table{{
+			Name: "auth_identity_provider_configs", Keys: []string{"tenant_id", "provider"}, Tenant: "tenant_id",
+			Item: "provider", ItemType: "identity_provider_secrets", WrappedDEK: "secrets_wrapped_dek", WrappedIV: "secrets_wrapped_dek_iv",
+			Where: "secrets_wrapped_dek IS NOT NULL",
+		}},
+	},
 	"compliance": {
 		Service: "compliance", ClientID: "kms-compliance",
 		StateTable: "compliance_mek_state", ExposureTable: "compliance_mek_exposure",

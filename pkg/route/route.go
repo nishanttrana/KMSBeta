@@ -192,6 +192,15 @@ func (rt *Router) MountOn(mux *http.ServeMux) {
 	}
 }
 
+// MountOnWith is MountOn for a legacy mux that authenticates each route
+// itself and not in a middleware around the mux (auth): wrap verifies the
+// caller and puts the claims in the request context before the kernel runs.
+func (rt *Router) MountOnWith(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
+	for _, r := range rt.routes {
+		mux.Handle(r.Pattern, wrap(rt))
+	}
+}
+
 func (s Spec) validate(pattern string) error {
 	method, _, ok := strings.Cut(pattern, " ")
 	if !ok || method == "" || strings.ToUpper(method) != method {

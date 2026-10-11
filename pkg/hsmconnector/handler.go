@@ -110,6 +110,9 @@ type opRequest struct {
 	SignatureB64  string `json:"signature_b64"`
 	Length        int    `json:"length"`
 	MaterialB64   string `json:"material_b64"`
+	// ImportMethod: for AES material, create_object or unwrap to use only
+	// that way of placing it; empty tries the first, then the second.
+	ImportMethod string `json:"import_method"`
 }
 
 // begin decodes the request, checks the caller and label, and opens a
@@ -212,8 +215,9 @@ func (h *Handler) generate(c *route.Call) {
 	})
 }
 
-// importKey places AES material in the HSM as a sensitive, never
-// extractable token object. The HSM reports it honestly afterwards:
+// importKey places existing key material in the HSM as a sensitive, never
+// extractable token object: AES material, or an RSA or ECDSA private key
+// (PKCS#8, PKCS#1 or SEC 1 DER). The HSM reports it honestly afterwards:
 // CKA_LOCAL is false, because it was not generated there.
 func (h *Handler) importKey(c *route.Call) {
 	in, ctx, sh, release, ok := h.begin(c, keyManager, true)
@@ -223,8 +227,8 @@ func (h *Handler) importKey(c *route.Call) {
 	defer release()
 	alg := hsm.NormalizeAlgorithm(in.Algorithm)
 	c.Detail("algorithm", alg)
-	if !strings.HasPrefix(alg, "AES-") {
-		c.Refuse(http.StatusBadRequest, "algorithm_not_supported", "only AES-128/192/256 material can be imported into the HSM")
+	if alg == "" {
+		c.Refuse(http.StatusBadRequest, "algorithm_not_supported", "AES-128/192/256 material and RSA-2048/3072/4096 or ECDSA P-256/P-384 private keys can be imported into the HSM")
 		return
 	}
 	material, ok := decode(c, "material_b64", in.MaterialB64)
@@ -232,11 +236,34 @@ func (h *Handler) importKey(c *route.Call) {
 		return
 	}
 	defer pkgcrypto.Zeroize(material)
-	if want := map[string]int{"AES-128": 16, "AES-192": 24, "AES-256": 32}[alg]; len(material) != want {
-		c.Error(http.StatusBadRequest, "bad_request", fmt.Sprintf("%s material must be %d bytes", alg, want))
-		return
+	var (
+		res    hsm.GenerateResult
+		method = importCreateObject
+		err    error
+	)
+	if strings.HasPrefix(alg, "AES-") {
+		if want := map[string]int{"AES-128": 16, "AES-192": 24, "AES-256": 32}[alg]; len(material) != want {
+			c.Error(http.StatusBadRequest, "bad_request", fmt.Sprintf("%s material must be %d bytes", alg, want))
+			return
+		}
+		if in.ImportMethod != "" && in.ImportMethod != importCreateObject && in.ImportMethod != importUnwrap {
+			c.Error(http.StatusBadRequest, "bad_request", "import_method is create_object or unwrap")
+			return
+		}
+		res, method, err = importAES(ctx, sh, in.Label, material, in.ImportMethod)
+	} else {
+		key, perr := pkgcrypto.HSMPrivateKeyFromDER(material)
+		if perr != nil {
+			c.Error(http.StatusBadRequest, "bad_request", perr.Error())
+			return
+		}
+		defer key.Zeroize()
+		if key.Algorithm != alg {
+			c.Error(http.StatusBadRequest, "bad_request", fmt.Sprintf("the material is a %s key, not %s", key.Algorithm, alg))
+			return
+		}
+		res, err = importPrivate(ctx, sh, in.Label, key)
 	}
-	res, err := importAES(ctx, sh, in.Label, material)
 	if err != nil {
 		h.fail(c, err)
 		return
@@ -244,8 +271,10 @@ func (h *Handler) importKey(c *route.Call) {
 	id := h.identity(c)
 	c.Detail("hsm_serial", id.SerialNumber)
 	c.Detail("hsm_token", id.TokenLabel)
+	c.Detail("import_method", method)
 	c.JSON(http.StatusCreated, map[string]interface{}{
-		"label": res.Label, "kcv_b64": base64.StdEncoding.EncodeToString(res.KCV), "hsm": id,
+		"label": res.Label, "kcv_b64": base64.StdEncoding.EncodeToString(res.KCV),
+		"public_key_b64": base64.StdEncoding.EncodeToString(res.PublicKey), "import_method": method, "hsm": id,
 	})
 }
 

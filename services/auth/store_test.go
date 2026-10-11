@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -24,7 +25,10 @@ func newTestStore(t *testing.T) *SQLStore {
 	if err := createSQLiteSchema(conn); err != nil {
 		t.Fatalf("create schema: %v", err)
 	}
-	return NewSQLStore(conn)
+	store := NewSQLStore(conn)
+	// The master key is open, as it is once keycore has answered.
+	store.idp.set(bytes.Repeat([]byte{0x42}, 32))
+	return store
 }
 
 func createSQLiteSchema(conn *pkgdb.DB) error {
@@ -85,7 +89,7 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE auth_password_policies (tenant_id TEXT PRIMARY KEY, min_length INTEGER NOT NULL DEFAULT 12, max_length INTEGER NOT NULL DEFAULT 128, require_upper INTEGER NOT NULL DEFAULT 1, require_lower INTEGER NOT NULL DEFAULT 1, require_digit INTEGER NOT NULL DEFAULT 1, require_special INTEGER NOT NULL DEFAULT 1, require_no_whitespace INTEGER NOT NULL DEFAULT 1, deny_username INTEGER NOT NULL DEFAULT 1, deny_email_local_part INTEGER NOT NULL DEFAULT 1, min_unique_chars INTEGER NOT NULL DEFAULT 6, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_security_policies (tenant_id TEXT PRIMARY KEY, max_failed_attempts INTEGER NOT NULL DEFAULT 5, lockout_minutes INTEGER NOT NULL DEFAULT 15, idle_timeout_minutes INTEGER NOT NULL DEFAULT 15, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_hsm_provider_configs (tenant_id TEXT PRIMARY KEY, provider_name TEXT NOT NULL DEFAULT 'customer-hsm', integration_service TEXT NOT NULL DEFAULT 'hsm-integration', library_path TEXT NOT NULL DEFAULT '', slot_id TEXT NOT NULL DEFAULT '', partition_label TEXT NOT NULL DEFAULT '', token_label TEXT NOT NULL DEFAULT '', pin_env_var TEXT NOT NULL DEFAULT 'HSM_PIN', read_only INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 0, metadata_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
-		`CREATE TABLE auth_identity_provider_configs (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, config_json TEXT NOT NULL DEFAULT '{}', secret_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, provider));`,
+		`CREATE TABLE auth_identity_provider_configs (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, config_json TEXT NOT NULL DEFAULT '{}', secret_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', secrets_ciphertext BLOB, secrets_data_iv BLOB, secrets_wrapped_dek BLOB, secrets_wrapped_dek_iv BLOB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, provider));`,
 		`CREATE TABLE auth_group_role_bindings (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, role_name TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id));`,
 		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id, user_id));`,
 		`CREATE TABLE auth_scim_settings (

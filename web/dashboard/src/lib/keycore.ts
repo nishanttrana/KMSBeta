@@ -296,7 +296,8 @@ export type ImportKeyInput = {
   wrapping_key_id?: string;
   material_iv?: string;
   origin?: string;
-  // Place the material in an HSM (AES only): the tenant's, or the HSM
+  // Place the material in an HSM (AES material, or an RSA or ECDSA
+  // private key): the tenant's, or the HSM
   // credential hsm_connection_id names.
   hsm?: boolean;
   hsm_connection_id?: string;

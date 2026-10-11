@@ -35,7 +35,7 @@ func (h *Handler) handleListIdentityProviderConfigs(w http.ResponseWriter, r *ht
 		if errors.Is(getErr, errNotFound) {
 			cfg = defaultIdentityProviderConfig(targetTenant, provider)
 		} else if getErr != nil {
-			writeErr(w, http.StatusInternalServerError, "store_error", "failed to list identity providers", reqID, targetTenant)
+			idpStoreErr(w, getErr, "failed to list identity providers", reqID, targetTenant)
 			return
 		}
 		cfg = normalizeIdentityProviderConfig(cfg)
@@ -66,7 +66,7 @@ func (h *Handler) handleGetIdentityProviderConfig(w http.ResponseWriter, r *http
 	if errors.Is(getErr, errNotFound) {
 		cfg = defaultIdentityProviderConfig(targetTenant, provider)
 	} else if getErr != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read identity provider config", reqID, targetTenant)
+		idpStoreErr(w, getErr, "failed to read identity provider config", reqID, targetTenant)
 		return
 	}
 	cfg = normalizeIdentityProviderConfig(cfg)
@@ -98,12 +98,15 @@ func (h *Handler) handleUpsertIdentityProviderConfig(w http.ResponseWriter, r *h
 	}
 	cfg := defaultIdentityProviderConfig(targetTenant, provider)
 	existing, getErr := h.store.GetIdentityProviderConfig(r.Context(), targetTenant, provider)
+	// The patch below writes into the same map, so the values held before
+	// it are copied now.
+	held := idpSecretValues(existing.Secrets)
 	if getErr == nil {
 		cfg = normalizeIdentityProviderConfig(existing)
 		cfg.TenantID = targetTenant
 		cfg.Provider = provider
 	} else if !errors.Is(getErr, errNotFound) {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read identity provider config", reqID, targetTenant)
+		idpStoreErr(w, getErr, "failed to read identity provider config", reqID, targetTenant)
 		return
 	}
 	cfg = applyIdentityProviderPatch(cfg, req)
@@ -115,15 +118,20 @@ func (h *Handler) handleUpsertIdentityProviderConfig(w http.ResponseWriter, r *h
 	}
 	updated, err := h.store.UpsertIdentityProviderConfig(r.Context(), cfg)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to save identity provider config", reqID, targetTenant)
+		idpStoreErr(w, err, "failed to save identity provider config", reqID, targetTenant)
 		return
 	}
+	// Replacing every secret a provider held closes its exposure entry
+	// (secrets an earlier release stored in plaintext).
+	exposureClosed := h.idpRemediate != nil && idpSecretsReplaced(held, idpSecretValues(updated.Secrets)) &&
+		h.idpRemediate(r.Context(), targetTenant, provider, identityProviderActor(claims))
 	if err := h.publishAudit(r.Context(), "audit.auth.identity_provider_config_updated", reqID, targetTenant, map[string]any{
-		"provider":       provider,
-		"enabled":        updated.Enabled,
-		"actor_user_id":  claims.UserID,
-		"actor_tenant":   claims.TenantID,
-		"updated_tenant": targetTenant,
+		"provider":        provider,
+		"enabled":         updated.Enabled,
+		"exposure_closed": exposureClosed,
+		"actor_user_id":   claims.UserID,
+		"actor_tenant":    claims.TenantID,
+		"updated_tenant":  targetTenant,
 	}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, targetTenant)
 		return
@@ -159,7 +167,7 @@ func (h *Handler) handleTestIdentityProviderConnection(w http.ResponseWriter, r 
 	if getErr == nil {
 		cfg = normalizeIdentityProviderConfig(existing)
 	} else if !errors.Is(getErr, errNotFound) {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read identity provider config", reqID, targetTenant)
+		idpStoreErr(w, getErr, "failed to read identity provider config", reqID, targetTenant)
 		return
 	}
 	cfg.TenantID = targetTenant
@@ -851,4 +859,28 @@ func isIdentityUniqueViolation(err error) bool {
 	return strings.Contains(msg, "duplicate key") ||
 		strings.Contains(msg, "unique constraint") ||
 		(strings.Contains(msg, "constraint failed") && strings.Contains(msg, "auth_users"))
+}
+
+// idpStoreErr answers a failed read or save of a provider: 503 while the
+// master key that seals its secrets is not open, 500 otherwise.
+func idpStoreErr(w http.ResponseWriter, err error, msg, reqID, tenantID string) {
+	if errors.Is(err, errIDPKeyUnavailable) {
+		writeErr(w, http.StatusServiceUnavailable, "secrets_unavailable", errIDPKeyUnavailable.Error(), reqID, tenantID)
+		return
+	}
+	writeErr(w, http.StatusInternalServerError, "store_error", msg, reqID, tenantID)
+}
+
+// idpSecretsReplaced reports whether every secret the provider held has a
+// different value now (or is gone): what closes its exposure entry.
+func idpSecretsReplaced(old, now map[string]string) bool {
+	if len(old) == 0 {
+		return false
+	}
+	for k, v := range old {
+		if now[k] == v {
+			return false
+		}
+	}
+	return true
 }

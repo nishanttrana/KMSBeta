@@ -31,7 +31,9 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/metering"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -113,6 +115,40 @@ func main() {
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
 	handler.SetAuditClient(kernelAudit)
+
+	// Identity provider secrets master key from keycore (pkg/mek). Auth is
+	// its own token issuer: it asks itself for a kms-auth service token like
+	// any other service. The key opens in the background, because keycore
+	// can't verify that token until auth is serving (idp_secrets.go).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-auth"))
+	var mekAudit mek.Emitter
+	if kernelAudit != nil {
+		mekAudit = kernelAudit
+	}
+	mekSource := mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["auth"])
+	go openIDPKeyring(ctx, store.idp, func(ctx context.Context) (*mek.Keyring, error) {
+		return mek.Open(ctx, mek.Options{
+			Tables: mek.Catalog["auth"],
+			Source: mekSource,
+			DB:     dbConn.SQL(),
+			Audit:  mekAudit,
+			Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
+			Logf:   logger.Printf,
+			Wait:   time.Minute,
+		})
+	}, func(k *mek.Keyring) {
+		// Exposure register and backup re-wrap routes, behind auth's own
+		// token check (auth has no middleware around its mux).
+		kernel := route.New("auth", mekAudit, logger)
+		k.Routes(kernel, "auth")
+		kernel.MountOnWith(handler.mux, func(next http.Handler) http.Handler { return handler.withAuth(next.ServeHTTP, "") })
+		handler.idpRemediate = func(ctx context.Context, tenantID, provider, by string) bool {
+			closed, err := k.Remediate(ctx, tenantID, idpSecretsItemType, provider, "secrets_replaced", by)
+			return err == nil && closed
+		}
+		go k.Watch(ctx, 15*time.Minute)
+		go sealPlaintextIDPLoop(ctx, store, k, clusterstate.RunsPrimaryJobs, mekAudit, 15*time.Minute, logger.Printf)
+	}, 15*time.Second, logger.Printf)
 	revokeRetiredCLIPasswords(ctx, store, logger, auditPublisher, handler.lockCLISSHPassword)
 
 	httpPort := envOr("HTTP_PORT", "8001")
@@ -293,6 +329,8 @@ var internalServiceClients = []string{
 	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
 	"kms-cluster-manager", "kms-secrets", "kms-reconciler", "kms-confidential",
+	// auth itself, to get its master key from keycore (idp_secrets.go).
+	"kms-auth",
 	"kms-workload-identity",
 	// The HSM connector opens HSM credentials from compliance (8.0.0-beta).
 	"kms-hsm",

@@ -343,16 +343,6 @@ func normalizeTokenStorageType(v string) string {
 	}
 }
 
-func normalizeExternalVaultProvider(v string) string {
-	v = strings.ToLower(strings.TrimSpace(v))
-	switch v {
-	case "postgres", "mysql", "mssql", "oracle", "mongodb":
-		return v
-	default:
-		return ""
-	}
-}
-
 func normalizeMaskPattern(v string) string {
 	v = strings.ToLower(strings.TrimSpace(v))
 	switch v {

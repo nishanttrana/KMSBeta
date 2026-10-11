@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -105,10 +106,12 @@ type Store interface {
 
 type SQLStore struct {
 	db *pkgdb.DB
+	// idp seals identity provider secrets (idp_secrets.go).
+	idp *idpVault
 }
 
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
-	return &SQLStore{db: db}
+	return &SQLStore{db: db, idp: &idpVault{}}
 }
 
 type Tenant struct {
@@ -1458,9 +1461,42 @@ ON CONFLICT (tenant_id) DO UPDATE SET
 	return s.GetHSMProviderConfig(ctx, cfg.TenantID)
 }
 
+const idpConfigColumns = `tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at,
+       secrets_ciphertext, secrets_data_iv, secrets_wrapped_dek, secrets_wrapped_dek_iv`
+
+// scanIDPConfig reads one row. Its secrets come back as stored: the names
+// with empty values when sealed (with the envelope), or the values
+// themselves in a row an earlier release wrote and that is not sealed yet.
+func scanIDPConfig(row interface{ Scan(...any) error }) (IdentityProviderConfig, *pkgcrypto.EnvelopeCiphertext, error) {
+	var (
+		cfg                            IdentityProviderConfig
+		configRaw, secretRaw           []byte
+		ct, dataIV, wrapped, wrappedIV []byte
+	)
+	if err := row.Scan(&cfg.TenantID, &cfg.Provider, &cfg.Enabled, &configRaw, &secretRaw, &cfg.UpdatedBy, &cfg.CreatedAt, &cfg.UpdatedAt,
+		&ct, &dataIV, &wrapped, &wrappedIV); err != nil {
+		return IdentityProviderConfig{}, nil, err
+	}
+	cfg.Config = map[string]any{}
+	cfg.Secrets = map[string]any{}
+	if len(configRaw) > 0 {
+		_ = json.Unmarshal(configRaw, &cfg.Config)
+	}
+	if len(secretRaw) > 0 {
+		_ = json.Unmarshal(secretRaw, &cfg.Secrets)
+	}
+	if len(wrapped) == 0 {
+		return cfg, nil, nil
+	}
+	return cfg, &pkgcrypto.EnvelopeCiphertext{Ciphertext: ct, DataIV: dataIV, WrappedDEK: wrapped, WrappedDEKIV: wrappedIV}, nil
+}
+
+// ListIdentityProviderConfigs lists a tenant's providers without their
+// secrets: it is what the sign-in page reads, and must answer while the
+// master key is not open.
 func (s *SQLStore) ListIdentityProviderConfigs(ctx context.Context, tenantID string) ([]IdentityProviderConfig, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
+SELECT `+idpConfigColumns+`
 FROM auth_identity_provider_configs
 WHERE tenant_id=$1
 ORDER BY provider
@@ -1472,29 +1508,11 @@ ORDER BY provider
 
 	out := make([]IdentityProviderConfig, 0, 4)
 	for rows.Next() {
-		var cfg IdentityProviderConfig
-		var configRaw []byte
-		var secretRaw []byte
-		if err := rows.Scan(
-			&cfg.TenantID,
-			&cfg.Provider,
-			&cfg.Enabled,
-			&configRaw,
-			&secretRaw,
-			&cfg.UpdatedBy,
-			&cfg.CreatedAt,
-			&cfg.UpdatedAt,
-		); err != nil {
+		cfg, _, err := scanIDPConfig(rows)
+		if err != nil {
 			return nil, err
 		}
-		cfg.Config = map[string]any{}
 		cfg.Secrets = map[string]any{}
-		if len(configRaw) > 0 {
-			_ = json.Unmarshal(configRaw, &cfg.Config)
-		}
-		if len(secretRaw) > 0 {
-			_ = json.Unmarshal(secretRaw, &cfg.Secrets)
-		}
 		out = append(out, cfg)
 	}
 	if err := rows.Err(); err != nil {
@@ -1503,65 +1521,114 @@ ORDER BY provider
 	return out, nil
 }
 
+// GetIdentityProviderConfig returns a provider with its secrets opened. A
+// provider whose secrets are sealed can't be read while the master key is
+// not open (errIDPKeyUnavailable).
 func (s *SQLStore) GetIdentityProviderConfig(ctx context.Context, tenantID string, provider string) (IdentityProviderConfig, error) {
-	var out IdentityProviderConfig
-	var configRaw []byte
-	var secretRaw []byte
-	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
+	out, env, err := scanIDPConfig(s.db.SQL().QueryRowContext(ctx, `
+SELECT `+idpConfigColumns+`
 FROM auth_identity_provider_configs
 WHERE tenant_id=$1 AND provider=$2
-`, tenantID, provider).Scan(
-		&out.TenantID,
-		&out.Provider,
-		&out.Enabled,
-		&configRaw,
-		&secretRaw,
-		&out.UpdatedBy,
-		&out.CreatedAt,
-		&out.UpdatedAt,
-	)
+`, tenantID, provider))
 	if errors.Is(err, sql.ErrNoRows) {
 		return IdentityProviderConfig{}, errNotFound
 	}
 	if err != nil {
 		return IdentityProviderConfig{}, err
 	}
-	out.Config = map[string]any{}
-	out.Secrets = map[string]any{}
-	if len(configRaw) > 0 {
-		_ = json.Unmarshal(configRaw, &out.Config)
-	}
-	if len(secretRaw) > 0 {
-		_ = json.Unmarshal(secretRaw, &out.Secrets)
+	if env != nil {
+		if out.Secrets, err = s.idp.open(out.TenantID, out.Provider, env); err != nil {
+			return IdentityProviderConfig{}, err
+		}
 	}
 	return out, nil
 }
 
+// idpEnvelopeArgs is the envelope as its four columns (NULLs for none).
+func idpEnvelopeArgs(env *pkgcrypto.EnvelopeCiphertext) []interface{} {
+	if env == nil {
+		return []interface{}{nil, nil, nil, nil}
+	}
+	return []interface{}{env.Ciphertext, env.DataIV, env.WrappedDEK, env.WrappedDEKIV}
+}
+
+// UpsertIdentityProviderConfig saves a provider. Its secrets are sealed
+// under the master key and never written in plaintext; with secrets to save
+// and no key it fails with errIDPKeyUnavailable.
 func (s *SQLStore) UpsertIdentityProviderConfig(ctx context.Context, cfg IdentityProviderConfig) (IdentityProviderConfig, error) {
 	configRaw, err := json.Marshal(cfg.Config)
 	if err != nil {
 		return IdentityProviderConfig{}, err
 	}
-	secretRaw, err := json.Marshal(cfg.Secrets)
+	names, env, err := s.idp.seal(cfg)
 	if err != nil {
 		return IdentityProviderConfig{}, err
 	}
+	args := append([]interface{}{cfg.TenantID, cfg.Provider, cfg.Enabled, configRaw, names, cfg.UpdatedBy}, idpEnvelopeArgs(env)...)
 	_, err = s.db.SQL().ExecContext(ctx, `
 INSERT INTO auth_identity_provider_configs (
-    tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+    tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at,
+    secrets_ciphertext, secrets_data_iv, secrets_wrapped_dek, secrets_wrapped_dek_iv
+) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,$7,$8,$9,$10)
 ON CONFLICT (tenant_id, provider) DO UPDATE SET
     enabled = EXCLUDED.enabled,
     config_json = EXCLUDED.config_json,
     secret_json = EXCLUDED.secret_json,
+    secrets_ciphertext = EXCLUDED.secrets_ciphertext,
+    secrets_data_iv = EXCLUDED.secrets_data_iv,
+    secrets_wrapped_dek = EXCLUDED.secrets_wrapped_dek,
+    secrets_wrapped_dek_iv = EXCLUDED.secrets_wrapped_dek_iv,
     updated_by = EXCLUDED.updated_by,
     updated_at = CURRENT_TIMESTAMP
-`, cfg.TenantID, cfg.Provider, cfg.Enabled, configRaw, secretRaw, cfg.UpdatedBy)
+`, args...)
 	if err != nil {
 		return IdentityProviderConfig{}, err
 	}
 	return s.GetIdentityProviderConfig(ctx, cfg.TenantID, cfg.Provider)
+}
+
+// listPlaintextIDPSecrets returns the providers whose secrets an earlier
+// release stored in plaintext and that are not sealed yet.
+func (s *SQLStore) listPlaintextIDPSecrets(ctx context.Context) ([]IdentityProviderConfig, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT `+idpConfigColumns+`
+FROM auth_identity_provider_configs
+WHERE secrets_wrapped_dek IS NULL
+ORDER BY tenant_id, provider`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []IdentityProviderConfig
+	for rows.Next() {
+		cfg, _, err := scanIDPConfig(rows)
+		if err != nil {
+			return nil, err
+		}
+		if len(idpSecretValues(cfg.Secrets)) > 0 {
+			out = append(out, cfg)
+		}
+	}
+	return out, rows.Err()
+}
+
+// sealPlaintextIDPSecrets replaces a plaintext row's secrets with their
+// envelope, only if the row is still unsealed. It reports whether it did.
+func (s *SQLStore) sealPlaintextIDPSecrets(ctx context.Context, cfg IdentityProviderConfig) (bool, error) {
+	names, env, err := s.idp.seal(cfg)
+	if err != nil {
+		return false, err
+	}
+	args := append([]interface{}{names}, idpEnvelopeArgs(env)...)
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE auth_identity_provider_configs
+SET secret_json=$1, secrets_ciphertext=$2, secrets_data_iv=$3, secrets_wrapped_dek=$4, secrets_wrapped_dek_iv=$5
+WHERE tenant_id=$6 AND provider=$7 AND secrets_wrapped_dek IS NULL`, append(args, cfg.TenantID, cfg.Provider)...)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
 }
 
 func (s *SQLStore) GetSCIMSettings(ctx context.Context, tenantID string) (SCIMSettings, error) {

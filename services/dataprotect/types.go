@@ -323,6 +323,9 @@ type TokenVault struct {
 	TenantID              string            `json:"tenant_id"`
 	Name                  string            `json:"name"`
 	Mode                  string            `json:"mode"`
+	// StorageType is always "internal". The external_* fields are read
+	// only to refuse a request that still asks for the removed external
+	// database vault (9.0.0-beta); they are never stored or returned.
 	StorageType           string            `json:"storage_type"`
 	ExternalProvider      string            `json:"external_provider,omitempty"`
 	ExternalConfig        map[string]string `json:"external_config,omitempty"`
