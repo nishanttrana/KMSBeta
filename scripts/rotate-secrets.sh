@@ -43,7 +43,6 @@ set_secret WORKLOAD_IDENTITY_SHARED_SECRET "$(hex 32)"
 set_secret SOFTWARE_VAULT_PASSPHRASE       "$(hex 32)"
 set_secret INTERNAL_API_TOKEN              "$(hex 32)"
 set_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET "$(hex 32)"
-set_secret AUTH_BOOTSTRAP_ADMIN_PASSWORD   "$(strong_pw)"
 set_secret AUTH_BOOTSTRAP_CLI_PASSWORD     "$(strong_pw)"
 
 cat <<'NEXT'
@@ -62,8 +61,9 @@ where possible) — see docs/SECURITY/SECRET_ROTATION.md:
      On start, auth retires every service API key derived from the previous
      INTERNAL_SERVICE_BOOTSTRAP_SECRET. Service JWTs already minted stay valid
      until they expire (at most 1 hour).
-  3) Admin/CLI bootstrap passwords only seed a FRESH auth volume. For an existing
-     deployment, rotate the live admin password via the dashboard / auth API.
+  3) The CLI bootstrap password only seeds a FRESH auth volume. The admin is
+     always seeded as changeit with a forced change and is not in .env; change
+     a live admin password in the dashboard / auth API.
   4) Software vault passphrase: if the vault already sealed data with the old
      passphrase, run the vault rekey/re-seal flow before restarting that service.
 

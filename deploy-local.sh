@@ -109,6 +109,12 @@ if [[ "$(env_get CERTS_CRWK_USE_TPM_SEAL)" == "true" ]]; then
   warn "CERTS_CRWK_USE_TPM_SEAL in .env is ignored: TPM sealing of the certs root wrapping key was never implemented. Remove the line."
 fi
 
+# The admin is always seeded as changeit with a forced change; a value left in
+# .env by an older installer or rotate-secrets.sh no longer does anything.
+if grep -q '^AUTH_BOOTSTRAP_ADMIN_PASSWORD=.' "${ENV_FILE}"; then
+  warn "AUTH_BOOTSTRAP_ADMIN_PASSWORD in .env is ignored: the admin is always seeded as changeit and must change it at first login. Remove the line."
+fi
+
 fips_mode="$(env_get VECTA_FIPS_MODE)"
 case "${fips_mode:-on}" in
   on|only|off) ;;
@@ -241,7 +247,7 @@ cat <<EOF
     Dashboard   https://localhost        (self-signed certificate — accept it once in the browser)
     KMIP        localhost:5696
     Login       tenant: root   user: admin
-                password: AUTH_BOOTSTRAP_ADMIN_PASSWORD from .env (you'll be asked to change it on first login)
+                password: changeit on a new install (you must change it at first login; after that, the one you set)
 
   Stop:     bash infra/scripts/stop-kms.sh infra/deployment/deployment.yaml
   Logs:     docker compose logs -f <service>

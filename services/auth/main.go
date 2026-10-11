@@ -421,16 +421,15 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "root")
 	tenantName := envOr("AUTH_BOOTSTRAP_TENANT_NAME", "Root")
 	adminUsername := envOr("AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin")
-	// Default credential is admin/changeit. This is safe only because the seeded
-	// admin is created with MustChangePassword=true (AUTH_BOOTSTRAP_FORCE_
-	// PASSWORD_CHANGE, default true): the resulting login is scoped to the
-	// password-change operation alone, and first login forces rotation to a
-	// policy-compliant password. Operators may override with a strong password
-	// via the env var.
-	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "changeit")
+	// The seeded credential is always admin/changeit with a forced change:
+	// that login is scoped to the password-change operation alone. Neither is
+	// configurable (9.5.0-beta): a different seed in .env left a stack nobody
+	// could sign in to with the documented default. The password the admin
+	// then sets is never touched again unless AUTH_BOOTSTRAP_RESET_ADMIN asks.
+	const adminPassword = "changeit"
+	const mustChange = true
 	adminEmail := envOr("AUTH_BOOTSTRAP_ADMIN_EMAIL", "admin@vecta.local")
 	adminRole := envOr("AUTH_BOOTSTRAP_ADMIN_ROLE", "admin")
-	mustChange := envOrBool("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", true)
 	// Opt-in: re-apply the default admin password + force-change on an existing
 	// deployment whose admin account predates the default credential. Off by
 	// default so a rotated admin password is never silently clobbered.

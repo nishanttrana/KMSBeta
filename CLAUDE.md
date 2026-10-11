@@ -51,7 +51,11 @@ an approach, record it here or in the matching doc below.
      removed default already produced.
    - Every installer generates every secret compose requires.
    - The only repo-visible default is admin `changeit`, which is always seeded
-     with a forced password change.
+     with a forced password change. It is fixed, not configurable (owner
+     directive, 2026-10-11: "the default password for stack is changeit and
+     then after change it should keep the user specified password"): no
+     installer, script or `.env` value sets a different seed, and nothing
+     replaces the password the admin then chooses.
 4. **Tenancy bypass must be unforgeable.** A privilege that skips tenant checks
    is keyed on something only the platform can mint (see
    `tenantcheck.IsServicePrincipal`), never on a role name or an `X-Actor-*`

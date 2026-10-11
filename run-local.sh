@@ -40,10 +40,8 @@ export VECTA_DEPLOYED_PROFILES="key_access_justifications"
 export AUTH_BOOTSTRAP_TENANT_ID="root"
 export AUTH_BOOTSTRAP_TENANT_NAME="Root"
 export AUTH_BOOTSTRAP_ADMIN_USERNAME="admin"
-export AUTH_BOOTSTRAP_ADMIN_PASSWORD="changeit"
 export INTERNAL_SERVICE_BOOTSTRAP_SECRET="${INTERNAL_SERVICE_BOOTSTRAP_SECRET:-$(openssl rand -hex 32)}"
 export AUTH_BOOTSTRAP_ADMIN_EMAIL="admin@vecta.local"
-export AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE="true"
 
 stop_all() {
     echo "Stopping all services..."

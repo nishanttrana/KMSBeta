@@ -79,7 +79,12 @@ checked mechanically. Reviewers enforce the rest.
 | Startup validation | per service (for example `bootstrapInternalServiceClients`) | weak values at runtime |
 | Unit tests | `pkg/servicetoken/servicetoken_test.go`, `services/auth/bootstrap_admin_test.go`, `pkg/config/secrets_test.go`, `pkg/mek/mek_test.go`, `services/keycore/system_keys_test.go` | validation rules, default-key revocation, rotated-key retirement, placeholder detection, dev-key re-wrap and exposure register (SQLite and Postgres), system-key protection |
 
-The only exemption is `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (rule 5). Don't add
+The only exemption is the admin seed password `changeit` (rule 5). It is a
+constant in `services/auth/main.go`, always seeded with a forced change, and
+since 9.5.0-beta not configurable: `AUTH_BOOTSTRAP_ADMIN_PASSWORD` and
+`AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE` are ignored
+(`TestBootstrapIgnoresAdminPasswordFromEnvironment`). The password the admin
+sets at first login is never replaced by a restart or redeploy. Don't add
 another exemption without the same forced-change guarantee.
 
 ## Checklist for a new secret

@@ -430,7 +430,6 @@ cd vecta-kms
 cp .env.example .env
 # Edit .env to set at minimum (services refuse to start without the JWT key
 # and internal token):
-#   AUTH_BOOTSTRAP_ADMIN_PASSWORD=<strong-password>
 #   AUTH_BOOTSTRAP_CLI_PASSWORD=<strong-password>
 #   WORKLOAD_IDENTITY_SHARED_SECRET=<random-secret>
 #   SOFTWARE_VAULT_PASSPHRASE=<random-passphrase>

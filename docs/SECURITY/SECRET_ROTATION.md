@@ -9,9 +9,10 @@ with [`scripts/rotate-secrets.sh`](../../scripts/rotate-secrets.sh):
 
 It generates fresh values for `POSTGRES_PASSWORD`, `NATS_AUTH_TOKEN`,
 `WORKLOAD_IDENTITY_SHARED_SECRET`, `SOFTWARE_VAULT_PASSPHRASE`,
-`INTERNAL_API_TOKEN`, `INTERNAL_SERVICE_BOOTSTRAP_SECRET`,
-`AUTH_BOOTSTRAP_ADMIN_PASSWORD`, and
-`AUTH_BOOTSTRAP_CLI_PASSWORD`. Hex for connection-string/header-safe values;
+`INTERNAL_API_TOKEN`, `INTERNAL_SERVICE_BOOTSTRAP_SECRET` and
+`AUTH_BOOTSTRAP_CLI_PASSWORD`. The admin password is not among them: the
+admin is always seeded as `changeit` with a forced change, and the password
+set at that first login is kept (9.5.0-beta). Hex for connection-string/header-safe values;
 policy-compliant strings (≥12 chars, mixed classes) for the bootstrap passwords.
 
 > The script only rewrites the **configured** values. It does **not** touch
@@ -26,7 +27,7 @@ policy-compliant strings (≥12 chars, mixed classes) for the bootstrap password
 | `POSTGRES_PASSWORD` | The `postgres-data` volume keeps the password it was first initialized with. | `docker compose exec postgres psql -U "$POSTGRES_USER" -c "ALTER USER \"$POSTGRES_USER\" PASSWORD '<new>';"` then recreate dependents. |
 | `NATS_AUTH_TOKEN`, `INTERNAL_API_TOKEN`, `WORKLOAD_IDENTITY_SHARED_SECRET` | Shared between services; all must use the same value at once. | `docker compose up -d --force-recreate` (recreates every service with the new env together). |
 | `INTERNAL_SERVICE_BOOTSTRAP_SECRET` | Every service derives its API key from it; auth holds the key hashes. | `docker compose up -d --force-recreate`. On start, auth provisions keys for the new secret and **retires every service key derived from the previous one** (logged as `SECURITY retired … stale … service key(s)`). Service JWTs already minted stay valid until they expire (≤ 1 h). |
-| `AUTH_BOOTSTRAP_ADMIN_PASSWORD`, `AUTH_BOOTSTRAP_CLI_PASSWORD` | Only seed a **fresh** auth volume; the existing admin keeps its current password. | Rotate the live admin/CLI password via the dashboard or auth API. |
+| `AUTH_BOOTSTRAP_CLI_PASSWORD` | Only seed a **fresh** auth volume; an existing CLI user keeps its current password; the admin seed is always `changeit` and is not in `.env`. | Rotate the live admin/CLI password via the dashboard or auth API. |
 | `SOFTWARE_VAULT_PASSPHRASE` | Vault data already sealed under the old passphrase won't unseal under the new one. | Run the vault rekey/re-seal flow **before** restarting the vault service. |
 | Service master keys (secrets, certs, cloud, ekm) | Not in `.env`: they come from keycore. | See [Service master keys](#service-master-keys). |
 | Certs CRWK passphrase | Lives in the certs key volume, not `.env`; the sealed root wrapping key only opens under the passphrase it was sealed with. | `./scripts/rotate-crwk-passphrase.sh`. See [Certs root wrapping key passphrase](#certs-root-wrapping-key-crwk-passphrase). |

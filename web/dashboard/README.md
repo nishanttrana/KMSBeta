@@ -19,11 +19,11 @@ Default admin credentials are configured in:
 Current defaults:
 
 - Username: `admin`
-- Password: `admin`
+- Password: `changeit`
 
-`force_password_change: true` (the default) requires rotating this password to a
-policy-compliant one at first login — the default `admin`/`admin` credential can
-do nothing but change the password until then.
+A password change is always required at first login: until then the
+`admin`/`changeit` credential can do nothing but change the password. The
+password set there is kept across restarts and redeploys.
 
 ## Run
 

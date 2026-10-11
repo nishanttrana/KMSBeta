@@ -4,6 +4,23 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [9.5.0-beta] — 2026-10-11
+
+### Sign-in: the first admin password is always `changeit`
+- **Changed: the admin is always created as `admin` / `changeit`, with a
+  password change required at first sign-in.** Until now `.env`
+  (`AUTH_BOOTSTRAP_ADMIN_PASSWORD`), the installer's prompt and
+  `scripts/rotate-secrets.sh` could each set a different first password, so
+  a stack could come up refusing the documented default. Those are removed.
+  `AUTH_BOOTSTRAP_ADMIN_PASSWORD` and `AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE`
+  are now ignored; `deploy-local.sh` says so when it finds the first in
+  `.env`. Remove both lines.
+- **Unchanged: the password you set is kept.** Restarting or redeploying
+  never replaces it. Only `AUTH_BOOTSTRAP_RESET_ADMIN=true`, set for one
+  restart, puts the admin back to `changeit` with a forced change.
+- **Removed: `admin_password` from `infra/deployment/auth-bootstrap.yaml`.**
+  Nothing read it.
+
 ## [9.4.0-beta] — 2026-10-11
 
 ### Local deploy: a stack whose volumes were removed starts again

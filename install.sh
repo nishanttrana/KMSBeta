@@ -1282,8 +1282,6 @@ collect_inputs() {
 
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "changeit"
-  prompt_yes_no FORCE_PASSWORD_CHANGE "Force password change at first login" "true"
 
   prompt_default LICENSE_KEY "License key" "SEC-KMS-ENT-2026-ABCD"
   prompt_default MAX_KEYS "License max keys" "5000000"
@@ -1666,9 +1664,8 @@ EOF
 write_auth_yaml() {
   cat > "${AUTH_FILE}" <<EOF
 admin_email: ${ADMIN_EMAIL}
-admin_password: ${ADMIN_PASSWORD}
 admin_username: ${ADMIN_USERNAME}
-force_password_change: ${FORCE_PASSWORD_CHANGE}
+force_password_change: true
 tenant_id: ${TENANT_ID}
 EOF
 }
@@ -1731,9 +1728,7 @@ CERTS_CRWK_PASSPHRASE_FILE=${CERTS_PASSPHRASE_FILE_PATH}
 AUTH_BOOTSTRAP_TENANT_ID=${TENANT_ID}
 AUTH_BOOTSTRAP_TENANT_NAME=${TENANT_NAME}
 AUTH_BOOTSTRAP_ADMIN_USERNAME=${ADMIN_USERNAME}
-AUTH_BOOTSTRAP_ADMIN_PASSWORD=${ADMIN_PASSWORD}
 AUTH_BOOTSTRAP_ADMIN_EMAIL=${ADMIN_EMAIL}
-AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE=${FORCE_PASSWORD_CHANGE}
 CLUSTER_NODE_ID=${APPLIANCE_ID}
 CLUSTER_NODE_NAME=${APPLIANCE_ID}
 CLUSTER_NODE_ROLE=${CLUSTER_NODE_ROLE}
@@ -2180,7 +2175,7 @@ print_summary() {
   echo "Default admin credentials:"
   echo "  Username : ${ADMIN_USERNAME}"
   echo "  Email    : ${ADMIN_EMAIL}"
-  echo "  Password : ${ADMIN_PASSWORD}"
+  echo "  Password : changeit (you must change it at first login)"
   if [[ "${HOST_OS}" == "linux" && "${EUID}" -ne 0 ]]; then
     echo
     echo "Note: If this is your first Docker install, run:"
@@ -2210,8 +2205,6 @@ collect_fast_inputs() {
   TENANT_NAME="Root Tenant"
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "changeit"
-  FORCE_PASSWORD_CHANGE="true"
   local detected_iface detected_gw detected_dns_csv detected_hostname detected_domain
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
   MAX_KEYS="5000000"

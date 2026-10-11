@@ -5,6 +5,21 @@ Newest entries on top.
 
 ## 2026-10-11
 
+### "It doesn't accept the default password" (9.5.0-beta)
+- **A documented default that three things could silently replace.** The
+  rule said the admin is seeded as `changeit`; the code read
+  `AUTH_BOOTSTRAP_ADMIN_PASSWORD` first. `rotate-secrets.sh` wrote a random
+  value there, the installer prompted for one, and compose passed it on. A
+  fresh database was then seeded with a password nobody had chosen or seen.
+  A default that is a rule is a constant, not a fallback.
+- **I answered the question asked instead of the rule broken.** Told "the
+  default is overridden in .env, read it there", the owner had to restate
+  the rule. When behaviour contradicts a standing rule, the behaviour is the
+  bug: fix it, don't explain it.
+- **"Rotating" a seed value rotates nothing.** The bootstrap password only
+  applies to an empty database, so a new one in `.env` never changed a live
+  admin and only broke the next fresh install.
+
 ### Every service 401s after the volumes are removed (9.4.0-beta)
 - **Symptom far from the cause.** `compose up` said only "container certs
   is unhealthy". certs was waiting for its master key; keycore refused it

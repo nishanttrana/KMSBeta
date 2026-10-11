@@ -38,6 +38,27 @@ func TestBootstrapSeedsDefaultAdminChangeit(t *testing.T) {
 	}
 }
 
+// The seed is not configurable: a value in the environment (an old .env, a
+// rotated "bootstrap password") must not replace changeit or lift the forced
+// change, or nobody can sign in with the documented default.
+func TestBootstrapIgnoresAdminPasswordFromEnvironment(t *testing.T) {
+	t.Setenv("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "Vk-some-other-Seed-9!")
+	t.Setenv("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", "false")
+	store := newTestStore(t)
+	bootstrapDefaultAdmin(context.Background(), store, quietLogger())
+
+	if ok, _ := adminLoginState(t, store, "Vk-some-other-Seed-9!"); ok {
+		t.Fatal("admin was seeded with the password from the environment")
+	}
+	ok, mustChange := adminLoginState(t, store, "changeit")
+	if !ok {
+		t.Fatal("expected admin/changeit whatever the environment says")
+	}
+	if !mustChange {
+		t.Fatal("the forced password change must not be switchable off")
+	}
+}
+
 func TestBootstrapDoesNotClobberExistingAdminWithoutReset(t *testing.T) {
 	store := newTestStore(t)
 	bootstrapDefaultAdmin(context.Background(), store, quietLogger())
